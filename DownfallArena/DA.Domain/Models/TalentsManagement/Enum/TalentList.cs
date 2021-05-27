@@ -1,0 +1,42 @@
+﻿namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Enum
+{
+    public enum TalentList
+    {
+        Wait,
+        Strike,
+        HeavyStrike,
+        Pummel,
+        Guard,
+        ProtectiveSlam,
+        ChainSlash,
+        ThunderingSeal,
+        FullPlate,
+        CrushingStomp,
+        RestorativeGush,
+        EnragedCharge,
+        Tornado,
+        PsychoRush,
+        LightningBolt,
+        Rejuvenate,
+        Meteor,
+        IceSpear,
+        EngulfingFlames,
+        SummonMinions,
+        RevenantGuards,
+        CrazedSpecters,
+        HealingScreech,
+        ToxicWaves,
+        RestoringBurst,
+        PoisonSlash,
+        ThrowingStar,
+        ParasiteJab,
+        HatefulSacrifice,
+        SoulDevourer,
+        Momentum,
+        DeathSquad,
+        MortalWound,
+        NoxiousCure,
+        TranquilizerDart,
+        InfectiousBlast
+    }
+}

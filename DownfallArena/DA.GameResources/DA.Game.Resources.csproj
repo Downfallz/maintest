@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <AssemblyName>DA.Game.Resources</AssemblyName>
+    <RootNamespace>DA.Game.Resources</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Characters\**" />
+    <EmbeddedResource Remove="Characters\**" />
+    <None Remove="Characters\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DA.Domain\DA.Game.Domain.csproj" />
+    <ProjectReference Include="..\DA.Game.TalentsManagement\DA.Game.TalentsManagement.csproj" />
+  </ItemGroup>
+
+</Project>
