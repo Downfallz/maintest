@@ -1,9 +1,9 @@
-﻿using System;
-using DA.Game.CombatMechanic.Tools;
+﻿using DA.Game.CombatMechanic.Tools;
 using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services.GameFlowEngine.CombatMechanic;
+using System;
 
 namespace DA.Game.CombatMechanic
 {

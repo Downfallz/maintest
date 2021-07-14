@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,14 +9,16 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetSummonMinions()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Necromancer;
-            s.Name = "Summon Minions";
-            s.SpellType = SpellType.Defensive;
-            s.EnergyCost = 2;
-            s.Initiative = 1;
-            s.NbTargets = 0;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Necromancer,
+                Name = "Summon Minions",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 0,
+                CriticalChance = null
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.SelfDirect,
@@ -32,15 +34,17 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetRevenantGuards()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Necromancer;
-            s.Name = "Revenant Guards";
-            s.SpellType = SpellType.Defensive;
-            s.EnergyCost = 2;
-            s.Initiative = 1;
-            s.NbTargets = 3;
-            s.CriticalChance = 0.33;
-            s.MinionsCost = 1;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Necromancer,
+                Name = "Revenant Guards",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 3,
+                CriticalChance = 0.33,
+                MinionsCost = 1
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -63,15 +67,17 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetCrazedSpecters()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Necromancer;
-            s.Name = "Crazed Specters";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 1;
-            s.NbTargets = 3;
-            s.CriticalChance = 0.33;
-            s.MinionsCost = 1;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Necromancer,
+                Name = "Crazed Specters",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 1,
+                NbTargets = 3,
+                CriticalChance = 0.33,
+                MinionsCost = 1
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,

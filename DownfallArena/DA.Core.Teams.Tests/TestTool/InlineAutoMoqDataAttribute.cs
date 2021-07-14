@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using AutoFixture;
-using AutoFixture.AutoMoq;
-using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit2;
 
 namespace DA.Game.Tests.TestTool
 {

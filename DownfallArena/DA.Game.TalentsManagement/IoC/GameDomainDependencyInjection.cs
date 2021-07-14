@@ -1,6 +1,4 @@
-﻿using DA.Game.Domain.Services.GameFlowEngine;
-using DA.Game.Domain.Services.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
+﻿using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
 using DA.Game.TalentsManagement.Tools;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,14 +9,16 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetFullPlate()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Warlord;
-            s.Name = "Full Plate";
-            s.SpellType = SpellType.Passive;
-            s.EnergyCost = null;
-            s.Initiative = 1;
-            s.NbTargets = null;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Warlord,
+                Name = "Full Plate",
+                SpellType = SpellType.Passive,
+                EnergyCost = null,
+                Initiative = 1,
+                NbTargets = null,
+                CriticalChance = null
+            };
 
             s.PassiveEffects.Add(new PassiveEffect()
             {
@@ -32,14 +34,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetCrushingStomp()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Warlord;
-            s.Name = "Crushing Stomp";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 4;
-            s.Initiative = 1;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.667;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Warlord,
+                Name = "Crushing Stomp",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 4,
+                Initiative = 1,
+                NbTargets = 1,
+                CriticalChance = 0.667
+            };
 
             s.Effects.Add(new Effect()
             {
@@ -64,14 +68,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetRestorativeGush()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Warlord;
-            s.Name = "Restorative Gush";
-            s.SpellType = SpellType.Defensive;
-            s.EnergyCost = 2;
-            s.Initiative = 2;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.17;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Warlord,
+                Name = "Restorative Gush",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
+                Initiative = 2,
+                NbTargets = 1,
+                CriticalChance = 0.17
+            };
 
             s.Effects.Add(new Effect()
             {

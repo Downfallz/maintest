@@ -1,11 +1,11 @@
-﻿using System;
-using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit2;
 using DA.Game.CombatMechanic.Tools;
 using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
 using Moq;
+using System;
 using Xunit;
 
 namespace DA.Game.CombatMechanic.Tests
@@ -35,10 +35,12 @@ namespace DA.Game.CombatMechanic.Tests
     Character rndCharacter)
         {
             statModifier.StatType = stats;
-            var charCond = new CharCondition();
-            charCond.StatModifier = statModifier;
-            charCond.RoundsLeft = 2;
-            charCond.IsPermanent = true;
+            CharCondition charCond = new CharCondition
+            {
+                StatModifier = statModifier,
+                RoundsLeft = 2,
+                IsPermanent = true
+            };
 
             sut.ApplyCondition(charCond, rndCharacter);
 
@@ -61,10 +63,12 @@ namespace DA.Game.CombatMechanic.Tests
     Character rndCharacter)
         {
             statModifier.StatType = stats;
-            var charCond = new CharCondition();
-            charCond.StatModifier = statModifier;
-            charCond.RoundsLeft = 2;
-            charCond.IsPermanent = true;
+            CharCondition charCond = new CharCondition
+            {
+                StatModifier = statModifier,
+                RoundsLeft = 2,
+                IsPermanent = true
+            };
 
             sut.ApplyCondition(charCond, rndCharacter);
 
@@ -81,7 +85,7 @@ namespace DA.Game.CombatMechanic.Tests
     CharCondition charCondition,
     Character rndCharacter)
         {
-            var currentRoundLeft = charCondition.RoundsLeft;
+            int currentRoundLeft = charCondition.RoundsLeft;
             sut.ApplyCondition(charCondition, rndCharacter);
             Assert.Equal(currentRoundLeft - 1, charCondition.RoundsLeft);
         }

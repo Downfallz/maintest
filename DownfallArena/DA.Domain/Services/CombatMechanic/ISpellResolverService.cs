@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+using System.Collections.Generic;
 
 namespace DA.Game.Domain.Services.GameFlowEngine.CombatMechanic
 {

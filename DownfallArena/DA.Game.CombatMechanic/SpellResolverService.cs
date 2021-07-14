@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Services.GameFlowEngine.CombatMechanic;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DA.Game.CombatMechanic
 {
@@ -27,7 +27,7 @@ namespace DA.Game.CombatMechanic
             bool isCritical = ResolveIsCritical(source, spell);
             bool isHigh = init == Speed.Quick;
 
-            var critInitModifier = 0;
+            int critInitModifier = 0;
             if (isCritical)
                 critInitModifier++;
             if (isHigh)
@@ -37,7 +37,7 @@ namespace DA.Game.CombatMechanic
 
             foreach (Effect e in spell.Effects)
             {
-                var ae = new AppliedEffect()
+                AppliedEffect ae = new AppliedEffect()
                 {
                     EffectType = e.EffectType,
                     Length = e.Length,
@@ -55,12 +55,12 @@ namespace DA.Game.CombatMechanic
 
         private bool ResolveIsCritical(Character source, Spell spell)
         {
-            var haveToResolve = spell.CriticalChance.HasValue && spell.CriticalChance.Value > 0;
+            bool haveToResolve = spell.CriticalChance.HasValue && spell.CriticalChance.Value > 0;
             if (haveToResolve)
             {
-                var totalCritChance = spell.CriticalChance.Value + source.BonusCritical;
-                var rnd = new Random();
-                var rndDouble = rnd.NextDouble();
+                double totalCritChance = spell.CriticalChance.Value + source.BonusCritical;
+                Random rnd = new Random();
+                double rndDouble = rnd.NextDouble();
                 if (rndDouble < totalCritChance)
                 {
                     return true;

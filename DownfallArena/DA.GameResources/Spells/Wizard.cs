@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,14 +9,16 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetMeteor()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Wizard;
-            s.Name = "Meteor";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 1;
-            s.NbTargets = 3;
-            s.CriticalChance = 0.5;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Wizard,
+                Name = "Meteor",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 1,
+                NbTargets = 3,
+                CriticalChance = 0.5
+            };
 
             s.Effects.Add(new Effect()
             {
@@ -34,14 +36,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetIceSpear()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Wizard;
-            s.Name = "Ice Spear";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 2;
-            s.Initiative = 2;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.5;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Wizard,
+                Name = "Ice Spear",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 2,
+                Initiative = 2,
+                NbTargets = 1,
+                CriticalChance = 0.5
+            };
 
             s.Effects.Add(new Effect()
             {
@@ -65,14 +69,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetEngulfingFlames()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Wizard;
-            s.Name = "Engulfing Flames";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 1;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.33;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Wizard,
+                Name = "Engulfing Flames",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 1,
+                NbTargets = 1,
+                CriticalChance = 0.33
+            };
 
             s.Effects.Add(new Effect()
             {

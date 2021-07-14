@@ -1,8 +1,8 @@
-﻿using System;
-using System.Linq;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
+﻿using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+using System;
+using System.Linq;
 
 namespace DA.Game.TalentsManagement.Tools
 {
@@ -42,10 +42,10 @@ namespace DA.Game.TalentsManagement.Tools
             if (talentTreeStructure.Root == null)
                 throw new ArgumentException("Talent tree structure root can't be null", nameof(talentTreeStructure));
 
-            var stats = new CharacterTalentStats();
+            CharacterTalentStats stats = new CharacterTalentStats();
 
-            var unlockedSpells = _talentTreeManager.GetUnlockedSpells(talentTreeStructure);
-            var unlockableSpells = _talentTreeManager.GetUnlockableSpells(talentTreeStructure);
+            System.Collections.Generic.IReadOnlyList<Spell> unlockedSpells = _talentTreeManager.GetUnlockedSpells(talentTreeStructure);
+            System.Collections.Generic.IReadOnlyList<Spell> unlockableSpells = _talentTreeManager.GetUnlockableSpells(talentTreeStructure);
             stats.UnlockableSpells = unlockableSpells;
             stats.UnlockedSpells = unlockedSpells;
 

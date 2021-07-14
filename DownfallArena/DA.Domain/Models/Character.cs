@@ -1,8 +1,8 @@
-﻿using System;
+﻿using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
+using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
 
 namespace DA.Game.Domain.Models.GameFlowEngine
 {
@@ -38,14 +38,14 @@ namespace DA.Game.Domain.Models.GameFlowEngine
             string main = $"[{Name} {Health}/{BaseHealth} - {Initiative} initiative - {Energy} energy]";
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(main);
-            foreach (var s in CharacterTalentStats.UnlockedSpells)
+            foreach (TalentsManagement.Spells.Spell s in CharacterTalentStats.UnlockedSpells)
             {
                 sb.AppendLine($"    {s.Name} ");
             }
 
             return sb.ToString();
         }
-        
+
         public bool IsDead => Health <= 0;
     }
 }

@@ -19,7 +19,7 @@ namespace DA.AI.MonteCarlo
         public static Node findBestNodeWithUCT(Node node)
         {
             int parentVisit = node.State.VisitCount;
-            var a = node.ChildArray.OrderByDescending(x => uctValue(parentVisit, x.State.Score, x.State.VisitCount)).First();
+            Node a = node.ChildArray.OrderByDescending(x => uctValue(parentVisit, x.State.Score, x.State.VisitCount)).First();
             return a;
         }
     }

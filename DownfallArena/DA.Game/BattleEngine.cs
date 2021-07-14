@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Services;
 using DA.Game.Domain.Services.GameFlowEngine;
 using DA.Game.Events;
+using System;
+using System.Collections.Generic;
 
 namespace DA.Game
 {
@@ -48,21 +48,22 @@ namespace DA.Game
 
         public Battle InitializeNewBattle()
         {
-            var battle = new Battle();
-
-            battle.BattleStatus = BattleStatus.Created;
+            Battle battle = new Battle
+            {
+                BattleStatus = BattleStatus.Created
+            };
 
             if (battle.BattleStatus != BattleStatus.Created)
                 throw new Exception("Invalid battle status to be adding players.");
 
 
             battle.TeamOne = _teamService.InitializeNewTeam();
-            foreach(var c in battle.TeamOne.Characters)
+            foreach (Character c in battle.TeamOne.Characters)
             {
                 c.TeamNumber = 1;
             }
             battle.TeamTwo = _teamService.InitializeNewTeam();
-            foreach (var c in battle.TeamTwo.Characters)
+            foreach (Character c in battle.TeamTwo.Characters)
             {
                 c.TeamNumber = 2;
             }
@@ -107,7 +108,7 @@ namespace DA.Game
             if (_roundService.ChooseTeamSpeed(battle, ti, choices))
             {
                 _roundService.ResolveCharacterOrder(battle);
-                var c = _roundService.GetCurrentCharacterIdActionTurn(battle.CurrentRound);
+                Guid? c = _roundService.GetCurrentCharacterIdActionTurn(battle.CurrentRound);
                 OnCharacterTurnInitialized(new CharacterTurnInitializedEventArgs() { CharacterId = c.Value });
             }
         }
@@ -115,9 +116,9 @@ namespace DA.Game
         public void PlayAndResolveCharacterAction(Battle battle, CharacterActionChoice characterActionChoice)
         {
             _roundService.PlayAndResolveCharacterAction(battle.CurrentRound, characterActionChoice);
-            var c = _roundService.GetCurrentCharacterIdActionTurn(battle.CurrentRound);
+            Guid? c = _roundService.GetCurrentCharacterIdActionTurn(battle.CurrentRound);
 
-            var characterContinueToPlay = false;
+            bool characterContinueToPlay = false;
 
             if (c == null)
             {

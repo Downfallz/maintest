@@ -13,7 +13,7 @@ namespace DA.Game.TalentsManagement.Tests.IntegrationTests
 
         public CharacterDevelopmentServiceIntgTests()
         {
-            var services = new ServiceCollection();
+            ServiceCollection services = new ServiceCollection();
 
             services.AddScoped<IGetSpell, GetSpell>();
             services.AddScoped<ITalentTreeBuilder, TalentTreeBuilder>();
@@ -29,7 +29,7 @@ namespace DA.Game.TalentsManagement.Tests.IntegrationTests
         {
             ICharacterDevelopmentService sut = (ICharacterDevelopmentService)ServiceProvider.GetService(typeof(ICharacterDevelopmentService));
 
-            var newChar = sut.InitializeNewCharacter();
+            Domain.Models.GameFlowEngine.Character newChar = sut.InitializeNewCharacter();
 
             sut.UnlockSpell(newChar, newChar.CharacterTalentStats.UnlockableSpells[0]);
             Assert.NotNull(newChar);

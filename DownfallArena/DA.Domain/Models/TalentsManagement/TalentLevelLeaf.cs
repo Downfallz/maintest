@@ -31,10 +31,10 @@ namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement
 
         private void GetAvailableToUnlock(List<TalentNode> listToUnlock, List<TalentLevelLeaf> listLevels)
         {
-            foreach (var c in listLevels)
+            foreach (TalentLevelLeaf c in listLevels)
             {
                 bool atLeastOne = false;
-                foreach (var s in c.TalentNodes)
+                foreach (TalentNode s in c.TalentNodes)
                 {
                     if (!s.IsUnlocked)
                         listToUnlock.Add(s);
@@ -69,9 +69,9 @@ namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement
 
         private void GetAll(List<TalentNode> listAll, List<TalentLevelLeaf> listLevels)
         {
-            foreach (var c in listLevels)
+            foreach (TalentLevelLeaf c in listLevels)
             {
-                foreach (var s in c.TalentNodes)
+                foreach (TalentNode s in c.TalentNodes)
                 {
                     listAll.Add(s);
                 }

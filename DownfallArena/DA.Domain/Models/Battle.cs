@@ -1,7 +1,7 @@
-﻿using System;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
 
 namespace DA.Game.Domain.Models.GameFlowEngine
 {

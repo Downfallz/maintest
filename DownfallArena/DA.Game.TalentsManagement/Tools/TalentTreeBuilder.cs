@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
+﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+using System.Collections.Generic;
 
 namespace DA.Game.TalentsManagement.Tools
 {
@@ -16,170 +16,198 @@ namespace DA.Game.TalentsManagement.Tools
 
         public TalentTreeStructure GenerateNewTree()
         {
-            var berserkerTalents1 = new List<Spell>()
+            List<Spell> berserkerTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.Tornado),
                 _getTalent.FromEnum(TalentList.PsychoRush),
             };
-            var soldierrTalents1 = new List<Spell>()
+            List<Spell> soldierrTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.ChainSlash),
                 _getTalent.FromEnum(TalentList.ThunderingSeal)
             };
-            var paladinTalents1 = new List<Spell>()
+            List<Spell> paladinTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.CrushingStomp),
                 _getTalent.FromEnum(TalentList.RestorativeGush)
             };
-            var warlockTalents1 = new List<Spell>()
+            List<Spell> warlockTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.RevenantGuards),
                 _getTalent.FromEnum(TalentList.CrazedSpecters)
             };
-            var wizardTalents1 = new List<Spell>()
+            List<Spell> wizardTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.IceSpear),
                 _getTalent.FromEnum(TalentList.EngulfingFlames)
             };
-            var shamanTalents1 = new List<Spell>()
+            List<Spell> shamanTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.ToxicWaves),
                 _getTalent.FromEnum(TalentList.RestoringBurst)
             };
-            var assassinTalents1 = new List<Spell>()
+            List<Spell> assassinTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.DeathSquad),
                 _getTalent.FromEnum(TalentList.MortalWound)
             };
-            var beastMasterTalents1 = new List<Spell>()
+            List<Spell> beastMasterTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.TranquilizerDart),
                 _getTalent.FromEnum(TalentList.InfectiousBlast)
             };
-            var druidTalents1 = new List<Spell>()
+            List<Spell> druidTalents1 = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.HatefulSacrifice),
                 _getTalent.FromEnum(TalentList.SoulDevourer)
             };
 
-            var berserkerTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.EnragedCharge) };
-            var soldierrTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.ProtectiveSlam) };
-            var paladinTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.FullPlate) };
-            var warlockTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.SummonMinions) };
-            var wizardTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.Meteor) };
-            var shamanTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.HealingScreech) };
-            var assassinTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.Momentum) };
-            var beastMasterTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.NoxiousCure) };
-            var druidTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.ParasiteJab) };
+            List<Spell> berserkerTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.EnragedCharge) };
+            List<Spell> soldierrTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.ProtectiveSlam) };
+            List<Spell> paladinTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.FullPlate) };
+            List<Spell> warlockTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.SummonMinions) };
+            List<Spell> wizardTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.Meteor) };
+            List<Spell> shamanTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.HealingScreech) };
+            List<Spell> assassinTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.Momentum) };
+            List<Spell> beastMasterTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.NoxiousCure) };
+            List<Spell> druidTalents2 = new List<Spell>() { _getTalent.FromEnum(TalentList.ParasiteJab) };
 
 
-            var listListBerserker = new List<List<Spell>>();
-            listListBerserker.Add(berserkerTalents1);
-            listListBerserker.Add(berserkerTalents2);
+            List<List<Spell>> listListBerserker = new List<List<Spell>>
+            {
+                berserkerTalents1,
+                berserkerTalents2
+            };
 
-            var listlistSoldier = new List<List<Spell>>();
-            listlistSoldier.Add(soldierrTalents1);
-            listlistSoldier.Add(soldierrTalents2);
+            List<List<Spell>> listlistSoldier = new List<List<Spell>>
+            {
+                soldierrTalents1,
+                soldierrTalents2
+            };
 
-            var listlistPaladin = new List<List<Spell>>();
-            listlistPaladin.Add(paladinTalents1);
-            listlistPaladin.Add(paladinTalents2);
+            List<List<Spell>> listlistPaladin = new List<List<Spell>>
+            {
+                paladinTalents1,
+                paladinTalents2
+            };
 
-            var listlistWarlock = new List<List<Spell>>();
-            listlistWarlock.Add(warlockTalents1);
-            listlistWarlock.Add(warlockTalents2);
+            List<List<Spell>> listlistWarlock = new List<List<Spell>>
+            {
+                warlockTalents1,
+                warlockTalents2
+            };
 
-            var listlistWizard = new List<List<Spell>>();
-            listlistWizard.Add(wizardTalents1);
-            listlistWizard.Add(wizardTalents2);
+            List<List<Spell>> listlistWizard = new List<List<Spell>>
+            {
+                wizardTalents1,
+                wizardTalents2
+            };
 
-            var listlistShaman = new List<List<Spell>>();
-            listlistShaman.Add(shamanTalents1);
-            listlistShaman.Add(shamanTalents2);
+            List<List<Spell>> listlistShaman = new List<List<Spell>>
+            {
+                shamanTalents1,
+                shamanTalents2
+            };
 
-            var listlistAssassin = new List<List<Spell>>();
-            listlistAssassin.Add(assassinTalents1);
-            listlistAssassin.Add(assassinTalents2);
+            List<List<Spell>> listlistAssassin = new List<List<Spell>>
+            {
+                assassinTalents1,
+                assassinTalents2
+            };
 
-            var listlistBeastMaster = new List<List<Spell>>();
-            listlistBeastMaster.Add(beastMasterTalents1);
-            listlistBeastMaster.Add(beastMasterTalents2);
+            List<List<Spell>> listlistBeastMaster = new List<List<Spell>>
+            {
+                beastMasterTalents1,
+                beastMasterTalents2
+            };
 
-            var listlistDruid = new List<List<Spell>>();
-            listlistDruid.Add(druidTalents1);
-            listlistDruid.Add(druidTalents2);
+            List<List<Spell>> listlistDruid = new List<List<Spell>>
+            {
+                druidTalents1,
+                druidTalents2
+            };
 
-            var sub1 = CreateSubCategory(listListBerserker);
-            var sub2 = CreateSubCategory(listlistSoldier);
-            var sub3 = CreateSubCategory(listlistPaladin);
+            TalentLevelLeaf sub1 = CreateSubCategory(listListBerserker);
+            TalentLevelLeaf sub2 = CreateSubCategory(listlistSoldier);
+            TalentLevelLeaf sub3 = CreateSubCategory(listlistPaladin);
 
-            var listFighterSubcategories = new List<TalentLevelLeaf>();
-            listFighterSubcategories.Add(sub1);
-            listFighterSubcategories.Add(sub2);
-            listFighterSubcategories.Add(sub3);
+            List<TalentLevelLeaf> listFighterSubcategories = new List<TalentLevelLeaf>
+            {
+                sub1,
+                sub2,
+                sub3
+            };
 
-            var fighterTalents = new List<Spell>()
+            List<Spell> fighterTalents = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.Pummel),
                 _getTalent.FromEnum(TalentList.Guard)
             };
 
-            var fighterMainLevel = CreateMainLevel(fighterTalents, listFighterSubcategories);
+            TalentLevelLeaf fighterMainLevel = CreateMainLevel(fighterTalents, listFighterSubcategories);
 
-            var sub4 = CreateSubCategory(listlistWarlock);
-            var sub5 = CreateSubCategory(listlistWizard);
-            var sub6 = CreateSubCategory(listlistShaman);
+            TalentLevelLeaf sub4 = CreateSubCategory(listlistWarlock);
+            TalentLevelLeaf sub5 = CreateSubCategory(listlistWizard);
+            TalentLevelLeaf sub6 = CreateSubCategory(listlistShaman);
 
-            var listMageSubcategories = new List<TalentLevelLeaf>();
-            listMageSubcategories.Add(sub4);
-            listMageSubcategories.Add(sub5);
-            listMageSubcategories.Add(sub6);
+            List<TalentLevelLeaf> listMageSubcategories = new List<TalentLevelLeaf>
+            {
+                sub4,
+                sub5,
+                sub6
+            };
 
-            var mageTalents = new List<Spell>()
+            List<Spell> mageTalents = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.LightningBolt),
                 _getTalent.FromEnum(TalentList.Rejuvenate)
             };
 
-            var mageMainLevel = CreateMainLevel(mageTalents, listMageSubcategories);
+            TalentLevelLeaf mageMainLevel = CreateMainLevel(mageTalents, listMageSubcategories);
 
-            var sub7 = CreateSubCategory(listlistAssassin);
-            var sub8 = CreateSubCategory(listlistBeastMaster);
-            var sub9 = CreateSubCategory(listlistDruid);
+            TalentLevelLeaf sub7 = CreateSubCategory(listlistAssassin);
+            TalentLevelLeaf sub8 = CreateSubCategory(listlistBeastMaster);
+            TalentLevelLeaf sub9 = CreateSubCategory(listlistDruid);
 
-            var listRangerSubcategories = new List<TalentLevelLeaf>();
-            listRangerSubcategories.Add(sub7);
-            listRangerSubcategories.Add(sub8);
-            listRangerSubcategories.Add(sub9);
+            List<TalentLevelLeaf> listRangerSubcategories = new List<TalentLevelLeaf>
+            {
+                sub7,
+                sub8,
+                sub9
+            };
 
-            var rangerTalents = new List<Spell>()
+            List<Spell> rangerTalents = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.PoisonSlash),
                 _getTalent.FromEnum(TalentList.ThrowingStar)
             };
 
-            var rangerMainlevel = CreateMainLevel(rangerTalents, listRangerSubcategories);
+            TalentLevelLeaf rangerMainlevel = CreateMainLevel(rangerTalents, listRangerSubcategories);
 
-            var basicTalents = new List<Spell>()
+            List<Spell> basicTalents = new List<Spell>()
             {
                 _getTalent.FromEnum(TalentList.Strike),
                 _getTalent.FromEnum(TalentList.HeavyStrike),
                 _getTalent.FromEnum(TalentList.Wait),
             };
 
-            var mainLevelsList = new List<TalentLevelLeaf>();
-            mainLevelsList.Add(fighterMainLevel);
-            mainLevelsList.Add(mageMainLevel);
-            mainLevelsList.Add(rangerMainlevel);
+            List<TalentLevelLeaf> mainLevelsList = new List<TalentLevelLeaf>
+            {
+                fighterMainLevel,
+                mageMainLevel,
+                rangerMainlevel
+            };
 
-            var basicLevel = CreateMainLevel(basicTalents, mainLevelsList);
+            TalentLevelLeaf basicLevel = CreateMainLevel(basicTalents, mainLevelsList);
 
-            foreach (var beginningLevelTalentNode in basicLevel.TalentNodes)
+            foreach (TalentNode beginningLevelTalentNode in basicLevel.TalentNodes)
             {
                 beginningLevelTalentNode.IsUnlocked = true;
             }
-            var newTalentTree = new TalentTreeStructure();
-            newTalentTree.Root = basicLevel;
+            TalentTreeStructure newTalentTree = new TalentTreeStructure
+            {
+                Root = basicLevel
+            };
             return newTalentTree;
         }
 
@@ -187,16 +215,16 @@ namespace DA.Game.TalentsManagement.Tools
 
         private static TalentLevelLeaf CreateMainLevel(List<Spell> listTalentNameFirst1, List<TalentLevelLeaf> listLevels)
         {
-            var firstMainLevel = new TalentLevelLeaf();
+            TalentLevelLeaf firstMainLevel = new TalentLevelLeaf();
 
-            foreach (var s in listTalentNameFirst1)
+            foreach (Spell s in listTalentNameFirst1)
             {
-                firstMainLevel.TalentNodes.Add(new TalentNode{Spell = s});
+                firstMainLevel.TalentNodes.Add(new TalentNode { Spell = s });
             }
 
             if (listLevels != null)
             {
-                foreach (var lvl in listLevels)
+                foreach (TalentLevelLeaf lvl in listLevels)
                 {
                     if (lvl != null)
                     {
@@ -212,7 +240,7 @@ namespace DA.Game.TalentsManagement.Tools
         private static TalentLevelLeaf CreateSubCategory(List<List<Spell>> listListTalents)
         {
             TalentLevelLeaf level = null;
-            for (var i = 0; i < listListTalents.Count; i++)
+            for (int i = 0; i < listListTalents.Count; i++)
             {
                 level = CreateMainLevel(listListTalents[i], new List<TalentLevelLeaf>() { level });
             }

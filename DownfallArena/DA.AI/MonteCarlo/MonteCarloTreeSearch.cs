@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using DA.Game;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Services;
+using System;
+using System.Collections.Generic;
 
 namespace DA.AI.MonteCarlo
 {
     public class MonteCarloTreeSearch
     {
-        static int WIN_SCORE = 10;
+        static readonly int WIN_SCORE = 10;
         int Level { get; set; }
         int opponent;
         private readonly IBattleEngine _be;
@@ -31,12 +30,16 @@ namespace DA.AI.MonteCarlo
             // define an end time which will act as a terminating condition
 
             opponent = 3 - playerNo;
-            Tree tree = new Tree();
-            tree.Root = new Node();
+            Tree tree = new Tree
+            {
+                Root = new Node()
+            };
             Node rootNode = tree.Root;
-            rootNode.State = new State();
-            rootNode.State.Board = board;
-            rootNode.State.PlayerNo = opponent;
+            rootNode.State = new State
+            {
+                Board = board,
+                PlayerNo = opponent
+            };
 
             while (DateTime.Now < end)
             {
@@ -72,11 +75,13 @@ namespace DA.AI.MonteCarlo
         private void expandNode(Node node)
         {
             List<State> possibleStates = node.State.GetAllPossibleStates(_be);
-            foreach(var s in possibleStates)
+            foreach (State s in possibleStates)
             {
-                Node newNode = new Node();
-                newNode.State = s;
-                newNode.Parent = node;
+                Node newNode = new Node
+                {
+                    State = s,
+                    Parent = node
+                };
                 node.ChildArray.Add(newNode);
             }
         }

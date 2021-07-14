@@ -13,7 +13,7 @@ namespace DA.Game
 
         public void Start(BasePlayerHandler one, BasePlayerHandler two)
         {
-            var battle = _battleEngine.InitializeNewBattle();
+            Domain.Models.GameFlowEngine.Battle battle = _battleEngine.InitializeNewBattle();
             one.Setup(battle, TeamIndicator.One);
             two.Setup(battle, TeamIndicator.Two);
 

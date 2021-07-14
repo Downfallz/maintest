@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
+﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+using System.Collections.Generic;
 
 namespace DA.Game.TalentsManagement.Tools
 {

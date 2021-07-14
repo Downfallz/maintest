@@ -16,15 +16,15 @@ namespace DA.AI.MonteCarlo
 
         public Node GetRandomChildNode()
         {
-            var rnd = new Random();
-            var indexRnd = rnd.Next(0, ChildArray.Count);
+            Random rnd = new Random();
+            int indexRnd = rnd.Next(0, ChildArray.Count);
             return ChildArray[indexRnd];
         }
 
         public Node GetChildWithMaxScore()
         {
-            var rnd = new Random();
-            var indexRnd = rnd.Next(0, ChildArray.Count);
+            Random rnd = new Random();
+            int indexRnd = rnd.Next(0, ChildArray.Count);
             return ChildArray.OrderByDescending(x => x.State.VisitCount).First();
         }
 

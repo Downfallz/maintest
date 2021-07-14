@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,14 +9,16 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetEnragedCharge()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Berserker;
-            s.Name = "Enraged Charge";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 1;
-            s.NbTargets = 1;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Berserker,
+                Name = "Enraged Charge",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 1,
+                NbTargets = 1,
+                CriticalChance = null
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -39,14 +41,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetTornado()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Berserker;
-            s.Name = "Tornado";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 2;
-            s.Initiative = 1;
-            s.NbTargets = 3;
-            s.CriticalChance = 0.33;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Berserker,
+                Name = "Tornado",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 3,
+                CriticalChance = 0.33
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -62,14 +66,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetPsychoRush()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Berserker;
-            s.Name = "Psycho Rush";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 1;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.33;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Berserker,
+                Name = "Psycho Rush",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 1,
+                NbTargets = 1,
+                CriticalChance = 0.33
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,

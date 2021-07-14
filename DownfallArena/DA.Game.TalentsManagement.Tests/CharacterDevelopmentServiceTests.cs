@@ -1,11 +1,11 @@
-﻿using System;
-using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit2;
 using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.TalentsManagement.Tools;
 using Moq;
+using System;
 using Xunit;
 
 namespace DA.Game.TalentsManagement.Tests
@@ -43,7 +43,7 @@ namespace DA.Game.TalentsManagement.Tests
         [Theory]
         public void InitializeNewCharacter_ReturnsWellFormedCharacter(CharacterDevelopmentService sut)
         {
-            var newCharacter = sut.InitializeNewCharacter();
+            Character newCharacter = sut.InitializeNewCharacter();
 
             Assert.NotNull(newCharacter);
             Assert.NotNull(newCharacter.CharacterTalentStats);
@@ -69,13 +69,13 @@ namespace DA.Game.TalentsManagement.Tests
 
         [AutoMoqData]
         [Theory]
-        public void InitializeNewCharacter_CallsUnderlyingDependences([Frozen]Mock<ICharacterTalentStatsHandler> charTalentStats,
+        public void InitializeNewCharacter_CallsUnderlyingDependences([Frozen] Mock<ICharacterTalentStatsHandler> charTalentStats,
             [Frozen] Mock<ITalentTreeManager> talentTreeManager,
             TalentTreeStructure structure,
             CharacterDevelopmentService sut)
         {
             talentTreeManager.Setup(x => x.InitializeNewTalentTree()).Returns(structure);
-            var newCharacter = sut.InitializeNewCharacter();
+            Character newCharacter = sut.InitializeNewCharacter();
 
             talentTreeManager.Verify(x => x.InitializeNewTalentTree(), Times.Once);
             charTalentStats.Verify(

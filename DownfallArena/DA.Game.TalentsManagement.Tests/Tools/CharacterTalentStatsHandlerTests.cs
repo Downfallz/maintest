@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using AutoFixture.Xunit2;
+﻿using AutoFixture.Xunit2;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.TalentsManagement.Tools;
 using Moq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 
 namespace DA.Game.TalentsManagement.Tests.Tools
@@ -42,8 +42,8 @@ namespace DA.Game.TalentsManagement.Tests.Tools
             CharacterTalentStats ts = sut.UnlockSpell(talentTreeStructure, spell);
             Assert.NotNull(ts);
             manager.Verify(x => x.UnlockSpell(
-                It.Is<TalentTreeStructure>(z => object.ReferenceEquals(z, talentTreeStructure)), 
-                It.Is<Spell>(z =>  object.ReferenceEquals(z, spell))), Times.Once);
+                It.Is<TalentTreeStructure>(z => object.ReferenceEquals(z, talentTreeStructure)),
+                It.Is<Spell>(z => object.ReferenceEquals(z, spell))), Times.Once);
         }
 
         [AutoMoqData]
@@ -59,7 +59,7 @@ namespace DA.Game.TalentsManagement.Tests.Tools
         public void GivenValidTalentTree_UpdateCharTalentTree_CallsUnderlyingDependenceAndSetOnStats([Frozen] Mock<ITalentTreeManager> manager,
             CharacterTalentStatsHandler sut,
             TalentTreeStructure talentTreeStructure,
-            IReadOnlyList<Spell> unlockedSpells, 
+            IReadOnlyList<Spell> unlockedSpells,
             IReadOnlyList<Spell> unlockableSpells)
         {
             manager.Setup(x => x.GetUnlockedSpells(It.IsAny<TalentTreeStructure>())).Returns(unlockedSpells);

@@ -1,8 +1,8 @@
-﻿using System;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Resources.Spells;
 using DA.Game.TalentsManagement.Tools;
+using System;
 
 namespace DA.Game.Resources.Generator
 {

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.Enum;
@@ -10,6 +7,9 @@ using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services.GameFlowEngine;
 using DA.Game.Domain.Services.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DA.Game
 {
@@ -53,18 +53,22 @@ namespace DA.Game
                 battle.FinishedRoundsHistory.Add(battle.CurrentRound);
             }
 
-            battle.CurrentRound = new Round();
-            battle.CurrentRound.RoundStatus = RoundStatus.Created;
+            battle.CurrentRound = new Round
+            {
+                RoundStatus = RoundStatus.Created
+            };
 
             ResolveRoundStart(battle);
         }
 
         private void ResolveRoundStart(Battle battle)
         {
-            AppliedEffect roundStartEnergy = new AppliedEffect();
-            roundStartEnergy.EffectType = EffectType.Temporary;
-            roundStartEnergy.Length = 1;
-            roundStartEnergy.StatModifier = new StatModifier() { Modifier = 2, StatType = Stats.Energy };
+            AppliedEffect roundStartEnergy = new AppliedEffect
+            {
+                EffectType = EffectType.Temporary,
+                Length = 1,
+                StatModifier = new StatModifier() { Modifier = 2, StatType = Stats.Energy }
+            };
 
 
             _appliedEffectService.ApplyEffect(roundStartEnergy, null, battle.AllAliveCharacters);
@@ -83,35 +87,35 @@ namespace DA.Game
 
         public void ApplySpellsToUnlock(Battle battle)
         {
-            foreach (var choice in battle.CurrentRound.PlayerOneSpellUnlocks)
+            foreach (SpellUnlockChoice choice in battle.CurrentRound.PlayerOneSpellUnlocks)
             {
-                var c = battle.AllCharacter.Single(x => x.Id == choice.CharacterId);
+                Character c = battle.AllCharacter.Single(x => x.Id == choice.CharacterId);
                 _characterDevelopmentService.UnlockSpell(c, choice.Spell);
             }
-            foreach (var choice in battle.CurrentRound.PlayerTwoSpellUnlocks)
+            foreach (SpellUnlockChoice choice in battle.CurrentRound.PlayerTwoSpellUnlocks)
             {
-                var c = battle.AllCharacter.Single(x => x.Id == choice.CharacterId);
+                Character c = battle.AllCharacter.Single(x => x.Id == choice.CharacterId);
                 _characterDevelopmentService.UnlockSpell(c, choice.Spell);
             }
         }
 
         public void ResolveCharacterOrder(Battle battle)
         {
-            var round = battle.CurrentRound;
-            var quickCharacter = round.PlayerOneSpeedChoice.Where(x => x.Speed == Speed.Quick).ToList();
+            Round round = battle.CurrentRound;
+            List<SpeedChoice> quickCharacter = round.PlayerOneSpeedChoice.Where(x => x.Speed == Speed.Quick).ToList();
             quickCharacter.AddRange(round.PlayerTwoSpeedChoice.Where(x => x.Speed == Speed.Quick).ToList());
 
-            var normalCharacters = round.PlayerOneSpeedChoice.Where(x => x.Speed == Speed.Standard).ToList();
+            List<SpeedChoice> normalCharacters = round.PlayerOneSpeedChoice.Where(x => x.Speed == Speed.Standard).ToList();
             normalCharacters.AddRange(round.PlayerTwoSpeedChoice.Where(x => x.Speed == Speed.Standard).ToList());
 
 
-            var listQuick = quickCharacter.Select(x => battle.AllCharacter.Single(y => y.Id == x.CharacterId)).ToList();
-            var listNormal = normalCharacters.Select(x => battle.AllCharacter.Single(y => y.Id == x.CharacterId)).ToList();
-            foreach (var choice in listQuick.OrderByDescending(x => x.Initiative))
+            List<Character> listQuick = quickCharacter.Select(x => battle.AllCharacter.Single(y => y.Id == x.CharacterId)).ToList();
+            List<Character> listNormal = normalCharacters.Select(x => battle.AllCharacter.Single(y => y.Id == x.CharacterId)).ToList();
+            foreach (Character choice in listQuick.OrderByDescending(x => x.Initiative))
             {
                 round.OrderedCharacters.Add(choice);
             }
-            foreach (var choice in listNormal.OrderByDescending(x => x.Initiative))
+            foreach (Character choice in listNormal.OrderByDescending(x => x.Initiative))
             {
                 round.OrderedCharacters.Add(choice);
             }
@@ -137,7 +141,7 @@ namespace DA.Game
             }
             else
             {
-                for (var i = round.CurrentCharacterIndex.Value + 1; i < round.OrderedCharacters.Count; i++)
+                for (int i = round.CurrentCharacterIndex.Value + 1; i < round.OrderedCharacters.Count; i++)
                 {
                     if (!round.OrderedCharacters[i].IsDead)
                     {
@@ -204,12 +208,12 @@ namespace DA.Game
         public void PlayAndResolveCharacterAction(Round round, CharacterActionChoice characterActionChoice)
         {
             // play
-            var targetSpeed = round.AllSpeedChoice.Single(x => x.CharacterId.Equals(characterActionChoice.CharacterId));
+            SpeedChoice targetSpeed = round.AllSpeedChoice.Single(x => x.CharacterId.Equals(characterActionChoice.CharacterId));
 
-            var sourceChar = round.OrderedCharacters.Single(x => x.Id == characterActionChoice.CharacterId);
+            Character sourceChar = round.OrderedCharacters.Single(x => x.Id == characterActionChoice.CharacterId);
 
-            var listeTargets = new List<Character>();
-            foreach (var cId in characterActionChoice.Targets)
+            List<Character> listeTargets = new List<Character>();
+            foreach (Guid cId in characterActionChoice.Targets)
             {
                 listeTargets.Add(round.OrderedCharacters.Single(x => x.Id == cId));
             }

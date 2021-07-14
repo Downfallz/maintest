@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
+using System;
+using System.Collections.Generic;
 
 namespace DA.AI
 {
@@ -10,11 +10,11 @@ namespace DA.AI
         public List<SpellUnlockChoice> GetRandomSpellUnlocks(List<Character> aliveCharacters)
         {
             List<SpellUnlockChoice> choices = new List<SpellUnlockChoice>();
-            var rnd = new Random();
-            foreach (var c in aliveCharacters)
+            Random rnd = new Random();
+            foreach (Character c in aliveCharacters)
             {
-                var possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
-                var possibleListCount = possibleList.Count;
+                List<Game.Domain.Models.GameFlowEngine.TalentsManagement.TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
+                int possibleListCount = possibleList.Count;
 
                 choices.Add(new SpellUnlockChoice()
                 {

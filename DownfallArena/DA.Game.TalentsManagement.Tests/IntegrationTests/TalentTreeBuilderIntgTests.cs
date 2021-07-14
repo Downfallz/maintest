@@ -9,9 +9,9 @@ namespace DA.Game.TalentsManagement.Tests.IntegrationTests
         [Fact]
         public void GivenTalents_GenerateNewTree_IsSuccess()
         {
-            var getSpell = new GetSpell();
-            var talentTreeInitializer = new TalentTreeBuilder(getSpell);
-            var newTree = talentTreeInitializer.GenerateNewTree();
+            GetSpell getSpell = new GetSpell();
+            TalentTreeBuilder talentTreeInitializer = new TalentTreeBuilder(getSpell);
+            Domain.Models.GameFlowEngine.TalentsManagement.TalentTreeStructure newTree = talentTreeInitializer.GenerateNewTree();
             Assert.NotNull(newTree);
         }
     }

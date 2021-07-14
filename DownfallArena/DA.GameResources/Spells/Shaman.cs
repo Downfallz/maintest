@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,14 +9,16 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetHealingScreech()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Shaman;
-            s.Name = "Healing Screech";
-            s.SpellType = SpellType.Defensive;
-            s.EnergyCost = 2;
-            s.Initiative = 1;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.5;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Shaman,
+                Name = "Healing Screech",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 1,
+                CriticalChance = 0.5
+            };
 
             s.Effects.Add(new Effect()
             {
@@ -39,14 +41,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetToxicWaves()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Shaman;
-            s.Name = "Toxic Waves";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 2;
-            s.NbTargets = 3;
-            s.CriticalChance = 0.33;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Shaman,
+                Name = "Toxic Waves",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 2,
+                NbTargets = 3,
+                CriticalChance = 0.33
+            };
 
             s.Effects.Add(new Effect()
             {
@@ -70,14 +74,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetRestoringBurst()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Shaman;
-            s.Name = "Restoring Burst";
-            s.SpellType = SpellType.Defensive;
-            s.EnergyCost = 2;
-            s.Initiative = 2;
-            s.NbTargets = 1;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Shaman,
+                Name = "Restoring Burst",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
+                Initiative = 2,
+                NbTargets = 1,
+                CriticalChance = null
+            };
 
             s.Effects.Add(new Effect()
             {

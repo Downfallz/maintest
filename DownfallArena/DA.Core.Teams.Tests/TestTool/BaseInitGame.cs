@@ -10,12 +10,12 @@ namespace DA.Game.Tests.TestTool
 
         public BaseInitGame()
         {
-            var builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", true, true);
+            IConfigurationBuilder builder = new ConfigurationBuilder().AddJsonFile("appsettings.json", true, true);
 
             Configuration = builder.Build();
             //services.AddDbContext<GameDbContext>(item => item.UseSqlServer(Configuration.GetConnectionString("myconn")));
 
-            var services = new ServiceCollection();
+            ServiceCollection services = new ServiceCollection();
 
             //services.AddLogging();
             //services.AddTransient<ITalentTreeBuilder, TalentTreeBuilder>();

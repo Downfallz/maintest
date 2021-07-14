@@ -1,8 +1,8 @@
-﻿using System;
+﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
+using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 
 namespace DA.Game.TalentsManagement.Tools
 {
@@ -36,7 +36,7 @@ namespace DA.Game.TalentsManagement.Tools
 
         public bool UnlockSpell(TalentTreeStructure talentTreeStructure, Spell talent)
         {
-            var talentNode = GetNextChildrenToUnlock(talentTreeStructure.Root).SingleOrDefault(x => Object.ReferenceEquals(talent, x.Spell));
+            TalentNode talentNode = GetNextChildrenToUnlock(talentTreeStructure.Root).SingleOrDefault(x => Object.ReferenceEquals(talent, x.Spell));
             if (talentNode == null)
                 throw new Exception("This Spell can not be unlocked yet or has already been unlocked.");
             talentNode.IsUnlocked = true;
@@ -54,10 +54,10 @@ namespace DA.Game.TalentsManagement.Tools
 
         private void GetAvailableToUnlock(IList<TalentNode> listToUnlock, IEnumerable<TalentLevelLeaf> listLevels)
         {
-            foreach (var c in listLevels)
+            foreach (TalentLevelLeaf c in listLevels)
             {
-                var atLeastOne = false;
-                foreach (var s in c.TalentNodes)
+                bool atLeastOne = false;
+                foreach (TalentNode s in c.TalentNodes)
                     if (!s.IsUnlocked)
                         listToUnlock.Add(s);
                     else
@@ -70,7 +70,7 @@ namespace DA.Game.TalentsManagement.Tools
         private IReadOnlyList<TalentNode> GetAllUnlocked(TalentLevelLeaf root)
         {
             IList<TalentNode> listAll = new List<TalentNode>();
-            GetAll(listAll, new List<TalentLevelLeaf> {root});
+            GetAll(listAll, new List<TalentLevelLeaf> { root });
 
             return listAll.Where(x => x.IsUnlocked).ToList().AsReadOnly();
         }
@@ -78,16 +78,16 @@ namespace DA.Game.TalentsManagement.Tools
         private IReadOnlyList<TalentNode> GetAll(TalentLevelLeaf root)
         {
             IList<TalentNode> listAll = new List<TalentNode>();
-            GetAll(listAll, new List<TalentLevelLeaf> {root});
+            GetAll(listAll, new List<TalentLevelLeaf> { root });
 
             return listAll.ToList().AsReadOnly();
         }
 
         private void GetAll(IList<TalentNode> listAll, IEnumerable<TalentLevelLeaf> listLevels)
         {
-            foreach (var c in listLevels)
+            foreach (TalentLevelLeaf c in listLevels)
             {
-                foreach (var s in c.TalentNodes) listAll.Add(s);
+                foreach (TalentNode s in c.TalentNodes) listAll.Add(s);
 
                 if (c.Children.Any()) GetAll(listAll, c.Children);
             }

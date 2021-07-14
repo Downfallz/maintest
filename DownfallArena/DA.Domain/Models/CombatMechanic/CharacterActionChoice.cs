@@ -1,6 +1,6 @@
-﻿using System;
+﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+using System;
 using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 
 namespace DA.Game.Domain.Models.GameFlowEngine.CombatMechanic
 {

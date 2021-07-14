@@ -1,15 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Services;
 using DA.Game.Events;
+using System;
+using System.Collections.Generic;
 
 namespace DA.Game
 {
     public abstract class BasePlayerHandler
     {
-        protected IBattleEngine BattleEngine {get;}
+        protected IBattleEngine BattleEngine { get; }
         public BasePlayerHandler(IBattleEngine battleService)
         {
             BattleEngine = battleService;
@@ -52,11 +52,11 @@ namespace DA.Game
                 List<Character> myEnemies;
                 if (Indicator == TeamIndicator.One)
                 {
-                    myEnemies = (List<Character>) Battle.TeamTwo.AliveCharacters;
+                    myEnemies = (List<Character>)Battle.TeamTwo.AliveCharacters;
                 }
                 else
                 {
-                    myEnemies = (List<Character>) Battle.TeamOne.AliveCharacters;
+                    myEnemies = (List<Character>)Battle.TeamOne.AliveCharacters;
                 }
 
                 return myEnemies;

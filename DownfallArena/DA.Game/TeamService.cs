@@ -15,12 +15,12 @@ namespace DA.Game
 
         public Team InitializeNewTeam()
         {
-            var team = new Team();
-            var char1 = _characterService.InitializeNewCharacter();
+            Team team = new Team();
+            Character char1 = _characterService.InitializeNewCharacter();
             char1.Name = "Creature 1";
-            var char2 = _characterService.InitializeNewCharacter();
+            Character char2 = _characterService.InitializeNewCharacter();
             char2.Name = "Creature 2";
-            var char3 = _characterService.InitializeNewCharacter();
+            Character char3 = _characterService.InitializeNewCharacter();
             char3.Name = "Creature 3";
 
             team.Characters.Add(char1);

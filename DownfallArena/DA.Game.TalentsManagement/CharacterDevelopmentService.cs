@@ -1,8 +1,8 @@
-﻿using System;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
 using DA.Game.TalentsManagement.Tools;
+using System;
 
 namespace DA.Game.TalentsManagement
 {
@@ -19,8 +19,10 @@ namespace DA.Game.TalentsManagement
 
         public Character InitializeNewCharacter()
         {
-            var newChar = new Character();
-            newChar.TalentTreeStructure = _talentTreeService.InitializeNewTalentTree();
+            Character newChar = new Character
+            {
+                TalentTreeStructure = _talentTreeService.InitializeNewTalentTree()
+            };
             newChar.CharacterTalentStats = _characterTalentStatsHandler.UpdateCharTalentTree(newChar.TalentTreeStructure);
             newChar.BaseHealth = 20;
             InitCharState(newChar);
@@ -42,10 +44,10 @@ namespace DA.Game.TalentsManagement
                 throw new ArgumentNullException(nameof(character));
             if (spell == null)
                 throw new ArgumentNullException(nameof(spell));
-            if(character.TalentTreeStructure == null)
+            if (character.TalentTreeStructure == null)
                 throw new ArgumentException("Character tree structure can't be null", nameof(character));
 
-            var stats = _characterTalentStatsHandler.UnlockSpell(character.TalentTreeStructure, spell);
+            Domain.Models.GameFlowEngine.CombatMechanic.CharacterTalentStats stats = _characterTalentStatsHandler.UnlockSpell(character.TalentTreeStructure, spell);
             character.CharacterTalentStats = stats;
         }
     }

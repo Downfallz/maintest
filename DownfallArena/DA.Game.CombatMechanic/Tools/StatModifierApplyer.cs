@@ -1,7 +1,7 @@
-﻿using System;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System;
 
 namespace DA.Game.CombatMechanic.Tools
 {
@@ -19,10 +19,10 @@ namespace DA.Game.CombatMechanic.Tools
             switch (effect.StatType)
             {
                 case Stats.Damage:
-                    var total = effect.Modifier - character.BonusDefense;
+                    int total = effect.Modifier - character.BonusDefense;
                     if (total > 0)
                     {
-                        var totalHp = character.Health - total;
+                        int totalHp = character.Health - total;
                         if (totalHp <= 0)
                             character.Health = 0;
                         else
@@ -30,7 +30,7 @@ namespace DA.Game.CombatMechanic.Tools
                     }
                     break;
                 case Stats.Critical:
-                    double totalCrit = (double)effect.Modifier/ 100 + character.BonusCritical;
+                    double totalCrit = (double)effect.Modifier / 100 + character.BonusCritical;
                     if (totalCrit < 0)
                     {
                         character.BonusCritical = 0;
@@ -45,21 +45,21 @@ namespace DA.Game.CombatMechanic.Tools
                     }
                     break;
                 case Stats.Defense:
-                    var totalDef = character.BonusDefense + effect.Modifier;
+                    int totalDef = character.BonusDefense + effect.Modifier;
                     if (totalDef <= 0)
                         character.BonusDefense = 0;
                     else
                         character.BonusDefense = totalDef;
                     break;
                 case Stats.Energy:
-                    var totalEnergy = character.Energy + effect.Modifier;
+                    int totalEnergy = character.Energy + effect.Modifier;
                     if (totalEnergy <= 0)
                         character.Energy = 0;
                     else
                         character.Energy = totalEnergy;
                     break;
                 case Stats.Health:
-                    var totalHealth = character.Health + effect.Modifier;
+                    int totalHealth = character.Health + effect.Modifier;
                     if (totalHealth <= 0)
                     {
                         character.Health = 0;
@@ -73,21 +73,21 @@ namespace DA.Game.CombatMechanic.Tools
                     }
                     break;
                 case Stats.Initiative:
-                    var totalInitiative = character.BonusInitiative + effect.Modifier;
+                    int totalInitiative = character.BonusInitiative + effect.Modifier;
                     if (totalInitiative < 0)
                         character.BonusInitiative = 0;
                     else
                         character.BonusInitiative = totalInitiative;
                     break;
                 case Stats.Minions:
-                    var totalExtraPoint = character.ExtraPoint + effect.Modifier;
+                    int totalExtraPoint = character.ExtraPoint + effect.Modifier;
                     if (totalExtraPoint < 0)
                         character.ExtraPoint = 0;
                     else
                         character.ExtraPoint = totalExtraPoint;
                     break;
                 case Stats.Retaliate:
-                    var totalRetaliate = character.BonusRetaliate + effect.Modifier;
+                    int totalRetaliate = character.BonusRetaliate + effect.Modifier;
                     if (totalRetaliate < 0)
                         character.BonusRetaliate = 0;
                     else

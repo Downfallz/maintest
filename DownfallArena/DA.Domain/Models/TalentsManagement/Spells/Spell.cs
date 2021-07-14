@@ -1,8 +1,8 @@
-﻿using System;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
+using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
 
 namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells
 {
@@ -31,7 +31,7 @@ namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells
             string main = $"[{Name} {EnergyCost} energy - {Initiative} initiative - {CriticalChance} critChance]";
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(main);
-            foreach (var e in Effects)
+            foreach (Effect e in Effects)
             {
                 sb.AppendLine($"    {e.EffectType} {e.Stats} {e.Modifier} {e.Length} ");
             }

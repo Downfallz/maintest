@@ -1,5 +1,5 @@
-﻿using System;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
+using System;
 
 namespace DA.Game.Domain.Models.GameFlowEngine.CombatMechanic
 {

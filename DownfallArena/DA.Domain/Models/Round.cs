@@ -1,8 +1,8 @@
-﻿using System;
+﻿using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
+using DA.Game.Domain.Models.GameFlowEngine.Enum;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
 
 namespace DA.Game.Domain.Models.GameFlowEngine
 {
@@ -17,7 +17,7 @@ namespace DA.Game.Domain.Models.GameFlowEngine
             PlayerTwoSpellUnlocks = new List<SpellUnlockChoice>();
             OrderedCharacters = new List<Character>();
         }
-        public List<SpellUnlockChoice> PlayerOneSpellUnlocks{get;set;}
+        public List<SpellUnlockChoice> PlayerOneSpellUnlocks { get; set; }
         public List<SpellUnlockChoice> PlayerTwoSpellUnlocks { get; set; }
         public List<SpeedChoice> PlayerOneSpeedChoice { get; set; }
         public List<SpeedChoice> PlayerTwoSpeedChoice { get; set; }

@@ -12,7 +12,7 @@ namespace DA.Game.TalentsManagement.Tests.IntegrationTests
 
         public TalentTreeManagerIntgTests()
         {
-            var services = new ServiceCollection();
+            ServiceCollection services = new ServiceCollection();
 
             services.AddScoped<IGetSpell, GetSpell>();
             services.AddScoped<ITalentTreeBuilder, TalentTreeBuilder>();
@@ -26,10 +26,10 @@ namespace DA.Game.TalentsManagement.Tests.IntegrationTests
         {
             ITalentTreeManager sut = (ITalentTreeManager)ServiceProvider.GetService(typeof(ITalentTreeManager));
 
-            var tree = sut.InitializeNewTalentTree();
-            var all = sut.GetAllSpells(tree);
-            var unlocked = sut.GetUnlockedSpells(tree);
-            var unlockable = sut.GetUnlockableSpells(tree);
+            Domain.Models.GameFlowEngine.TalentsManagement.TalentTreeStructure tree = sut.InitializeNewTalentTree();
+            System.Collections.Generic.IReadOnlyList<Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell> all = sut.GetAllSpells(tree);
+            System.Collections.Generic.IReadOnlyList<Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell> unlocked = sut.GetUnlockedSpells(tree);
+            System.Collections.Generic.IReadOnlyList<Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell> unlockable = sut.GetUnlockableSpells(tree);
 
             Assert.Equal(3, unlocked.Count);
             Assert.Equal(6, unlockable.Count);

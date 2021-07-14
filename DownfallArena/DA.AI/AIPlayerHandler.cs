@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using DA.Game;
+﻿using DA.Game;
 using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Services;
 using DA.Game.Events;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DA.AI
 {
@@ -51,16 +51,16 @@ namespace DA.AI
         public override void EvaluateCharacterToPlay(object sender, CharacterTurnInitializedEventArgs e)
         {
             List<Character> myAliveCharacters = GetMyAliveCharacters();
-            var characterToPlay = myAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
+            Character characterToPlay = myAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
 
-            var a = GetMyEnemies();
+            List<Character> a = GetMyEnemies();
             if (characterToPlay != null)
             {
                 BattleEngine.PlayAndResolveCharacterAction(Battle, new CharacterActionChoice()
                 {
                     CharacterId = e.CharacterId,
                     Spell = characterToPlay.CharacterTalentStats.UnlockedSpells.Where(x => x.EnergyCost <= characterToPlay.Energy).ToList()[0],
-                    Targets = new List<Guid>() { a[0].Id}
+                    Targets = new List<Guid>() { a[0].Id }
                 });
             }
 
@@ -71,7 +71,7 @@ namespace DA.AI
             List<Character> myAliveCharacters = GetMyAliveCharacters();
             List<SpellUnlockChoice> choices = new List<SpellUnlockChoice>();
 
-            foreach (var c in myAliveCharacters)
+            foreach (Character c in myAliveCharacters)
             {
                 choices.Add(new SpellUnlockChoice()
                 {
@@ -87,9 +87,9 @@ namespace DA.AI
             List<Character> myAliveCharacters = GetMyAliveCharacters();
 
             List<SpeedChoice> choices = new List<SpeedChoice>();
-            var rnd = new Random();
+            Random rnd = new Random();
 
-            foreach (var c in myAliveCharacters)
+            foreach (Character c in myAliveCharacters)
             {
                 choices.Add(new SpeedChoice()
                 {

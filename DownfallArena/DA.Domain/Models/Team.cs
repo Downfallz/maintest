@@ -5,13 +5,13 @@ using System.Linq;
 namespace DA.Game.Domain.Models.GameFlowEngine
 {
     [Serializable]
-    public class Team
+    public record Team
     {
-        public Team()
+        public Team(string lol)
         {
             Characters = new List<Character>();
         }
-        
+
         public IList<Character> Characters { get; set; }
 
         public IList<Character> AliveCharacters => Characters.Where(x => !x.IsDead).ToList();

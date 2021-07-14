@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,14 +9,16 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetParasiteJab()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Leech;
-            s.Name = "Parasite Jab";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 2;
-            s.Initiative = 1;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.5;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Leech,
+                Name = "Parasite Jab",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 1,
+                CriticalChance = 0.5
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -39,14 +41,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetHatefulSacrifice()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Leech;
-            s.Name = "Hateful Sacrifice";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 3;
-            s.NbTargets = 1;
-            s.CriticalChance = 0.5;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Leech,
+                Name = "Hateful Sacrifice",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 3,
+                NbTargets = 1,
+                CriticalChance = 0.5
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -69,14 +73,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetSoulDevourer()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Leech;
-            s.Name = "Soul Devourer";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 2;
-            s.NbTargets = 1;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Leech,
+                Name = "Soul Devourer",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 2,
+                NbTargets = 1,
+                CriticalChance = null
+            };
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,

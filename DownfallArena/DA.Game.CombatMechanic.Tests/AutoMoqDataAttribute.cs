@@ -1,7 +1,7 @@
-﻿using System.Linq;
-using AutoFixture;
+﻿using AutoFixture;
 using AutoFixture.AutoMoq;
 using AutoFixture.Xunit2;
+using System.Linq;
 
 namespace DA.Game.CombatMechanic.Tests
 {
@@ -10,7 +10,7 @@ namespace DA.Game.CombatMechanic.Tests
         public AutoMoqDataAttribute()
             : base(() =>
             {
-                var fixture = new Fixture();
+                Fixture fixture = new();
                 fixture.Customize(new AutoMoqCustomization());
                 fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList().ForEach(b => fixture.Behaviors.Remove(b));
                 fixture.Behaviors.Add(new OmitOnRecursionBehavior());

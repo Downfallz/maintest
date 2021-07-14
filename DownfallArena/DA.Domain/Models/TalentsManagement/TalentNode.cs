@@ -1,5 +1,5 @@
-﻿using System;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+using System;
 
 namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement
 {

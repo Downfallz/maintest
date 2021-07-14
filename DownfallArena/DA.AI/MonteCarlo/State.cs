@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using DA.AI.Spd;
+﻿using DA.AI.Spd;
 using DA.AI.Spl;
-using DA.Game;
 using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DA.AI.MonteCarlo
 {
@@ -42,10 +41,12 @@ namespace DA.AI.MonteCarlo
 
             List<CharacterActionChoice> sd = GetAvailablePosition(be);
 
-            foreach (var ap in sd)
+            foreach (CharacterActionChoice ap in sd)
             {
-                State newState = new State();
-                newState.Board = Board.Clone();
+                State newState = new State
+                {
+                    Board = Board.Clone()
+                };
                 if (newState.Board.CurrentRound == null || !newState.Board.CurrentRound.CurrentCharacterIndex.HasValue)
                 {
                     Setup(be, newState.Board);
@@ -66,9 +67,9 @@ namespace DA.AI.MonteCarlo
                 Setup(be, Board);
             }
 
-            var charToPlay = Board.CurrentRound.OrderedCharacters[Board.CurrentRound.CurrentCharacterIndex.Value];
+            Character charToPlay = Board.CurrentRound.OrderedCharacters[Board.CurrentRound.CurrentCharacterIndex.Value];
 
-            foreach (var s in charToPlay.CharacterTalentStats.UnlockedSpells.Where(x => x.EnergyCost <= charToPlay.Energy))
+            foreach (Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell s in charToPlay.CharacterTalentStats.UnlockedSpells.Where(x => x.EnergyCost <= charToPlay.Energy))
             {
                 Team teamTarget = null;
                 if (s.SpellType == SpellType.Defensive)
@@ -96,7 +97,7 @@ namespace DA.AI.MonteCarlo
 
                 if (s.NbTargets == 1)
                 {
-                    foreach (var target in teamTarget.AliveCharacters)
+                    foreach (Character target in teamTarget.AliveCharacters)
                     {
                         sd.Add(new CharacterActionChoice()
                         {
@@ -122,15 +123,15 @@ namespace DA.AI.MonteCarlo
 
         private void Setup(IBattleEngine be, Battle battle)
         {
-            var spellUnlock = new SpellChooser();
-            var t1Choice = spellUnlock.GetSpellUnlockChoices(battle.TeamOne.AliveCharacters.ToList());
-            var t2Choice = spellUnlock.GetSpellUnlockChoices(battle.TeamTwo.AliveCharacters.ToList());
+            SpellChooser spellUnlock = new SpellChooser();
+            List<SpellUnlockChoice> t1Choice = spellUnlock.GetSpellUnlockChoices(battle.TeamOne.AliveCharacters.ToList());
+            List<SpellUnlockChoice> t2Choice = spellUnlock.GetSpellUnlockChoices(battle.TeamTwo.AliveCharacters.ToList());
 
-            var speedChooser = new SpeedChooser();
-            var t1SpeedChoice = speedChooser.GetSpeedChoices(battle,
+            SpeedChooser speedChooser = new SpeedChooser();
+            List<SpeedChoice> t1SpeedChoice = speedChooser.GetSpeedChoices(battle,
                 battle.TeamOne.AliveCharacters.ToList(),
                 battle.TeamTwo.AliveCharacters.ToList());
-            var t2SpeedChoice = speedChooser.GetSpeedChoices(battle,
+            List<SpeedChoice> t2SpeedChoice = speedChooser.GetSpeedChoices(battle,
                 battle.TeamTwo.AliveCharacters.ToList(),
                 battle.TeamOne.AliveCharacters.ToList());
 
@@ -144,7 +145,7 @@ namespace DA.AI.MonteCarlo
         {
             List<CharacterActionChoice> availablePositions = GetAvailablePosition(be);
             int totalPossibilities = availablePositions.Count;
-            var rnd = new Random();
+            Random rnd = new Random();
             int selectRandom = rnd.Next(0, totalPossibilities);
             be.PlayAndResolveCharacterAction(Board, availablePositions[selectRandom]);
         }

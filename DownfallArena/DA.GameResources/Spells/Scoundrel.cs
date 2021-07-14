@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,15 +9,17 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetPoisonSlash()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Scoundrel;
-            s.Name = "Poison Slash";
-            s.SpellType = SpellType.Defensive;
-            s.EnergyCost = 2;
-            s.Initiative = 1;
-            s.NbTargets = 1;
-            s.CriticalChance = null;
-           
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Scoundrel,
+                Name = "Poison Slash",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 1,
+                CriticalChance = null
+            };
+
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -40,14 +42,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetThrowingStar()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Scoundrel;
-            s.Name = "Throwing Star";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 1;
-            s.Initiative = 2;
-            s.NbTargets = 1;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Scoundrel,
+                Name = "Throwing Star",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 1,
+                Initiative = 2,
+                NbTargets = 1,
+                CriticalChance = null
+            };
 
             s.Effects.Add(new Effect()
             {

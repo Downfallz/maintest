@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DA.AI.Spd
 {
@@ -12,12 +12,12 @@ namespace DA.AI.Spd
         public List<SpeedChoice> GetSpeedChoices(Battle battle, List<Character> aliveCharacters, List<Character> aliveEnemies)
         {
             List<SpeedChoice> choices = new List<SpeedChoice>();
-            var rnd = new Random();
+            Random rnd = new Random();
 
-            var friendLowOnHp = aliveCharacters.Any(x => x.Health <= 5);
-            var enemiesLowOnHp = aliveEnemies.Any(x => x.Health <= 5);
+            bool friendLowOnHp = aliveCharacters.Any(x => x.Health <= 5);
+            bool enemiesLowOnHp = aliveEnemies.Any(x => x.Health <= 5);
 
-            foreach (var c in aliveCharacters)
+            foreach (Character c in aliveCharacters)
             {
                 Speed speed = Speed.Standard;
                 if (friendLowOnHp && c.IsAHealer())
@@ -28,7 +28,7 @@ namespace DA.AI.Spd
                 {
                     speed = Speed.Quick;
                 }
-                
+
                 choices.Add(new SpeedChoice()
                 {
                     CharacterId = c.Id,

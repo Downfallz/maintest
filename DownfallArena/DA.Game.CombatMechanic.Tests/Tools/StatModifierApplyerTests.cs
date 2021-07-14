@@ -1,8 +1,8 @@
-﻿using System;
-using DA.Game.CombatMechanic.Tools;
+﻿using DA.Game.CombatMechanic.Tools;
 using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System;
 using Xunit;
 
 namespace DA.Game.CombatMechanic.Tests.Tools
@@ -27,22 +27,24 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         }
 
         [Theory]
-        [InlineAutoMoqData(10,3,20,13)]
+        [InlineAutoMoqData(10, 3, 20, 13)]
         [InlineAutoMoqData(2, 2, 20, 20)]
         [InlineAutoMoqData(100, 3, 20, 0)]
         [InlineAutoMoqData(-10, 3, 20, 20)]
         [InlineAutoMoqData(5, 10, 1, 1)]
         public void GivenDmgSpell_ApplyEffect_ReducesHealth(int damage, int def, int startingHealth, int finishedHealth, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = damage;
-            statMod.StatType = Stats.Damage;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = damage,
+                StatType = Stats.Damage
+            };
 
             rndChar.BonusDefense = def;
             rndChar.Health = startingHealth;
 
             sut.ApplyEffect(statMod, rndChar);
-            
+
             Assert.Equal(finishedHealth, rndChar.Health);
         }
 
@@ -53,9 +55,11 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [InlineAutoMoqData(75, 0.5, 1)]
         public void GivenCritSpell_ApplyEffect_AugmentsCrit(int critValue, double startingCrit, double finishedCrit, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = critValue;
-            statMod.StatType = Stats.Critical;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = critValue,
+                StatType = Stats.Critical
+            };
 
             rndChar.BonusCritical = startingCrit;
 
@@ -71,9 +75,11 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [InlineAutoMoqData(-3, 5, 2)]
         public void GivenDefSpell_ApplyEffect_AugmentsDef(int defValue, int startingDef, int finishedDef, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = defValue;
-            statMod.StatType = Stats.Defense;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = defValue,
+                StatType = Stats.Defense
+            };
 
             rndChar.BonusDefense = startingDef;
 
@@ -89,9 +95,11 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [InlineAutoMoqData(-3, 5, 2)]
         public void GivenEnergySpell_ApplyEffect_AugmentsEnergy(int engValue, int startingEng, int finishEng, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = engValue;
-            statMod.StatType = Stats.Energy;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = engValue,
+                StatType = Stats.Energy
+            };
 
             rndChar.Energy = startingEng;
 
@@ -103,14 +111,16 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [Theory]
         [InlineAutoMoqData(-500, 2, 1, 0)]
         [InlineAutoMoqData(2, 3, 3, 3)]
-        [InlineAutoMoqData(2,12, 14, 14)]
+        [InlineAutoMoqData(2, 12, 14, 14)]
         [InlineAutoMoqData(222, 12, 14, 14)]
         [InlineAutoMoqData(3, 12, 166, 15)]
         public void GivenHpSpell_ApplyEffect_AugmentsHp(int hpValue, int startingHp, int baseHp, int finishHp, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = hpValue;
-            statMod.StatType = Stats.Health;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = hpValue,
+                StatType = Stats.Health
+            };
 
             rndChar.Health = startingHp;
             rndChar.BaseHealth = baseHp;
@@ -127,9 +137,11 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [InlineAutoMoqData(-3, 5, 2)]
         public void GivenInitSpell_ApplyEffect_AugmentsInit(int initValue, int startingInit, int finishInit, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = initValue;
-            statMod.StatType = Stats.Initiative;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = initValue,
+                StatType = Stats.Initiative
+            };
 
             rndChar.BonusInitiative = startingInit;
 
@@ -145,9 +157,11 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [InlineAutoMoqData(-3, 5, 2)]
         public void GivenExtraPointSpell_ApplyEffect_AugmentsExtraPoint(int value, int startingValue, int finishValue, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = value;
-            statMod.StatType = Stats.Minions;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = value,
+                StatType = Stats.Minions
+            };
 
             rndChar.ExtraPoint = startingValue;
 
@@ -163,9 +177,11 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [InlineAutoMoqData(-3, 5, 2)]
         public void GivenRetaliateSpell_ApplyEffect_AugmentsRetaliate(int value, int startingValue, int finishValue, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = value;
-            statMod.StatType = Stats.Retaliate;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = value,
+                StatType = Stats.Retaliate
+            };
 
             rndChar.BonusRetaliate = startingValue;
 
@@ -181,9 +197,11 @@ namespace DA.Game.CombatMechanic.Tests.Tools
         [InlineAutoMoqData(-3)]
         public void GivenStunSpell_ApplyEffect_StunsChar(int value, Character rndChar, StatModifierApplyer sut)
         {
-            var statMod = new StatModifier();
-            statMod.Modifier = value;
-            statMod.StatType = Stats.Stun;
+            StatModifier statMod = new StatModifier
+            {
+                Modifier = value,
+                StatType = Stats.Stun
+            };
 
             sut.ApplyEffect(statMod, rndChar);
 

@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
+using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
@@ -9,14 +9,16 @@ namespace DA.Game.Resources.Spells
     {
         public static Spell GetNoxiousCure()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Trickster;
-            s.Name = "Noxious Cure";
-            s.SpellType = SpellType.Defensive;
-            s.EnergyCost = 2;
-            s.Initiative = 1;
-            s.NbTargets = 3;
-            s.CriticalChance = 0.33;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Trickster,
+                Name = "Noxious Cure",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 3,
+                CriticalChance = 0.33
+            };
 
             s.Effects.Add(new Effect()
             {
@@ -41,14 +43,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetTranquilizerDart()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Trickster;
-            s.Name = "Tranquilizer Dart";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 3;
-            s.Initiative = 2;
-            s.NbTargets = 1;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Trickster,
+                Name = "Tranquilizer Dart",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 2,
+                NbTargets = 1,
+                CriticalChance = null
+            };
 
             s.Effects.Add(new Effect()
             {
@@ -73,14 +77,16 @@ namespace DA.Game.Resources.Spells
 
         public static Spell GetInfectiousBlast()
         {
-            var s = new Spell();
-            s.CharacterClass = CharClass.Trickster;
-            s.Name = "Infectious Blast";
-            s.SpellType = SpellType.Offensive;
-            s.EnergyCost = 1;
-            s.Initiative = 2;
-            s.NbTargets = 3;
-            s.CriticalChance = null;
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Trickster,
+                Name = "Infectious Blast",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 1,
+                Initiative = 2,
+                NbTargets = 3,
+                CriticalChance = null
+            };
 
             s.Effects.Add(new Effect()
             {

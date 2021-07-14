@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models.GameFlowEngine;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
 using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
+using System;
+using System.Collections.Generic;
 
 namespace DA.AI.Spd
 {
@@ -11,9 +11,9 @@ namespace DA.AI.Spd
         public List<SpeedChoice> GetSpeedChoices(Battle battle, List<Character> aliveCharacters, List<Character> aliveEnemies)
         {
             List<SpeedChoice> choices = new List<SpeedChoice>();
-            var rnd = new Random();
+            Random rnd = new Random();
 
-            foreach (var c in aliveCharacters)
+            foreach (Character c in aliveCharacters)
             {
                 choices.Add(new SpeedChoice()
                 {
