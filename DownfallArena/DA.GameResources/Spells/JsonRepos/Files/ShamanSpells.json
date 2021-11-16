@@ -1,0 +1,80 @@
+[
+  {
+    "EnergyCost": 2,
+    "Name": "Healing Screech",
+    "SpellType": 1,
+    "CharacterClass": 12,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 0,
+        "Modifier": 2
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 0,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.5,
+    "PassiveEffects": [],
+    "Level": 2
+  },
+  {
+    "EnergyCost": 3,
+    "Name": "Toxic Waves",
+    "SpellType": 0,
+    "CharacterClass": 12,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 3
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 3,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 3,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": 0.33,
+    "PassiveEffects": [],
+    "Level": 3
+  },
+  {
+    "EnergyCost": 2,
+    "Name": "Restoring Burst",
+    "SpellType": 1,
+    "CharacterClass": 12,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 0,
+        "Modifier": 3
+      },
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 6,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 3
+  }
+]

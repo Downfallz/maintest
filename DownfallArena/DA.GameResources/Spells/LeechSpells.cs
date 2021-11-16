@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Leech
+    public class LeechSpells : ILeechSpells
     {
-        public static Spell GetParasiteJab()
+        public Spell GetParasiteJab()
         {
             Spell s = new Spell
             {
@@ -39,7 +39,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetHatefulSacrifice()
+        public Spell GetHatefulSacrifice()
         {
             Spell s = new Spell
             {
@@ -71,7 +71,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetSoulDevourer()
+        public Spell GetSoulDevourer()
         {
             Spell s = new Spell
             {

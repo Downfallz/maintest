@@ -1,0 +1,42 @@
+[
+  {
+    "EnergyCost": 2,
+    "Name": "Lightning Bolt",
+    "SpellType": 0,
+    "CharacterClass": 3,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 3
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.667,
+    "PassiveEffects": [],
+    "Level": 1
+  },
+  {
+    "EnergyCost": 1,
+    "Name": "Rejuvenate",
+    "SpellType": 1,
+    "CharacterClass": 3,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 0,
+        "Modifier": 3
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.17,
+    "PassiveEffects": [],
+    "Level": 1
+  }
+]

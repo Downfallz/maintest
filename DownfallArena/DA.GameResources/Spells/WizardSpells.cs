@@ -5,20 +5,21 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Berserker
+    public class WizardSpells : IWizardSpells
     {
-        public static Spell GetEnragedCharge()
+        public Spell GetMeteor()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Berserker,
-                Name = "Enraged Charge",
+                CharacterClass = CharClass.Wizard,
+                Name = "Meteor",
                 SpellType = SpellType.Offensive,
                 EnergyCost = 3,
                 Initiative = 1,
-                NbTargets = 1,
-                CriticalChance = null
+                NbTargets = 3,
+                CriticalChance = 0.5
             };
+
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -26,37 +27,39 @@ namespace DA.Game.Resources.Spells
                 Modifier = 4,
                 Length = null
             });
-            s.Effects.Add(new Effect()
-            {
-                EffectType = EffectType.Direct,
-                Stats = Stats.Damage,
-                Modifier = 3,
-                Length = null
-            });
+
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 2;
 
             return s;
         }
 
-        public static Spell GetTornado()
+        public Spell GetIceSpear()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Berserker,
-                Name = "Tornado",
+                CharacterClass = CharClass.Wizard,
+                Name = "Ice Spear",
                 SpellType = SpellType.Offensive,
                 EnergyCost = 2,
-                Initiative = 1,
-                NbTargets = 3,
-                CriticalChance = 0.33
+                Initiative = 2,
+                NbTargets = 1,
+                CriticalChance = 0.5
             };
+
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
                 Stats = Stats.Damage,
                 Modifier = 4,
                 Length = null
+            });
+            s.Effects.Add(new Effect()
+            {
+                EffectType = EffectType.Temporary,
+                Stats = Stats.Initiative,
+                Modifier = -2,
+                Length = 1
             });
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 3;
@@ -64,18 +67,19 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetPsychoRush()
+        public Spell GetEngulfingFlames()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Berserker,
-                Name = "Psycho Rush",
+                CharacterClass = CharClass.Wizard,
+                Name = "Engulfing Flames",
                 SpellType = SpellType.Offensive,
                 EnergyCost = 3,
                 Initiative = 1,
                 NbTargets = 1,
                 CriticalChance = 0.33
             };
+
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -83,13 +87,7 @@ namespace DA.Game.Resources.Spells
                 Modifier = 9,
                 Length = null
             });
-            s.Effects.Add(new Effect()
-            {
-                EffectType = EffectType.SelfTemporary,
-                Stats = Stats.Defense,
-                Modifier = -2,
-                Length = 1
-            });
+
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 3;
 

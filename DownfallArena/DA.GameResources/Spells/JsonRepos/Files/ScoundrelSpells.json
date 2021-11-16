@@ -1,0 +1,48 @@
+[
+  {
+    "EnergyCost": 2,
+    "Name": "Poison Slash",
+    "SpellType": 1,
+    "CharacterClass": 2,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 2
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 3,
+        "Modifier": 1
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 1
+  },
+  {
+    "EnergyCost": 1,
+    "Name": "Throwing Star",
+    "SpellType": 0,
+    "CharacterClass": 2,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 1
+  }
+]

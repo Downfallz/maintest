@@ -1,0 +1,80 @@
+[
+  {
+    "EnergyCost": 2,
+    "Name": "Parasite Jab",
+    "SpellType": 0,
+    "CharacterClass": 7,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 2
+      },
+      {
+        "Length": null,
+        "EffectType": 2,
+        "Stats": 0,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.5,
+    "PassiveEffects": [],
+    "Level": 2
+  },
+  {
+    "EnergyCost": 3,
+    "Name": "Hateful Sacrifice",
+    "SpellType": 0,
+    "CharacterClass": 7,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 10
+      },
+      {
+        "Length": null,
+        "EffectType": 2,
+        "Stats": 0,
+        "Modifier": -4
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 3,
+    "MinionsCost": null,
+    "CriticalChance": 0.5,
+    "PassiveEffects": [],
+    "Level": 3
+  },
+  {
+    "EnergyCost": 3,
+    "Name": "Soul Devourer",
+    "SpellType": 0,
+    "CharacterClass": 7,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 3
+      },
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 6,
+        "Modifier": -2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 3
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "EnergyCost": 2,
+    "Name": "Death Squad",
+    "SpellType": 1,
+    "CharacterClass": 8,
+    "Effects": [
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 5,
+        "Modifier": 10
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 4,
+        "Modifier": 1
+      }
+    ],
+    "NbTargets": 3,
+    "Initiative": 3,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 3
+  },
+  {
+    "EnergyCost": null,
+    "Name": "Momentum",
+    "SpellType": 1,
+    "CharacterClass": 8,
+    "Effects": [],
+    "NbTargets": null,
+    "Initiative": 3,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 2
+  },
+  {
+    "EnergyCost": 3,
+    "Name": "Mortal Wound",
+    "SpellType": 0,
+    "CharacterClass": 8,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 4
+      },
+      {
+        "Length": 2,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 4
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": 0.5,
+    "PassiveEffects": [],
+    "Level": 3
+  }
+]

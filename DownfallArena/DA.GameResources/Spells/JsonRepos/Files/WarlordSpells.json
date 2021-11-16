@@ -1,0 +1,68 @@
+[
+  {
+    "EnergyCost": null,
+    "Name": "Full Plate",
+    "SpellType": 2,
+    "CharacterClass": 5,
+    "Effects": [],
+    "NbTargets": null,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [
+      {
+        "StatModifier": {
+          "StatType": 1,
+          "Modifier": 1
+        }
+      }
+    ],
+    "Level": 2
+  },
+  {
+    "EnergyCost": 4,
+    "Name": "Crushing Stomp",
+    "SpellType": 0,
+    "CharacterClass": 5,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 6
+      },
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 8,
+        "Modifier": 1
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.667,
+    "PassiveEffects": [],
+    "Level": 3
+  },
+  {
+    "EnergyCost": 2,
+    "Name": "Restorative Gush",
+    "SpellType": 1,
+    "CharacterClass": 5,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 0,
+        "Modifier": 6
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": 0.17,
+    "PassiveEffects": [],
+    "Level": 3
+  }
+]

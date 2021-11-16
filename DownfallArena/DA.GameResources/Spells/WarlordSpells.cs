@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Warlord
+    public class WarlordSpells : IWarlordSpells
     {
-        public static Spell GetFullPlate()
+        public Spell GetFullPlate()
         {
             Spell s = new Spell
             {
@@ -32,7 +32,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetCrushingStomp()
+        public Spell GetCrushingStomp()
         {
             Spell s = new Spell
             {
@@ -66,7 +66,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetRestorativeGush()
+        public Spell GetRestorativeGush()
         {
             Spell s = new Spell
             {

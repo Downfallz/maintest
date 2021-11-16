@@ -5,26 +5,9 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Assassin
+    public class AssassinSpells : IAssassinSpells
     {
-        public static Spell GetMomentum()
-        {
-            Spell s = new Spell
-            {
-                CharacterClass = CharClass.Assassin,
-                Name = "Momentum",
-                SpellType = SpellType.Defensive,
-                EnergyCost = null,
-                Initiative = 3,
-                NbTargets = null,
-                CriticalChance = null,
-                Level = 2
-            };
-
-            return s;
-        }
-
-        public static Spell GetDeathSquad()
+        public Spell GetDeathSquad()
         {
             Spell s = new Spell
             {
@@ -55,8 +38,24 @@ namespace DA.Game.Resources.Spells
 
             return s;
         }
+        public Spell GetMomentum()
+        {
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Assassin,
+                Name = "Momentum",
+                SpellType = SpellType.Defensive,
+                EnergyCost = null,
+                Initiative = 3,
+                NbTargets = null,
+                CriticalChance = null,
+                Level = 2
+            };
 
-        public static Spell GetMortalWound()
+            return s;
+        }
+
+        public Spell GetMortalWound()
         {
             Spell s = new Spell
             {

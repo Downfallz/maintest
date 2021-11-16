@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.29709.97
+VisualStudioVersion = 16.0.31729.503
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4A5FAE28-C16A-437B-BDB2-89FBD9021F49}"
 	ProjectSection(SolutionItems) = preProject
@@ -20,29 +20,31 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game.Resources", "DA.Gam
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game.Domain", "DA.Domain\DA.Game.Domain.csproj", "{B7F30058-32AA-4E37-B6CA-761DBF55F117}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DA.Game", "DA.Game\DA.Game.csproj", "{F2618DB8-8749-4B31-AD9B-5C91200DBF59}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game", "DA.Game\DA.Game.csproj", "{F2618DB8-8749-4B31-AD9B-5C91200DBF59}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DA.AI", "DA.AI\DA.AI.csproj", "{86BD128E-A2A0-46C3-8E01-CC23C99D11A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.AI", "DA.AI\DA.AI.csproj", "{86BD128E-A2A0-46C3-8E01-CC23C99D11A0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Game", "Game", "{2E650A08-83BA-4BC8-B770-96B9E9A78A14}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AI", "AI", "{891E1D97-1749-4E2C-8F70-BD51A1F6BFCD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DA.Game.TalentsManagement", "DA.Game.TalentsManagement\DA.Game.TalentsManagement.csproj", "{1E540BF1-6A2F-438B-8A47-40DB1D972AA9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game.TalentsManagement", "DA.Game.TalentsManagement\DA.Game.TalentsManagement.csproj", "{1E540BF1-6A2F-438B-8A47-40DB1D972AA9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DA.Game.CombatMechanic", "DA.Game.CombatMechanic\DA.Game.CombatMechanic.csproj", "{72E5D105-BED5-4B1E-87BA-18FF3FDD122F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game.CombatMechanic", "DA.Game.CombatMechanic\DA.Game.CombatMechanic.csproj", "{72E5D105-BED5-4B1E-87BA-18FF3FDD122F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DA.Game.TalentsManagement.Tests", "DA.Game.TalentsManagement.Tests\DA.Game.TalentsManagement.Tests.csproj", "{77B7C62C-D515-47AB-9750-FB8F18652E07}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game.TalentsManagement.Tests", "DA.Game.TalentsManagement.Tests\DA.Game.TalentsManagement.Tests.csproj", "{77B7C62C-D515-47AB-9750-FB8F18652E07}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TalentsManagement", "TalentsManagement", "{B45A06BC-BF6F-446B-9449-CB7566A9C6DF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DA.Game.CombatMechanic.Tests", "DA.Game.CombatMechanic.Tests\DA.Game.CombatMechanic.Tests.csproj", "{C90B4F06-EDC6-4331-B95F-AE98CCE3E3B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game.CombatMechanic.Tests", "DA.Game.CombatMechanic.Tests\DA.Game.CombatMechanic.Tests.csproj", "{C90B4F06-EDC6-4331-B95F-AE98CCE3E3B3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CombatMechanic", "CombatMechanic", "{0101EB18-3AD1-45B7-9EF5-750B3B74D5A7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Resources", "Resources", "{A63EA9F9-11DE-45BC-8175-ABEC46E8D1A2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Domain", "Domain", "{8595E81D-E493-4E37-8DD7-EA882D1DADF4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DA.Game.Resources.Tests", "DA.Game.Resources.Tests\DA.Game.Resources.Tests.csproj", "{AAE71A51-7FA9-49EE-AAE6-C1FE7204AD65}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -90,6 +92,10 @@ Global
 		{C90B4F06-EDC6-4331-B95F-AE98CCE3E3B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C90B4F06-EDC6-4331-B95F-AE98CCE3E3B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C90B4F06-EDC6-4331-B95F-AE98CCE3E3B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAE71A51-7FA9-49EE-AAE6-C1FE7204AD65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAE71A51-7FA9-49EE-AAE6-C1FE7204AD65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAE71A51-7FA9-49EE-AAE6-C1FE7204AD65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAE71A51-7FA9-49EE-AAE6-C1FE7204AD65}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -109,6 +115,7 @@ Global
 		{0101EB18-3AD1-45B7-9EF5-750B3B74D5A7} = {2E650A08-83BA-4BC8-B770-96B9E9A78A14}
 		{A63EA9F9-11DE-45BC-8175-ABEC46E8D1A2} = {2E650A08-83BA-4BC8-B770-96B9E9A78A14}
 		{8595E81D-E493-4E37-8DD7-EA882D1DADF4} = {2E650A08-83BA-4BC8-B770-96B9E9A78A14}
+		{AAE71A51-7FA9-49EE-AAE6-C1FE7204AD65} = {A63EA9F9-11DE-45BC-8175-ABEC46E8D1A2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F915C9D8-BA54-4EC0-B537-7500D921F8CB}

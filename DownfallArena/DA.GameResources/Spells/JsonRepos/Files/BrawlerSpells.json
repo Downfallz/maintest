@@ -1,0 +1,48 @@
+[
+  {
+    "EnergyCost": 1,
+    "Name": "Pummel",
+    "SpellType": 0,
+    "CharacterClass": 1,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.667,
+    "PassiveEffects": [],
+    "Level": 1
+  },
+  {
+    "EnergyCost": 1,
+    "Name": "Guard",
+    "SpellType": 1,
+    "CharacterClass": 1,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 1,
+        "Modifier": 1
+      },
+      {
+        "Length": 2,
+        "EffectType": 1,
+        "Stats": 1,
+        "Modifier": 1
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 1
+  }
+]

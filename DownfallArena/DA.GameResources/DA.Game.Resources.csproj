@@ -13,8 +13,70 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Spells\JsonRepos\Files\AssassinSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\BerserkerSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\BrawlerSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\CreatureSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\LeechSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\MercenarySpells.json" />
+    <None Remove="Spells\JsonRepos\Files\NecromancerSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\ScoundrelSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\ShamanSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\SorcererSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\TricksterSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\WarlordSpells.json" />
+    <None Remove="Spells\JsonRepos\Files\WizardSpells.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Spells\JsonRepos\Files\AssassinSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\BerserkerSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\BrawlerSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\CreatureSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\LeechSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\MercenarySpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\NecromancerSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\ScoundrelSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\ShamanSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\SorcererSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\TricksterSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\WarlordSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Spells\JsonRepos\Files\WizardSpells.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DA.Domain\DA.Game.Domain.csproj" />
     <ProjectReference Include="..\DA.Game.TalentsManagement\DA.Game.TalentsManagement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
 </Project>

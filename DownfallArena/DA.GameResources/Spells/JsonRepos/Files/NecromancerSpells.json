@@ -1,0 +1,68 @@
+[
+  {
+    "EnergyCost": 2,
+    "Name": "Summon Minions",
+    "SpellType": 1,
+    "CharacterClass": 11,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 2,
+        "Stats": 7,
+        "Modifier": 6
+      }
+    ],
+    "NbTargets": 0,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 2
+  },
+  {
+    "EnergyCost": 2,
+    "Name": "Revenant Guards",
+    "SpellType": 1,
+    "CharacterClass": 11,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 1,
+        "Modifier": 2
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 1,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 3,
+    "Initiative": 1,
+    "MinionsCost": 1,
+    "CriticalChance": 0.33,
+    "PassiveEffects": [],
+    "Level": 3
+  },
+  {
+    "EnergyCost": 3,
+    "Name": "Crazed Specters",
+    "SpellType": 0,
+    "CharacterClass": 11,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 6
+      }
+    ],
+    "NbTargets": 3,
+    "Initiative": 1,
+    "MinionsCost": 1,
+    "CriticalChance": 0.33,
+    "PassiveEffects": [],
+    "Level": 3
+  }
+]

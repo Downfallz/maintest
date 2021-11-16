@@ -5,59 +5,56 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Brawler
+    public class SorcererSpells : ISorcererSpells
     {
-        public static Spell GetPummel()
+        public Spell GetLightningBolt()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Brawler,
-                Name = "Pummel",
+                CharacterClass = CharClass.Sorcerer,
+                Name = "Lightning Bolt",
                 SpellType = SpellType.Offensive,
-                EnergyCost = 1,
+                EnergyCost = 2,
                 Initiative = 1,
                 NbTargets = 1,
                 CriticalChance = 0.667
             };
+
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
                 Stats = Stats.Damage,
-                Modifier = 2,
+                Modifier = 3,
                 Length = null
             });
+
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 1;
 
             return s;
         }
 
-        public static Spell GetGuard()
+        public Spell GetRejuvenate()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Brawler,
-                Name = "Guard",
+                CharacterClass = CharClass.Sorcerer,
+                Name = "Rejuvenate",
                 SpellType = SpellType.Defensive,
                 EnergyCost = 1,
                 Initiative = 1,
                 NbTargets = 1,
-                CriticalChance = null
+                CriticalChance = 0.17
             };
+
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
-                Stats = Stats.Defense,
-                Modifier = 1,
+                Stats = Stats.Health,
+                Modifier = 3,
                 Length = null
             });
-            s.Effects.Add(new Effect()
-            {
-                EffectType = EffectType.Temporary,
-                Stats = Stats.Defense,
-                Modifier = 1,
-                Length = 2
-            });
+
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 1;
 

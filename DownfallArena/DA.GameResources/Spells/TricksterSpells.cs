@@ -5,27 +5,34 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Wizard
+    public class TricksterSpells : ITricksterSpells
     {
-        public static Spell GetMeteor()
+        public Spell GetNoxiousCure()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Wizard,
-                Name = "Meteor",
-                SpellType = SpellType.Offensive,
-                EnergyCost = 3,
+                CharacterClass = CharClass.Trickster,
+                Name = "Noxious Cure",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
                 Initiative = 1,
                 NbTargets = 3,
-                CriticalChance = 0.5
+                CriticalChance = 0.33
             };
 
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
-                Stats = Stats.Damage,
-                Modifier = 4,
+                Stats = Stats.Health,
+                Modifier = 3,
                 Length = null
+            });
+            s.Effects.Add(new Effect()
+            {
+                EffectType = EffectType.Temporary,
+                Stats = Stats.Defense,
+                Modifier = -2,
+                Length = 1
             });
 
             s.PassiveEffects = new List<PassiveEffect>();
@@ -34,57 +41,58 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetIceSpear()
+        public Spell GetTranquilizerDart()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Wizard,
-                Name = "Ice Spear",
+                CharacterClass = CharClass.Trickster,
+                Name = "Tranquilizer Dart",
                 SpellType = SpellType.Offensive,
-                EnergyCost = 2,
+                EnergyCost = 3,
                 Initiative = 2,
                 NbTargets = 1,
-                CriticalChance = 0.5
+                CriticalChance = null
             };
 
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
                 Stats = Stats.Damage,
-                Modifier = 4,
+                Modifier = 3,
                 Length = null
             });
             s.Effects.Add(new Effect()
             {
-                EffectType = EffectType.Temporary,
-                Stats = Stats.Initiative,
-                Modifier = -2,
-                Length = 1
+                EffectType = EffectType.Direct,
+                Stats = Stats.Stun,
+                Modifier = 1,
+                Length = null
             });
+
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 3;
 
             return s;
         }
 
-        public static Spell GetEngulfingFlames()
+        public Spell GetInfectiousBlast()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Wizard,
-                Name = "Engulfing Flames",
+                CharacterClass = CharClass.Trickster,
+                Name = "Infectious Blast",
                 SpellType = SpellType.Offensive,
-                EnergyCost = 3,
-                Initiative = 1,
-                NbTargets = 1,
-                CriticalChance = 0.33
+                EnergyCost = 1,
+                Initiative = 2,
+                NbTargets = 3,
+                CriticalChance = null
             };
 
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
-                Stats = Stats.Damage,
-                Modifier = 9,
+                Stats = Stats.Defense,
+                Modifier = -2,
                 Length = null
             });
 

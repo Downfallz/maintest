@@ -1,0 +1,68 @@
+[
+  {
+    "EnergyCost": 3,
+    "Name": "Meteor",
+    "SpellType": 0,
+    "CharacterClass": 10,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 4
+      }
+    ],
+    "NbTargets": 3,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.5,
+    "PassiveEffects": [],
+    "Level": 2
+  },
+  {
+    "EnergyCost": 2,
+    "Name": "Ice Spear",
+    "SpellType": 0,
+    "CharacterClass": 10,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 4
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 5,
+        "Modifier": -2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": 0.5,
+    "PassiveEffects": [],
+    "Level": 3
+  },
+  {
+    "EnergyCost": 3,
+    "Name": "Engulfing Flames",
+    "SpellType": 0,
+    "CharacterClass": 10,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 9
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.33,
+    "PassiveEffects": [],
+    "Level": 3
+  }
+]

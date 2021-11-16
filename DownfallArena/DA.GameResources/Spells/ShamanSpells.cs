@@ -5,53 +5,51 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Trickster
+    public class ShamanSpells : IShamanSpells
     {
-        public static Spell GetNoxiousCure()
+        public Spell GetHealingScreech()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Trickster,
-                Name = "Noxious Cure",
+                CharacterClass = CharClass.Shaman,
+                Name = "Healing Screech",
                 SpellType = SpellType.Defensive,
                 EnergyCost = 2,
                 Initiative = 1,
-                NbTargets = 3,
-                CriticalChance = 0.33
+                NbTargets = 1,
+                CriticalChance = 0.5
             };
 
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
                 Stats = Stats.Health,
-                Modifier = 3,
+                Modifier = 2,
                 Length = null
             });
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Temporary,
-                Stats = Stats.Defense,
-                Modifier = -2,
+                Stats = Stats.Health,
+                Modifier = 2,
                 Length = 1
             });
-
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 2;
-
             return s;
         }
 
-        public static Spell GetTranquilizerDart()
+        public Spell GetToxicWaves()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Trickster,
-                Name = "Tranquilizer Dart",
+                CharacterClass = CharClass.Shaman,
+                Name = "Toxic Waves",
                 SpellType = SpellType.Offensive,
                 EnergyCost = 3,
                 Initiative = 2,
-                NbTargets = 1,
-                CriticalChance = null
+                NbTargets = 3,
+                CriticalChance = 0.33
             };
 
             s.Effects.Add(new Effect()
@@ -63,39 +61,44 @@ namespace DA.Game.Resources.Spells
             });
             s.Effects.Add(new Effect()
             {
-                EffectType = EffectType.Direct,
-                Stats = Stats.Stun,
-                Modifier = 1,
-                Length = null
+                EffectType = EffectType.Temporary,
+                Stats = Stats.Damage,
+                Modifier = 2,
+                Length = 1
             });
-
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 3;
 
             return s;
         }
 
-        public static Spell GetInfectiousBlast()
+        public Spell GetRestoringBurst()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Trickster,
-                Name = "Infectious Blast",
-                SpellType = SpellType.Offensive,
-                EnergyCost = 1,
+                CharacterClass = CharClass.Shaman,
+                Name = "Restoring Burst",
+                SpellType = SpellType.Defensive,
+                EnergyCost = 2,
                 Initiative = 2,
-                NbTargets = 3,
+                NbTargets = 1,
                 CriticalChance = null
             };
 
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
-                Stats = Stats.Defense,
-                Modifier = -2,
+                Stats = Stats.Health,
+                Modifier = 3,
                 Length = null
             });
-
+            s.Effects.Add(new Effect()
+            {
+                EffectType = EffectType.Direct,
+                Stats = Stats.Energy,
+                Modifier = 2,
+                Length = null
+            });
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 3;
 

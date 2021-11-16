@@ -1,0 +1,55 @@
+[
+  {
+    "EnergyCost": 0,
+    "Name": "Wait",
+    "SpellType": 1,
+    "CharacterClass": 0,
+    "Effects": [],
+    "NbTargets": null,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 0
+  },
+  {
+    "EnergyCost": 1,
+    "Name": "Strike",
+    "SpellType": 0,
+    "CharacterClass": 0,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 1
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 0
+  },
+  {
+    "EnergyCost": 2,
+    "Name": "Heavy Strike",
+    "SpellType": 0,
+    "CharacterClass": 0,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 3
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 0
+  }
+]

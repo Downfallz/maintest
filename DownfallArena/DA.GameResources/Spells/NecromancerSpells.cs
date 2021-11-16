@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Necromancer
+    public class NecromancerSpells : INecromancerSpells
     {
-        public static Spell GetSummonMinions()
+        public Spell GetSummonMinions()
         {
             Spell s = new Spell
             {
@@ -32,7 +32,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetRevenantGuards()
+        public Spell GetRevenantGuards()
         {
             Spell s = new Spell
             {
@@ -65,7 +65,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetCrazedSpecters()
+        public Spell GetCrazedSpecters()
         {
             Spell s = new Spell
             {

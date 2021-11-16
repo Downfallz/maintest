@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Mercenary
+    public class MercenarySpells : IMercenarySpells
     {
-        public static Spell GetProtectiveSlam()
+        public Spell GetProtectiveSlam()
         {
             Spell s = new Spell
             {
@@ -46,7 +46,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetChainSlash()
+        public Spell GetChainSlash()
         {
             Spell s = new Spell
             {
@@ -71,7 +71,7 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetThunderingSeal()
+        public Spell GetThunderingSeal()
         {
             Spell s = new Spell
             {

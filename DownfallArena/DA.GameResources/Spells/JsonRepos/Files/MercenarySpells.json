@@ -1,0 +1,92 @@
+[
+  {
+    "EnergyCost": 2,
+    "Name": "Protective Slam",
+    "SpellType": 0,
+    "CharacterClass": 4,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 3
+      },
+      {
+        "Length": null,
+        "EffectType": 2,
+        "Stats": 1,
+        "Modifier": 1
+      },
+      {
+        "Length": 2,
+        "EffectType": 3,
+        "Stats": 1,
+        "Modifier": 1
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 1,
+    "MinionsCost": null,
+    "CriticalChance": 0.333,
+    "PassiveEffects": [],
+    "Level": 2
+  },
+  {
+    "EnergyCost": 3,
+    "Name": "Chain Slash",
+    "SpellType": 0,
+    "CharacterClass": 4,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 3,
+        "Modifier": 5
+      }
+    ],
+    "NbTargets": 2,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": 0.5,
+    "PassiveEffects": [],
+    "Level": 3
+  },
+  {
+    "EnergyCost": 2,
+    "Name": "Thundering Seal",
+    "SpellType": 1,
+    "CharacterClass": 4,
+    "Effects": [
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 1,
+        "Modifier": 2
+      },
+      {
+        "Length": null,
+        "EffectType": 0,
+        "Stats": 2,
+        "Modifier": 2
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 1,
+        "Modifier": 2
+      },
+      {
+        "Length": 1,
+        "EffectType": 1,
+        "Stats": 2,
+        "Modifier": 2
+      }
+    ],
+    "NbTargets": 1,
+    "Initiative": 2,
+    "MinionsCost": null,
+    "CriticalChance": null,
+    "PassiveEffects": [],
+    "Level": 3
+  }
+]

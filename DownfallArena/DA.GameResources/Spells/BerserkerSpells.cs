@@ -5,53 +5,27 @@ using System.Collections.Generic;
 
 namespace DA.Game.Resources.Spells
 {
-    public static class Shaman
+    public class BerserkerSpells : IBerserkerSpells
     {
-        public static Spell GetHealingScreech()
+        public Spell GetEnragedCharge()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Shaman,
-                Name = "Healing Screech",
-                SpellType = SpellType.Defensive,
-                EnergyCost = 2,
+                CharacterClass = CharClass.Berserker,
+                Name = "Enraged Charge",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
                 Initiative = 1,
                 NbTargets = 1,
-                CriticalChance = 0.5
+                CriticalChance = null
             };
-
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
-                Stats = Stats.Health,
-                Modifier = 2,
+                Stats = Stats.Damage,
+                Modifier = 4,
                 Length = null
             });
-            s.Effects.Add(new Effect()
-            {
-                EffectType = EffectType.Temporary,
-                Stats = Stats.Health,
-                Modifier = 2,
-                Length = 1
-            });
-            s.PassiveEffects = new List<PassiveEffect>();
-            s.Level = 2;
-            return s;
-        }
-
-        public static Spell GetToxicWaves()
-        {
-            Spell s = new Spell
-            {
-                CharacterClass = CharClass.Shaman,
-                Name = "Toxic Waves",
-                SpellType = SpellType.Offensive,
-                EnergyCost = 3,
-                Initiative = 2,
-                NbTargets = 3,
-                CriticalChance = 0.33
-            };
-
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
@@ -59,12 +33,30 @@ namespace DA.Game.Resources.Spells
                 Modifier = 3,
                 Length = null
             });
+            s.PassiveEffects = new List<PassiveEffect>();
+            s.Level = 2;
+
+            return s;
+        }
+
+        public Spell GetTornado()
+        {
+            Spell s = new Spell
+            {
+                CharacterClass = CharClass.Berserker,
+                Name = "Tornado",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 2,
+                Initiative = 1,
+                NbTargets = 3,
+                CriticalChance = 0.33
+            };
             s.Effects.Add(new Effect()
             {
-                EffectType = EffectType.Temporary,
+                EffectType = EffectType.Direct,
                 Stats = Stats.Damage,
-                Modifier = 2,
-                Length = 1
+                Modifier = 4,
+                Length = null
             });
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 3;
@@ -72,32 +64,31 @@ namespace DA.Game.Resources.Spells
             return s;
         }
 
-        public static Spell GetRestoringBurst()
+        public Spell GetPsychoRush()
         {
             Spell s = new Spell
             {
-                CharacterClass = CharClass.Shaman,
-                Name = "Restoring Burst",
-                SpellType = SpellType.Defensive,
-                EnergyCost = 2,
-                Initiative = 2,
+                CharacterClass = CharClass.Berserker,
+                Name = "Psycho Rush",
+                SpellType = SpellType.Offensive,
+                EnergyCost = 3,
+                Initiative = 1,
                 NbTargets = 1,
-                CriticalChance = null
+                CriticalChance = 0.33
             };
-
             s.Effects.Add(new Effect()
             {
                 EffectType = EffectType.Direct,
-                Stats = Stats.Health,
-                Modifier = 3,
+                Stats = Stats.Damage,
+                Modifier = 9,
                 Length = null
             });
             s.Effects.Add(new Effect()
             {
-                EffectType = EffectType.Direct,
-                Stats = Stats.Energy,
-                Modifier = 2,
-                Length = null
+                EffectType = EffectType.SelfTemporary,
+                Stats = Stats.Defense,
+                Modifier = -2,
+                Length = 1
             });
             s.PassiveEffects = new List<PassiveEffect>();
             s.Level = 3;
