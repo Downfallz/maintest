@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using System.Linq;
+﻿using System.Linq;
+using DA.Game.Domain.Models;
 
 namespace DA.AI
 {

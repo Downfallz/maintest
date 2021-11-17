@@ -1,5 +1,8 @@
-﻿using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
+﻿using DA.Game.Domain.Models;
+using DA.Game.Domain.Services.TalentsManagement;
 using DA.Game.Resources.Generator;
+using DA.Game.Resources.IoC;
+using DA.Game.TalentsManagement.IoC;
 using DA.Game.TalentsManagement.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -15,21 +18,18 @@ namespace DA.Game.TalentsManagement.Tests.IntegrationTests
         {
             ServiceCollection services = new ServiceCollection();
 
-            services.AddScoped<IGetSpell, GetSpell>();
-            services.AddScoped<ITalentTreeBuilder, TalentTreeBuilder>();
-            services.AddScoped<ITalentTreeManager, TalentTreeManager>();
-            services.AddScoped<ICharacterTalentStatsHandler, CharacterTalentStatsHandler>();
-            services.AddScoped<ICharacterDevelopmentService, CharacterDevelopmentService>();
+            services.AddGameResources();
+            services.AddGameTalentsManagement();
 
             ServiceProvider = services.BuildServiceProvider();
         }
 
         [Fact]
-        public void Test1()
+        public void BasicUnlockSpellTest()
         {
             ICharacterDevelopmentService sut = (ICharacterDevelopmentService)ServiceProvider.GetService(typeof(ICharacterDevelopmentService));
 
-            Domain.Models.GameFlowEngine.Character newChar = sut.InitializeNewCharacter();
+            Character newChar = sut.InitializeNewCharacter();
 
             sut.UnlockSpell(newChar, newChar.CharacterTalentStats.UnlockableSpells[0]);
             Assert.NotNull(newChar);

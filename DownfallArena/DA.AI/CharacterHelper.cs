@@ -1,6 +1,6 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
-using System.Linq;
+﻿using System.Linq;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 
 namespace DA.AI
 {

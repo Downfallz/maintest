@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DA.Game.Domain.Models.GameFlowEngine
+namespace DA.Game.Domain.Models
 {
     [Serializable]
     public record Team
     {
-        public Team(string lol)
+        public Team()
         {
             Characters = new List<Character>();
         }

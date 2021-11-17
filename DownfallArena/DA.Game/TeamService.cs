@@ -1,6 +1,6 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Services.GameFlowEngine;
-using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
+﻿using DA.Game.Domain.Models;
+using DA.Game.Domain.Services;
+using DA.Game.Domain.Services.TalentsManagement;
 
 namespace DA.Game
 {

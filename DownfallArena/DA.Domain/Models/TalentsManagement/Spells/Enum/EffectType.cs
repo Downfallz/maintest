@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum
+﻿namespace DA.Game.Domain.Models.TalentsManagement.Spells.Enum
 {
     public enum EffectType
     {

@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain.Models.GameFlowEngine.Enum
+﻿namespace DA.Game.Domain.Models.TalentsManagement.Enum
 {
     public enum CharClass
     {

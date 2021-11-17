@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+﻿using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
 namespace DA.Game.CombatMechanic.Tools
 {

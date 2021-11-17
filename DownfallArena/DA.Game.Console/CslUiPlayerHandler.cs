@@ -1,12 +1,15 @@
 ﻿using DA.Game;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services;
 using DA.Game.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.CombatMechanic.Enum;
+using DA.Game.Domain.Models.TalentsManagement;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 
 namespace DA.Csl
 {
@@ -16,7 +19,7 @@ namespace DA.Csl
 
         public override void EvaluateCharacterToPlay(object sender, CharacterTurnInitializedEventArgs e)
         {
-            Game.Domain.Models.GameFlowEngine.Character characterToPlay = MyAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
+            Character characterToPlay = MyAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
             if (characterToPlay != null)
             {
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -34,7 +37,7 @@ namespace DA.Csl
                 Console.WriteLine($"    Available spells to play:");
                 for (int i = 0; i < spellCount; i++)
                 {
-                    Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell tal = characterToPlay.CharacterTalentStats.UnlockedSpells[i];
+                    Spell tal = characterToPlay.CharacterTalentStats.UnlockedSpells[i];
                     if (characterToPlay.CharacterTalentStats.UnlockedSpells.Where(x => x.EnergyCost <= characterToPlay.Energy).ToList().Contains(tal))
                     {
                         availables.Add(i);
@@ -55,7 +58,7 @@ namespace DA.Csl
                     int.TryParse(readNumber, out numberPicked);
                 }
 
-                Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell spellToPlay = characterToPlay.CharacterTalentStats.UnlockedSpells[numberPicked];
+                Spell spellToPlay = characterToPlay.CharacterTalentStats.UnlockedSpells[numberPicked];
 
                 List<Guid> targets = new List<Guid>();
                 if (spellToPlay.SpellType == SpellType.Defensive)
@@ -143,10 +146,10 @@ namespace DA.Csl
                 }
 
                 picked.Add(numberPicked);
-                Game.Domain.Models.GameFlowEngine.Character c = MyAliveCharacters[numberPicked];
+                Character c = MyAliveCharacters[numberPicked];
                 Console.ForegroundColor = ConsoleColor.Gray;
 
-                List<Game.Domain.Models.GameFlowEngine.TalentsManagement.TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
+                List<TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
                 int possibleListCount = possibleList.Count;
                 List<int> spellAvailables = new List<int>();
                 int spellNumberPicked = 99;
@@ -186,7 +189,7 @@ namespace DA.Csl
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("Choose your speed for every of your characters.");
             int count = 1;
-            foreach (Game.Domain.Models.GameFlowEngine.Character c in MyAliveCharacters)
+            foreach (Character c in MyAliveCharacters)
             {
                 int number = 99;
                 while (number != 0 && number != 1)

@@ -1,11 +1,10 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using DA.Game.Domain.Services;
-using DA.Game.Domain.Services.GameFlowEngine;
+﻿using DA.Game.Domain.Services;
 using DA.Game.Events;
 using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.Enum;
 
 namespace DA.Game
 {
@@ -116,17 +115,20 @@ namespace DA.Game
         public void PlayAndResolveCharacterAction(Battle battle, CharacterActionChoice characterActionChoice)
         {
             _roundService.PlayAndResolveCharacterAction(battle.CurrentRound, characterActionChoice);
+            _roundService.AssignNextCharacter(battle.CurrentRound);
             Guid? c = _roundService.GetCurrentCharacterIdActionTurn(battle.CurrentRound);
 
             bool characterContinueToPlay = false;
 
+            // Si c == null , fin du round.
             if (c == null)
             {
-                if (!battle.IsDone)
+                battle.FinishedRoundsHistory.Add(battle.CurrentRound);
+
+                if (!battle.OneTeamIsDead && battle.FinishedRoundsHistory.Count <= 15)
                 {
                     _roundService.InitializeNewRound(battle);
                     OnNewRoundInitialized(EventArgs.Empty);
-                    //characterContinueToPlay = true;
                 }
                 else
                 {

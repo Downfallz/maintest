@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System.Linq;
+﻿using System.Linq;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
-namespace DA.Game.Resources.Spells
+namespace DA.Game.Resources.Spells.JsonRepos
 {
     public class JsonLeechSpells : JsonBaseSpells, ILeechSpells
     {

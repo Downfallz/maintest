@@ -1,16 +1,16 @@
-﻿using AutoFixture;
+﻿using System.Linq;
+using AutoFixture;
 using AutoFixture.AutoMoq;
 using AutoFixture.Xunit2;
-using System.Linq;
 
-namespace DA.Game.CombatMechanic.Tests
+namespace DA.Game.TalentsManagement.Tests.Attributes
 {
     public class AutoMoqDataAttribute : AutoDataAttribute
     {
         public AutoMoqDataAttribute()
             : base(() =>
             {
-                Fixture fixture = new();
+                Fixture fixture = new Fixture();
                 fixture.Customize(new AutoMoqCustomization());
                 fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList().ForEach(b => fixture.Behaviors.Remove(b));
                 fixture.Behaviors.Add(new OmitOnRecursionBehavior());

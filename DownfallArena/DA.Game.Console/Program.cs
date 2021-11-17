@@ -1,7 +1,6 @@
 ﻿using DA.AI;
 using DA.AI.Spd;
 using DA.AI.Spl;
-using DA.AI.Tgt;
 using DA.Game;
 using DA.Game.CombatMechanic.IoC;
 using DA.Game.Domain.Services;
@@ -28,16 +27,16 @@ namespace DA.Csl
             ServiceProvider serviceProvider = services.BuildServiceProvider();
 
             BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
-            IBattleEngine simulator = (IBattleEngine)serviceProvider.GetService<IBattleEngine>();
-            DAGame test = new DAGame(battleEngine);
-            SuperAIPlayerHandler randomAi = new SuperAIPlayerHandler(battleEngine, simulator,
-                new SpeedChooser(),
-                new SpellChooser(), new RandomTargetChooser());
-            CslUiPlayerHandler playerHandler = new CslUiPlayerHandler(battleEngine);
+            //IBattleEngine simulator = (IBattleEngine)serviceProvider.GetService<IBattleEngine>();
+            //DAGame test = new DAGame(battleEngine);
+            //SuperAIPlayerHandler randomAi = new SuperAIPlayerHandler(battleEngine, simulator,
+            //    new SpeedChooser(),
+            //    new SpellUnlockChooser(), new RandomTargetChooser());
+            //CslUiPlayerHandler playerHandler = new CslUiPlayerHandler(battleEngine);
 
-            test.Start(playerHandler, randomAi);
-            //Console.WriteLine(jokeProvider.GetJoke());
-            Console.ReadLine();
+            //test.Start(playerHandler, randomAi);
+            ////Console.WriteLine(jokeProvider.GetJoke());
+            //Console.ReadLine();
         }
     }
 }

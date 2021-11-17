@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain.Models.GameFlowEngine.Enum
+﻿namespace DA.Game.Domain.Models.Enum
 {
     public enum BattleStatus
     {

@@ -1,8 +1,8 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System;
+﻿using System;
 using System.Linq;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
 namespace DA.Game.TalentsManagement.Tools
 {

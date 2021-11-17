@@ -1,5 +1,3 @@
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Resources.Generator;
 using DA.Game.Resources.Spells;
 using DA.Game.TalentsManagement.Tools;
@@ -8,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 using Xunit;
 
 namespace DA.Game.Resources.Tests

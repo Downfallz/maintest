@@ -1,15 +1,16 @@
 ﻿using DA.AI.MonteCarlo;
 using DA.AI.Spd;
 using DA.AI.Spl;
-using DA.AI.Tgt;
 using DA.Game;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.Domain.Services;
 using DA.Game.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.AI.CharAction.Tgt;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
 namespace DA.AI
 {
@@ -17,11 +18,11 @@ namespace DA.AI
     {
         readonly IBattleEngine _simulator;
         private readonly ISpeedChooser _sc;
-        private readonly ISpellChooser _spellChooser;
+        private readonly ISpellUnlockChooser _spellChooser;
         private readonly ITargetChooser _targetChooser;
 
         public SuperAIPlayerHandler(IBattleEngine battleService,
-            IBattleEngine simulator, ISpeedChooser sc, ISpellChooser spellChooser,
+            IBattleEngine simulator, ISpeedChooser sc, ISpellUnlockChooser spellChooser,
             ITargetChooser targetChooser) : base(battleService)
         {
             _simulator = simulator;
@@ -32,7 +33,7 @@ namespace DA.AI
 
         public override void EvaluateCharacterToPlay(object sender, CharacterTurnInitializedEventArgs e)
         {
-            Game.Domain.Models.GameFlowEngine.Character characterToPlay = MyAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
+            Character characterToPlay = MyAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
 
             if (characterToPlay != null)
             {
@@ -47,7 +48,7 @@ namespace DA.AI
                 {
                     List<Guid> targets = _targetChooser.ChooseTargetForSpell(spell, MyAliveCharacters, MyEnemies);
 
-                    Game.Domain.Models.GameFlowEngine.Battle battleClone = Battle.Clone();
+                    Battle battleClone = Battle.Clone();
 
                     _simulator.PlayAndResolveCharacterAction(battleClone, new CharacterActionChoice()
                     {

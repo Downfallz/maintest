@@ -1,11 +1,11 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using DA.Game.Domain.Services.GameFlowEngine.CombatMechanic;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.CombatMechanic.Enum;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Domain.Services.CombatMechanic;
 
 namespace DA.Game.CombatMechanic
 {

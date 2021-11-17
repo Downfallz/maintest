@@ -1,15 +1,15 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
-using DA.Game.Domain.Services.GameFlowEngine;
-using DA.Game.Domain.Services.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.CombatMechanic.Enum;
+using DA.Game.Domain.Models.Enum;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
+using DA.Game.Domain.Services;
+using DA.Game.Domain.Services.CombatMechanic;
+using DA.Game.Domain.Services.TalentsManagement;
 
 namespace DA.Game
 {
@@ -48,11 +48,6 @@ namespace DA.Game
 
         private void InitializeRound(Battle battle)
         {
-            if (battle.CurrentRound != null)
-            {
-                battle.FinishedRoundsHistory.Add(battle.CurrentRound);
-            }
-
             battle.CurrentRound = new Round
             {
                 RoundStatus = RoundStatus.Created
@@ -207,6 +202,8 @@ namespace DA.Game
 
         public void PlayAndResolveCharacterAction(Round round, CharacterActionChoice characterActionChoice)
         {
+            round.CharacterActionChoices.Add(characterActionChoice);
+
             // play
             SpeedChoice targetSpeed = round.AllSpeedChoice.Single(x => x.CharacterId.Equals(characterActionChoice.CharacterId));
 
@@ -217,6 +214,7 @@ namespace DA.Game
             {
                 listeTargets.Add(round.OrderedCharacters.Single(x => x.Id == cId));
             }
+
             _spellService.PlaySpell(sourceChar, characterActionChoice.Spell, listeTargets, targetSpeed.Speed);
         }
     }

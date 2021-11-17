@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
-using System;
+﻿using System;
+using DA.Game.Domain.Models.CombatMechanic.Enum;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.CombatMechanic
+namespace DA.Game.Domain.Models.CombatMechanic
 {
     [Serializable]
     public class SpeedChoice

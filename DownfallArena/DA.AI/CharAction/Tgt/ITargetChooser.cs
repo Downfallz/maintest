@@ -1,9 +1,9 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
-namespace DA.AI.Tgt
+namespace DA.AI.CharAction.Tgt
 {
     public interface ITargetChooser
     {

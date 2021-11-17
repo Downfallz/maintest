@@ -1,8 +1,9 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using DA.Game.Domain.Services.GameFlowEngine.TalentsManagement;
-using DA.Game.TalentsManagement.Tools;
+﻿using DA.Game.TalentsManagement.Tools;
 using System;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Domain.Services.TalentsManagement;
 
 namespace DA.Game.TalentsManagement
 {
@@ -47,7 +48,7 @@ namespace DA.Game.TalentsManagement
             if (character.TalentTreeStructure == null)
                 throw new ArgumentException("Character tree structure can't be null", nameof(character));
 
-            Domain.Models.GameFlowEngine.CombatMechanic.CharacterTalentStats stats = _characterTalentStatsHandler.UnlockSpell(character.TalentTreeStructure, spell);
+            CharacterTalentStats stats = _characterTalentStatsHandler.UnlockSpell(character.TalentTreeStructure, spell);
             character.CharacterTalentStats = stats;
         }
     }

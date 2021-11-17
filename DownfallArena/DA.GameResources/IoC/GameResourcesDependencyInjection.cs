@@ -1,5 +1,6 @@
 ﻿using DA.Game.Resources.Generator;
 using DA.Game.Resources.Spells;
+using DA.Game.Resources.Spells.JsonRepos;
 using DA.Game.TalentsManagement.Tools;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +24,7 @@ namespace DA.Game.Resources.IoC
             services.AddSingleton<IWarlordSpells>(new JsonWarlordSpells("WarlordSpells"));
             services.AddSingleton<IWizardSpells>(new JsonWizardSpells("WizardSpells"));
             services.AddSingleton<IResourceContext, ResourceContext>();
-            services.AddScoped<IGetSpell, GetSpell>();
+            services.AddTransient<IGetSpell, GetSpell>();
         }
     }
 }

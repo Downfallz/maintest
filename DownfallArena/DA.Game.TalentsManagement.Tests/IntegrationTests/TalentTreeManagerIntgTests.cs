@@ -1,4 +1,7 @@
-using DA.Game.Resources.Generator;
+using DA.Game.Domain.Models.TalentsManagement;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Resources.IoC;
+using DA.Game.TalentsManagement.IoC;
 using DA.Game.TalentsManagement.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -14,22 +17,21 @@ namespace DA.Game.TalentsManagement.Tests.IntegrationTests
         {
             ServiceCollection services = new ServiceCollection();
 
-            services.AddScoped<IGetSpell, GetSpell>();
-            services.AddScoped<ITalentTreeBuilder, TalentTreeBuilder>();
-            services.AddScoped<ITalentTreeManager, TalentTreeManager>();
+            services.AddGameResources();
+            services.AddGameTalentsManagement();
 
             ServiceProvider = services.BuildServiceProvider();
         }
 
         [Fact]
-        public void Test1()
+        public void GivenTalents_InitializeNewTree_IsSuccess()
         {
             ITalentTreeManager sut = (ITalentTreeManager)ServiceProvider.GetService(typeof(ITalentTreeManager));
 
-            Domain.Models.GameFlowEngine.TalentsManagement.TalentTreeStructure tree = sut.InitializeNewTalentTree();
-            System.Collections.Generic.IReadOnlyList<Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell> all = sut.GetAllSpells(tree);
-            System.Collections.Generic.IReadOnlyList<Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell> unlocked = sut.GetUnlockedSpells(tree);
-            System.Collections.Generic.IReadOnlyList<Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell> unlockable = sut.GetUnlockableSpells(tree);
+            TalentTreeStructure tree = sut.InitializeNewTalentTree();
+            System.Collections.Generic.IReadOnlyList<Spell> all = sut.GetAllSpells(tree);
+            System.Collections.Generic.IReadOnlyList<Spell> unlocked = sut.GetUnlockedSpells(tree);
+            System.Collections.Generic.IReadOnlyList<Spell> unlockable = sut.GetUnlockableSpells(tree);
 
             Assert.Equal(3, unlocked.Count);
             Assert.Equal(6, unlockable.Count);

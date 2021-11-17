@@ -1,8 +1,8 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
-using System;
+﻿using System;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.CombatMechanic
+namespace DA.Game.Domain.Models.CombatMechanic
 {
     [Serializable]
     public class AppliedEffect

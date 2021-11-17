@@ -1,13 +1,14 @@
 ﻿using DA.AI.Spd;
 using DA.AI.Spl;
-using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.Enum;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 
 namespace DA.AI.MonteCarlo
 {
@@ -69,7 +70,7 @@ namespace DA.AI.MonteCarlo
 
             Character charToPlay = Board.CurrentRound.OrderedCharacters[Board.CurrentRound.CurrentCharacterIndex.Value];
 
-            foreach (Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Spell s in charToPlay.CharacterTalentStats.UnlockedSpells.Where(x => x.EnergyCost <= charToPlay.Energy))
+            foreach (Spell s in charToPlay.CharacterTalentStats.UnlockedSpells.Where(x => x.EnergyCost <= charToPlay.Energy))
             {
                 Team teamTarget = null;
                 if (s.SpellType == SpellType.Defensive)
@@ -123,7 +124,7 @@ namespace DA.AI.MonteCarlo
 
         private void Setup(IBattleEngine be, Battle battle)
         {
-            SpellChooser spellUnlock = new SpellChooser();
+            SpellUnlockChooser spellUnlock = new SpellUnlockChooser();
             List<SpellUnlockChoice> t1Choice = spellUnlock.GetSpellUnlockChoices(battle.TeamOne.AliveCharacters.ToList());
             List<SpellUnlockChoice> t2Choice = spellUnlock.GetSpellUnlockChoices(battle.TeamTwo.AliveCharacters.ToList());
 

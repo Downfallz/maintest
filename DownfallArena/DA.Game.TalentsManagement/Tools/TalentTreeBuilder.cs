@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using DA.Game.Domain.Models.TalentsManagement;
+using DA.Game.Domain.Models.TalentsManagement.Enum;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
 namespace DA.Game.TalentsManagement.Tools
 {

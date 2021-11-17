@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
+﻿using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
 
-namespace DA.Game.Domain.Services.GameFlowEngine.CombatMechanic
+namespace DA.Game.Domain.Services.CombatMechanic
 {
     public interface ICharacterCondService
     {

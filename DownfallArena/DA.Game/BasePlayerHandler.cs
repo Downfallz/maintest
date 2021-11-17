@@ -1,9 +1,9 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using DA.Game.Domain.Services;
+﻿using DA.Game.Domain.Services;
 using DA.Game.Events;
 using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.Enum;
 
 namespace DA.Game
 {

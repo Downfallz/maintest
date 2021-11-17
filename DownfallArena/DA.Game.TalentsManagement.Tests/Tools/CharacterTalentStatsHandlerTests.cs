@@ -1,18 +1,20 @@
 ﻿using AutoFixture.Xunit2;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.TalentsManagement.Tools;
 using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.TalentsManagement.Tests.Attributes;
 using Xunit;
 
 namespace DA.Game.TalentsManagement.Tests.Tools
 {
     public class CharacterTalentStatsHandlerTests
     {
+        #region InitializeCharacterTalentTree
         [AutoMoqData]
         [Theory]
         public void InitializeCharacterTalentTree_CallsTalentTreeManagerInitializer([Frozen] Mock<ITalentTreeManager> manager, CharacterTalentStatsHandler sut)
@@ -21,6 +23,9 @@ namespace DA.Game.TalentsManagement.Tests.Tools
             Assert.NotNull(ts);
             manager.Verify(x => x.InitializeNewTalentTree(), Times.Once);
         }
+        #endregion
+
+        #region UnlockSpell
 
         [AutoMoqData]
         [Theory]
@@ -45,7 +50,9 @@ namespace DA.Game.TalentsManagement.Tests.Tools
                 It.Is<TalentTreeStructure>(z => object.ReferenceEquals(z, talentTreeStructure)),
                 It.Is<Spell>(z => object.ReferenceEquals(z, spell))), Times.Once);
         }
+        #endregion
 
+        #region UpdateCharTalentTree
         [AutoMoqData]
         [Theory]
         public void GiveNullArgs_UpdateCharTalentTree_ThrowsExceptions(CharacterTalentStatsHandler sut, TalentTreeStructure talentTreeStructure)
@@ -107,5 +114,8 @@ namespace DA.Game.TalentsManagement.Tests.Tools
 
             Assert.Equal(unlockedSpells.Sum(x => x.Initiative), ts.Initiative);
         }
+
+        #endregion
+
     }
 }

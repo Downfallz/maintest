@@ -1,8 +1,8 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain.Models.TalentsManagement;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
 namespace DA.Game.TalentsManagement.Tools
 {
@@ -36,9 +36,12 @@ namespace DA.Game.TalentsManagement.Tools
 
         public bool UnlockSpell(TalentTreeStructure talentTreeStructure, Spell talent)
         {
-            TalentNode talentNode = GetNextChildrenToUnlock(talentTreeStructure.Root).SingleOrDefault(x => Object.ReferenceEquals(talent, x.Spell));
+            TalentNode talentNode = talentTreeStructure.Root.GetNextChildrenToUnlock().SingleOrDefault(x => x.Spell.Name == talent.Name);
             if (talentNode == null)
-                throw new Exception("This Spell can not be unlocked yet or has already been unlocked.");
+            {
+                string weirtd = ""; //;throw new Exception("This Spell can not be unlocked yet or has already been unlocked.");
+            }
+
             talentNode.IsUnlocked = true;
 
             return true;

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells
+namespace DA.Game.Domain.Models.TalentsManagement.Spells
 {
     [Serializable]
     public class PassiveEffect

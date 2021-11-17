@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement
+namespace DA.Game.Domain.Models.TalentsManagement
 {
     [Serializable]
     public class TalentLevelLeaf

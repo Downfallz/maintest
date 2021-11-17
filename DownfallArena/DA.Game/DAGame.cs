@@ -1,11 +1,12 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
+﻿using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.Enum;
 
 namespace DA.Game
 {
     public class DAGame : IDAGame
     {
         private readonly BattleEngine _battleEngine;
-
+        public Battle Battle { get; private set; }
         public DAGame(BattleEngine battleService)
         {
             _battleEngine = battleService;
@@ -13,14 +14,14 @@ namespace DA.Game
 
         public void Start(BasePlayerHandler one, BasePlayerHandler two)
         {
-            Domain.Models.GameFlowEngine.Battle battle = _battleEngine.InitializeNewBattle();
-            one.Setup(battle, TeamIndicator.One);
-            two.Setup(battle, TeamIndicator.Two);
+            Battle = _battleEngine.InitializeNewBattle();
+            one.Setup(Battle, TeamIndicator.One);
+            two.Setup(Battle, TeamIndicator.Two);
 
             SetupPlayerHandler(one);
             SetupPlayerHandler(two);
 
-            _battleEngine.StartBattle(battle);
+            _battleEngine.StartBattle(Battle);
         }
 
         private void SetupPlayerHandler(BasePlayerHandler ph)

@@ -1,11 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
-using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
-namespace DA.Game.Resources.Spells
+namespace DA.Game.Resources.Spells.JsonRepos
 {
     public class JsonBerserkerSpells : JsonBaseSpells, IBerserkerSpells
     {

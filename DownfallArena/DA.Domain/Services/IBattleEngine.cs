@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.Enum;
 
 
 namespace DA.Game.Domain.Services

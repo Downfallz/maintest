@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
+﻿using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
-namespace DA.Game.Domain.Services.GameFlowEngine.TalentsManagement
+namespace DA.Game.Domain.Services.TalentsManagement
 {
     public interface ICharacterDevelopmentService
     {

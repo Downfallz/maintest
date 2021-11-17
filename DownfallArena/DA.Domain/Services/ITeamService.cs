@@ -1,6 +1,6 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
+﻿using DA.Game.Domain.Models;
 
-namespace DA.Game.Domain.Services.GameFlowEngine
+namespace DA.Game.Domain.Services
 {
     public interface ITeamService
     {

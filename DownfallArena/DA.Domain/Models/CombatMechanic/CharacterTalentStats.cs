@@ -1,8 +1,8 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.CombatMechanic
+namespace DA.Game.Domain.Models.CombatMechanic
 {
     [Serializable]
     public class CharacterTalentStats

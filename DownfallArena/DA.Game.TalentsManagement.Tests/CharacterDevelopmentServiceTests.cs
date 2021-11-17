@@ -1,44 +1,19 @@
 ﻿using AutoFixture.Xunit2;
-using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
 using DA.Game.TalentsManagement.Tools;
 using Moq;
 using System;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.TalentsManagement.Tests.Attributes;
 using Xunit;
 
 namespace DA.Game.TalentsManagement.Tests
 {
     public class CharacterDevelopmentServiceTests
     {
-        [AutoMoqData]
-        [Theory]
-        public void GiveNullArgs_UnlockSpell_ThrowsExceptions(CharacterDevelopmentService sut, Character rndChar)
-        {
-            Assert.Throws<ArgumentNullException>(() => sut.UnlockSpell(null, null));
-            Assert.Throws<ArgumentNullException>(() => sut.UnlockSpell(null, new Spell()));
-            Assert.Throws<ArgumentException>(() => sut.UnlockSpell(new Character(), new Spell()));
-            Assert.Throws<ArgumentNullException>(() => sut.UnlockSpell(rndChar, null));
-        }
-
-        [AutoMoqData]
-        [Theory]
-        public void GivenAnyCharAndSpell_UnlockSpell_ChangesCharStats(
-            [Frozen] Mock<ICharacterTalentStatsHandler> mockCharTalentStats,
-            CharacterTalentStats stats,
-            Character rndChar,
-            Spell spell,
-            CharacterDevelopmentService sut)
-        {
-            mockCharTalentStats.Setup(x => x.UnlockSpell(It.IsAny<TalentTreeStructure>(), It.IsAny<Spell>()))
-                .Returns(stats);
-
-            sut.UnlockSpell(rndChar, spell);
-
-            Assert.Same(stats, rndChar.CharacterTalentStats);
-        }
-
+        #region InitializeNewCharacter
         [AutoMoqData]
         [Theory]
         public void InitializeNewCharacter_ReturnsWellFormedCharacter(CharacterDevelopmentService sut)
@@ -82,5 +57,35 @@ namespace DA.Game.TalentsManagement.Tests
                 x => x.UpdateCharTalentTree(It.Is<TalentTreeStructure>(x => object.ReferenceEquals(x, structure))),
                 Times.Once);
         }
+        #endregion
+
+        #region UnlockSpell
+        [AutoMoqData]
+        [Theory]
+        public void GiveNullArgs_UnlockSpell_ThrowsExceptions(CharacterDevelopmentService sut, Character rndChar)
+        {
+            Assert.Throws<ArgumentNullException>(() => sut.UnlockSpell(null, null));
+            Assert.Throws<ArgumentNullException>(() => sut.UnlockSpell(null, new Spell()));
+            Assert.Throws<ArgumentException>(() => sut.UnlockSpell(new Character(), new Spell()));
+            Assert.Throws<ArgumentNullException>(() => sut.UnlockSpell(rndChar, null));
+        }
+
+        [AutoMoqData]
+        [Theory]
+        public void GivenAnyCharAndSpell_UnlockSpell_ChangesCharStats(
+            [Frozen] Mock<ICharacterTalentStatsHandler> mockCharTalentStats,
+            CharacterTalentStats stats,
+            Character rndChar,
+            Spell spell,
+            CharacterDevelopmentService sut)
+        {
+            mockCharTalentStats.Setup(x => x.UnlockSpell(It.IsAny<TalentTreeStructure>(), It.IsAny<Spell>()))
+                .Returns(stats);
+
+            sut.UnlockSpell(rndChar, spell);
+
+            Assert.Same(stats, rndChar.CharacterTalentStats);
+        }
+        #endregion
     }
 }

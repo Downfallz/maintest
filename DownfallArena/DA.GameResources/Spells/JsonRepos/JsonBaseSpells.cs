@@ -1,10 +1,9 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using Newtonsoft.Json;
 
-namespace DA.Game.Resources.Spells
+namespace DA.Game.Resources.Spells.JsonRepos
 {
     public class JsonBaseSpells
     {

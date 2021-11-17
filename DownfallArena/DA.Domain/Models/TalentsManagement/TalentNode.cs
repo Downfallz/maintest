@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System;
+﻿using System;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement
+namespace DA.Game.Domain.Models.TalentsManagement
 {
     [Serializable]
     public class TalentNode

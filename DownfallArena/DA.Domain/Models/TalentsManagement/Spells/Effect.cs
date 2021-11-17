@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
-using System;
+﻿using System;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells
+namespace DA.Game.Domain.Models.TalentsManagement.Spells
 {
     [Serializable]
     public class Effect

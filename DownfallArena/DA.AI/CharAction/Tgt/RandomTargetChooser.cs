@@ -1,10 +1,10 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 
-namespace DA.AI.Tgt
+namespace DA.AI.CharAction.Tgt
 {
     public class RandomTargetChooser : ITargetChooser
     {

@@ -1,10 +1,10 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells.Enum;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using DA.Game.Domain.Models.TalentsManagement.Enum;
+using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 
-namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells
+namespace DA.Game.Domain.Models.TalentsManagement.Spells
 {
     [Serializable]
     public class Spell

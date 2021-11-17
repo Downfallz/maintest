@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Enum
+﻿namespace DA.Game.Domain.Models.TalentsManagement.Enum
 {
     public enum TalentList
     {

@@ -1,4 +1,4 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
+﻿using DA.Game.Domain.Models.TalentsManagement;
 
 namespace DA.Game.TalentsManagement.Tools
 {

@@ -1,9 +1,9 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic.Enum;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement.Spells;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic.Enum;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
-namespace DA.Game.Domain.Services.GameFlowEngine.CombatMechanic
+namespace DA.Game.Domain.Services.CombatMechanic
 {
     public interface ISpellResolverService
     {

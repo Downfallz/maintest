@@ -1,10 +1,10 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.TalentsManagement;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement;
 
-namespace DA.Game.Domain.Models.GameFlowEngine
+namespace DA.Game.Domain.Models
 {
     [Serializable]
     public class Character

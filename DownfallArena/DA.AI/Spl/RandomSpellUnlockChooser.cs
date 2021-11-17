@@ -1,11 +1,12 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement;
 
 namespace DA.AI.Spl
 {
-    public class RandomSpellChooser : ISpellChooser
+    public class RandomSpellUnlockChooser : ISpellUnlockChooser
     {
         public List<SpellUnlockChoice> GetSpellUnlockChoices(List<Character> aliveCharacters)
         {
@@ -17,7 +18,7 @@ namespace DA.AI.Spl
             {
                 if (count == 2)
                     break;
-                List<Game.Domain.Models.GameFlowEngine.TalentsManagement.TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
+                List<TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
                 int possibleListCount = possibleList.Count;
 
                 choices.Add(new SpellUnlockChoice()

@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Services;
+﻿using DA.Game.Domain.Services;
 using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
 
 namespace DA.AI.MonteCarlo
 {

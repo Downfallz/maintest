@@ -1,10 +1,10 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using DA.Game.Domain.Models.GameFlowEngine.Enum;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.Enum;
 
-namespace DA.Game.Domain.Services.GameFlowEngine
+namespace DA.Game.Domain.Services
 {
     public interface IRoundService
     {

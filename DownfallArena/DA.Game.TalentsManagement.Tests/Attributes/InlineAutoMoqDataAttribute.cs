@@ -1,6 +1,6 @@
 ﻿using AutoFixture.Xunit2;
 
-namespace DA.Game.CombatMechanic.Tests
+namespace DA.Game.TalentsManagement.Tests.Attributes
 {
     public class InlineAutoMoqDataAttribute : InlineAutoDataAttribute
     {

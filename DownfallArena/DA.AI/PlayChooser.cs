@@ -1,7 +1,8 @@
-﻿using DA.Game.Domain.Models.GameFlowEngine;
-using DA.Game.Domain.Models.GameFlowEngine.CombatMechanic;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using DA.Game.Domain.Models;
+using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.TalentsManagement;
 
 namespace DA.AI
 {
@@ -13,7 +14,7 @@ namespace DA.AI
             Random rnd = new Random();
             foreach (Character c in aliveCharacters)
             {
-                List<Game.Domain.Models.GameFlowEngine.TalentsManagement.TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
+                List<TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
                 int possibleListCount = possibleList.Count;
 
                 choices.Add(new SpellUnlockChoice()
