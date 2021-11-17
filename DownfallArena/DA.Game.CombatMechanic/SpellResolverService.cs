@@ -51,6 +51,7 @@ namespace DA.Game.CombatMechanic
             }
 
             source.Energy -= spell.EnergyCost.HasValue ? spell.EnergyCost.Value : 0;
+            source.ExtraPoint -= spell.MinionsCost.HasValue ? spell.MinionsCost.Value : 0;
         }
 
         private bool ResolveIsCritical(Character source, Spell spell)

@@ -13,7 +13,7 @@ namespace DA.AI.CharAction.Tgt
         public Spell ChooseSpell(Character charToPlay)
         {
             var possibleSpell = charToPlay.CharacterTalentStats.UnlockedSpells
-                .Where(x => x.EnergyCost <= charToPlay.Energy).ToList();
+                .Where(x => x.EnergyCost <= charToPlay.Energy && (!x.MinionsCost.HasValue || x.MinionsCost.Value <= charToPlay.ExtraPoint)).ToList();
             Random rnd = new Random();
             int source = rnd.Next(possibleSpell.Count);
             Spell spell = possibleSpell[source];

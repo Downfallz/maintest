@@ -24,7 +24,6 @@ namespace DA.Game.TalentsManagement.Tests
             Assert.NotNull(newCharacter.CharacterTalentStats);
             Assert.NotNull(newCharacter.TalentTreeStructure);
             Assert.Equal(20, newCharacter.BaseHealth);
-            Assert.Equal(0, newCharacter.BonusAttackPower);
             Assert.Equal(0, newCharacter.BonusCritical);
             Assert.Equal(0, newCharacter.BonusDefense);
             Assert.Equal(0, newCharacter.BonusInitiative);

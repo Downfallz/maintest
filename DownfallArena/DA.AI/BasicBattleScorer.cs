@@ -3,11 +3,9 @@ using DA.Game.Domain.Models;
 
 namespace DA.AI
 {
-    public class BattleScorer
+    public class BasicBattleScorer : IBattleScorer
     {
-
-
-        public int GetBattleScore(Battle battle)
+        public double GetBattleScore(Battle battle)
         {
             int teamOneAlivePoint = battle.TeamOne.AliveCharacters.Count * 10;
             int teamOneTotalHp = battle.TeamOne.AliveCharacters.Sum(x => x.Health);
@@ -18,7 +16,6 @@ namespace DA.AI
             int totalTeamTwoScore = teamTwoAlivePoint + teamTwoTotalHp;
 
             return totalTeamTwoScore - totalTeamOneScore;
-
         }
     }
 }

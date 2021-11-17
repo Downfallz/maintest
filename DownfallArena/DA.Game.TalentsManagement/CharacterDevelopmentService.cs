@@ -35,7 +35,6 @@ namespace DA.Game.TalentsManagement
         {
             newChar.Health = newChar.BaseHealth;
             newChar.BonusDefense = 0;
-            newChar.BonusAttackPower = 0;
             newChar.Energy = 0;
         }
 

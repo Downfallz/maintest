@@ -15,7 +15,7 @@ namespace DA.AI.CharAction.Tgt
             Random rnd = new Random();
             Spell spell;
             var possibleSpell = charToPlay.CharacterTalentStats.UnlockedSpells
-                .Where(x => x.EnergyCost <= charToPlay.Energy).ToList();
+                .Where(x => x.EnergyCost <= charToPlay.Energy && (!x.MinionsCost.HasValue || x.MinionsCost.Value <= charToPlay.ExtraPoint)).ToList();
 
             if (possibleSpell.Count == 1) // means wait only
             {
@@ -33,13 +33,17 @@ namespace DA.AI.CharAction.Tgt
             }
             else
             {
-                // Only spell that cost 2 or more
-
-                do
+                // Only spell that cost 2 or more, level 3 ideally
+                List<Spell> moreStrong = new List<Spell>();
+                if (possibleSpell.Any(x => x.Level == 3))
+                    moreStrong = possibleSpell.Where(x => x.Level == 3).ToList();
+                else
                 {
-                    int index = rnd.Next(possibleSpell.Count);
-                    spell = possibleSpell[index];
-                } while (spell.EnergyCost < 2);
+                    moreStrong = possibleSpell.Where(x => x.EnergyCost >= 2).ToList();
+                }
+
+                int index = rnd.Next(moreStrong.Count);
+                spell = moreStrong[index];
             }
 
             return spell;

@@ -24,7 +24,6 @@ namespace DA.Game.Domain.Models
         public int Health { get; set; }
         public int Energy { get; set; }
         public int ExtraPoint { get; set; }
-        public int BonusAttackPower { get; set; }
         public int BonusDefense { get; set; }
         public double BonusCritical { get; set; }
         public int BonusInitiative { get; set; }

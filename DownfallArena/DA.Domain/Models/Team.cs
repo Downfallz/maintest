@@ -5,14 +5,9 @@ using System.Linq;
 namespace DA.Game.Domain.Models
 {
     [Serializable]
-    public record Team
+    public record Team()
     {
-        public Team()
-        {
-            Characters = new List<Character>();
-        }
-
-        public IList<Character> Characters { get; set; }
+        public IList<Character> Characters { get; set; } = new List<Character>();
 
         public IList<Character> AliveCharacters => Characters.Where(x => !x.IsDead).ToList();
 

@@ -2,6 +2,7 @@
 using DA.Game.CombatMechanic.Tools;
 using Moq;
 using System;
+using DA.Game.CombatMechanic.Tests.Attributes;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using DA.Game.Domain.Models.TalentsManagement.Spells;

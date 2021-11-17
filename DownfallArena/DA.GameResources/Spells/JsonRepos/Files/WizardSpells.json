@@ -46,7 +46,7 @@
     "Level": 3
   },
   {
-    "EnergyCost": 2,
+    "EnergyCost": 3,
     "Name": "Engulfing Flames",
     "SpellType": 0,
     "CharacterClass": 10,
@@ -55,10 +55,10 @@
         "Length": null,
         "EffectType": 0,
         "Stats": 3,
-        "Modifier": 20
+        "Modifier": 9
       }
     ],
-    "NbTargets": 3,
+    "NbTargets": 1,
     "Initiative": 1,
     "MinionsCost": null,
     "CriticalChance": 0.33,

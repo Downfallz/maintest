@@ -6,18 +6,18 @@ using System.Collections.Generic;
 
 namespace DA.AI.CharAction
 {
-    public class BaseCharacterActionChooser
+    public class BasicCharacterActionChooser : ICharacterActionChooser
     {
         private readonly ISpellChooser _spellChooser;
         private readonly ITargetChooser _targetChooser;
 
-        public BaseCharacterActionChooser(ISpellChooser spellChooser, ITargetChooser targetChooser)
+        public BasicCharacterActionChooser(ISpellChooser spellChooser, ITargetChooser targetChooser)
         {
             _spellChooser = spellChooser;
             _targetChooser = targetChooser;
         }
 
-        public CharacterActionChoice GetCharActionChoice(Character charToPlay, List<Character> aliveCharacters, List<Character> aliveEnemies)
+        public CharacterActionChoice GetCharActionChoice(Battle battle, Character charToPlay, List<Character> aliveCharacters, List<Character> aliveEnemies)
         {
             var spell = _spellChooser.ChooseSpell(charToPlay);
             List<Guid> targets = _targetChooser.ChooseTargetForSpell(spell, aliveCharacters, aliveEnemies);

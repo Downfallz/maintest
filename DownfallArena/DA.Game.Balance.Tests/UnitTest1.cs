@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DA.AI;
+using DA.AI.CharAction;
+using DA.AI.CharAction.Tgt;
 using DA.AI.Spd;
 using DA.AI.Spl;
 using DA.Game.CombatMechanic.IoC;
@@ -71,11 +73,27 @@ namespace DA.Game.Balance.Tests
 
             ConcurrentBag<BattleResult> winningResults = new ConcurrentBag<BattleResult>();
 
-            Parallel.For(0, 3000, (i) =>
+            Parallel.For(0, 50, (i) =>
             {
                 BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
+                BattleEngine sim = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
+
+                var rndPlayerHandler = new RandomAIPlayerHandler(battleEngine);
+                var slightlyBetterRndPlayerHandler = new BaseAIPlayerHandler(battleEngine,
+                    new RandomSpeedChooser(),
+                    new RandomSpellUnlockChooser(),
+                    new BasicCharacterActionChooser(new BetterRandomSpellChooser(), new RandomTargetChooser()));
+                var intelligentPlayerHandler = new BaseAIPlayerHandler(battleEngine,
+                    new RandomSpeedChooser(),
+                    new RandomSpellUnlockChooser(),
+                    new IntelligentCharacterActionChooser(sim, new BasicBattleScorer()));
+                var moreIntelligentPlayerHandler = new BaseAIPlayerHandler(battleEngine,
+                    new RandomSpeedChooser(),
+                    new RandomSpellUnlockChooser(),
+                    new IntelligentCharacterActionChooser(sim, new BetterBattleScorer()));
                 DAGame test = new DAGame(battleEngine);
-                test.Start(new RandomAIPlayerHandler(battleEngine), new RandomAIPlayerHandler(battleEngine));
+
+                test.Start(intelligentPlayerHandler, moreIntelligentPlayerHandler);
 
                 Team winningTeam = test.Battle.Winner == 1 ? test.Battle.TeamOne : test.Battle.TeamTwo;
 
@@ -92,25 +110,47 @@ namespace DA.Game.Balance.Tests
 
             var countTeamDead = winningResults.Count(x => x.OneTeamDead);
             var countRoundsEnded = winningResults.Count(x => !x.OneTeamDead);
+            var totalWinTeamOne = winningResults.Count(x => x.WinningTeamNo == 1);
+            var totalWinTeamtwo = winningResults.Count(x => x.WinningTeamNo == 2);
 
-            var allTop3 = winningResults.SelectMany(x => x.Top5Spell).ToList();
+            var teamOneallTop3 = winningResults.Where(x => x.WinningTeamNo == 1).SelectMany(x => x.Top5Spell).ToList();
+            var teamTwoallTop3 = winningResults.Where(x => x.WinningTeamNo == 2).SelectMany(x => x.Top5Spell).ToList();
             
-            Dictionary<string, Statstest> dic = new Dictionary<string, Statstest>();
+            Dictionary<string, Statstest> dicOne = new Dictionary<string, Statstest>();
 
-            foreach (var t in allTop3)
+            foreach (var t in teamOneallTop3)
             {
-                if (dic.ContainsKey(t.Item1.Name))
+                if (dicOne.ContainsKey(t.Item1.Name))
                 {
-                    dic[t.Item1.Name].NbOccurence++;
-                    dic[t.Item1.Name].OccurenceNbCast.Add(t.Item2);
+                    dicOne[t.Item1.Name].NbOccurence++;
+                    dicOne[t.Item1.Name].OccurenceNbCast.Add(t.Item2);
                 }
                 else
                 {
-                    dic.Add(t.Item1.Name, new Statstest(){Spell = t.Item1, NbOccurence = 1, OccurenceNbCast = new List<int>(){t.Item2}});
+                    dicOne.Add(t.Item1.Name, new Statstest(){Spell = t.Item1, NbOccurence = 1, OccurenceNbCast = new List<int>(){t.Item2}});
                 }
             }
+            var orderedLevelOneOne = dicOne.Values.Where(x => x.Spell.Level == 1).OrderByDescending(x => x.NbOccurence).ToList();
+            var orderedLevelTwoOne = dicOne.Values.Where(x => x.Spell.Level == 2).OrderByDescending(x => x.NbOccurence).ToList();
+            var orderedOne = dicOne.Values.Where(x => x.Spell.Level == 3).OrderByDescending(x => x.NbOccurence).ToList();
 
-            var ordered = dic.Values.Where(x => x.Spell.Level == 3).OrderByDescending(x => x.NbOccurence).ToList();
+            Dictionary<string, Statstest> dicTwo = new Dictionary<string, Statstest>();
+
+            foreach (var t in teamTwoallTop3)
+            {
+                if (dicTwo.ContainsKey(t.Item1.Name))
+                {
+                    dicTwo[t.Item1.Name].NbOccurence++;
+                    dicTwo[t.Item1.Name].OccurenceNbCast.Add(t.Item2);
+                }
+                else
+                {
+                    dicTwo.Add(t.Item1.Name, new Statstest() { Spell = t.Item1, NbOccurence = 1, OccurenceNbCast = new List<int>() { t.Item2 } });
+                }
+            }
+            var orderedLevelOneTwo = dicTwo.Values.Where(x => x.Spell.Level == 1).OrderByDescending(x => x.NbOccurence).ToList();
+            var orderedLevelTwoTwo = dicTwo.Values.Where(x => x.Spell.Level == 2).OrderByDescending(x => x.NbOccurence).ToList();
+            var orderedTwo = dicTwo.Values.Where(x => x.Spell.Level == 3).OrderByDescending(x => x.NbOccurence).ToList();
         }
     }
 

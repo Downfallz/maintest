@@ -1,5 +1,6 @@
 ﻿using DA.Game.CombatMechanic.Tools;
 using System;
+using DA.Game.CombatMechanic.Tests.Attributes;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;

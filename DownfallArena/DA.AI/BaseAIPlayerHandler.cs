@@ -16,10 +16,10 @@ namespace DA.AI
     {
         private readonly ISpeedChooser _sc;
         private readonly ISpellUnlockChooser _spellChooser;
-        private readonly BaseCharacterActionChooser _charActionChooser;
+        private readonly ICharacterActionChooser _charActionChooser;
 
         public BaseAIPlayerHandler(IBattleEngine battleService, ISpeedChooser sc, ISpellUnlockChooser spellChooser,
-            BaseCharacterActionChooser charActionChooser) : base(battleService)
+            ICharacterActionChooser charActionChooser) : base(battleService)
         {
             _sc = sc;
             _spellChooser = spellChooser;
@@ -33,7 +33,7 @@ namespace DA.AI
             if (characterToPlay != null)
             {
                 CharacterActionChoice choices =
-                    _charActionChooser.GetCharActionChoice(characterToPlay, MyAliveCharacters, MyEnemies);
+                    _charActionChooser.GetCharActionChoice(Battle, characterToPlay, MyAliveCharacters, MyEnemies);
 
                 BattleEngine.PlayAndResolveCharacterAction(Battle, choices);
             }

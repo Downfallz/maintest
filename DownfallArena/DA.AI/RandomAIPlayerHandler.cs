@@ -18,7 +18,7 @@ namespace DA.AI
     {
         public RandomAIPlayerHandler(IBattleEngine battleService) : base(battleService, new RandomSpeedChooser(), 
             new RandomSpellUnlockChooser(), 
-            new BaseCharacterActionChooser(new BetterRandomSpellChooser(), new RandomTargetChooser()))
+            new BasicCharacterActionChooser(new RandomSpellChooser(), new RandomTargetChooser()))
         {
         }
     }
