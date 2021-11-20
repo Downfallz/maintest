@@ -34,9 +34,17 @@ namespace DA.Game.Domain.Models
 
         public override string ToString()
         {
-            string main = $"[{Name} {Health}/{BaseHealth} - {Initiative} initiative - {Energy} energy]";
+            string main = $"[Team{TeamNumber} {Name} {Health}/{BaseHealth} - initiative:{Initiative}  - energy:{Energy}  - IsStunned: {IsStunned}]";
+            string stats =
+                $"[Minions:{ExtraPoint} BonusDef:{BonusDefense} BonusCrit:{BonusCritical} BonusInit: {BonusInitiative} BonusRetaliate:{BonusRetaliate}]";
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(main);
+            sb.AppendLine(stats);
+            foreach (var charCondition in CharConditions)
+            {
+                sb.AppendLine(charCondition.ToString());
+            }
             foreach (TalentsManagement.Spells.Spell s in CharacterTalentStats.UnlockedSpells)
             {
                 sb.AppendLine($"    {s.Name} ");

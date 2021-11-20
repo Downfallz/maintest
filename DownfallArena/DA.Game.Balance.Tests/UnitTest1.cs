@@ -63,17 +63,9 @@ namespace DA.Game.Balance.Tests
 
             IBattleEngine simulator = (IBattleEngine)serviceProvider.GetService<IBattleEngine>();
 
-            
-            //SuperAIPlayerHandler randomAi = new SuperAIPlayerHandler(battleEngine, simulator,
-            //    new SpeedChooser(),
-            //    new SpellUnlockChooser(), new RandomTargetChooser());
-
-            //var aa = new RandomAIPlayerHandler(battleEngine, simulator, new RandomSpeedChooser(),
-            //    new RandomSpellUnlockChooser(), new RandomTargetChooser());
-
             ConcurrentBag<BattleResult> winningResults = new ConcurrentBag<BattleResult>();
 
-            Parallel.For(0, 50, (i) =>
+            Parallel.For(0, 20, (i) =>
             {
                 BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
                 BattleEngine sim = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
@@ -86,11 +78,12 @@ namespace DA.Game.Balance.Tests
                 var intelligentPlayerHandler = new BaseAIPlayerHandler(battleEngine,
                     new RandomSpeedChooser(),
                     new RandomSpellUnlockChooser(),
-                    new IntelligentCharacterActionChooser(sim, new BasicBattleScorer()));
+                    new IntelligentCharacterActionChooser(new BestCharacterActionChoicePicker(sim, new BasicBattleScorer())));
                 var moreIntelligentPlayerHandler = new BaseAIPlayerHandler(battleEngine,
                     new RandomSpeedChooser(),
-                    new RandomSpellUnlockChooser(),
-                    new IntelligentCharacterActionChooser(sim, new BetterBattleScorer()));
+                    new IntelligentSpellUnlockChooser(sim, new BetterBattleScorer(), new RandomSpeedChooser(), new BestCharacterActionChoicePicker(sim, new BetterBattleScorer())),
+                    new IntelligentCharacterActionChooser(new BestCharacterActionChoicePicker(sim, new BetterBattleScorer())));
+
                 DAGame test = new DAGame(battleEngine);
 
                 test.Start(intelligentPlayerHandler, moreIntelligentPlayerHandler);

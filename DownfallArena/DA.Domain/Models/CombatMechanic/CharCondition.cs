@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using DA.Game.Domain.Models.TalentsManagement.Spells;
 
 namespace DA.Game.Domain.Models.CombatMechanic
@@ -9,5 +10,12 @@ namespace DA.Game.Domain.Models.CombatMechanic
         public bool IsPermanent { get; set; }
         public StatModifier StatModifier { get; set; }
         public int RoundsLeft { get; set; }
+
+        public override string ToString()
+        {
+            string main = $"  [Condition - IsPermanent:{IsPermanent}  - RoundsLeft:{RoundsLeft}  - {StatModifier}]";
+
+            return main;;
+        }
     }
 }

@@ -9,6 +9,7 @@ using DA.Game.Resources.IoC;
 using DA.Game.TalentsManagement.IoC;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using DA.AI.CharAction;
 
 namespace DA.Csl
 {
@@ -27,6 +28,15 @@ namespace DA.Csl
             ServiceProvider serviceProvider = services.BuildServiceProvider();
 
             BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
+            BattleEngine sim = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
+            var moreIntelligentPlayerHandler = new BaseAIPlayerHandler(battleEngine,
+                new RandomSpeedChooser(),
+                new IntelligentSpellUnlockChooser(sim, new BetterBattleScorer(), new RandomSpeedChooser(), new BestCharacterActionChoicePicker(sim, new BetterBattleScorer())),
+                new IntelligentCharacterActionChooser(new BestCharacterActionChoicePicker(sim, new BetterBattleScorer())));
+            DAGame test = new DAGame(battleEngine);
+
+            test.Start(new CslUiPlayerHandler(battleEngine), moreIntelligentPlayerHandler);
+
             //IBattleEngine simulator = (IBattleEngine)serviceProvider.GetService<IBattleEngine>();
             //DAGame test = new DAGame(battleEngine);
             //SuperAIPlayerHandler randomAi = new SuperAIPlayerHandler(battleEngine, simulator,

@@ -9,6 +9,7 @@ using DA.Game.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DA.AI
 {
@@ -32,16 +33,17 @@ namespace DA.AI
 
             if (characterToPlay != null)
             {
-                CharacterActionChoice choices =
-                    _charActionChooser.GetCharActionChoice(Battle, characterToPlay, MyAliveCharacters, MyEnemies);
+                CharacterActionChoice choice = null;
+                if (!characterToPlay.IsDead && !characterToPlay.IsStunned) 
+                    choice = _charActionChooser.GetCharActionChoice(Battle, characterToPlay, MyAliveCharacters, MyEnemies).Result;
 
-                BattleEngine.PlayAndResolveCharacterAction(Battle, choices);
+                BattleEngine.PlayAndResolveCharacterAction(Battle, choice);
             }
         }
 
         public override void SpellUnlock(object sender, EventArgs e)
         {
-            List<SpellUnlockChoice> choices = _spellChooser.GetSpellUnlockChoices(MyAliveCharacters);
+            List<SpellUnlockChoice> choices = _spellChooser.GetSpellUnlockChoices(Battle, MyAliveCharacters, MyEnemies);
             BattleEngine.ChooseSpellToUnlock(Battle, Indicator, choices);
         }
 

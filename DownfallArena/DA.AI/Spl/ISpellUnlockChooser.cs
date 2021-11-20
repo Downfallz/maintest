@@ -6,6 +6,7 @@ namespace DA.AI.Spl
 {
     public interface ISpellUnlockChooser
     {
-        List<SpellUnlockChoice> GetSpellUnlockChoices(List<Character> aliveCharacters);
+        List<SpellUnlockChoice> GetSpellUnlockChoices(Battle battle, List<Character> aliveCharacters,
+            List<Character> aliveEnemies);
     }
 }

@@ -73,7 +73,10 @@ namespace DA.Game
             {
                 foreach (CharCondition cc in c.CharConditions)
                 {
-                    _characterCondService.ApplyCondition(cc, c);
+                    if (!c.IsDead)
+                    {
+                        _characterCondService.ApplyCondition(cc, c);
+                    }
                 }
 
                 c.CharConditions.RemoveAll(x => x.RoundsLeft <= 0);
@@ -202,20 +205,38 @@ namespace DA.Game
 
         public void PlayAndResolveCharacterAction(Round round, CharacterActionChoice characterActionChoice)
         {
-            round.CharacterActionChoices.Add(characterActionChoice);
+            if (round == null)
+                throw new ArgumentNullException(nameof(round));
 
-            // play
-            SpeedChoice targetSpeed = round.AllSpeedChoice.Single(x => x.CharacterId.Equals(characterActionChoice.CharacterId));
+            if (round.RoundStatus != RoundStatus.Playing)
+                throw new System.Exception("Can't play a character choice if round is not in status playing");
 
-            Character sourceChar = round.OrderedCharacters.Single(x => x.Id == characterActionChoice.CharacterId);
-
-            List<Character> listeTargets = new List<Character>();
-            foreach (Guid cId in characterActionChoice.Targets)
+            if (characterActionChoice != null)
             {
-                listeTargets.Add(round.OrderedCharacters.Single(x => x.Id == cId));
-            }
+                Character sourceChar = round.OrderedCharacters.Single(x => x.Id == characterActionChoice.CharacterId);
 
-            _spellService.PlaySpell(sourceChar, characterActionChoice.Spell, listeTargets, targetSpeed.Speed);
+                if (sourceChar.IsDead)
+                    throw new System.Exception("Can't play a character choice if source character is dead.");
+                if (sourceChar.IsStunned)
+                    throw new System.Exception("Can't play a character choice if source character is stunned.");
+                round.CharacterActionChoices.Add(characterActionChoice);
+
+                // play
+                SpeedChoice targetSpeed = round.AllSpeedChoice.Single(x => x.CharacterId.Equals(characterActionChoice.CharacterId));
+                if (targetSpeed == null)
+                    throw new Exception("Can't find target speed for action");
+
+                List<Character> listeTargets = new List<Character>();
+                foreach (Guid cId in characterActionChoice.Targets)
+                {
+                    var targetChar = round.OrderedCharacters.Single(x => x.Id == cId);
+                    if (targetChar.IsDead)
+                        throw new System.Exception("Target is dead.");
+                    listeTargets.Add(targetChar);
+                }
+
+                _spellService.PlaySpell(sourceChar, characterActionChoice.Spell, listeTargets, targetSpeed.Speed);
+            }
         }
     }
 }

@@ -114,6 +114,12 @@ namespace DA.Game
 
         public void PlayAndResolveCharacterAction(Battle battle, CharacterActionChoice characterActionChoice)
         {
+            if (battle == null)
+                throw new ArgumentNullException(nameof(battle));
+
+            if (battle.BattleStatus != BattleStatus.Started)
+                throw new System.Exception("Can't play a character action if battle is not in status started");
+
             _roundService.PlayAndResolveCharacterAction(battle.CurrentRound, characterActionChoice);
             _roundService.AssignNextCharacter(battle.CurrentRound);
             Guid? c = _roundService.GetCurrentCharacterIdActionTurn(battle.CurrentRound);

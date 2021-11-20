@@ -1,4 +1,5 @@
-﻿using DA.Game.CombatMechanic.Tools;
+﻿using System;
+using DA.Game.CombatMechanic.Tools;
 using System.Collections.Generic;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
@@ -18,6 +19,14 @@ namespace DA.Game.CombatMechanic
 
         public void ApplyEffect(AppliedEffect effect, Character source, List<Character> targets)
         {
+            // source is null when effect come from environment (ie.: round energy)
+            if (effect == null)
+                throw new ArgumentNullException(nameof(effect));
+            if (effect.StatModifier == null)
+                throw new ArgumentException("charCond must have a stat modifier.", nameof(effect.StatModifier));
+            if (source != null && source.IsDead)
+                throw new System.Exception("Can't apply an effect cast by a dead character");
+
             switch (effect.EffectType)
             {
                 case EffectType.Direct:
@@ -40,7 +49,7 @@ namespace DA.Game.CombatMechanic
                             {
                                 StatModifier = effect.StatModifier,
                                 IsPermanent = false,
-                                RoundsLeft = effect.Length.Value
+                                RoundsLeft = effect.Length ?? 0
                             };
                             t.CharConditions.Add(charCond);
                         }
@@ -51,7 +60,7 @@ namespace DA.Game.CombatMechanic
                     {
                         StatModifier = effect.StatModifier,
                         IsPermanent = false,
-                        RoundsLeft = effect.Length.Value
+                        RoundsLeft = effect.Length ?? 0
                     };
 
                     source.CharConditions.Add(charCond2);

@@ -8,10 +8,15 @@ namespace DA.AI.Spl
 {
     public class RandomSpellUnlockChooser : ISpellUnlockChooser
     {
-        public List<SpellUnlockChoice> GetSpellUnlockChoices(List<Character> aliveCharacters)
+        private readonly Random _rnd;
+
+        public RandomSpellUnlockChooser()
+        {
+            _rnd = new Random();
+        }
+        public List<SpellUnlockChoice> GetSpellUnlockChoices(Battle battle, List<Character> aliveCharacters, List<Character> aliveEnemies)
         {
             List<SpellUnlockChoice> choices = new List<SpellUnlockChoice>();
-            Random rnd = new Random();
 
             int count = 0;
             foreach (Character c in aliveCharacters)
@@ -24,7 +29,7 @@ namespace DA.AI.Spl
                 choices.Add(new SpellUnlockChoice()
                 {
                     CharacterId = c.Id,
-                    Spell = possibleList[rnd.Next(0, possibleListCount)].Spell
+                    Spell = possibleList[_rnd.Next(0, possibleListCount)].Spell
                 });
                 count++;
             }

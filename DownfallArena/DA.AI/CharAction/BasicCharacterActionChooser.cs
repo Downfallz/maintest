@@ -3,6 +3,7 @@ using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DA.AI.CharAction
 {
@@ -17,7 +18,7 @@ namespace DA.AI.CharAction
             _targetChooser = targetChooser;
         }
 
-        public CharacterActionChoice GetCharActionChoice(Battle battle, Character charToPlay, List<Character> aliveCharacters, List<Character> aliveEnemies)
+        public async Task<CharacterActionChoice> GetCharActionChoice(Battle battle, Character charToPlay, List<Character> aliveCharacters, List<Character> aliveEnemies)
         {
             var spell = _spellChooser.ChooseSpell(charToPlay);
             List<Guid> targets = _targetChooser.ChooseTargetForSpell(spell, aliveCharacters, aliveEnemies);
