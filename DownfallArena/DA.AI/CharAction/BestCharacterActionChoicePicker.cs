@@ -4,11 +4,14 @@ using DA.Game.Domain.Models.CombatMechanic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters;
 using System.Security.AccessControl;
 using System.Threading.Tasks;
 using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services;
+using Force.DeepCloner;
 
 namespace DA.AI.CharAction
 {
@@ -134,7 +137,7 @@ namespace DA.AI.CharAction
 
         private async Task BestScoreAsync(Battle battle, Character charToPlay, Spell s, List<Guid> targets, BestPick pick)
         {
-            var battleClone = battle.Clone();
+            var battleClone = battle.DeepClone();
 
             _simulator.PlayAndResolveCharacterAction(battleClone, new CharacterActionChoice()
             {

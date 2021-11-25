@@ -6,7 +6,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DA.Domain\DA.Game.Domain.csproj" />
+    <ProjectReference Include="..\DA.Game.CombatMechanic\DA.Game.CombatMechanic.csproj" />
     <ProjectReference Include="..\DA.Game\DA.Game.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Sim\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DeepCloner" Version="0.10.3" />
   </ItemGroup>
 
 </Project>

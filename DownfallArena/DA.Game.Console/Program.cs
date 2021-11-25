@@ -10,11 +10,13 @@ using DA.Game.TalentsManagement.IoC;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using DA.AI.CharAction;
+using DA.Game.Domain;
 
 namespace DA.Csl
 {
     class Program
     {
+        public delegate IBattleEngine ServiceResolver(string key);
         static void Main(string[] args)
         {
             ServiceCollection services = new ServiceCollection();
@@ -24,7 +26,21 @@ namespace DA.Csl
             services.AddGameCombatMechanic();
             services.AddGameResources();
             services.AddGame();
-
+            services.AddSingleton<IGameLogger, GameLogger>();
+            //services.AddTransient<ServiceResolver>(serviceProvider => key =>
+            //{
+            //    switch (key)
+            //    {
+            //        case "A":
+            //            return serviceProvider.GetService<ServiceA>();
+            //        case "B":
+            //            return serviceProvider.GetService<ServiceB>();
+            //        case "C":
+            //            return serviceProvider.GetService<ServiceC>();
+            //        default:
+            //            throw new KeyNotFoundException(); // or maybe return null, up to you
+            //    }
+            //});
             ServiceProvider serviceProvider = services.BuildServiceProvider();
 
             BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();

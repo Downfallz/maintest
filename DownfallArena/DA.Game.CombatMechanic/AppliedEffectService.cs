@@ -1,10 +1,11 @@
-﻿using System;
-using DA.Game.CombatMechanic.Tools;
-using System.Collections.Generic;
+﻿using DA.Game.CombatMechanic.Tools;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services.CombatMechanic;
+using System;
+using System.Collections.Generic;
+using DA.Game.Domain.Models.TalentsManagement.Spells;
 
 namespace DA.Game.CombatMechanic
 {
@@ -17,7 +18,7 @@ namespace DA.Game.CombatMechanic
             _statModifierService = statModifierService;
         }
 
-        public void ApplyEffect(AppliedEffect effect, Character source, List<Character> targets)
+        public AppliedEffectResult ApplyEffect(AppliedEffect effect, Character source, List<Character> targets)
         {
             // source is null when effect come from environment (ie.: round energy)
             if (effect == null)
@@ -27,18 +28,23 @@ namespace DA.Game.CombatMechanic
             if (source != null && source.IsDead)
                 throw new System.Exception("Can't apply an effect cast by a dead character");
 
+            var result = new AppliedEffectResult();
+            result.Effect = effect;
+            result.CharCondResults = new List<CharCondResult>();
+            result.StatResults = new List<StatModifierResult>();
+
             switch (effect.EffectType)
             {
                 case EffectType.Direct:
                     foreach (Character t in targets)
                     {
                         if (!t.IsDead)
-                            _statModifierService.ApplyEffect(effect.StatModifier, t);
+                            result.StatResults.Add(_statModifierService.ApplyEffect(effect.StatModifier, t));
                     }
 
                     break;
                 case EffectType.SelfDirect:
-                    _statModifierService.ApplyEffect(effect.StatModifier, source);
+                    result.StatResults.Add(_statModifierService.ApplyEffect(effect.StatModifier, source));
                     break;
                 case EffectType.Temporary:
                     foreach (Character t in targets)
@@ -52,6 +58,13 @@ namespace DA.Game.CombatMechanic
                                 RoundsLeft = effect.Length ?? 0
                             };
                             t.CharConditions.Add(charCond);
+                            result.CharCondResults.Add(new CharCondResult()
+                            {
+                                CharCondition = charCond,
+                                TargetCharacterId = t.Id,
+                                TargetCharacterName = t.Name,
+                                TargetCharacterTeam = t.TeamNumber
+                            });
                         }
                     }
                     break;
@@ -64,8 +77,16 @@ namespace DA.Game.CombatMechanic
                     };
 
                     source.CharConditions.Add(charCond2);
+                    result.CharCondResults.Add(new CharCondResult()
+                    {
+                        CharCondition = charCond2,
+                        TargetCharacterId = source.Id,
+                        TargetCharacterName = source.Name,
+                        TargetCharacterTeam = source.TeamNumber
+                    });
                     break;
             }
+            return result;
         }
     }
 }

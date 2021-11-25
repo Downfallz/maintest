@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DA.Game.Tests": {
+      "commandName": "Project",
+      "jsWebView2Debugging": true
+    }
+  }
+}

@@ -1,6 +1,5 @@
-﻿using System;
-using System.Text;
-using DA.Game.Domain.Models.TalentsManagement.Spells;
+﻿using DA.Game.Domain.Models.TalentsManagement.Spells;
+using System;
 
 namespace DA.Game.Domain.Models.CombatMechanic
 {

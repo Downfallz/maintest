@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 
+
 namespace DA.Game.Domain.Models.TalentsManagement
 {
     [Serializable]
     public class TalentLevelLeaf
     {
+        public int Id { get; set; } = 1;
         public TalentLevelLeaf()
         {
             TalentNodes = new List<TalentNode>();
@@ -14,8 +16,10 @@ namespace DA.Game.Domain.Models.TalentsManagement
         }
 
         public TalentLevelLeaf Parent { get; set; }
-        public List<TalentNode> TalentNodes { get; }
-        public List<TalentLevelLeaf> Children { get; }
+
+        public List<TalentNode> TalentNodes { get; set; }
+        
+        public List<TalentLevelLeaf> Children { get; set; }
 
 
         public List<TalentNode> GetNextChildrenToUnlock()

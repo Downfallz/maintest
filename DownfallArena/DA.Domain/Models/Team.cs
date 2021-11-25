@@ -7,6 +7,7 @@ namespace DA.Game.Domain.Models
     [Serializable]
     public record Team()
     {
+        
         public IList<Character> Characters { get; set; } = new List<Character>();
 
         public IList<Character> AliveCharacters => Characters.Where(x => !x.IsDead).ToList();

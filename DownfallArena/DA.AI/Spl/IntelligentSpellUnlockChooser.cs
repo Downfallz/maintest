@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using DA.AI.CharAction;
 using DA.AI.Spd;
 using DA.Game;
@@ -11,9 +12,11 @@ using DA.Game.Domain.Models.TalentsManagement;
 using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services;
+using Force.DeepCloner;
 
 namespace DA.AI.Spl
 {
+
     public record BestPickSpellChoose()
     {
         public List<SpellUnlockChoice> Choices { get; set; }
@@ -40,7 +43,8 @@ namespace DA.AI.Spl
             var theirTeamIndicator = aliveCharacters[0].TeamNumber == 1 ? TeamIndicator.Two : TeamIndicator.One;
 
             BestPickSpellChoose bestPick = new BestPickSpellChoose();
-            var battleClone = battle.Clone();
+
+            var battleClone = battle.DeepClone();
             var myTeamSpeed = _speedChooser.GetSpeedChoices(battleClone, aliveCharacters, aliveEnemies);
             _sim.ChooseSpeed(battleClone, myTeamIndicator, myTeamSpeed);
             var theirTeamSpeed = _speedChooser.GetSpeedChoices(battleClone, aliveEnemies, aliveCharacters);
@@ -62,7 +66,7 @@ namespace DA.AI.Spl
                 {
                     foreach (var s in possibleList)
                     {
-                        var battleClone2 = battleClone.Clone();
+                        var battleClone2 = battleClone.DeepClone();
                         _sim.ChooseSpellToUnlock(battleClone2, myTeamIndicator, new List<SpellUnlockChoice>()
                         {
                             new(){CharacterId = c.Id, Spell = s.Spell}

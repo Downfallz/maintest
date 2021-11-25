@@ -9,7 +9,7 @@ namespace DA.Game.Domain.Models
     [Serializable]
     public class Character
     {
-        public Guid Id { get; }
+        public Guid Id { get; set; }
         public Character()
         {
             Id = Guid.NewGuid();

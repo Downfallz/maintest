@@ -6,6 +6,6 @@ namespace DA.Game.Domain.Services.CombatMechanic
 {
     public interface IAppliedEffectService
     {
-        void ApplyEffect(AppliedEffect effect, Character source, List<Character> targets);
+        AppliedEffectResult ApplyEffect(AppliedEffect effect, Character source, List<Character> targets);
     }
 }

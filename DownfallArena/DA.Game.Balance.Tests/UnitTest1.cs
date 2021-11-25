@@ -65,7 +65,7 @@ namespace DA.Game.Balance.Tests
 
             ConcurrentBag<BattleResult> winningResults = new ConcurrentBag<BattleResult>();
 
-            Parallel.For(0, 20, (i) =>
+            Parallel.For(0, 5, (i) =>
             {
                 BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
                 BattleEngine sim = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
@@ -86,7 +86,7 @@ namespace DA.Game.Balance.Tests
 
                 DAGame test = new DAGame(battleEngine);
 
-                test.Start(intelligentPlayerHandler, moreIntelligentPlayerHandler);
+                test.Start(intelligentPlayerHandler, slightlyBetterRndPlayerHandler);
 
                 Team winningTeam = test.Battle.Winner == 1 ? test.Battle.TeamOne : test.Battle.TeamTwo;
 

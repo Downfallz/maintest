@@ -5,17 +5,20 @@ using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Services.CombatMechanic;
 using System;
 using System.Collections.Generic;
+using DA.Game.Domain;
 
 namespace DA.Game.CombatMechanic
 {
     public class SpellResolverService : ISpellResolverService
     {
         private readonly IAppliedEffectService _appliedEffectService;
+        private readonly IGameLogger _gameLogger;
         private readonly Random _rnd;
 
         public SpellResolverService(IAppliedEffectService appliedEffectService)
         {
-            _appliedEffectService = appliedEffectService; 
+            _appliedEffectService = appliedEffectService;
+            //_gameLogger = gameLogger;
             _rnd = new Random();
         }
 
