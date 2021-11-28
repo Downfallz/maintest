@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DA.Game.Domain;
 
 namespace DA.AI
 {
@@ -19,7 +20,7 @@ namespace DA.AI
         private readonly ISpellUnlockChooser _spellChooser;
         private readonly ICharacterActionChooser _charActionChooser;
 
-        public BaseAIPlayerHandler(IBattleEngine battleService, ISpeedChooser sc, ISpellUnlockChooser spellChooser,
+        public BaseAIPlayerHandler(IBattleController battleService, ISpeedChooser sc, ISpellUnlockChooser spellChooser,
             ICharacterActionChooser charActionChooser) : base(battleService)
         {
             _sc = sc;

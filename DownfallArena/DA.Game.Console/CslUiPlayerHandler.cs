@@ -4,24 +4,81 @@ using DA.Game.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using DA.Game.Domain.Models.CombatMechanic.Enum;
 using DA.Game.Domain.Models.TalentsManagement;
 using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
+using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace DA.Csl
 {
     public class CslUiPlayerHandler : BasePlayerHandler
     {
-        public CslUiPlayerHandler(IBattleEngine battleService) : base(battleService) { }
+        private List<string> LatestMessages { get; set; } = new List<string>();
+
+        private Table BuildTeam(List<Character> characters)
+        {
+            // Create a table
+            var myTeam = new Table();
+
+            List<IRenderable> characterStats = new List<IRenderable>();
+            foreach (var character in characters)
+            {
+                // Add some columns
+                myTeam.AddColumn(character.Name).Centered();
+                characterStats.Add(new Markup($"{character.Health}/{character.BaseHealth}"));
+            }
+
+            // Add some rows
+            myTeam.AddRow(characterStats);
+
+            return myTeam;
+        }
+
+        private void WriteDashboard()
+        {
+            AnsiConsole.Clear();
+            // Create a table
+            var myTeam = BuildTeam(MyAliveCharacters);
+            var enemyTeam = BuildTeam(MyEnemies);
+
+            // Create a table
+            var parent = new Table();
+
+            // Add some columns
+            parent.AddColumn("Team One");
+            parent.AddColumn("Team Two");
+
+            parent.AddRow(myTeam, enemyTeam);
+            // Render the table to the console
+            AnsiConsole.Write(parent);
+
+            AnsiConsole.Write(new Rule("Console"));
+            WriteConsole();
+            AnsiConsole.Write(new Rule("Play"));
+        }
+
+        private void WriteConsole()
+        {
+            foreach (var s in LatestMessages.TakeLast(15))
+            {
+                AnsiConsole.MarkupLine(s);
+            }
+        }
+        public CslUiPlayerHandler(IBattleController battleService) : base(battleService) { }
 
         public override void EvaluateCharacterToPlay(object sender, CharacterTurnInitializedEventArgs e)
         {
+            WriteDashboard();
             Character characterToPlay = MyAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
+            
             if (characterToPlay != null)
             {
+                AnsiConsole.MarkupLine($"[b]{characterToPlay.Name} (Team {characterToPlay.TeamNumber})'s turn.[/]");
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine($"Select your spell and target for character {characterToPlay.Name}");
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
@@ -113,68 +170,54 @@ namespace DA.Csl
                     Targets = targets
                 });
             }
+            else
+            {
+                Character enemyToPlay = MyEnemies.SingleOrDefault(x => x.Id == e.CharacterId);
+                LatestMessages.Add($"[b]{enemyToPlay.Name} (Team {enemyToPlay.TeamNumber})'s turn.[/]");
+            }
         }
 
         public override void SpellUnlock(object sender, EventArgs e)
         {
-            List<SpellUnlockChoice> choices = new List<SpellUnlockChoice>();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Please choose your spell unlocks for 2 characters.");
+            
 
-            List<int> picked = new List<int>();
+            LatestMessages.Add($"Round {Battle.CurrentRound.RoundNumber}");
+            foreach (var cond in Battle.CurrentRound.RoundStartConditions)
+            {
+                LatestMessages.Add($"Condition {cond.StatModifierResult.TotalEffectiveValue} {cond.StatModifierResult.Effect.StatType} on {cond.StatModifierResult.TargetCharacterTeam} {cond.StatModifierResult.TargetCharacterName} |{cond.StatModifierResult.PostEffectStatsValue}|      - (rounds left: {cond.RoundsLeft})");
+            }
+            WriteDashboard();
+            
+            List<SpellUnlockChoice> choices = new List<SpellUnlockChoice>();
+            AnsiConsole.MarkupLine($"[bold yellow on blue]Round {Battle.CurrentRound.RoundNumber}[/]");
+            AnsiConsole.MarkupLine("[bold yellow on blue]Phase: Spell Unlock[/]");
+            AnsiConsole.MarkupLine("[cyan]Please choose your spell unlocks for 2 characters.[/]");
+            List<Guid> picked = new List<Guid>();
             for (int i = 0; i < 2; i++)
             {
-                List<int> availables = new List<int>();
-                int numberPicked = 99;
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine($"    Available characters:");
-                for (int j = 0; j < MyAliveCharacters.Count; j++)
-                {
-                    if (!picked.Contains(j))
-                    {
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.WriteLine($"{j} - {MyAliveCharacters[j]}");
-                        availables.Add(j);
-                    }
-                }
-                while (!availables.Contains(numberPicked))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Pick character #{i + 1}");
-                    string readNumber = Console.ReadLine();
-                    int.TryParse(readNumber, out numberPicked);
-                }
+                var pickedCharacter = AnsiConsole.Prompt(
+                    new SelectionPrompt<Character>()
+                        .Title("[yellow]Available characters:[/]")
+                        .PageSize(10)
+                        .AddChoices(MyAliveCharacters.Where(x => !picked.Contains(x.Id))));
 
-                picked.Add(numberPicked);
-                Character c = MyAliveCharacters[numberPicked];
-                Console.ForegroundColor = ConsoleColor.Gray;
+                picked.Add(pickedCharacter.Id);
 
-                List<TalentNode> possibleList = c.TalentTreeStructure.Root.GetNextChildrenToUnlock();
-                int possibleListCount = possibleList.Count;
-                List<int> spellAvailables = new List<int>();
-                int spellNumberPicked = 99;
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine($"    List of available spell to unlock");
-                for (int j = 0; j < possibleListCount; j++)
-                {
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    Console.WriteLine($"{j} - {possibleList[j].Spell}");
-                    spellAvailables.Add(j);
-                }
+                List<Spell> possibleList = pickedCharacter.TalentTreeStructure.Root.GetNextChildrenToUnlock()
+                    .Select(x => x.Spell).ToList();
 
-                while (!spellAvailables.Contains(spellNumberPicked))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Pick a spell");
-                    string readNumber = Console.ReadLine();
-                    int.TryParse(readNumber, out spellNumberPicked);
-                }
-
+                var pickedSpell = AnsiConsole.Prompt(
+                    new SelectionPrompt<Spell>()
+                        .Title("[yellow]List of available spell to unlock:[/]")
+                        .PageSize(10)
+                        .AddChoices(possibleList));
+                
                 choices.Add(new SpellUnlockChoice()
                 {
-                    CharacterId = c.Id,
-                    Spell = possibleList[spellNumberPicked].Spell
+                    CharacterId = pickedCharacter.Id,
+                    Spell = pickedSpell
                 });
+
                 if (MyAliveCharacters.Count <= 1)
                     break;
             }
@@ -184,10 +227,11 @@ namespace DA.Csl
 
         public override void SpeedChoose(object sender, EventArgs e)
         {
+            WriteDashboard();
             List<SpeedChoice> choices = new List<SpeedChoice>();
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Choose your speed for every of your characters.");
+            AnsiConsole.MarkupLine("[cyan]Choose your speed for every of your characters.[/]");
+
             int count = 1;
             foreach (Character c in MyAliveCharacters)
             {

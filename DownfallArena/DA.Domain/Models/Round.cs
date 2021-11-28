@@ -17,14 +17,16 @@ namespace DA.Game.Domain.Models
             PlayerTwoSpellUnlocks = new List<SpellUnlockChoice>();
             OrderedCharacters = new List<Character>();
             CharacterActionChoices = new List<CharacterActionChoice>();
+            RoundStartConditions = new List<CharCondApplyResult>();
         }
+        public int RoundNumber { get; set; }
         public List<SpellUnlockChoice> PlayerOneSpellUnlocks { get; set; }
         public List<SpellUnlockChoice> PlayerTwoSpellUnlocks { get; set; }
         public List<SpeedChoice> PlayerOneSpeedChoice { get; set; }
         public List<SpeedChoice> PlayerTwoSpeedChoice { get; set; }
         public List<Character> OrderedCharacters { get; set; }
         public List<CharacterActionChoice> CharacterActionChoices { get; set; }
-
+        public List<CharCondApplyResult> RoundStartConditions { get; set; }
         public List<SpeedChoice> AllSpeedChoice => PlayerOneSpeedChoice.Concat(PlayerTwoSpeedChoice).ToList();
         public int? CurrentCharacterIndex { get; set; }
         public RoundStatus RoundStatus { get; set; }

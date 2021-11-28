@@ -12,7 +12,7 @@ namespace DA.Game.Domain.Models.CombatMechanic
 
         public override string ToString()
         {
-            string main = $"  [Condition - IsPermanent:{IsPermanent}  - RoundsLeft:{RoundsLeft}  - {StatModifier}]";
+            string main = $"  (Condition - IsPermanent:{IsPermanent}  - RoundsLeft:{RoundsLeft}  - {StatModifier})";
 
             return main;;
         }

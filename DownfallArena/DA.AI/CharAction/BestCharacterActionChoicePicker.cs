@@ -8,6 +8,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters;
 using System.Security.AccessControl;
 using System.Threading.Tasks;
+using DA.Game.Domain;
 using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Models.TalentsManagement.Spells.Enum;
 using DA.Game.Domain.Services;
@@ -17,10 +18,10 @@ namespace DA.AI.CharAction
 {
     public class BestCharacterActionChoicePicker : IBestCharacterActionChoicePicker
     {
-        private readonly IBattleEngine _simulator;
+        private readonly IBattleController _simulator;
         private readonly IBattleScorer _battleScorer;
         object guard = new object();
-        public BestCharacterActionChoicePicker(IBattleEngine simulator, IBattleScorer battleScorer)
+        public BestCharacterActionChoicePicker(IBattleController simulator, IBattleScorer battleScorer)
         {
             _simulator = simulator;
             _battleScorer = battleScorer;

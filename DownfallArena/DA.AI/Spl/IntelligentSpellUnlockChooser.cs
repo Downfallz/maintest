@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using DA.AI.CharAction;
 using DA.AI.Spd;
 using DA.Game;
+using DA.Game.Domain;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using DA.Game.Domain.Models.Enum;
@@ -24,12 +25,12 @@ namespace DA.AI.Spl
     }
     public class IntelligentSpellUnlockChooser : ISpellUnlockChooser
     {
-        private readonly IBattleEngine _sim;
+        private readonly IBattleController _sim;
         private readonly IBattleScorer _battleScorer;
         private readonly ISpeedChooser _speedChooser;
         private readonly IBestCharacterActionChoicePicker _bestCharacterActionChoicePicker;
 
-        public IntelligentSpellUnlockChooser(IBattleEngine sim, IBattleScorer battleScorer, ISpeedChooser speedChooser, IBestCharacterActionChoicePicker bestCharacterActionChoicePicker)
+        public IntelligentSpellUnlockChooser(IBattleController sim, IBattleScorer battleScorer, ISpeedChooser speedChooser, IBestCharacterActionChoicePicker bestCharacterActionChoicePicker)
         {
             _sim = sim;
             _battleScorer = battleScorer;

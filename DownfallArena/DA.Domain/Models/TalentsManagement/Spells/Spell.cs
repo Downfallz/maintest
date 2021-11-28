@@ -28,7 +28,7 @@ namespace DA.Game.Domain.Models.TalentsManagement.Spells
         public int Level { get; set; }
         public override string ToString()
         {
-            string main = $"[{Name} {EnergyCost} energy - {Initiative} initiative - {CriticalChance} critChance]";
+            string main = $"({Name} {EnergyCost} energy - {Initiative} initiative - {CriticalChance} critChance)";
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(main);
             foreach (Effect e in Effects)

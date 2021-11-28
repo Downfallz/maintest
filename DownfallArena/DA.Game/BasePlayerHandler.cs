@@ -2,6 +2,7 @@
 using DA.Game.Events;
 using System;
 using System.Collections.Generic;
+using DA.Game.Domain;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.Enum;
 
@@ -9,8 +10,8 @@ namespace DA.Game
 {
     public abstract class BasePlayerHandler
     {
-        protected IBattleEngine BattleEngine { get; }
-        public BasePlayerHandler(IBattleEngine battleService)
+        protected IBattleController BattleEngine { get; }
+        public BasePlayerHandler(IBattleController battleService)
         {
             BattleEngine = battleService;
         }

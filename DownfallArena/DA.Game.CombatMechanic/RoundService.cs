@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using DA.Game.Domain;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using DA.Game.Domain.Models.CombatMechanic.Enum;
@@ -11,7 +12,7 @@ using DA.Game.Domain.Services;
 using DA.Game.Domain.Services.CombatMechanic;
 using DA.Game.Domain.Services.TalentsManagement;
 
-namespace DA.Game
+namespace DA.Game.CombatMechanic
 {
     public class RoundService : IRoundService
     {
@@ -19,13 +20,15 @@ namespace DA.Game
         private readonly ICharacterCondService _characterCondService;
         private readonly ICharacterDevelopmentService _characterDevelopmentService;
         private readonly ISpellResolverService _spellService;
+        private readonly IGameLogger _gameLogger;
 
-        public RoundService(IAppliedEffectService appliedEffectService, ICharacterCondService characterCondService, ICharacterDevelopmentService characterDevelopmentService, ISpellResolverService spellService)
+        public RoundService(IAppliedEffectService appliedEffectService, ICharacterCondService characterCondService, ICharacterDevelopmentService characterDevelopmentService, ISpellResolverService spellService, IGameLogger gameLogger)
         {
             _appliedEffectService = appliedEffectService;
             _characterCondService = characterCondService;
             _characterDevelopmentService = characterDevelopmentService;
             _spellService = spellService;
+            _gameLogger = gameLogger;
         }
 
         public void InitializeNewRound(Battle battle)
@@ -33,27 +36,23 @@ namespace DA.Game
             if (battle.BattleStatus != BattleStatus.Started)
                 throw new Exception("Invalid status to be initializing a new round.");
 
-            if (battle.CurrentRound == null)
-            {
-                InitializeRound(battle);
-            }
-            else
+            if (battle.CurrentRound != null)
             {
                 if (battle.CurrentRound.RoundStatus != RoundStatus.Finished)
                     throw new Exception("Can't initialize a new round if current is not finished.");
-
-                InitializeRound(battle);
             }
+            InitializeRound(battle);
         }
 
         private void InitializeRound(Battle battle)
         {
             battle.CurrentRound = new Round
             {
-                RoundStatus = RoundStatus.Created
+                RoundStatus = RoundStatus.Created,
+                RoundNumber = battle.FinishedRoundsHistory.Count + 1
             };
 
-            ResolveRoundStart(battle);
+           ResolveRoundStart(battle);
         }
 
         private void ResolveRoundStart(Battle battle)
@@ -65,9 +64,8 @@ namespace DA.Game
                 StatModifier = new StatModifier() { Modifier = 2, StatType = Stats.Energy }
             };
 
-
             _appliedEffectService.ApplyEffect(roundStartEnergy, null, battle.AllAliveCharacters);
-
+            List<CharCondApplyResult> charCondApplyResults = new List<CharCondApplyResult>();
 
             foreach (Character c in battle.AllAliveCharacters)
             {
@@ -75,12 +73,14 @@ namespace DA.Game
                 {
                     if (!c.IsDead)
                     {
-                        _characterCondService.ApplyCondition(cc, c);
+                        charCondApplyResults.Add(_characterCondService.ApplyCondition(cc, c));
                     }
                 }
 
                 c.CharConditions.RemoveAll(x => x.RoundsLeft <= 0);
             }
+
+            battle.CurrentRound.RoundStartConditions = charCondApplyResults;
         }
 
         public void ApplySpellsToUnlock(Battle battle)
@@ -235,7 +235,8 @@ namespace DA.Game
                     listeTargets.Add(targetChar);
                 }
 
-                _spellService.PlaySpell(sourceChar, characterActionChoice.Spell, listeTargets, targetSpeed.Speed);
+                var result = _spellService.PlaySpell(sourceChar, characterActionChoice.Spell, listeTargets, targetSpeed.Speed);
+                _gameLogger.Log($"{result.SourceCharInfo.Name} (Team {result.SourceCharInfo.Team}) played {result.Spell.Name} on {result.TargetsCharInfo.Select(x => x.Name)}");
             }
         }
     }

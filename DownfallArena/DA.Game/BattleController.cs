@@ -2,13 +2,14 @@
 using DA.Game.Events;
 using System;
 using System.Collections.Generic;
+using DA.Game.Domain;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using DA.Game.Domain.Models.Enum;
 
 namespace DA.Game
 {
-    public class BattleEngine : IBattleEngine
+    public class BattleController : IBattleController
     {
         private readonly ITeamService _teamService;
         private readonly IRoundService _roundService;
@@ -39,7 +40,7 @@ namespace DA.Game
             handler?.Invoke(this, e);
         }
 
-        public BattleEngine(ITeamService teamService, IRoundService roundService)
+        public BattleController(ITeamService teamService, IRoundService roundService)
         {
             _teamService = teamService;
             _roundService = roundService;

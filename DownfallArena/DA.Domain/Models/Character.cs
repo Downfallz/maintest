@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using DA.Game.Domain.Models.CombatMechanic;
+using DA.Game.Domain.Models.Enum;
 using DA.Game.Domain.Models.TalentsManagement;
 
 namespace DA.Game.Domain.Models
@@ -32,11 +33,21 @@ namespace DA.Game.Domain.Models
         public int Initiative => CharacterTalentStats.Initiative + BonusInitiative;
         public List<CharCondition> CharConditions { get; set; }
 
+        public LightCharInfo GetLightCharInfo()
+        {
+            return new LightCharInfo()
+            {
+                Id = Id,
+                Name = Name,
+                Team = TeamNumber == 1 ? TeamIndicator.One : TeamIndicator.Two,
+                Description = ToString()
+            };
+        }
         public override string ToString()
         {
-            string main = $"[Team{TeamNumber} {Name} {Health}/{BaseHealth} - initiative:{Initiative}  - energy:{Energy}  - IsStunned: {IsStunned}]";
+            string main = $"(Team{TeamNumber} {Name} {Health}/{BaseHealth} - initiative:{Initiative}  - energy:{Energy}  - IsStunned: {IsStunned})";
             string stats =
-                $"[Minions:{ExtraPoint} BonusDef:{BonusDefense} BonusCrit:{BonusCritical} BonusInit: {BonusInitiative} BonusRetaliate:{BonusRetaliate}]";
+                $"(Minions:{ExtraPoint} BonusDef:{BonusDefense} BonusCrit:{BonusCritical} BonusInit: {BonusInitiative} BonusRetaliate:{BonusRetaliate})";
 
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(main);

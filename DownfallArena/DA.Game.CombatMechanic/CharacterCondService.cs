@@ -16,8 +16,10 @@ namespace DA.Game.CombatMechanic
             _statModifierApplyer = statModifieApplyer;
         }
 
-        public void ApplyCondition(CharCondition charCond, Character target)
+        public CharCondApplyResult ApplyCondition(CharCondition charCond, Character target)
         {
+            var result = new CharCondApplyResult();
+
             if (charCond == null)
                 throw new ArgumentNullException(nameof(charCond));
             if (target == null)
@@ -32,11 +34,14 @@ namespace DA.Game.CombatMechanic
                 case Stats.Damage:
                 case Stats.Health:
                 case Stats.Energy:
-                    _statModifierApplyer.ApplyEffect(charCond.StatModifier, target);
+                    result.StatModifierResult = _statModifierApplyer.ApplyEffect(charCond.StatModifier, target);
                     break;
             }
 
             charCond.RoundsLeft--;
+            result.RoundsLeft = charCond.RoundsLeft;
+
+            return result;
         }
     }
 }

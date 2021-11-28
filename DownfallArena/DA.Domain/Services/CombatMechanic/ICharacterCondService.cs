@@ -5,6 +5,6 @@ namespace DA.Game.Domain.Services.CombatMechanic
 {
     public interface ICharacterCondService
     {
-        void ApplyCondition(CharCondition charCond, Character target);
+        CharCondApplyResult ApplyCondition(CharCondition charCond, Character target);
     }
 }

@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using DA.AI.CharAction;
 using DA.Game.Domain;
+using Spectre.Console;
 
 namespace DA.Csl
 {
@@ -18,7 +19,7 @@ namespace DA.Csl
     {
         public void Log(string message)
         {
-            Console.WriteLine(message);
+            AnsiConsole.Markup($"[underline red]Hello[/] world");
         }
     }
 }

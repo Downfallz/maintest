@@ -5,24 +5,22 @@ using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Services.CombatMechanic;
 using System;
 using System.Collections.Generic;
-using DA.Game.Domain;
+using System.Linq;
 
 namespace DA.Game.CombatMechanic
 {
     public class SpellResolverService : ISpellResolverService
     {
         private readonly IAppliedEffectService _appliedEffectService;
-        private readonly IGameLogger _gameLogger;
         private readonly Random _rnd;
 
         public SpellResolverService(IAppliedEffectService appliedEffectService)
         {
             _appliedEffectService = appliedEffectService;
-            //_gameLogger = gameLogger;
             _rnd = new Random();
         }
 
-        public void PlaySpell(Character source, Spell spell, List<Character> targets, Speed init)
+        public SpellResolverResult PlaySpell(Character source, Spell spell, List<Character> targets, Speed init)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -39,6 +37,14 @@ namespace DA.Game.CombatMechanic
             if (source.ExtraPoint < minionsCost)
                 throw new System.Exception("Not enough minions/extra points to cast spell");
 
+            var result = new SpellResolverResult();
+            result.Spell = spell;
+            result.SourceCharInfo = source.GetLightCharInfo();
+            result.TargetsCharInfo = targets.Select(x => x.GetLightCharInfo()).ToList();
+            result.Speed = init;
+            result.InitialEnergy = source.Energy;
+            result.InitialExtraPoint = source.ExtraPoint;
+
             bool isCritical = ResolveIsCritical(source, spell);
             bool isHigh = init == Speed.Quick;
 
@@ -47,6 +53,9 @@ namespace DA.Game.CombatMechanic
                 critInitModifier++;
             if (isHigh)
                 critInitModifier--;
+
+            result.IsCritical = isCritical;
+            result.AppliedEffectResults = new List<AppliedEffectResult>();
 
             foreach (Effect e in spell.Effects)
             {
@@ -61,11 +70,15 @@ namespace DA.Game.CombatMechanic
                     }
                 };
                 if (!source.IsDead)
-                    _appliedEffectService.ApplyEffect(ae, source, targets);
+                    result.AppliedEffectResults.Add(_appliedEffectService.ApplyEffect(ae, source, targets));
             }
 
             source.Energy -= energyCost;
             source.ExtraPoint -= minionsCost;
+
+            result.PostEnergy = source.Energy;
+            result.PostExtraPoint = source.ExtraPoint;
+            return result;
         }
 
         private bool ResolveIsCritical(Character source, Spell spell)

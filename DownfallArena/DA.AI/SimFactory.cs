@@ -21,20 +21,19 @@ namespace DA.AI
         {
             _serviceProvider = serviceProvider;
         }
-        public IBattleEngine CreateBattleEngineSimulator()
+        public IBattleController CreateBattleEngineSimulator()
         {
             var teamService = _serviceProvider.GetService<ITeamService>();
             var appliedEffectService = _serviceProvider.GetService<IAppliedEffectService>();
             var charCondService = _serviceProvider.GetService<ICharacterCondService>();
             var characterDevelopmentService  = _serviceProvider.GetService<ICharacterDevelopmentService>();
-            var gameLogger = _serviceProvider.GetService<IGameLogger>();
-
-            var spellResolverService = new SpellResolverService(appliedEffectService);//, gameLogger);
+            var spellResolverService = _serviceProvider.GetService<ISpellResolverService>();
+            var gameLogger = new SimGameLogger();
 
             var roundService = new RoundService(appliedEffectService, charCondService, characterDevelopmentService,
-                spellResolverService);
+                spellResolverService, gameLogger);
 
-            return new BattleEngine(teamService, roundService);
+            return new BattleController(teamService, roundService);
         }
     }
 }

@@ -3,10 +3,9 @@ using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
 using DA.Game.Domain.Models.Enum;
 
-
-namespace DA.Game.Domain.Services
+namespace DA.Game.Domain
 {
-    public interface IBattleEngine
+    public interface IBattleController
     {
         Battle InitializeNewBattle();
         void StartBattle(Battle battle);

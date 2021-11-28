@@ -9,6 +9,7 @@ using DA.AI.CharAction.Tgt;
 using DA.AI.Spd;
 using DA.AI.Spl;
 using DA.Game.CombatMechanic.IoC;
+using DA.Game.Domain;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.TalentsManagement.Spells;
 using DA.Game.Domain.Services;
@@ -61,14 +62,16 @@ namespace DA.Game.Balance.Tests
             ServiceProvider serviceProvider = services.BuildServiceProvider();
 
 
-            IBattleEngine simulator = (IBattleEngine)serviceProvider.GetService<IBattleEngine>();
-
+            
+            var s = new SimFactory(serviceProvider);
+            
+            IBattleController simulator = s.CreateBattleEngineSimulator();
             ConcurrentBag<BattleResult> winningResults = new ConcurrentBag<BattleResult>();
 
             Parallel.For(0, 5, (i) =>
             {
-                BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
-                BattleEngine sim = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
+                BattleController battleEngine = (BattleController)serviceProvider.GetService<IBattleController>();
+                BattleController sim = (BattleController)s.CreateBattleEngineSimulator();
 
                 var rndPlayerHandler = new RandomAIPlayerHandler(battleEngine);
                 var slightlyBetterRndPlayerHandler = new BaseAIPlayerHandler(battleEngine,

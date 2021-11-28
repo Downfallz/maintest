@@ -9,16 +9,24 @@ using DA.Game.Resources.IoC;
 using DA.Game.TalentsManagement.IoC;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Threading;
 using DA.AI.CharAction;
 using DA.Game.Domain;
+using Spectre.Console;
 
 namespace DA.Csl
 {
     class Program
     {
-        public delegate IBattleEngine ServiceResolver(string key);
+        public delegate IBattleController ServiceResolver(string key);
         static void Main(string[] args)
         {
+            AnsiConsole.Write(
+                new FigletText("Downfall Arena")
+                    .LeftAligned()
+                    .Color(Color.Red));
+
+
             ServiceCollection services = new ServiceCollection();
 
             services.AddLogging();
@@ -27,24 +35,13 @@ namespace DA.Csl
             services.AddGameResources();
             services.AddGame();
             services.AddSingleton<IGameLogger, GameLogger>();
-            //services.AddTransient<ServiceResolver>(serviceProvider => key =>
-            //{
-            //    switch (key)
-            //    {
-            //        case "A":
-            //            return serviceProvider.GetService<ServiceA>();
-            //        case "B":
-            //            return serviceProvider.GetService<ServiceB>();
-            //        case "C":
-            //            return serviceProvider.GetService<ServiceC>();
-            //        default:
-            //            throw new KeyNotFoundException(); // or maybe return null, up to you
-            //    }
-            //});
-            ServiceProvider serviceProvider = services.BuildServiceProvider();
 
-            BattleEngine battleEngine = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
-            BattleEngine sim = (BattleEngine)serviceProvider.GetService<IBattleEngine>();
+            ServiceProvider serviceProvider = services.BuildServiceProvider();
+            var s = new SimFactory(serviceProvider);
+
+
+            BattleController battleEngine = (BattleController)serviceProvider.GetService<IBattleController>();
+            BattleController sim = (BattleController)s.CreateBattleEngineSimulator();
             var moreIntelligentPlayerHandler = new BaseAIPlayerHandler(battleEngine,
                 new RandomSpeedChooser(),
                 new IntelligentSpellUnlockChooser(sim, new BetterBattleScorer(), new RandomSpeedChooser(), new BestCharacterActionChoicePicker(sim, new BetterBattleScorer())),

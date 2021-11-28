@@ -5,30 +5,30 @@ namespace DA.Game
 {
     public class DAGame : IDAGame
     {
-        private readonly BattleEngine _battleEngine;
+        private readonly BattleController _battleController;
         public Battle Battle { get; private set; }
-        public DAGame(BattleEngine battleService)
+        public DAGame(BattleController battleController)
         {
-            _battleEngine = battleService;
+            _battleController = battleController;
         }
 
         public void Start(BasePlayerHandler one, BasePlayerHandler two)
         {
-            Battle = _battleEngine.InitializeNewBattle();
+            Battle = _battleController.InitializeNewBattle();
             one.Setup(Battle, TeamIndicator.One);
             two.Setup(Battle, TeamIndicator.Two);
 
             SetupPlayerHandler(one);
             SetupPlayerHandler(two);
 
-            _battleEngine.StartBattle(Battle);
+            _battleController.StartBattle(Battle);
         }
 
         private void SetupPlayerHandler(BasePlayerHandler ph)
         {
-            _battleEngine.NewRoundInitialized += ph.SpellUnlock;
-            _battleEngine.AllSpellUnlocked += ph.SpeedChoose;
-            _battleEngine.CharacterTurnInitialized += ph.EvaluateCharacterToPlay;
+            _battleController.NewRoundInitialized += ph.SpellUnlock;
+            _battleController.AllSpellUnlocked += ph.SpeedChoose;
+            _battleController.CharacterTurnInitialized += ph.EvaluateCharacterToPlay;
         }
     }
 }

@@ -2,7 +2,7 @@
 using DA.Game.Domain.Services;
 using DA.Game.Domain.Services.TalentsManagement;
 
-namespace DA.Game
+namespace DA.Game.CombatMechanic
 {
     public class TeamService : ITeamService
     {

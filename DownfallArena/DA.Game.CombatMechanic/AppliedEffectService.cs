@@ -30,7 +30,7 @@ namespace DA.Game.CombatMechanic
 
             var result = new AppliedEffectResult();
             result.Effect = effect;
-            result.CharCondResults = new List<CharCondResult>();
+            result.CharCondResults = new List<CharCondAddResult>();
             result.StatResults = new List<StatModifierResult>();
 
             switch (effect.EffectType)
@@ -58,7 +58,7 @@ namespace DA.Game.CombatMechanic
                                 RoundsLeft = effect.Length ?? 0
                             };
                             t.CharConditions.Add(charCond);
-                            result.CharCondResults.Add(new CharCondResult()
+                            result.CharCondResults.Add(new CharCondAddResult()
                             {
                                 CharCondition = charCond,
                                 TargetCharacterId = t.Id,
@@ -77,7 +77,7 @@ namespace DA.Game.CombatMechanic
                     };
 
                     source.CharConditions.Add(charCond2);
-                    result.CharCondResults.Add(new CharCondResult()
+                    result.CharCondResults.Add(new CharCondAddResult()
                     {
                         CharCondition = charCond2,
                         TargetCharacterId = source.Id,

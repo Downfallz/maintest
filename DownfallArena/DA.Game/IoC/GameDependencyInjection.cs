@@ -1,4 +1,5 @@
-﻿using DA.Game.Domain.Services;
+﻿using DA.Game.Domain;
+using DA.Game.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DA.Game.IoC
@@ -7,9 +8,7 @@ namespace DA.Game.IoC
     {
         public static void AddGame(this IServiceCollection services)
         {
-            services.AddTransient<ITeamService, TeamService>();
-            services.AddTransient<IRoundService, RoundService>();
-            services.AddTransient<IBattleEngine, BattleEngine>();
+            services.AddTransient<IBattleController, BattleController>();
         }
     }
 }

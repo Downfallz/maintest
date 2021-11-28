@@ -2,7 +2,7 @@
 
 namespace DA.Game.Domain.Models.CombatMechanic;
 
-public record CharCondResult
+public record CharCondAddResult
 {
     public Guid TargetCharacterId { get; set; }
     public int TargetCharacterTeam { get; set; }
