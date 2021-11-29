@@ -21,6 +21,7 @@ namespace DA.Game.CombatMechanic
         private readonly ICharacterDevelopmentService _characterDevelopmentService;
         private readonly ISpellResolverService _spellService;
         private readonly IGameLogger _gameLogger;
+        public event EventHandler NewRoundInitialized;
 
         public RoundService(IAppliedEffectService appliedEffectService, ICharacterCondService characterCondService, ICharacterDevelopmentService characterDevelopmentService, ISpellResolverService spellService, IGameLogger gameLogger)
         {
@@ -203,7 +204,7 @@ namespace DA.Game.CombatMechanic
             return false;
         }
 
-        public void PlayAndResolveCharacterAction(Round round, CharacterActionChoice characterActionChoice)
+        public SpellResolverResult PlayAndResolveCharacterAction(Round round, CharacterActionChoice characterActionChoice)
         {
             if (round == null)
                 throw new ArgumentNullException(nameof(round));
@@ -226,6 +227,11 @@ namespace DA.Game.CombatMechanic
                 if (targetSpeed == null)
                     throw new Exception("Can't find target speed for action");
 
+                if ((characterActionChoice.Spell.NbTargets == null && characterActionChoice.Targets.Count != 0) ||
+                    (characterActionChoice.Spell.NbTargets != null && characterActionChoice.Targets.Count > characterActionChoice.Spell.NbTargets.Value))
+                {
+                    throw new Exception("You chose to many targets for spell.");
+                }
                 List<Character> listeTargets = new List<Character>();
                 foreach (Guid cId in characterActionChoice.Targets)
                 {
@@ -236,8 +242,10 @@ namespace DA.Game.CombatMechanic
                 }
 
                 var result = _spellService.PlaySpell(sourceChar, characterActionChoice.Spell, listeTargets, targetSpeed.Speed);
-                _gameLogger.Log($"{result.SourceCharInfo.Name} (Team {result.SourceCharInfo.Team}) played {result.Spell.Name} on {result.TargetsCharInfo.Select(x => x.Name)}");
+                return result;
             }
+
+            return null;
         }
     }
 }

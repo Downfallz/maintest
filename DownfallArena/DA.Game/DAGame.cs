@@ -29,6 +29,7 @@ namespace DA.Game
             _battleController.NewRoundInitialized += ph.SpellUnlock;
             _battleController.AllSpellUnlocked += ph.SpeedChoose;
             _battleController.CharacterTurnInitialized += ph.EvaluateCharacterToPlay;
+            _battleController.CharacterPlayed += ph.CharacterPlayed;
         }
     }
 }

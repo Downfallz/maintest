@@ -17,8 +17,14 @@ namespace DA.Game
         public event EventHandler NewRoundInitialized;
         public event EventHandler AllSpellUnlocked;
         public event EventHandler AllSpeedChosen;
+        public event EventHandler<CharacterPlayedEventArgs> CharacterPlayed;
         public event EventHandler<CharacterTurnInitializedEventArgs> CharacterTurnInitialized;
 
+        protected virtual void OnCharacterPlayed(CharacterPlayedEventArgs e)
+        {
+            EventHandler<CharacterPlayedEventArgs> handler = CharacterPlayed;
+            handler?.Invoke(this, e);
+        }
         protected virtual void OnNewRoundInitialized(EventArgs e)
         {
             EventHandler handler = NewRoundInitialized;
@@ -121,7 +127,9 @@ namespace DA.Game
             if (battle.BattleStatus != BattleStatus.Started)
                 throw new System.Exception("Can't play a character action if battle is not in status started");
 
-            _roundService.PlayAndResolveCharacterAction(battle.CurrentRound, characterActionChoice);
+            var spellResolverResult = _roundService.PlayAndResolveCharacterAction(battle.CurrentRound, characterActionChoice);
+            OnCharacterPlayed(new CharacterPlayedEventArgs() { SpellResolverResult = spellResolverResult });
+
             _roundService.AssignNextCharacter(battle.CurrentRound);
             Guid? c = _roundService.GetCurrentCharacterIdActionTurn(battle.CurrentRound);
 

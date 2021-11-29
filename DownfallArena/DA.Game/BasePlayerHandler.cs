@@ -22,9 +22,8 @@ namespace DA.Game
             Battle = battle;
             Indicator = indicator;
         }
-
+        public abstract void CharacterPlayed(object sender, CharacterPlayedEventArgs e);
         public abstract void SpellUnlock(object sender, EventArgs e);
-
         public abstract void SpeedChoose(object sender, EventArgs e);
         public abstract void EvaluateCharacterToPlay(object sender, CharacterTurnInitializedEventArgs e);
 

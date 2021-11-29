@@ -1,9 +1,10 @@
 ﻿using System;
+using DA.Game.Domain.Models.CombatMechanic;
 
 namespace DA.Game.Events
 {
-    public class CharacterTurnInitializedEventArgs : EventArgs
+    public class CharacterPlayedEventArgs : EventArgs
     {
-        public Guid CharacterId { get; set; }
+        public SpellResolverResult SpellResolverResult { get; set; }
     }
 }

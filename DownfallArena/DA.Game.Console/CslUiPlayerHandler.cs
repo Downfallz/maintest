@@ -4,6 +4,8 @@ using DA.Game.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using DA.Game.Domain;
 using DA.Game.Domain.Models;
 using DA.Game.Domain.Models.CombatMechanic;
@@ -24,18 +26,46 @@ namespace DA.Csl
         {
             // Create a table
             var myTeam = new Table();
+            myTeam.Border = TableBorder.MinimalHeavyHead;
 
             List<IRenderable> characterStats = new List<IRenderable>();
+            List<IRenderable> spellList = new List<IRenderable>();
+            List<IRenderable> playSpeed = new List<IRenderable>();
             foreach (var character in characters)
             {
                 // Add some columns
-                myTeam.AddColumn(character.Name).Centered();
-                characterStats.Add(new Markup($"{character.Health}/{character.BaseHealth}"));
+                myTeam.AddColumn(character.Name).Width(80).Centered();
+                var sb = new StringBuilder();
+                sb.AppendLine($"[lime]{ character.Health}[/][white]/{ character.BaseHealth}[/]");
+                sb.AppendLine($"[blue]{ character.Energy}[/]");
+                sb.AppendLine($"[gold1]{ character.Initiative}[/]");
+                sb.AppendLine($"[darkorange3_1]{ character.ExtraPoint}[/]");
+                sb.AppendLine($"[cyan]{ character.IsStunned}[/]");
+                var charStatsPanel = new Panel(sb.ToString()).Padding(0, 0, 15, 0);
+                charStatsPanel.Border = BoxBorder.Rounded;
+
+                characterStats.Add(charStatsPanel);
+
+                var sbSpell = new StringBuilder();
+                foreach (var s in character.CharacterTalentStats.UnlockedSpells)
+                {
+                    sbSpell.AppendLine($"{s.Name}");
+                }
+
+
+                var spellPanel = new Panel(sbSpell.ToString());
+                charStatsPanel.Border = BoxBorder.Rounded;
+                spellList.Add(spellPanel);
+
+                var sp = Battle.CurrentRound.AllSpeedChoice.SingleOrDefault(x => x.CharacterId == character.Id)?.Speed;
+                var speedPanel = new Markup((sp == null ? "" : sp.ToString()) ?? string.Empty);
+                playSpeed.Add(speedPanel);
             }
 
             // Add some rows
             myTeam.AddRow(characterStats);
-
+            myTeam.AddRow(spellList);
+            myTeam.AddRow(playSpeed);
             return myTeam;
         }
 
@@ -73,100 +103,68 @@ namespace DA.Csl
 
         public override void EvaluateCharacterToPlay(object sender, CharacterTurnInitializedEventArgs e)
         {
-            WriteDashboard();
+
             Character characterToPlay = MyAliveCharacters.SingleOrDefault(x => x.Id == e.CharacterId);
-            
+
             if (characterToPlay != null)
             {
-                AnsiConsole.MarkupLine($"[b]{characterToPlay.Name} (Team {characterToPlay.TeamNumber})'s turn.[/]");
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"Select your spell and target for character {characterToPlay.Name}");
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine($"    {characterToPlay}");
+                WriteDashboard();
+                AnsiConsole.MarkupLine($"[bold yellow on blue]Round {Battle.CurrentRound.RoundNumber}[/]");
+                AnsiConsole.MarkupLine("[bold yellow on blue]Phase: Action[/]");
+                AnsiConsole.MarkupLine($"[cyan]{characterToPlay.Name} (Team {characterToPlay.TeamNumber})'s turn.[/]");
+                AnsiConsole.MarkupLine("");
 
+                var selectPrompt = new SelectionPrompt<Spell>()
+                    .Title("[yellow]Spells:[/]")
+                    .PageSize(10)
+                    .AddChoices(
+                        characterToPlay.CharacterTalentStats.UnlockedSpells.Where(x =>
+                            x.EnergyCost <= characterToPlay.Energy));
 
-                int spellCount = characterToPlay.CharacterTalentStats.UnlockedSpells.Count;
-                List<int> availables = new List<int>();
-                int numberPicked = 99;
-
-
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine($"    Available spells to play:");
-                for (int i = 0; i < spellCount; i++)
-                {
-                    Spell tal = characterToPlay.CharacterTalentStats.UnlockedSpells[i];
-                    if (characterToPlay.CharacterTalentStats.UnlockedSpells.Where(x => x.EnergyCost <= characterToPlay.Energy).ToList().Contains(tal))
-                    {
-                        availables.Add(i);
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                    }
-                    Console.WriteLine($"{i} - {tal}");
-                }
-
-                while (!availables.Contains(numberPicked))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Pick a spell");
-                    string readNumber = Console.ReadLine();
-                    int.TryParse(readNumber, out numberPicked);
-                }
-
-                Spell spellToPlay = characterToPlay.CharacterTalentStats.UnlockedSpells[numberPicked];
+                var pickedSpell = AnsiConsole.Prompt(selectPrompt);
 
                 List<Guid> targets = new List<Guid>();
-                if (spellToPlay.SpellType == SpellType.Defensive)
+                if (pickedSpell.SpellType == SpellType.Defensive)
                 {
                     int possibleTargetsCount = MyAliveCharacters.Count;
-                    int? spellTargetCount = spellToPlay.NbTargets;
+                    int? spellTargetCount = pickedSpell.NbTargets;
 
                     Console.WriteLine($"Spell can target {spellTargetCount} out of {possibleTargetsCount} possible targets.");
-                    for (int i = 0; i < possibleTargetsCount; i++)
-                    {
-                        Console.WriteLine($"{i} - {MyAliveCharacters[i]}");
-                    }
 
-                    for (int i = 0; i < spellTargetCount; i++)
+                    List<Character> pickedTargets;
+                    do
                     {
-                        if (i >= possibleTargetsCount)
-                        {
-                            break;
-                        }
-                        Console.WriteLine($"Target {i + 1}");
-                        string targetNumber = Console.ReadLine();
-                        targets.Add(MyAliveCharacters[int.Parse(targetNumber)].Id);
-                    }
+                        pickedTargets = AnsiConsole.Prompt(new MultiSelectionPrompt<Character>()
+                            .Title($"[yellow]Spell can target {spellTargetCount} out of {possibleTargetsCount} possible targets:[/]")
+                            .PageSize(10).Required()
+                            .AddChoices(MyAliveCharacters));
+                    } while (pickedTargets.Count != spellTargetCount || pickedTargets.Count != possibleTargetsCount );
+
+                    targets = pickedTargets.Select(x => x.Id).ToList();
                 }
-                else if (spellToPlay.SpellType == SpellType.Offensive)
+                else if (pickedSpell.SpellType == SpellType.Offensive)
                 {
                     int possibleTargetsCount = MyEnemies.Count;
-                    int? spellTargetCount = spellToPlay.NbTargets;
+                    int? spellTargetCount = pickedSpell.NbTargets;
 
                     Console.WriteLine($"Spell can target {spellTargetCount} out of {possibleTargetsCount} possible targets.");
-                    for (int i = 0; i < possibleTargetsCount; i++)
-                    {
-                        Console.WriteLine($"{i} - {MyEnemies[i]}");
-                    }
 
-                    for (int i = 0; i < spellTargetCount; i++)
+                    List<Character> pickedTargets;
+                    do
                     {
-                        if (i >= possibleTargetsCount)
-                        {
-                            break;
-                        }
-                        Console.WriteLine($"Target {i + 1}");
-                        string targetNumber = Console.ReadLine();
-                        targets.Add(MyEnemies[int.Parse(targetNumber)].Id);
-                    }
+                        pickedTargets = AnsiConsole.Prompt(new MultiSelectionPrompt<Character>()
+                            .Title($"[yellow]Spell can target {spellTargetCount} out of {possibleTargetsCount} possible targets:[/]")
+                            .PageSize(10).Required()
+                            .AddChoices(MyEnemies));
+                    } while (pickedTargets.Count > spellTargetCount);
+
+                    targets = pickedTargets.Select(x => x.Id).ToList();
                 }
 
                 BattleEngine.PlayAndResolveCharacterAction(Battle, new CharacterActionChoice()
                 {
                     CharacterId = e.CharacterId,
-                    Spell = spellToPlay,
+                    Spell = pickedSpell,
                     Targets = targets
                 });
             }
@@ -177,29 +175,35 @@ namespace DA.Csl
             }
         }
 
+        public override void CharacterPlayed(object sender, CharacterPlayedEventArgs e)
+        {
+            LatestMessages.Add($"{e.SpellResolverResult?.SourceCharInfo.Name} (Team {e.SpellResolverResult?.SourceCharInfo.Team}) played {e.SpellResolverResult?.Spell.Name} on {string.Join(",", e.SpellResolverResult?.TargetsCharInfo.Select(x => x.Name).ToList() ?? new List<string>())}");
+        }
+
         public override void SpellUnlock(object sender, EventArgs e)
         {
-            
-
             LatestMessages.Add($"Round {Battle.CurrentRound.RoundNumber}");
             foreach (var cond in Battle.CurrentRound.RoundStartConditions)
             {
-                LatestMessages.Add($"Condition {cond.StatModifierResult.TotalEffectiveValue} {cond.StatModifierResult.Effect.StatType} on {cond.StatModifierResult.TargetCharacterTeam} {cond.StatModifierResult.TargetCharacterName} |{cond.StatModifierResult.PostEffectStatsValue}|      - (rounds left: {cond.RoundsLeft})");
+                LatestMessages.Add($"Condition {cond?.StatModifierResult?.TotalEffectiveValue} {cond?.StatModifierResult?.Effect.StatType} on {cond?.StatModifierResult?.TargetCharacterTeam} {cond?.StatModifierResult?.TargetCharacterName} |{cond?.StatModifierResult?.PostEffectStatsValue}|      - (rounds left: {cond?.RoundsLeft})");
             }
             WriteDashboard();
-            
+
             List<SpellUnlockChoice> choices = new List<SpellUnlockChoice>();
             AnsiConsole.MarkupLine($"[bold yellow on blue]Round {Battle.CurrentRound.RoundNumber}[/]");
             AnsiConsole.MarkupLine("[bold yellow on blue]Phase: Spell Unlock[/]");
             AnsiConsole.MarkupLine("[cyan]Please choose your spell unlocks for 2 characters.[/]");
+            AnsiConsole.MarkupLine("");
             List<Guid> picked = new List<Guid>();
             for (int i = 0; i < 2; i++)
             {
-                var pickedCharacter = AnsiConsole.Prompt(
-                    new SelectionPrompt<Character>()
-                        .Title("[yellow]Available characters:[/]")
-                        .PageSize(10)
-                        .AddChoices(MyAliveCharacters.Where(x => !picked.Contains(x.Id))));
+                var selectPrompt = new SelectionPrompt<Character>()
+                    .Title("[yellow]Available characters:[/]")
+                    .PageSize(10)
+                    .AddChoices(MyAliveCharacters.Where(x => !picked.Contains(x.Id)));
+                selectPrompt.Converter = x => x.Name;
+
+                var pickedCharacter = AnsiConsole.Prompt(selectPrompt);
 
                 picked.Add(pickedCharacter.Id);
 
@@ -208,10 +212,10 @@ namespace DA.Csl
 
                 var pickedSpell = AnsiConsole.Prompt(
                     new SelectionPrompt<Spell>()
-                        .Title("[yellow]List of available spell to unlock:[/]")
+                        .Title($"[yellow]Spells for Team {pickedCharacter.TeamNumber} {pickedCharacter.Name}:[/]")
                         .PageSize(10)
                         .AddChoices(possibleList));
-                
+
                 choices.Add(new SpellUnlockChoice()
                 {
                     CharacterId = pickedCharacter.Id,
@@ -227,34 +231,26 @@ namespace DA.Csl
 
         public override void SpeedChoose(object sender, EventArgs e)
         {
-            WriteDashboard();
             List<SpeedChoice> choices = new List<SpeedChoice>();
 
-            AnsiConsole.MarkupLine("[cyan]Choose your speed for every of your characters.[/]");
-
-            int count = 1;
             foreach (Character c in MyAliveCharacters)
             {
-                int number = 99;
-                while (number != 0 && number != 1)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Choose your speed for character #{count}");
-                    Console.ForegroundColor = ConsoleColor.DarkYellow;
-                    Console.WriteLine($"    {c}");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    Console.WriteLine($"0 - Standard");
-                    Console.WriteLine($"1 - Quick");
-                    string readNumber = Console.ReadLine();
-                    int.TryParse(readNumber, out number);
-                }
+                WriteDashboard();
+                AnsiConsole.MarkupLine($"[bold yellow on blue]Round {Battle.CurrentRound.RoundNumber}[/]");
+                AnsiConsole.MarkupLine("[bold yellow on blue]Phase: Choose Speed[/]");
+                AnsiConsole.MarkupLine("[cyan]Choose your speed for every of your characters.[/]");
+                AnsiConsole.MarkupLine("");
+                var pickedSpeed = AnsiConsole.Prompt(
+                    new SelectionPrompt<Speed>()
+                        .Title($"[yellow]Speed for Team {c.TeamNumber} {c.Name}:[/]")
+                        .PageSize(10)
+                        .AddChoices(Enum.GetValues(typeof(Speed)).Cast<Speed>()));
 
                 choices.Add(new SpeedChoice()
                 {
                     CharacterId = c.Id,
-                    Speed = number == 0 ? Speed.Standard : Speed.Quick
+                    Speed = pickedSpeed
                 });
-                count++;
             }
 
             BattleEngine.ChooseSpeed(Battle, Indicator, choices);

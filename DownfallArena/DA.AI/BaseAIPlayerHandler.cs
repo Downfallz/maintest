@@ -42,6 +42,11 @@ namespace DA.AI
             }
         }
 
+        public override void CharacterPlayed(object sender, CharacterPlayedEventArgs e)
+        {
+
+        }
+
         public override void SpellUnlock(object sender, EventArgs e)
         {
             List<SpellUnlockChoice> choices = _spellChooser.GetSpellUnlockChoices(Battle, MyAliveCharacters, MyEnemies);

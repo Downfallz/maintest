@@ -28,13 +28,15 @@ namespace DA.Game.Domain.Models.TalentsManagement.Spells
         public int Level { get; set; }
         public override string ToString()
         {
-            string main = $"({Name} {EnergyCost} energy - {Initiative} initiative - {CriticalChance} critChance)";
+            string main = $"{Name} eng:{EnergyCost} init:{Initiative} crit:{CriticalChance} (";
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine(main);
+            sb.Append(main);
             foreach (Effect e in Effects)
             {
-                sb.AppendLine($"    {e.EffectType} {e.Stats} {e.Modifier} {e.Length} ");
+                sb.Append($"|{e.EffectType} {e.Stats} {e.Modifier} {e.Length}|");
             }
+
+            sb.Append(")");
 
             return sb.ToString();
         }

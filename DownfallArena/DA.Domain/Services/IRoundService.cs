@@ -16,6 +16,6 @@ namespace DA.Game.Domain.Services
 
         bool ChooseTeamSpellToUnlock(Battle battle, TeamIndicator ti, List<SpellUnlockChoice> choices);
         bool ChooseTeamSpeed(Battle battle, TeamIndicator ti, List<SpeedChoice> choices);
-        void PlayAndResolveCharacterAction(Round round, CharacterActionChoice characterActionChoice);
+        SpellResolverResult PlayAndResolveCharacterAction(Round round, CharacterActionChoice characterActionChoice);
     }
 }
