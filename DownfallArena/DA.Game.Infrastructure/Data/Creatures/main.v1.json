@@ -1,0 +1,9 @@
+{
+  "id": "creature:main:v1",
+  "name": "Mage",
+  "baseHealth": 15,
+  "baseEnergy": 6,
+  "startingSpellIds": [
+    "spell:basic_attack"
+  ]
+}

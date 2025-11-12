@@ -1,0 +1,14 @@
+﻿using DA.Game.Domain2.Shared.Primitives;
+
+namespace DA.Game.Domain2.Catalog.ValueObjects;
+
+public sealed record Initiative(int Value) : ValueObject
+{
+    public static Initiative Of(int v) {
+        var res = Validate((v >= 0, "Initiative >= 0"));
+        if (!res.IsSuccess)
+            throw new ArgumentException(res.Error);
+        return new(v); 
+    }
+    public override string ToString() => Value.ToString();
+}
