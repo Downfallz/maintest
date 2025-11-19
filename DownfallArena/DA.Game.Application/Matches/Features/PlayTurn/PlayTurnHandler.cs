@@ -1,7 +1,5 @@
 ﻿using DA.Game.Application.Matches.Ports;
-using DA.Game.Application.Shared.Abstractions;
-using DA.Game.Application.Shared.Primitives;
-using DA.Game.Shared;
+using DA.Game.Shared.Utilities;
 using MediatR;
 
 namespace DA.Game.Application.Matches.Features.PlayTurn;

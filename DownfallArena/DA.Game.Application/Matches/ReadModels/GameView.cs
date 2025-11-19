@@ -1,8 +1,8 @@
-﻿using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Matches.Ids;
-using DA.Game.Domain2.Players.Ids;
+﻿using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Players.Ids;
 
-namespace DA.Game.Domain2.Match.ReadModels;
+namespace DA.Game.Application.Matches.ReadModels;
 public sealed record GameView(
     MatchId MatchId,
     PlayerSlot? CurrentTurn,

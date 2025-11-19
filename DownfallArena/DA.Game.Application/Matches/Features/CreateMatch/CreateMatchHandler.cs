@@ -1,11 +1,11 @@
 ﻿using DA.Game.Application.Matches.Features.CreateMatch.Notifications;
 using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Shared.Messaging;
+using DA.Game.Application.Shared.RuleSets;
 using DA.Game.Domain2.Matches.Aggregates;
-using DA.Game.Domain2.Matches.Ids;
-using DA.Game.Domain2.Matches.Resources;
-using DA.Game.Domain2.Shared.Policies.RuleSets;
-using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Resources;
+using DA.Game.Shared.Utilities;
 using MediatR;
 
 namespace DA.Game.Application.Matches.Features.CreateMatch;
@@ -14,9 +14,9 @@ public sealed class CreateMatchHandler(IMatchRepository repo,
     IApplicationEventCollector appEvents,
     IGameResources gameResources,
     IRuleSetProvider ruleSetProvider,
-    IClock clock) : IRequestHandler<CreateMatchCommand, Result<Match>>
+    IClock clock) : IRequestHandler<CreateMatchCommand, Result<MatchId>>
 {
-    public async Task<Result<Match>> Handle(CreateMatchCommand cmd, CancellationToken ct = default)
+    public async Task<Result<MatchId>> Handle(CreateMatchCommand cmd, CancellationToken ct = default)
     {
         var rulebook = ruleSetProvider.Current;
 
@@ -26,6 +26,6 @@ public sealed class CreateMatchHandler(IMatchRepository repo,
 
         appEvents.Add(new MatchCreated(match.Id, clock.UtcNow));
 
-        return res;
+        return Result<MatchId>.Ok(res.Value!.Id);
     }
 }

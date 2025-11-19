@@ -1,9 +1,9 @@
-﻿using DA.Game.Domain2.Match.Entities;
-using DA.Game.Domain2.Players.Enums;
-using DA.Game.Shared;
+﻿using DA.Game.Shared.Contracts.Players.Enums;
+using DA.Game.Shared.Contracts.Players.Ids;
+using DA.Game.Shared.Utilities;
 using MediatR;
 
 namespace DA.Game.Application.Players.Features.Create;
 
 public sealed record CreatePlayerCommand(string Name, ActorKind Kind)
-    : IRequest<Result<Player>>;
+    : IRequest<Result<PlayerId>>;

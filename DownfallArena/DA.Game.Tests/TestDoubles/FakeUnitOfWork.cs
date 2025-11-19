@@ -1,4 +1,4 @@
-﻿using DA.Game.Application.Shared.Abstractions;
+﻿using DA.Game.Application.Shared.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Linq;

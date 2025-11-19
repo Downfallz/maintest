@@ -1,6 +1,6 @@
 ﻿using DA.Game.Domain2.Shared.Primitives;
 
-namespace DA.Game.Domain2.Catalog.ValueObjects;
+namespace DA.Game.Domain2.Catalog.ValueObjects.Stats;
 
 public sealed record CriticalChance(Percentage01 Value) : ValueObject
 {

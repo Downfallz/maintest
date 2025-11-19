@@ -7,7 +7,7 @@ using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Matches.Simulation.Runners;
 using DA.Game.Application.Matches.Simulation.Scenarios;
 using DA.Game.Application.Players.Features.Create;
-using DA.Game.Data;
+using DA.Game.DataBuilder;
 using DA.Game.Domain2.Match.Enums;
 using DA.Game.Domain2.Match.ReadModels;
 using DA.Game.Domain2.Match.ValueObjects;
@@ -19,7 +19,7 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DA.Game.Tests;
+namespace DA.Game.Tests.Infrastructure.Bootstrap;
 
 public sealed class DataBuilderTests
 {

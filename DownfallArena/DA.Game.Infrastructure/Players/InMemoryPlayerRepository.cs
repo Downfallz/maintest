@@ -1,8 +1,8 @@
 ﻿using DA.Game.Application.Players.Ports;
-using DA.Game.Domain2.Match.Entities;
-using DA.Game.Domain2.Players.Ids;
+using DA.Game.Domain2.Players.Entities;
+using DA.Game.Shared.Contracts.Players.Ids;
 
-namespace DA.Game.Infrastructure.Matches;
+namespace DA.Game.Infrastructure.Players;
 
 public sealed class InMemoryPlayerRepository : IPlayerRepository
 {

@@ -1,4 +1,4 @@
-﻿using DA.Game.Domain2.Players.Enums;
+﻿using DA.Game.Shared.Contracts.Players.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;

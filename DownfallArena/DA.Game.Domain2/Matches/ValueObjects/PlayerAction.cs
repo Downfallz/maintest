@@ -1,2 +1,2 @@
-﻿namespace DA.Game.Domain2.Match.ValueObjects;
+﻿namespace DA.Game.Domain2.Matches.ValueObjects;
 public sealed record PlayerAction(string Kind, string? Payload = null);

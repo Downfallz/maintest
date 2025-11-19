@@ -1,9 +1,8 @@
-﻿
-using DA.Game.Shared;
+﻿using DA.Game.Shared.Utilities;
 using FluentValidation;
 using MediatR;
 
-namespace DA.Game.Infrastructure;
+namespace DA.Game.Application.DI;
 
 public sealed class ValidationBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, TResponse>

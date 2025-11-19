@@ -1,6 +1,6 @@
 ﻿using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Shared.Ids;
 using DA.Game.Domain2.Shared.Primitives;
+using DA.Game.Shared.Contracts.Matches.Ids;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
 

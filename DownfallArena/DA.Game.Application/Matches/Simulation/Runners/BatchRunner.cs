@@ -1,6 +1,6 @@
 ﻿using DA.Game.Application.Matches.Simulation.Results;
 using DA.Game.Application.Matches.Simulation.Scenarios;
-using DA.Game.Domain2.Match.Enums;
+using DA.Game.Shared.Contracts.Matches.Enums;
 
 namespace DA.Game.Application.Matches.Simulation.Runners;
 // Application/Matches/Simulation/Runners/BatchRunner.cs

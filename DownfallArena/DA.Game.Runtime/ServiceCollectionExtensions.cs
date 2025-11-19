@@ -1,21 +1,21 @@
-﻿using DA.Game.Application.Matches.Ports;
+﻿using DA.Game.Application;
+using DA.Game.Application.DI;
+using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Players.Ports;
-using DA.Game.Application.Shared.Abstractions;
 using DA.Game.Application.Shared.Messaging;
-using DA.Game.Data;
-using DA.Game.Domain2.Matches.Resources;
-using DA.Game.Domain2.Players.Enums;
-using DA.Game.Domain2.Shared.Messaging;
-using DA.Game.Domain2.Shared.Policies.RuleSets;
+using DA.Game.Application.Shared.Primitives;
+using DA.Game.Application.Shared.RuleSets;
 using DA.Game.Infrastructure.Bootstrap;
 using DA.Game.Infrastructure.Matches;
+using DA.Game.Infrastructure.Players;
 using DA.Game.Infrastructure.Shared;
-using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Players.Enums;
+using DA.Game.Shared.Resources;
+using DA.Game.Shared.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace DA.Game.Application.DI;
+namespace DA.Game.Runtime;
 
 public static class ServiceCollectionExtensions
 {

@@ -1,10 +1,10 @@
 ﻿using DA.Game.Application.Players.Features.Create.Notifications;
 using DA.Game.Application.Players.Ports;
 using DA.Game.Application.Shared.Messaging;
-using DA.Game.Domain2.Match.Entities;
-using DA.Game.Domain2.Players.Ids;
+using DA.Game.Domain2.Players.Entities;
 using DA.Game.Domain2.Players.Messages;
-using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Players.Ids;
+using DA.Game.Shared.Utilities;
 using MediatR;
 
 namespace DA.Game.Application.Players.Features.Create;
@@ -14,13 +14,13 @@ public sealed class CreatePlayerHandler(
     IPlayerUniqueness unique,
     IApplicationEventCollector appEvents,
     IClock clock
-) : IRequestHandler<CreatePlayerCommand, Result<Player>>
+) : IRequestHandler<CreatePlayerCommand, Result<PlayerId>>
 {
-    public async Task<Result<Player>> Handle(CreatePlayerCommand cmd, CancellationToken ct = default)
+    public async Task<Result<PlayerId>> Handle(CreatePlayerCommand cmd, CancellationToken ct = default)
     {
         var name = cmd.Name!.Trim();
         if (await unique.ExistsNameAsync(name, ct))
-            return Result<Player>.Fail(PlayerErrors.NameAlreadyTaken);
+            return Result<PlayerId>.Fail(PlayerErrors.NameAlreadyTaken);
 
         var player = new Player(PlayerId.New(), name, cmd.Kind);
 
@@ -28,6 +28,6 @@ public sealed class CreatePlayerHandler(
 
         appEvents.Add(new PlayerCreated(player.Id, name, clock.UtcNow));
 
-        return Result<Player>.Ok(player);
+        return Result<PlayerId>.Ok(player.Id);
     }
 }

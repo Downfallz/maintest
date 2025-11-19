@@ -1,6 +1,6 @@
 ﻿using DA.Game.Application.Shared.Messaging;
-using DA.Game.Domain2.Players.Ids;
-using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Players.Ids;
+using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Application.Players.Features.Create.Notifications;
 

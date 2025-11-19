@@ -1,12 +1,13 @@
 ﻿using DA.Game.Domain2.Catalog.Entities;
-using DA.Game.Domain2.Catalog.Ids;
-using DA.Game.Domain2.Catalog.ValueObjects;
 using DA.Game.Domain2.Catalog.ValueObjects.Spells;
-using DA.Game.Domain2.Matches.Enums;
-using DA.Game.Domain2.Matches.Resources;
-using DA.Game.Resources.Dto;
-using DA.Game.Shared;
+using DA.Game.Domain2.Catalog.ValueObjects.Stats;
+using DA.Game.Shared.Contracts.Catalog.Ids;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Resources.JsonDto;
+using DA.Game.Shared.Resources.Spells;
+using DA.Game.Shared.Utilities;
 namespace DA.Game.Infrastructure.Bootstrap;
+
 public static class SpellMapping
 {
     public static Result<SpellDefinition> ToDomain(this SpellDefinitionDto dto, GameSchema schema)
@@ -25,7 +26,7 @@ public static class SpellMapping
         var init = Initiative.Of(dto.Initiative);
         var crit = CriticalChance.Of(Percentage01.Of(dto.CriticalChance));
 
-        var effects = dto.Effects.Select(g => g.ToDomain());
+        var effects = dto.Effects.Select(g => g.ToRef());
 
 
         var spellDef = SpellDefinition.Create(id,
@@ -40,17 +41,17 @@ public static class SpellMapping
         return Result<SpellDefinition>.Ok(spellDef);
 
     }
-    public static Effect ToDomain(this EffectDto dto)
+    public static Effect ToRef(this EffectDto dto)
       => dto.Kind switch
       {
-          EffectKind.Bleed => dto.ToBleedDomain(),
-          EffectKind.Damage => dto.ToDamageDomain(),
+          EffectKind.Bleed => dto.ToBleedRef(),
+          EffectKind.Damage => dto.ToDamageRef(),
           // EffectKind.Heal   => dto.ToHealDomain(),
           _ => throw new NotSupportedException(
               $"Unsupported effect kind '{dto.Kind}'.")
       };
 
-    private static Bleed ToBleedDomain(this EffectDto dto)
+    private static Bleed ToBleedRef(this EffectDto dto)
     {
         if (dto.Targeting is null)
             throw new InvalidOperationException("Bleed requires Targeting.");
@@ -63,7 +64,7 @@ public static class SpellMapping
         var amountPerTick = Req(dto.AmountPerTick, nameof(dto.AmountPerTick));
         var durationRounds = Req(dto.DurationRounds, nameof(dto.DurationRounds));
 
-        var targeting = dto.Targeting.ToDomain();
+        var targeting = dto.Targeting.ToRef();
 
         return Bleed.Of(
             amountPerTick,
@@ -71,7 +72,7 @@ public static class SpellMapping
             targeting
         );
     }
-    private static Damage ToDamageDomain(this EffectDto dto)
+    private static Damage ToDamageRef(this EffectDto dto)
     {
         if (dto.Targeting is null)
             throw new InvalidOperationException("Damage requires Targeting.");
@@ -83,7 +84,7 @@ public static class SpellMapping
 
         var amount = Req(dto.Amount, nameof(dto.Amount));
 
-        var targeting = dto.Targeting.ToDomain();
+        var targeting = dto.Targeting.ToRef();
 
         return Damage.Of(amount,
             targeting
@@ -91,7 +92,7 @@ public static class SpellMapping
     }
     // ---------- Targeting
 
-    public static TargetingSpec ToDomain(this TargetingSpecDto dto)
+    public static TargetingSpec ToRef(this TargetingSpecDto dto)
         => TargetingSpec.Of(dto.Origin, dto.Scope, dto.MaxTargets);
 
 
@@ -103,7 +104,7 @@ public static class SpellMapping
             , dto.Initiative
             , dto.EnergyCost
             , dto.CriticalChance
-            , dto.Effects.Select(e => e.ToDomain()).ToArray()
-        ); 
+            , dto.Effects.Select(e => e.ToRef()).ToArray()
+        );
 
 }

@@ -1,4 +1,4 @@
-﻿using DA.Game.Domain2.Shared.Ids;
+﻿using DA.Game.Shared.Contracts.Matches.Ids;
 using System;
 using System.Collections.Generic;
 using System.Linq;

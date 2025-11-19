@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain2.Shared.Ids;
+﻿namespace DA.Game.Shared.Contracts.Matches.Ids;
 
 public readonly record struct CharacterId(int Value)
 {

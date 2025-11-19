@@ -1,6 +1,6 @@
-﻿using DA.Game.Domain2.Match.ReadModels;
-using DA.Game.Domain2.Match.ValueObjects;
-using DA.Game.Domain2.Players.Ids;
+﻿using DA.Game.Application.Matches.ReadModels;
+using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Shared.Contracts.Players.Ids;
 
 namespace DA.Game.Application.Matches.Ports;
 public interface ITurnDecider

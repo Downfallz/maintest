@@ -13,7 +13,6 @@
   <ItemGroup>
     <Folder Include="Matches\Services\" />
     <Folder Include="Shared\Policies\Combat\" />
-    <Folder Include="Shared\Resources\" />
   </ItemGroup>
 
   <ItemGroup>

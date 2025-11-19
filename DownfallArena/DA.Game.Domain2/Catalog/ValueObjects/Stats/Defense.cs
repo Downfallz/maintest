@@ -1,6 +1,6 @@
 ﻿using DA.Game.Domain2.Shared.Primitives;
 
-namespace DA.Game.Domain2.Catalog.ValueObjects;
+namespace DA.Game.Domain2.Catalog.ValueObjects.Stats;
 
 public sealed record Defense(int Value) : ValueObject
 {

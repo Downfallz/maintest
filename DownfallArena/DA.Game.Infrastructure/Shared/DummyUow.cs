@@ -1,4 +1,4 @@
-﻿using DA.Game.Application.Shared.Abstractions;
+﻿using DA.Game.Application.Shared.Primitives;
 
 namespace DA.Game.Infrastructure.Shared;
 

@@ -1,8 +1,6 @@
-﻿using DA.Game.Domain2.Catalog.Ids;
-using DA.Game.Domain2.Match.ValueObjects;
-using DA.Game.Domain2.Matches.Resources;
-using DA.Game.Domain2.Shared.Ids;
-using DA.Game.Domain2.Shared.Primitives;
+﻿using DA.Game.Domain2.Shared.Primitives;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Resources.Spells;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
 public sealed record CombatActionChoice(

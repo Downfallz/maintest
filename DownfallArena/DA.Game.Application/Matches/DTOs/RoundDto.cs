@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Matches.Ids;
+﻿using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Matches.Ids;
 
 namespace DA.Game.Application.Matches.DTOs;
 

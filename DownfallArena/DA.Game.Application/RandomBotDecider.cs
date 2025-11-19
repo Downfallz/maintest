@@ -1,8 +1,8 @@
 ﻿using DA.Game.Application.Matches.Ports;
-using DA.Game.Domain2.Match.ReadModels;
-using DA.Game.Domain2.Match.ValueObjects;
-using DA.Game.Domain2.Players.Ids;
-using DA.Game.Shared;
+using DA.Game.Application.Matches.ReadModels;
+using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Shared.Contracts.Players.Ids;
+using DA.Game.Shared.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

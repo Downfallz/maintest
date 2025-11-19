@@ -1,9 +1,8 @@
-﻿using DA.Game.Domain2.Matches.Resources;
-using DA.Game.Infrastructure.Bootstrap;
-using DA.Game.Shared;
+﻿using DA.Game.Shared.Resources.JsonDto;
+using DA.Game.Shared.Utilities;
 using System.Text.Json;
 
-namespace DA.Game.Data;
+namespace DA.Game.Infrastructure.Bootstrap;
 
 public static class GameResourcesFactory
 {

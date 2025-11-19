@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain2.Matches.Resources;
-using DA.Game.Domain2.Shared.Ids;
+﻿using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Resources.Spells;
 using System;
 using System.Collections.Generic;
 using System.Linq;

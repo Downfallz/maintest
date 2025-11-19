@@ -1,6 +1,6 @@
 ﻿using DA.Game.Domain2.Matches.Aggregates;
-using DA.Game.Domain2.Matches.Ids;
-using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Application.Matches.Ports;
 

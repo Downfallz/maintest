@@ -1,6 +1,6 @@
-﻿using DA.Game.Domain2.Match.Enums;      // MatchState
-using DA.Game.Domain2.Match.ValueObjects;
-using DA.Game.Domain2.Matches.Ids;      // MatchId
+﻿using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Matches.Ids;      // MatchId
 
 namespace DA.Game.Application.Matches.DTOs;
 

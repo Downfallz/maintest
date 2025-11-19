@@ -1,6 +1,6 @@
-﻿using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Matches.Contexts;
-using DA.Game.Shared;
+﻿using DA.Game.Domain2.Matches.Contexts;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Shared.Policies.MatchPhase;
 

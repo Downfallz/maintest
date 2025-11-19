@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain2.Matches.Ids;
+﻿namespace DA.Game.Shared.Contracts.Matches.Ids;
 
 public readonly record struct MatchId(Guid Value)
 {

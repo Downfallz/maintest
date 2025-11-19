@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DA.Game.Application\DA.Game.Application.csproj" />
+    <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" PrivateAssets="All"/>
   </ItemGroup>
 
 </Project>

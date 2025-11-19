@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Resources.Enums;
+﻿namespace DA.Game.Shared.Contracts.Catalog.Enums;
 
 public enum CharClass
 {

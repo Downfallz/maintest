@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Application.Shared.Abstractions;
+﻿namespace DA.Game.Application.Shared.Primitives;
 
 public interface IUnitOfWork
 {

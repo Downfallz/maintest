@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain2.Matches.Enums
+﻿namespace DA.Game.Shared.Contracts.Matches.Enums
 {
     public enum Speed
     {

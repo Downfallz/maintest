@@ -1,6 +1,9 @@
-﻿using DA.Game.Domain2.Catalog.Ids;
+﻿using DA.Game.Shared.Contracts.Catalog.Ids;
+using DA.Game.Shared.Resources;
+using DA.Game.Shared.Resources.Creatures;
+using DA.Game.Shared.Resources.Spells;
 
-namespace DA.Game.Domain2.Matches.Resources;
+namespace DA.Game.Infrastructure.Bootstrap;
 
 /// <summary>
 /// Représente un ensemble immuable des ressources de jeu (spells et characters)

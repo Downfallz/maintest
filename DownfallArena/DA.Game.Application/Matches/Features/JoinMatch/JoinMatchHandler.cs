@@ -1,7 +1,6 @@
 ﻿using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Shared.Messaging;
-using DA.Game.Domain2.Matches.ValueObjects;
-using DA.Game.Shared;
+using DA.Game.Shared.Utilities;
 using MediatR;
 
 namespace DA.Game.Application.Matches.Features.JoinMatch;
@@ -18,10 +17,11 @@ public sealed class JoinMatchHandler(IMatchRepository repo,
             return Result<JoinMatchResult>.Fail($"Match '{cmd.MatchId}' not found.");
         var res = match.Join(cmd.PlayerRef, clock, rng);
 
-        if (!res.IsSuccess) return res;
+        if (!res.IsSuccess)
+            return Result<JoinMatchResult>.Fail(res.Error!);
 
         await repo.SaveAsync(match, ct);
 
-        return res;
+        return Result<JoinMatchResult>.Ok(new JoinMatchResult(res.Value, match.State));
     }
 }

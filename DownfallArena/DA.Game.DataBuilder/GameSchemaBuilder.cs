@@ -1,12 +1,11 @@
-﻿using DA.Game.Infrastructure.Bootstrap;
-using DA.Game.Resources.Dto;
-using DA.Game.Shared;
+﻿using DA.Game.Shared.Resources.JsonDto;
+using DA.Game.Shared.Utilities;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace DA.Game.Data;
+namespace DA.Game.DataBuilder;
 
 public static class GameSchemaBuilder
 {

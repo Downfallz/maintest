@@ -1,6 +1,6 @@
 ﻿using DA.Game.Domain2.Matches.ValueObjects;
-using DA.Game.Domain2.Shared.Policies.RuleSets;
-using DA.Game.Shared;
+using DA.Game.Domain2.Shared.RuleSets;
+using DA.Game.Shared.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

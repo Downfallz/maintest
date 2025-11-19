@@ -1,9 +1,9 @@
-﻿using DA.Game.Domain2.Matches.Ids;
-using DA.Game.Domain2.Players.Ids;
-using DA.Game.Domain2.Shared.Messaging;
-using DA.Game.Shared;
+﻿using DA.Game.Domain2.Shared.Messaging;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Players.Ids;
+using DA.Game.Shared.Utilities;
 
-namespace DA.Game.Domain2.Match.Events;
+namespace DA.Game.Domain2.Matches.Events;
 
 public sealed record PlayerJoined(MatchId MatchId, PlayerId PlayerId, DateTime dt) : EventBase(dt), IDomainEvent;
 

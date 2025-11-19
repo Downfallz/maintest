@@ -1,13 +1,13 @@
 ﻿using DA.Game.Application.Matches.Features.PlayTurn;
 using DA.Game.Application.Matches.Ports;
-using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Match.Events;
-using DA.Game.Domain2.Match.ReadModels;
-using DA.Game.Shared;
+using DA.Game.Application.Matches.ReadModels;
+using DA.Game.Domain2.Matches.Events;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Utilities;
 using MediatR;
 using Microsoft.Extensions.Options;
 
-namespace DA.Game.Application.Matches.Events;
+namespace DA.Game.Application.Matches.DomainEvents;
 
 public sealed class TurnAdvancedHandler(
     IMatchRepository repo,

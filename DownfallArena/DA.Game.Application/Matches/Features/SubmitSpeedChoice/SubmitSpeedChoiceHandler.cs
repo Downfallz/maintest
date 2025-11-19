@@ -1,26 +1,32 @@
-﻿using DA.Game.Application.Matches.Ports;
+﻿using AutoMapper;
+using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Shared.Messaging;
 using DA.Game.Domain2.Matches.ValueObjects;
-using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Utilities;
 using MediatR;
 
-namespace DA.Game.Application.Matches.Features.JoinMatch;
+namespace DA.Game.Application.Matches.Features.SubmitSpeedChoice;
 
 public sealed class SubmitSpeedChoiceHandler(IMatchRepository repo, 
     IApplicationEventCollector appEvents,
     IClock clock,
-    IRandom rng) : IRequestHandler<SubmitSpeedChoiceCommand, Result<SubmitSpeedResult>>
+    IRandom rng,
+    IMapper mapper) : IRequestHandler<SubmitSpeedChoiceCommand, Result<SubmitSpeedResult>>
 {
     public async Task<Result<SubmitSpeedResult>> Handle(SubmitSpeedChoiceCommand cmd, CancellationToken ct = default)
     {
         var match = await repo.GetAsync(cmd.MatchId, ct);
         if (match is null)
             return Result<SubmitSpeedResult>.Fail($"Match '{cmd.MatchId}' not found.");
-        var res = match.SubmitSpeedChoice(cmd.slot, cmd.SpeedChoice, clock);
-        if (!res.IsSuccess) return res;
+
+        var domainChoice = mapper.Map<SpeedChoice>(cmd.SpeedChoice);
+        var res = match.SubmitSpeedChoice(cmd.slot, domainChoice, clock);
+        if (!res.IsSuccess)
+            return Result<SubmitSpeedResult>.Fail(res.Error!);
 
         await repo.SaveAsync(match, ct);
-
-        return res;
+        var choices = cmd.slot == PlayerSlot.Player1 ? match.CurrentRound!.Player1SpeedChoices : match.CurrentRound!.Player2SpeedChoices;
+        return Result<SubmitSpeedResult>.Ok(new SubmitSpeedResult(choices.ToHashSet(), match.CurrentRound!.Phase));
     }
 }

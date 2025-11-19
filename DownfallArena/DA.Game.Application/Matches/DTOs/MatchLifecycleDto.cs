@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DA.Game.Application.Matches.DTOs;
 
-using DA.Game.Domain2.Match.Enums;
+using DA.Game.Shared.Contracts.Matches.Enums;
 
 public sealed record MatchLifecycleDto(
     MatchState State,

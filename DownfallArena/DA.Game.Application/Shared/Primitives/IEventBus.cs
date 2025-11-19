@@ -1,6 +1,6 @@
-﻿using DA.Game.Shared;
+﻿using DA.Game.Shared.Utilities;
 
-namespace DA.Game.Application.Shared.Abstractions;
+namespace DA.Game.Application.Shared.Primitives;
 
 // Bus (unifié)
 public interface IEventBus

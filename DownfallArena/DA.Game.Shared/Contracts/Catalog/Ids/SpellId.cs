@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Domain2.Catalog.Ids;
+﻿namespace DA.Game.Shared.Contracts.Catalog.Ids;
 
 public readonly record struct SpellId(string Name)
 {

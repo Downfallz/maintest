@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain2.Matches.Resources; // pour SpellRef
-using DA.Game.Domain2.Shared.Ids;
+﻿using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Resources.Spells;
 
 namespace DA.Game.Application.Matches.DTOs;
 

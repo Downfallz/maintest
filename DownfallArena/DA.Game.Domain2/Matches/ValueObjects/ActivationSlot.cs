@@ -1,8 +1,5 @@
-﻿
-using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.Enums;
-using DA.Game.Domain2.Shared.Ids;
+﻿using DA.Game.Domain2.Matches.Entities;
+using DA.Game.Shared.Contracts.Matches.Enums;
 namespace DA.Game.Domain2.Matches.ValueObjects;
 
 public sealed record ActivationSlot(

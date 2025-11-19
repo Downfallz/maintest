@@ -1,3 +1,3 @@
-﻿namespace DA.Game.Domain2.Shared.Resources.Enums;
+﻿namespace DA.Game.Shared.Contracts.Catalog.Enums;
 
 public enum TargetOrigin { Self, Ally, Enemy, Any }

@@ -1,4 +1,4 @@
-﻿using DA.Game.Shared;
+﻿using DA.Game.Shared.Utilities;
 using MediatR;
 
 namespace DA.Game.Domain2.Shared.Messaging;

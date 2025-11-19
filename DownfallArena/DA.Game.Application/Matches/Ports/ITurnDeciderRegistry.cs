@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain2.Players.Enums;
-using DA.Game.Domain2.Players.Ids;
+﻿using DA.Game.Shared.Contracts.Players.Enums;
+using DA.Game.Shared.Contracts.Players.Ids;
 
 namespace DA.Game.Application.Matches.Ports;
 public interface ITurnDeciderRegistry

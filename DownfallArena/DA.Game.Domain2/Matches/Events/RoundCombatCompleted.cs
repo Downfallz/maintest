@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain2.Matches.Ids;
-using DA.Game.Domain2.Shared.Messaging;
+﻿using DA.Game.Domain2.Shared.Messaging;
+using DA.Game.Shared.Contracts.Matches.Ids;
 
 namespace DA.Game.Domain2.Matches.Events;
 

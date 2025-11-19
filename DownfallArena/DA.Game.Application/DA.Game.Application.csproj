@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" />
+    <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" PrivateAssets="All" />
     <ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
   </ItemGroup>
 

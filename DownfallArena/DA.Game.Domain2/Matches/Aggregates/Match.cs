@@ -1,17 +1,17 @@
-﻿using DA.Game.Domain2.Catalog.Ids;
-using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Match.Events;
-using DA.Game.Domain2.Match.ValueObjects;
-using DA.Game.Domain2.Matches.Contexts;
+﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.Ids;
+using DA.Game.Domain2.Matches.Events;
 using DA.Game.Domain2.Matches.Messages;
-using DA.Game.Domain2.Matches.Resources;
 using DA.Game.Domain2.Matches.ValueObjects;
-using DA.Game.Domain2.Players.Ids;
-using DA.Game.Domain2.Shared.Policies.RuleSets;
 using DA.Game.Domain2.Shared.Primitives;
+using DA.Game.Domain2.Shared.RuleSets;
 using DA.Game.Shared;
+using DA.Game.Shared.Contracts.Catalog.Ids;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Players.Ids;
+using DA.Game.Shared.Resources;
+using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.Aggregates;
 
@@ -52,13 +52,13 @@ public sealed class Match : AggregateRoot<MatchId>
     /// <summary>
     /// Permet à un joueur de rejoindre le match. Le match démarre automatiquement si les deux sont présents.
     /// </summary>
-    public Result Join(PlayerRef player, IClock clock, IRandom rng)
+    public Result<PlayerSlot> Join(PlayerRef player, IClock clock, IRandom rng)
     {
         if (State != MatchState.WaitingForPlayers)
-            return Result.Fail(MatchErrors.AlreadyStarted);
+            return Result<PlayerSlot>.Fail(MatchErrors.AlreadyStarted);
 
         if (PlayerRef1?.Id == player.Id || PlayerRef2?.Id == player.Id)
-            return Result.Fail(MatchErrors.PlayerAlreadyInGame);
+            return Result<PlayerSlot>.Fail(MatchErrors.PlayerAlreadyInGame);
         PlayerSlot slot = default;
         if (PlayerRef1 is null)
         {
@@ -76,7 +76,7 @@ public sealed class Match : AggregateRoot<MatchId>
         if (PlayerRef1 is not null && PlayerRef2 is not null)
             StartMatch(clock, rng);
 
-        return Result.Ok();
+        return Result<PlayerSlot>.Ok(slot);
     }
 
     private void StartMatch(IClock clock, IRandom rng)

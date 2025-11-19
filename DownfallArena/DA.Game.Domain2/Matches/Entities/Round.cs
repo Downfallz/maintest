@@ -1,14 +1,12 @@
-﻿using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Match.ValueObjects;
-using DA.Game.Domain2.Matches.Contexts;
-using DA.Game.Domain2.Matches.Ids;
-using DA.Game.Domain2.Matches.Resources;
+﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Domain2.Services;
-using DA.Game.Domain2.Shared.Ids;
-using DA.Game.Domain2.Shared.Policies.RuleSets;
 using DA.Game.Domain2.Shared.Primitives;
-using DA.Game.Shared;
+using DA.Game.Domain2.Shared.RuleSets;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Resources;
+using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.Entities
 {

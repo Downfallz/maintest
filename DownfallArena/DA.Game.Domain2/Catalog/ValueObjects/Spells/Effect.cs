@@ -1,4 +1,5 @@
 ﻿using DA.Game.Domain2.Shared.Primitives;
+using DA.Game.Shared.Resources.Spells.Effects;
 
 namespace DA.Game.Domain2.Catalog.ValueObjects.Spells;
 

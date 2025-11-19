@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain2.Match.Enums;
-using DA.Game.Domain2.Matches.Entities;
+﻿using DA.Game.Domain2.Matches.Entities;
 using DA.Game.Domain2.Matches.ValueObjects;
-using DA.Game.Domain2.Shared.Ids;
+using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Matches.Ids;
 
 namespace DA.Game.Domain2.Matches.Contexts;
 

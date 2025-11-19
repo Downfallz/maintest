@@ -1,7 +1,7 @@
 ﻿using DA.Game.Application.Learning.Abstractions;
 using DA.Game.Application.Learning.ML.Models;
-using DA.Game.Domain2.Match.ReadModels;
-using DA.Game.Domain2.Match.ValueObjects;
+using DA.Game.Application.Matches.ReadModels;
+using DA.Game.Domain2.Matches.ValueObjects;
 using Microsoft.ML;
 using System;
 using System.Collections.Generic;

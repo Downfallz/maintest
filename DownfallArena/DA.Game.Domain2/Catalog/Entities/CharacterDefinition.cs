@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain2.Catalog.Ids;
-using DA.Game.Domain2.Catalog.ValueObjects;
+﻿using DA.Game.Domain2.Catalog.ValueObjects.Stats;
 using DA.Game.Domain2.Shared.Primitives;
-using DA.Game.Resources.Enums;
+using DA.Game.Shared.Contracts.Catalog.Enums;
+using DA.Game.Shared.Contracts.Catalog.Ids;
 using System.Collections.Immutable;
 
 namespace DA.Game.Domain2.Catalog.Entities;

@@ -1,4 +1,4 @@
-﻿namespace DA.Game.Data;
+﻿namespace DA.Game.Infrastructure;
 
 public static class IdHelpers
 {

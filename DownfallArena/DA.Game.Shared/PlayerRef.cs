@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain2.Players.Enums;
-using DA.Game.Domain2.Players.Ids;
+﻿using DA.Game.Shared.Contracts.Players.Enums;
+using DA.Game.Shared.Contracts.Players.Ids;
 
-namespace DA.Game.Domain2.Match.ValueObjects;
+namespace DA.Game.Shared;
 public sealed record PlayerRef(PlayerId Id, ActorKind Kind, string DisplayName)
 {
     public static PlayerRef Create(PlayerId id, ActorKind kind, string displayName)
