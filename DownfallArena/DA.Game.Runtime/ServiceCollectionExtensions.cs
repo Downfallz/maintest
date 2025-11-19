@@ -10,7 +10,7 @@ using DA.Game.Infrastructure.Matches;
 using DA.Game.Infrastructure.Players;
 using DA.Game.Infrastructure.Shared;
 using DA.Game.Shared.Contracts.Players.Enums;
-using DA.Game.Shared.Resources;
+using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

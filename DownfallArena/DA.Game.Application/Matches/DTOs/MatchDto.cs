@@ -1,6 +1,6 @@
-﻿using DA.Game.Shared;
-using DA.Game.Shared.Contracts.Matches.Enums;
-using DA.Game.Shared.Contracts.Matches.Ids;      // MatchId
+﻿using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Players;      // MatchId
 
 namespace DA.Game.Application.Matches.DTOs;
 

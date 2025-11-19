@@ -1,11 +1,11 @@
-﻿using DA.Game.Domain2.Shared.Primitives;
-using DA.Game.Shared.Contracts.Matches.Ids;
-using DA.Game.Shared.Resources.Spells;
+﻿using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
-public sealed record SpellUnlockChoice(CharacterId CharacterId, SpellRef SpellRef) : ValueObject()
+public sealed record SpellUnlockChoice(CharacterId CharacterId, Spell SpellRef) : ValueObject()
 {
-    public static SpellUnlockChoice Create(CharacterId id, SpellRef spellRef)
+    public static SpellUnlockChoice Create(CharacterId id, Spell spellRef)
     {
         return new SpellUnlockChoice(id, spellRef);
     }

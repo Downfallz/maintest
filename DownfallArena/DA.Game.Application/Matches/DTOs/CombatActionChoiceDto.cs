@@ -1,5 +1,5 @@
 ﻿using DA.Game.Shared.Contracts.Matches.Ids;
-using DA.Game.Shared.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,6 @@ namespace DA.Game.Application.Matches.DTOs;
 
 public sealed record CombatActionChoiceDto(
     CharacterId ActorId,
-    SpellRef SpellRef,
+    Spell SpellRef,
     IReadOnlyList<CharacterId> TargetIds
 );

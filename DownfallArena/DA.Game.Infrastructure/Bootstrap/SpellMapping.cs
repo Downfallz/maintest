@@ -1,46 +1,12 @@
-﻿using DA.Game.Domain2.Catalog.Entities;
-using DA.Game.Domain2.Catalog.ValueObjects.Spells;
-using DA.Game.Domain2.Catalog.ValueObjects.Stats;
-using DA.Game.Shared.Contracts.Catalog.Ids;
-using DA.Game.Shared.Contracts.Matches.Enums;
-using DA.Game.Shared.Resources.JsonDto;
-using DA.Game.Shared.Resources.Spells;
-using DA.Game.Shared.Utilities;
+﻿using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Resources.Json;
+using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Effects;
 namespace DA.Game.Infrastructure.Bootstrap;
 
 public static class SpellMapping
 {
-    public static Result<SpellDefinition> ToDomain(this SpellDefinitionDto dto, GameSchema schema)
-    {
-        // validations légères côté DTO
-        if (string.IsNullOrWhiteSpace(dto.Name))
-            return Result<SpellDefinition>.Fail("Name is required.");
-        if (dto.Effects is null || dto.Effects.Count == 0)
-            return Result<SpellDefinition>.Fail("At least one starting spell is required.");
-
-
-        // construction domaine (VO)
-        var id = new SpellId(dto.Id);
-
-        var energy = Energy.Of(dto.EnergyCost);
-        var init = Initiative.Of(dto.Initiative);
-        var crit = CriticalChance.Of(Percentage01.Of(dto.CriticalChance));
-
-        var effects = dto.Effects.Select(g => g.ToRef());
-
-
-        var spellDef = SpellDefinition.Create(id,
-            dto.Name,
-            dto.SpellType,
-            dto.CharacterClass,
-            init,
-            energy,
-            crit,
-            effects);
-
-        return Result<SpellDefinition>.Ok(spellDef);
-
-    }
+   
     public static Effect ToRef(this EffectDto dto)
       => dto.Kind switch
       {
@@ -96,8 +62,8 @@ public static class SpellMapping
         => TargetingSpec.Of(dto.Origin, dto.Scope, dto.MaxTargets);
 
 
-    public static SpellRef ToRef(this SpellDefinitionDto dto)
-        => new SpellRef(SpellId.New(dto.Id)
+    public static Spell ToRef(this SpellDefinitionDto dto)
+        => new Spell(SpellId.New(dto.Id)
             , dto.Name
             , dto.SpellType
             , dto.CharacterClass

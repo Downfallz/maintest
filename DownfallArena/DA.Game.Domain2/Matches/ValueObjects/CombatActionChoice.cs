@@ -1,14 +1,14 @@
-﻿using DA.Game.Domain2.Shared.Primitives;
-using DA.Game.Shared.Contracts.Matches.Ids;
-using DA.Game.Shared.Resources.Spells;
+﻿using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
 public sealed record CombatActionChoice(
     CharacterId ActorId,
-    SpellRef SpellRef,
+    Spell SpellRef,
     IReadOnlyList<CharacterId> TargetIds) : ValueObject
 {
-    public static CombatActionChoice Create(CharacterId id, SpellRef spellRef, IReadOnlyList<CharacterId> TargetIds)
+    public static CombatActionChoice Create(CharacterId id, Spell spellRef, IReadOnlyList<CharacterId> TargetIds)
     {
         return new CombatActionChoice(id, spellRef, TargetIds);
     }

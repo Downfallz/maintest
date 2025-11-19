@@ -1,6 +1,7 @@
-﻿using DA.Game.Shared.Contracts.Catalog.Ids;
-using DA.Game.Shared.Resources.Creatures;
-using DA.Game.Shared.Resources.JsonDto;
+﻿using DA.Game.Shared.Contracts.Resources.Creatures;
+using DA.Game.Shared.Contracts.Resources.Json;
+using DA.Game.Shared.Contracts.Resources.Spells;
+
 namespace DA.Game.Infrastructure.Bootstrap;
 
 public static class CreatureMapping

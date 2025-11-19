@@ -1,4 +1,4 @@
-﻿using DA.Game.Shared.Resources.JsonDto;
+﻿using DA.Game.Shared.Contracts.Resources.Json;
 using DA.Game.Shared.Utilities;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;

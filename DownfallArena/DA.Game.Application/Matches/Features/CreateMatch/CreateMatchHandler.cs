@@ -4,7 +4,7 @@ using DA.Game.Application.Shared.Messaging;
 using DA.Game.Application.Shared.RuleSets;
 using DA.Game.Domain2.Matches.Aggregates;
 using DA.Game.Shared.Contracts.Matches.Ids;
-using DA.Game.Shared.Resources;
+using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Utilities;
 using MediatR;
 

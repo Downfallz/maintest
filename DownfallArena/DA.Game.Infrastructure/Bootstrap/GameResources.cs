@@ -1,7 +1,6 @@
-﻿using DA.Game.Shared.Contracts.Catalog.Ids;
-using DA.Game.Shared.Resources;
-using DA.Game.Shared.Resources.Creatures;
-using DA.Game.Shared.Resources.Spells;
+﻿using DA.Game.Shared.Contracts.Resources;
+using DA.Game.Shared.Contracts.Resources.Creatures;
+using DA.Game.Shared.Contracts.Resources.Spells;
 
 namespace DA.Game.Infrastructure.Bootstrap;
 
@@ -11,15 +10,15 @@ namespace DA.Game.Infrastructure.Bootstrap;
 /// </summary>
 public sealed class GameResources : IGameResources
 {
-    private readonly IReadOnlyDictionary<SpellId, SpellRef> _spells;
+    private readonly IReadOnlyDictionary<SpellId, Spell> _spells;
     private readonly IReadOnlyDictionary<CharacterDefId, CharacterDefinitionRef> _characters;
 
-    public IReadOnlyList<SpellRef> Spells => _spells.Values.ToList();
+    public IReadOnlyList<Spell> Spells => _spells.Values.ToList();
     public IReadOnlyList<CharacterDefinitionRef> Characters => _characters.Values.ToList();
     public string Version { get; }
 
     private GameResources(
-        IReadOnlyDictionary<SpellId, SpellRef> spells,
+        IReadOnlyDictionary<SpellId, Spell> spells,
         IReadOnlyDictionary<CharacterDefId, CharacterDefinitionRef> characters,
         string version)
     {
@@ -32,7 +31,7 @@ public sealed class GameResources : IGameResources
     /// Crée une instance immuable à partir de collections sources.
     /// </summary>
     public static GameResources Create(
-        IEnumerable<SpellRef> spells,
+        IEnumerable<Spell> spells,
         IEnumerable<CharacterDefinitionRef> characters,
         string version)
     {
@@ -46,7 +45,7 @@ public sealed class GameResources : IGameResources
         return new GameResources(dictSpells, dictChars, version);
     }
 
-    public SpellRef GetSpell(SpellId id)
+    public Spell GetSpell(SpellId id)
         => _spells.TryGetValue(id, out var spell)
             ? spell
             : throw new KeyNotFoundException($"Spell '{id}' introuvable (version {Version}).");
@@ -56,7 +55,7 @@ public sealed class GameResources : IGameResources
             ? def
             : throw new KeyNotFoundException($"Character '{id}' introuvable (version {Version}).");
 
-    public bool TryGetSpell(SpellId id, out SpellRef? spell)
+    public bool TryGetSpell(SpellId id, out Spell? spell)
         => _spells.TryGetValue(id, out spell);
 
     public bool TryGetCharacter(CharacterDefId id, out CharacterDefinitionRef? def)

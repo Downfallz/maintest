@@ -1,22 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Matches\Services\" />
-    <Folder Include="Shared\Policies\Combat\" />
-  </ItemGroup>
+	<ItemGroup>
+		<Folder Include="Matches\Services\" />
+		<Folder Include="Shared\Policies\Combat\" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MediatR" Version="13.0.0" />
-  </ItemGroup>
-
+	<ItemGroup>
+		<PackageReference Include="MediatR" Version="13.0.0" />
+	</ItemGroup>
 </Project>

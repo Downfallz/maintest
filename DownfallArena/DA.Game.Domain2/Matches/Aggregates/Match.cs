@@ -5,12 +5,12 @@ using DA.Game.Domain2.Matches.Messages;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Domain2.Shared.RuleSets;
-using DA.Game.Shared;
-using DA.Game.Shared.Contracts.Catalog.Ids;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Players;
 using DA.Game.Shared.Contracts.Players.Ids;
-using DA.Game.Shared.Resources;
+using DA.Game.Shared.Contracts.Resources;
+using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.Aggregates;
