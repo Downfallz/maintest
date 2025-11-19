@@ -7,4 +7,5 @@ public static class MatchErrors
     public const string NotYourTurn = "Ce n'est pas ton tour.";
     public const string NotStarted = "Match non démarré.";
     public const string PlayerAlreadyInGame = "Joueur déjà inscrit ou match plein.";
+    public const string MatchNotRunning = "Match pas en cours";
 }

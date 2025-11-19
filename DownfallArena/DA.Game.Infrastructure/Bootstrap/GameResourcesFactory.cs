@@ -1,0 +1,43 @@
+﻿using DA.Game.Domain2.Matches.Resources;
+using DA.Game.Infrastructure.Bootstrap;
+using DA.Game.Shared;
+using System.Text.Json;
+
+namespace DA.Game.Data;
+
+public static class GameResourcesFactory
+{
+    public static GameResources LoadFromFile(string path)
+    {
+        var json = File.ReadAllText(path);
+
+        var schema = JsonSerializer.Deserialize<GameSchema>(json, DownfallArenaJsonOptions.ReadOptions)
+                     ?? throw new InvalidOperationException("Invalid schema file");
+        Validate(schema);
+
+        var gameResources = GameResources.Create(schema.Spells.Select(s => s.ToRef()), schema.Creatures.Select(c => c.ToRef()), schema.BuildHash);
+        return gameResources;
+    }
+
+    public static void Validate(GameSchema schema)
+    {
+        var spellIds = schema.Spells.Select(s => s.Id).ToHashSet();
+        foreach (var c in schema.Creatures)
+        {
+            foreach (var sid in c.StartingSpellIds)
+                if (!spellIds.Contains(ResolveAlias(schema,sid)))
+                    throw new InvalidOperationException($"Creature {c.Id} references missing spell {sid}");
+        }
+    }
+
+    public static string ResolveAlias(GameSchema schema, string requestedIdOrBase)
+    {
+        // Si déjà versionné → le renvoyer tel quel
+        if (requestedIdOrBase.Contains(":v")) return requestedIdOrBase;
+
+        if (schema.Aliases is null || !schema.Aliases.TryGetValue(requestedIdOrBase, out var concrete))
+            throw new KeyNotFoundException($"Alias not found: {requestedIdOrBase}");
+
+        return concrete;
+    }
+}

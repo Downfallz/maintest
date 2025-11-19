@@ -8,13 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DA.Game.Application\DA.Game.Application.csproj" />
+    <ProjectReference Include="..\DA.Game.Resources\DA.Game.Resources.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Data\Creatures\" />
-    <Folder Include="Data\Spells\" />
-  </ItemGroup>
-<Target Name="BuildGameSchema" AfterTargets="Build">
-  <Exec Command="dotnet run --project $(SolutionDir)src\Game.DataBuilder\Game.DataBuilder.csproj" />
-</Target>
 </Project>

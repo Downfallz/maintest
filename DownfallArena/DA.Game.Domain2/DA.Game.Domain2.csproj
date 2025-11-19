@@ -11,11 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Catalog\Events\" />
-    <Folder Include="Catalog\Messages\" />
-    <Folder Include="Catalog\Enums\" />
+    <Folder Include="Matches\Services\" />
     <Folder Include="Shared\Policies\Combat\" />
-    <Folder Include="Shared\Policies\Initiative\" />
+    <Folder Include="Shared\Resources\" />
   </ItemGroup>
 
   <ItemGroup>

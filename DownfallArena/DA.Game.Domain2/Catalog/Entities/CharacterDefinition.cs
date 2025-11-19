@@ -1,7 +1,7 @@
 ﻿using DA.Game.Domain2.Catalog.Ids;
 using DA.Game.Domain2.Catalog.ValueObjects;
-using DA.Game.Domain2.Catalog.ValueObjects.Character;
 using DA.Game.Domain2.Shared.Primitives;
+using DA.Game.Resources.Enums;
 using System.Collections.Immutable;
 
 namespace DA.Game.Domain2.Catalog.Entities;
@@ -18,7 +18,6 @@ public sealed class CharacterDefinition : Entity<CharacterDefId>
     public Defense BaseDefense { get; }
     public Initiative BaseInitiative { get; }
     public CriticalChance BaseCriticalChance { get; }
-    public Level Level { get; }  // si tu n’en as pas besoin, retire-le
 
     // Loadout initial (références vers le catalog de sorts)
     public ImmutableArray<SpellId> StartingSpellIds { get; }
@@ -33,7 +32,6 @@ public sealed class CharacterDefinition : Entity<CharacterDefId>
         Defense baseDefense,
         Initiative baseInitiative,
         CriticalChance baseCriticalChance,
-        Level level,
         ImmutableArray<SpellId> startingSpellIds
     ) : base(id)
     {
@@ -44,7 +42,6 @@ public sealed class CharacterDefinition : Entity<CharacterDefId>
         BaseDefense = baseDefense;
         BaseInitiative = baseInitiative;
         BaseCriticalChance = baseCriticalChance;
-        Level = level;
         StartingSpellIds = startingSpellIds.IsDefault ? [] : startingSpellIds;
     }
 
@@ -58,7 +55,6 @@ public sealed class CharacterDefinition : Entity<CharacterDefId>
         Defense baseDefense,               // ex: Defense.Of(2)
         Initiative baseInitiative,         // ex: Initiative.Of(5)
         CriticalChance baseCriticalChance, // ex: CriticalChance.Of(0.15)
-        Level level,                       // ex: Level.Of(1)
         IEnumerable<SpellId> startingSpellIds
     )
     {
@@ -71,27 +67,10 @@ public sealed class CharacterDefinition : Entity<CharacterDefId>
 
         return new CharacterDefinition(
             id, name, characterClass,
-            baseHealth, baseEnergy, baseDefense, baseInitiative, baseCriticalChance, level,
+            baseHealth, baseEnergy, baseDefense, baseInitiative, baseCriticalChance,
             loadout
         );
     }
-
-    // -------- Aides immuables ciblées (optionnelles)
-    public CharacterDefinition WithStartingSpells(IEnumerable<SpellId> spellIds)
-        => new(Id, Name, CharacterClass, BaseHealth, BaseEnergy, BaseDefense, BaseInitiative, BaseCriticalChance, Level,
-               (spellIds ?? Array.Empty<SpellId>()).ToImmutableArray());
-
-    public CharacterDefinition WithBaseStats(
-        Health? health = null, Energy? energy = null, Defense? defense = null,
-        Initiative? initiative = null, CriticalChance? crit = null, Level? level = null)
-        => new(Id, Name, CharacterClass,
-               health ?? BaseHealth,
-               energy ?? BaseEnergy,
-               defense ?? BaseDefense,
-               initiative ?? BaseInitiative,
-               crit ?? BaseCriticalChance,
-               level ?? Level,
-               StartingSpellIds);
 
     public override string ToString()
         => $"{Name} [{CharacterClass}] HP:{BaseHealth.Value:0.#} EN:{BaseEnergy.Value:0.#} " +

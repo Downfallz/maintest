@@ -23,14 +23,17 @@ public sealed class TurnAdvancedHandler(
         if (!_simulation)
         {
             var match = await repo.GetAsync(evt.MatchId, ct);
-            if (match is null || match.CurrentPlayerSlot is null || match.State != MatchState.Started) return;
+            if (match is null || match.State != MatchState.Started) return;
+            // fix avec le combat timeline...
 
-            var currentRef = match.CurrentPlayerSlot == PlayerSlot.Player1 ? match.PlayerRef1 : match.PlayerRef2;
+            //var currentRef = match.PlayerRef2 == PlayerSlot.Player1 ? match.PlayerRef1 : match.PlayerRef2; //todo : fix
+
+            var currentRef = match.PlayerRef1; // À corriger avec le timeline
             if (currentRef is null) return;
             // Résolution du decider
             var decider = turnDeciderRegistry.Resolve(currentRef.Kind); // ou Resolve(currentRef.Id)
 
-            var view = new GameView(match.Id, match.CurrentPlayerSlot, match.RoundNumber,
+            var view = new GameView(match.Id, PlayerSlot.Player1, match.RoundNumber, 
                                     match.PlayerRef1?.Id, match.PlayerRef2?.Id);
 
             var action = await decider.DecideAsync(currentRef.Id, view, ct);

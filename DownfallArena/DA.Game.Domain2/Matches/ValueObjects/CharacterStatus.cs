@@ -12,7 +12,12 @@ public sealed record CharacterStatus : ValueObject
     public int Initiative { get; private set; }
     public bool IsStunned { get; private set; }
     public bool IsAlive => Health > 0;
-    
+    public int BaseHealth { get; private set; }
+    public int BaseEnergy { get; private set; }
+    public int BaseDefense { get; private set; }
+    public int BaseInitiative { get; private set; }
+    public double BaseCritical { get; private set; }
+
     private CharacterStatus(CharacterId characterId, int health, int energy, int initiative, bool isStunned)
     {
         CharacterId = characterId;
@@ -28,6 +33,13 @@ public sealed record CharacterStatus : ValueObject
             character.Health,
             character.Energy,
             character.CurrentInitiative,
-            character.IsStunned);
+            character.IsStunned)
+        {
+            BaseHealth = character.BaseHealth,
+            BaseEnergy = character.BaseEnergy,
+            BaseDefense = character.BaseDefense,
+            BaseInitiative = character.BaseInitiative,
+            BaseCritical = character.BaseCritical   
+        };
     }
 }

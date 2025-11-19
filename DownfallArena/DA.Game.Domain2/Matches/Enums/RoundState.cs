@@ -2,8 +2,10 @@
 
 public enum RoundState
 { 
-    WaitingForPlayersUnlockChoices, 
+    WaitingForPlayersEvolutionChoices, 
     WaitingForPlayersSpeedChoices,
-    WaitingForPlayersActions
+    WaitingForPlayersCombatActions,
+    ResolvingActions,
+    Completed
 }
 

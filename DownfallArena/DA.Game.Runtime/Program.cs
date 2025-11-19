@@ -3,9 +3,15 @@ using DA.Game.Application.DI;
 using DA.Game.Application.Matches.Features.CreateMatch;
 using DA.Game.Application.Matches.Features.JoinMatch;
 using DA.Game.Application.Players.Features.Create;
+using DA.Game.Domain2.Catalog.Ids;
 using DA.Game.Domain2.Match.ValueObjects;
+using DA.Game.Domain2.Matches.Resources;
+using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Domain2.Shared.Ids;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
 namespace DA.Game.Runtime
@@ -14,6 +20,20 @@ namespace DA.Game.Runtime
     {
         static async Task Main(string[] args)
         {
+            using var host = Host.CreateDefaultBuilder(args)
+                .ConfigureLogging(logging =>
+                {
+                    // You can tune this level depending on how noisy you want it
+                    logging.ClearProviders();
+                    logging.AddConsole();
+                    logging.SetMinimumLevel(LogLevel.Information);
+                })
+                .Build();
+
+            var logger = host.Services
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("DownfallArenaLogger");
+
             var services = new ServiceCollection();
 
             services.ConfigureDownfallArena();
@@ -22,6 +42,7 @@ namespace DA.Game.Runtime
 
             var mediator = serviceProvider.GetRequiredService<IMediator>();
             var mapper = serviceProvider.GetRequiredService<IMapper>();
+            var gamere = serviceProvider.GetRequiredService<IGameResources>();
             var match = await mediator.Send(new CreateMatchCommand());
             if (match.IsSuccess)
             {
@@ -57,11 +78,42 @@ namespace DA.Game.Runtime
             var pr1 = mapper.Map<PlayerRef>(player1.Value!);
             var pr2 = mapper.Map<PlayerRef>(player2.Value!);
             var matchId = match.Value!.Id;
+            var basicAttack = gamere.Spells.Single(x => x.Id == SpellId.New("spell:basic_attack:v1"));
 
+            var joinMatchResult = await mediator.Send(new JoinMatchCommand(matchId, pr1));
+            var joinMatchResult2 = await mediator.Send(new JoinMatchCommand(matchId, pr2));
 
-            await mediator.Send(new JoinMatchCommand(matchId, pr1));
-            await mediator.Send(new JoinMatchCommand(matchId, pr2));
+            var re1 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId, 
+                Domain2.Match.Enums.PlayerSlot.Player1, 
+                SpellUnlockChoice.Create(CharacterId.New(1), basicAttack)));
+            var re2 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player1,
+                SpellUnlockChoice.Create(CharacterId.New(2), basicAttack)));
+            var re3 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                SpellUnlockChoice.Create(CharacterId.New(1), basicAttack)));
+            var re4 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                SpellUnlockChoice.Create(CharacterId.New(2), basicAttack)));
 
+            var speed1 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player1,
+                SpeedChoice.Create(CharacterId.New(1), Domain2.Matches.Enums.Speed.Quick)));
+            var speed2 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player1,
+                SpeedChoice.Create(CharacterId.New(2), Domain2.Matches.Enums.Speed.Standard)));
+            var speed3 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player1,
+                SpeedChoice.Create(CharacterId.New(3), Domain2.Matches.Enums.Speed.Standard)));
+            var speed4 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                SpeedChoice.Create(CharacterId.New(1), Domain2.Matches.Enums.Speed.Quick)));
+            var speed5 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                SpeedChoice.Create(CharacterId.New(2), Domain2.Matches.Enums.Speed.Quick)));
+            var speed6 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                SpeedChoice.Create(CharacterId.New(3), Domain2.Matches.Enums.Speed.Standard)));
             Console.ReadLine();
         }
 

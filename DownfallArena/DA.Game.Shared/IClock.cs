@@ -1,5 +1,3 @@
-﻿namespace DA.Game.Shared
-{
-    // /shared/Time.cs
-    public interface IClock { DateTime UtcNow { get; } }
-}
+﻿namespace DA.Game.Shared;
+
+public interface IClock { DateTime UtcNow { get; } }

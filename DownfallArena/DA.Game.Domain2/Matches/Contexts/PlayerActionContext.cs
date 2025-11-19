@@ -30,5 +30,9 @@ public sealed record PlayerActionContext
     public bool IsAvailable(CharacterId id) =>
         MyCharacters.Any(c => c.CharacterId == id && c.IsAlive && !c.IsStunned);
 
-    public int AvailableCount => MyCharacters.Count(c => c.IsAlive && !c.IsStunned);
+    public int MyAvailableCharactersCount => MyCharacters.Count(c => c.IsAlive && !c.IsStunned);
+
+    public int EnemyAvailableCharactersCount => EnemyCharacters.Count(c => c.IsAlive && !c.IsStunned);
+
+    public int AllAvailableCharactersCount => MyAvailableCharactersCount + EnemyAvailableCharactersCount;
 }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,7 +8,29 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DA.Game.Infrastructure\DA.Game.Infrastructure.csproj" />
+    <Content Include="..\Data\aliases.json" Link="Data\aliases.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Creatures\main.v1.json" Link="Data\Creatures\main.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\basic_attack.v1.json" Link="Data\Spells\basic_attack.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\Creatures\" />
+    <Folder Include="Data\Spells\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DA.Game.Resources\DA.Game.Resources.csproj" />
+    <ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
   </ItemGroup>
 
 </Project>

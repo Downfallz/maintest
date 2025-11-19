@@ -1,0 +1,21 @@
+{
+  "id": "spell:basic_attack:v1",
+  "name": "Basic Attack",
+  "spellType": "Offensive",
+  "characterClass": "Creature",
+  "initiative": 1,
+  "level": 0,
+  "energyCost": 1,
+  "criticalChance": 0,
+  "effects": [
+    {
+      "kind": "Damage",
+      "targeting": {
+        "origin": "Enemy",
+        "scope": "Single",
+        "maxTargets": 1
+      },
+      "amount": 1
+    }
+  ]
+}

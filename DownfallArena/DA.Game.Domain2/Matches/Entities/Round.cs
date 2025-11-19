@@ -2,8 +2,10 @@
 using DA.Game.Domain2.Match.ValueObjects;
 using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Ids;
+using DA.Game.Domain2.Matches.Resources;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Domain2.Services;
+using DA.Game.Domain2.Shared.Ids;
 using DA.Game.Domain2.Shared.Policies.RuleSets;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared;
@@ -14,7 +16,7 @@ namespace DA.Game.Domain2.Matches.Entities
     {
         public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
         public TurnCursor Cursor { get; private set; } = TurnCursor.Start;
-        private readonly Queue<CombatActionIntent> _pendingActions = new();
+        private readonly Dictionary<CharacterId, CombatActionIntent> _intents = new();
 
         private readonly HashSet<SpellUnlockChoice> _p1Evolution = new();
         private readonly HashSet<SpellUnlockChoice> _p2Evolution = new();
@@ -22,7 +24,7 @@ namespace DA.Game.Domain2.Matches.Entities
         private readonly HashSet<SpeedChoice> _p2Speed = new();
 
         public int Number { get; private set; }
-        public RoundState State { get; private set; } = RoundState.WaitingForPlayersUnlockChoices;
+        public RoundState State { get; private set; } = RoundState.WaitingForPlayersEvolutionChoices;
 
         public IReadOnlyCollection<SpellUnlockChoice> Player1Choices => _p1Evolution;
         public IReadOnlyCollection<SpellUnlockChoice> Player2Choices => _p2Evolution;
@@ -30,87 +32,140 @@ namespace DA.Game.Domain2.Matches.Entities
         public IReadOnlyCollection<SpeedChoice> Player1SpeedChoices => _p1Speed;
         public IReadOnlyCollection<SpeedChoice> Player2SpeedChoices => _p2Speed;
 
-        protected Round(RoundId id) : base(id)
+        protected Round(RoundId id, IGameResources resources, RuleSet ruleSet) : base(id)
         {
             Number = id.Value;
-            State = RoundState.WaitingForPlayersUnlockChoices;
+            State = RoundState.WaitingForPlayersEvolutionChoices;
+            _resources = resources;
+            _ruleSet = ruleSet;
         }
 
-        public static Round StartFirst() => new Round(RoundId.New(1));
+        private readonly IGameResources _resources;
+        private readonly RuleSet _ruleSet;
+        public static Round StartFirst(IGameResources resources,
+            RuleSet ruleSet) => new Round(RoundId.New(1), resources, ruleSet);
 
-        public static Round StartNext(Round previous) => new Round(RoundId.New(previous.Number + 1));
+        public static Round StartNext(Round previous) => new Round(RoundId.New(previous.Number + 1), previous._resources, previous._ruleSet);
 
-        public Result SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
+        public Result<SubmitEvolutionResult> SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
         {
-            if (State != RoundState.WaitingForPlayersUnlockChoices)
-                return Result.Fail("Phase invalide pour soumettre une évolution.");
+            if (State != RoundState.WaitingForPlayersEvolutionChoices)
+                return Result<SubmitEvolutionResult>.Fail("Phase invalide pour soumettre une évolution.");
 
             var target = ctx.Slot == PlayerSlot.Player1 ? _p1Evolution : _p2Evolution;
+            if (ctx.Slot == PlayerSlot.Player1)
+            {
+                if (_p1Evolution.Count >= 2)
+                    return Result<SubmitEvolutionResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                if (!_p1Evolution.Add(choice))
+                    return Result<SubmitEvolutionResult>.Fail("Choix déjà soumis.");
 
-            if (target.Count >= 2)
-                return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
-
-            if (!target.Add(choice))
-                return Result.Fail("Choix déjà soumis.");
+            }
+            else
+            {
+                if (_p2Evolution.Count >= 2)
+                    return Result<SubmitEvolutionResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                if (!_p2Evolution.Add(choice))
+                    return Result<SubmitEvolutionResult>.Fail("Choix déjà soumis.");
+            }
 
             if (IsEvolutionPhaseComplete)
                 State = RoundState.WaitingForPlayersSpeedChoices;
 
-            return Result.Ok();
+            return Result<SubmitEvolutionResult>.Ok(new SubmitEvolutionResult(target, State));
         }
 
-        public Result SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
+        public Result<SubmitSpeedResult> SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
         {
             if (State != RoundState.WaitingForPlayersSpeedChoices)
-                return Result.Fail("Phase invalide pour soumettre un choix de vitesse.");
+                return Result<SubmitSpeedResult>.Fail("Phase invalide pour soumettre un choix de vitesse.");
 
             var target = ctx.Slot == PlayerSlot.Player1 ? _p1Speed : _p2Speed;
 
-            if (target.Count >= 3)
-                return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
-
-            if (!target.Add(choice))
-                return Result.Fail("Choix déjà soumis.");
+            if (ctx.Slot == PlayerSlot.Player1)
+            {
+                if (_p1Speed.Count >= 3)
+                    return Result<SubmitSpeedResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                if (!_p1Speed.Add(choice))
+                    return Result<SubmitSpeedResult>.Fail("Choix déjà soumis.");
+            }
+            else
+            {
+                if (_p2Speed.Count >= 3)
+                    return Result<SubmitSpeedResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                if (!_p2Speed.Add(choice))
+                    return Result<SubmitSpeedResult>.Fail("Choix déjà soumis.");
+            }
 
             if (IsSpeedChoicePhaseComplete)
-                State = RoundState.WaitingForPlayersActions;
+                State = RoundState.WaitingForPlayersCombatActions;
 
-            return Result.Ok();
+            return Result<SubmitSpeedResult>.Ok(new SubmitSpeedResult(target, State));
         }
+
         public void BeginCombatPhase(CombatTimeline timeline)
         {
             Timeline = timeline;
             Cursor = TurnCursor.Start;
-            State = RoundState.WaitingForPlayersUnlockChoices;
+            State = RoundState.WaitingForPlayersEvolutionChoices;
         }
 
-        public Result<CombatActionIntent> SubmitAction(CombatActionRequest request, RuleSet rules, PlayerActionContext ctx, IClock clock)
+        public Result<CombatActionIntent> SubmitCombatAction(
+    PlayerActionContext ctx,
+    CombatActionChoice request)
         {
-            var validator = new ActionValidator(rules, ctx);
-            var validation = validator.Validate(request);
-            if (!validation.IsSuccess) return Result<CombatActionIntent>.Fail(validation.Error);
+            if (State != RoundState.WaitingForPlayersCombatActions)
+                return Result<CombatActionIntent>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
 
-            var intent = validation.Value!;
-            _pendingActions.Enqueue(intent);
+            var validator = new ActionValidator(_ruleSet);
+            var resultIntent = validator.Validate(ctx, request);
+            if (!resultIntent.IsSuccess)
+                return Result<CombatActionIntent>.Fail(resultIntent.Error!);
+
+            var intent = resultIntent.Value!;
+
+            if (_intents.ContainsKey(intent.ActorId))
+                return Result<CombatActionIntent>.Fail("Cette créature a déjà soumis une action pour ce round.");
+
+            _intents[intent.ActorId] = intent;
+
+            if (_intents.Count == ctx.AllAvailableCharactersCount)
+                State = RoundState.ResolvingActions;
 
             //AddEvent(new ActionQueued(Id, intent.ActorId, intent.ActionId, clock.UtcNow));
             return Result<CombatActionIntent>.Ok(intent);
         }
+        public Result<CombatActionResult> ResolveNextAction(
+    ActionResolver resolver,
+    RuleSet rules,
+    IClock clock)
+        {
+            if (Timeline is null)
+                return Result<CombatActionResult>.Fail("Timeline non initialisé pour ce round.");
 
-        //public Result<CombatActionResult> ResolveNextAction(ActionResolver resolver, RuleSet rules, IClock clock)
-        //{
-        //    if (!_pendingActions.TryDequeue(out var intent))
-        //        return Result<CombatActionResult>.Fail("Aucune action en attente.");
+            if (Cursor.IsEnd)
+                return Result<CombatActionResult>.Fail("Le round est déjà complété.");
 
-        //    var result = resolver.Resolve(intent, rules, clock);
-        //    //AddEvent(new ActionResolved(Id, intent.ActorId, intent.ActionId, result, clock.UtcNow));
+            var slot = Timeline.Slots[Cursor.Index];
 
-        //    Cursor = Cursor.MoveNext(Timeline);
-        //    if (Cursor.IsEnd)
-        //        //AddEvent(new RoundCombatCompleted(Id, Number, clock.UtcNow));
+            if (!_intents.TryGetValue(slot.CombatCharacter.Id, out var intent))
+            {
+                return Result<CombatActionResult>.Fail("Rien de soumis pour ce character.");
+            }
 
-        //    return Result<CombatActionResult>.Ok(result);
-        //}
+            var result = resolver.Resolve(intent, rules, clock);
+            //AddEvent(new ActionResolved(Id, intent.ActorId, intent.ActionId, result, clock.UtcNow));
+
+            Cursor = Cursor.MoveNext(Timeline);
+
+            if (Cursor.IsEnd)
+            {
+                State = RoundState.Completed;
+                //AddEvent(new RoundCombatCompleted(Id, Number, clock.UtcNow));
+            }
+
+            return Result<CombatActionResult>.Ok(result);
+        }
 
         public bool IsCombatOver => Cursor.IsEnd || Timeline.AllDead();
         public bool IsEvolutionPhaseComplete => _p1Evolution.Count == 2 && _p2Evolution.Count == 2;

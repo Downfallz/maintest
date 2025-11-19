@@ -7,13 +7,25 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+	<ItemGroup>
+		<Content Include="..\Data\aliases.json" Link="Data\aliases.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\Data\Creatures\main.v1.json" Link="Data\Creatures\main.v1.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\Data\Spells\basic_attack.v1.json" Link="Data\Spells\basic_attack.v1.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2" />
     <PackageReference Include="FluentAssertions" Version="8.7.1" />
     <PackageReference Include="MediatR" Version="13.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="Scrutor" Version="6.1.0" />
@@ -23,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DA.Game.Application\DA.Game.Application.csproj" />
+    <ProjectReference Include="..\DA.Game.DataBuilder\DA.Game.DataBuilder.csproj" />
     <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" />
     <ProjectReference Include="..\DA.Game.Infrastructure\DA.Game.Infrastructure.csproj" />
     <ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
@@ -30,6 +43,11 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\Creatures\" />
+    <Folder Include="Data\Spells\" />
   </ItemGroup>
 
 </Project>

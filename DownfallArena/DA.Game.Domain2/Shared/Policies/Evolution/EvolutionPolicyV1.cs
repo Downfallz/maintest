@@ -1,14 +1,24 @@
 ﻿using DA.Game.Domain2.Match.Enums;
+using DA.Game.Domain2.Matches.Contexts;
+using DA.Game.Domain2.Matches.Specifications.Evolution;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Domain2.Shared.Ids;
+using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Shared.Policies.Evolution;
 
-public sealed class EvolutionPolicyV1 : IEvolutionPolicy
+public sealed class EvolutionPolicy : IEvolutionPolicy
 {
-    public bool CanEvolve(CharacterId id, IReadOnlyCollection<CharacterStatus> statuses)
+    private readonly ISpecification<EvolutionContext> _canEvolve;
+
+    public EvolutionPolicy()
     {
-        var c = statuses.FirstOrDefault(x => x.CharacterId == id);
-        return !c.IsStunned && c.IsAlive;
+        _canEvolve = new CanEvolveCharacterSpec(2);
+    }
+
+    public bool CanEvolve(CharacterId id, EvolutionContext evolution)
+    {
+
+        return _canEvolve.IsSatisfiedBy(evolution);
     }
 }

@@ -1,4 +1,5 @@
-﻿using DA.Game.Domain2.Matches.ValueObjects;
+﻿using DA.Game.Domain2.Matches.Resources;
+using DA.Game.Domain2.Shared.Ids;
 using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Matches.Entities;
@@ -14,12 +15,10 @@ public class Team : IEntity
 
     public static Team FromCharacterTemplate(CharacterDefinitionRef charTemplate)
     {
-        return new Team(CombatCharacter.FromCharacterTemplate(charTemplate),
-            CombatCharacter.FromCharacterTemplate(charTemplate),
-            CombatCharacter.FromCharacterTemplate(charTemplate));
+        return new Team(CombatCharacter.FromCharacterTemplate(charTemplate,CharacterId.New(1)),
+            CombatCharacter.FromCharacterTemplate(charTemplate, CharacterId.New(2)),
+            CombatCharacter.FromCharacterTemplate(charTemplate, CharacterId.New(3)));
     }
 
     public CombatCharacter this[int index] => _chars[index]; // 0..2
 }
-
-

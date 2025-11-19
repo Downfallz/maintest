@@ -11,8 +11,11 @@ using DA.Game.Domain2.Match.Enums;
 using DA.Game.Domain2.Match.Events;
 using DA.Game.Domain2.Match.ReadModels;
 using DA.Game.Domain2.Match.ValueObjects;
+using DA.Game.Domain2.Matches.Aggregates;
 using DA.Game.Domain2.Matches.Ids;
+using DA.Game.Domain2.Matches.Resources;
 using DA.Game.Domain2.Players.Ids;
+using DA.Game.Domain2.Shared.Policies.RuleSets;
 using DA.Game.Shared;
 using MediatR;
 
@@ -31,7 +34,9 @@ public sealed class FidelitySimulationRunner(
     ITurnDeciderRegistry deciders,
     IClock clock,
     IMapper mapper,
-    IDatasetLogger? dataset // nullable: actif en mode simulation/ML
+    IDatasetLogger? dataset,// nullable: actif en mode simulation/ML
+    IGameResources gameResources,
+    IRuleSetProvider ruleSetProvider
 ) : ISimulationRunner
 {
     public async Task<MatchResult> RunAsync(MatchScenario scenario, CancellationToken ct = default)
@@ -41,9 +46,11 @@ public sealed class FidelitySimulationRunner(
         var p2 = await EnsurePlayerAsync(scenario.Player2, ct);
 
         // 2) Crée un match et join
-        var matchId = MatchId.New();
-        var matchResult = await matches.SaveAsync(new Domain2.Matches.Aggregates.Match(matchId), ct);
-        var match = matchResult.Value;
+        
+        var match = Match.Create(gameResources, ruleSetProvider.Current);
+        var matchId = match.Id;
+        var matchResult = await matches.SaveAsync(match, ct);
+        match = matchResult.Value;
 
         var pr1 = mapper.Map<PlayerRef>(p1);
         var pr2 = mapper.Map<PlayerRef>(p2);
@@ -58,10 +65,10 @@ public sealed class FidelitySimulationRunner(
         for (; turns < scenario.MaxTurns; turns++)
         {
             var m = await matches.GetAsync(matchId, ct);
-            if (m is null || m.State != MatchState.Started || m.CurrentPlayerSlot is null) break;
+            if (m is null || m.State != MatchState.Started) break;
 
-            var currentRef = m.CurrentPlayerSlot == PlayerSlot.Player1 ? m.PlayerRef1! : m.PlayerRef2!;
-            var view = new GameView(m.Id, m.CurrentPlayerSlot.Value, m.CurrentRound?.Number ?? 0, m.PlayerRef1?.Id, m.PlayerRef2?.Id);
+            var currentRef = PlayerSlot.Player1 == PlayerSlot.Player1 ? m.PlayerRef1! : m.PlayerRef2!;
+            var view = new GameView(m.Id, PlayerSlot.Player1, m.CurrentRound?.Number ?? 0, m.PlayerRef1?.Id, m.PlayerRef2?.Id);
 
             var action = await decider.DecideAsync(currentRef.Id, view, ct)
                          ?? new PlayerAction("noop", "sim-default"); // fallback pour humains en sim
@@ -78,7 +85,7 @@ public sealed class FidelitySimulationRunner(
             Scenario: scenario.Name,
             TurnsPlayed: turns,
             FinalState: final?.State ?? MatchState.WaitingForPlayers,
-            LastTurnBy: final?.CurrentPlayerSlot,
+            LastTurnBy: PlayerSlot.Player1, // fix avec le timeline si besoin
             Winner: null // à compléter quand tu auras une condition de victoire
         );
     }
