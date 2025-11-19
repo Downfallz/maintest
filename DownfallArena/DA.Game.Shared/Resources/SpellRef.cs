@@ -1,5 +1,5 @@
 ﻿using DA.Game.Domain2.Catalog.Ids;
-using DA.Game.Domain2.Catalog.Interfaces;
+using DA.Game.Domain2.Catalog.ValueObjects.Spells;
 using DA.Game.Resources.Enums;
 
 namespace DA.Game.Domain2.Matches.Resources;

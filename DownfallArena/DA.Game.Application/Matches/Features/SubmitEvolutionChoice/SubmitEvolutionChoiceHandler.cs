@@ -17,6 +17,7 @@ public sealed class SubmitEvolutionChoiceHandler(IMatchRepository repo,
         if (match is null)
             return Result<SubmitEvolutionResult>.Fail($"Match '{cmd.MatchId}' not found.");
         var res = match.SubmitEvolutionChoice(cmd.slot, cmd.SpellUnlockChoice, clock);
+        var test = new SubmitEvolutionResult(match.CurrentRound.Player1Choices, match.CurrentRound.Phase)
         if (!res.IsSuccess) return res;
 
         await repo.SaveAsync(match, ct);

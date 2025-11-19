@@ -47,60 +47,60 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public static Round StartNext(Round previous) => new Round(RoundId.New(previous.Number + 1), previous._resources, previous._ruleSet);
 
-        public Result<SubmitEvolutionResult> SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
+        public Result SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
         {
             if (Phase != RoundPhase.Evolution)
-                return Result<SubmitEvolutionResult>.Fail("Phase invalide pour soumettre une évolution.");
+                return Result.Fail("Phase invalide pour soumettre une évolution.");
 
             var target = ctx.Slot == PlayerSlot.Player1 ? _p1Evolution : _p2Evolution;
             if (ctx.Slot == PlayerSlot.Player1)
             {
                 if (_p1Evolution.Count >= 2)
-                    return Result<SubmitEvolutionResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
                 if (!_p1Evolution.Add(choice))
-                    return Result<SubmitEvolutionResult>.Fail("Choix déjà soumis.");
+                    return Result.Fail("Choix déjà soumis.");
 
             }
             else
             {
                 if (_p2Evolution.Count >= 2)
-                    return Result<SubmitEvolutionResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
                 if (!_p2Evolution.Add(choice))
-                    return Result<SubmitEvolutionResult>.Fail("Choix déjà soumis.");
+                    return Result.Fail("Choix déjà soumis.");
             }
 
             if (IsEvolutionPhaseComplete)
                 Phase = RoundPhase.Speed;
 
-            return Result<SubmitEvolutionResult>.Ok(new SubmitEvolutionResult(target, Phase));
+            return Result.Ok();
         }
 
-        public Result<SubmitSpeedResult> SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
+        public Result SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
         {
             if (Phase != RoundPhase.Speed)
-                return Result<SubmitSpeedResult>.Fail("Phase invalide pour soumettre un choix de vitesse.");
+                return Result.Fail("Phase invalide pour soumettre un choix de vitesse.");
 
             var target = ctx.Slot == PlayerSlot.Player1 ? _p1Speed : _p2Speed;
 
             if (ctx.Slot == PlayerSlot.Player1)
             {
                 if (_p1Speed.Count >= 3)
-                    return Result<SubmitSpeedResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
                 if (!_p1Speed.Add(choice))
-                    return Result<SubmitSpeedResult>.Fail("Choix déjà soumis.");
+                    return Result.Fail("Choix déjà soumis.");
             }
             else
             {
                 if (_p2Speed.Count >= 3)
-                    return Result<SubmitSpeedResult>.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
                 if (!_p2Speed.Add(choice))
-                    return Result<SubmitSpeedResult>.Fail("Choix déjà soumis.");
+                    return Result.Fail("Choix déjà soumis.");
             }
 
             if (IsSpeedChoicePhaseComplete)
                 Phase = RoundPhase.Combat;
 
-            return Result<SubmitSpeedResult>.Ok(new SubmitSpeedResult(target, Phase));
+            return Result.Ok();
         }
 
         public void BeginCombatPhase(CombatTimeline timeline)

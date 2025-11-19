@@ -1,9 +1,8 @@
 ﻿using DA.Game.Domain2.Players.Enums;
 using DA.Game.Domain2.Players.Ids;
-using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Match.ValueObjects;
-public sealed record PlayerRef(PlayerId Id, ActorKind Kind, string DisplayName) : ValueObject()
+public sealed record PlayerRef(PlayerId Id, ActorKind Kind, string DisplayName)
 {
     public static PlayerRef Create(PlayerId id, ActorKind kind, string displayName)
     {

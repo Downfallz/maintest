@@ -1,6 +1,4 @@
-﻿using DA.Game.Domain2.Catalog.Interfaces;
-using DA.Game.Domain2.Shared.Primitives;
-using DA.Game.Resources.Interfaces;
+﻿using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Catalog.ValueObjects.Spells;
 

@@ -52,13 +52,13 @@ public sealed class Match : AggregateRoot<MatchId>
     /// <summary>
     /// Permet à un joueur de rejoindre le match. Le match démarre automatiquement si les deux sont présents.
     /// </summary>
-    public Result<JoinMatchResult> Join(PlayerRef player, IClock clock, IRandom rng)
+    public Result Join(PlayerRef player, IClock clock, IRandom rng)
     {
         if (State != MatchState.WaitingForPlayers)
-            return Result<JoinMatchResult>.Fail(MatchErrors.AlreadyStarted);
+            return Result.Fail(MatchErrors.AlreadyStarted);
 
         if (PlayerRef1?.Id == player.Id || PlayerRef2?.Id == player.Id)
-            return Result<JoinMatchResult>.Fail(MatchErrors.PlayerAlreadyInGame);
+            return Result.Fail(MatchErrors.PlayerAlreadyInGame);
         PlayerSlot slot = default;
         if (PlayerRef1 is null)
         {
@@ -76,7 +76,7 @@ public sealed class Match : AggregateRoot<MatchId>
         if (PlayerRef1 is not null && PlayerRef2 is not null)
             StartMatch(clock, rng);
 
-        return Result<JoinMatchResult>.Ok(new JoinMatchResult(slot, State));
+        return Result.Ok();
     }
 
     private void StartMatch(IClock clock, IRandom rng)
@@ -109,11 +109,11 @@ public sealed class Match : AggregateRoot<MatchId>
     /// <summary>
     /// Soumet le choix d’évolution (déblocage de sort) du joueur.
     /// </summary>
-    public Result<SubmitEvolutionResult> SubmitEvolutionChoice(PlayerSlot player, SpellUnlockChoice choice, IClock clock)
+    public Result SubmitEvolutionChoice(PlayerSlot player, SpellUnlockChoice choice, IClock clock)
     {
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitEvolutionChoice(this);
         if (!guard.IsSuccess)
-            return guard.To<SubmitEvolutionResult>();
+            return guard;
 
         var playerCtx = BuildContextForCurrentPlayer(player);
         var result = CurrentRound!.SubmitEvolutionChoice(playerCtx, choice);
@@ -132,11 +132,11 @@ public sealed class Match : AggregateRoot<MatchId>
     /// <summary>
     /// Soumet le choix de vitesse (Quick/Standard) du joueur.
     /// </summary>
-    public Result<SubmitSpeedResult> SubmitSpeedChoice(PlayerSlot slot, SpeedChoice speedChoice, IClock clock)
+    public Result SubmitSpeedChoice(PlayerSlot slot, SpeedChoice speedChoice, IClock clock)
     {
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitSpeedChoice(this);
         if (!guard.IsSuccess)
-            return guard.To<SubmitSpeedResult>();
+            return guard;
 
         var playerCtx = BuildContextForCurrentPlayer(slot);
         var result = CurrentRound!.SubmitSpeedChoice(playerCtx, speedChoice);
@@ -152,11 +152,11 @@ public sealed class Match : AggregateRoot<MatchId>
         return result;
     }
 
-    public Result<SubmitCombatActionResult> SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice, IClock clock)
+    public Result SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice, IClock clock)
     {
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
         if (!guard.IsSuccess)
-            return guard.To<SubmitCombatActionResult>();
+            return guard;
 
         var playerCtx = BuildContextForCurrentPlayer(slot);
         var result = CurrentRound!.SubmitCombatAction(playerCtx, combatActionChoice);
@@ -180,7 +180,7 @@ public sealed class Match : AggregateRoot<MatchId>
             {
                 var actionResult = CurrentRound!.ResolveNextAction();
                 if (!actionResult.IsSuccess)
-                    return Result<SubmitCombatActionResult>.Fail(actionResult.Error!);
+                    return Result.Fail(actionResult.Error!);
                 AddEvent(new CombatActionResolved(CurrentRound!.Id, actionResult.Value!, clock.UtcNow));
             }
 
@@ -188,7 +188,7 @@ public sealed class Match : AggregateRoot<MatchId>
             InitializeNextRound();
         }
 
-        return Result<SubmitCombatActionResult>.Ok(new SubmitCombatActionResult(result.Value!, CurrentRound.Phase));
+        return Result.Ok();
     }
 
     /// <summary>

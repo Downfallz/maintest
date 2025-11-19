@@ -1,5 +1,4 @@
-﻿using DA.Game.Domain2.Catalog.Interfaces;
-using DA.Game.Resources.Interfaces;
+﻿using DA.Game.Domain2.Catalog.ValueObjects.Spells;
 
 namespace DA.Game.Domain2.Matches.Resources.Effects;
 

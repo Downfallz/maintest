@@ -1,5 +1,4 @@
-﻿using DA.Game.Domain2.Catalog.Interfaces;
-using DA.Game.Domain2.Shared.Resources.Enums;
+﻿using DA.Game.Domain2.Shared.Resources.Enums;
 
 namespace DA.Game.Domain2.Catalog.ValueObjects.Spells;
 

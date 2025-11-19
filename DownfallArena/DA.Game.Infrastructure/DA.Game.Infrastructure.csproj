@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DA.Game.Application\DA.Game.Application.csproj" />
-    <ProjectReference Include="..\DA.Game.Resources\DA.Game.Resources.csproj" />
   </ItemGroup>
 
 </Project>
