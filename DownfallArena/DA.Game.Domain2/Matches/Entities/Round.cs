@@ -16,7 +16,7 @@ namespace DA.Game.Domain2.Matches.Entities
     {
         public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
         public TurnCursor Cursor { get; private set; } = TurnCursor.Start;
-        private readonly Dictionary<CharacterId, CombatActionIntent> _intents = new();
+        private readonly Dictionary<CharacterId, CombatActionChoice> _intents = new();
 
         private readonly HashSet<SpellUnlockChoice> _p1Evolution = new();
         private readonly HashSet<SpellUnlockChoice> _p2Evolution = new();
@@ -107,38 +107,30 @@ namespace DA.Game.Domain2.Matches.Entities
         {
             Timeline = timeline;
             Cursor = TurnCursor.Start;
-            State = RoundState.WaitingForPlayersEvolutionChoices;
         }
 
-        public Result<CombatActionIntent> SubmitCombatAction(
-    PlayerActionContext ctx,
-    CombatActionChoice request)
+        public Result<CombatActionChoice> SubmitCombatAction(PlayerActionContext ctx, CombatActionChoice choice)
         {
             if (State != RoundState.WaitingForPlayersCombatActions)
-                return Result<CombatActionIntent>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
+                return Result<CombatActionChoice>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
 
             var validator = new ActionValidator(_ruleSet);
-            var resultIntent = validator.Validate(ctx, request);
+            var resultIntent = validator.Validate(ctx, choice);
             if (!resultIntent.IsSuccess)
-                return Result<CombatActionIntent>.Fail(resultIntent.Error!);
+                return Result<CombatActionChoice>.Fail(resultIntent.Error!);
 
-            var intent = resultIntent.Value!;
+            if (_intents.ContainsKey(choice.ActorId))
+                return Result<CombatActionChoice>.Fail("Cette créature a déjà soumis une action pour ce round.");
 
-            if (_intents.ContainsKey(intent.ActorId))
-                return Result<CombatActionIntent>.Fail("Cette créature a déjà soumis une action pour ce round.");
-
-            _intents[intent.ActorId] = intent;
+            _intents[choice.ActorId] = choice;
 
             if (_intents.Count == ctx.AllAvailableCharactersCount)
                 State = RoundState.ResolvingActions;
 
             //AddEvent(new ActionQueued(Id, intent.ActorId, intent.ActionId, clock.UtcNow));
-            return Result<CombatActionIntent>.Ok(intent);
+            return Result<CombatActionChoice>.Ok(choice);
         }
-        public Result<CombatActionResult> ResolveNextAction(
-    ActionResolver resolver,
-    RuleSet rules,
-    IClock clock)
+        public Result<CombatActionResult> ResolveNextAction()
         {
             if (Timeline is null)
                 return Result<CombatActionResult>.Fail("Timeline non initialisé pour ce round.");
@@ -152,8 +144,8 @@ namespace DA.Game.Domain2.Matches.Entities
             {
                 return Result<CombatActionResult>.Fail("Rien de soumis pour ce character.");
             }
-
-            var result = resolver.Resolve(intent, rules, clock);
+            
+            //var result = resolver.Resolve(intent, rules, clock);
             //AddEvent(new ActionResolved(Id, intent.ActorId, intent.ActionId, result, clock.UtcNow));
 
             Cursor = Cursor.MoveNext(Timeline);
@@ -164,7 +156,7 @@ namespace DA.Game.Domain2.Matches.Entities
                 //AddEvent(new RoundCombatCompleted(Id, Number, clock.UtcNow));
             }
 
-            return Result<CombatActionResult>.Ok(result);
+            return Result<CombatActionResult>.Ok(new CombatActionResult(intent, new List<EffectSummary>()));
         }
 
         public bool IsCombatOver => Cursor.IsEnd || Timeline.AllDead();

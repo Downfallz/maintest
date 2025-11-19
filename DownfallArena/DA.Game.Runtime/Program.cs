@@ -91,10 +91,10 @@ namespace DA.Game.Runtime
                 SpellUnlockChoice.Create(CharacterId.New(2), basicAttack)));
             var re3 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
                 Domain2.Match.Enums.PlayerSlot.Player2,
-                SpellUnlockChoice.Create(CharacterId.New(1), basicAttack)));
+                SpellUnlockChoice.Create(CharacterId.New(4), basicAttack)));
             var re4 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
                 Domain2.Match.Enums.PlayerSlot.Player2,
-                SpellUnlockChoice.Create(CharacterId.New(2), basicAttack)));
+                SpellUnlockChoice.Create(CharacterId.New(5), basicAttack)));
 
             var speed1 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                 Domain2.Match.Enums.PlayerSlot.Player1,
@@ -107,13 +107,33 @@ namespace DA.Game.Runtime
                 SpeedChoice.Create(CharacterId.New(3), Domain2.Matches.Enums.Speed.Standard)));
             var speed4 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                 Domain2.Match.Enums.PlayerSlot.Player2,
-                SpeedChoice.Create(CharacterId.New(1), Domain2.Matches.Enums.Speed.Quick)));
+                SpeedChoice.Create(CharacterId.New(4), Domain2.Matches.Enums.Speed.Quick)));
             var speed5 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                 Domain2.Match.Enums.PlayerSlot.Player2,
-                SpeedChoice.Create(CharacterId.New(2), Domain2.Matches.Enums.Speed.Quick)));
+                SpeedChoice.Create(CharacterId.New(5), Domain2.Matches.Enums.Speed.Quick)));
             var speed6 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                 Domain2.Match.Enums.PlayerSlot.Player2,
-                SpeedChoice.Create(CharacterId.New(3), Domain2.Matches.Enums.Speed.Standard)));
+                SpeedChoice.Create(CharacterId.New(6), Domain2.Matches.Enums.Speed.Standard)));
+
+            var action1 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId, 
+                Domain2.Match.Enums.PlayerSlot.Player1, 
+                CombatActionChoice.Create(CharacterId.New(1), basicAttack, new List<CharacterId>() { new CharacterId(4) })));
+            var action2 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player1,
+                CombatActionChoice.Create(CharacterId.New(2), basicAttack, new List<CharacterId>() { new CharacterId(4) })));
+            var action3 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player1,
+                CombatActionChoice.Create(CharacterId.New(3), basicAttack, new List<CharacterId>() { new CharacterId(4) })));
+            var action4 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                CombatActionChoice.Create(CharacterId.New(4), basicAttack, new List<CharacterId>() { new CharacterId(1) })));
+            var action5 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                CombatActionChoice.Create(CharacterId.New(5), basicAttack, new List<CharacterId>() { new CharacterId(1) })));
+            var action6 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
+                Domain2.Match.Enums.PlayerSlot.Player2,
+                CombatActionChoice.Create(CharacterId.New(6), basicAttack, new List<CharacterId>() { new CharacterId(1) })));
+
             Console.ReadLine();
         }
 

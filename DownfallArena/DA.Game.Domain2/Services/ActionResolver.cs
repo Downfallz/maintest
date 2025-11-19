@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace DA.Game.Domain2.Services;
 public sealed class ActionResolver
 {
-    public CombatActionResult Resolve(CombatActionIntent intent, RuleSet rules, IClock clock)
+    public CombatActionResult Resolve(CombatActionChoice intent, RuleSet rules, IClock clock)
     {
         // orchestrer le pipeline (cost, hit, crit, damage, status, death check, aftermath)
         throw new NotImplementedException();

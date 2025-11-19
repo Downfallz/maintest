@@ -13,10 +13,10 @@ public sealed class EffectPipeline
         _steps = steps;
     }
 
-    public CombatActionResult Execute(CombatActionIntent intent, RuleSet rules, IClock clock)
+    public CombatActionResult Execute(CombatActionChoice intent, RuleSet rules, IClock clock)
     {
         // accumulateur
-        var result = new CombatActionResult(intent.ActorId, intent.SpellId, new List<EffectSummary>(), true);
+        var result = new CombatActionResult(intent, new List<EffectSummary>());
         foreach (var step in _steps)
             result = step.Execute(result, intent, rules, clock);
         return result;

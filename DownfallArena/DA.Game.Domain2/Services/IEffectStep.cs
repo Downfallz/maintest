@@ -11,5 +11,5 @@ namespace DA.Game.Domain2.Services;
 
 public interface IEffectStep
 {
-    CombatActionResult Execute(CombatActionResult acc, CombatActionIntent intent, RuleSet rules, IClock clock);
+    CombatActionResult Execute(CombatActionResult acc, CombatActionChoice intent, RuleSet rules, IClock clock);
 }

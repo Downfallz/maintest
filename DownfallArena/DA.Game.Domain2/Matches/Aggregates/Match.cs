@@ -76,7 +76,7 @@ public sealed class Match : AggregateRoot<MatchId>
         if (PlayerRef1 is not null && PlayerRef2 is not null)
             StartMatch(clock, rng);
 
-        return Result<JoinMatchResult>.Ok(new JoinMatchResult(slot,State));
+        return Result<JoinMatchResult>.Ok(new JoinMatchResult(slot, State));
     }
 
     private void StartMatch(IClock clock, IRandom rng)
@@ -100,6 +100,12 @@ public sealed class Match : AggregateRoot<MatchId>
         AddEvent(new TurnAdvanced(Id, RoundNumber, DateTime.UtcNow));
     }
 
+    private void InitializeNextRound()
+    {
+
+        CurrentRound = Round.StartNext(CurrentRound!);
+        AddEvent(new TurnAdvanced(Id, RoundNumber, DateTime.UtcNow));
+    }
     /// <summary>
     /// Soumet le choix d’évolution (déblocage de sort) du joueur.
     /// </summary>
@@ -145,17 +151,12 @@ public sealed class Match : AggregateRoot<MatchId>
 
         return result;
     }
-    //public Result<CombatActionIntent> SubmitCombatAction(CombatActionRequest request, RuleSet rules, PlayerActionContext ctx, IClock clock)
-    //{
-    //    var a = CurrentRound?.SubmitAction(request, rules, ctx, clock);
-        
-    //}
 
-    public Result SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice, IClock clock)
+    public Result<SubmitCombatActionResult> SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice, IClock clock)
     {
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
         if (!guard.IsSuccess)
-            return guard;
+            return guard.To<SubmitCombatActionResult>();
 
         var playerCtx = BuildContextForCurrentPlayer(slot);
         var result = CurrentRound!.SubmitCombatAction(playerCtx, combatActionChoice);
@@ -174,10 +175,20 @@ public sealed class Match : AggregateRoot<MatchId>
             _ruleSet);
 
             CurrentRound!.BeginCombatPhase(timeline);
+
+            while (CurrentRound!.State != RoundState.Completed)
+            {
+                var actionResult = CurrentRound!.ResolveNextAction();
+                if (!actionResult.IsSuccess)
+                    return Result<SubmitCombatActionResult>.Fail(actionResult.Error!);
+                AddEvent(new CombatActionResolved(CurrentRound!.Id, actionResult.Value!, clock.UtcNow));
+            }
+
+            AddEvent(new CombatResolvingPhaseCompleted(CurrentRound!.Id, RoundNumber, clock.UtcNow));
+            InitializeNextRound();
         }
 
-
-        return Result.Ok();
+        return Result<SubmitCombatActionResult>.Ok(new SubmitCombatActionResult(result.Value!, CurrentRound.State));
     }
 
     /// <summary>

@@ -13,9 +13,9 @@ public sealed class ActionValidator
         _rules = rules;
     }
 
-    public Result<CombatActionIntent> Validate(PlayerActionContext context, CombatActionChoice req)
+    public Result Validate(PlayerActionContext context, CombatActionChoice req)
     {
         // utiliser CanActSpecification, CanTargetSpecification, Energy, Cooldown, etc.
-        throw new NotImplementedException();
+        return Result.Ok();
     }
 }
