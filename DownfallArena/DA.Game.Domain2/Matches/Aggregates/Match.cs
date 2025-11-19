@@ -163,7 +163,7 @@ public sealed class Match : AggregateRoot<MatchId>
 
         AddEvent(new CombatActionChoiceSubmitted(CurrentRound!.Id, slot, combatActionChoice, clock.UtcNow));
 
-        if (CurrentRound!.State == RoundState.ResolvingActions)
+        if (CurrentRound!.Phase == RoundPhase.CombatResolution)
         {
             AddEvent(new CombatActionRequestPhaseCompleted(CurrentRound!.Id, RoundNumber, clock.UtcNow));
 
@@ -176,7 +176,7 @@ public sealed class Match : AggregateRoot<MatchId>
 
             CurrentRound!.BeginCombatPhase(timeline);
 
-            while (CurrentRound!.State != RoundState.Completed)
+            while (CurrentRound!.Phase != RoundPhase.Completed)
             {
                 var actionResult = CurrentRound!.ResolveNextAction();
                 if (!actionResult.IsSuccess)
@@ -188,7 +188,7 @@ public sealed class Match : AggregateRoot<MatchId>
             InitializeNextRound();
         }
 
-        return Result<SubmitCombatActionResult>.Ok(new SubmitCombatActionResult(result.Value!, CurrentRound.State));
+        return Result<SubmitCombatActionResult>.Ok(new SubmitCombatActionResult(result.Value!, CurrentRound.Phase));
     }
 
     /// <summary>

@@ -1,11 +1,11 @@
 ﻿namespace DA.Game.Domain2.Match.Enums;
 
-public enum RoundState
+public enum RoundPhase
 { 
-    WaitingForPlayersEvolutionChoices, 
-    WaitingForPlayersSpeedChoices,
-    WaitingForPlayersCombatActions,
-    ResolvingActions,
+    Evolution, 
+    Speed,
+    Combat,
+    CombatResolution,
     Completed
 }
 

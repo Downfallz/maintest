@@ -4,4 +4,4 @@ using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
 
-public sealed record SubmitCombatActionResult(CombatActionChoice CurrentChoiceForPlayer, RoundState State) : ValueObject;
+public sealed record SubmitCombatActionResult(CombatActionChoice CurrentChoiceForPlayer, RoundPhase State) : ValueObject;

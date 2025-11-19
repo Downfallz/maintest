@@ -4,4 +4,4 @@ using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
 
-public sealed record SubmitEvolutionResult(HashSet<SpellUnlockChoice> CurrentChoicesForPlayer, RoundState State) : ValueObject;
+public sealed record SubmitEvolutionResult(HashSet<SpellUnlockChoice> CurrentChoicesForPlayer, RoundPhase State) : ValueObject;

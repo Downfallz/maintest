@@ -24,7 +24,7 @@ namespace DA.Game.Domain2.Matches.Entities
         private readonly HashSet<SpeedChoice> _p2Speed = new();
 
         public int Number { get; private set; }
-        public RoundState State { get; private set; } = RoundState.WaitingForPlayersEvolutionChoices;
+        public RoundPhase Phase { get; private set; } = RoundPhase.Evolution;
 
         public IReadOnlyCollection<SpellUnlockChoice> Player1Choices => _p1Evolution;
         public IReadOnlyCollection<SpellUnlockChoice> Player2Choices => _p2Evolution;
@@ -35,7 +35,7 @@ namespace DA.Game.Domain2.Matches.Entities
         protected Round(RoundId id, IGameResources resources, RuleSet ruleSet) : base(id)
         {
             Number = id.Value;
-            State = RoundState.WaitingForPlayersEvolutionChoices;
+            Phase = RoundPhase.Evolution;
             _resources = resources;
             _ruleSet = ruleSet;
         }
@@ -49,7 +49,7 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result<SubmitEvolutionResult> SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
         {
-            if (State != RoundState.WaitingForPlayersEvolutionChoices)
+            if (Phase != RoundPhase.Evolution)
                 return Result<SubmitEvolutionResult>.Fail("Phase invalide pour soumettre une évolution.");
 
             var target = ctx.Slot == PlayerSlot.Player1 ? _p1Evolution : _p2Evolution;
@@ -70,14 +70,14 @@ namespace DA.Game.Domain2.Matches.Entities
             }
 
             if (IsEvolutionPhaseComplete)
-                State = RoundState.WaitingForPlayersSpeedChoices;
+                Phase = RoundPhase.Speed;
 
-            return Result<SubmitEvolutionResult>.Ok(new SubmitEvolutionResult(target, State));
+            return Result<SubmitEvolutionResult>.Ok(new SubmitEvolutionResult(target, Phase));
         }
 
         public Result<SubmitSpeedResult> SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
         {
-            if (State != RoundState.WaitingForPlayersSpeedChoices)
+            if (Phase != RoundPhase.Speed)
                 return Result<SubmitSpeedResult>.Fail("Phase invalide pour soumettre un choix de vitesse.");
 
             var target = ctx.Slot == PlayerSlot.Player1 ? _p1Speed : _p2Speed;
@@ -98,9 +98,9 @@ namespace DA.Game.Domain2.Matches.Entities
             }
 
             if (IsSpeedChoicePhaseComplete)
-                State = RoundState.WaitingForPlayersCombatActions;
+                Phase = RoundPhase.Combat;
 
-            return Result<SubmitSpeedResult>.Ok(new SubmitSpeedResult(target, State));
+            return Result<SubmitSpeedResult>.Ok(new SubmitSpeedResult(target, Phase));
         }
 
         public void BeginCombatPhase(CombatTimeline timeline)
@@ -111,7 +111,7 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result<CombatActionChoice> SubmitCombatAction(PlayerActionContext ctx, CombatActionChoice choice)
         {
-            if (State != RoundState.WaitingForPlayersCombatActions)
+            if (Phase != RoundPhase.Combat)
                 return Result<CombatActionChoice>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
 
             var validator = new ActionValidator(_ruleSet);
@@ -125,7 +125,7 @@ namespace DA.Game.Domain2.Matches.Entities
             _intents[choice.ActorId] = choice;
 
             if (_intents.Count == ctx.AllAvailableCharactersCount)
-                State = RoundState.ResolvingActions;
+                Phase = RoundPhase.CombatResolution;
 
             //AddEvent(new ActionQueued(Id, intent.ActorId, intent.ActionId, clock.UtcNow));
             return Result<CombatActionChoice>.Ok(choice);
@@ -152,7 +152,7 @@ namespace DA.Game.Domain2.Matches.Entities
 
             if (Cursor.IsEnd)
             {
-                State = RoundState.Completed;
+                Phase = RoundPhase.Completed;
                 //AddEvent(new RoundCombatCompleted(Id, Number, clock.UtcNow));
             }
 
