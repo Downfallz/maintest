@@ -1,7 +1,6 @@
 ﻿namespace DA.Game.Shared.Contracts.Resources.Spells.Enums;
 
-public enum TalentList
-{
+public enum TalentList {
     Wait,
     Strike,
     HeavyStrike,

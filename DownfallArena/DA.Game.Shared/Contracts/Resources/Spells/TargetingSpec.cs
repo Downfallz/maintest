@@ -6,8 +6,7 @@ namespace DA.Game.Shared.Contracts.Resources.Spells;
 /// <summary>
 /// Specifies how an effect selects its targets (who, and how many).
 /// </summary>
-public sealed record TargetingSpec : ValueObject
-{
+public sealed record TargetingSpec : ValueObject {
     public TargetOrigin Origin { get; }
     public TargetScope Scope { get; }
     public int? MaxTargets { get; }

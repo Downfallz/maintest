@@ -2,8 +2,7 @@
 
 namespace DA.Game.Shared.Utilities;
 
-public sealed class SystemRandom : IRandom
-{
+public sealed class SystemRandom : IRandom {
     public int Next(int min, int max)
     {
         if (min > max)

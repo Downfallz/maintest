@@ -2,8 +2,7 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Json;
 
-public sealed class EffectDto
-{
+public sealed class EffectDto {
     public EffectKind Kind { get; init; }
     public TargetingSpecDto Targeting { get; init; } = default!;
 

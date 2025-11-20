@@ -1,7 +1,6 @@
 ﻿namespace DA.Game.Shared.Utilities;
 
-public static class ResultExtensions
-{
+public static class ResultExtensions {
     public static Result<T> To<T>(this Result result)
     {
         if (result.IsSuccess)
