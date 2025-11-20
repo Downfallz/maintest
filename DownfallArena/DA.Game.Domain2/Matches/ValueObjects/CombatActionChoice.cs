@@ -3,6 +3,7 @@ using DA.Game.Shared.Contracts.Resources.Spells;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
+
 public sealed record CombatActionChoice(
     CharacterId ActorId,
     Spell SpellRef,

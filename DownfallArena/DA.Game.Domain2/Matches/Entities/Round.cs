@@ -151,7 +151,7 @@ namespace DA.Game.Domain2.Matches.Entities
             {
                 return Result<CombatActionResult>.Fail("Rien de soumis pour ce character.");
             }
-            
+
             Cursor = Cursor.MoveNext(Timeline);
 
             if (Cursor.IsEnd)

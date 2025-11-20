@@ -27,8 +27,8 @@ public sealed record PlayerActionContext
 
         return new PlayerActionContext(
             slot,
-            [..myTeam.Characters.Select(CharacterStatus.From)],
-            [..enemyTeam.Characters.Select(CharacterStatus.From)]);
+            [.. myTeam.Characters.Select(CharacterStatus.From)],
+            [.. enemyTeam.Characters.Select(CharacterStatus.From)]);
     }
 
     // Aides métier

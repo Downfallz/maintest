@@ -1,6 +1,4 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
-using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.Specifications.Creatures;
 using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Matches.Specifications.Evolution;

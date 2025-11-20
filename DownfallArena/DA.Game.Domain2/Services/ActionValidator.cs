@@ -4,6 +4,7 @@ using DA.Game.Domain2.Shared.RuleSets;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Services;
+
 public sealed class ActionValidator
 {
     private readonly RuleSet _rules;
