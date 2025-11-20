@@ -12,5 +12,5 @@ public sealed class SpellDefinitionDto
     public int EnergyCost { get; set; }
     public double CriticalChance { get; set; }             // ex: 0.15
 
-    public List<EffectDto> Effects { get; set; } = [];
+    public IReadOnlyCollection<EffectDto> Effects { get; set; } = [];
 }

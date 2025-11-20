@@ -2,5 +2,5 @@
 
 public interface IEffect
 {
-    public ITargetingSpec Targeting { get; init; }
+    public TargetingSpec Targeting { get; }
 }

@@ -22,16 +22,14 @@ public sealed record Bleed : Effect, IOverTimeEffect
                             (targeting is not null, "Targeting required."));
         if (!res.IsSuccess)
             throw new ArgumentException(res.Error);
-        // (Optionnel) Politique de bon sens : Bleed ne s’applique pas sur Self par défaut.
-        // À déplacer dans un validator si tu préfères centraliser.
-        // Require(targeting.Origin != TargetOrigin.Self, "Bleed on self is not allowed.");
 
-        return new Bleed(amountPerTick, durationRounds, targeting);
+        // At this point, targeting is guaranteed not to be null.
+        return new Bleed(amountPerTick, durationRounds, targeting!);
     }
 
     /// <summary>Convenience: mono-cible ennemi, 1 tick/round (le cas le plus courant).</summary>
     public static Bleed EnemySingle(int amountPerTick, int durationRounds)
-        => Of(amountPerTick, durationRounds, TargetingSpec.Of(TargetOrigin.Enemy, TargetScope.Single, 1));
+        => Of(amountPerTick, durationRounds, TargetingSpec.Of(TargetOrigin.Enemy, TargetScope.SingleTarget, 1));
 
     /// <summary>Change le ciblage en gardant la charge utile (immutabilité).</summary>
     public Bleed WithTargeting(TargetingSpec targeting)

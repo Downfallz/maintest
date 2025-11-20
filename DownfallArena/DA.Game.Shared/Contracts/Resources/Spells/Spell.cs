@@ -11,5 +11,5 @@ public sealed record Spell(
     int Initiative,
     int EnergyCost,
     double CritChance,
-    IEffect[] Effects
+    IReadOnlyCollection<IEffect> Effects
 );

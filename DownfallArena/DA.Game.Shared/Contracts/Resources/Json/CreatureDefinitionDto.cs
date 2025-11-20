@@ -1,4 +1,5 @@
-﻿using DA.Game.Shared.Contracts.Resources.Spells.Enums;
+﻿using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Enums;
 
 namespace DA.Game.Shared.Contracts.Resources.Json;
 public sealed record CreatureDefinitionDto(
@@ -10,5 +11,5 @@ public sealed record CreatureDefinitionDto(
     int BaseDefense,
     int BaseInitiative,
     double BaseCriticalChance, // 0.15 = 15%
-    string[] StartingSpellIds
+    IReadOnlyCollection<SpellId> StartingSpellIds
 );

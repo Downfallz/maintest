@@ -1,8 +1,8 @@
 ﻿namespace DA.Game.Shared.Contracts.Matches.Enums;
 
 public enum RoundPhase
-{ 
-    Evolution, 
+{
+    Evolution,
     Speed,
     Combat,
     CombatResolution,

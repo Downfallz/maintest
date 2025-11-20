@@ -1,14 +1,15 @@
 ﻿using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Stats;
 
 namespace DA.Game.Shared.Contracts.Resources.Creatures;
-// Domain2.Matches.ValueObjects
+
 public sealed record CharacterDefinitionRef(
     CharacterDefId Id,
     string Name,
-    int BaseHp,
-    int BaseEnergy,
-    int BaseDefense,
-    int BaseInitiative,
-    double BaseCritChance,
+    Health BaseHp,
+    Energy BaseEnergy,
+    Defense BaseDefense,
+    Initiative BaseInitiative,
+    CriticalChance BaseCritChance,
     IReadOnlyList<SpellId> StartingSpellIds
 );

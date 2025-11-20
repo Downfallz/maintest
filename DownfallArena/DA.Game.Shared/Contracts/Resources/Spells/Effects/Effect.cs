@@ -4,7 +4,7 @@ namespace DA.Game.Shared.Contracts.Resources.Spells.Effects;
 
 public abstract record Effect : ValueObject, IEffect
 {
-    public ITargetingSpec Targeting { get; init; }
+    public TargetingSpec Targeting { get; }
 
-    protected Effect(ITargetingSpec targeting) => Targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
+    protected Effect(TargetingSpec targeting) => Targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
 }

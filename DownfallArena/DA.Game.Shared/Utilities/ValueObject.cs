@@ -4,6 +4,8 @@ public abstract record ValueObject
 {
     protected static Result Validate(params (bool ok, string error)[] rules)
     {
+        ArgumentNullException.ThrowIfNull(rules);
+
         foreach (var (ok, error) in rules)
             if (!ok) return Result.Fail(error);
         return Result.Ok();

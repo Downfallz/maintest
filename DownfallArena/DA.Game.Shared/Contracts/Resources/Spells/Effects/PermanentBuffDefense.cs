@@ -16,9 +16,9 @@ public sealed record PermanentBuffDefense : Effect, IInstantEffect
         if (!res.IsSuccess)
             throw new ArgumentException(res.Error);
 
-        return new PermanentBuffDefense(amount, targeting);
+        return new PermanentBuffDefense(amount, targeting!);
     }
 
     public static PermanentBuffDefense Self(int amount)
-        => Of(amount, TargetingSpec.Of(TargetOrigin.Self, TargetScope.Single, 1));
+        => Of(amount, TargetingSpec.Of(TargetOrigin.Self, TargetScope.SingleTarget, 1));
 }

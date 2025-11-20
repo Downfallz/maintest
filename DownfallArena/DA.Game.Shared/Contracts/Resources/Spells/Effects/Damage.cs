@@ -15,11 +15,11 @@ public sealed record Damage : Effect, IInstantEffect
 
         // Optionnel : policy de bon sens (les dégâts sur Self ne sont pas autorisés par défaut)
         // -> à déplacer dans une ValidationPolicy si tu préfères centraliser.
-        return new Damage(amount, targeting);
+        return new Damage(amount, targeting!);
     }
 
     public static Damage SingleTargetEnemy(int amount)
-        => Of(amount, TargetingSpec.Of(TargetOrigin.Enemy, TargetScope.Single, 1));
+        => Of(amount, TargetingSpec.Of(TargetOrigin.Enemy, TargetScope.SingleTarget, 1));
 
     public Damage WithTargeting(TargetingSpec targeting) => Of(Amount, targeting);
 }
