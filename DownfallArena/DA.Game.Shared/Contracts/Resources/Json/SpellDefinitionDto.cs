@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Json;
 
-public sealed class SpellDefinitionDto {
+public sealed class SpellDefinitionDto
+{
     public string Id { get; set; } = default!;             // ex: "spell:fireball"
     public string Name { get; set; } = default!;
     public SpellType SpellType { get; set; } = default!;

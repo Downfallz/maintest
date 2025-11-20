@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Stats;
 
-public sealed record Health(int Value) : ValueObject, IComparable<Health> {
+public sealed record Health(int Value) : ValueObject, IComparable<Health>
+{
     public static Health Of(int v)
     {
         var res = Validate((v >= 0, "Health >= 0"));

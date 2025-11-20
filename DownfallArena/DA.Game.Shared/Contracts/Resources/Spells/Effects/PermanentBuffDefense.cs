@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Spells.Effects;
 
-public sealed record PermanentBuffDefense : Effect, IInstantEffect {
+public sealed record PermanentBuffDefense : Effect, IInstantEffect
+{
     public int Amount { get; }
 
     private PermanentBuffDefense(int amount, TargetingSpec targeting)

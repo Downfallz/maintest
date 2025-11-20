@@ -1,6 +1,7 @@
 ﻿namespace DA.Game.Shared.Utilities;
 
-public abstract record ValueObject {
+public abstract record ValueObject
+{
     protected static Result Validate(params (bool ok, string error)[] rules)
     {
         ArgumentNullException.ThrowIfNull(rules);

@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Spells.Effects;
 
-public sealed record Bleed : Effect, IOverTimeEffect {
+public sealed record Bleed : Effect, IOverTimeEffect
+{
     public int AmountPerTick { get; }
     public int DurationRounds { get; }
 

@@ -1,6 +1,7 @@
 ﻿namespace DA.Game.Shared.Contracts.Resources.Spells.Enums;
 
-public enum CharClass {
+public enum CharClass
+{
     Creature,
     Brawler,
     Scoundrel,

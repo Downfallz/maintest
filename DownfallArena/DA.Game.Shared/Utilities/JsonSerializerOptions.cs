@@ -3,7 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace DA.Game.Shared.Utilities;
 
-public static class DownfallArenaJsonOptions {
+public static class DownfallArenaJsonOptions
+{
     public const string FILENAME_ALIASES = "aliases.json";
     public const string FILENAME_GAMESCHEMA = "game.schema.json";
     public const string FILENAME_SCHEMAHASH = "schema.hash";

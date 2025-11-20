@@ -3,7 +3,8 @@ using DA.Game.Shared.Contracts.Resources.Spells;
 
 namespace DA.Game.Shared.Contracts.Resources;
 
-public interface IGameResources {
+public interface IGameResources
+{
     IReadOnlyList<CharacterDefinitionRef> Characters { get; }
     IReadOnlyList<Spell> Spells { get; }
     string Version { get; }

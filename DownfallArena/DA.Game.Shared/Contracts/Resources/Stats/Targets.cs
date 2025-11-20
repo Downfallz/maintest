@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Stats;
 
-public sealed record Targets(int Value) : ValueObject {
+public sealed record Targets(int Value) : ValueObject
+{
     public static Targets Of(int v)
     {
         var res = Validate((v >= 0, "Targets >= 0"));

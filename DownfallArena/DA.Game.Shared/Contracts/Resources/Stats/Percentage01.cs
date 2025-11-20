@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Stats;
 
-public sealed record Percentage01(double Value) : ValueObject {
+public sealed record Percentage01(double Value) : ValueObject
+{
     public static Percentage01 Of(double v)
     {
         var res = Validate((v is >= 0 and <= 1, "Must be in [0,1]"));

@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Spells.Effects;
 
-public sealed record Damage : Effect, IInstantEffect {
+public sealed record Damage : Effect, IInstantEffect
+{
     public int Amount { get; }
 
     private Damage(int amount, TargetingSpec targeting) : base(targeting) => Amount = amount;

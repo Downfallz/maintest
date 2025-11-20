@@ -2,7 +2,8 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Stats;
 
-public sealed record Initiative(int Value) : ValueObject {
+public sealed record Initiative(int Value) : ValueObject
+{
     public static Initiative Of(int v)
     {
         var res = Validate((v >= 0, "Initiative >= 0"));
