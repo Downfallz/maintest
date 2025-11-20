@@ -21,10 +21,15 @@ public sealed record PlayerActionContext
     }
 
     public static PlayerActionContext FromTeams(PlayerSlot slot, Team myTeam, Team enemyTeam)
-        => new PlayerActionContext(
+    {
+        ArgumentNullException.ThrowIfNull(myTeam);
+        ArgumentNullException.ThrowIfNull(enemyTeam);
+
+        return new PlayerActionContext(
             slot,
-            myTeam.Characters.Select(CharacterStatus.From).ToArray(),
-            enemyTeam.Characters.Select(CharacterStatus.From).ToArray());
+            [..myTeam.Characters.Select(CharacterStatus.From)],
+            [..enemyTeam.Characters.Select(CharacterStatus.From)]);
+    }
 
     // Aides métier
     public bool IsAvailable(CharacterId id) =>

@@ -6,5 +6,9 @@ namespace DA.Game.Domain2.Matches.Specifications.Creatures;
 public sealed class HasTakenDamageSpec : ISpecification<CombatCharacter>
 {
     public bool IsSatisfiedBy(CombatCharacter candidate)
-        => candidate.Health < candidate.BaseHealth;
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        return candidate.Health < candidate.BaseHealth;
+    }
 }

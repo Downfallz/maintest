@@ -12,6 +12,8 @@ namespace DA.Game.Domain2.Matches.Entities
 {
     public class Round : Entity<RoundId>
     {
+        private const string MaxChoicesAlreadySubmittedMessage = "Nombre maximum de choix déjà soumis pour ce joueur.";
+
         public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
         public TurnCursor Cursor { get; private set; } = TurnCursor.Start;
         private readonly Dictionary<CharacterId, CombatActionChoice> _intents = new();
@@ -22,7 +24,7 @@ namespace DA.Game.Domain2.Matches.Entities
         private readonly HashSet<SpeedChoice> _p2Speed = new();
 
         public int Number { get; private set; }
-        public RoundPhase Phase { get; private set; } = RoundPhase.Evolution;
+        public RoundPhase Phase { get; private set; }
 
         public IReadOnlyCollection<SpellUnlockChoice> Player1Choices => _p1Evolution;
         public IReadOnlyCollection<SpellUnlockChoice> Player2Choices => _p2Evolution;
@@ -43,26 +45,30 @@ namespace DA.Game.Domain2.Matches.Entities
         public static Round StartFirst(IGameResources resources,
             RuleSet ruleSet) => new Round(RoundId.New(1), resources, ruleSet);
 
-        public static Round StartNext(Round previous) => new Round(RoundId.New(previous.Number + 1), previous._resources, previous._ruleSet);
+        public static Round StartNext(Round previous)
+        {
+            ArgumentNullException.ThrowIfNull(previous);
+            return new Round(RoundId.New(previous.Number + 1), previous._resources, previous._ruleSet);
+        }
 
         public Result SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
         {
+            ArgumentNullException.ThrowIfNull(ctx);
+
             if (Phase != RoundPhase.Evolution)
                 return Result.Fail("Phase invalide pour soumettre une évolution.");
 
-            var target = ctx.Slot == PlayerSlot.Player1 ? _p1Evolution : _p2Evolution;
             if (ctx.Slot == PlayerSlot.Player1)
             {
                 if (_p1Evolution.Count >= 2)
-                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
                 if (!_p1Evolution.Add(choice))
                     return Result.Fail("Choix déjà soumis.");
-
             }
             else
             {
                 if (_p2Evolution.Count >= 2)
-                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
                 if (!_p2Evolution.Add(choice))
                     return Result.Fail("Choix déjà soumis.");
             }
@@ -75,22 +81,22 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
         {
+            ArgumentNullException.ThrowIfNull(ctx);
+
             if (Phase != RoundPhase.Speed)
                 return Result.Fail("Phase invalide pour soumettre un choix de vitesse.");
-
-            var target = ctx.Slot == PlayerSlot.Player1 ? _p1Speed : _p2Speed;
 
             if (ctx.Slot == PlayerSlot.Player1)
             {
                 if (_p1Speed.Count >= 3)
-                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
                 if (!_p1Speed.Add(choice))
                     return Result.Fail("Choix déjà soumis.");
             }
             else
             {
                 if (_p2Speed.Count >= 3)
-                    return Result.Fail("Nombre maximum de choix déjà soumis pour ce joueur.");
+                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
                 if (!_p2Speed.Add(choice))
                     return Result.Fail("Choix déjà soumis.");
             }
@@ -109,6 +115,9 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result<CombatActionChoice> SubmitCombatAction(PlayerActionContext ctx, CombatActionChoice choice)
         {
+            ArgumentNullException.ThrowIfNull(ctx);
+            ArgumentNullException.ThrowIfNull(choice);
+
             if (Phase != RoundPhase.Combat)
                 return Result<CombatActionChoice>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
 
@@ -125,9 +134,9 @@ namespace DA.Game.Domain2.Matches.Entities
             if (_intents.Count == ctx.AllAvailableCharactersCount)
                 Phase = RoundPhase.CombatResolution;
 
-            //AddEvent(new ActionQueued(Id, intent.ActorId, intent.ActionId, clock.UtcNow));
             return Result<CombatActionChoice>.Ok(choice);
         }
+
         public Result<CombatActionResult> ResolveNextAction()
         {
             if (Timeline is null)
@@ -143,15 +152,11 @@ namespace DA.Game.Domain2.Matches.Entities
                 return Result<CombatActionResult>.Fail("Rien de soumis pour ce character.");
             }
             
-            //var result = resolver.Resolve(intent, rules, clock);
-            //AddEvent(new ActionResolved(Id, intent.ActorId, intent.ActionId, result, clock.UtcNow));
-
             Cursor = Cursor.MoveNext(Timeline);
 
             if (Cursor.IsEnd)
             {
                 Phase = RoundPhase.Completed;
-                //AddEvent(new RoundCombatCompleted(Id, Number, clock.UtcNow));
             }
 
             return Result<CombatActionResult>.Ok(new CombatActionResult(intent, new List<EffectSummary>()));

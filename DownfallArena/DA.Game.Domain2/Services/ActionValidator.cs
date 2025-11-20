@@ -16,6 +16,7 @@ public sealed class ActionValidator
     public Result Validate(PlayerActionContext context, CombatActionChoice req)
     {
         // utiliser CanActSpecification, CanTargetSpecification, Energy, Cooldown, etc.
+        var t = _rules.Evolution;
         return Result.Ok();
     }
 }

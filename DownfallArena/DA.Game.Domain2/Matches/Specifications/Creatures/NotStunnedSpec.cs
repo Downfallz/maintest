@@ -6,5 +6,8 @@ namespace DA.Game.Domain2.Matches.Specifications.Creatures;
 public sealed class NotStunnedSpec : ISpecification<CombatCharacter>
 {
     public bool IsSatisfiedBy(CombatCharacter candidate)
-        => !candidate.IsStunned;
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        return !candidate.IsStunned;
+    }
 }

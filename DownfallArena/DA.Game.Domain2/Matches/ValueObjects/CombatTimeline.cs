@@ -24,6 +24,11 @@ public sealed record CombatTimeline
         IReadOnlyCollection<SpeedChoice> p2Speed,
         RuleSet rules)
     {
+        ArgumentNullException.ThrowIfNull(team1);
+        ArgumentNullException.ThrowIfNull(team2);
+        ArgumentNullException.ThrowIfNull(p1Speed);
+        ArgumentNullException.ThrowIfNull(p2Speed);
+
         var allSlots = new List<ActivationSlot>();
 
         void AddSlotsForTeam(Team team, PlayerSlot owner, IEnumerable<SpeedChoice> choices)
@@ -37,8 +42,6 @@ public sealed record CombatTimeline
                     throw new InvalidOperationException(
                         $"Character {choice.CharacterId} not found in team {owner}.");
 
-                // TODO: adapter selon ton modèle de stats
-                //var initiative = rules.GetCurrentInitiative(character);
                 var initiative = character.CurrentInitiative;
                 allSlots.Add(new ActivationSlot(
                     owner,

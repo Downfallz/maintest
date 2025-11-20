@@ -23,6 +23,8 @@ public sealed class Match : AggregateRoot<MatchId>
 {
     private readonly IGameResources _resources;
     private readonly RuleSet _ruleSet;
+    private readonly IClock _clock;
+
     public MatchLifecycle Lifecycle { get; } = new();
 
     public MatchState State => Lifecycle.State;
@@ -34,26 +36,29 @@ public sealed class Match : AggregateRoot<MatchId>
     public Round? CurrentRound { get; private set; }
     public int RoundNumber => CurrentRound?.Number ?? 0;
 
-    private Match(MatchId id, IGameResources resources, RuleSet ruleSet) : base(id)
+    private Match(MatchId id, IGameResources resources, RuleSet ruleSet, IClock clock) : base(id)
     {
         _resources = resources ?? throw new ArgumentNullException(nameof(resources));
         _ruleSet = ruleSet;
+        _clock = clock;
     }
 
     /// <summary>
     /// Crée un nouveau match avec les ressources de jeu fournies.
     /// </summary>
-    public static Match Create(IGameResources resources, RuleSet ruleSet)
+    public static Match Create(IGameResources resources, RuleSet ruleSet, IClock clock)
     {
         ArgumentNullException.ThrowIfNull(resources);
-        return new Match(MatchId.New(), resources, ruleSet);
+        return new Match(MatchId.New(), resources, ruleSet, clock);
     }
 
     /// <summary>
     /// Permet à un joueur de rejoindre le match. Le match démarre automatiquement si les deux sont présents.
     /// </summary>
-    public Result<PlayerSlot> Join(PlayerRef player, IClock clock, IRandom rng)
+    public Result<PlayerSlot> Join(PlayerRef player)
     {
+        ArgumentNullException.ThrowIfNull(player);
+
         if (State != MatchState.WaitingForPlayers)
             return Result<PlayerSlot>.Fail(MatchErrors.AlreadyStarted);
 
@@ -63,23 +68,23 @@ public sealed class Match : AggregateRoot<MatchId>
         if (PlayerRef1 is null)
         {
             PlayerRef1 = player;
-            AddEvent(new PlayerJoined(Id, player.Id, clock.UtcNow));
+            AddEvent(new PlayerJoined(Id, player.Id, _clock.UtcNow));
             slot = PlayerSlot.Player1;
         }
         else if (PlayerRef2 is null)
         {
             PlayerRef2 = player;
-            AddEvent(new PlayerJoined(Id, player.Id, clock.UtcNow));
+            AddEvent(new PlayerJoined(Id, player.Id, _clock.UtcNow));
             slot = PlayerSlot.Player2;
         }
 
         if (PlayerRef1 is not null && PlayerRef2 is not null)
-            StartMatch(clock, rng);
+            StartMatch(_clock);
 
         return Result<PlayerSlot>.Ok(slot);
     }
 
-    private void StartMatch(IClock clock, IRandom rng)
+    private void StartMatch(IClock clock)
     {
         InitializeTeams();
         InitializeFirstRound();
@@ -109,7 +114,7 @@ public sealed class Match : AggregateRoot<MatchId>
     /// <summary>
     /// Soumet le choix d’évolution (déblocage de sort) du joueur.
     /// </summary>
-    public Result SubmitEvolutionChoice(PlayerSlot player, SpellUnlockChoice choice, IClock clock)
+    public Result SubmitEvolutionChoice(PlayerSlot player, SpellUnlockChoice choice)
     {
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitEvolutionChoice(this);
         if (!guard.IsSuccess)
@@ -121,10 +126,10 @@ public sealed class Match : AggregateRoot<MatchId>
         if (!result.IsSuccess)
             return result;
 
-        AddEvent(new EvolutionChoiceSubmitted(CurrentRound.Id, playerCtx.Slot, choice, clock.UtcNow));
+        AddEvent(new EvolutionChoiceSubmitted(CurrentRound.Id, playerCtx.Slot, choice, _clock.UtcNow));
 
         if (CurrentRound.IsEvolutionPhaseComplete)
-            AddEvent(new EvolutionPhaseCompleted(CurrentRound.Id, RoundNumber, clock.UtcNow));
+            AddEvent(new EvolutionPhaseCompleted(CurrentRound.Id, RoundNumber, _clock.UtcNow));
 
         return result;
     }
@@ -132,7 +137,7 @@ public sealed class Match : AggregateRoot<MatchId>
     /// <summary>
     /// Soumet le choix de vitesse (Quick/Standard) du joueur.
     /// </summary>
-    public Result SubmitSpeedChoice(PlayerSlot slot, SpeedChoice speedChoice, IClock clock)
+    public Result SubmitSpeedChoice(PlayerSlot slot, SpeedChoice speedChoice)
     {
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitSpeedChoice(this);
         if (!guard.IsSuccess)
@@ -144,15 +149,15 @@ public sealed class Match : AggregateRoot<MatchId>
         if (!result.IsSuccess)
             return result;
 
-        AddEvent(new SpeedChoiceSubmitted(CurrentRound.Id, slot, speedChoice, clock.UtcNow));
+        AddEvent(new SpeedChoiceSubmitted(CurrentRound.Id, slot, speedChoice, _clock.UtcNow));
 
         if (CurrentRound.IsSpeedChoicePhaseComplete)
-            AddEvent(new SpeedPhaseCompleted(CurrentRound.Id, RoundNumber, clock.UtcNow));
+            AddEvent(new SpeedPhaseCompleted(CurrentRound.Id, RoundNumber, _clock.UtcNow));
 
         return result;
     }
 
-    public Result SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice, IClock clock)
+    public Result SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice)
     {
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
         if (!guard.IsSuccess)
@@ -160,17 +165,19 @@ public sealed class Match : AggregateRoot<MatchId>
 
         var playerCtx = BuildContextForCurrentPlayer(slot);
         var result = CurrentRound!.SubmitCombatAction(playerCtx, combatActionChoice);
+        if (!result.IsSuccess)
+            return Result.Fail(result.Error!);
 
-        AddEvent(new CombatActionChoiceSubmitted(CurrentRound!.Id, slot, combatActionChoice, clock.UtcNow));
+        AddEvent(new CombatActionChoiceSubmitted(CurrentRound!.Id, slot, combatActionChoice, _clock.UtcNow));
 
         if (CurrentRound!.Phase == RoundPhase.CombatResolution)
         {
-            AddEvent(new CombatActionRequestPhaseCompleted(CurrentRound!.Id, RoundNumber, clock.UtcNow));
+            AddEvent(new CombatActionRequestPhaseCompleted(CurrentRound!.Id, RoundNumber, _clock.UtcNow));
 
             var timeline = CombatTimeline.FromSpeedChoices(
-            Player1Team,
+            Player1Team!,
             CurrentRound.Player1SpeedChoices,
-            Player2Team,
+            Player2Team!,
             CurrentRound.Player1SpeedChoices,
             _ruleSet);
 
@@ -181,10 +188,10 @@ public sealed class Match : AggregateRoot<MatchId>
                 var actionResult = CurrentRound!.ResolveNextAction();
                 if (!actionResult.IsSuccess)
                     return Result.Fail(actionResult.Error!);
-                AddEvent(new CombatActionResolved(CurrentRound!.Id, actionResult.Value!, clock.UtcNow));
+                AddEvent(new CombatActionResolved(CurrentRound!.Id, actionResult.Value!, _clock.UtcNow));
             }
 
-            AddEvent(new CombatResolvingPhaseCompleted(CurrentRound!.Id, RoundNumber, clock.UtcNow));
+            AddEvent(new CombatResolvingPhaseCompleted(CurrentRound!.Id, RoundNumber, _clock.UtcNow));
             InitializeNextRound();
         }
 
@@ -194,12 +201,12 @@ public sealed class Match : AggregateRoot<MatchId>
     /// <summary>
     /// Termine le tour courant du joueur.
     /// </summary>
-    public Result EndTurn(PlayerId actor, IClock clock)
+    public Result EndTurn(PlayerId actor)
     {
         if (State != MatchState.Started)
             return Result.Fail(MatchErrors.NotStarted);
 
-        AddEvent(new TurnAdvanced(Id, RoundNumber, clock.UtcNow));
+        AddEvent(new TurnAdvanced(Id, RoundNumber, _clock.UtcNow));
         return Result.Ok();
     }
 

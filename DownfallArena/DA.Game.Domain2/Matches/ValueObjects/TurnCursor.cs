@@ -14,6 +14,8 @@ public sealed record TurnCursor(int Index)
 
     public TurnCursor MoveNext(CombatTimeline timeline)
     {
+        ArgumentNullException.ThrowIfNull(timeline);
+
         var next = timeline.NextAfter(Index);
         return next is null ? new TurnCursor(-1) : new TurnCursor(Index + 1);
     }

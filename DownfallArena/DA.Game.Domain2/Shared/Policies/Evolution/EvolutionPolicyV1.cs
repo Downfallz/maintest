@@ -7,16 +7,15 @@ namespace DA.Game.Domain2.Shared.Policies.Evolution;
 
 public sealed class EvolutionPolicy : IEvolutionPolicy
 {
-    private readonly ISpecification<EvolutionContext> _canEvolve;
+    private readonly CanEvolveCharacterSpec _canEvolve;
 
     public EvolutionPolicy()
     {
-        _canEvolve = new CanEvolveCharacterSpec(2);
+        _canEvolve = new CanEvolveCharacterSpec();
     }
 
-    public bool CanEvolve(CharacterId id, EvolutionContext evolution)
+    public bool CanEvolve(CharacterId id, EvolutionContext evolutionContext)
     {
-
-        return _canEvolve.IsSatisfiedBy(evolution);
+        return _canEvolve.IsSatisfiedBy(evolutionContext);
     }
 }

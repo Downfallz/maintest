@@ -6,5 +6,9 @@ namespace DA.Game.Domain2.Matches.Specifications.Creatures;
 public sealed class IsDeadSpec : ISpecification<CombatCharacter>
 {
     public bool IsSatisfiedBy(CombatCharacter candidate)
-        => !candidate.IsAlive;
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        return !candidate.IsAlive;
+    }
 }

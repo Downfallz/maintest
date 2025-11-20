@@ -3,11 +3,11 @@ using DA.Game.Shared.Contracts.Matches.Ids;
 
 namespace DA.Game.Domain2.Shared.Policies.Speed;
 
-public sealed class IInitiativePolicyV1 : IInitiativePolicy
+public sealed class InitiativePolicyV1 : IInitiativePolicy
 {
     public bool CanEvolve(CharacterId id, IReadOnlyCollection<CharacterStatus> statuses)
     {
         var c = statuses.FirstOrDefault(x => x.CharacterId == id);
-        return !c.IsStunned && c.IsAlive;
+        return c != null && !c.IsStunned && c.IsAlive;
     }
 }

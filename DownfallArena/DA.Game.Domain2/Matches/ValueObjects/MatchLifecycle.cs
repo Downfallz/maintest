@@ -8,7 +8,7 @@ public sealed class MatchLifecycle
     public MatchState State { get; private set; } = MatchState.WaitingForPlayers;
 
     // même dictionnaire que plus haut
-    private static readonly IReadOnlyDictionary<MatchState, MatchState[]> _allowedTransitions =
+    private static readonly Dictionary<MatchState, MatchState[]> _allowedTransitions =
     new Dictionary<MatchState, MatchState[]>
     {
         [MatchState.WaitingForPlayers] = new[]

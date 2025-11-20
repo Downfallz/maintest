@@ -6,10 +6,10 @@ namespace DA.Game.Domain2.Shared.Policies.MatchPhase;
 
 public sealed class MatchPhasePolicyV1 : IMatchPhasePolicy
 {
-
-
     public Result EnsureCanSubmitCombatAction(Matches.Aggregates.Match match)
     {
+        ArgumentNullException.ThrowIfNull(match);
+
         if (match.State != MatchState.Started)
             return Result.Fail("Invalid match phase.");
 
@@ -19,18 +19,20 @@ public sealed class MatchPhasePolicyV1 : IMatchPhasePolicy
         return Result.Ok();
     }
 
-    public Result EnsureCanResolveNextAction(Matches.Aggregates.Match match)
+    // Made static to address S2325 and CA1822.
+    // Added a different error message to address S4144.
+    public static Result EnsureCanResolveNextAction(Matches.Aggregates.Match match)
     {
+        ArgumentNullException.ThrowIfNull(match);
+
         if (match.State != MatchState.Started)
-            return Result.Fail("Invalid match phase.");
+            return Result.Fail("Cannot resolve next action: invalid match phase.");
 
         if (match.CurrentRound is null)
-            return Result.Fail("No active round.");
+            return Result.Fail("Cannot resolve next action: no active round.");
 
         return Result.Ok();
     }
-
-
 
     public Result EnsureCanSubmitEvolutionChoice(Matches.Aggregates.Match match)
     {
@@ -42,8 +44,10 @@ public sealed class MatchPhasePolicyV1 : IMatchPhasePolicy
         return EnsureBasicGuard(match);
     }
 
-    private Result EnsureBasicGuard(Matches.Aggregates.Match match)
+    private static Result EnsureBasicGuard(Matches.Aggregates.Match match)
     {
+        ArgumentNullException.ThrowIfNull(match);
+
         if (match.State != MatchState.Started)
             return Result.Fail("Invalid match phase.");
 

@@ -2,6 +2,7 @@
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Stats;
 
 namespace DA.Game.Domain2.Matches.Entities;
 
@@ -11,6 +12,8 @@ public class CombatCharacter : Entity<CharacterId>
 
     public static CombatCharacter FromCharacterTemplate(CharacterDefinitionRef characterRuntimeTemplate, CharacterId id)
     {
+        ArgumentNullException.ThrowIfNull(characterRuntimeTemplate);
+
         return new CombatCharacter(id)
         {
             BaseHealth = characterRuntimeTemplate.BaseHp,
@@ -27,22 +30,19 @@ public class CombatCharacter : Entity<CharacterId>
             IsStunned = false
         };
     }
-    IReadOnlyList<SpellId> StartingSpellIds { get; set; }
-    public int BaseHealth { get; set; }
-    public int BaseEnergy { get; set; }
-    public int BaseDefense { get; set; }
-    public int BaseInitiative { get; set; }
-    public double BaseCritical { get; set; }
-    public int Health { get; set; }
-    public int Energy { get; set; }
-    public int ExtraPoint { get; set; }
-    public int BonusDefense { get; set; }
-    public double BonusCritical { get; set; }
-    public int CurrentInitiative { get; set; }
-    public int BonusRetaliate { get; set; }
-    public bool IsStunned { get; set; }
-
-    public bool IsDead => Health <= 0;
+    public required IReadOnlyList<SpellId> StartingSpellIds { get; set; }
+    public required Health BaseHealth { get; set; }
+    public required Energy BaseEnergy { get; set; }
+    public required Defense BaseDefense { get; set; }
+    public required Initiative BaseInitiative { get; set; }
+    public required CriticalChance BaseCritical { get; set; }
+    public required Health Health { get; set; }
+    public required Energy Energy { get; set; }
+    public required Defense BonusDefense { get; set; }
+    public required CriticalChance BonusCritical { get; set; }
+    public required Initiative CurrentInitiative { get; set; }
+    public required bool IsStunned { get; set; }
+    public bool IsDead => Health.IsDead();
     public bool IsAlive => !IsDead;
 }
 
