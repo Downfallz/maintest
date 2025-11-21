@@ -8,24 +8,23 @@ using MediatR;
 
 namespace DA.Game.Application.Matches.Features.SubmitCombatActionChoice;
 
-public sealed class SubmitCombatActionChoiceHandler(IMatchRepository repo, 
-    IApplicationEventCollector appEvents,
-    IClock clock,
-    IRandom rng,
+public sealed class SubmitCombatActionChoiceHandler(IMatchRepository repo,
     IMapper mapper) : IRequestHandler<SubmitCombatActionChoiceCommand, Result<SubmitCombatActionResult>>
 {
-    public async Task<Result<SubmitCombatActionResult>> Handle(SubmitCombatActionChoiceCommand cmd, CancellationToken ct = default)
+    public async Task<Result<SubmitCombatActionResult>> Handle(SubmitCombatActionChoiceCommand cmd, CancellationToken cancellationToken)
     {
-        var match = await repo.GetAsync(cmd.MatchId, ct);
+        ArgumentNullException.ThrowIfNull(cmd);
+
+        var match = await repo.GetAsync(cmd.MatchId, cancellationToken);
         if (match is null)
             return Result<SubmitCombatActionResult>.Fail($"Match '{cmd.MatchId}' not found.");
         var domainChoice = mapper.Map<CombatActionChoice>(cmd.CombatActionChoice);
 
-        var res = match.SubmitCombatAction(cmd.slot, domainChoice, clock);
+        var res = match.SubmitCombatAction(cmd.slot, domainChoice);
         if (!res.IsSuccess)
             return Result<SubmitCombatActionResult>.Fail(res.Error!);
 
-        await repo.SaveAsync(match, ct);
+        await repo.SaveAsync(match, cancellationToken);
 
         return Result<SubmitCombatActionResult>.Ok(new SubmitCombatActionResult(cmd.CombatActionChoice, match.CurrentRound!.Phase));
     }

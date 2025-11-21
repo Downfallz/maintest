@@ -11,12 +11,12 @@ namespace DA.Game.Application.Learning.ML;
 
 public sealed class RewardTrainer : ITrainer
 {
-    public void Train(string datasetCsvPath, string modelPath)
+    public void Train(string datasetPath, string modelPath)
     {
         var ml = new MLContext(seed: 123);
 
         var data = ml.Data.LoadFromTextFile<GameModelInput>(
-            path: datasetCsvPath, hasHeader: true, separatorChar: ',');
+            path: datasetPath, hasHeader: true, separatorChar: ',');
 
         var pipeline =
             ml.Transforms.Categorical.OneHotEncoding("ActionEncoded", nameof(GameModelInput.Action))

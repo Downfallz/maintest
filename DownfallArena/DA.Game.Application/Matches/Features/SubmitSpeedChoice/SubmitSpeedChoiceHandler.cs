@@ -9,23 +9,22 @@ using MediatR;
 namespace DA.Game.Application.Matches.Features.SubmitSpeedChoice;
 
 public sealed class SubmitSpeedChoiceHandler(IMatchRepository repo, 
-    IApplicationEventCollector appEvents,
-    IClock clock,
-    IRandom rng,
     IMapper mapper) : IRequestHandler<SubmitSpeedChoiceCommand, Result<SubmitSpeedResult>>
 {
-    public async Task<Result<SubmitSpeedResult>> Handle(SubmitSpeedChoiceCommand cmd, CancellationToken ct = default)
+    public async Task<Result<SubmitSpeedResult>> Handle(SubmitSpeedChoiceCommand cmd, CancellationToken cancellationToken)
     {
-        var match = await repo.GetAsync(cmd.MatchId, ct);
+        ArgumentNullException.ThrowIfNull(cmd);
+
+        var match = await repo.GetAsync(cmd.MatchId, cancellationToken);
         if (match is null)
             return Result<SubmitSpeedResult>.Fail($"Match '{cmd.MatchId}' not found.");
 
         var domainChoice = mapper.Map<SpeedChoice>(cmd.SpeedChoice);
-        var res = match.SubmitSpeedChoice(cmd.slot, domainChoice, clock);
+        var res = match.SubmitSpeedChoice(cmd.slot, domainChoice);
         if (!res.IsSuccess)
             return Result<SubmitSpeedResult>.Fail(res.Error!);
 
-        await repo.SaveAsync(match, ct);
+        await repo.SaveAsync(match, cancellationToken);
         var choices = cmd.slot == PlayerSlot.Player1 ? match.CurrentRound!.Player1SpeedChoices : match.CurrentRound!.Player2SpeedChoices;
         return Result<SubmitSpeedResult>.Ok(new SubmitSpeedResult(choices.ToHashSet(), match.CurrentRound!.Phase));
     }

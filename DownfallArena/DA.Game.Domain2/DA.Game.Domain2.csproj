@@ -8,12 +8,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Matches\Services\" />
-		<Folder Include="Shared\Policies\Combat\" />
+		<ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" PrivateAssets="All" />
 	</ItemGroup>
 
 	<ItemGroup>

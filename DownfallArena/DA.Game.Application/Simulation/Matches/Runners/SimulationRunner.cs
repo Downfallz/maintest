@@ -30,26 +30,28 @@ public sealed class FidelitySimulationRunner(
     IMediator mediator,
     IMatchRepository matches,
     IPlayerRepository players,
-    ITurnDeciderRegistry deciders,
     IClock clock,
     IMapper mapper,
     IDatasetLogger? dataset,// nullable: actif en mode simulation/ML
     IGameResources gameResources,
-    IRuleSetProvider ruleSetProvider
+    IRuleSetProvider ruleSetProvider,
+    IRandom rng
 ) : ISimulationRunner
 {
     public async Task<MatchResult> RunAsync(MatchScenario scenario, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(scenario);
+
         // 1) Setup players (création/seed côté repo ou via use case)
         var p1 = await EnsurePlayerAsync(scenario.Player1, ct);
         var p2 = await EnsurePlayerAsync(scenario.Player2, ct);
 
         // 2) Crée un match et join
         
-        var match = Match.Create(gameResources, ruleSetProvider.Current);
+        var match = Match.Create(gameResources, ruleSetProvider.Current, clock);
         var matchId = match.Id;
-        var matchResult = await matches.SaveAsync(match, ct);
-        match = matchResult.Value;
+        await matches.SaveAsync(match, ct);
+        
 
         var pr1 = mapper.Map<PlayerRef>(p1);
         var pr2 = mapper.Map<PlayerRef>(p2);
@@ -66,12 +68,12 @@ public sealed class FidelitySimulationRunner(
             var m = await matches.GetAsync(matchId, ct);
             if (m is null || m.State != MatchState.Started) break;
 
-            var currentRef = PlayerSlot.Player1 == PlayerSlot.Player1 ? m.PlayerRef1! : m.PlayerRef2!;
+            var currentRef = m.PlayerRef1!;
             var view = new GameView(m.Id, PlayerSlot.Player1, m.CurrentRound?.Number ?? 0, m.PlayerRef1?.Id, m.PlayerRef2?.Id);
 
             var action = await decider.DecideAsync(currentRef.Id, view, ct)
                          ?? new PlayerAction("noop", "sim-default"); // fallback pour humains en sim
-            var reward = new Random().Next(-2, 5);
+            var reward = rng.Next(-2,5);
             dataset?.Record(view, action, reward); // <= log pour ML
 
             await mediator.Send(new PlayTurnCommand(matchId, currentRef.Id, action), ct);
@@ -91,11 +93,6 @@ public sealed class FidelitySimulationRunner(
 
     private async Task<Player> EnsurePlayerAsync(PlayerSimProfile profile, CancellationToken ct)
     {
-        // Ici je seed via repo directement. 
-        // Variante: envoie CreatePlayerCommand si tu veux passer par le use case.
-        //var existing = await players.FindByNameAsync?.Invoke(profile.Name, ct) ?? null;
-        //if (existing is not null) return existing;
-
         var p = new Player(PlayerId.New(), profile.Name, profile.Kind);
         await players.SaveAsync(p, ct);
         return p;

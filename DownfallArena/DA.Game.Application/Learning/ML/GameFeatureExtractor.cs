@@ -15,6 +15,7 @@ public sealed class GameFeatureExtractor : IFeatureExtractor
 {
     public GameModelInput Extract(GameView view, PlayerAction? action = null)
     {
+        ArgumentNullException.ThrowIfNull(view);
         var player = view.CurrentTurn == PlayerSlot.Player1 ? view.Player1Id : view.Player2Id;
         var enemy = view.CurrentTurn == PlayerSlot.Player1 ? view.Player2Id : view.Player1Id;
 

@@ -8,6 +8,8 @@ public sealed class BatchRunner(ISimulationRunner runner)
 {
     public async Task<BatchResult> RunAsync(MatchScenario scenario, int runs, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(scenario);
+
         var results = new List<MatchResult>(runs);
         for (int i = 0; i < runs; i++)
             results.Add(await runner.RunAsync(scenario, ct));

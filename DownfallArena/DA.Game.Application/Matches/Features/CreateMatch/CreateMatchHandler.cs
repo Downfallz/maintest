@@ -16,12 +16,12 @@ public sealed class CreateMatchHandler(IMatchRepository repo,
     IRuleSetProvider ruleSetProvider,
     IClock clock) : IRequestHandler<CreateMatchCommand, Result<MatchId>>
 {
-    public async Task<Result<MatchId>> Handle(CreateMatchCommand cmd, CancellationToken ct = default)
+    public async Task<Result<MatchId>> Handle(CreateMatchCommand cmd, CancellationToken cancellationToken)
     {
         var rulebook = ruleSetProvider.Current;
 
-        var match = Match.Create(gameResources, rulebook);
-        var res = await repo.SaveAsync(match, ct);
+        var match = Match.Create(gameResources, rulebook, clock);
+        var res = await repo.SaveAsync(match, cancellationToken);
 
 
         appEvents.Add(new MatchCreated(match.Id, clock.UtcNow));

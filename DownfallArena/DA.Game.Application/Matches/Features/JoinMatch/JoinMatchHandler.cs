@@ -5,22 +5,21 @@ using MediatR;
 
 namespace DA.Game.Application.Matches.Features.JoinMatch;
 
-public sealed class JoinMatchHandler(IMatchRepository repo,
-    IApplicationEventCollector appEvents,
-    IClock clock,
-    IRandom rng) : IRequestHandler<JoinMatchCommand, Result<JoinMatchResult>>
+public sealed class JoinMatchHandler(IMatchRepository repo) : IRequestHandler<JoinMatchCommand, Result<JoinMatchResult>>
 {
-    public async Task<Result<JoinMatchResult>> Handle(JoinMatchCommand cmd, CancellationToken ct = default)
+    public async Task<Result<JoinMatchResult>> Handle(JoinMatchCommand cmd, CancellationToken cancellationToken)
     {
-        var match = await repo.GetAsync(cmd.MatchId, ct);
+        ArgumentNullException.ThrowIfNull(cmd);
+
+        var match = await repo.GetAsync(cmd.MatchId, cancellationToken);
         if (match is null)
             return Result<JoinMatchResult>.Fail($"Match '{cmd.MatchId}' not found.");
-        var res = match.Join(cmd.PlayerRef, clock, rng);
+        var res = match.Join(cmd.PlayerRef);
 
         if (!res.IsSuccess)
             return Result<JoinMatchResult>.Fail(res.Error!);
 
-        await repo.SaveAsync(match, ct);
+        await repo.SaveAsync(match, cancellationToken);
 
         return Result<JoinMatchResult>.Ok(new JoinMatchResult(res.Value, match.State));
     }

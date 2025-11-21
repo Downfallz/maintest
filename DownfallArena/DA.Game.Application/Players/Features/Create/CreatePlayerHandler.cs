@@ -16,15 +16,17 @@ public sealed class CreatePlayerHandler(
     IClock clock
 ) : IRequestHandler<CreatePlayerCommand, Result<PlayerId>>
 {
-    public async Task<Result<PlayerId>> Handle(CreatePlayerCommand cmd, CancellationToken ct = default)
+    public async Task<Result<PlayerId>> Handle(CreatePlayerCommand cmd, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(cmd);
+
         var name = cmd.Name!.Trim();
-        if (await unique.ExistsNameAsync(name, ct))
+        if (await unique.ExistsNameAsync(name, cancellationToken))
             return Result<PlayerId>.Fail(PlayerErrors.NameAlreadyTaken);
 
         var player = new Player(PlayerId.New(), name, cmd.Kind);
 
-        await repo.SaveAsync(player, ct);
+        await repo.SaveAsync(player, cancellationToken);
 
         appEvents.Add(new PlayerCreated(player.Id, name, clock.UtcNow));
 

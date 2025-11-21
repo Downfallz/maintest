@@ -8,27 +8,26 @@ using MediatR;
 
 namespace DA.Game.Application.Matches.Features.SubmitEvolutionChoice;
 
-public sealed class SubmitEvolutionChoiceHandler(IMatchRepository repo, 
-    IApplicationEventCollector appEvents,
-    IClock clock,
-    IRandom rng,
+public sealed class SubmitEvolutionChoiceHandler(IMatchRepository repo,
     IMapper mapper) : IRequestHandler<SubmitEvolutionChoiceCommand, Result<SubmitEvolutionResult>>
 {
-    public async Task<Result<SubmitEvolutionResult>> Handle(SubmitEvolutionChoiceCommand cmd, CancellationToken ct = default)
+    public async Task<Result<SubmitEvolutionResult>> Handle(SubmitEvolutionChoiceCommand cmd, CancellationToken cancellationToken)
     {
-        var match = await repo.GetAsync(cmd.MatchId, ct);
+        ArgumentNullException.ThrowIfNull(cmd);
+
+        var match = await repo.GetAsync(cmd.MatchId, cancellationToken);
         if (match is null)
             return Result<SubmitEvolutionResult>.Fail($"Match '{cmd.MatchId}' not found.");
         var domainChoice = mapper.Map<SpellUnlockChoice>(cmd.SpellUnlockChoice);
-        var res = match.SubmitEvolutionChoice(cmd.slot, domainChoice, clock);
+        var res = match.SubmitEvolutionChoice(cmd.slot, domainChoice);
 
         if (!res.IsSuccess) 
             return Result<SubmitEvolutionResult>.Fail(res.Error!);
 
-        await repo.SaveAsync(match, ct);
+        await repo.SaveAsync(match, cancellationToken);
 
         var choices = cmd.slot == PlayerSlot.Player1 ? match.CurrentRound!.Player1Choices : match.CurrentRound!.Player2Choices;
 
-        return Result<SubmitEvolutionResult>.Ok(new SubmitEvolutionResult(choices.ToList().ToHashSet(), match.CurrentRound.Phase));
+        return Result<SubmitEvolutionResult>.Ok(new SubmitEvolutionResult(choices.ToHashSet(), match.CurrentRound.Phase));
     }
 }

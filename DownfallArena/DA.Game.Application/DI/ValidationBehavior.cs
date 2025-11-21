@@ -21,7 +21,9 @@ public sealed class ValidationBehavior<TRequest, TResponse>
         CancellationToken cancellationToken)
     {
         if (!_validators.Any())
-            return await next(); // aucune règle, on continue
+#pragma warning disable CA1062 // Validate arguments of public methods
+            return await next(cancellationToken); // aucune règle, on continue
+#pragma warning restore CA1062 // Validate arguments of public methods
 
         var context = new ValidationContext<TRequest>(request);
 
@@ -51,6 +53,6 @@ public sealed class ValidationBehavior<TRequest, TResponse>
             throw new ValidationException(failures);
         }
 
-        return await next();
+        return await next(cancellationToken);
     }
 }

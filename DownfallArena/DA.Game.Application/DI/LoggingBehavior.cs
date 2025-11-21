@@ -28,7 +28,9 @@ namespace DA.Game.Application.DI
             {
                 _logger.LogInformation("➡️ Handling {RequestName} : {@Request}", requestName, request);
 
-                var response = await next();
+#pragma warning disable CA1062 // Validate arguments of public methods
+                var response = await next(cancellationToken);
+#pragma warning restore CA1062 // Validate arguments of public methods
 
                 stopwatch.Stop();
 
@@ -41,11 +43,9 @@ namespace DA.Game.Application.DI
 
                 return response;
             }
-            catch (Exception ex)
+            catch
             {
                 stopwatch.Stop();
-                _logger.LogError(ex, "❌ Error handling {RequestName} after {Elapsed}ms",
-                    requestName, stopwatch.ElapsedMilliseconds);
                 throw;
             }
         }

@@ -12,17 +12,17 @@ namespace DA.Game.Application.Matches.DomainEvents;
 public sealed class TurnAdvancedHandler(
     IMatchRepository repo,
     ITurnDeciderRegistry turnDeciderRegistry,
-    IClock clock,
     IMediator commandBus,
     IOptions<GameSettings> options) : INotificationHandler<TurnAdvanced>
 {
     private readonly bool _simulation = options.Value.SimulationMode;
 
-    public async Task Handle(TurnAdvanced evt, CancellationToken ct = default)
+    public async Task Handle(TurnAdvanced evt, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(evt);
         if (!_simulation)
         {
-            var match = await repo.GetAsync(evt.MatchId, ct);
+            var match = await repo.GetAsync(evt.MatchId, cancellationToken);
             if (match is null || match.State != MatchState.Started) return;
             // fix avec le combat timeline...
 
@@ -36,13 +36,13 @@ public sealed class TurnAdvancedHandler(
             var view = new GameView(match.Id, PlayerSlot.Player1, match.RoundNumber, 
                                     match.PlayerRef1?.Id, match.PlayerRef2?.Id);
 
-            var action = await decider.DecideAsync(currentRef.Id, view, ct);
+            var action = await decider.DecideAsync(currentRef.Id, view, cancellationToken);
 
             // Si c’est humain => pas d’action auto (on attend l’UI).
             if (action is null) return;
 
             // Sinon, bot : passe par le même pipeline que l’humain
-            await commandBus.Send(new PlayTurnCommand(match.Id, currentRef.Id, action));
+            await commandBus.Send(new PlayTurnCommand(match.Id, currentRef.Id, action), cancellationToken);
         }
     }
 }
