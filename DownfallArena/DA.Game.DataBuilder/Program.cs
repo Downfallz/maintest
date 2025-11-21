@@ -6,6 +6,10 @@ namespace DA.Game.DataBuilder;
 
 internal sealed class Program
 {
+    private Program()
+    {
+    }
+
     public static async Task Main(string[] args)
     {
         using var host = Host.CreateDefaultBuilder(args)
@@ -32,16 +36,11 @@ internal sealed class Program
             }
         }
 
-        try
-        {
-            logger.LogInformation("Running GameSchemaBuilder (baseDir: {BaseDir})", baseDir ?? "<default>");
-            await GameSchemaBuilder.BuildAsync(logger, baseDir);
-            logger.LogInformation("Game schema build finished.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Game schema build failed with an exception.");
-            Environment.ExitCode = 1;
-        }
+
+        logger.LogInformation("Running GameSchemaBuilder (baseDir: {BaseDir})", baseDir ?? "<default>");
+        await GameSchemaBuilder.BuildAsync(logger, baseDir);
+        logger.LogInformation("Game schema build finished.");
+
+
     }
 }

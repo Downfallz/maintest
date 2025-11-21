@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace DA.Game.DataBuilder;
 
-public static class GameSchemaBuilder
+internal static class GameSchemaBuilder
 {
     /// <summary>
     /// Builds the consolidated game schema from the Data folder.
