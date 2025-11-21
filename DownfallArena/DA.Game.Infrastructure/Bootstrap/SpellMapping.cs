@@ -7,7 +7,7 @@ namespace DA.Game.Infrastructure.Bootstrap;
 
 public static class SpellMapping
 {
-   
+
     public static Effect ToRef(this EffectDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -64,9 +64,10 @@ public static class SpellMapping
     // ---------- Targeting
 
     public static TargetingSpec ToRef(this TargetingSpecDto dto)
-    { 
+    {
         ArgumentNullException.ThrowIfNull(dto);
-        return TargetingSpec.Of(dto.Origin, dto.Scope, dto.MaxTargets); }
+        return TargetingSpec.Of(dto.Origin, dto.Scope, dto.MaxTargets);
+    }
 
 
     public static Spell ToRef(this SpellDefinitionDto dto)
