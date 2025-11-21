@@ -10,16 +10,17 @@ public class MatchesProfile : Profile
 {
     public MatchesProfile()
     {
-        CreateMap<TurnCursor, TurnCursorDto>();
-        CreateMap<CombatTimeline, CombatTimelineDto>();
-        CreateMap<ActivationSlot, ActivationSlotDto>();
-        CreateMap<CombatCharacter, CombatCharacterDto>();
-        CreateMap<Team, TeamDto>();
-        CreateMap<SpellUnlockChoice, SpellUnlockChoiceDto>();
-        CreateMap<SpeedChoice, SpeedChoiceDto>();
-        CreateMap<CharacterStatus, CharacterStatusDto>();
-        CreateMap<MatchLifecycle, MatchLifecycleDto>();
-        CreateMap<Round, RoundDto>();
-        CreateMap<Match, MatchDto>();
+        CreateMap<TurnCursor, TurnCursorDto>().ReverseMap();
+        CreateMap<CombatTimeline, CombatTimelineDto>().ReverseMap();
+        CreateMap<ActivationSlot, ActivationSlotDto>().ReverseMap();
+        CreateMap<CombatCharacter, CombatCharacterDto>().ReverseMap();
+        CreateMap<Team, TeamDto>().ReverseMap();
+        CreateMap<SpellUnlockChoice, SpellUnlockChoiceDto>().ReverseMap();
+        CreateMap<SpeedChoice, SpeedChoiceDto>().ReverseMap();
+        CreateMap<CombatActionChoice, CombatActionChoiceDto>().ReverseMap();
+        CreateMap<CharacterStatus, CharacterStatusDto>().ReverseMap();
+        CreateMap<MatchLifecycle, MatchLifecycleDto>().ReverseMap();
+        CreateMap<Round, RoundDto>().ReverseMap();
+        CreateMap<Match, MatchDto>().ReverseMap();
     }
 }

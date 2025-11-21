@@ -1,8 +1,10 @@
-﻿using DA.Game.Application.Players.Features.Create.Notifications;
+﻿using AutoMapper;
+using DA.Game.Application.Players.Features.Create.Notifications;
 using DA.Game.Application.Players.Ports;
 using DA.Game.Application.Shared.Messaging;
 using DA.Game.Domain2.Players.Entities;
 using DA.Game.Domain2.Players.Messages;
+using DA.Game.Shared.Contracts.Players;
 using DA.Game.Shared.Contracts.Players.Ids;
 using DA.Game.Shared.Utilities;
 using MediatR;
@@ -13,23 +15,24 @@ public sealed class CreatePlayerHandler(
     IPlayerRepository repo,
     IPlayerUniqueness unique,
     IApplicationEventCollector appEvents,
-    IClock clock
-) : IRequestHandler<CreatePlayerCommand, Result<PlayerId>>
+    IClock clock,
+    IMapper mapper
+) : IRequestHandler<CreatePlayerCommand, Result<PlayerRef>>
 {
-    public async Task<Result<PlayerId>> Handle(CreatePlayerCommand cmd, CancellationToken cancellationToken)
+    public async Task<Result<PlayerRef>> Handle(CreatePlayerCommand cmd, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cmd);
 
         var name = cmd.Name!.Trim();
         if (await unique.ExistsNameAsync(name, cancellationToken))
-            return Result<PlayerId>.Fail(PlayerErrors.NameAlreadyTaken);
+            return Result<PlayerRef>.Fail(PlayerErrors.NameAlreadyTaken);
 
         var player = new Player(PlayerId.New(), name, cmd.Kind);
 
         await repo.SaveAsync(player, cancellationToken);
 
         appEvents.Add(new PlayerCreated(player.Id, name, clock.UtcNow));
-
-        return Result<PlayerId>.Ok(player.Id);
+        var playerRef = mapper.Map<PlayerRef>(player);
+        return Result<PlayerRef>.Ok(playerRef);
     }
 }

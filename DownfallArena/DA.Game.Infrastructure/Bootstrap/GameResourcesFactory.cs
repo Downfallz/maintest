@@ -25,7 +25,7 @@ public static class GameResourcesFactory
         foreach (var c in schema.Creatures)
         {
             foreach (var sid in c.StartingSpellIds)
-                if (!spellIds.Contains(ResolveAlias(schema, sid.Name)))
+                if (!spellIds.Contains(ResolveAlias(schema, sid)))
                     throw new InvalidOperationException($"Creature {c.Id} references missing spell {sid}");
         }
     }

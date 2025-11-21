@@ -41,7 +41,7 @@ public static class ServiceCollectionExtensions
             //var env = sp.GetRequiredService<IHostEnvironment>();
 
             // schema file next to the exe: /Data/game-schema.json
-            
+
             var baseDir = AppContext.BaseDirectory;
             var schemaPath = Path.Combine(baseDir, "Data/dst", "game.schema.json");
 

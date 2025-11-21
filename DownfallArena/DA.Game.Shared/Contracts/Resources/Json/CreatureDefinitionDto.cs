@@ -12,5 +12,5 @@ public sealed record CreatureDefinitionDto(
     int BaseDefense,
     int BaseInitiative,
     double BaseCriticalChance, // 0.15 = 15%
-    IReadOnlyList<SpellId> StartingSpellIds
+    IReadOnlyList<string> StartingSpellIds
 );

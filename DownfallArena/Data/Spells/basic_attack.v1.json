@@ -12,7 +12,7 @@
       "kind": "Damage",
       "targeting": {
         "origin": "Enemy",
-        "scope": "Single",
+        "scope": "SingleTarget",
         "maxTargets": 1
       },
       "amount": 1

@@ -26,8 +26,6 @@ internal static class GameSchemaBuilder
         string? baseDirectory = null,
         CancellationToken cancellationToken = default)
     {
-        logger?.LogInformation("Starting game schema build...");
-
         var baseDir = baseDirectory ?? AppContext.BaseDirectory;
         var (sourceDir, dstDir) = PrepareDirectories(baseDir, logger);
 

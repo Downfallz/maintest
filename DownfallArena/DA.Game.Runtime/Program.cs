@@ -88,16 +88,16 @@ namespace DA.Game.Runtime
             var joinMatchResult2 = await mediator.Send(new JoinMatchCommand(matchId, pr2));
 
             var re1 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
-                PlayerSlot.Player1, 
+                PlayerSlot.Player1,
                 new SpellUnlockChoiceDto(CharacterId.New(1), basicAttack)));
             var re2 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
                 PlayerSlot.Player1,
                 new SpellUnlockChoiceDto(CharacterId.New(2), basicAttack)));
             var re3 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new SpellUnlockChoiceDto(CharacterId.New(4), basicAttack)));
             var re4 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new SpellUnlockChoiceDto(CharacterId.New(5), basicAttack)));
 
             var speed1 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
@@ -113,15 +113,15 @@ namespace DA.Game.Runtime
                 new SpeedChoiceDto(CharacterId.New(3), Speed.Quick)));
 
             var speed4 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new SpeedChoiceDto(CharacterId.New(4), Speed.Quick)));
 
             var speed5 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new SpeedChoiceDto(CharacterId.New(5), Speed.Quick)));
 
             var speed6 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new SpeedChoiceDto(CharacterId.New(6), Speed.Quick)));
 
 
@@ -135,13 +135,13 @@ namespace DA.Game.Runtime
                 PlayerSlot.Player1,
                 new CombatActionChoiceDto(CharacterId.New(3), basicAttack, new List<CharacterId>() { new CharacterId(4) })));
             var action4 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new CombatActionChoiceDto(CharacterId.New(4), basicAttack, new List<CharacterId>() { new CharacterId(1) })));
             var action5 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new CombatActionChoiceDto(CharacterId.New(5), basicAttack, new List<CharacterId>() { new CharacterId(1) })));
             var action6 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                PlayerSlot.Player1,
+                PlayerSlot.Player2,
                 new CombatActionChoiceDto(CharacterId.New(6), basicAttack, new List<CharacterId>() { new CharacterId(1) })));
 
 
