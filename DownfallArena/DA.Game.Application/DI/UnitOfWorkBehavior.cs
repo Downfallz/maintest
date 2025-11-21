@@ -47,6 +47,6 @@ public sealed class UnitOfWorkBehavior<TRequest, TResponse> : IPipelineBehavior<
             // (selon impl) _uow.Rollback(); vider les trackers si nécessaire
             throw;
         }
-       
+
     }
 }

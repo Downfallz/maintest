@@ -47,11 +47,11 @@ public sealed class FidelitySimulationRunner(
         var p2 = await EnsurePlayerAsync(scenario.Player2, ct);
 
         // 2) Crée un match et join
-        
+
         var match = Match.Create(gameResources, ruleSetProvider.Current, clock);
         var matchId = match.Id;
         await matches.SaveAsync(match, ct);
-        
+
 
         var pr1 = mapper.Map<PlayerRef>(p1);
         var pr2 = mapper.Map<PlayerRef>(p2);
@@ -73,7 +73,7 @@ public sealed class FidelitySimulationRunner(
 
             var action = await decider.DecideAsync(currentRef.Id, view, ct)
                          ?? new PlayerAction("noop", "sim-default"); // fallback pour humains en sim
-            var reward = rng.Next(-2,5);
+            var reward = rng.Next(-2, 5);
             dataset?.Record(view, action, reward); // <= log pour ML
 
             await mediator.Send(new PlayTurnCommand(matchId, currentRef.Id, action), ct);

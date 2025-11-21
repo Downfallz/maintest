@@ -2,11 +2,6 @@
 using DA.Game.Application.Learning.ML.Models;
 using DA.Game.Application.Matches.ReadModels;
 using DA.Game.Domain2.Matches.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DA.Game.Application.Learning.Data;
 
@@ -24,7 +19,7 @@ public sealed class CsvDatasetLogger : IDatasetLogger
         row.Reward = (float)reward;
         _rows.Add(row);
     }
-        
+
 
     public void SaveCsv(string path, bool includeHeader = true)
     {

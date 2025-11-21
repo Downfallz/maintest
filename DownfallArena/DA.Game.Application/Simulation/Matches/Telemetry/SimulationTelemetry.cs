@@ -1,13 +1,9 @@
 ﻿using DA.Game.Application.Matches.ReadModels;
 using DA.Game.Domain2.Matches.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace DA.Game.Application.Simulation.Matches.Telemetry;
+
 public sealed class SimulationTelemetry
 {
     private readonly List<GameTick> _ticks = new();

@@ -3,7 +3,6 @@ using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Matches.ReadModels;
 using DA.Game.Domain2.Matches.Events;
 using DA.Game.Shared.Contracts.Matches.Enums;
-using DA.Game.Shared.Utilities;
 using MediatR;
 using Microsoft.Extensions.Options;
 
@@ -33,7 +32,7 @@ public sealed class TurnAdvancedHandler(
             // Résolution du decider
             var decider = turnDeciderRegistry.Resolve(currentRef.Kind); // ou Resolve(currentRef.Id)
 
-            var view = new GameView(match.Id, PlayerSlot.Player1, match.RoundNumber, 
+            var view = new GameView(match.Id, PlayerSlot.Player1, match.RoundNumber,
                                     match.PlayerRef1?.Id, match.PlayerRef2?.Id);
 
             var action = await decider.DecideAsync(currentRef.Id, view, cancellationToken);

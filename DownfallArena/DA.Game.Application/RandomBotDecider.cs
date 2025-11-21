@@ -3,13 +3,9 @@ using DA.Game.Application.Matches.ReadModels;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Shared.Contracts.Players.Ids;
 using DA.Game.Shared.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DA.Game.Application;
+
 public sealed class RandomBotDecider : ITurnDecider
 {
     private readonly IRandom _rng;

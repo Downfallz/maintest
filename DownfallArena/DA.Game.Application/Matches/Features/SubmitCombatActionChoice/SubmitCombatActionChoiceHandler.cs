@@ -1,7 +1,5 @@
 ﻿using AutoMapper;
-using DA.Game.Application.Matches.DTOs;
 using DA.Game.Application.Matches.Ports;
-using DA.Game.Application.Shared.Messaging;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Shared.Utilities;
 using MediatR;

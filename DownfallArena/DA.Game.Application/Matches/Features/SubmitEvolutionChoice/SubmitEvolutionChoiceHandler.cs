@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using DA.Game.Application.Matches.Ports;
-using DA.Game.Application.Shared.Messaging;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Utilities;
@@ -21,7 +20,7 @@ public sealed class SubmitEvolutionChoiceHandler(IMatchRepository repo,
         var domainChoice = mapper.Map<SpellUnlockChoice>(cmd.SpellUnlockChoice);
         var res = match.SubmitEvolutionChoice(cmd.slot, domainChoice);
 
-        if (!res.IsSuccess) 
+        if (!res.IsSuccess)
             return Result<SubmitEvolutionResult>.Fail(res.Error!);
 
         await repo.SaveAsync(match, cancellationToken);

@@ -1,4 +1,5 @@
 ﻿namespace DA.Game.Application.Shared.Messaging;
+
 public sealed class ApplicationEventCollector : IApplicationEventCollector
 {
     private readonly List<IApplicationEvent> _buffer = new();

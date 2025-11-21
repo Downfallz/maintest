@@ -4,6 +4,7 @@ using DA.Game.Application.Learning.ML.Models;
 using Microsoft.ML;
 
 namespace DA.Game.Application.Learning.ML;
+
 public sealed class MLTrainer : ITrainer
 {
     public void Train(string datasetPath, string modelPath)

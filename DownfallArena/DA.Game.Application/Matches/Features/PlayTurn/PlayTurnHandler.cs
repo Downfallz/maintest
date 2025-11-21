@@ -3,6 +3,7 @@ using DA.Game.Shared.Utilities;
 using MediatR;
 
 namespace DA.Game.Application.Matches.Features.PlayTurn;
+
 public sealed class PlayTurnHandler(IMatchRepository repo) : IRequestHandler<PlayTurnCommand, Result>
 {
     public async Task<Result> Handle(PlayTurnCommand cmd, CancellationToken cancellationToken)

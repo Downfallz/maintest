@@ -5,6 +5,7 @@ using DA.Game.Domain2.Matches.Entities;
 using DA.Game.Domain2.Matches.ValueObjects;
 
 namespace DA.Game.Application.Matches.Mapping;
+
 public class MatchesProfile : Profile
 {
     public MatchesProfile()

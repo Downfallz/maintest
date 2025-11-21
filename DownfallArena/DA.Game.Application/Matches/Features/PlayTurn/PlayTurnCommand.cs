@@ -5,4 +5,5 @@ using DA.Game.Shared.Contracts.Players.Ids;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Application.Matches.Features.PlayTurn;
+
 public sealed record PlayTurnCommand(MatchId MatchId, PlayerId PlayerId, PlayerAction Action) : ICommand<Result>;

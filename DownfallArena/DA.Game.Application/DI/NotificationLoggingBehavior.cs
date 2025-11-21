@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 
 namespace DA.Game.Application.DI;
+
 public sealed class NotificationLoggingBehavior<TNotification> : INotificationHandler<TNotification>
     where TNotification : INotification
 {

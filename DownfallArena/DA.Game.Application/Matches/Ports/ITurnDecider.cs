@@ -3,6 +3,7 @@ using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Shared.Contracts.Players.Ids;
 
 namespace DA.Game.Application.Matches.Ports;
+
 public interface ITurnDecider
 {
     /// <summary>

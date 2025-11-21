@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using DA.Game.Application.Matches.Ports;
-using DA.Game.Application.Shared.Messaging;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Utilities;
@@ -8,7 +7,7 @@ using MediatR;
 
 namespace DA.Game.Application.Matches.Features.SubmitSpeedChoice;
 
-public sealed class SubmitSpeedChoiceHandler(IMatchRepository repo, 
+public sealed class SubmitSpeedChoiceHandler(IMatchRepository repo,
     IMapper mapper) : IRequestHandler<SubmitSpeedChoiceCommand, Result<SubmitSpeedResult>>
 {
     public async Task<Result<SubmitSpeedResult>> Handle(SubmitSpeedChoiceCommand cmd, CancellationToken cancellationToken)

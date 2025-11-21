@@ -3,6 +3,7 @@ using DA.Game.Domain2.Players.Entities;
 using DA.Game.Shared.Contracts.Players;
 
 namespace DA.Game.Application.Players.Mapping;
+
 public class PlayerProfile : Profile
 {
     public PlayerProfile()

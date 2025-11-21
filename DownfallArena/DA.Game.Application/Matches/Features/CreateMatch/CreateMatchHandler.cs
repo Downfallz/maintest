@@ -10,7 +10,7 @@ using MediatR;
 
 namespace DA.Game.Application.Matches.Features.CreateMatch;
 
-public sealed class CreateMatchHandler(IMatchRepository repo, 
+public sealed class CreateMatchHandler(IMatchRepository repo,
     IApplicationEventCollector appEvents,
     IGameResources gameResources,
     IRuleSetProvider ruleSetProvider,
