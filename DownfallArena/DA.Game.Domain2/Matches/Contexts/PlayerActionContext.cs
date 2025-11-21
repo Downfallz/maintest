@@ -32,7 +32,7 @@ public sealed record PlayerActionContext
     }
 
     // Aides métier
-    public bool IsAvailable(CharacterId id) =>
+    public bool IsAvailable(CreatureId id) =>
         MyCharacters.Any(c => c.CharacterId == id && c.IsAlive && !c.IsStunned);
 
     public int MyAvailableCharactersCount => MyCharacters.Count(c => c.IsAlive && !c.IsStunned);

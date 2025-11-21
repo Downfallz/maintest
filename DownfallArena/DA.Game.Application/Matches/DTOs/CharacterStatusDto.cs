@@ -3,7 +3,7 @@
 namespace DA.Game.Application.Matches.DTOs;
 
 public sealed record CharacterStatusDto(
-    CharacterId CharacterId,
+    CreatureId CharacterId,
     int Health,
     int Energy,
     int Initiative,

@@ -5,7 +5,7 @@ namespace DA.Game.Domain2.Shared.Policies.Speed;
 
 public sealed class InitiativePolicyV1 : IInitiativePolicy
 {
-    public bool CanEvolve(CharacterId id, IReadOnlyCollection<CharacterStatus> statuses)
+    public bool CanEvolve(CreatureId id, IReadOnlyCollection<CharacterStatus> statuses)
     {
         var c = statuses.FirstOrDefault(x => x.CharacterId == id);
         return c != null && !c.IsStunned && c.IsAlive;

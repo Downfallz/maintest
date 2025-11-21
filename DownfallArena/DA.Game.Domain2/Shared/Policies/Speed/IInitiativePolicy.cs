@@ -5,5 +5,5 @@ namespace DA.Game.Domain2.Shared.Policies.Speed;
 
 public interface IInitiativePolicy
 {
-    bool CanEvolve(CharacterId id, IReadOnlyCollection<CharacterStatus> statuses);
+    bool CanEvolve(CreatureId id, IReadOnlyCollection<CharacterStatus> statuses);
 }

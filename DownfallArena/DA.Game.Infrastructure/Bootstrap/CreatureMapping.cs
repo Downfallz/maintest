@@ -17,7 +17,7 @@ public static class CreatureMapping
             Energy.Of(dto.BaseEnergy),
             Defense.Of(dto.BaseDefense),
             Initiative.Of(dto.BaseInitiative),
-            CriticalChance.Of(Percentage01.Of(dto.BaseCriticalChance)),
+            CriticalChance.Of(dto.BaseCriticalChance),
             dto.StartingSpellIds.Select(id => new SpellId(id)).ToList()
         );
     }

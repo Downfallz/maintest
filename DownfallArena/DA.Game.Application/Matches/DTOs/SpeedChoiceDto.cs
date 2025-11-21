@@ -4,6 +4,6 @@ using DA.Game.Shared.Contracts.Matches.Ids;
 namespace DA.Game.Application.Matches.DTOs;
 
 public sealed record SpeedChoiceDto(
-    CharacterId CharacterId,
+    CreatureId CharacterId,
     Speed Speed
 );

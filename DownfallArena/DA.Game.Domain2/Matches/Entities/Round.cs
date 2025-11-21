@@ -16,7 +16,7 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
         public TurnCursor Cursor { get; private set; } = TurnCursor.Start;
-        private readonly Dictionary<CharacterId, CombatActionChoice> _intents = new();
+        private readonly Dictionary<CreatureId, CombatActionChoice> _intents = new();
 
         private readonly HashSet<SpellUnlockChoice> _p1Evolution = new();
         private readonly HashSet<SpellUnlockChoice> _p2Evolution = new();

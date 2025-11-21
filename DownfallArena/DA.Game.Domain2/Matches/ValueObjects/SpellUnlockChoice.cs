@@ -4,9 +4,9 @@ using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;
 
-public sealed record SpellUnlockChoice(CharacterId CharacterId, Spell SpellRef) : ValueObject()
+public sealed record SpellUnlockChoice(CreatureId CharacterId, Spell SpellRef) : ValueObject()
 {
-    public static SpellUnlockChoice Create(CharacterId id, Spell spellRef)
+    public static SpellUnlockChoice Create(CreatureId id, Spell spellRef)
     {
         return new SpellUnlockChoice(id, spellRef);
     }

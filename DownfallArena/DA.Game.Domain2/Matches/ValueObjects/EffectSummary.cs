@@ -4,7 +4,7 @@ namespace DA.Game.Domain2.Matches.ValueObjects;
 
 public sealed record EffectSummary(
     EffectKind Kind,
-    CharacterId TargetId,
+    CreatureId TargetId,
     int Amount,                 // ex. dégâts/heal/énergie ±
     string? Stat = null,        // ex. "Defense", "Attack" (pour Buff/Debuff)
     bool IsCritical = false,
@@ -13,21 +13,21 @@ public sealed record EffectSummary(
 )
 {
     // Helpers lisibles
-    public static EffectSummary Damage(CharacterId id, int dealt, bool crit = false)
+    public static EffectSummary Damage(CreatureId id, int dealt, bool crit = false)
         => new(EffectKind.Damage, id, dealt, null, crit);
 
-    public static EffectSummary Heal(CharacterId id, int healed)
+    public static EffectSummary Heal(CreatureId id, int healed)
         => new(EffectKind.Heal, id, healed);
 
-    public static EffectSummary Energy(CharacterId id, int delta)
+    public static EffectSummary Energy(CreatureId id, int delta)
         => new(EffectKind.Energy, id, delta);
 
-    public static EffectSummary Buff(CharacterId id, string stat, int delta, int? duration = null)
+    public static EffectSummary Buff(CreatureId id, string stat, int delta, int? duration = null)
         => new(EffectKind.Buff, id, delta, stat, false, null, duration);
 
-    public static EffectSummary Debuff(CharacterId id, string stat, int delta, int? duration = null)
+    public static EffectSummary Debuff(CreatureId id, string stat, int delta, int? duration = null)
         => new(EffectKind.Debuff, id, delta, stat, false, null, duration);
 
-    public static EffectSummary Status(CharacterId id, string statusName, int? duration = null)
+    public static EffectSummary Status(CreatureId id, string statusName, int? duration = null)
         => new(EffectKind.Status, id, 0, null, false, statusName, duration);
 }

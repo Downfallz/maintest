@@ -4,7 +4,8 @@ using FluentAssertions;
 
 namespace DA.Game.Shared.Tests.Contracts.Resources.Spells;
 
-public class TargetingSpecTests {
+public class TargetingSpecTests
+{
     [Fact]
     public void GivenValidParameters_WhenCreatingViaFactory_ThenPropertiesAreSet()
     {

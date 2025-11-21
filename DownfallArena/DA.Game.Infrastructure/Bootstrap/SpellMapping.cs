@@ -79,7 +79,7 @@ public static class SpellMapping
             , dto.CharacterClass
             , Initiative.Of(dto.Initiative)
             , Energy.Of(dto.EnergyCost)
-            , CriticalChance.Of(Percentage01.Of(dto.CriticalChance))
+            , CriticalChance.Of(dto.CriticalChance)
             , dto.Effects.Select(e => e.ToRef()).ToArray()
         );
 

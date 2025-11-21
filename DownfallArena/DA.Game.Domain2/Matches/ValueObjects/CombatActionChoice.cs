@@ -5,11 +5,11 @@ using DA.Game.Shared.Utilities;
 namespace DA.Game.Domain2.Matches.ValueObjects;
 
 public sealed record CombatActionChoice(
-    CharacterId ActorId,
+    CreatureId ActorId,
     Spell SpellRef,
-    IReadOnlyList<CharacterId> TargetIds) : ValueObject
+    IReadOnlyList<CreatureId> TargetIds) : ValueObject
 {
-    public static CombatActionChoice Create(CharacterId id, Spell spellRef, IReadOnlyList<CharacterId> TargetIds)
+    public static CombatActionChoice Create(CreatureId id, Spell spellRef, IReadOnlyList<CreatureId> TargetIds)
     {
         return new CombatActionChoice(id, spellRef, TargetIds);
     }

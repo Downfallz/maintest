@@ -2,11 +2,18 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Stats;
 
-public sealed record CriticalChance(Percentage01 Value) : ValueObject
+public sealed record CriticalChance(double Value) : ValueObject
 {
-    public static CriticalChance Of(Percentage01 v)
+    public static CriticalChance Of(double v)
     {
+        var res = Validate((v is >= 0 and <= 1, "Critical chance must be in [0,1]."));
+        if (!res.IsSuccess)
+            throw new ArgumentException(res.Error);
+
         return new(v);
     }
-    public override string ToString() => Value.ToString();
+
+    public double ToPercent() => Value * 100.0;
+
+    public override string ToString() => $"{ToPercent():0.##}%";
 }

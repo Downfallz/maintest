@@ -13,7 +13,7 @@ public sealed class EvolutionPolicy : IEvolutionPolicy
         _canEvolve = new CanEvolveCharacterSpec();
     }
 
-    public bool CanEvolve(CharacterId id, EvolutionContext evolutionContext)
+    public bool CanEvolve(CreatureId id, EvolutionContext evolutionContext)
     {
         return _canEvolve.IsSatisfiedBy(evolutionContext);
     }

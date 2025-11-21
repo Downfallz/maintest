@@ -5,5 +5,5 @@ namespace DA.Game.Domain2.Shared.Policies.Evolution;
 
 public interface IEvolutionPolicy
 {
-    bool CanEvolve(CharacterId id, EvolutionContext evolutionContext);
+    bool CanEvolve(CreatureId id, EvolutionContext evolutionContext);
 }

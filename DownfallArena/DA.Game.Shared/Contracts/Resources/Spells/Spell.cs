@@ -12,5 +12,33 @@ public sealed record Spell(
     Initiative Initiative,
     Energy EnergyCost,
     CriticalChance CritChance,
-    IReadOnlyCollection<IEffect> Effects
-);
+    IReadOnlyCollection<IEffect> Effects)
+{
+    public static Spell Create(
+        SpellId id,
+        string name,
+        SpellType spellType,
+        CharClass classType,
+        Initiative initiative,
+        Energy energyCost,
+        CriticalChance critChance,
+        IReadOnlyCollection<IEffect> effects)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Spell name cannot be empty.", nameof(name));
+
+        if (effects is null || effects.Count == 0)
+            throw new ArgumentException("Spell must have at least one effect.", nameof(effects));
+
+        return new Spell(
+            id,
+            name,
+            spellType,
+            classType,
+            initiative,
+            energyCost,
+            critChance,
+            effects
+        );
+    }
+}

@@ -4,7 +4,7 @@ using DA.Game.Shared.Contracts.Resources.Spells;
 namespace DA.Game.Application.Matches.DTOs;
 
 public sealed record CombatCharacterDto(
-    CharacterId Id,
+    CreatureId Id,
     IReadOnlyList<SpellId> StartingSpellIds,
     int BaseHealth,
     int BaseEnergy,

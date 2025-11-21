@@ -7,7 +7,7 @@ namespace DA.Game.Domain2.Matches.ValueObjects;
 
 public sealed record CharacterStatus : ValueObject
 {
-    public CharacterId CharacterId { get; private set; }
+    public CreatureId CharacterId { get; private set; }
     public Health Health { get; private set; }
     public Energy Energy { get; private set; }
     public Initiative Initiative { get; private set; }
@@ -19,7 +19,7 @@ public sealed record CharacterStatus : ValueObject
     public CriticalChance BaseCritical { get; private set; }
     public bool IsAlive => !Health.IsDead();
     private CharacterStatus(
-        CharacterId characterId,
+        CreatureId characterId,
         Health health,
         Energy energy,
         Initiative initiative,

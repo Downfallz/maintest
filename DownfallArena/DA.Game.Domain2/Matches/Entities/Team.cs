@@ -15,9 +15,9 @@ public class Team : IEntity
 
     public static Team FromCharacterTemplate(CharacterDefinitionRef charTemplate)
     {
-        return new Team(CombatCharacter.FromCharacterTemplate(charTemplate, CharacterId.New(1)),
-            CombatCharacter.FromCharacterTemplate(charTemplate, CharacterId.New(2)),
-            CombatCharacter.FromCharacterTemplate(charTemplate, CharacterId.New(3)));
+        return new Team(CombatCharacter.FromCharacterTemplate(charTemplate, CreatureId.New(1)),
+            CombatCharacter.FromCharacterTemplate(charTemplate, CreatureId.New(2)),
+            CombatCharacter.FromCharacterTemplate(charTemplate, CreatureId.New(3)));
     }
 
     public CombatCharacter this[int index] => _chars[index]; // 0..2

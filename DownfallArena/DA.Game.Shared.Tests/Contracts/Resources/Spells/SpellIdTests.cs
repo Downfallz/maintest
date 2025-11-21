@@ -1,73 +1,79 @@
 ﻿using DA.Game.Shared.Contracts.Resources.Spells;
-using FluentAssertions;
 
 namespace DA.Game.Shared.Tests.Contracts.Resources.Spells;
 
-public class SpellIdTests {
+public class SpellIdTests
+{
     [Fact]
-    public void GivenAName_WhenCreatingWithFactory_ThenNameIsSet()
+    public void GivenValidId_WhenCreating_ThenStoresValue()
     {
-        // Arrange
-        var name = "Fireball";
+        var id = "spell:fire_bolt:v1";
 
-        // Act
-        var sut = SpellId.New(name);
+        var result = SpellId.New(id);
 
-        // Assert
-        sut.Name.Should().Be(name);
+        Assert.Equal(id, result.Name);
     }
 
     [Fact]
-    public void GivenAName_WhenUsingConstructor_ThenNameIsSet()
+    public void GivenSpellId_WhenToString_ThenReturnsValue()
     {
-        // Arrange
-        var name = "IceBolt";
+        var id = SpellId.New("spell:ice_spear:v2");
 
-        // Act
-        var sut = new SpellId(name);
+        Assert.Equal("spell:ice_spear:v2", id.ToString());
+    }
 
-        // Assert
-        sut.Name.Should().Be(name);
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void GivenEmptyId_WhenCreating_ThenThrows(string value)
+    {
+        Assert.Throws<ArgumentException>(() => SpellId.New(value));
+    }
+
+    [Theory]
+    [InlineData("fire_bolt:v1")]           // missing 'spell:'
+    [InlineData("spell:fire_bolt:1")]      // missing 'v'
+    [InlineData("spell:fire_bolt:v")]      // no number
+    [InlineData("spell::v1")]              // empty name
+    [InlineData(":fire_bolt:v1")]          // empty category (should always be spell)
+    [InlineData("spell/fire_bolt/v1")]     // wrong separators
+    [InlineData("spell:fire:bolt:v1")]     // too many segments
+    public void GivenInvalidFormat_WhenCreating_ThenThrows(string value)
+    {
+        Assert.Throws<FormatException>(() => SpellId.New(value));
     }
 
     [Fact]
-    public void GivenASpellId_WhenCallingToString_ThenReturnsName()
+    public void GivenValidId_WhenParsing_ThenExtractsParts()
     {
-        // Arrange
-        var name = "ArcaneMissile";
-        var sut = new SpellId(name);
+        var id = SpellId.New("spell:heal_major:v3");
 
-        // Act
-        var result = sut.ToString();
+        var (category, name, version) = id.Parse();
 
-        // Assert
-        result.Should().Be(name);
+        Assert.Equal("spell", category);
+        Assert.Equal("heal_major", name);
+        Assert.Equal(3, version);
     }
 
     [Fact]
-    public void GivenTwoSpellIdsWithSameName_WhenComparing_ThenTheyAreEqual()
+    public void GivenTwoEqualSpellIds_WhenComparing_ThenTheyAreEqual()
     {
-        // Arrange
-        var a = new SpellId("Heal");
-        var b = new SpellId("Heal");
+        var a = SpellId.New("spell:slash:v1");
+        var b = SpellId.New("spell:slash:v1");
 
-        // Act & Assert
-        a.Should().Be(b);
-        (a == b).Should().BeTrue();
-        (a != b).Should().BeFalse();
-        a.GetHashCode().Should().Be(b.GetHashCode());
+        Assert.Equal(a, b);
+        Assert.True(a == b);
     }
 
     [Fact]
-    public void GivenTwoSpellIdsWithDifferentNames_WhenComparing_ThenTheyAreNotEqual()
+    public void GivenTwoDifferentSpellIds_WhenComparing_ThenTheyAreNotEqual()
     {
-        // Arrange
-        var a = new SpellId("Shield");
-        var b = new SpellId("Barrier");
+        var a = SpellId.New("spell:slash:v1");
+        var b = SpellId.New("spell:slash:v2");
 
-        // Act & Assert
-        a.Should().NotBe(b);
-        (a == b).Should().BeFalse();
-        (a != b).Should().BeTrue();
+        Assert.NotEqual(a, b);
+        Assert.True(a != b);
     }
 }

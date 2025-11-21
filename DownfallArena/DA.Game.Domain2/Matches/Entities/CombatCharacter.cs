@@ -6,11 +6,11 @@ using DA.Game.Shared.Contracts.Resources.Stats;
 
 namespace DA.Game.Domain2.Matches.Entities;
 
-public class CombatCharacter : Entity<CharacterId>
+public class CombatCharacter : Entity<CreatureId>
 {
-    protected CombatCharacter(CharacterId id) : base(id) { }
+    protected CombatCharacter(CreatureId id) : base(id) { }
 
-    public static CombatCharacter FromCharacterTemplate(CharacterDefinitionRef characterRuntimeTemplate, CharacterId id)
+    public static CombatCharacter FromCharacterTemplate(CharacterDefinitionRef characterRuntimeTemplate, CreatureId id)
     {
         ArgumentNullException.ThrowIfNull(characterRuntimeTemplate);
 
