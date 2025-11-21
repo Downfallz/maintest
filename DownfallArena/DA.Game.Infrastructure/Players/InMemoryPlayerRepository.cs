@@ -20,6 +20,7 @@ public sealed class InMemoryPlayerRepository : IPlayerRepository
 
     public Task SaveAsync(Player player, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(player);
         _store[player.Id] = player;
         return Task.CompletedTask;
     }

@@ -4,11 +4,13 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DA.Game.Application\DA.Game.Application.csproj" />
-    <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" PrivateAssets="All"/>
+    <ProjectReference Include="..\DA.Game.Application\DA.Game.Application.csproj" PrivateAssets="All"/>
+    <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" PrivateAssets="All" />
+    <ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" PrivateAssets="All"/>
   </ItemGroup>
 
 </Project>

@@ -20,19 +20,22 @@ public static class GameResourcesFactory
 
     public static void Validate(GameSchema schema)
     {
+        ArgumentNullException.ThrowIfNull(schema);
         var spellIds = schema.Spells.Select(s => s.Id).ToHashSet();
         foreach (var c in schema.Creatures)
         {
             foreach (var sid in c.StartingSpellIds)
-                if (!spellIds.Contains(ResolveAlias(schema,sid)))
+                if (!spellIds.Contains(ResolveAlias(schema,sid.Name)))
                     throw new InvalidOperationException($"Creature {c.Id} references missing spell {sid}");
         }
     }
 
     public static string ResolveAlias(GameSchema schema, string requestedIdOrBase)
     {
+        ArgumentNullException.ThrowIfNull(schema);
+        ArgumentNullException.ThrowIfNull(requestedIdOrBase);
         // Si déjà versionné → le renvoyer tel quel
-        if (requestedIdOrBase.Contains(":v")) return requestedIdOrBase;
+        if (requestedIdOrBase.Contains(":v", StringComparison.InvariantCultureIgnoreCase)) return requestedIdOrBase;
 
         if (schema.Aliases is null || !schema.Aliases.TryGetValue(requestedIdOrBase, out var concrete))
             throw new KeyNotFoundException($"Alias not found: {requestedIdOrBase}");

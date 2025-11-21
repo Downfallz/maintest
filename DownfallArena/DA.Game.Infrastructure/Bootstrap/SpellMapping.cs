@@ -2,20 +2,25 @@
 using DA.Game.Shared.Contracts.Resources.Json;
 using DA.Game.Shared.Contracts.Resources.Spells;
 using DA.Game.Shared.Contracts.Resources.Spells.Effects;
+using DA.Game.Shared.Contracts.Resources.Stats;
 namespace DA.Game.Infrastructure.Bootstrap;
 
 public static class SpellMapping
 {
    
     public static Effect ToRef(this EffectDto dto)
-      => dto.Kind switch
-      {
-          EffectKind.Bleed => dto.ToBleedRef(),
-          EffectKind.Damage => dto.ToDamageRef(),
-          // EffectKind.Heal   => dto.ToHealDomain(),
-          _ => throw new NotSupportedException(
-              $"Unsupported effect kind '{dto.Kind}'.")
-      };
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return dto.Kind switch
+        {
+            EffectKind.Bleed => dto.ToBleedRef(),
+            EffectKind.Damage => dto.ToDamageRef(),
+            // EffectKind.Heal   => dto.ToHealDomain(),
+            _ => throw new NotSupportedException(
+                $"Unsupported effect kind '{dto.Kind}'.")
+        };
+    }
+
 
     private static Bleed ToBleedRef(this EffectDto dto)
     {
@@ -59,18 +64,23 @@ public static class SpellMapping
     // ---------- Targeting
 
     public static TargetingSpec ToRef(this TargetingSpecDto dto)
-        => TargetingSpec.Of(dto.Origin, dto.Scope, dto.MaxTargets);
+    { 
+        ArgumentNullException.ThrowIfNull(dto);
+        return TargetingSpec.Of(dto.Origin, dto.Scope, dto.MaxTargets); }
 
 
     public static Spell ToRef(this SpellDefinitionDto dto)
-        => new Spell(SpellId.New(dto.Id)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return new Spell(SpellId.New(dto.Id)
             , dto.Name
             , dto.SpellType
             , dto.CharacterClass
-            , dto.Initiative
-            , dto.EnergyCost
-            , dto.CriticalChance
+            , Initiative.Of(dto.Initiative)
+            , Energy.Of(dto.EnergyCost)
+            , CriticalChance.Of(Percentage01.Of(dto.CriticalChance))
             , dto.Effects.Select(e => e.ToRef()).ToArray()
         );
 
+    }
 }
