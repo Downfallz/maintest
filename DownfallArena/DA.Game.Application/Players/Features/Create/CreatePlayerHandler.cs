@@ -27,7 +27,7 @@ public sealed class CreatePlayerHandler(
         if (await unique.ExistsNameAsync(name, cancellationToken))
             return Result<PlayerRef>.Fail(PlayerErrors.NameAlreadyTaken);
 
-        var player = new Player(PlayerId.New(), name, cmd.Kind);
+        var player = Player.Create(PlayerId.New(), name, cmd.Kind);
 
         await repo.SaveAsync(player, cancellationToken);
 

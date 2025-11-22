@@ -1,5 +1,5 @@
 ﻿using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Shared.RuleSets;
+using DA.Game.Domain2.Matches.RuleSets;
 using DA.Game.Shared.Contracts.Matches.Enums;
 
 namespace DA.Game.Domain2.Matches.ValueObjects;

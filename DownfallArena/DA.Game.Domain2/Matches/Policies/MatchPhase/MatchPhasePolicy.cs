@@ -1,11 +1,11 @@
 ﻿using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Utilities;
 
-namespace DA.Game.Domain2.Shared.Policies.MatchPhase;
+namespace DA.Game.Domain2.Matches.Policies.MatchPhase;
 
 public sealed class MatchPhasePolicyV1 : IMatchPhasePolicy
 {
-    public Result EnsureCanSubmitCombatAction(Matches.Aggregates.Match match)
+    public Result EnsureCanSubmitCombatAction(Aggregates.Match match)
     {
         ArgumentNullException.ThrowIfNull(match);
 
@@ -20,7 +20,7 @@ public sealed class MatchPhasePolicyV1 : IMatchPhasePolicy
 
     // Made static to address S2325 and CA1822.
     // Added a different error message to address S4144.
-    public static Result EnsureCanResolveNextAction(Matches.Aggregates.Match match)
+    public static Result EnsureCanResolveNextAction(Aggregates.Match match)
     {
         ArgumentNullException.ThrowIfNull(match);
 
@@ -33,17 +33,17 @@ public sealed class MatchPhasePolicyV1 : IMatchPhasePolicy
         return Result.Ok();
     }
 
-    public Result EnsureCanSubmitEvolutionChoice(Matches.Aggregates.Match match)
+    public Result EnsureCanSubmitEvolutionChoice(Aggregates.Match match)
     {
         return EnsureBasicGuard(match);
     }
 
-    public Result EnsureCanSubmitSpeedChoice(Matches.Aggregates.Match match)
+    public Result EnsureCanSubmitSpeedChoice(Aggregates.Match match)
     {
         return EnsureBasicGuard(match);
     }
 
-    private static Result EnsureBasicGuard(Matches.Aggregates.Match match)
+    private static Result EnsureBasicGuard(Aggregates.Match match)
     {
         ArgumentNullException.ThrowIfNull(match);
 

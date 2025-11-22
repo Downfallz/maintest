@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" />
+    <ProjectReference Include="..\DA.Game.Shared.Tests\DA.Game.Shared.Tests.csproj" />
     <ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
   </ItemGroup>
 

@@ -1,7 +1,7 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Shared.Contracts.Matches.Ids;
 
-namespace DA.Game.Domain2.Shared.Policies.Evolution;
+namespace DA.Game.Domain2.Matches.Policies.Evolution;
 
 public interface IEvolutionPolicy
 {

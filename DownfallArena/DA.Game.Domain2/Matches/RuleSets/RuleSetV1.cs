@@ -1,7 +1,7 @@
-﻿using DA.Game.Domain2.Shared.Policies.Evolution;
-using DA.Game.Domain2.Shared.Policies.MatchPhase;
+﻿using DA.Game.Domain2.Matches.Policies.Evolution;
+using DA.Game.Domain2.Matches.Policies.MatchPhase;
 
-namespace DA.Game.Domain2.Shared.RuleSets;
+namespace DA.Game.Domain2.Matches.RuleSets;
 
 public static class RuleSetV1
 {

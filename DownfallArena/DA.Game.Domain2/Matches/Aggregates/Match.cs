@@ -2,9 +2,9 @@
 using DA.Game.Domain2.Matches.Entities;
 using DA.Game.Domain2.Matches.Events;
 using DA.Game.Domain2.Matches.Messages;
+using DA.Game.Domain2.Matches.RuleSets;
 using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Domain2.Shared.Primitives;
-using DA.Game.Domain2.Shared.RuleSets;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Players;
@@ -79,17 +79,19 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         if (PlayerRef1 is not null && PlayerRef2 is not null)
-            StartMatch(_clock);
+            AddEvent(new AllPlayersReady(Id, _clock.UtcNow));
 
         return Result<PlayerSlot>.Ok(slot);
     }
 
-    private void StartMatch(IClock clock)
+    public void StartMatch()
     {
         InitializeTeams();
-        InitializeFirstRound();
+
         Lifecycle.MoveTo(MatchState.Started);
-        AddEvent(new MatchStarted(Id, clock.UtcNow));
+        AddEvent(new MatchStarted(Id, _clock.UtcNow));
+
+        InitializeFirstRound();
     }
 
     private void InitializeTeams()
@@ -102,15 +104,25 @@ public sealed class Match : AggregateRoot<MatchId>
     {
 
         CurrentRound = Round.StartFirst(_resources, _ruleSet);
-        AddEvent(new TurnAdvanced(Id, RoundNumber, DateTime.UtcNow));
+        InitializeRound();
     }
 
-    private void InitializeNextRound()
+    public void InitializeNextRound()
     {
-
         CurrentRound = Round.StartNext(CurrentRound!);
-        AddEvent(new TurnAdvanced(Id, RoundNumber, DateTime.UtcNow));
+        InitializeRound();
     }
+
+    private void InitializeRound()
+    {
+        AddEvent(new RoundInitialized(Id, CurrentRound!.Id, RoundNumber, DateTime.UtcNow));
+        InitializeCurrentRoundEvolution();
+    }
+    private void InitializeCurrentRoundEvolution()
+    {
+        CurrentRound!.InitializeEvolutionPhase();
+    }
+
     /// <summary>
     /// Soumet le choix d’évolution (déblocage de sort) du joueur.
     /// </summary>
@@ -129,9 +141,14 @@ public sealed class Match : AggregateRoot<MatchId>
         AddEvent(new EvolutionChoiceSubmitted(CurrentRound.Id, playerCtx.Slot, choice, _clock.UtcNow));
 
         if (CurrentRound.IsEvolutionPhaseComplete)
-            AddEvent(new EvolutionPhaseCompleted(CurrentRound.Id, RoundNumber, _clock.UtcNow));
+            AddEvent(new EvolutionPhaseCompleted(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
 
         return result;
+    }
+
+    public Result InitializeCurrentRoundSpeedPhase()
+    {
+        return CurrentRound!.InitializeSpeedPhase();
     }
 
     /// <summary>
@@ -152,9 +169,15 @@ public sealed class Match : AggregateRoot<MatchId>
         AddEvent(new SpeedChoiceSubmitted(CurrentRound.Id, slot, speedChoice, _clock.UtcNow));
 
         if (CurrentRound.IsSpeedChoicePhaseComplete)
-            AddEvent(new SpeedPhaseCompleted(CurrentRound.Id, RoundNumber, _clock.UtcNow));
+            AddEvent(new SpeedPhaseCompleted(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
 
         return result;
+    }
+
+    public Result InitializeCurrentRoundCombatPhase()
+    {
+        CurrentRound!.InitializeCombatPhase();
+        return Result.Ok();
     }
 
     public Result SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice)
@@ -170,32 +193,48 @@ public sealed class Match : AggregateRoot<MatchId>
 
         AddEvent(new CombatActionChoiceSubmitted(CurrentRound!.Id, slot, combatActionChoice, _clock.UtcNow));
 
-        if (CurrentRound!.Phase == RoundPhase.CombatResolution)
+        if (CurrentRound!.IsCombatActionRequestPhaseCompleted)
         {
-            AddEvent(new CombatActionRequestPhaseCompleted(CurrentRound!.Id, RoundNumber, _clock.UtcNow));
+            AddEvent(new CombatActionRequestPhaseCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
+            InitializeCurrentRoundSpeedResolutionPhase();
+        }
 
-            var timeline = CombatTimeline.FromSpeedChoices(
+        return Result.Ok();
+    }
+
+    private void InitializeCurrentRoundSpeedResolutionPhase()
+    {
+        var timeline = CombatTimeline.FromSpeedChoices(
             Player1Team!,
-            CurrentRound.Player1SpeedChoices,
+            CurrentRound!.Player1SpeedChoices,
             Player2Team!,
             CurrentRound.Player1SpeedChoices,
             _ruleSet);
 
-            CurrentRound!.BeginCombatPhase(timeline);
+        CurrentRound!.InitializeSpeedResolutionPhase(timeline);
+        AddEvent(new SpeedResolutionCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
+        InitializeCurrentRoundCombatResolutionPhase();
+    }
 
-            while (CurrentRound!.Phase != RoundPhase.Completed)
-            {
-                var actionResult = CurrentRound!.ResolveNextAction();
-                if (!actionResult.IsSuccess)
-                    return Result.Fail(actionResult.Error!);
-                AddEvent(new CombatActionResolved(CurrentRound!.Id, actionResult.Value!, _clock.UtcNow));
-            }
-
-            AddEvent(new CombatResolvingPhaseCompleted(CurrentRound!.Id, RoundNumber, _clock.UtcNow));
-            InitializeNextRound();
+    public Result InitializeCurrentRoundCombatResolutionPhase()
+    {
+        while (!CurrentRound!.IsCombatResolutionCompleted)
+        {
+            var actionResult = CurrentRound!.ResolveNextAction();
+            if (!actionResult.IsSuccess)
+                return Result.Fail(actionResult.Error!);
+            AddEvent(new CombatActionResolved(CurrentRound!.Id, actionResult.Value!, _clock.UtcNow));
         }
-
+        AddEvent(new CombatResolutionCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
+        InitializeCurrentRoundCleanup();
         return Result.Ok();
+    }
+
+    private void InitializeCurrentRoundCleanup()
+    {
+        CurrentRound!.DoCleanup();
+        AddEvent(new RoundEnded(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
+        InitializeNextRound();
     }
 
     /// <summary>

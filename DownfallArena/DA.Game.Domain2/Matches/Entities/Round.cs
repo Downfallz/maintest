@@ -1,8 +1,8 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
+using DA.Game.Domain2.Matches.RuleSets;
+using DA.Game.Domain2.Matches.Services;
 using DA.Game.Domain2.Matches.ValueObjects;
-using DA.Game.Domain2.Services;
 using DA.Game.Domain2.Shared.Primitives;
-using DA.Game.Domain2.Shared.RuleSets;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources;
@@ -24,8 +24,9 @@ namespace DA.Game.Domain2.Matches.Entities
         private readonly HashSet<SpeedChoice> _p2Speed = new();
 
         public int Number { get; private set; }
-        public RoundPhase Phase { get; private set; }
+        public RoundLifecycle Lifecycle { get; } = new();
 
+        public RoundPhase Phase => Lifecycle.Phase;
         public IReadOnlyCollection<SpellUnlockChoice> Player1Choices => _p1Evolution;
         public IReadOnlyCollection<SpellUnlockChoice> Player2Choices => _p2Evolution;
 
@@ -35,7 +36,6 @@ namespace DA.Game.Domain2.Matches.Entities
         protected Round(RoundId id, IGameResources resources, RuleSet ruleSet) : base(id)
         {
             Number = id.Value;
-            Phase = RoundPhase.Evolution;
             _resources = resources;
             _ruleSet = ruleSet;
         }
@@ -49,6 +49,11 @@ namespace DA.Game.Domain2.Matches.Entities
         {
             ArgumentNullException.ThrowIfNull(previous);
             return new Round(RoundId.New(previous.Number + 1), previous._resources, previous._ruleSet);
+        }
+
+        public Result InitializeEvolutionPhase()
+        {
+            return Lifecycle.MoveTo(RoundPhase.Evolution);
         }
 
         public Result SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
@@ -73,10 +78,12 @@ namespace DA.Game.Domain2.Matches.Entities
                     return Result.Fail("Choix déjà soumis.");
             }
 
-            if (IsEvolutionPhaseComplete)
-                Phase = RoundPhase.Speed;
-
             return Result.Ok();
+        }
+
+        public Result InitializeSpeedPhase()
+        {
+            return Lifecycle.MoveTo(RoundPhase.Speed);
         }
 
         public Result SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
@@ -101,16 +108,12 @@ namespace DA.Game.Domain2.Matches.Entities
                     return Result.Fail("Choix déjà soumis.");
             }
 
-            if (IsSpeedChoicePhaseComplete)
-                Phase = RoundPhase.Combat;
-
             return Result.Ok();
         }
 
-        public void BeginCombatPhase(CombatTimeline timeline)
+        public void InitializeCombatPhase()
         {
-            Timeline = timeline;
-            Cursor = TurnCursor.Start;
+            Lifecycle.MoveTo(RoundPhase.Combat);
         }
 
         public Result<CombatActionChoice> SubmitCombatAction(PlayerActionContext ctx, CombatActionChoice choice)
@@ -132,9 +135,19 @@ namespace DA.Game.Domain2.Matches.Entities
             _intents[choice.ActorId] = choice;
 
             if (_intents.Count == ctx.AllAvailableCharactersCount)
-                Phase = RoundPhase.CombatResolution;
+            {
+                IsCombatActionRequestPhaseCompleted = true;
+            }
 
             return Result<CombatActionChoice>.Ok(choice);
+        }
+
+        public void InitializeSpeedResolutionPhase(CombatTimeline timeline)
+        {
+            Lifecycle.MoveTo(RoundPhase.SpeedResolution);
+            Timeline = timeline;
+            IsSpeedResolutionCompleted = true;
+            Cursor = TurnCursor.Start;
         }
 
         public Result<CombatActionResult> ResolveNextAction()
@@ -152,14 +165,22 @@ namespace DA.Game.Domain2.Matches.Entities
                 return Result<CombatActionResult>.Fail("Rien de soumis pour ce character.");
             }
 
+            
             Cursor = Cursor.MoveNext(Timeline);
 
             if (Cursor.IsEnd)
             {
-                Phase = RoundPhase.Completed;
+                IsCombatResolutionCompleted = true;
             }
 
             return Result<CombatActionResult>.Ok(new CombatActionResult(intent, new List<EffectSummary>()));
+        }
+
+        public void DoCleanup()
+        {
+            Lifecycle.MoveTo(RoundPhase.Cleanup);
+
+
         }
 
         public bool IsCombatOver => Cursor.IsEnd || Timeline.AllDead();
@@ -167,5 +188,8 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public bool IsSpeedChoicePhaseComplete => _p1Speed.Count == 3 && _p2Speed.Count == 3;
 
+        public bool IsCombatActionRequestPhaseCompleted { get; private set;  }
+        public bool IsSpeedResolutionCompleted { get; private set; }
+        public bool IsCombatResolutionCompleted { get; private set; }
     }
 }

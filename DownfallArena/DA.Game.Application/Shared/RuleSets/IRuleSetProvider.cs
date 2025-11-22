@@ -1,4 +1,4 @@
-﻿using DA.Game.Domain2.Shared.RuleSets;
+﻿using DA.Game.Domain2.Matches.RuleSets;
 
 namespace DA.Game.Application.Shared.RuleSets;
 

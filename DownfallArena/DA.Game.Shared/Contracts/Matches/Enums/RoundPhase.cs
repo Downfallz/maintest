@@ -2,10 +2,12 @@
 
 public enum RoundPhase
 {
+    Initialization,
     Evolution,
     Speed,
     Combat,
+    SpeedResolution,
     CombatResolution,
-    Completed
+    Cleanup
 }
 

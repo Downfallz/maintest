@@ -93,7 +93,7 @@ public sealed class FidelitySimulationRunner(
 
     private async Task<Player> EnsurePlayerAsync(PlayerSimProfile profile, CancellationToken ct)
     {
-        var p = new Player(PlayerId.New(), profile.Name, profile.Kind);
+        var p = Player.Create(PlayerId.New(), profile.Name, profile.Kind);
         await players.SaveAsync(p, ct);
         return p;
     }

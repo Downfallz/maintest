@@ -1,7 +1,7 @@
 ﻿using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Shared.Contracts.Matches.Ids;
 
-namespace DA.Game.Domain2.Shared.Policies.Speed;
+namespace DA.Game.Domain2.Matches.Policies.Speed;
 
 public sealed class InitiativePolicyV1 : IInitiativePolicy
 {
