@@ -1,8 +1,9 @@
 ﻿using DA.Game.Shared.Utilities;
+using System.Runtime.CompilerServices;
 
 namespace DA.Game.Shared.Contracts.Resources.Stats;
 
-public sealed record Health(int Value) : ValueObject, IComparable<Health>
+public sealed record Health(int Value) : NonNegativeIntStat<Health>(Value), IComparable<Health>
 {
     public static Health Of(int v)
     {

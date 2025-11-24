@@ -5,11 +5,11 @@ namespace DA.Game.Shared.Contracts.Resources;
 
 public interface IGameResources
 {
-    IReadOnlyList<CharacterDefinitionRef> Characters { get; }
+    IReadOnlyList<CreatureDefinitionRef> Characters { get; }
     IReadOnlyList<Spell> Spells { get; }
     string Version { get; }
-    CharacterDefinitionRef GetCharacter(CharacterDefId id);
+    CreatureDefinitionRef GetCharacter(CreatureDefId id);
     Spell GetSpell(SpellId id);
-    bool TryGetCharacter(CharacterDefId id, out CharacterDefinitionRef? def);
+    bool TryGetCharacter(CreatureDefId id, out CreatureDefinitionRef? def);
     bool TryGetSpell(SpellId id, out Spell? spell);
 }

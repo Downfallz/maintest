@@ -9,7 +9,7 @@ public class CharacterDefIdTests
     {
         var id = "creature:warrior:v1";
 
-        var result = CharacterDefId.New(id);
+        var result = CreatureDefId.New(id);
 
         Assert.Equal(id, result.Value);
     }
@@ -17,7 +17,7 @@ public class CharacterDefIdTests
     [Fact]
     public void GivenCharacterDefId_WhenToString_ThenReturnsValue()
     {
-        var id = CharacterDefId.New("creature:mage:v2");
+        var id = CreatureDefId.New("creature:mage:v2");
 
         Assert.Equal("creature:mage:v2", id.ToString());
     }
@@ -28,7 +28,7 @@ public class CharacterDefIdTests
     [InlineData(null)]
     public void GivenEmptyId_WhenCreating_ThenThrows(string value)
     {
-        Assert.Throws<ArgumentException>(() => CharacterDefId.New(value));
+        Assert.Throws<ArgumentException>(() => CreatureDefId.New(value));
     }
 
     [Theory]
@@ -40,13 +40,13 @@ public class CharacterDefIdTests
     [InlineData("creature/warrior/v1")]     // invalid separators
     public void GivenInvalidFormat_WhenCreating_ThenThrows(string value)
     {
-        Assert.Throws<FormatException>(() => CharacterDefId.New(value));
+        Assert.Throws<FormatException>(() => CreatureDefId.New(value));
     }
 
     [Fact]
     public void GivenValidId_WhenParsing_ThenExtractsParts()
     {
-        var id = CharacterDefId.New("creature:rogue:v3");
+        var id = CreatureDefId.New("creature:rogue:v3");
 
         var (category, name, version) = id.Parse();
 

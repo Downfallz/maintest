@@ -1,5 +1,8 @@
 ﻿using DA.Game.Domain2.Matches.Policies.Evolution;
 using DA.Game.Domain2.Matches.Policies.MatchPhase;
+using DA.Game.Domain2.Matches.Services.Combat;
+using DA.Game.Domain2.Matches.Services.Combat.Execution;
+using DA.Game.Domain2.Matches.Services.Combat.Resolution;
 
 namespace DA.Game.Domain2.Matches.RuleSets;
 
@@ -19,7 +22,8 @@ public static class RuleSetV1
         //    TimelineBuilder: new TimelineBuilderV1());
 
         // --- Combat Rules
-        var combat = new CombatRules();
+        var combat = new CombatRules(new CombatActionResolutionService(new EffectComputationServiceV1()),
+            new EffectExecutionService(new InstantEffectServiceV1(new DamageComputationService())));
 
         //// --- Status Rules
         //var status = new StatusRules(

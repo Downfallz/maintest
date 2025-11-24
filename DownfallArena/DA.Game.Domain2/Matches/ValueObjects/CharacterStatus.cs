@@ -17,7 +17,10 @@ public sealed record CharacterStatus : ValueObject
     public Defense BaseDefense { get; private set; }
     public Initiative BaseInitiative { get; private set; }
     public CriticalChance BaseCritical { get; private set; }
+    public CriticalChance BonusCritical { get; private set; }
+    public Defense BonusDefense { get; private set; }
     public bool IsAlive => !Health.IsDead();
+    public bool IsDead => !IsAlive;
     private CharacterStatus(
         CreatureId characterId,
         Health health,
@@ -28,7 +31,9 @@ public sealed record CharacterStatus : ValueObject
         Energy baseEnergy,
         Defense baseDefense,
         Initiative baseInitiative,
-        CriticalChance baseCritical)
+        CriticalChance baseCritical,
+        CriticalChance bonusCritical,
+        Defense bonusDefense)
     {
         CharacterId = characterId;
         Health = health;
@@ -40,9 +45,11 @@ public sealed record CharacterStatus : ValueObject
         BaseDefense = baseDefense;
         BaseInitiative = baseInitiative;
         BaseCritical = baseCritical;
+        BonusCritical = bonusCritical;
+        BonusDefense = bonusDefense;
     }
 
-    public static CharacterStatus From(CombatCharacter character)
+    public static CharacterStatus From(CombatCreature character)
     {
         ArgumentNullException.ThrowIfNull(character);
 
@@ -56,7 +63,9 @@ public sealed record CharacterStatus : ValueObject
             character.BaseEnergy,
             character.BaseDefense,
             character.BaseInitiative,
-            character.BaseCritical
+            character.BaseCritical,
+            character.BonusCritical,
+            character.BonusDefense
         );
     }
 }

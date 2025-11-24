@@ -13,7 +13,7 @@ public class MatchesProfile : Profile
         CreateMap<TurnCursor, TurnCursorDto>().ReverseMap();
         CreateMap<CombatTimeline, CombatTimelineDto>().ReverseMap();
         CreateMap<ActivationSlot, ActivationSlotDto>().ReverseMap();
-        CreateMap<CombatCharacter, CombatCharacterDto>().ReverseMap();
+        CreateMap<CombatCreature, CombatCharacterDto>().ReverseMap();
         CreateMap<Team, TeamDto>().ReverseMap();
         CreateMap<SpellUnlockChoice, SpellUnlockChoiceDto>().ReverseMap();
         CreateMap<SpeedChoice, SpeedChoiceDto>().ReverseMap();

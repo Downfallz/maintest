@@ -7,11 +7,11 @@ namespace DA.Game.Infrastructure.Bootstrap;
 
 public static class CreatureMapping
 {
-    public static CharacterDefinitionRef ToRef(this CreatureDefinitionDto dto)
+    public static CreatureDefinitionRef ToRef(this CreatureDefinitionDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        return new CharacterDefinitionRef(
-            new CharacterDefId(dto.Id),
+        return new CreatureDefinitionRef(
+            new CreatureDefId(dto.Id),
             dto.Name,
             Health.Of(dto.BaseHealth),
             Energy.Of(dto.BaseEnergy),

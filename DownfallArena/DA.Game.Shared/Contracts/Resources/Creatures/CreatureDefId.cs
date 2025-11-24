@@ -2,20 +2,20 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Creatures;
 
-public readonly record struct CharacterDefId(string Value)
+public readonly record struct CreatureDefId(string Value)
 {
     private static readonly Regex Pattern =
         new(@"^[a-zA-Z0-9_\-]+:[a-zA-Z0-9_\-]+:v[0-9]+$", RegexOptions.Compiled);
 
-    public static CharacterDefId New(string id)
+    public static CreatureDefId New(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentException("CharacterDefId cannot be empty.", nameof(id));
+            throw new ArgumentException($"{nameof(CreatureDefId)} cannot be empty.", nameof(id));
 
         if (!Pattern.IsMatch(id))
-            throw new FormatException($"Invalid CharacterDefId format: '{id}'. Expected '<category>:<name>:v<number>'.");
+            throw new FormatException($"Invalid {nameof(CreatureDefId)} format: '{id}'. Expected '<category>:<name>:v<number>'.");
 
-        return new CharacterDefId(id);
+        return new CreatureDefId(id);
     }
 
     public override string ToString() => Value;

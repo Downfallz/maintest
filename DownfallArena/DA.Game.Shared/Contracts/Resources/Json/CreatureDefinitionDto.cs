@@ -6,7 +6,7 @@ namespace DA.Game.Shared.Contracts.Resources.Json;
 public sealed record CreatureDefinitionDto(
     string Id,
     string Name,
-    CharClass CharacterClass,   // ex: "Brawler"
+    CreatureClass CreatureClass,   // ex: "Brawler"
     int BaseHealth,
     int BaseEnergy,
     int BaseDefense,

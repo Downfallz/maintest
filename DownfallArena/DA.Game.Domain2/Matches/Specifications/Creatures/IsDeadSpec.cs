@@ -3,9 +3,9 @@ using DA.Game.Domain2.Shared.Primitives;
 
 namespace DA.Game.Domain2.Matches.Specifications.Creatures;
 
-public sealed class IsDeadSpec : ISpecification<CombatCharacter>
+public sealed class IsDeadSpec : ISpecification<CombatCreature>
 {
-    public bool IsSatisfiedBy(CombatCharacter candidate)
+    public bool IsSatisfiedBy(CombatCreature candidate)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 

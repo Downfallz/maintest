@@ -7,7 +7,7 @@ public sealed record PermanentBuffDefense : Effect, IPermanentEffect
     public int Amount { get; }
 
     private PermanentBuffDefense(int amount, TargetingSpec targeting)
-        : base(targeting) => Amount = amount;
+        : base(Matches.Enums.EffectKind.Buff, targeting) => Amount = amount;
 
     public static PermanentBuffDefense Of(int amount, TargetingSpec targeting)
     {

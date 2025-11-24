@@ -10,7 +10,7 @@ public class CharacterDefinitionRefTests
     [InlineGameAutoData("Warrior")]
     public void GivenValidInputs_WhenCreatingCharacterDefinitionRef_ThenStoresValues(
         string name,
-        CharacterDefId id,
+        CreatureDefId id,
         Health hp,
         Energy energy,
         Defense defense,
@@ -21,7 +21,7 @@ public class CharacterDefinitionRefTests
     {
         var spells = new List<SpellId> { spell1, spell2 };
 
-        var def = CharacterDefinitionRef.Create(
+        var def = CreatureDefinitionRef.Create(
             id,
             name,
             hp,
@@ -48,7 +48,7 @@ public class CharacterDefinitionRefTests
     [InlineGameAutoData("   ")]
     public void GivenInvalidName_WhenCreatingCharacterDefinitionRef_ThenThrows(
         string name,
-        CharacterDefId id,
+        CreatureDefId id,
         Health hp,
         Energy energy,
         Defense defense,
@@ -59,7 +59,7 @@ public class CharacterDefinitionRefTests
         var spells = new List<SpellId> { spell };
 
         Assert.Throws<ArgumentException>(() =>
-            CharacterDefinitionRef.Create(
+            CreatureDefinitionRef.Create(
                 id,
                 name,
                 hp,
@@ -73,7 +73,7 @@ public class CharacterDefinitionRefTests
     [Theory]
     [GameAutoData]
     public void GivenNullStartingSpellIds_WhenCreatingCharacterDefinitionRef_ThenThrows(
-        CharacterDefId id,
+        CreatureDefId id,
         Health hp,
         Energy energy,
         Defense defense,
@@ -81,7 +81,7 @@ public class CharacterDefinitionRefTests
         CriticalChance crit)
     {
         Assert.Throws<ArgumentException>(() =>
-            CharacterDefinitionRef.Create(
+            CreatureDefinitionRef.Create(
                 id,
                 "Warrior",
                 hp,
@@ -95,7 +95,7 @@ public class CharacterDefinitionRefTests
     [Theory]
     [GameAutoData]
     public void GivenEmptyStartingSpellIds_WhenCreatingCharacterDefinitionRef_ThenThrows(
-        CharacterDefId id,
+        CreatureDefId id,
         Health hp,
         Energy energy,
         Defense defense,
@@ -105,7 +105,7 @@ public class CharacterDefinitionRefTests
         var spells = new List<SpellId>();
 
         Assert.Throws<ArgumentException>(() =>
-            CharacterDefinitionRef.Create(
+            CreatureDefinitionRef.Create(
                 id,
                 "Warrior",
                 hp,
@@ -119,7 +119,7 @@ public class CharacterDefinitionRefTests
     [Theory]
     [GameAutoData]
     public void GivenStartingSpellIdsWithDefaultSpellId_WhenCreatingCharacterDefinitionRef_ThenThrows(
-        CharacterDefId id,
+        CreatureDefId id,
         Health hp,
         Energy energy,
         Defense defense,
@@ -129,7 +129,7 @@ public class CharacterDefinitionRefTests
         var spells = new List<SpellId> { default(SpellId) };
 
         Assert.Throws<ArgumentException>(() =>
-            CharacterDefinitionRef.Create(
+            CreatureDefinitionRef.Create(
                 id,
                 "Warrior",
                 hp,

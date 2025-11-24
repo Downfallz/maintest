@@ -2,7 +2,7 @@
 
 namespace DA.Game.Shared.Contracts.Resources.Stats;
 
-public sealed record Initiative(int Value) : ValueObject
+public sealed record Initiative(int Value) : NonNegativeIntStat<Initiative>(Value)
 {
     public static Initiative Of(int v)
     {

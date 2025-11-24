@@ -13,6 +13,8 @@ using DA.Game.Shared.Contracts.Players.Ids;
 using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Utilities;
+using System.Collections.ObjectModel;
+using System.Data.SqlTypes;
 
 namespace DA.Game.Domain2.Matches.Aggregates;
 
@@ -36,6 +38,11 @@ public sealed class Match : AggregateRoot<MatchId>
     public Team? Player2Team { get; private set; }
     public Round? CurrentRound { get; private set; }
     public int RoundNumber => CurrentRound?.Number ?? 0;
+
+    public IReadOnlyList<CombatCreature> AllCreatures =>
+    (Player1Team?.Characters ?? Enumerable.Empty<CombatCreature>())
+        .Concat(Player2Team?.Characters ?? Enumerable.Empty<CombatCreature>())
+        .ToList();
 
     private Match(MatchId id, IGameResources resources, RuleSet ruleSet, IClock clock) : base(id)
     {
@@ -97,8 +104,8 @@ public sealed class Match : AggregateRoot<MatchId>
 
     private void InitializeTeams()
     {
-        Player1Team = Team.FromCharacterTemplate(_resources.GetCharacter(CharacterDefId.New("creature:main:v1")));
-        Player2Team = Team.FromCharacterTemplate(_resources.GetCharacter(CharacterDefId.New("creature:main:v1")));
+        Player1Team = Team.FromCharacterTemplateAndSlot(_resources.GetCharacter(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player1);
+        Player2Team = Team.FromCharacterTemplateAndSlot(_resources.GetCharacter(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player2);
     }
 
     private void InitializeFirstRound()
@@ -232,24 +239,22 @@ public sealed class Match : AggregateRoot<MatchId>
         AddEvent(new SpeedResolutionCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
     }
 
-    public Result ResolveNextCombatStep()
+    public Result<bool> ResolveNextCombatStep()
     {
         if (CurrentRound is null)
-            return Result.Fail("Aucun round actif.");
+            return Result<bool>.Fail("Aucun round actif.");
 
         var next = CurrentRound.SelectNextActionToResolve();
         if (!next.IsSuccess)
-            return Result.Fail(next.Error!);
+            return Result<bool>.Fail(next.Error!);
 
         var intent = next.Value!;
 
         //// 1) Résoudre les effets pour cette action
-        //var combatResolver = new ActionResolver();
-
-        //var effects = combatResolver.Resolve(intent, _ruleSet, _clock); // service/domain service
+        var combatactionresult = _ruleSet.Combat.Resolve(intent, this);
 
         //// 2) Appliquer les effets sur les teams / créatures
-        //ApplyCombatResult(effects);
+        var appli = _ruleSet.Combat.ApplyCombatResult(combatactionresult.Value!, this);
 
         //// 3) Lever un event d’action résolue
         //AddEvent(new CombatActionResolved(
@@ -267,69 +272,20 @@ public sealed class Match : AggregateRoot<MatchId>
                 Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
 
             InitializeCurrentRoundCleanup();
+            return Result<bool>.Ok(true);
         }
 
-        return Result.Ok();
-    }
-    //private void ApplyCombatResult(CombatActionResult result)
-    //{
-    //    // 1) Apply instant effects
-    //    foreach (var instant in result.InstantEffects)
-    //    {
-    //        var target = FindCreature(instant.TargetId);
-    //        if (target is null)
-    //            continue;
-
-    //        ApplyInstantEffect(target, instant);
-    //    }
-
-    //    // 2) Apply new conditions (DoT, buffs, debuffs, permanent)
-    //    foreach (var cond in result.NewConditions)
-    //    {
-    //        var target = FindCreature(cond.TargetId);
-    //        if (target is null)
-    //            continue;
-
-    //        target.AddCondition(cond.Condition);
-    //    }
-    //}
-    //private void ApplyInstantEffect(CombatCharacter target, InstantEffectApplication effect)
-    //{
-    //    switch (effect.Kind)
-    //    {
-    //        case EffectKind.Damage:
-    //            target.TakeDamage(effect.Amount);
-    //            break;
-
-    //        case EffectKind.Heal:
-    //            target.Heal(effect.Amount);
-    //            break;
-
-    //        case EffectKind.Energy:
-    //            target.GainEnergy(effect.Amount);
-    //            break;
-    //    }
-    //}
-
-
-    private Result InitializeCurrentRoundCombatResolutionPhase()
-    {
-        while (!CurrentRound!.IsCombatResolutionCompleted)
-        {
-            var actionToResolve = CurrentRound!.SelectNextActionToResolve();
-            if (!actionToResolve.IsSuccess)
-                return Result.Fail(actionToResolve.Error!);
-
-
-            //AddEvent(new CombatActionResolved(CurrentRound!.Id, actionToResolve.Value!, _clock.UtcNow));
-        }
-        AddEvent(new CombatResolutionCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
-        InitializeCurrentRoundCleanup();
-        return Result.Ok();
+        return Result<bool>.Ok(false);
     }
 
     private void InitializeCurrentRoundCleanup()
     {
+        if (Player1Team!.IsDead || Player2Team!.IsDead)
+        {
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
+            Console.WriteLine("the end");
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
+        }
         CurrentRound!.DoCleanup();
         AddEvent(new RoundEnded(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
         InitializeNextRound();

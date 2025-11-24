@@ -3,8 +3,8 @@ using DA.Game.Shared.Contracts.Resources.Stats;
 
 namespace DA.Game.Shared.Contracts.Resources.Creatures;
 
-public sealed record CharacterDefinitionRef(
-    CharacterDefId Id,
+public sealed record CreatureDefinitionRef(
+    CreatureDefId Id,
     string Name,
     Health BaseHp,
     Energy BaseEnergy,
@@ -14,8 +14,8 @@ public sealed record CharacterDefinitionRef(
     IReadOnlyList<SpellId> StartingSpellIds
 )
 {
-    public static CharacterDefinitionRef Create(
-        CharacterDefId id,
+    public static CreatureDefinitionRef Create(
+        CreatureDefId id,
         string name,
         Health baseHp,
         Energy baseEnergy,
@@ -37,7 +37,7 @@ public sealed record CharacterDefinitionRef(
                 throw new ArgumentException("StartingSpellIds cannot contain default SpellId values.", nameof(startingSpellIds));
         }
 
-        return new CharacterDefinitionRef(
+        return new CreatureDefinitionRef(
             id,
             name,
             baseHp,

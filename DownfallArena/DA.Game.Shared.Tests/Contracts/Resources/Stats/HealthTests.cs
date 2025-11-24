@@ -1,4 +1,5 @@
 ﻿using DA.Game.Shared.Contracts.Resources.Stats;
+using FluentAssertions;
 
 namespace DA.Game.Shared.Tests.Contracts.Resources.Stats;
 
@@ -131,5 +132,116 @@ public class HealthTests
         var h = Health.Of(value);
 
         Assert.Equal(expected, h.ToString());
+    }
+
+    [Fact]
+    public void WithSubstracted_WhenAmountIsLessThanValue_ReturnsReducedHealth()
+    {
+        // Arrange
+        var health = Health.Of(10);
+
+        // Act
+        var result = health.WithSubstracted(3);
+
+        // Assert
+        result.Value.Should().Be(7);
+        result.IsDead().Should().BeFalse();
+    }
+
+    [Fact]
+    public void WithSubstracted_WhenAmountEqualsValue_ReturnsZeroHealthAndIsDead()
+    {
+        // Arrange
+        var health = Health.Of(5);
+
+        // Act
+        var result = health.WithSubstracted(5);
+
+        // Assert
+        result.Value.Should().Be(0);
+        result.IsDead().Should().BeTrue();
+    }
+
+    [Fact]
+    public void WithSubstracted_WhenAmountIsGreaterThanValue_ReturnsZeroHealthAndIsDead()
+    {
+        // Arrange
+        var health = Health.Of(4);
+
+        // Act
+        var result = health.WithSubstracted(10);
+
+        // Assert
+        result.Value.Should().Be(0);
+        result.IsDead().Should().BeTrue();
+    }
+
+    [Fact]
+    public void WithSubstracted_WhenAmountIsNegative_ThrowsArgumentException()
+    {
+        // Arrange
+        var health = Health.Of(10);
+
+        // Act
+        var act = () => health.WithSubstracted(-1);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*Substract amount must be >= 0*");
+    }
+
+    [Fact]
+    public void WithAdded_WhenAmountIsZero_ReturnsSameValue()
+    {
+        // Arrange
+        var health = Health.Of(10);
+
+        // Act
+        var result = health.WithAdded(0);
+
+        // Assert
+        result.Value.Should().Be(10);
+        result.IsDead().Should().BeFalse();
+    }
+
+    [Fact]
+    public void WithAdded_WhenAmountIsPositive_ReturnsIncreasedHealth()
+    {
+        // Arrange
+        var health = Health.Of(7);
+
+        // Act
+        var result = health.WithAdded(5);
+
+        // Assert
+        result.Value.Should().Be(12);
+        result.IsDead().Should().BeFalse();
+    }
+
+    [Fact]
+    public void WithAdded_WhenCalledMultipleTimes_AccumulatesNaturally()
+    {
+        // Arrange
+        var health = Health.Of(3);
+
+        // Act
+        var result = health.WithAdded(2).WithAdded(5);
+
+        // Assert
+        result.Value.Should().Be(10);
+    }
+
+    [Fact]
+    public void WithAdded_WhenAmountIsNegative_ThrowsArgumentException()
+    {
+        // Arrange
+        var health = Health.Of(10);
+
+        // Act
+        var act = () => health.WithAdded(-1);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*Added amount must be >= 0*");
     }
 }

@@ -8,27 +8,27 @@ using DA.Game.Shared.Contracts.Resources.Stats;
 
 namespace DA.Game.Domain2.Matches.Entities;
 
-public class CombatCharacter : Entity<CreatureId>
+public class CombatCreature : Entity<CreatureId>
 {
-    protected CombatCharacter(CreatureId id) : base(id) { }
+    protected CombatCreature(CreatureId id) : base(id) { }
 
-    public static CombatCharacter FromCharacterTemplate(CharacterDefinitionRef characterRuntimeTemplate, CreatureId id)
+    public static CombatCreature FromCreatureTemplate(CreatureDefinitionRef creatureDefinitionTemplate, CreatureId id)
     {
-        ArgumentNullException.ThrowIfNull(characterRuntimeTemplate);
+        ArgumentNullException.ThrowIfNull(creatureDefinitionTemplate);
 
-        return new CombatCharacter(id)
+        return new CombatCreature(id)
         {
-            BaseHealth = characterRuntimeTemplate.BaseHp,
-            BaseEnergy = characterRuntimeTemplate.BaseEnergy,
-            BaseDefense = characterRuntimeTemplate.BaseDefense,
-            BaseInitiative = characterRuntimeTemplate.BaseInitiative,
-            BaseCritical = characterRuntimeTemplate.BaseCritChance,
-            StartingSpellIds = characterRuntimeTemplate.StartingSpellIds,
-            Health = characterRuntimeTemplate.BaseHp,
-            Energy = characterRuntimeTemplate.BaseEnergy,
-            BonusDefense = characterRuntimeTemplate.BaseDefense,
-            CurrentInitiative = characterRuntimeTemplate.BaseInitiative,
-            BonusCritical = characterRuntimeTemplate.BaseCritChance,
+            BaseHealth = creatureDefinitionTemplate.BaseHp,
+            BaseEnergy = creatureDefinitionTemplate.BaseEnergy,
+            BaseDefense = creatureDefinitionTemplate.BaseDefense,
+            BaseInitiative = creatureDefinitionTemplate.BaseInitiative,
+            BaseCritical = creatureDefinitionTemplate.BaseCritChance,
+            StartingSpellIds = creatureDefinitionTemplate.StartingSpellIds,
+            Health = creatureDefinitionTemplate.BaseHp,
+            Energy = creatureDefinitionTemplate.BaseEnergy,
+            CurrentInitiative = creatureDefinitionTemplate.BaseInitiative,
+            BonusDefense = Defense.Of(0),
+            BonusCritical = CriticalChance.Of(0),
             IsStunned = false
         };
     }
@@ -47,19 +47,54 @@ public class CombatCharacter : Entity<CreatureId>
     public bool IsDead => Health.IsDead();
     public bool IsAlive => !IsDead;
 
-    //public void TakeDamage(int rawDamage)
-    //{
-    //    if (IsDead)
-    //        return;
+    public void TakeDamage(int damage)
+    {
+        if (IsDead)
+            return;
 
-    //    var mitigated = Math.Max(0, rawDamage - Defense.Value);
-    //    if (mitigated <= 0)
-    //        return;
+        Health = Health.WithSubstracted(damage);
+    }
 
-    //    Health = Health.WithSubtracted(mitigated); // clamp à 0, max 20 dans le VO
-    //    if (Health.Value <= 0)
-    //        IsDead = true;
-    //}
+    public void Heal(int heal)
+    {
+        if (IsDead)
+            return;
+
+        Health = Health.WithAdded(heal);
+    }
+
+
+    public void SpendOrLoseEnergy(int energy)
+    {
+        if (IsDead)
+            return;
+
+        Energy = Energy.WithSubstracted(energy);
+    }
+
+    public void GainEnergy(int energy)
+    {
+        if (IsDead)
+            return;
+
+        Energy = Energy.WithAdded(energy);
+    }
+
+    public void SpendOrLoseInitiative(int initiative)
+    {
+        if (IsDead)
+            return;
+
+        CurrentInitiative = CurrentInitiative.WithSubstracted(initiative);
+    }
+
+    public void GainInitiative(int initiative)
+    {
+        if (IsDead)
+            return;
+
+        CurrentInitiative = CurrentInitiative.WithAdded(initiative);
+    }
 
     //private readonly List<ActiveCondition> _conditions = new();
 

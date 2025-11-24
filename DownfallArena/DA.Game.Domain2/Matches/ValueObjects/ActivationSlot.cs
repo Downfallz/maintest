@@ -5,7 +5,7 @@ namespace DA.Game.Domain2.Matches.ValueObjects;
 
 public sealed record ActivationSlot(
     PlayerSlot PlayerSlot,
-    CombatCharacter CombatCharacter,
+    CombatCreature CombatCharacter,
     Speed Speed,
     Initiative InitiativeValue // valeur figée pour l’ordre d’activation
 );

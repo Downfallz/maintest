@@ -31,7 +31,7 @@ internal sealed class GameResourcesCustomization : ICustomization
             if (version <= 0) version = 1;
 
             var raw = TestIdFactory.CreateCharacterDefIdString(baseName, version);
-            return CharacterDefId.New(raw);
+            return CreatureDefId.New(raw);
         });
     }
 }

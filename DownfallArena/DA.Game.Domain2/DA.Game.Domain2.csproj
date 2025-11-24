@@ -8,16 +8,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="Matches\Policies\Combat\**" />
-	  <EmbeddedResource Remove="Matches\Policies\Combat\**" />
-	  <None Remove="Matches\Policies\Combat\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" PrivateAssets="All" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="MediatR" Version="13.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Matches\Policies\Combat\" />
 	</ItemGroup>
 </Project>

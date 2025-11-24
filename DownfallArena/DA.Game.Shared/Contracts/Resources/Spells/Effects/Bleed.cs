@@ -1,4 +1,5 @@
-﻿using DA.Game.Shared.Contracts.Resources.Spells.Enums;
+﻿using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Resources.Spells.Enums;
 
 namespace DA.Game.Shared.Contracts.Resources.Spells.Effects;
 
@@ -8,7 +9,7 @@ public sealed record Bleed : Effect, IOverTimeEffect
     public int DurationRounds { get; }
 
     private Bleed(int amountPerTick, int durationRounds, TargetingSpec targeting)
-        : base(targeting)
+        : base(EffectKind.Bleed, targeting)
     {
         AmountPerTick = amountPerTick;
         DurationRounds = durationRounds;

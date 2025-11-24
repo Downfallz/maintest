@@ -11,15 +11,15 @@ namespace DA.Game.Infrastructure.Bootstrap;
 public sealed class GameResources : IGameResources
 {
     private readonly IReadOnlyDictionary<SpellId, Spell> _spells;
-    private readonly IReadOnlyDictionary<CharacterDefId, CharacterDefinitionRef> _characters;
+    private readonly IReadOnlyDictionary<CreatureDefId, CreatureDefinitionRef> _characters;
 
     public IReadOnlyList<Spell> Spells => _spells.Values.ToList();
-    public IReadOnlyList<CharacterDefinitionRef> Characters => _characters.Values.ToList();
+    public IReadOnlyList<CreatureDefinitionRef> Characters => _characters.Values.ToList();
     public string Version { get; }
 
     private GameResources(
         IReadOnlyDictionary<SpellId, Spell> spells,
-        IReadOnlyDictionary<CharacterDefId, CharacterDefinitionRef> characters,
+        IReadOnlyDictionary<CreatureDefId, CreatureDefinitionRef> characters,
         string version)
     {
         _spells = spells;
@@ -32,7 +32,7 @@ public sealed class GameResources : IGameResources
     /// </summary>
     public static GameResources Create(
         IEnumerable<Spell> spells,
-        IEnumerable<CharacterDefinitionRef> characters,
+        IEnumerable<CreatureDefinitionRef> characters,
         string version)
     {
         ArgumentNullException.ThrowIfNull(spells);
@@ -50,7 +50,7 @@ public sealed class GameResources : IGameResources
             ? spell
             : throw new KeyNotFoundException($"Spell '{id}' introuvable (version {Version}).");
 
-    public CharacterDefinitionRef GetCharacter(CharacterDefId id)
+    public CreatureDefinitionRef GetCharacter(CreatureDefId id)
         => _characters.TryGetValue(id, out var def)
             ? def
             : throw new KeyNotFoundException($"Character '{id}' introuvable (version {Version}).");
@@ -58,6 +58,6 @@ public sealed class GameResources : IGameResources
     public bool TryGetSpell(SpellId id, out Spell? spell)
         => _spells.TryGetValue(id, out spell);
 
-    public bool TryGetCharacter(CharacterDefId id, out CharacterDefinitionRef? def)
+    public bool TryGetCharacter(CreatureDefId id, out CreatureDefinitionRef? def)
         => _characters.TryGetValue(id, out def);
 }

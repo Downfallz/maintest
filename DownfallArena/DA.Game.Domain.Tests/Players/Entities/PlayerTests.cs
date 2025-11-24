@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace DA.Game.Domain.Tests.Players;
+namespace DA.Game.Domain.Tests.Players.Entities;
 
 public class PlayerTests
 {
