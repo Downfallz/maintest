@@ -2,5 +2,4 @@
 
 namespace DA.Game.Domain2.Matches.RuleSets;
 
-public sealed record CombatRules(
-    IEvolutionPolicy Evolution);
+public sealed record CombatRules();

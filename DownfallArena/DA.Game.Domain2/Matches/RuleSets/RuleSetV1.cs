@@ -18,10 +18,8 @@ public static class RuleSetV1
         //    SpeedChoicePolicy: new SpeedChoicePolicyV1(),
         //    TimelineBuilder: new TimelineBuilderV1());
 
-        //// --- Combat Rules
-        //var combat = new CombatRules(
-        //    ActionValidator: new ActionValidatorV1(),
-        //    ActionResolver: new ActionResolverV1());
+        // --- Combat Rules
+        var combat = new CombatRules();
 
         //// --- Status Rules
         //var status = new StatusRules(
@@ -29,6 +27,6 @@ public static class RuleSetV1
         //    StackingPolicy: new StatusStackingPolicyV1());
 
         // --- Assemble the full rulebook
-        return new RuleSet(phase, evolution);
+        return new RuleSet(phase, evolution, combat);
     }
 }

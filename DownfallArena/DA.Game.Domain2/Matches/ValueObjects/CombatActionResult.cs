@@ -2,4 +2,6 @@
 
 public sealed record CombatActionResult(
     CombatActionChoice choice,
-    IReadOnlyList<EffectSummary> Effects);
+    IReadOnlyList<InstantEffectApplication> InstantEffects,
+    bool WasCritical);
+    //,IReadOnlyList<ConditionApplication> NewConditions);

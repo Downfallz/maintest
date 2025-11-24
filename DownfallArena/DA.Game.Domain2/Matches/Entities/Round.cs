@@ -124,11 +124,6 @@ namespace DA.Game.Domain2.Matches.Entities
             if (Phase != RoundPhase.Combat)
                 return Result<CombatActionChoice>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
 
-            var validator = new ActionValidator(_ruleSet);
-            var resultIntent = validator.Validate(ctx, choice);
-            if (!resultIntent.IsSuccess)
-                return Result<CombatActionChoice>.Fail(resultIntent.Error!);
-
             if (_intents.ContainsKey(choice.ActorId))
                 return Result<CombatActionChoice>.Fail("Cette créature a déjà soumis une action pour ce round.");
 
@@ -150,37 +145,32 @@ namespace DA.Game.Domain2.Matches.Entities
             Cursor = TurnCursor.Start;
         }
 
-        public Result<CombatActionResult> ResolveNextAction()
+        public Result<CombatActionChoice> SelectNextActionToResolve()
         {
             if (Timeline is null)
-                return Result<CombatActionResult>.Fail("Timeline non initialisé pour ce round.");
+                return Result<CombatActionChoice>.Fail("Timeline non initialisé pour ce round.");
 
             if (Cursor.IsEnd)
-                return Result<CombatActionResult>.Fail("Le round est déjà complété.");
+                return Result<CombatActionChoice>.Fail("Le round est déjà complété.");
 
             var slot = Timeline.Slots[Cursor.Index];
 
             if (!_intents.TryGetValue(slot.CombatCharacter.Id, out var intent))
             {
-                return Result<CombatActionResult>.Fail("Rien de soumis pour ce character.");
+                return Result<CombatActionChoice>.Fail("Rien de soumis pour ce character.");
             }
-
-            
             Cursor = Cursor.MoveNext(Timeline);
-
             if (Cursor.IsEnd)
             {
                 IsCombatResolutionCompleted = true;
             }
-
-            return Result<CombatActionResult>.Ok(new CombatActionResult(intent, new List<EffectSummary>()));
+            return Result<CombatActionChoice>.Ok(intent);
         }
+
 
         public void DoCleanup()
         {
             Lifecycle.MoveTo(RoundPhase.Cleanup);
-
-
         }
 
         public bool IsCombatOver => Cursor.IsEnd || Timeline.AllDead();
