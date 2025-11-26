@@ -1,7 +1,7 @@
 ﻿using DA.Game.Domain2.Matches.Aggregates;
 using DA.Game.Domain2.Matches.Entities;
 using DA.Game.Domain2.Matches.Services.Combat.Execution;
-using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Spells.Effects;

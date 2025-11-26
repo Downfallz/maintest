@@ -5,7 +5,7 @@ public enum RoundPhase
     Initialization,
     Evolution,
     Speed,
-    Combat,
+    AttackChoice,
     SpeedResolution,
     CombatResolution,
     Cleanup

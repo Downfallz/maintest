@@ -1,27 +1,50 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="..\Data\aliases.json" Link="Data\aliases.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\Data\Creatures\main.v1.json" Link="Data\Creatures\main.v1.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\Data\Spells\basic_attack.v1.json" Link="Data\Spells\basic_attack.v1.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" />
-    <ProjectReference Include="..\DA.Game.Shared.Tests\DA.Game.Shared.Tests.csproj" />
-    <ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="AutoFixture.AutoMoq" Version="4.18.1" />
+		<PackageReference Include="AutoFixture.Xunit2" Version="4.18.1" />
+		<PackageReference Include="coverlet.collector" Version="6.0.4" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+		<PackageReference Include="xunit" Version="2.9.3" />
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Using Include="Xunit" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\DA.Game.Domain2\DA.Game.Domain2.csproj" />
+		<ProjectReference Include="..\DA.Game.Infrastructure\DA.Game.Infrastructure.csproj" />
+		<ProjectReference Include="..\DA.Game.Shared.Tests\DA.Game.Shared.Tests.csproj" />
+		<ProjectReference Include="..\DA.Game.Shared\DA.Game.Shared.csproj" />
+	</ItemGroup>
 
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Data\Creatures\" />
+		<Folder Include="Data\Spells\" />
+	</ItemGroup>
+
+	<Target Name="BuildGameSchema" AfterTargets="Build">
+		<Exec Command="dotnet run --no-build --project ..\DA.Game.DataBuilder\DA.Game.DataBuilder.csproj --configuration $(Configuration) --base-dir=$(TargetDir)" WorkingDirectory="$(MSBuildProjectDirectory)" />
+	</Target>
 </Project>

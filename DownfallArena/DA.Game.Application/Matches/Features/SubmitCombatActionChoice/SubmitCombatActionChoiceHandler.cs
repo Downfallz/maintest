@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using DA.Game.Application.Matches.Ports;
-using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Shared.Utilities;
 using MediatR;
 
@@ -18,7 +18,7 @@ public sealed class SubmitCombatActionChoiceHandler(IMatchRepository repo,
             return Result<SubmitCombatActionResult>.Fail($"Match '{cmd.MatchId}' not found.");
         var domainChoice = mapper.Map<CombatActionChoice>(cmd.CombatActionChoice);
 
-        var res = match.SubmitCombatAction(cmd.slot, domainChoice);
+        var res = match.SubmitCombatAction(domainChoice);
         if (!res.IsSuccess)
             return Result<SubmitCombatActionResult>.Fail(res.Error!);
 

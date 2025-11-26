@@ -11,6 +11,6 @@ public sealed class SpellDefinitionDto
     public int Initiative { get; set; }
     public int EnergyCost { get; set; }
     public double CriticalChance { get; set; }             // ex: 0.15
-
+    public TargetingSpecDto Targeting { get; init; } = default!;
     public IReadOnlyCollection<EffectDto> Effects { get; set; } = [];
 }

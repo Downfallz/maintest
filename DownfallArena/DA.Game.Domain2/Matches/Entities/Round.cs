@@ -1,12 +1,16 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.RuleSets;
 using DA.Game.Domain2.Matches.Services;
-using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Domain2.Matches.ValueObjects.Combat;
+using DA.Game.Domain2.Matches.ValueObjects.Evolution;
+using DA.Game.Domain2.Matches.ValueObjects.RoundVo;
+using DA.Game.Domain2.Matches.ValueObjects.SpeedVo;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Utilities;
+using System.Collections.ObjectModel;
 
 namespace DA.Game.Domain2.Matches.Entities
 {
@@ -33,6 +37,7 @@ namespace DA.Game.Domain2.Matches.Entities
         public IReadOnlyCollection<SpeedChoice> Player1SpeedChoices => _p1Speed;
         public IReadOnlyCollection<SpeedChoice> Player2SpeedChoices => _p2Speed;
 
+        public ReadOnlyDictionary<CreatureId, CombatActionChoice> CombatActionChoices => _intents.AsReadOnly();
         protected Round(RoundId id, IGameResources resources, RuleSet ruleSet) : base(id)
         {
             Number = id.Value;
@@ -56,14 +61,14 @@ namespace DA.Game.Domain2.Matches.Entities
             return Lifecycle.MoveTo(RoundPhase.Evolution);
         }
 
-        public Result SubmitEvolutionChoice(PlayerActionContext ctx, SpellUnlockChoice choice)
+        public Result SubmitEvolutionChoice(GameContext ctx, SpellUnlockChoice choice)
         {
             ArgumentNullException.ThrowIfNull(ctx);
 
             if (Phase != RoundPhase.Evolution)
                 return Result.Fail("Phase invalide pour soumettre une évolution.");
 
-            if (ctx.Slot == PlayerSlot.Player1)
+            if (ctx.Actor.OwnerSlot == PlayerSlot.Player1)
             {
                 if (_p1Evolution.Count >= 2)
                     return Result.Fail(MaxChoicesAlreadySubmittedMessage);
@@ -86,14 +91,14 @@ namespace DA.Game.Domain2.Matches.Entities
             return Lifecycle.MoveTo(RoundPhase.Speed);
         }
 
-        public Result SubmitSpeedChoice(PlayerActionContext ctx, SpeedChoice choice)
+        public Result SubmitSpeedChoice(GameContext ctx, SpeedChoice choice)
         {
             ArgumentNullException.ThrowIfNull(ctx);
 
             if (Phase != RoundPhase.Speed)
                 return Result.Fail("Phase invalide pour soumettre un choix de vitesse.");
 
-            if (ctx.Slot == PlayerSlot.Player1)
+            if (ctx.Actor.OwnerSlot == PlayerSlot.Player1)
             {
                 if (_p1Speed.Count >= 3)
                     return Result.Fail(MaxChoicesAlreadySubmittedMessage);
@@ -113,15 +118,15 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public void InitializeCombatPhase()
         {
-            Lifecycle.MoveTo(RoundPhase.Combat);
+            Lifecycle.MoveTo(RoundPhase.AttackChoice);
         }
 
-        public Result<CombatActionChoice> SubmitCombatAction(PlayerActionContext ctx, CombatActionChoice choice)
+        public Result<CombatActionChoice> SubmitCombatAction(GameContext ctx, CombatActionChoice choice)
         {
             ArgumentNullException.ThrowIfNull(ctx);
             ArgumentNullException.ThrowIfNull(choice);
 
-            if (Phase != RoundPhase.Combat)
+            if (Phase != RoundPhase.AttackChoice)
                 return Result<CombatActionChoice>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
 
             if (_intents.ContainsKey(choice.ActorId))
@@ -129,7 +134,8 @@ namespace DA.Game.Domain2.Matches.Entities
 
             _intents[choice.ActorId] = choice;
 
-            if (_intents.Count == ctx.AllAvailableCharactersCount)
+
+            if (_intents.Count == ctx.Creatures.Count)
             {
                 IsCombatActionRequestPhaseCompleted = true;
             }
@@ -143,6 +149,7 @@ namespace DA.Game.Domain2.Matches.Entities
             Timeline = timeline;
             IsSpeedResolutionCompleted = true;
             Cursor = TurnCursor.Start;
+            Lifecycle.MoveTo(RoundPhase.CombatResolution);
         }
 
         public Result<CombatActionChoice> SelectNextActionToResolve()

@@ -5,16 +5,16 @@
   "characterClass": "Creature",
   "initiative": 1,
   "level": 0,
-  "energyCost": 1,
+  "energyCost": 0,
   "criticalChance": 0,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
   "effects": [
     {
       "kind": "Damage",
-      "targeting": {
-        "origin": "Enemy",
-        "scope": "SingleTarget",
-        "maxTargets": 1
-      },
       "amount": 1
     }
   ]

@@ -6,19 +6,18 @@ public sealed record PermanentBuffDefense : Effect, IPermanentEffect
 {
     public int Amount { get; }
 
-    private PermanentBuffDefense(int amount, TargetingSpec targeting)
-        : base(Matches.Enums.EffectKind.Buff, targeting) => Amount = amount;
+    private PermanentBuffDefense(int amount)
+        : base(Matches.Enums.EffectKind.Buff) => Amount = amount;
 
-    public static PermanentBuffDefense Of(int amount, TargetingSpec targeting)
+    public static PermanentBuffDefense Of(int amount)
     {
-        var res = Validate((amount > 0, "Buff amount must be > 0."),
-                        (targeting is not null, "Targeting required."));
+        var res = Validate((amount > 0, "Buff amount must be > 0."));
         if (!res.IsSuccess)
             throw new ArgumentException(res.Error);
 
-        return new PermanentBuffDefense(amount, targeting!);
+        return new PermanentBuffDefense(amount);
     }
 
     public static PermanentBuffDefense Self(int amount)
-        => Of(amount, TargetingSpec.Of(TargetOrigin.Self, TargetScope.SingleTarget, 1));
+        => Of(amount);
 }

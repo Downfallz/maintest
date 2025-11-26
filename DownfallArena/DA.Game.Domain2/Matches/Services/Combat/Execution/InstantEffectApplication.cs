@@ -4,7 +4,7 @@ using DA.Game.Shared.Contracts.Matches.Ids;
 namespace DA.Game.Domain2.Matches.Services.Combat.Execution;
 
 // ------------------------------------------------------------
-// DTO / helper types used inside the pipeline
+// DTO / helper types used inside the service
 // ------------------------------------------------------------
 
 public sealed record InstantEffectApplication(

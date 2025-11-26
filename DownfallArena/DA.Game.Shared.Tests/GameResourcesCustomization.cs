@@ -4,7 +4,7 @@ using DA.Game.Shared.Contracts.Resources.Spells;
 
 namespace DA.Game.Shared.Tests;
 
-internal sealed class GameResourcesCustomization : ICustomization
+public sealed class GameResourcesCustomization : ICustomization
 {
     public void Customize(IFixture fixture)
     {

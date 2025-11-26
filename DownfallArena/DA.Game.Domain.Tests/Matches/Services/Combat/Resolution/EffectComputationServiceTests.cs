@@ -42,7 +42,7 @@ public class EffectComputationServiceV1Tests
             new CreatureId(3)
         };
 
-        var damage = Damage.SingleTargetEnemy(10);
+        var damage = Damage.Of(10);
         var spell = CreateSpellWithEffects(new IEffect[] { damage });
         var intent = new CombatActionChoice(actorId, spell, targets);
 
@@ -72,7 +72,7 @@ public class EffectComputationServiceV1Tests
         };
 
         // TODO: ajuste la factory de Bleed à ta vraie signature
-        var bleed = Bleed.Of(amountPerTick: 2, durationRounds: 3, targeting: TargetingSpec.Of(TargetOrigin.Enemy, TargetScope.SingleTarget, 1));
+        var bleed = Bleed.Of(amountPerTick: 2, durationRounds: 3);
         var spell = CreateSpellWithEffects(new IEffect[] { bleed });
         var intent = new CombatActionChoice(actorId, spell, targets);
 
@@ -101,6 +101,7 @@ public class EffectComputationServiceV1Tests
             initiative: Initiative.Of(0),
             energyCost: Energy.Of(0),
             critChance: CriticalChance.Of(0),
+            targetingSpec: TargetingSpec.Of(TargetOrigin.Enemy, TargetScope.SingleTarget),
             effects: effects
         );
     }

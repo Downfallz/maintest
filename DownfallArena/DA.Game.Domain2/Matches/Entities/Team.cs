@@ -16,9 +16,9 @@ public class Team : IEntity
 
     public static Team FromCharacterTemplateAndSlot(CreatureDefinitionRef charTemplate, PlayerSlot playerSlot)
     {
-        return new Team(CombatCreature.FromCreatureTemplate(charTemplate, CreatureId.New(playerSlot == PlayerSlot.Player1 ? 1 : 4)),
-            CombatCreature.FromCreatureTemplate(charTemplate, CreatureId.New(playerSlot == PlayerSlot.Player1 ? 2 : 5)),
-            CombatCreature.FromCreatureTemplate(charTemplate, CreatureId.New(playerSlot == PlayerSlot.Player1 ? 3 : 6)));
+        return new Team(CombatCreature.FromCreatureTemplate(charTemplate, CreatureId.New(playerSlot == PlayerSlot.Player1 ? 1 : 4), playerSlot),
+            CombatCreature.FromCreatureTemplate(charTemplate, CreatureId.New(playerSlot == PlayerSlot.Player1 ? 2 : 5), playerSlot),
+            CombatCreature.FromCreatureTemplate(charTemplate, CreatureId.New(playerSlot == PlayerSlot.Player1 ? 3 : 6), playerSlot));
     }
 
     public CombatCreature this[int index] => _chars[index]; // 0..2

@@ -16,4 +16,9 @@ public sealed class SystemRandom : IRandom
         var uint32 = RandomNumberGenerator.GetInt32((int)diff);
         return min + uint32;
     }
+
+    public double NextDouble()
+    {
+        return Next(0, 100) / 100.0;
+    }
 }

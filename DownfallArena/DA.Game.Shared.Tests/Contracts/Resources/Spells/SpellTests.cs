@@ -17,6 +17,7 @@ public class SpellTests
         Initiative initiative,
         Energy energyCost,
         CriticalChance critChance,
+        TargetingSpec targeting,
         IReadOnlyCollection<IEffect> effects)
     {
         var spell = Spell.Create(
@@ -27,6 +28,7 @@ public class SpellTests
             initiative,
             energyCost,
             critChance,
+            targeting,
             effects
         );
 
@@ -52,6 +54,7 @@ public class SpellTests
         Initiative initiative,
         Energy energyCost,
         CriticalChance critChance,
+        TargetingSpec targeting,
         IReadOnlyCollection<IEffect> effects)
     {
         Assert.Throws<ArgumentException>(() =>
@@ -63,6 +66,7 @@ public class SpellTests
                 initiative,
                 energyCost,
                 critChance,
+                targeting,
                 effects));
     }
 
@@ -75,6 +79,7 @@ public class SpellTests
         Initiative initiative,
         Energy energyCost,
         CriticalChance critChance,
+        TargetingSpec targeting,
         string name)
     {
         Assert.Throws<ArgumentException>(() =>
@@ -86,6 +91,7 @@ public class SpellTests
                 initiative,
                 energyCost,
                 critChance,
+                targeting,
                 new List<Effect>()));
     }
 
@@ -98,6 +104,7 @@ public class SpellTests
         Initiative initiative,
         Energy energyCost,
         CriticalChance critChance,
+        TargetingSpec targeting,
         string name)
     {
         var effects = Array.Empty<IEffect>();
@@ -111,6 +118,7 @@ public class SpellTests
                 initiative,
                 energyCost,
                 critChance,
+                targeting,
                 effects));
     }
 
@@ -123,6 +131,7 @@ public class SpellTests
         Initiative initiative,
         Energy energyCost,
         CriticalChance critChance,
+        TargetingSpec targeting,
         string name,
         IReadOnlyCollection<IEffect> effects)
     {
@@ -134,12 +143,12 @@ public class SpellTests
             initiative,
             energyCost,
             critChance,
+            targeting,
             effects
         );
 
         Assert.NotNull(spell.Effects);
         Assert.NotEmpty(spell.Effects);
-        Assert.All(spell.Effects, e => Assert.NotNull(e.Targeting));
     }
 }
 

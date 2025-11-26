@@ -1,4 +1,4 @@
-﻿using DA.Game.Domain2.Matches.ValueObjects;
+﻿using DA.Game.Domain2.Matches.Contexts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +11,5 @@ public interface IDamageComputationService
 {
     int ComputeFinalDamage(
         int rawDamage,
-        CharacterStatus attacker,
-        CharacterStatus defender);
+        CharacterSnapshot defender);
 }

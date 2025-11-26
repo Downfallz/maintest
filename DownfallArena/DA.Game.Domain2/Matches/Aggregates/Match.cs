@@ -1,10 +1,18 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Entities;
 using DA.Game.Domain2.Matches.Events;
+using DA.Game.Domain2.Matches.Events.Combat;
+using DA.Game.Domain2.Matches.Events.Evolution;
+using DA.Game.Domain2.Matches.Events.Match;
+using DA.Game.Domain2.Matches.Events.Round;
+using DA.Game.Domain2.Matches.Events.Speed;
 using DA.Game.Domain2.Matches.Messages;
 using DA.Game.Domain2.Matches.RuleSets;
 using DA.Game.Domain2.Matches.Services;
-using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Domain2.Matches.ValueObjects.Combat;
+using DA.Game.Domain2.Matches.ValueObjects.Evolution;
+using DA.Game.Domain2.Matches.ValueObjects.MatchVo;
+using DA.Game.Domain2.Matches.ValueObjects.SpeedVo;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -145,17 +153,20 @@ public sealed class Match : AggregateRoot<MatchId>
     /// </summary>
     public Result SubmitEvolutionChoice(PlayerSlot player, SpellUnlockChoice choice)
     {
+        ArgumentNullException.ThrowIfNull(choice);
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitEvolutionChoice(this);
         if (!guard.IsSuccess)
             return guard;
 
-        var playerCtx = BuildContextForCurrentPlayer(player);
-        var result = CurrentRound!.SubmitEvolutionChoice(playerCtx, choice);
+        var ctxResult = BuildGameContextForCurrentCreature(choice.CharacterId);
+        if (!ctxResult.IsSuccess)
+            return Result.Fail(ctxResult.Error!);
+        var result = CurrentRound!.SubmitEvolutionChoice(ctxResult.Value!, choice);
 
         if (!result.IsSuccess)
             return result;
 
-        AddEvent(new EvolutionChoiceSubmitted(CurrentRound.Id, playerCtx.Slot, choice, _clock.UtcNow));
+        AddEvent(new EvolutionChoiceSubmitted(CurrentRound.Id, ctxResult.Value!.Actor.OwnerSlot, choice, _clock.UtcNow));
 
         if (CurrentRound.IsEvolutionPhaseComplete)
             AddEvent(new EvolutionPhaseCompleted(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
@@ -173,12 +184,16 @@ public sealed class Match : AggregateRoot<MatchId>
     /// </summary>
     public Result SubmitSpeedChoice(PlayerSlot slot, SpeedChoice speedChoice)
     {
+        ArgumentNullException.ThrowIfNull(speedChoice);
+
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitSpeedChoice(this);
         if (!guard.IsSuccess)
             return guard;
 
-        var playerCtx = BuildContextForCurrentPlayer(slot);
-        var result = CurrentRound!.SubmitSpeedChoice(playerCtx, speedChoice);
+        var ctxResult = BuildGameContextForCurrentCreature(speedChoice.CharacterId);
+        if (!ctxResult.IsSuccess)
+            return Result.Fail(ctxResult.Error!);
+        var result = CurrentRound!.SubmitSpeedChoice(ctxResult.Value!, speedChoice);
 
         if (!result.IsSuccess)
             return result;
@@ -197,25 +212,28 @@ public sealed class Match : AggregateRoot<MatchId>
         return Result.Ok();
     }
 
-    public Result SubmitCombatAction(PlayerSlot slot, CombatActionChoice combatActionChoice)
+    public Result SubmitCombatAction(CombatActionChoice combatActionChoice)
     {
+        ArgumentNullException.ThrowIfNull(combatActionChoice);
+
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
         if (!guard.IsSuccess)
             return guard;
 
-        var playerCtx = BuildContextForCurrentPlayer(slot);
+        var ctxResult = BuildGameContextForCurrentCreature(combatActionChoice.ActorId);
+        if (!ctxResult.IsSuccess)
+            return Result.Fail(ctxResult.Error!);
 
-        var validator = new ActionValidator(_ruleSet);
-        var validateResult = validator.Validate(playerCtx, combatActionChoice);
+        var validateResult = _ruleSet.Combat.ValidateAction(ctxResult.Value!, combatActionChoice);
         if (!validateResult.IsSuccess)
         {
             return validateResult;
         }
-        var result = CurrentRound!.SubmitCombatAction(playerCtx, combatActionChoice);
+        var result = CurrentRound!.SubmitCombatAction(ctxResult.Value!, combatActionChoice);
         if (!result.IsSuccess)
             return Result.Fail(result.Error!);
 
-        AddEvent(new CombatActionChoiceSubmitted(CurrentRound!.Id, slot, combatActionChoice, _clock.UtcNow));
+        AddEvent(new CombatActionChoiceSubmitted(CurrentRound!.Id, combatActionChoice, _clock.UtcNow));
 
         if (CurrentRound!.IsCombatActionRequestPhaseCompleted)
         {
@@ -250,11 +268,15 @@ public sealed class Match : AggregateRoot<MatchId>
 
         var intent = next.Value!;
 
+        var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
+        if (!ctxResult.IsSuccess)
+            return Result<bool>.Fail(ctxResult.Error!);
+
         //// 1) Résoudre les effets pour cette action
-        var combatactionresult = _ruleSet.Combat.Resolve(intent, this);
+        var combatactionresult = _ruleSet.Combat.Resolve(ctxResult.Value!, intent);
 
         //// 2) Appliquer les effets sur les teams / créatures
-        var appli = _ruleSet.Combat.ApplyCombatResult(combatactionresult.Value!, this);
+        var appli = _ruleSet.Combat.ApplyCombatResult(combatactionresult.Value!, AllCreatures);
 
         //// 3) Lever un event d’action résolue
         //AddEvent(new CombatActionResolved(
@@ -303,7 +325,8 @@ public sealed class Match : AggregateRoot<MatchId>
         return Result.Ok();
     }
 
-    private PlayerActionContext BuildContextForCurrentPlayer(PlayerSlot slot)
+
+    private Result<GameContext> BuildGameContextForCurrentCreature(CreatureId creatureId)
     {
         if (Player1Team is null || Player2Team is null)
             throw new InvalidOperationException("Teams are not initialized.");
@@ -311,8 +334,6 @@ public sealed class Match : AggregateRoot<MatchId>
         if (State != MatchState.Started)
             throw new InvalidOperationException("Match is not started.");
 
-        var my = slot == PlayerSlot.Player1 ? Player1Team : Player2Team;
-        var enemy = slot == PlayerSlot.Player1 ? Player2Team : Player1Team;
-        return PlayerActionContext.FromTeams(slot, my, enemy);
+        return GameContext.FromMatch(creatureId, this);
     }
 }

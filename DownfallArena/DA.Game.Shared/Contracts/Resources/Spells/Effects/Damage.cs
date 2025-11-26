@@ -7,20 +7,14 @@ public sealed record Damage : Effect, IInstantEffect
 {
     public int Amount { get; }
 
-    private Damage(int amount, TargetingSpec targeting) : base(EffectKind.Damage, targeting) => Amount = amount;
+    private Damage(int amount) : base(EffectKind.Damage) => Amount = amount;
 
-    public static Damage Of(int amount, TargetingSpec targeting)
+    public static Damage Of(int amount)
     {
-        var res = Validate((amount > 0, "Damage amount must be > 0."),
-                            (targeting is not null, "Targeting required."));
+        var res = Validate((amount > 0, "Damage amount must be > 0."));
         if (!res.IsSuccess)
             throw new ArgumentException(res.Error);
 
-        return new Damage(amount, targeting!);
+        return new Damage(amount);
     }
-
-    public static Damage SingleTargetEnemy(int amount)
-        => Of(amount, TargetingSpec.Of(TargetOrigin.Enemy, TargetScope.SingleTarget, 1));
-
-    public Damage WithTargeting(TargetingSpec targeting) => Of(Amount, targeting);
 }

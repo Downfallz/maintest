@@ -1,4 +1,5 @@
-﻿using DA.Game.Shared.Contracts.Resources.Spells.Effects;
+﻿using DA.Game.Shared.Contracts.Matches.Enums;
+using DA.Game.Shared.Contracts.Resources.Spells.Effects;
 using DA.Game.Shared.Contracts.Resources.Spells.Enums;
 using DA.Game.Shared.Contracts.Resources.Stats;
 
@@ -12,6 +13,7 @@ public sealed record Spell(
     Initiative Initiative,
     Energy EnergyCost,
     CriticalChance CritChance,
+    TargetingSpec TargetingSpec,
     IReadOnlyCollection<IEffect> Effects)
 {
     public static Spell Create(
@@ -22,6 +24,7 @@ public sealed record Spell(
         Initiative initiative,
         Energy energyCost,
         CriticalChance critChance,
+        TargetingSpec targetingSpec,
         IReadOnlyCollection<IEffect> effects)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -38,6 +41,7 @@ public sealed record Spell(
             initiative,
             energyCost,
             critChance,
+            targetingSpec,
             effects
         );
     }

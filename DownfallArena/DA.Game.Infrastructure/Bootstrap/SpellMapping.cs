@@ -24,9 +24,6 @@ public static class SpellMapping
 
     private static Bleed ToBleedRef(this EffectDto dto)
     {
-        if (dto.Targeting is null)
-            throw new InvalidOperationException("Bleed requires Targeting.");
-
         // helpers pour éviter les null
         static int Req(int? value, string name)
             => value ?? throw new InvalidOperationException(
@@ -35,19 +32,13 @@ public static class SpellMapping
         var amountPerTick = Req(dto.AmountPerTick, nameof(dto.AmountPerTick));
         var durationRounds = Req(dto.DurationRounds, nameof(dto.DurationRounds));
 
-        var targeting = dto.Targeting.ToRef();
-
         return Bleed.Of(
             amountPerTick,
-            durationRounds,
-            targeting
+            durationRounds
         );
     }
     private static Damage ToDamageRef(this EffectDto dto)
     {
-        if (dto.Targeting is null)
-            throw new InvalidOperationException("Damage requires Targeting.");
-
         // helpers pour éviter les null
         static int Req(int? value, string name)
             => value ?? throw new InvalidOperationException(
@@ -55,10 +46,7 @@ public static class SpellMapping
 
         var amount = Req(dto.Amount, nameof(dto.Amount));
 
-        var targeting = dto.Targeting.ToRef();
-
-        return Damage.Of(amount,
-            targeting
+        return Damage.Of(amount
         );
     }
     // ---------- Targeting
@@ -80,6 +68,7 @@ public static class SpellMapping
             , Initiative.Of(dto.Initiative)
             , Energy.Of(dto.EnergyCost)
             , CriticalChance.Of(dto.CriticalChance)
+            , dto.Targeting.ToRef()
             , dto.Effects.Select(e => e.ToRef()).ToArray()
         );
 

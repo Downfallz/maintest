@@ -2,7 +2,7 @@
 
 namespace DA.Game.Shared.Tests;
 
-internal sealed class SpellEffectCustomization : ICustomization
+public sealed class SpellEffectCustomization : ICustomization
 {
     public void Customize(IFixture fixture)
     {

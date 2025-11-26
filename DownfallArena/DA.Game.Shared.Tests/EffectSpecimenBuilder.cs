@@ -6,7 +6,7 @@ using DA.Game.Shared.Contracts.Resources.Spells.Enums;
 
 namespace DA.Game.Shared.Tests;
 
-internal sealed class EffectSpecimenBuilder : ISpecimenBuilder
+public sealed class EffectSpecimenBuilder : ISpecimenBuilder
 {
     public object Create(object request, ISpecimenContext context)
     {
@@ -31,9 +31,7 @@ internal sealed class EffectSpecimenBuilder : ISpecimenBuilder
         // durationRounds ∈ [1, 4]
         var durationRounds = Math.Abs(context.Create<int>()) % 4 + 1;
 
-        var targeting = CreateRandomTargeting(context);
-
-        return Bleed.Of(amountPerTick, durationRounds, targeting);
+        return Bleed.Of(amountPerTick, durationRounds);
     }
 
     private static Damage CreateDamage(ISpecimenContext context)
@@ -41,26 +39,7 @@ internal sealed class EffectSpecimenBuilder : ISpecimenBuilder
         // amount ∈ [1, 10]
         var amount = Math.Abs(context.Create<int>()) % 10 + 1;
 
-        var targeting = CreateRandomTargeting(context);
-
-        return Damage.Of(amount, targeting);
-    }
-
-    private static TargetingSpec CreateRandomTargeting(ISpecimenContext context)
-    {
-        // AutoFixture sait fabriquer des enums => parfait pour randomiser
-        var origin = context.Create<TargetOrigin>();
-        var scope = context.Create<TargetScope>();
-
-        // maxTargets : null ou 1–3
-        int? maxTargets = null;
-        var useLimitedTargets = context.Create<bool>();
-        if (useLimitedTargets)
-        {
-            maxTargets = Math.Abs(context.Create<int>()) % 3 + 1;
-        }
-
-        return TargetingSpec.Of(origin, scope, maxTargets);
+        return Damage.Of(amount);
     }
 }
 

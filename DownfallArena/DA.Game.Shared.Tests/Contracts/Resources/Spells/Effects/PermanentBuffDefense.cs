@@ -12,10 +12,9 @@ public class PermanentBuffDefenseTests
         var targeting = TargetingSpec.Of(TargetOrigin.Ally, TargetScope.SingleTarget, 1);
         var amount = 3;
 
-        var buff = PermanentBuffDefense.Of(amount, targeting);
+        var buff = PermanentBuffDefense.Of(amount);
 
         Assert.Equal(amount, buff.Amount);
-        Assert.Equal(targeting, buff.Targeting);
     }
 
     [Theory]
@@ -27,7 +26,7 @@ public class PermanentBuffDefenseTests
         var targeting = TargetingSpec.Of(TargetOrigin.Ally, TargetScope.SingleTarget, 1);
 
         Assert.Throws<ArgumentException>(() =>
-            PermanentBuffDefense.Of(amount, targeting));
+            PermanentBuffDefense.Of(amount));
     }
 
     [Fact]
@@ -38,8 +37,5 @@ public class PermanentBuffDefenseTests
         var buff = PermanentBuffDefense.Self(amount);
 
         Assert.Equal(amount, buff.Amount);
-        Assert.Equal(TargetOrigin.Self, buff.Targeting.Origin);
-        Assert.Equal(TargetScope.SingleTarget, buff.Targeting.Scope);
-        Assert.Equal(1, buff.Targeting.MaxTargets);
     }
 }

@@ -6,5 +6,5 @@ namespace DA.Game.Domain2.Matches.Services.Combat;
 
 public interface IInstantEffectService
 {
-    void ApplyInstantEffect(Match match, CombatCreature target, InstantEffectApplication eff);
+    void ApplyInstantEffect(InstantEffectApplication eff, CombatCreature target);
 }

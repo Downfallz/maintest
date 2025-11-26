@@ -12,7 +12,7 @@ public class CombatCreature : Entity<CreatureId>
 {
     protected CombatCreature(CreatureId id) : base(id) { }
 
-    public static CombatCreature FromCreatureTemplate(CreatureDefinitionRef creatureDefinitionTemplate, CreatureId id)
+    public static CombatCreature FromCreatureTemplate(CreatureDefinitionRef creatureDefinitionTemplate, CreatureId id, PlayerSlot playerSlot)
     {
         ArgumentNullException.ThrowIfNull(creatureDefinitionTemplate);
 
@@ -29,7 +29,8 @@ public class CombatCreature : Entity<CreatureId>
             CurrentInitiative = creatureDefinitionTemplate.BaseInitiative,
             BonusDefense = Defense.Of(0),
             BonusCritical = CriticalChance.Of(0),
-            IsStunned = false
+            IsStunned = false,
+            OwnerSlot = playerSlot
         };
     }
     public required IReadOnlyList<SpellId> StartingSpellIds { get; set; }
@@ -46,6 +47,7 @@ public class CombatCreature : Entity<CreatureId>
     public required bool IsStunned { get; set; }
     public bool IsDead => Health.IsDead();
     public bool IsAlive => !IsDead;
+    public PlayerSlot OwnerSlot { get; set; }
 
     public void TakeDamage(int damage)
     {
