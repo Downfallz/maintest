@@ -1,18 +1,16 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.Events;
 using DA.Game.Domain2.Matches.Events.Combat;
-using DA.Game.Domain2.Matches.Events.Evolution;
+using DA.Game.Domain2.Matches.Events.EndOfRound;
 using DA.Game.Domain2.Matches.Events.Match;
-using DA.Game.Domain2.Matches.Events.Round;
-using DA.Game.Domain2.Matches.Events.Speed;
+using DA.Game.Domain2.Matches.Events.Planning;
+using DA.Game.Domain2.Matches.Events.StartOfRound;
 using DA.Game.Domain2.Matches.Messages;
 using DA.Game.Domain2.Matches.RuleSets;
-using DA.Game.Domain2.Matches.Services;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Evolution;
-using DA.Game.Domain2.Matches.ValueObjects.MatchVo;
-using DA.Game.Domain2.Matches.ValueObjects.SpeedVo;
+using DA.Game.Domain2.Matches.ValueObjects.Phases;
+using DA.Game.Domain2.Matches.ValueObjects.Planning;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -21,8 +19,6 @@ using DA.Game.Shared.Contracts.Players.Ids;
 using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Utilities;
-using System.Collections.ObjectModel;
-using System.Data.SqlTypes;
 
 namespace DA.Game.Domain2.Matches.Aggregates;
 
@@ -112,8 +108,8 @@ public sealed class Match : AggregateRoot<MatchId>
 
     private void InitializeTeams()
     {
-        Player1Team = Team.FromCharacterTemplateAndSlot(_resources.GetCharacter(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player1);
-        Player2Team = Team.FromCharacterTemplateAndSlot(_resources.GetCharacter(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player2);
+        Player1Team = Team.FromCharacterTemplateAndSlot(_resources.GetCreature(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player1);
+        Player2Team = Team.FromCharacterTemplateAndSlot(_resources.GetCreature(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player2);
     }
 
     private void InitializeFirstRound()
@@ -190,7 +186,7 @@ public sealed class Match : AggregateRoot<MatchId>
         if (!guard.IsSuccess)
             return guard;
 
-        var ctxResult = BuildGameContextForCurrentCreature(speedChoice.CharacterId);
+        var ctxResult = BuildGameContextForCurrentCreature(speedChoice.CreatureId);
         if (!ctxResult.IsSuccess)
             return Result.Fail(ctxResult.Error!);
         var result = CurrentRound!.SubmitSpeedChoice(ctxResult.Value!, speedChoice);
@@ -326,7 +322,7 @@ public sealed class Match : AggregateRoot<MatchId>
     }
 
 
-    private Result<GameContext> BuildGameContextForCurrentCreature(CreatureId creatureId)
+    private Result<CreaturePerspective> BuildGameContextForCurrentCreature(CreatureId creatureId)
     {
         if (Player1Team is null || Player2Team is null)
             throw new InvalidOperationException("Teams are not initialized.");
@@ -334,6 +330,6 @@ public sealed class Match : AggregateRoot<MatchId>
         if (State != MatchState.Started)
             throw new InvalidOperationException("Match is not started.");
 
-        return GameContext.FromMatch(creatureId, this);
+        return CreaturePerspective.FromMatch(creatureId, this);
     }
 }

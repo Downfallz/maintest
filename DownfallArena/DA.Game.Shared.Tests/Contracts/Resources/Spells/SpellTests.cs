@@ -35,7 +35,7 @@ public class SpellTests
         Assert.Equal(id, spell.Id);
         Assert.Equal(name, spell.Name);
         Assert.Equal(spellType, spell.SpellType);
-        Assert.Equal(characterClass, spell.CharacterClass);
+        Assert.Equal(characterClass, spell.CreatureClass);
         Assert.Equal(initiative, spell.Initiative);
         Assert.Equal(energyCost, spell.EnergyCost);
         Assert.Equal(critChance, spell.CritChance);

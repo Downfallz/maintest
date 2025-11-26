@@ -5,6 +5,6 @@ using DA.Game.Shared.Contracts.Matches.Enums;
 public sealed record ActivationSlotDto(
     PlayerSlot PlayerSlot,
     CombatCharacterDto CombatCharacter,
-    Speed Speed,
+    SkillSpeed Speed,
     int InitiativeValue
 );

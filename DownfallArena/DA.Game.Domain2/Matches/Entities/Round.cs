@@ -3,8 +3,8 @@ using DA.Game.Domain2.Matches.RuleSets;
 using DA.Game.Domain2.Matches.Services;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Evolution;
-using DA.Game.Domain2.Matches.ValueObjects.RoundVo;
-using DA.Game.Domain2.Matches.ValueObjects.SpeedVo;
+using DA.Game.Domain2.Matches.ValueObjects.Phases;
+using DA.Game.Domain2.Matches.ValueObjects.Planning;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -58,14 +58,14 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result InitializeEvolutionPhase()
         {
-            return Lifecycle.MoveTo(RoundPhase.Evolution);
+            return Lifecycle.MoveTo(RoundPhase.Planning);
         }
 
-        public Result SubmitEvolutionChoice(GameContext ctx, SpellUnlockChoice choice)
+        public Result SubmitEvolutionChoice(CreaturePerspective ctx, SpellUnlockChoice choice)
         {
             ArgumentNullException.ThrowIfNull(ctx);
 
-            if (Phase != RoundPhase.Evolution)
+            if (Phase != RoundPhase.Planning)
                 return Result.Fail("Phase invalide pour soumettre une évolution.");
 
             if (ctx.Actor.OwnerSlot == PlayerSlot.Player1)
@@ -88,14 +88,14 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result InitializeSpeedPhase()
         {
-            return Lifecycle.MoveTo(RoundPhase.Speed);
+            return Lifecycle.MoveTo(RoundPhase.Planning);
         }
 
-        public Result SubmitSpeedChoice(GameContext ctx, SpeedChoice choice)
+        public Result SubmitSpeedChoice(CreaturePerspective ctx, SpeedChoice choice)
         {
             ArgumentNullException.ThrowIfNull(ctx);
 
-            if (Phase != RoundPhase.Speed)
+            if (Phase != RoundPhase.Planning)
                 return Result.Fail("Phase invalide pour soumettre un choix de vitesse.");
 
             if (ctx.Actor.OwnerSlot == PlayerSlot.Player1)
@@ -118,15 +118,15 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public void InitializeCombatPhase()
         {
-            Lifecycle.MoveTo(RoundPhase.AttackChoice);
+            Lifecycle.MoveTo(RoundPhase.Combat);
         }
 
-        public Result<CombatActionChoice> SubmitCombatAction(GameContext ctx, CombatActionChoice choice)
+        public Result<CombatActionChoice> SubmitCombatAction(CreaturePerspective ctx, CombatActionChoice choice)
         {
             ArgumentNullException.ThrowIfNull(ctx);
             ArgumentNullException.ThrowIfNull(choice);
 
-            if (Phase != RoundPhase.AttackChoice)
+            if (Phase != RoundPhase.Combat)
                 return Result<CombatActionChoice>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
 
             if (_intents.ContainsKey(choice.ActorId))
@@ -145,11 +145,11 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public void InitializeSpeedResolutionPhase(CombatTimeline timeline)
         {
-            Lifecycle.MoveTo(RoundPhase.SpeedResolution);
+            Lifecycle.MoveTo(RoundPhase.Combat);
             Timeline = timeline;
             IsSpeedResolutionCompleted = true;
             Cursor = TurnCursor.Start;
-            Lifecycle.MoveTo(RoundPhase.CombatResolution);
+            Lifecycle.MoveTo(RoundPhase.Combat);
         }
 
         public Result<CombatActionChoice> SelectNextActionToResolve()
@@ -177,7 +177,7 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public void DoCleanup()
         {
-            Lifecycle.MoveTo(RoundPhase.Cleanup);
+            Lifecycle.MoveTo(RoundPhase.EndOfRound);
         }
 
         public bool IsCombatOver => Cursor.IsEnd || Timeline.AllDead();

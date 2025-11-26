@@ -6,5 +6,5 @@ namespace DA.Game.Domain2.Matches.Policies.Combat;
 
 public interface ICostPolicy
 {
-    Result EnsureCreatureHasEnoughEnergy(GameContext ctx, CombatActionChoice choice);
+    Result EnsureCreatureHasEnoughEnergy(CreaturePerspective ctx, CombatActionChoice choice);
 }

@@ -11,7 +11,7 @@ namespace DA.Game.Domain2.Matches.Policies.Combat;
 public sealed class TargetingPolicyV1 : ITargetingPolicy
 {
 
-    public Result EnsureCombatActionHasValidTargets(GameContext ctx, CombatActionChoice choice)
+    public Result EnsureCombatActionHasValidTargets(CreaturePerspective ctx, CombatActionChoice choice)
     {
         ArgumentNullException.ThrowIfNull(ctx);
         ArgumentNullException.ThrowIfNull(choice);

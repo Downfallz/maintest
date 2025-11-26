@@ -1,6 +1,6 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.Services.Combat;
+using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 using DA.Game.Infrastructure.Bootstrap;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -31,7 +31,7 @@ public class DamageComputationServiceTests
     {
         // Arrange
         const int rawDamage = 10;
-        CharacterSnapshot defender = null!;
+        CreatureSnapshot defender = null!;
 
         // Act
         var act = () => _sut.ComputeFinalDamage(rawDamage, defender);
@@ -131,26 +131,26 @@ public class DamageComputationServiceTests
 
     // ---------- Helpers ----------
 
-    private CharacterSnapshot CreateAliveSnapshot()
+    private CreatureSnapshot CreateAliveSnapshot()
     {
         var id = new CreatureId(1);
-        var def = _resources.GetCharacter(new CreatureDefId("creature:main:v1"));
+        var def = _resources.GetCreature(new CreatureDefId("creature:main:v1"));
         var playerSlot = PlayerSlot.Player2;
         var creature = CombatCreature.FromCreatureTemplate(def, id, playerSlot);
 
-        return CharacterSnapshot.From(creature);
+        return CreatureSnapshot.From(creature);
     }
 
-    private CharacterSnapshot CreateDeadSnapshot()
+    private CreatureSnapshot CreateDeadSnapshot()
     {
         var id = new CreatureId(1);
-        var def = _resources.GetCharacter(new CreatureDefId("creature:main:v1"));
+        var def = _resources.GetCreature(new CreatureDefId("creature:main:v1"));
         var playerSlot = PlayerSlot.Player2;
         var creature = CombatCreature.FromCreatureTemplate(def, id, playerSlot);
 
         // Kill the creature so the snapshot reflects a dead state
         creature.TakeDamage(creature.Health.Value + 50);
 
-        return CharacterSnapshot.From(creature);
+        return CreatureSnapshot.From(creature);
     }
 }

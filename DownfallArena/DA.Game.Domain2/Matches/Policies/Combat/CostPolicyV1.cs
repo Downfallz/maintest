@@ -6,7 +6,7 @@ namespace DA.Game.Domain2.Matches.Policies.Combat;
 
 public sealed class CostPolicyV1 : ICostPolicy
 {
-    public Result EnsureCreatureHasEnoughEnergy(GameContext ctx, CombatActionChoice choice)
+    public Result EnsureCreatureHasEnoughEnergy(CreaturePerspective ctx, CombatActionChoice choice)
     {
         ArgumentNullException.ThrowIfNull(ctx);
         ArgumentNullException.ThrowIfNull(choice);

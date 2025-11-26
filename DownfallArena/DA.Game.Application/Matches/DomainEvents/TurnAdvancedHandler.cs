@@ -1,7 +1,7 @@
 ﻿using DA.Game.Application.Matches.Features.PlayTurn;
 using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Matches.ReadModels;
-using DA.Game.Domain2.Matches.Events.Round;
+using DA.Game.Domain2.Matches.Events.StartOfRound;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using MediatR;
 using Microsoft.Extensions.Options;

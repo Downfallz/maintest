@@ -1,7 +1,7 @@
 ﻿using AutoFixture.Xunit2;
 using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.Services.Combat;
-using DA.Game.Domain2.Matches.Services.Combat.Execution;
+using DA.Game.Domain2.Matches.Services.Combat.Resolution;
+using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Infrastructure.Bootstrap;
 using DA.Game.Shared.Contracts.Matches.Enums;
@@ -33,7 +33,7 @@ public class EffectExecutionServiceTests
 
     private CombatCreature CreateCreature(CreatureId id)
     {
-        var def = _resources.GetCharacter(new CreatureDefId("creature:main:v1"));
+        var def = _resources.GetCreature(new CreatureDefId("creature:main:v1"));
         var playerSlot = PlayerSlot.Player2;
         return CombatCreature.FromCreatureTemplate(def, id, playerSlot);
     }
@@ -43,7 +43,7 @@ public class EffectExecutionServiceTests
         return new CombatActionResult(
             choice: null!,                 // irrelevant for this test
             instantEffects: instantEffects,
-            wasCritical: false
+            critical: CritComputationResult.Normal(0, 0)
         );
     }
 

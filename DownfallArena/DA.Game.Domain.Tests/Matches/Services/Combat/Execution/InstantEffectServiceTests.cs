@@ -1,8 +1,7 @@
 ﻿using AutoFixture.Xunit2;
 using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.Services.Combat;
-using DA.Game.Domain2.Matches.Services.Combat.Execution;
+using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 using DA.Game.Infrastructure.Bootstrap;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -84,7 +83,7 @@ public class InstantEffectServiceTests
 
         // Assert
         damageService.Verify(
-            x => x.ComputeFinalDamage(It.IsAny<int>(), It.IsAny<CharacterSnapshot>()),
+            x => x.ComputeFinalDamage(It.IsAny<int>(), It.IsAny<CreatureSnapshot>()),
             Times.Never);
 
         target.Health.Should().Be(initialHealth);
@@ -108,7 +107,7 @@ public class InstantEffectServiceTests
         );
 
         damageService
-            .Setup(x => x.ComputeFinalDamage(rawAmount, It.IsAny<CharacterSnapshot>()))
+            .Setup(x => x.ComputeFinalDamage(rawAmount, It.IsAny<CreatureSnapshot>()))
             .Returns(computedDamage);
 
         // Act
@@ -116,7 +115,7 @@ public class InstantEffectServiceTests
 
         // Assert
         damageService.Verify(
-            x => x.ComputeFinalDamage(rawAmount, It.IsAny<CharacterSnapshot>()),
+            x => x.ComputeFinalDamage(rawAmount, It.IsAny<CreatureSnapshot>()),
             Times.Once);
 
         target.Health.Value.Should().Be(initialHealth - Math.Max(0, computedDamage));
@@ -141,7 +140,7 @@ public class InstantEffectServiceTests
         );
 
         damageService
-            .Setup(x => x.ComputeFinalDamage(rawAmount, It.IsAny<CharacterSnapshot>()))
+            .Setup(x => x.ComputeFinalDamage(rawAmount, It.IsAny<CreatureSnapshot>()))
             .Returns(computedDamage);
 
         // Act
@@ -151,7 +150,7 @@ public class InstantEffectServiceTests
         target.Health.Should().Be(initialHealth);
 
         damageService.Verify(
-            x => x.ComputeFinalDamage(rawAmount, It.IsAny<CharacterSnapshot>()),
+            x => x.ComputeFinalDamage(rawAmount, It.IsAny<CreatureSnapshot>()),
             Times.Once);
     }
 
@@ -160,7 +159,7 @@ public class InstantEffectServiceTests
     private CombatCreature CreateBasicCreature()
     {
         var id = new CreatureId(1);
-        var def = _resources.GetCharacter(new CreatureDefId("creature:main:v1"));
+        var def = _resources.GetCreature(new CreatureDefId("creature:main:v1"));
         var playerSlot = PlayerSlot.Player2;
         return CombatCreature.FromCreatureTemplate(def, id, playerSlot);
     }

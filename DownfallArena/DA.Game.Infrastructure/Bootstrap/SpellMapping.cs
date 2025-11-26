@@ -64,7 +64,7 @@ public static class SpellMapping
         return new Spell(SpellId.New(dto.Id)
             , dto.Name
             , dto.SpellType
-            , dto.CharacterClass
+            , dto.CreatureClass
             , Initiative.Of(dto.Initiative)
             , Energy.Of(dto.EnergyCost)
             , CriticalChance.Of(dto.CriticalChance)

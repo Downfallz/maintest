@@ -6,5 +6,5 @@ namespace DA.Game.Domain2.Matches.Policies.Combat;
 
 public interface ITargetingPolicy
 {
-    Result EnsureCombatActionHasValidTargets(GameContext ctx, CombatActionChoice choice);
+    Result EnsureCombatActionHasValidTargets(CreaturePerspective ctx, CombatActionChoice choice);
 }

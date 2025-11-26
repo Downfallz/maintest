@@ -1,4 +1,4 @@
-﻿using DA.Game.Domain2.Matches.ValueObjects.SpeedVo;
+﻿using DA.Game.Domain2.Matches.ValueObjects.Planning;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Utilities;
 

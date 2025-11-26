@@ -2,12 +2,8 @@
 
 public enum RoundPhase
 {
-    Initialization,
-    Evolution,
-    Speed,
-    AttackChoice,
-    SpeedResolution,
-    CombatResolution,
-    Cleanup
+    StartOfRound,   // DOT/HOT, +2 energy, etc.
+    Planning,       // évolutions + choix de speed
+    Combat,         // combat choices + ordre de tour + résolution
+    EndOfRound      // cleanup, expiration, morts, etc.
 }
-

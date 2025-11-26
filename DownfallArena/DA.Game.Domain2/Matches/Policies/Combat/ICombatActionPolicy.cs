@@ -10,5 +10,5 @@ namespace DA.Game.Domain2.Matches.Policies.Combat;
 public interface ICombatActionPolicy
 {
     Result EnsureActionIsValid(
-        GameContext ctx);
+        CreaturePerspective ctx);
 }

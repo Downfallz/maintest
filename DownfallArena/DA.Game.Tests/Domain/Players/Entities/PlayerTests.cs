@@ -1,6 +1,6 @@
 ﻿namespace DA.Game.Tests.Domain.Players.Entities;
 
-using DA.Game.Domain2.Match.Entities;
+using DA.Game.Domain2.Players.Entities;
 using DA.Game.Domain2.Players.Messages;
 using DA.Game.Shared.Contracts.Players.Enums;
 using DA.Game.Shared.Contracts.Players.Ids;

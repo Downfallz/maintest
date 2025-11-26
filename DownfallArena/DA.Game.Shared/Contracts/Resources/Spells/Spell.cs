@@ -9,7 +9,7 @@ public sealed record Spell(
     SpellId Id,
     string Name,
     SpellType SpellType,
-    CreatureClass CharacterClass,
+    CreatureClass CreatureClass,
     Initiative Initiative,
     Energy EnergyCost,
     CriticalChance CritChance,

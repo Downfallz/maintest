@@ -1,5 +1,5 @@
-﻿using DA.Game.Domain2.Matches.Services.Combat.Execution;
-using DA.Game.Domain2.Matches.Services.Combat.Resolution;
+﻿using DA.Game.Domain2.Matches.Services.Combat.Resolution;
+using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.ValueObjects.Combat;

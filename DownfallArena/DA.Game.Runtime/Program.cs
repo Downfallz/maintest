@@ -103,27 +103,27 @@ namespace DA.Game.Runtime
 
                 var speed1 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                     PlayerSlot.Player1,
-                    new SpeedChoiceDto(CreatureId.New(1), Speed.Quick)));
+                    new SpeedChoiceDto(CreatureId.New(1), SkillSpeed.Quick)));
 
                 var speed2 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                     PlayerSlot.Player1,
-                    new SpeedChoiceDto(CreatureId.New(2), Speed.Quick)));
+                    new SpeedChoiceDto(CreatureId.New(2), SkillSpeed.Quick)));
 
                 var speed3 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                     PlayerSlot.Player1,
-                    new SpeedChoiceDto(CreatureId.New(3), Speed.Quick)));
+                    new SpeedChoiceDto(CreatureId.New(3), SkillSpeed.Quick)));
 
                 var speed4 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                     PlayerSlot.Player2,
-                    new SpeedChoiceDto(CreatureId.New(4), Speed.Quick)));
+                    new SpeedChoiceDto(CreatureId.New(4), SkillSpeed.Quick)));
 
                 var speed5 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                     PlayerSlot.Player2,
-                    new SpeedChoiceDto(CreatureId.New(5), Speed.Quick)));
+                    new SpeedChoiceDto(CreatureId.New(5), SkillSpeed.Quick)));
 
                 var speed6 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                     PlayerSlot.Player2,
-                    new SpeedChoiceDto(CreatureId.New(6), Speed.Quick)));
+                    new SpeedChoiceDto(CreatureId.New(6), SkillSpeed.Quick)));
 
 
                 var action1 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,

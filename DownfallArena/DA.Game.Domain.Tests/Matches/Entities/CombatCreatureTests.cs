@@ -281,7 +281,7 @@ public class CombatCreatureTests
     private CombatCreature CreateBasicCreature()
     {
         var id = new CreatureId(1);
-        var def = _resources.GetCharacter(new CreatureDefId("creature:main:v1"));
+        var def = _resources.GetCreature(new CreatureDefId("creature:main:v1"));
         var playerSlot = PlayerSlot.Player2;
         return CombatCreature.FromCreatureTemplate(def, id, playerSlot);
     }

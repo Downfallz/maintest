@@ -14,7 +14,7 @@ public sealed class GameResources : IGameResources
     private readonly IReadOnlyDictionary<CreatureDefId, CreatureDefinitionRef> _characters;
 
     public IReadOnlyList<Spell> Spells => _spells.Values.ToList();
-    public IReadOnlyList<CreatureDefinitionRef> Characters => _characters.Values.ToList();
+    public IReadOnlyList<CreatureDefinitionRef> Creatures => _characters.Values.ToList();
     public string Version { get; }
 
     private GameResources(
@@ -50,7 +50,7 @@ public sealed class GameResources : IGameResources
             ? spell
             : throw new KeyNotFoundException($"Spell '{id}' introuvable (version {Version}).");
 
-    public CreatureDefinitionRef GetCharacter(CreatureDefId id)
+    public CreatureDefinitionRef GetCreature(CreatureDefId id)
         => _characters.TryGetValue(id, out var def)
             ? def
             : throw new KeyNotFoundException($"Character '{id}' introuvable (version {Version}).");
@@ -58,6 +58,6 @@ public sealed class GameResources : IGameResources
     public bool TryGetSpell(SpellId id, out Spell? spell)
         => _spells.TryGetValue(id, out spell);
 
-    public bool TryGetCharacter(CreatureDefId id, out CreatureDefinitionRef? def)
+    public bool TryGetCreature(CreatureDefId id, out CreatureDefinitionRef? def)
         => _characters.TryGetValue(id, out def);
 }

@@ -1,5 +1,6 @@
 ﻿using DA.Game.Domain2.Matches.Services.Combat;
 using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Spells;
 using DA.Game.Shared.Contracts.Resources.Spells.Effects;

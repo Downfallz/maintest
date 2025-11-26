@@ -1,4 +1,6 @@
-﻿using DA.Game.Domain2.Matches.ValueObjects;
+﻿using DA.Game.Domain2.Matches.Services.Combat.Resolution;
+using DA.Game.Domain2.Matches.ValueObjects;
+using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using FluentAssertions;
 using System;
@@ -23,7 +25,7 @@ public class CombatActionResultTests
         var result = new CombatActionResult(
             choice,
             instantEffects: null,
-            wasCritical: false
+            critical: CritComputationResult.Normal(0.0, 0.0)
         );
 
         // Assert

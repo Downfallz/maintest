@@ -5,5 +5,5 @@ namespace DA.Game.Application.Matches.DTOs;
 
 public sealed record SpeedChoiceDto(
     CreatureId CharacterId,
-    Speed Speed
+    SkillSpeed Speed
 );
