@@ -281,6 +281,7 @@ public sealed class Match : AggregateRoot<MatchId>
         //    Effects: effects,
         //    ResolvedAt: _clock.UtcNow));
 
+        CurrentRound.MoveToNextAction();
         // 4) Si tout est terminé → fin de résolution + cleanup
         if (CurrentRound.IsCombatResolutionCompleted)
         {

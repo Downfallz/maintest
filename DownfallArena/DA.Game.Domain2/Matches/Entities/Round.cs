@@ -167,12 +167,15 @@ namespace DA.Game.Domain2.Matches.Entities
             if (!_intents.TryGetValue(slot.CreatureId, out var intent))
                 return Result<CombatActionChoice>.Fail("Rien de soumis pour cette créature.");
 
+            return Result<CombatActionChoice>.Ok(intent);
+        }
+
+        public void MoveToNextAction()
+        {
             Timeline = Timeline.MoveNext();
 
             if (Timeline.IsComplete)
                 IsCombatResolutionCompleted = true;
-
-            return Result<CombatActionChoice>.Ok(intent);
         }
 
 
