@@ -157,20 +157,21 @@ namespace DA.Game.Domain2.Matches.Entities
             if (Timeline is null)
                 return Result<CombatActionChoice>.Fail("Timeline non initialisé pour ce round.");
 
-            if (Cursor.IsEnd)
+            if (Timeline.IsComplete)
                 return Result<CombatActionChoice>.Fail("Le round est déjà complété.");
 
-            var slot = Timeline.Slots[Cursor.Index];
+            var slot = Timeline.Current;
+            if (slot is null)
+                return Result<CombatActionChoice>.Fail("Aucun slot courant dans la timeline.");
 
-            if (!_intents.TryGetValue(slot.CombatCharacter.Id, out var intent))
-            {
-                return Result<CombatActionChoice>.Fail("Rien de soumis pour ce character.");
-            }
-            Cursor = Cursor.MoveNext(Timeline);
-            if (Cursor.IsEnd)
-            {
+            if (!_intents.TryGetValue(slot.CreatureId, out var intent))
+                return Result<CombatActionChoice>.Fail("Rien de soumis pour cette créature.");
+
+            Timeline = Timeline.MoveNext();
+
+            if (Timeline.IsComplete)
                 IsCombatResolutionCompleted = true;
-            }
+
             return Result<CombatActionChoice>.Ok(intent);
         }
 
@@ -180,7 +181,6 @@ namespace DA.Game.Domain2.Matches.Entities
             Lifecycle.MoveTo(RoundPhase.EndOfRound);
         }
 
-        public bool IsCombatOver => Cursor.IsEnd || Timeline.AllDead();
         public bool IsEvolutionPhaseComplete => _p1Evolution.Count == 2 && _p2Evolution.Count == 2;
 
         public bool IsSpeedChoicePhaseComplete => _p1Speed.Count == 3 && _p2Speed.Count == 3;

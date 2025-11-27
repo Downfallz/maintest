@@ -1,32 +1,35 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
+using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Resources.Stats;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace DA.Game.Domain.Tests;
+namespace DA.Game.Domain.Tests.Matches.Policies;
 
-public static class CloneUtility
+internal static class CloneUtility
 {
     public static CreatureSnapshot CloneSnapshot(
-    CreatureSnapshot original,
-    Health? health = null,
-    bool? isStunned = null)
+        CreatureSnapshot original,
+        Health? health = null,
+        bool? isStunned = null,
+        Energy? energy = null,
+        PlayerSlot? ownerSlot = null,
+        CriticalChance? baseCritical = null,
+        CriticalChance? bonusCritical = null)
     {
         return new CreatureSnapshot(
             characterId: original.CharacterId,
-            ownerSlot: original.OwnerSlot,
+            ownerSlot: ownerSlot ?? original.OwnerSlot,
             health: health ?? original.Health,
-            energy: original.Energy,
+            energy: energy ?? original.Energy,
             initiative: original.Initiative,
             isStunned: isStunned ?? original.IsStunned,
             baseHealth: original.BaseHealth,
             baseEnergy: original.BaseEnergy,
             baseDefense: original.BaseDefense,
             baseInitiative: original.BaseInitiative,
-            baseCritical: original.BaseCritical,
-            bonusCritical: original.BonusCritical,
+            baseCritical: baseCritical ?? original.BaseCritical,
+            bonusCritical: bonusCritical ?? original.BonusCritical,
             bonusDefense: original.BonusDefense
         );
     }
 }
+

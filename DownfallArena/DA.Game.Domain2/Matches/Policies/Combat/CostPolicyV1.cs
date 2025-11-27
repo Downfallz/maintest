@@ -6,15 +6,25 @@ namespace DA.Game.Domain2.Matches.Policies.Combat;
 
 public sealed class CostPolicyV1 : ICostPolicy
 {
-    public Result EnsureCreatureHasEnoughEnergy(CreaturePerspective ctx, CombatActionChoice choice)
+    // -------------------------------
+    // DOMAIN FAILURES (Dxxx)
+    // -------------------------------
+    private const string DOM_D301_NOT_ENOUGH_ENERGY =
+        "D301 - Actor does not have enough energy to perform this combat action.";
+
+    public Result EnsureCreatureHasEnoughEnergy(
+        CreaturePerspective ctx,
+        CombatActionChoice choice)
     {
         ArgumentNullException.ThrowIfNull(ctx);
         ArgumentNullException.ThrowIfNull(choice);
 
         var spellCost = choice.SpellRef.EnergyCost;
         var actorEnergy = ctx.Actor.Energy;
+
         if (actorEnergy < spellCost)
-            return Result.Fail("Not enough energy");
+            return Result.Fail(DOM_D301_NOT_ENOUGH_ENERGY);
+
         return Result.Ok();
     }
 }

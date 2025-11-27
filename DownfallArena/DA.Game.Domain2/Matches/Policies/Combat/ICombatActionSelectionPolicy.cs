@@ -7,7 +7,7 @@ using DA.Game.Shared.Utilities;
 namespace DA.Game.Domain2.Matches.Policies.Combat;
 
 
-public interface IAttackChoicePolicy
+public interface ICombatActionSelectionPolicy
 {
     Result EnsureActionIsValid(
         CreaturePerspective ctx);

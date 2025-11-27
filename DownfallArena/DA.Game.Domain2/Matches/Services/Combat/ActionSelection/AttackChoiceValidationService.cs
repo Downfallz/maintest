@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace DA.Game.Domain2.Matches.Services.Combat.Resolution;
 
 public sealed class AttackChoiceValidationService(
-    IAttackChoicePolicy attackChoicePolicy,
+    ICombatActionSelectionPolicy attackChoicePolicy,
     ICostPolicy costPolicy,
     ITargetingPolicy targetingPolicy)
     : IAttackChoiceValidationService

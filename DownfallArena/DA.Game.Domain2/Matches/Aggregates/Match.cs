@@ -242,12 +242,10 @@ public sealed class Match : AggregateRoot<MatchId>
 
     private void InitializeCurrentRoundSpeedResolutionPhase()
     {
-        var timeline = CombatTimeline.FromSpeedChoices(
-            Player1Team!,
+        var timeline = _ruleSet.Planning.BuildTimeline(Player1Team!,
             CurrentRound!.Player1SpeedChoices,
             Player2Team!,
-            CurrentRound.Player2SpeedChoices,
-            _ruleSet);
+            CurrentRound.Player2SpeedChoices);
 
         CurrentRound!.InitializeSpeedResolutionPhase(timeline);
         AddEvent(new SpeedResolutionCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));

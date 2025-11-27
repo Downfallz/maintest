@@ -9,7 +9,7 @@ namespace DA.Game.Domain2.Matches.RuleSets;
 
 public class CombatRules(IAttackChoiceValidationService attackChoiceValidationService,
     ICombatActionResolutionService combatActionResolutionService,
-    IEffectExecutionService effectExecutionService)
+    ICombatActionExecutionService effectExecutionService)
 {
     public Result ValidateAction(CreaturePerspective ctx, CombatActionChoice choice)
     {

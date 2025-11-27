@@ -1,4 +1,5 @@
-﻿using DA.Game.Domain2.Matches.Services.Combat.Resolution;
+﻿using DA.Game.Domain2.Matches.Policies.Combat;
+using DA.Game.Domain2.Matches.Services.Combat.Resolution;
 using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 using DA.Game.Shared.Utilities;
 
@@ -6,18 +7,25 @@ namespace DA.Game.Domain2.Matches.ValueObjects.Combat;
 
 public sealed record CombatActionResult : ValueObject
 {
-    public CombatActionChoice Choice { get; init; }
+    public CombatActionChoice OriginalChoice { get; init; }
+    public CombatActionChoice EffectiveChoice { get; init; }
     public IReadOnlyList<InstantEffectApplication> InstantEffects { get; init; }
-    public CritComputationResult Critical { get; init; }   // ⬅️ Nouvelle propriété
+    public CritComputationResult Critical { get; init; }
+    public IReadOnlyList<TargetingFailure> TargetingFailures { get; init; }
+
+    public bool HasPartialTargetFailures => TargetingFailures.Count > 0;
 
     public CombatActionResult(
-        CombatActionChoice choice,
+        CombatActionChoice originalChoice,
+        CombatActionChoice effectiveChoice,
         IReadOnlyList<InstantEffectApplication>? instantEffects,
-        CritComputationResult critical)
+        CritComputationResult critical,
+        IReadOnlyList<TargetingFailure>? targetingFailures)
     {
-        Choice = choice;
+        OriginalChoice = originalChoice ?? throw new ArgumentNullException(nameof(originalChoice));
+        EffectiveChoice = effectiveChoice ?? throw new ArgumentNullException(nameof(effectiveChoice));
         InstantEffects = instantEffects ?? Array.Empty<InstantEffectApplication>();
         Critical = critical ?? CritComputationResult.Normal(0.0, 0.0);
+        TargetingFailures = targetingFailures ?? Array.Empty<TargetingFailure>();
     }
 }
-

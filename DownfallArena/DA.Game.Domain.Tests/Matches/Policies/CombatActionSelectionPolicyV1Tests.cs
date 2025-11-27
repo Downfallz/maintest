@@ -1,8 +1,6 @@
-﻿using AutoFixture;
-using DA.Game.Domain2.Matches.Contexts;
+﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Policies.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
-using DA.Game.Domain2.Tests.Customizations;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Stats;
@@ -17,8 +15,12 @@ namespace DA.Game.Domain.Tests.Matches.Policies;
 
 public class CombatActionSelectionPolicyV1Tests
 {
+    // --------------------------
+    // INVARIANT FAILURES (Ixxx)
+    // --------------------------
+
     [Theory, MatchAutoData]
-    public void EnsureActionIsValid_WhenMatchNotStarted_R1(
+    public void EnsureActionIsValid_WhenMatchNotStarted_I101(
         CreaturePerspective baseCtx,
         CombatActionSelectionPolicyV1 sut)
     {
@@ -27,11 +29,12 @@ public class CombatActionSelectionPolicyV1Tests
         var result = sut.EnsureActionIsValid(ctx);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Be("R1 - Match must be started to submit a combat action.");
+        result.IsInvariant.Should().BeTrue();
+        result.Error.Should().Be("I101 - Match must be started to submit a combat action.");
     }
 
     [Theory, MatchAutoData]
-    public void EnsureActionIsValid_WhenPhaseIsNotCombat_R2(
+    public void EnsureActionIsValid_WhenPhaseIsNotCombat_I102(
         CreaturePerspective baseCtx,
         CombatActionSelectionPolicyV1 sut)
     {
@@ -40,89 +43,123 @@ public class CombatActionSelectionPolicyV1Tests
         var result = sut.EnsureActionIsValid(ctx);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Be("R2 - Round phase must be Combat to submit a combat action.");
+        result.IsInvariant.Should().BeTrue();
+        result.Error.Should().Be("I102 - Round phase must be Combat to submit a combat action.");
     }
 
+    // --------------------------
+    // DOMAIN FAILURES (Dxxx)
+    // --------------------------
+
     [Theory, MatchAutoData]
-    public void EnsureActionIsValid_WhenActorDead_R3(
+    public void EnsureActionIsValid_WhenActorDead_D201(
         CreaturePerspective baseCtx,
         CombatActionSelectionPolicyV1 sut)
     {
-        var deadActor = CloneUtility.CloneSnapshot(baseCtx.Actor, health: Health.Of(0));
+        var normalized = WithActorAliveAndNotStunned(baseCtx) with
+        {
+            State = MatchState.Started,
+            Phase = RoundPhase.Combat
+        };
 
-        var newCreatures = baseCtx.Creatures
-            .Select(c => c.CharacterId == baseCtx.ActorId ? deadActor : c)
+        var deadActor = CloneUtility.CloneSnapshot(normalized.Actor, health: Health.Of(0), isStunned: false);
+
+        var newCreatures = normalized.Creatures
+            .Select(c => c.CharacterId == normalized.ActorId ? deadActor : c)
             .ToList();
 
-        var ctx = baseCtx with { Creatures = newCreatures };
+        var ctx = normalized with { Creatures = newCreatures };
 
         var result = sut.EnsureActionIsValid(ctx);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Be("R3 - Dead creature cannot submit a combat action.");
+        result.IsInvariant.Should().BeFalse();
+        result.Error.Should().Be("D201 - Dead creature cannot submit a combat action.");
     }
 
     [Theory, MatchAutoData]
-    public void EnsureActionIsValid_WhenActorStunned_R4(
+    public void EnsureActionIsValid_WhenActorStunned_D202(
         CreaturePerspective baseCtx,
         CombatActionSelectionPolicyV1 sut)
     {
-        var stunnedActor = CloneUtility.CloneSnapshot(baseCtx.Actor, isStunned: true);
+        var normalized = WithActorAliveAndNotStunned(baseCtx) with
+        {
+            State = MatchState.Started,
+            Phase = RoundPhase.Combat
+        };
 
-        var newCreatures = baseCtx.Creatures
-            .Select(c => c.CharacterId == baseCtx.ActorId ? stunnedActor : c)
+        var stunnedActor = CloneUtility.CloneSnapshot(
+            normalized.Actor,
+            health: normalized.Actor.Health,
+            isStunned: true);
+
+        var newCreatures = normalized.Creatures
+            .Select(c => c.CharacterId == normalized.ActorId ? stunnedActor : c)
             .ToList();
 
-        var ctx = baseCtx with { Creatures = newCreatures };
+        var ctx = normalized with { Creatures = newCreatures };
 
         var result = sut.EnsureActionIsValid(ctx);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Be("R4 - Stunned creature cannot submit a combat action.");
+        result.IsInvariant.Should().BeFalse();
+        result.Error.Should().Be("D202 - Stunned creature cannot submit a combat action.");
     }
 
     [Theory, MatchAutoData]
-    public void EnsureActionIsValid_WhenActionAlreadySubmitted_R5(
+    public void EnsureActionIsValid_WhenActionAlreadySubmitted_D203(
         CreaturePerspective baseCtx,
         CombatActionSelectionPolicyV1 sut,
         CombatActionChoice existingChoice)
     {
-        // Normalize actor so we don't trip R3/R4 before R5
-        var normalizedCtx = WithActorAliveAndNotStunned(baseCtx);
+        var normalized = WithActorAliveAndNotStunned(baseCtx) with
+        {
+            State = MatchState.Started,
+            Phase = RoundPhase.Combat
+        };
 
         var dict = new Dictionary<CreatureId, CombatActionChoice>
         {
-            { normalizedCtx.ActorId, existingChoice }
+            { normalized.ActorId, existingChoice }
         };
 
         var readOnly = new ReadOnlyDictionary<CreatureId, CombatActionChoice>(dict);
-        var ctx = normalizedCtx with { CombatActionChoices = readOnly };
+
+        var ctx = normalized with { CombatActionChoices = readOnly };
 
         var result = sut.EnsureActionIsValid(ctx);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Be("R5 - This creature has already submitted a combat action for this round.");
+        result.IsInvariant.Should().BeFalse();
+        result.Error.Should().Be("D203 - This creature has already submitted a combat action for this round.");
     }
+
+    // --------------------------
+    // SUCCESS
+    // --------------------------
 
     [Theory, MatchAutoData]
     public void EnsureActionIsValid_WhenAllRulesPass_Succeeds(
         CreaturePerspective baseCtx,
         CombatActionSelectionPolicyV1 sut)
     {
-        // Ensure we are in a clean valid state explicitly
-        var ctx = WithActorAliveAndNotStunned(baseCtx) with
+        var normalized = WithActorAliveAndNotStunned(baseCtx) with
         {
             State = MatchState.Started,
             Phase = RoundPhase.Combat,
-            CombatActionChoices = new ReadOnlyDictionary<CreatureId, CombatActionChoice>(
-                new Dictionary<CreatureId, CombatActionChoice>())
+            CombatActionChoices = null
         };
 
-        var result = sut.EnsureActionIsValid(ctx);
+        var result = sut.EnsureActionIsValid(normalized);
 
         result.IsSuccess.Should().BeTrue();
+        result.IsInvariant.Should().BeFalse();
         result.Error.Should().BeNull();
     }
+
+    // --------------------------
+    // Helpers
+    // --------------------------
 
     private static CreaturePerspective WithActorAliveAndNotStunned(CreaturePerspective ctx)
     {

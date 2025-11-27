@@ -1,74 +1,37 @@
-﻿using DA.Game.Domain2.Matches.Entities;
-using DA.Game.Domain2.Matches.RuleSets;
-using DA.Game.Shared.Contracts.Matches.Enums;
-
-namespace DA.Game.Domain2.Matches.ValueObjects.Planning;
+﻿using DA.Game.Domain2.Matches.ValueObjects.Planning;
 
 public sealed record CombatTimeline
 {
-    public IReadOnlyList<ActivationSlot> Slots { get; }
+    public IReadOnlyList<ActivationSlot> Slots { get; init; }
+    public TurnCursor Cursor { get; init; }
 
-    private CombatTimeline(IReadOnlyList<ActivationSlot> slots) => Slots = slots;
-
-    public static CombatTimeline Empty => new(Array.Empty<ActivationSlot>());
-
-    public static CombatTimeline FromSpeedChoices(
-        Team team1,
-        IReadOnlyCollection<SpeedChoice> p1Speed,
-        Team team2,
-        IReadOnlyCollection<SpeedChoice> p2Speed,
-        RuleSet rules)
+    private CombatTimeline(
+        IReadOnlyList<ActivationSlot> slots,
+        TurnCursor cursor)
     {
-        ArgumentNullException.ThrowIfNull(team1);
-        ArgumentNullException.ThrowIfNull(team2);
-        ArgumentNullException.ThrowIfNull(p1Speed);
-        ArgumentNullException.ThrowIfNull(p2Speed);
-
-        var allSlots = new List<ActivationSlot>();
-
-        void AddSlotsForTeam(Team team, PlayerSlot owner, IEnumerable<SpeedChoice> choices)
-        {
-            foreach (var choice in choices)
-            {
-                var character = team.Characters
-                    .SingleOrDefault(c => c.Id == choice.CreatureId);
-
-                if (character is null)
-                    throw new InvalidOperationException(
-                        $"Character {choice.CreatureId} not found in team {owner}.");
-
-                var initiative = character.CurrentInitiative;
-                allSlots.Add(new ActivationSlot(
-                    owner,
-                    character,
-                    choice.Speed,
-                    initiative
-                ));
-            }
-        }
-
-        AddSlotsForTeam(team1, PlayerSlot.Player1, p1Speed);
-        AddSlotsForTeam(team2, PlayerSlot.Player2, p2Speed);
-
-        // Reproduit ton ancienne logique :
-        // 1) Quick par Initiative DESC
-        // 2) Standard par Initiative DESC
-        var quick = allSlots
-            .Where(s => s.Speed == DA.Game.Shared.Contracts.Matches.Enums.SkillSpeed.Quick)
-            .OrderByDescending(s => s.InitiativeValue);
-
-        var standard = allSlots
-            .Where(s => s.Speed == DA.Game.Shared.Contracts.Matches.Enums.SkillSpeed.Standard)
-            .OrderByDescending(s => s.InitiativeValue);
-
-        var ordered = quick.Concat(standard).ToArray();
-
-        return new CombatTimeline(ordered);
+        Slots = slots;
+        Cursor = cursor;
     }
 
-    public ActivationSlot? NextAfter(int index)
-        => index + 1 < Slots.Count ? Slots[index + 1] : null;
+    public static CombatTimeline Empty =>
+        new(Array.Empty<ActivationSlot>(), TurnCursor.Start);
 
-    public bool AllDead()
-        => Slots.All(s => !s.CombatCharacter.IsAlive); // à adapter selon ton modèle
+    public static CombatTimeline FromSlots(IReadOnlyList<ActivationSlot> slots) =>
+        new(slots, TurnCursor.Start);
+
+    public ActivationSlot? Current =>
+        Cursor.IsEnd(Slots.Count) ? null : Slots[Cursor.Index];
+
+    public bool IsComplete => Cursor.IsEnd(Slots.Count);
+
+    public CombatTimeline MoveNext()
+    {
+        if (IsComplete)
+            return this;
+
+        return this with { Cursor = Cursor.MoveNext() };
+    }
+
+    public CombatTimeline ResetCursor()
+        => this with { Cursor = Cursor.Reset() };
 }

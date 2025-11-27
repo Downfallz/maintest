@@ -14,7 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace DA.Game.Domain.Tests.Services.Combat.Execution;
+namespace DA.Game.Domain.Tests.Matches.Services.Combat.ActionResolution.Execution;
 
 public class InstantEffectServiceTests
 {

@@ -9,9 +9,9 @@ using DA.Game.Shared.Contracts.Resources.Stats;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 
-namespace DA.Game.Domain.Tests.Matches.Services.Combat.Resolution;
+namespace DA.Game.Domain.Tests.Matches.Services.Combat.ActionResolution;
 
 public class EffectComputationServiceV1Tests
 {
@@ -22,8 +22,17 @@ public class EffectComputationServiceV1Tests
     {
         // Arrange
         var actorId = new CreatureId(1);
-        var spell = CreateSpellWithEffects(Array.Empty<IEffect>());
-        var intent = new CombatActionChoice(actorId, spell, Array.Empty<CreatureId>());
+
+        // Spell DOIT avoir au moins un effet (invariant du domaine).
+        // Le scénario "no targets" est représenté par une spell valide,
+        // mais avec une liste de cibles vide.
+        var damage = Damage.Of(10);
+        var spell = CreateSpellWithEffects(new IEffect[] { damage });
+
+        var intent = new CombatActionChoice(
+            actorId,
+            spell,
+            Array.Empty<CreatureId>()); // no targets
 
         // Act
         var result = _service.ComputeRawEffects(intent);
@@ -45,6 +54,7 @@ public class EffectComputationServiceV1Tests
 
         var damage = Damage.Of(10);
         var spell = CreateSpellWithEffects(new IEffect[] { damage });
+
         var intent = new CombatActionChoice(actorId, spell, targets);
 
         // Act
@@ -72,9 +82,10 @@ public class EffectComputationServiceV1Tests
             new CreatureId(3)
         };
 
-        // TODO: ajuste la factory de Bleed à ta vraie signature
+        // TODO: ajuste la factory de Bleed à ta vraie signature si nécessaire
         var bleed = Bleed.Of(amountPerTick: 2, durationRounds: 3);
         var spell = CreateSpellWithEffects(new IEffect[] { bleed });
+
         var intent = new CombatActionChoice(actorId, spell, targets);
 
         // Act
@@ -88,12 +99,12 @@ public class EffectComputationServiceV1Tests
         apps.Select(a => a.TargetId).Should().BeEquivalentTo(targets);
     }
 
-
     // ---------- Helpers ----------
 
     private static Spell CreateSpellWithEffects(IReadOnlyCollection<IEffect> effects)
     {
-        // TODO: adapte à ton vrai constructor / factory Spell.Create(...)
+        // Spell.Create applique déjà l’invariant "au moins un effet".
+        // On délègue la validation à la factory du domaine.
         return Spell.Create(
             id: new SpellId("spell:test:v1"),
             name: "Test Spell",
@@ -106,5 +117,4 @@ public class EffectComputationServiceV1Tests
             effects: effects
         );
     }
-
 }

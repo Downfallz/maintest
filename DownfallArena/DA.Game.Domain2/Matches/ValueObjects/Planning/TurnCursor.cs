@@ -4,14 +4,12 @@ public sealed record TurnCursor(int Index)
 {
     public static TurnCursor Start => new(0);
 
-    public bool IsEnd => Index < 0;
+    // Interpret "end" as: cursor is outside of slots range
+    public bool IsEnd(int totalSlots) => Index >= totalSlots || Index < 0;
 
-    public TurnCursor MoveNext(CombatTimeline timeline)
-    {
-        ArgumentNullException.ThrowIfNull(timeline);
+    public TurnCursor MoveNext() => new(Index + 1);
 
-        var next = timeline.NextAfter(Index);
-        return next is null ? new TurnCursor(-1) : new TurnCursor(Index + 1);
-    }
+    public TurnCursor Reset() => new(0);
+
+    public override string ToString() => $"Cursor at {Index}";
 }
-

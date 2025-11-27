@@ -5,7 +5,7 @@ using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 
-public interface IEffectExecutionService
+public interface ICombatActionExecutionService
 {
     Result ApplyCombatResult(CombatActionResult result, IReadOnlyList<CombatCreature> allCreatures);
 }

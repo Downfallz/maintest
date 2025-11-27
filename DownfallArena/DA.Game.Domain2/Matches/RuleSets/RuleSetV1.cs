@@ -4,6 +4,7 @@ using DA.Game.Domain2.Matches.Policies.Planning;
 using DA.Game.Domain2.Matches.Services.Combat;
 using DA.Game.Domain2.Matches.Services.Combat.Resolution;
 using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
+using DA.Game.Domain2.Matches.Services.Planning;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.RuleSets;
@@ -16,7 +17,8 @@ public static class RuleSetV1
         var phase = new PhaseRules(new MatchPhasePolicyV1());
 
         // --- Evolution Rules
-        var evolution = new PlanningRules(new InitiativePolicyV1());
+        var evolution = new PlanningRules(new CombatTimelineBuilderServiceV1(),
+            new InitiativePolicyV1());
 
         //// --- Speed Rules
         //var speed = new SpeedRules(
@@ -33,8 +35,8 @@ public static class RuleSetV1
                 new CostPolicyV1(),
                 new TargetingPolicyV1(),
                 new EffectComputationServiceV1(),
-                new CritComputationService(new SystemRandom())),
-            new EffectExecutionService(new InstantEffectService(new DamageComputationService())));
+                new CritComputationServiceV1(new SystemRandom())),
+            new CombatActionExecutionService(new InstantEffectService(new DamageComputationService())));
 
         //// --- Status Rules
         //var status = new StatusRules(

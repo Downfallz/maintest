@@ -1,5 +1,5 @@
 ﻿namespace DA.Game.Domain2.Matches.RuleSets;
 
 public sealed record RuleSet(PhaseRules Phase,
-    PlanningRules Evolution,
+    PlanningRules Planning,
     CombatRules Combat);

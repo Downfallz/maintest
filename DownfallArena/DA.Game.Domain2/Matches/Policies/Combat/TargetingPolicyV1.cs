@@ -1,92 +1,205 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
+using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Spells.Enums;
 using DA.Game.Shared.Utilities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DA.Game.Domain2.Matches.Policies.Combat;
 
-/// <summary>
-/// Targeting policy V1: assumes the action already carries a single TargetId.
-/// </summary>
 public sealed class TargetingPolicyV1 : ITargetingPolicy
 {
+    // -------------------------------
+    // DOMAIN FAILURES (D4xx)
+    // -------------------------------
+    private const string DOM_D401_TARGET_NOT_FOUND =
+        "D401 - Target not found in match.";
 
-    public Result EnsureCombatActionHasValidTargets(CreaturePerspective ctx, CombatActionChoice choice)
+    private const string DOM_D402_NO_TARGETS_PROVIDED =
+        "D402 - This spell requires at least one target.";
+
+    private const string DOM_D403_TOO_MANY_TARGETS =
+        "D403 - Too many targets provided for this spell.";
+
+    private const string DOM_D404_SELF_TARGET_REQUIRED =
+        "D404 - Self-target spell must target the acting creature only.";
+
+    private const string DOM_D405_ALLIES_ONLY =
+        "D405 - All targets must be allies.";
+
+    private const string DOM_D406_ENEMIES_ONLY =
+        "D406 - All targets must be enemies.";
+
+    private const string DOM_D407_SINGLE_TARGET_REQUIRED =
+        "D407 - This spell must target exactly one creature.";
+
+    private const string DOM_D408_AT_LEAST_ONE_TARGET_REQUIRED =
+        "D408 - This spell must target at least one creature.";
+
+    private const string DOM_D409_TARGET_DEAD =
+        "D409 - Target creature is dead and cannot be targeted.";
+
+    public Result<TargetingCheckReport> EnsureCombatActionHasValidTargets(
+        CreaturePerspective ctx,
+        CombatActionChoice choice)
     {
         ArgumentNullException.ThrowIfNull(ctx);
         ArgumentNullException.ThrowIfNull(choice);
 
-        var spell = choice.SpellRef;           // ou SkillRef selon ton modèle
-        var targeting = spell.TargetingSpec;        // TargetingSpec
-        if (choice.TargetIds is not null)
+        var spell = choice.SpellRef;
+        var targeting = spell.TargetingSpec;
+
+        var targetIds = choice.TargetIds ?? Array.Empty<CreatureId>();
+        var failures = new List<TargetingFailure>();
+
+        var creaturesById = ctx.Creatures.ToDictionary(c => c.CharacterId);
+
+        // 1) Existence des cibles
+        foreach (var targetId in targetIds)
         {
-            foreach (var targetId in choice.TargetIds)
+            if (!creaturesById.ContainsKey(targetId))
             {
-                if (!ctx.Creatures.Any(c => c.CharacterId == targetId))
-                    return Result.Fail($"Target not found in match: {targetId}");
+                failures.Add(new TargetingFailure(
+                    TargetId: targetId,
+                    ErrorCode: "D401",
+                    Message: DOM_D401_TARGET_NOT_FOUND));
             }
         }
-        var targets = (choice.TargetIds ?? [])
-            .Select(id => ctx.Creatures.Single(c => c.CharacterId == id))
+
+        // Ne garder que les cibles existantes
+        var targets = targetIds
+            .Where(id => creaturesById.TryGetValue(id, out _))
+            .Select(id => creaturesById[id])
             .ToList();
 
-        // 1) Aucun target fourni alors que le sort en exige ?
-        if ((targets is null || targets.Count == 0) &&
-            (targeting.MaxTargets is null || targeting.MaxTargets > 0))
+        // 2) Cibles mortes → une erreur par target morte
+        var deadTargets = targets
+            .Where(t => t.IsDead)
+            .Select(t => t.CharacterId)
+            .ToList();
+
+        foreach (var id in deadTargets)
         {
-            return Result.Fail("This spell requires at least one target.");
+            failures.Add(new TargetingFailure(
+                TargetId: id,
+                ErrorCode: "D409",
+                Message: DOM_D409_TARGET_DEAD));
         }
 
-        // 2) Trop de cibles
+        // 3) Pas de cibles alors que le sort en exige
+        var requiresAtLeastOneTarget =
+            targeting.MaxTargets is null || targeting.MaxTargets > 0;
+
+        if (requiresAtLeastOneTarget && targets.Count == 0)
+        {
+            failures.Add(new TargetingFailure(
+                TargetId: null,
+                ErrorCode: "D402",
+                Message: DOM_D402_NO_TARGETS_PROVIDED));
+        }
+
+        // 4) Trop de cibles (on regarde le nombre de TargetIds fournis)
         if (targeting.MaxTargets is not null &&
-            targets!.Count > targeting.MaxTargets.Value)
+            targetIds.Count > targeting.MaxTargets.Value)
         {
-            return Result.Fail($"Too many targets (max {targeting.MaxTargets}).");
+            failures.Add(new TargetingFailure(
+                TargetId: null,
+                ErrorCode: "D403",
+                Message: DOM_D403_TOO_MANY_TARGETS));
         }
 
-        // 3) Vérifier allié / ennemi / self selon TargetOrigin
+        // 5) Origin: Self / Ally / Enemy / Any
         switch (targeting.Origin)
         {
             case TargetOrigin.Self:
-                if (targets!.Count != 1 || targets[0].CharacterId != ctx.Actor.CharacterId)
-                    return Result.Fail("Self-target spell must target the acting creature only.");
-                break;
+                {
+                    if (targets.Count != 1 || targets[0].CharacterId != ctx.Actor.CharacterId)
+                    {
+                        failures.Add(new TargetingFailure(
+                            TargetId: null,
+                            ErrorCode: "D404",
+                            Message: DOM_D404_SELF_TARGET_REQUIRED));
+                    }
+                    break;
+                }
 
             case TargetOrigin.Ally:
-                if (targets!.Any(t => t.OwnerSlot != ctx.Actor.OwnerSlot))
-                    return Result.Fail("All targets must be allies.");
-                break;
+                {
+                    var invalidAllies = targets
+                        .Where(t => t.OwnerSlot != ctx.Actor.OwnerSlot)
+                        .Select(t => t.CharacterId)
+                        .ToList();
+
+                    foreach (var id in invalidAllies)
+                    {
+                        failures.Add(new TargetingFailure(
+                            TargetId: id,
+                            ErrorCode: "D405",
+                            Message: DOM_D405_ALLIES_ONLY));
+                    }
+                    break;
+                }
 
             case TargetOrigin.Enemy:
-                if (targets!.Any(t => t.OwnerSlot == ctx.Actor.OwnerSlot))
-                    return Result.Fail("All targets must be enemies.");
-                break;
+                {
+                    var invalidEnemies = targets
+                        .Where(t => t.OwnerSlot == ctx.Actor.OwnerSlot)
+                        .Select(t => t.CharacterId)
+                        .ToList();
+
+                    foreach (var id in invalidEnemies)
+                    {
+                        failures.Add(new TargetingFailure(
+                            TargetId: id,
+                            ErrorCode: "D406",
+                            Message: DOM_D406_ENEMIES_ONLY));
+                    }
+                    break;
+                }
 
             case TargetOrigin.Any:
             default:
-                // rien de spécial ici
                 break;
         }
 
-
-        // 5) Option: scope (Single, All, etc.) si tu as un TargetScope
-        // ex: si Scope == AllEnemies => targets doivent contenir *tous* les ennemis vivants, etc.
+        // 6) Scope
         switch (targeting.Scope)
         {
             case TargetScope.SingleTarget:
-                if (targets!.Count != 1)
-                    return Result.Fail("This spell must target exactly one creature.");
+                if (targetIds.Count != 1)
+                {
+                    failures.Add(new TargetingFailure(
+                        TargetId: null,
+                        ErrorCode: "D407",
+                        Message: DOM_D407_SINGLE_TARGET_REQUIRED));
+                }
                 break;
 
             case TargetScope.Multi:
-                // À toi de décider si Multi = 1..N ou forcément >= 2.
-                // Ici j’impose au moins 1, MaxTargets continue de gérer le plafond.
-                if (targets!.Count < 1)
-                    return Result.Fail("This spell must target at least one creature.");
+                if (targetIds.Count < 1)
+                {
+                    failures.Add(new TargetingFailure(
+                        TargetId: null,
+                        ErrorCode: "D408",
+                        Message: DOM_D408_AT_LEAST_ONE_TARGET_REQUIRED));
+                }
+                break;
+
+            default:
                 break;
         }
-        return Result.Ok();
+
+        // 7) Return
+        if (failures.Count == 0)
+        {
+            var reportOk = new TargetingCheckReport(Array.Empty<TargetingFailure>());
+            return Result<TargetingCheckReport>.Ok(reportOk);
+        }
+
+        var failureReport = new TargetingCheckReport(failures);
+
+        return Result<TargetingCheckReport>.Ok(failureReport);
     }
 }
-
-
