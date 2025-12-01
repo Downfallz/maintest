@@ -6,4 +6,4 @@ using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Application.Matches.Features.SubmitCombatActionChoice;
 
-public sealed record SubmitCombatActionChoiceCommand(MatchId MatchId, PlayerSlot slot, CombatActionChoiceDto CombatActionChoice) : ICommand<Result<SubmitCombatActionResult>>;
+public sealed record SubmitCombatIntentCommand(MatchId MatchId, PlayerSlot slot, CombatIntentDto Intent) : ICommand<Result<SubmitCombatIntentResult>>;

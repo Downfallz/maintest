@@ -125,26 +125,45 @@ namespace DA.Game.Runtime
                     PlayerSlot.Player2,
                     new SpeedChoiceDto(CreatureId.New(6), SkillSpeed.Quick)));
 
+                var action1 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
+                    PlayerSlot.Player1,
+                    new CombatIntentDto(CreatureId.New(1), basicAttack)));
+                var action2 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
+                    PlayerSlot.Player1,
+                    new CombatIntentDto(CreatureId.New(2), basicAttack)));
+                var action3 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
+                    PlayerSlot.Player1,
+                    new CombatIntentDto(CreatureId.New(3), basicAttack)));
+                var action4 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
+                    PlayerSlot.Player1,
+                    new CombatIntentDto(CreatureId.New(4), basicAttack)));
+                var action5 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
+                    PlayerSlot.Player1,
+                    new CombatIntentDto(CreatureId.New(5), basicAttack)));
+                var action6 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
+                    PlayerSlot.Player1,
+                    new CombatIntentDto(CreatureId.New(6), basicAttack)));
 
-                var action1 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatActionChoiceDto(CreatureId.New(1), basicAttack, new List<CreatureId>() { new CreatureId(4) })));
-                var action2 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatActionChoiceDto(CreatureId.New(2), basicAttack, new List<CreatureId>() { new CreatureId(4) })));
-                var action3 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatActionChoiceDto(CreatureId.New(3), basicAttack, new List<CreatureId>() { new CreatureId(4) })));
-                var action4 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new CombatActionChoiceDto(CreatureId.New(4), basicAttack, new List<CreatureId>() { new CreatureId(1) })));
-                var action5 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new CombatActionChoiceDto(CreatureId.New(5), basicAttack, new List<CreatureId>() { new CreatureId(1) })));
-                var action6 = await mediator.Send(new SubmitCombatActionChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new CombatActionChoiceDto(CreatureId.New(6), basicAttack, new List<CreatureId>() { new CreatureId(1) })));
+                var target1 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
+                    PlayerSlot.Player1, CreatureId.New(1),
+                     new List<CreatureId>() { new CreatureId(4) }));
+                var target2 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
+                    PlayerSlot.Player1, CreatureId.New(2),
+                     new List<CreatureId>() { new CreatureId(4) }));
+                var target3 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
+                    PlayerSlot.Player1, CreatureId.New(3),
+                     new List<CreatureId>() { new CreatureId(4) }));
+                var target4 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
+                    PlayerSlot.Player1, CreatureId.New(4),
+                     new List<CreatureId>() { new CreatureId(1) }));
+                var target5 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
+                    PlayerSlot.Player1, CreatureId.New(5),
+                     new List<CreatureId>() { new CreatureId(1) }));
+                var target6 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
+                    PlayerSlot.Player1, CreatureId.New(6),
+                     new List<CreatureId>() { new CreatureId(1) }));
 
+               
                 var roundEnded = false;
                 while (!roundEnded)
                 {

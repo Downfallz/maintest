@@ -27,7 +27,7 @@ public sealed class CombatActionResolutionService(
             return actionPolicyResult.To<CombatActionResult>();
 
         // 2) Cost / energy: if this fails, we stop here (full fizzle).
-        var costPolicyResult = costPolicy.EnsureCreatureHasEnoughEnergy(ctx, choice);
+        var costPolicyResult = costPolicy.EnsureCreatureHasEnoughEnergy(ctx, choice.SpellRef);
         if (!costPolicyResult.IsSuccess)
             return costPolicyResult.To<CombatActionResult>();
 

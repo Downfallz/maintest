@@ -20,7 +20,8 @@ public sealed record CreaturePerspective(
     IReadOnlyCollection<SpeedChoice>? Player2SpeedChoices,
     ReadOnlyDictionary<CreatureId, CombatActionChoice>? CombatActionChoices,
     CombatTimeline? Timeline,
-    TurnCursor? Cursor
+    TurnCursor? RevealCursor,
+    TurnCursor? ResolveCursor
     )
 {
 
@@ -63,6 +64,7 @@ public sealed record CreaturePerspective(
             match.CurrentRound?.Player2SpeedChoices,
             match.CurrentRound?.CombatActionChoices,
             match.CurrentRound?.Timeline,
-            match.CurrentRound?.Cursor));
+            match.CurrentRound?.RevealCursor,
+            match.CurrentRound?.ResolveCursor));
     }
 }

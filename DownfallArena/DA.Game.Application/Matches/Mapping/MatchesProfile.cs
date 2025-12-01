@@ -22,6 +22,7 @@ public class MatchesProfile : Profile
         CreateMap<SpellUnlockChoice, SpellUnlockChoiceDto>().ReverseMap();
         CreateMap<SpeedChoice, SpeedChoiceDto>().ReverseMap();
         CreateMap<CombatActionChoice, CombatActionChoiceDto>().ReverseMap();
+        CreateMap<CombatActionIntent, CombatIntentDto>().ReverseMap();
         CreateMap<CreatureSnapshot, CharacterStatusDto>().ReverseMap();
         CreateMap<MatchLifecycle, MatchLifecycleDto>().ReverseMap();
         CreateMap<Round, RoundDto>().ReverseMap();

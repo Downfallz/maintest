@@ -1,37 +1,42 @@
 ﻿using DA.Game.Domain2.Matches.ValueObjects.Planning;
 
+namespace DA.Game.Domain2.Matches.ValueObjects.Combat;
+
 public sealed record CombatTimeline
 {
-    public IReadOnlyList<ActivationSlot> Slots { get; init; }
-    public TurnCursor Cursor { get; init; }
+    /// <summary>
+    /// Ordered list of activation slots for the round.
+    /// </summary>
+    public IReadOnlyList<ActivationSlot> Slots { get; }
 
-    private CombatTimeline(
-        IReadOnlyList<ActivationSlot> slots,
-        TurnCursor cursor)
+    private CombatTimeline(IReadOnlyList<ActivationSlot> slots)
     {
         Slots = slots;
-        Cursor = cursor;
     }
 
-    public static CombatTimeline Empty =>
-        new(Array.Empty<ActivationSlot>(), TurnCursor.Start);
+    /// <summary>
+    /// Create an empty timeline.
+    /// </summary>
+    public static CombatTimeline Empty { get; } =
+        new(Array.Empty<ActivationSlot>());
 
-    public static CombatTimeline FromSlots(IReadOnlyList<ActivationSlot> slots) =>
-        new(slots, TurnCursor.Start);
+    /// <summary>
+    /// Create a timeline from a list of slots.
+    /// The list is assumed to already be sorted by Quick/Standard + Initiative.
+    /// </summary>
+    public static CombatTimeline FromSlots(IReadOnlyList<ActivationSlot> slots)
+        => new(slots);
 
-    public ActivationSlot? Current =>
-        Cursor.IsEnd(Slots.Count) ? null : Slots[Cursor.Index];
+    /// <summary>
+    /// Number of slots in this timeline.
+    /// </summary>
+    public int Count => Slots.Count;
 
-    public bool IsComplete => Cursor.IsEnd(Slots.Count);
+    /// <summary>
+    /// Access a slot by index.
+    /// </summary>
+    public ActivationSlot this[int index] => Slots[index];
 
-    public CombatTimeline MoveNext()
-    {
-        if (IsComplete)
-            return this;
-
-        return this with { Cursor = Cursor.MoveNext() };
-    }
-
-    public CombatTimeline ResetCursor()
-        => this with { Cursor = Cursor.Reset() };
+    public override string ToString()
+        => $"CombatTimeline[{Count} slots]";
 }

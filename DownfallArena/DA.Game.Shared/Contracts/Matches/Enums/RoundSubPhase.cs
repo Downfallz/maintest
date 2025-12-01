@@ -13,7 +13,8 @@ public enum RoundSubPhase
     Planning_TurnOrderResolution,
 
     // --- Combat ---
-    Combat_ActionSelection,
+    Combat_IntentSelection,
+    Combat_RevealAndTarget,
     Combat_ActionResolution,
 
     // --- EndOfRound ---

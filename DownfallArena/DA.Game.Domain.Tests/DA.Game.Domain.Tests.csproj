@@ -42,6 +42,7 @@
 	<ItemGroup>
 		<Folder Include="Data\Creatures\" />
 		<Folder Include="Data\Spells\" />
+		<Folder Include="Matches\Services\Combat\ActionSelection\" />
 	</ItemGroup>
 
 	<Target Name="BuildGameSchema" AfterTargets="Build">

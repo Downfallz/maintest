@@ -119,7 +119,7 @@ public sealed class Match : AggregateRoot<MatchId>
         InitializeRound();
     }
 
-    public void InitializeNextRound()
+    public void StartNextRound()
     {
         CurrentRound = Round.StartNext(CurrentRound!);
         InitializeRound();
@@ -208,17 +208,54 @@ public sealed class Match : AggregateRoot<MatchId>
         return Result.Ok();
     }
 
-    public Result SubmitCombatAction(CombatActionChoice combatActionChoice)
+    public Result SubmitCombatIntent(CombatActionIntent intent)
     {
-        ArgumentNullException.ThrowIfNull(combatActionChoice);
+        ArgumentNullException.ThrowIfNull(intent);
 
         var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
         if (!guard.IsSuccess)
             return guard;
 
-        var ctxResult = BuildGameContextForCurrentCreature(combatActionChoice.ActorId);
+        var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
         if (!ctxResult.IsSuccess)
             return Result.Fail(ctxResult.Error!);
+
+        //var validateResult = _ruleSet.Combat.ValidateAction(ctxResult.Value!, combatActionChoice);
+        //if (!validateResult.IsSuccess)
+        //{
+        //    return validateResult;
+        //}
+        var result = CurrentRound!.SubmitCombatIntent(ctxResult.Value!, intent);
+        if (!result.IsSuccess)
+            return Result.Fail(result.Error!);
+
+        AddEvent(new CombatActionIntentSubmitted(CurrentRound!.Id, intent, _clock.UtcNow));
+
+        if (CurrentRound!.IsCombatActionIntentSubmitPhaseCompleted)
+        {
+            AddEvent(new CombatActionSubmitIntentCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
+            InitializeCurrentRoundSpeedResolutionPhase();
+        }
+
+        return Result.Ok();
+    }
+    public Result RevealNextActionAndBindTargets(IReadOnlyList<CreatureId> targetIds)
+    {
+        ArgumentNullException.ThrowIfNull(targetIds);
+        if (CurrentRound is null)
+            return Result.Fail("Aucun round actif.");
+
+        var next = CurrentRound.SelectNextIntentToRevealTarget();
+        if (!next.IsSuccess)
+            return Result.Fail(next.Error!);
+
+        var intent = next.Value!;
+
+        var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
+        if (!ctxResult.IsSuccess)
+            return Result.Fail(ctxResult.Error!);
+
+        var combatActionChoice = CombatActionChoice.FromIntentAndTargets(intent, targetIds);
 
         var validateResult = _ruleSet.Combat.ValidateAction(ctxResult.Value!, combatActionChoice);
         if (!validateResult.IsSuccess)
@@ -234,11 +271,18 @@ public sealed class Match : AggregateRoot<MatchId>
         if (CurrentRound!.IsCombatActionRequestPhaseCompleted)
         {
             AddEvent(new CombatActionRequestPhaseCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
-            InitializeCurrentRoundSpeedResolutionPhase();
+
         }
 
         return Result.Ok();
+        // 1. Vérifier phase == ActionReveal
+        // 2. Récupérer "l’intent" courant selon l’ordre (cursor interne)
+        // 3. Valider que les targets sont légales pour ce spell + targetingSpec
+        // 4. Créer un CombatActionChoice complet
+        // 5. Remplacer l’intent dans la liste ordonnée par le "choice" complet
+        // 6. Avancer le cursor
     }
+
 
     private void InitializeCurrentRoundSpeedResolutionPhase()
     {
@@ -283,31 +327,52 @@ public sealed class Match : AggregateRoot<MatchId>
 
         CurrentRound.MoveToNextAction();
         // 4) Si tout est terminé → fin de résolution + cleanup
-        if (CurrentRound.IsCombatResolutionCompleted)
+        if (CurrentRound.ResolveCursor.IsEnd(CurrentRound.Timeline.Count))
         {
             AddEvent(new CombatResolutionCompleted(
                 Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
 
-            InitializeCurrentRoundCleanup();
+            FinalizeCurrentRound();
             return Result<bool>.Ok(true);
         }
 
         return Result<bool>.Ok(false);
     }
 
-    private void InitializeCurrentRoundCleanup()
+
+    private void FinalizeCurrentRound()
+    {
+        ArgumentNullException.ThrowIfNull(CurrentRound);
+
+        // Bouger round phase
+
+        // 1) Cleanup de fin de round (conditions, buffs, etc.)
+        //ApplyEndOfRoundCleanup(CurrentRound);
+
+        // 3) Round terminé mais le match continue
+        AddEvent(new RoundEnded(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
+
+        // 2) Vérifier si le match est terminé
+        if (TryEndMatchIfNeeded())
+        {
+            // Match terminé → on ne démarre pas un nouveau round
+            return;
+        }
+
+        // 4) Démarrer le prochain round
+        StartNextRound();
+    }
+
+    private bool TryEndMatchIfNeeded()
     {
         if (Player1Team!.IsDead || Player2Team!.IsDead)
         {
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
-            Console.WriteLine("the end");
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
+            Lifecycle.MoveTo(MatchState.Ended);
+            //AddEvent(new MatchEnded(Id, _clock.UtcNow));
+            return true;
         }
-        CurrentRound!.DoCleanup();
-        AddEvent(new RoundEnded(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
-        InitializeNextRound();
+        return false;
     }
-
     /// <summary>
     /// Termine le tour courant du joueur.
     /// </summary>

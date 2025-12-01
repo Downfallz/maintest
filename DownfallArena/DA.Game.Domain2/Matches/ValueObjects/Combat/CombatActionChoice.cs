@@ -13,4 +13,14 @@ public sealed record CombatActionChoice(
     {
         return new CombatActionChoice(id, spellRef, TargetIds);
     }
+
+   public static CombatActionChoice FromIntentAndTargets(CombatActionIntent intent, IReadOnlyList<CreatureId> targetIds)
+   {
+        ArgumentNullException.ThrowIfNull(intent);
+        return new CombatActionChoice(
+            intent.ActorId,
+            intent.SpellRef,
+            targetIds);
+    }
+
 }

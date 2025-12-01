@@ -49,7 +49,8 @@ public sealed class CreaturePerspectiveCustomization : ICustomization
                         Player2SpeedChoices: null,
                         CombatActionChoices: emptyActions,
                         Timeline: null,
-                        Cursor: null
+                        RevealCursor: null,
+                        ResolveCursor: null
                     );
                 })
                 // IMPORTANT: do not let AutoFixture overwrite properties afterward

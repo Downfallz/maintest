@@ -1,5 +1,6 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
+using DA.Game.Shared.Contracts.Resources.Spells;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.Policies.Combat;
@@ -14,12 +15,12 @@ public sealed class CostPolicyV1 : ICostPolicy
 
     public Result EnsureCreatureHasEnoughEnergy(
         CreaturePerspective ctx,
-        CombatActionChoice choice)
+        Spell spell)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        ArgumentNullException.ThrowIfNull(choice);
+        ArgumentNullException.ThrowIfNull(spell);
 
-        var spellCost = choice.SpellRef.EnergyCost;
+        var spellCost = spell.EnergyCost;
         var actorEnergy = ctx.Actor.Energy;
 
         if (actorEnergy < spellCost)

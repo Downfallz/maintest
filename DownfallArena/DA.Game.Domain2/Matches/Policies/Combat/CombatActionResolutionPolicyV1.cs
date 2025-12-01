@@ -1,6 +1,7 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Utilities;
+using System;
 
 namespace DA.Game.Domain2.Matches.Policies.Combat;
 
@@ -53,10 +54,13 @@ public sealed class CombatActionResolutionPolicyV1 : ICombatActionResolutionPoli
         if (ctx.Timeline is null)
             return Result.InvariantFail(INV_I003_TIMELINE_MISSING);
 
-        if (ctx.Timeline.IsComplete)
+        if (ctx.ResolveCursor is null)
+            return Result.InvariantFail("RESOLVE CURSOR MISSING");
+
+        if (ctx.ResolveCursor.IsEnd(ctx.Timeline.Count))
             return Result.InvariantFail(INV_I004_ROUND_ALREADY_COMPLETED);
 
-        var slot = ctx.Timeline.Current;
+        var slot = ctx.Timeline.Slots[ctx.ResolveCursor.Index];
         if (slot is null)
             return Result.InvariantFail(INV_I005_CURRENT_SLOT_MISSING);
 

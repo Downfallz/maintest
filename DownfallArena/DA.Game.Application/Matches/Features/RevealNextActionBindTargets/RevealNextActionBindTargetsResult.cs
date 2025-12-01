@@ -4,4 +4,4 @@ using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Application.Matches.Features.SubmitCombatActionChoice;
 
-public sealed record SubmitCombatActionResult(CombatActionChoiceDto CurrentChoiceForPlayer, RoundPhase State) : ValueObject;
+public sealed record RevealNextActionBindTargetsResult() : ValueObject;

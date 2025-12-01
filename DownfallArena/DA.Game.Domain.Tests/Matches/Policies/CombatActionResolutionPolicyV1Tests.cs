@@ -78,8 +78,9 @@ public class CombatActionResolutionPolicyV1Tests
         // Timeline avec 1 slot pour l'acteur, puis MoveNext => IsComplete == true
         var slot = BuildActorSlot(normalized);
         var timeline = CombatTimeline
-            .FromSlots(new[] { slot })
-            .MoveNext();
+            .FromSlots(new[] { slot });
+        var cursor = TurnCursor.Start;
+        cursor = cursor.MoveNext(); // Passe à la fin
 
         var choices = new ReadOnlyDictionary<CreatureId, CombatActionChoice>(
             new Dictionary<CreatureId, CombatActionChoice>
@@ -92,7 +93,8 @@ public class CombatActionResolutionPolicyV1Tests
             State = MatchState.Started,
             Phase = RoundPhase.Combat,
             Timeline = timeline,
-            CombatActionChoices = choices
+            CombatActionChoices = choices,
+            ResolveCursor = cursor
         };
 
         var result = sut.EnsureActionIsValid(ctx);
@@ -123,7 +125,7 @@ public class CombatActionResolutionPolicyV1Tests
             normalized.Actor.Initiative);
 
         var timeline = CombatTimeline.FromSlots(new[] { slot });
-
+        var cursor = TurnCursor.Start;
         var choices = new ReadOnlyDictionary<CreatureId, CombatActionChoice>(
             new Dictionary<CreatureId, CombatActionChoice>
             {
@@ -135,7 +137,8 @@ public class CombatActionResolutionPolicyV1Tests
             State = MatchState.Started,
             Phase = RoundPhase.Combat,
             Timeline = timeline,
-            CombatActionChoices = choices
+            CombatActionChoices = choices,
+            ResolveCursor = cursor
         };
 
         var result = sut.EnsureActionIsValid(ctx);
@@ -159,7 +162,8 @@ public class CombatActionResolutionPolicyV1Tests
 
         var slot = BuildActorSlot(normalized);
         var timeline = CombatTimeline.FromSlots(new[] { slot });
-
+        var cursor = TurnCursor.Start;
+        
         var deadActor = CloneUtility.CloneSnapshot(normalized.Actor, health: Health.Of(0));
 
         var newCreatures = normalized.Creatures
@@ -178,7 +182,8 @@ public class CombatActionResolutionPolicyV1Tests
             State = MatchState.Started,
             Phase = RoundPhase.Combat,
             Timeline = timeline,
-            CombatActionChoices = choices
+            CombatActionChoices = choices,
+            ResolveCursor = cursor
         };
 
         var result = sut.EnsureActionIsValid(ctx);
@@ -198,7 +203,7 @@ public class CombatActionResolutionPolicyV1Tests
 
         var slot = BuildActorSlot(normalized);
         var timeline = CombatTimeline.FromSlots(new[] { slot });
-
+        var cursor = TurnCursor.Start;
         var stunnedActor = CloneUtility.CloneSnapshot(
             normalized.Actor,
             health: Health.Of(normalized.Actor.Health.Value <= 0 ? 1 : normalized.Actor.Health.Value),
@@ -220,7 +225,8 @@ public class CombatActionResolutionPolicyV1Tests
             State = MatchState.Started,
             Phase = RoundPhase.Combat,
             Timeline = timeline,
-            CombatActionChoices = choices
+            CombatActionChoices = choices,
+            ResolveCursor = cursor
         };
 
         var result = sut.EnsureActionIsValid(ctx);
@@ -239,6 +245,7 @@ public class CombatActionResolutionPolicyV1Tests
 
         var slot = BuildActorSlot(normalized);
         var timeline = CombatTimeline.FromSlots(new[] { slot });
+        var cursor = TurnCursor.Start;
 
         var emptyChoices = new ReadOnlyDictionary<CreatureId, CombatActionChoice>(
             new Dictionary<CreatureId, CombatActionChoice>());
@@ -248,7 +255,8 @@ public class CombatActionResolutionPolicyV1Tests
             State = MatchState.Started,
             Phase = RoundPhase.Combat,
             Timeline = timeline,
-            CombatActionChoices = emptyChoices
+            CombatActionChoices = emptyChoices,
+            ResolveCursor = cursor
         };
 
         var result = sut.EnsureActionIsValid(ctx);
@@ -272,7 +280,7 @@ public class CombatActionResolutionPolicyV1Tests
 
         var slot = BuildActorSlot(normalized);
         var timeline = CombatTimeline.FromSlots(new[] { slot });
-
+        var cursor = TurnCursor.Start;
         var choices = new ReadOnlyDictionary<CreatureId, CombatActionChoice>(
             new Dictionary<CreatureId, CombatActionChoice>
             {
@@ -284,7 +292,8 @@ public class CombatActionResolutionPolicyV1Tests
             State = MatchState.Started,
             Phase = RoundPhase.Combat,
             Timeline = timeline,
-            CombatActionChoices = choices
+            CombatActionChoices = choices,
+            ResolveCursor = cursor
         };
 
         var result = sut.EnsureActionIsValid(ctx);

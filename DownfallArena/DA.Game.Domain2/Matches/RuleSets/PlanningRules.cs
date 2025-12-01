@@ -1,6 +1,7 @@
 ﻿using DA.Game.Domain2.Matches.Entities;
 using DA.Game.Domain2.Matches.Policies.Planning;
 using DA.Game.Domain2.Matches.Services.Planning;
+using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Planning;
 using DA.Game.Shared.Utilities;
 

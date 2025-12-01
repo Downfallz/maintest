@@ -8,6 +8,7 @@ using DA.Game.Domain2.Matches.Services.Combat.Resolution;
 using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Resources.Spells;
 using DA.Game.Shared.Utilities;
 using FluentAssertions;
 using Moq;
@@ -43,7 +44,7 @@ public sealed class CombatActionResolutionServiceTests
         result.Error.Should().Be(errorCode);
         result.IsInvariant.Should().BeFalse();
 
-        costPolicyMock.Verify(x => x.EnsureCreatureHasEnoughEnergy(It.IsAny<CreaturePerspective>(), It.IsAny<CombatActionChoice>()), Times.Never);
+        costPolicyMock.Verify(x => x.EnsureCreatureHasEnoughEnergy(It.IsAny<CreaturePerspective>(), It.IsAny<Spell>()), Times.Never);
         targetingPolicyMock.Verify(x => x.EnsureCombatActionHasValidTargets(It.IsAny<CreaturePerspective>(), It.IsAny<CombatActionChoice>()), Times.Never);
         effectServiceMock.Verify(x => x.ComputeRawEffects(It.IsAny<CombatActionChoice>()), Times.Never);
         critServiceMock.Verify(x => x.ApplyCrit(It.IsAny<CreaturePerspective>(), It.IsAny<CombatActionChoice>()), Times.Never);
@@ -69,7 +70,7 @@ public sealed class CombatActionResolutionServiceTests
         const string errorCode = "D402_NOT_ENOUGH_ENERGY";
 
         costPolicyMock
-            .Setup(x => x.EnsureCreatureHasEnoughEnergy(ctx, choice))
+            .Setup(x => x.EnsureCreatureHasEnoughEnergy(ctx, choice.SpellRef))
             .Returns(Result.Fail(errorCode));
 
         var result = sut.Resolve(ctx, choice);
@@ -105,7 +106,7 @@ public sealed class CombatActionResolutionServiceTests
 
         // Use It.IsAny because we mutate choice later (record instance changes).
         costPolicyMock
-            .Setup(x => x.EnsureCreatureHasEnoughEnergy(ctx, It.IsAny<CombatActionChoice>()))
+            .Setup(x => x.EnsureCreatureHasEnoughEnergy(ctx, It.IsAny<Spell>()))
             .Returns(Result.Ok());
 
         // Two explicit targets: t1 is valid, t2 is invalid.
@@ -186,7 +187,7 @@ public sealed class CombatActionResolutionServiceTests
             .Returns(Result.Ok());
 
         costPolicyMock
-            .Setup(x => x.EnsureCreatureHasEnoughEnergy(ctx, It.IsAny<CombatActionChoice>()))
+            .Setup(x => x.EnsureCreatureHasEnoughEnergy(ctx, It.IsAny<Spell>()))
             .Returns(Result.Ok());
 
         var t1 = fixture.Create<CreatureId>();

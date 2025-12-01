@@ -28,7 +28,7 @@ public sealed class CostPolicyV1Tests
     {
         CreaturePerspective ctx = null!;
 
-        var act = () => sut.EnsureCreatureHasEnoughEnergy(ctx, choice);
+        var act = () => sut.EnsureCreatureHasEnoughEnergy(ctx, choice.SpellRef);
 
         act.Should()
             .Throw<ArgumentNullException>()
@@ -40,13 +40,13 @@ public sealed class CostPolicyV1Tests
         CreaturePerspective ctx,
         CostPolicyV1 sut)
     {
-        CombatActionChoice choice = null!;
+        Spell spell = null!;
 
-        var act = () => sut.EnsureCreatureHasEnoughEnergy(ctx, choice);
+        var act = () => sut.EnsureCreatureHasEnoughEnergy(ctx, spell);
 
         act.Should()
             .Throw<ArgumentNullException>()
-            .Which.ParamName.Should().Be("choice");
+            .Which.ParamName.Should().Be("spell");
     }
 
     // --------------------------
@@ -80,7 +80,7 @@ public sealed class CostPolicyV1Tests
             TargetIds: Array.Empty<CreatureId>());
 
         // Act
-        var result = sut.EnsureCreatureHasEnoughEnergy(ctx, choice);
+        var result = sut.EnsureCreatureHasEnoughEnergy(ctx, spell);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -116,7 +116,7 @@ public sealed class CostPolicyV1Tests
             TargetIds: Array.Empty<CreatureId>());
 
         // Act
-        var result = sut.EnsureCreatureHasEnoughEnergy(ctx, choice);
+        var result = sut.EnsureCreatureHasEnoughEnergy(ctx, spell);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
