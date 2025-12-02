@@ -1,22 +1,18 @@
-﻿using AutoFixture;
-using DA.Game.Domain2.Matches.ValueObjects.Evolution;
+﻿using DA.Game.Domain2.Matches.ValueObjects.Evolution;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Spells;
 using FluentAssertions;
 using Xunit;
 
-namespace DA.Game.Domain.Tests.Matches.ValueObjects.Evolution;
+namespace DA.Game.Domain.Tests.Matches.ValueObjects.Planning;
 
-public class SpellUnlockChoiceTests
+public sealed class SpellUnlockChoiceTests
 {
-    private readonly Fixture _fixture = new();
-
-    [Fact]
-    public void Of_WhenCharacterIdIsDefault_ShouldThrow()
+    [Theory, MatchAutoData]
+    public void Of_WhenCharacterIdIsDefault_ShouldThrow(Spell spell)
     {
         // Arrange
         var id = default(CreatureId);
-        var spell = _fixture.Create<Spell>();
 
         // Act
         var act = () => SpellUnlockChoice.Of(id, spell);
@@ -27,11 +23,10 @@ public class SpellUnlockChoiceTests
            .Which.ParamName.Should().Be("characterId");
     }
 
-    [Fact]
-    public void Of_WhenSpellIsNull_ShouldThrow()
+    [Theory, MatchAutoData]
+    public void Of_WhenSpellIsNull_ShouldThrow(CreatureId id)
     {
         // Arrange
-        var id = new CreatureId(42);
         Spell spell = null!;
 
         // Act
@@ -43,13 +38,9 @@ public class SpellUnlockChoiceTests
            .Which.ParamName.Should().Be("spellRef");
     }
 
-    [Fact]
-    public void Of_WhenValid_ShouldCreateValueObject()
+    [Theory, MatchAutoData]
+    public void Of_WhenValid_ShouldCreateValueObject(CreatureId id, Spell spell)
     {
-        // Arrange
-        var id = new CreatureId(42);
-        var spell = _fixture.Create<Spell>();
-
         // Act
         var result = SpellUnlockChoice.Of(id, spell);
 
@@ -58,13 +49,10 @@ public class SpellUnlockChoiceTests
         result.SpellRef.Should().Be(spell);
     }
 
-    [Fact]
-    public void ValueObject_Equality_ShouldWork()
+    [Theory, MatchAutoData]
+    public void ValueObject_Equality_ShouldBeValueBased(CreatureId id, Spell spell)
     {
         // Arrange
-        var id = new CreatureId(42);
-        var spell = _fixture.Create<Spell>();
-
         var one = SpellUnlockChoice.Of(id, spell);
         var two = SpellUnlockChoice.Of(id, spell);
 

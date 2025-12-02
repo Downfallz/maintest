@@ -213,7 +213,7 @@ public sealed class CombatActionResolutionServiceTests
         var result = sut.Resolve(ctx, choice);
 
         result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Be("D405");
+        result.Error.Should().Be(perTargetFailures[0].Message);
         result.Value.Should().BeNull();
 
         effectServiceMock.Verify(x => x.ComputeRawEffects(It.IsAny<CombatActionChoice>()), Times.Never);
