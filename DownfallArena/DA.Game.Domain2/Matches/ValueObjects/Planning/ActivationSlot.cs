@@ -9,8 +9,8 @@ public sealed record ActivationSlot(
     PlayerSlot Owner,
     CreatureId CreatureId,
     SkillSpeed Speed,
-    Initiative InitiativeValue)
+    Initiative Initiative)
 {
     public override string ToString()
-        => $"{Owner} - {CreatureId} [{Speed}] Init={InitiativeValue.Value}";
+        => $"{Owner} - {CreatureId} [{Speed}] Init={Initiative.Value}";
 }

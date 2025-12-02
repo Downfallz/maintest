@@ -63,9 +63,9 @@ public sealed class CombatActionResolutionService(
         if (allowedTargets.Length == 0)
         {
             var firstFailure = report.PerTargetFailures.FirstOrDefault();
-            var errorCode = firstFailure?.ErrorCode ?? "D4XX_ALL_TARGETS_INVALID";
+            var errorMessage = firstFailure?.Message?? "D4XX_ALL_TARGETS_INVALID";
 
-            return Result<CombatActionResult>.Fail(errorCode);
+            return Result<CombatActionResult>.Fail(errorMessage);
         }
 
         // 4) Compute raw effects based on the effective targets.

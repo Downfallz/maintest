@@ -7,10 +7,16 @@ using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.RuleSets;
 
-public class CombatRules(IAttackChoiceValidationService attackChoiceValidationService,
+public class CombatRules(IIntentValidationService intentValidationService, 
+    IAttackChoiceValidationService attackChoiceValidationService,
     ICombatActionResolutionService combatActionResolutionService,
     ICombatActionExecutionService effectExecutionService)
 {
+    public Result ValidateIntent(CreaturePerspective ctx, CombatActionIntent intent)
+    {
+        return intentValidationService.EnsureSubmittedIntentIsValid(ctx, intent);
+    }
+
     public Result ValidateAction(CreaturePerspective ctx, CombatActionChoice choice)
     {
         return attackChoiceValidationService.EnsureSubmittedActionIsValid(ctx, choice);

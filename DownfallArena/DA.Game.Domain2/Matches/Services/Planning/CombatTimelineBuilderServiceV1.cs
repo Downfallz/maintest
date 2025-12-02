@@ -53,11 +53,11 @@ public sealed class CombatTimelineBuilderServiceV1 : ICombatTimelineBuilderServi
         // 2) Standard by Initiative DESC
         var quick = allSlots
             .Where(s => s.Speed == SkillSpeed.Quick)
-            .OrderByDescending(s => s.InitiativeValue.Value);
+            .OrderByDescending(s => s.Initiative.Value);
 
         var standard = allSlots
             .Where(s => s.Speed == SkillSpeed.Standard)
-            .OrderByDescending(s => s.InitiativeValue.Value);
+            .OrderByDescending(s => s.Initiative.Value);
 
         var ordered = quick.Concat(standard).ToArray();
 

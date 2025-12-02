@@ -25,7 +25,7 @@ public sealed class SubmitEvolutionChoiceHandler(IMatchRepository repo,
 
         await repo.SaveAsync(match, cancellationToken);
 
-        var choices = cmd.slot == PlayerSlot.Player1 ? match.CurrentRound!.Player1Choices : match.CurrentRound!.Player2Choices;
+        var choices = cmd.slot == PlayerSlot.Player1 ? match.CurrentRound!.Player1EvolutionChoices : match.CurrentRound!.Player2EvolutionChoices;
 
         return Result<SubmitEvolutionResult>.Ok(new SubmitEvolutionResult(choices.ToHashSet(), match.CurrentRound.Phase));
     }

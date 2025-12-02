@@ -19,381 +19,487 @@ using DA.Game.Shared.Contracts.Players.Ids;
 using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Utilities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace DA.Game.Domain2.Matches.Aggregates;
-
-/// <summary>
-/// Représente un match entre deux joueurs.
-/// Contient la logique principale du cycle de vie : join, rounds, évolutions, tours.
-/// </summary>
-public sealed class Match : AggregateRoot<MatchId>
+namespace DA.Game.Domain2.Matches.Aggregates
 {
-    private readonly IGameResources _resources;
-    private readonly RuleSet _ruleSet;
-    private readonly IClock _clock;
-
-    public MatchLifecycle Lifecycle { get; } = new();
-
-    public MatchState State => Lifecycle.State;
-
-    public PlayerRef? PlayerRef1 { get; private set; }
-    public PlayerRef? PlayerRef2 { get; private set; }
-    public Team? Player1Team { get; private set; }
-    public Team? Player2Team { get; private set; }
-    public Round? CurrentRound { get; private set; }
-    public int RoundNumber => CurrentRound?.Number ?? 0;
-
-    public IReadOnlyList<CombatCreature> AllCreatures =>
-    (Player1Team?.Characters ?? Enumerable.Empty<CombatCreature>())
-        .Concat(Player2Team?.Characters ?? Enumerable.Empty<CombatCreature>())
-        .ToList();
-
-    private Match(MatchId id, IGameResources resources, RuleSet ruleSet, IClock clock) : base(id)
-    {
-        _resources = resources ?? throw new ArgumentNullException(nameof(resources));
-        _ruleSet = ruleSet;
-        _clock = clock;
-    }
-
     /// <summary>
-    /// Crée un nouveau match avec les ressources de jeu fournies.
+    /// Represents a match between two players.
+    /// Orchestrates the lifecycle: join, rounds, evolutions, turns.
     /// </summary>
-    public static Match Create(IGameResources resources, RuleSet ruleSet, IClock clock)
+    public sealed class Match : AggregateRoot<MatchId>
     {
-        ArgumentNullException.ThrowIfNull(resources);
-        return new Match(MatchId.New(), resources, ruleSet, clock);
-    }
+        private readonly IGameResources _resources;
+        private readonly RuleSet _ruleSet;
+        private readonly IClock _clock;
 
-    /// <summary>
-    /// Permet à un joueur de rejoindre le match. Le match démarre automatiquement si les deux sont présents.
-    /// </summary>
-    public Result<PlayerSlot> Join(PlayerRef player)
-    {
-        ArgumentNullException.ThrowIfNull(player);
+        public MatchLifecycle Lifecycle { get; } = new();
 
-        if (State != MatchState.WaitingForPlayers)
-            return Result<PlayerSlot>.Fail(MatchErrors.AlreadyStarted);
+        public MatchState State => Lifecycle.State;
 
-        if (PlayerRef1?.Id == player.Id || PlayerRef2?.Id == player.Id)
-            return Result<PlayerSlot>.Fail(MatchErrors.PlayerAlreadyInGame);
-        PlayerSlot slot = default;
-        if (PlayerRef1 is null)
+        public PlayerRef? PlayerRef1 { get; private set; }
+        public PlayerRef? PlayerRef2 { get; private set; }
+
+        public Team? Player1Team { get; private set; }
+        public Team? Player2Team { get; private set; }
+
+        public Round? CurrentRound { get; private set; }
+        public int RoundNumber => CurrentRound?.Number ?? 0;
+
+        public IReadOnlyList<CombatCreature> AllCreatures =>
+            (Player1Team?.Characters ?? Enumerable.Empty<CombatCreature>())
+                .Concat(Player2Team?.Characters ?? Enumerable.Empty<CombatCreature>())
+                .ToList();
+
+        private Match(MatchId id, IGameResources resources, RuleSet ruleSet, IClock clock) : base(id)
         {
-            PlayerRef1 = player;
-            AddEvent(new PlayerJoined(Id, player.Id, _clock.UtcNow));
-            slot = PlayerSlot.Player1;
-        }
-        else if (PlayerRef2 is null)
-        {
-            PlayerRef2 = player;
-            AddEvent(new PlayerJoined(Id, player.Id, _clock.UtcNow));
-            slot = PlayerSlot.Player2;
-        }
-
-        if (PlayerRef1 is not null && PlayerRef2 is not null)
-            AddEvent(new AllPlayersReady(Id, _clock.UtcNow));
-
-        return Result<PlayerSlot>.Ok(slot);
-    }
-
-    public void StartMatch()
-    {
-        InitializeTeams();
-
-        Lifecycle.MoveTo(MatchState.Started);
-        AddEvent(new MatchStarted(Id, _clock.UtcNow));
-
-        InitializeFirstRound();
-    }
-
-    private void InitializeTeams()
-    {
-        Player1Team = Team.FromCharacterTemplateAndSlot(_resources.GetCreature(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player1);
-        Player2Team = Team.FromCharacterTemplateAndSlot(_resources.GetCreature(CreatureDefId.New("creature:main:v1")), PlayerSlot.Player2);
-    }
-
-    private void InitializeFirstRound()
-    {
-
-        CurrentRound = Round.StartFirst(_resources, _ruleSet);
-        InitializeRound();
-    }
-
-    public void StartNextRound()
-    {
-        CurrentRound = Round.StartNext(CurrentRound!);
-        InitializeRound();
-    }
-
-    private void InitializeRound()
-    {
-
-        //// global +2 Energy
-        //foreach (var creature in AllCreatures)
-        //    creature.GainEnergy(2);
-
-        //foreach (var creature in AllCreatures)
-        //    creature.ResolveConditionsAtRoundStart();
-
-
-        AddEvent(new RoundInitialized(Id, CurrentRound!.Id, RoundNumber, DateTime.UtcNow));
-        InitializeCurrentRoundEvolution();
-    }
-    private void InitializeCurrentRoundEvolution()
-    {
-        CurrentRound!.InitializeEvolutionPhase();
-    }
-
-    /// <summary>
-    /// Soumet le choix d’évolution (déblocage de sort) du joueur.
-    /// </summary>
-    public Result SubmitEvolutionChoice(PlayerSlot player, SpellUnlockChoice choice)
-    {
-        ArgumentNullException.ThrowIfNull(choice);
-        var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitEvolutionChoice(this);
-        if (!guard.IsSuccess)
-            return guard;
-
-        var ctxResult = BuildGameContextForCurrentCreature(choice.CharacterId);
-        if (!ctxResult.IsSuccess)
-            return Result.Fail(ctxResult.Error!);
-        var result = CurrentRound!.SubmitEvolutionChoice(ctxResult.Value!, choice);
-
-        if (!result.IsSuccess)
-            return result;
-
-        AddEvent(new EvolutionChoiceSubmitted(CurrentRound.Id, ctxResult.Value!.Actor.OwnerSlot, choice, _clock.UtcNow));
-
-        if (CurrentRound.IsEvolutionPhaseComplete)
-            AddEvent(new EvolutionPhaseCompleted(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
-
-        return result;
-    }
-
-    public Result InitializeCurrentRoundSpeedPhase()
-    {
-        return CurrentRound!.InitializeSpeedPhase();
-    }
-
-    /// <summary>
-    /// Soumet le choix de vitesse (Quick/Standard) du joueur.
-    /// </summary>
-    public Result SubmitSpeedChoice(PlayerSlot slot, SpeedChoice speedChoice)
-    {
-        ArgumentNullException.ThrowIfNull(speedChoice);
-
-        var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitSpeedChoice(this);
-        if (!guard.IsSuccess)
-            return guard;
-
-        var ctxResult = BuildGameContextForCurrentCreature(speedChoice.CreatureId);
-        if (!ctxResult.IsSuccess)
-            return Result.Fail(ctxResult.Error!);
-        var result = CurrentRound!.SubmitSpeedChoice(ctxResult.Value!, speedChoice);
-
-        if (!result.IsSuccess)
-            return result;
-
-        AddEvent(new SpeedChoiceSubmitted(CurrentRound.Id, slot, speedChoice, _clock.UtcNow));
-
-        if (CurrentRound.IsSpeedChoicePhaseComplete)
-            AddEvent(new SpeedPhaseCompleted(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
-
-        return result;
-    }
-
-    public Result InitializeCurrentRoundCombatPhase()
-    {
-        CurrentRound!.InitializeCombatPhase();
-        return Result.Ok();
-    }
-
-    public Result SubmitCombatIntent(CombatActionIntent intent)
-    {
-        ArgumentNullException.ThrowIfNull(intent);
-
-        var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
-        if (!guard.IsSuccess)
-            return guard;
-
-        var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
-        if (!ctxResult.IsSuccess)
-            return Result.Fail(ctxResult.Error!);
-
-        //var validateResult = _ruleSet.Combat.ValidateAction(ctxResult.Value!, combatActionChoice);
-        //if (!validateResult.IsSuccess)
-        //{
-        //    return validateResult;
-        //}
-        var result = CurrentRound!.SubmitCombatIntent(ctxResult.Value!, intent);
-        if (!result.IsSuccess)
-            return Result.Fail(result.Error!);
-
-        AddEvent(new CombatActionIntentSubmitted(CurrentRound!.Id, intent, _clock.UtcNow));
-
-        if (CurrentRound!.IsCombatActionIntentSubmitPhaseCompleted)
-        {
-            AddEvent(new CombatActionSubmitIntentCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
-            InitializeCurrentRoundSpeedResolutionPhase();
+            _resources = resources ?? throw new ArgumentNullException(nameof(resources));
+            _ruleSet = ruleSet ?? throw new ArgumentNullException(nameof(ruleSet));
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
-        return Result.Ok();
-    }
-    public Result RevealNextActionAndBindTargets(IReadOnlyList<CreatureId> targetIds)
-    {
-        ArgumentNullException.ThrowIfNull(targetIds);
-        if (CurrentRound is null)
-            return Result.Fail("Aucun round actif.");
-
-        var next = CurrentRound.SelectNextIntentToRevealTarget();
-        if (!next.IsSuccess)
-            return Result.Fail(next.Error!);
-
-        var intent = next.Value!;
-
-        var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
-        if (!ctxResult.IsSuccess)
-            return Result.Fail(ctxResult.Error!);
-
-        var combatActionChoice = CombatActionChoice.FromIntentAndTargets(intent, targetIds);
-
-        var validateResult = _ruleSet.Combat.ValidateAction(ctxResult.Value!, combatActionChoice);
-        if (!validateResult.IsSuccess)
+        /// <summary>
+        /// Creates a new match with the provided game resources.
+        /// </summary>
+        public static Match Create(IGameResources resources, RuleSet ruleSet, IClock clock)
         {
-            return validateResult;
-        }
-        var result = CurrentRound!.SubmitCombatAction(ctxResult.Value!, combatActionChoice);
-        if (!result.IsSuccess)
-            return Result.Fail(result.Error!);
+            ArgumentNullException.ThrowIfNull(resources);
+            ArgumentNullException.ThrowIfNull(ruleSet);
+            ArgumentNullException.ThrowIfNull(clock);
 
-        AddEvent(new CombatActionChoiceSubmitted(CurrentRound!.Id, combatActionChoice, _clock.UtcNow));
-
-        if (CurrentRound!.IsCombatActionRequestPhaseCompleted)
-        {
-            AddEvent(new CombatActionRequestPhaseCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
-
+            return new Match(MatchId.New(), resources, ruleSet, clock);
         }
 
-        return Result.Ok();
-        // 1. Vérifier phase == ActionReveal
-        // 2. Récupérer "l’intent" courant selon l’ordre (cursor interne)
-        // 3. Valider que les targets sont légales pour ce spell + targetingSpec
-        // 4. Créer un CombatActionChoice complet
-        // 5. Remplacer l’intent dans la liste ordonnée par le "choice" complet
-        // 6. Avancer le cursor
-    }
-
-
-    private void InitializeCurrentRoundSpeedResolutionPhase()
-    {
-        var timeline = _ruleSet.Planning.BuildTimeline(Player1Team!,
-            CurrentRound!.Player1SpeedChoices,
-            Player2Team!,
-            CurrentRound.Player2SpeedChoices);
-
-        CurrentRound!.InitializeSpeedResolutionPhase(timeline);
-        AddEvent(new SpeedResolutionCompleted(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
-    }
-
-    public Result<bool> ResolveNextCombatStep()
-    {
-        if (CurrentRound is null)
-            return Result<bool>.Fail("Aucun round actif.");
-
-        var next = CurrentRound.SelectNextActionToResolve();
-        if (!next.IsSuccess)
-            return Result<bool>.Fail(next.Error!);
-
-        var intent = next.Value!;
-
-        var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
-        if (!ctxResult.IsSuccess)
-            return Result<bool>.Fail(ctxResult.Error!);
-
-        //// 1) Résoudre les effets pour cette action
-        var combatactionresult = _ruleSet.Combat.Resolve(ctxResult.Value!, intent);
-
-        //// 2) Appliquer les effets sur les teams / créatures
-        var appli = _ruleSet.Combat.ApplyCombatResult(combatactionresult.Value!, AllCreatures);
-
-        //// 3) Lever un event d’action résolue
-        //AddEvent(new CombatActionResolved(
-        //    MatchId: Id,
-        //    RoundId: CurrentRound.Id,
-        //    RoundNumber: RoundNumber,
-        //    Intent: intent,
-        //    Effects: effects,
-        //    ResolvedAt: _clock.UtcNow));
-
-        CurrentRound.MoveToNextAction();
-        // 4) Si tout est terminé → fin de résolution + cleanup
-        if (CurrentRound.ResolveCursor.IsEnd(CurrentRound.Timeline.Count))
+        /// <summary>
+        /// Lets a player join the match. The match auto-starts when both players are present.
+        /// </summary>
+        public Result<PlayerSlot> Join(PlayerRef player)
         {
-            AddEvent(new CombatResolutionCompleted(
-                Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
+            ArgumentNullException.ThrowIfNull(player);
 
-            FinalizeCurrentRound();
-            return Result<bool>.Ok(true);
+            if (State != MatchState.WaitingForPlayers)
+                return Result<PlayerSlot>.Fail(MatchErrors.AlreadyStarted);
+
+            if (PlayerRef1?.Id == player.Id || PlayerRef2?.Id == player.Id)
+                return Result<PlayerSlot>.Fail(MatchErrors.PlayerAlreadyInGame);
+
+            PlayerSlot assignedSlot = default;
+
+            if (PlayerRef1 is null)
+            {
+                PlayerRef1 = player;
+                AddEvent(new PlayerJoined(Id, player.Id, _clock.UtcNow));
+                assignedSlot = PlayerSlot.Player1;
+            }
+            else if (PlayerRef2 is null)
+            {
+                PlayerRef2 = player;
+                AddEvent(new PlayerJoined(Id, player.Id, _clock.UtcNow));
+                assignedSlot = PlayerSlot.Player2;
+            }
+
+            if (PlayerRef1 is not null && PlayerRef2 is not null)
+                AddEvent(new AllPlayersReady(Id, _clock.UtcNow));
+
+            return Result<PlayerSlot>.Ok(assignedSlot);
         }
 
-        return Result<bool>.Ok(false);
-    }
-
-
-    private void FinalizeCurrentRound()
-    {
-        ArgumentNullException.ThrowIfNull(CurrentRound);
-
-        // Bouger round phase
-
-        // 1) Cleanup de fin de round (conditions, buffs, etc.)
-        //ApplyEndOfRoundCleanup(CurrentRound);
-
-        // 3) Round terminé mais le match continue
-        AddEvent(new RoundEnded(Id, CurrentRound.Id, RoundNumber, _clock.UtcNow));
-
-        // 2) Vérifier si le match est terminé
-        if (TryEndMatchIfNeeded())
+        public void StartMatch()
         {
-            // Match terminé → on ne démarre pas un nouveau round
-            return;
+            InitializeTeams();
+
+            Lifecycle.MoveTo(MatchState.Started);
+            AddEvent(new MatchStarted(Id, _clock.UtcNow));
+
+            InitializeFirstRound();
         }
 
-        // 4) Démarrer le prochain round
-        StartNextRound();
-    }
-
-    private bool TryEndMatchIfNeeded()
-    {
-        if (Player1Team!.IsDead || Player2Team!.IsDead)
+        private void InitializeTeams()
         {
-            Lifecycle.MoveTo(MatchState.Ended);
-            //AddEvent(new MatchEnded(Id, _clock.UtcNow));
-            return true;
+            var creatureTemplate = _resources.GetCreature(CreatureDefId.New("creature:main:v1"));
+
+            Player1Team = Team.FromCharacterTemplateAndSlot(creatureTemplate, PlayerSlot.Player1);
+            Player2Team = Team.FromCharacterTemplateAndSlot(creatureTemplate, PlayerSlot.Player2);
         }
-        return false;
-    }
-    /// <summary>
-    /// Termine le tour courant du joueur.
-    /// </summary>
-    public Result EndTurn(PlayerId actor)
-    {
-        if (State != MatchState.Started)
-            return Result.Fail(MatchErrors.NotStarted);
 
-        AddEvent(new TurnAdvanced(Id, RoundNumber, _clock.UtcNow));
-        return Result.Ok();
-    }
+        private void InitializeFirstRound()
+        {
+            CurrentRound = Round.StartFirst();
+            InitializeRound();
+        }
+
+        public void StartNextRound()
+        {
+            ArgumentNullException.ThrowIfNull(CurrentRound);
+
+            CurrentRound = Round.StartNext(CurrentRound);
+            InitializeRound();
+        }
+
+        private void InitializeRound()
+        {
+            // TODO: round start effects (+2 Energy, conditions, etc.) will be handled here later.
+
+            AddEvent(new RoundInitialized(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
+            InitializeCurrentRoundEvolution();
+        }
+
+        private void InitializeCurrentRoundEvolution()
+        {
+            var result = CurrentRound!.InitializeEvolutionPhase();
+            if (!result.IsSuccess)
+                throw new InvalidOperationException(result.Error);
+        }
+
+        // --------------------
+        // Evolution
+        // --------------------
+
+        /// <summary>
+        /// Submits an evolution (spell unlock) choice for the current round.
+        /// </summary>
+        public Result SubmitEvolutionChoice(PlayerSlot playerSlot, SpellUnlockChoice choice)
+        {
+            ArgumentNullException.ThrowIfNull(choice);
+
+            var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitEvolutionChoice(this);
+            if (!guard.IsSuccess)
+                return guard;
+
+            var ctxResult = BuildGameContextForCurrentCreature(choice.CharacterId);
+            if (!ctxResult.IsSuccess)
+                return Result.Fail(ctxResult.Error!);
+
+            var roundResult = CurrentRound!.SubmitEvolutionChoice(ctxResult.Value!, choice);
+            if (!roundResult.IsSuccess)
+                return roundResult;
+
+            AddEvent(new EvolutionChoiceSubmitted(
+                CurrentRound.Id,
+                ctxResult.Value!.Actor.OwnerSlot,
+                choice,
+                _clock.UtcNow));
+
+            if (IsEvolutionPhaseComplete(CurrentRound))
+            {
+                AddEvent(new EvolutionPhaseCompleted(
+                    Id,
+                    CurrentRound.Id,
+                    RoundNumber,
+                    _clock.UtcNow));
+            }
+
+            return roundResult;
+        }
+
+        private static bool IsEvolutionPhaseComplete(Round round) =>
+            round.Player1EvolutionChoices.Count == 2 &&
+            round.Player2EvolutionChoices.Count == 2;
+
+        // --------------------
+        // Speed
+        // --------------------
+
+        public Result InitializeCurrentRoundSpeedPhase()
+        {
+            return CurrentRound!.InitializeSpeedPhase();
+        }
+
+        /// <summary>
+        /// Submits the speed choice (Quick/Standard) for the current round.
+        /// </summary>
+        public Result SubmitSpeedChoice(PlayerSlot playerSlot, SpeedChoice speedChoice)
+        {
+            ArgumentNullException.ThrowIfNull(speedChoice);
+
+            var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitSpeedChoice(this);
+            if (!guard.IsSuccess)
+                return guard;
+
+            var ctxResult = BuildGameContextForCurrentCreature(speedChoice.CreatureId);
+            if (!ctxResult.IsSuccess)
+                return Result.Fail(ctxResult.Error!);
+
+            var roundResult = CurrentRound!.SubmitSpeedChoice(ctxResult.Value!, speedChoice);
+            if (!roundResult.IsSuccess)
+                return roundResult;
+
+            AddEvent(new SpeedChoiceSubmitted(
+                CurrentRound.Id,
+                playerSlot,
+                speedChoice,
+                _clock.UtcNow));
+
+            if (IsSpeedPhaseComplete(CurrentRound))
+            {
+                AddEvent(new SpeedPhaseCompleted(
+                    Id,
+                    CurrentRound.Id,
+                    RoundNumber,
+                    _clock.UtcNow));
+                InitializeCurrentRoundSpeedResolutionPhase();
+                InitializeCurrentRoundCombatPhase();
+            }
+
+            return roundResult;
+        }
+
+        private static bool IsSpeedPhaseComplete(Round round) =>
+            round.Player1SpeedChoices.Count == 3 &&
+            round.Player2SpeedChoices.Count == 3;
+
+        private void InitializeCurrentRoundSpeedResolutionPhase()
+        {
+            var timeline = _ruleSet.Planning.BuildTimeline(
+                Player1Team!,
+                CurrentRound!.Player1SpeedChoices,
+                Player2Team!,
+                CurrentRound.Player2SpeedChoices);
+
+            var result = CurrentRound.InitializeTurnOrderResolution(timeline);
+            if (!result.IsSuccess)
+                throw new InvalidOperationException(result.Error);
+
+            AddEvent(new SpeedResolutionCompleted(
+                Id,
+                CurrentRound.Id,
+                RoundNumber,
+                _clock.UtcNow));
+        }
+
+        // --------------------
+        // Combat – intents
+        // --------------------
+
+        private Result InitializeCurrentRoundCombatPhase()
+        {
+            CurrentRound!.InitializeCombatPhase();
+            return Result.Ok();
+        }
+
+        public Result SubmitCombatIntent(CombatActionIntent intent)
+        {
+            ArgumentNullException.ThrowIfNull(intent);
+
+            var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
+            if (!guard.IsSuccess)
+                return guard;
+
+            var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
+            if (!ctxResult.IsSuccess)
+                return Result.Fail(ctxResult.Error!);
+
+            var validateResult = _ruleSet.Combat.ValidateIntent(ctxResult.Value!, intent);
+            if (!validateResult.IsSuccess)
+                return validateResult;
+
+            var roundResult = CurrentRound!.SubmitCombatIntent(ctxResult.Value!, intent);
+            if (!roundResult.IsSuccess)
+                return Result.Fail(roundResult.Error!);
+
+            AddEvent(new CombatActionIntentSubmitted(
+                CurrentRound.Id,
+                intent,
+                _clock.UtcNow));
+
+            // When all intents are submitted, we transition to speed resolution / timeline.
+            if (IsIntentPhaseComplete(CurrentRound))
+            {
+                InitializeCurrentRoundCombatReveal();
+                AddEvent(new CombatActionSubmitIntentCompleted(
+                    Id,
+                    CurrentRound.Id,
+                    RoundNumber,
+                    _clock.UtcNow));
 
 
-    private Result<CreaturePerspective> BuildGameContextForCurrentCreature(CreatureId creatureId)
-    {
-        if (Player1Team is null || Player2Team is null)
-            throw new InvalidOperationException("Teams are not initialized.");
+            }
 
-        if (State != MatchState.Started)
-            throw new InvalidOperationException("Match is not started.");
+            return Result.Ok();
+        }
+        private static bool IsIntentPhaseComplete(Round round) =>
+            round.CombatIntentsByCreature.Count == 6;
+        // --------------------
+        // Combat – reveal + bind targets
+        // --------------------
+        private Result InitializeCurrentRoundCombatReveal()
+        {
+            CurrentRound!.InitializeCombatReveal();
+            return Result.Ok();
+        }
+        public Result RevealNextActionAndBindTargets(IReadOnlyList<CreatureId> targetIds)
+        {
+            ArgumentNullException.ThrowIfNull(targetIds);
 
-        return CreaturePerspective.FromMatch(creatureId, this);
+            if (CurrentRound is null)
+                return Result.Fail("No active round.");
+
+            var nextIntentResult = CurrentRound.SelectNextIntentToReveal();
+            if (!nextIntentResult.IsSuccess)
+                return Result.Fail(nextIntentResult.Error!);
+
+            var intent = nextIntentResult.Value!;
+
+            var ctxResult = BuildGameContextForCurrentCreature(intent.ActorId);
+            if (!ctxResult.IsSuccess)
+                return Result.Fail(ctxResult.Error!);
+
+            var actionChoice = CombatActionChoice.FromIntentAndTargets(intent, targetIds);
+
+            var validateResult = _ruleSet.Combat.ValidateAction(ctxResult.Value!, actionChoice);
+            if (!validateResult.IsSuccess)
+                return validateResult;
+
+            var submitResult = CurrentRound.SubmitCombatAction(ctxResult.Value!, actionChoice);
+            if (!submitResult.IsSuccess)
+                return Result.Fail(submitResult.Error!);
+
+            AddEvent(new CombatActionChoiceSubmitted(
+                CurrentRound.Id,
+                actionChoice,
+                _clock.UtcNow));
+
+            if (IsCombatActionSubmissionCompleted(CurrentRound))
+            {
+                InitializeCurrentRoundCombatResolution();
+                AddEvent(new CombatActionRequestPhaseCompleted(
+                    Id,
+                    CurrentRound.Id,
+                    RoundNumber,
+                    _clock.UtcNow));
+            }
+
+            return Result.Ok();
+        }
+        private static bool IsCombatActionSubmissionCompleted(Round round) =>
+            round.CombatActionsByCreature.Count == 6;
+        private Result InitializeCurrentRoundCombatResolution()
+        {
+            CurrentRound!.InitializeCombatResolution();
+            return Result.Ok();
+        }
+
+        // --------------------
+        // Combat – resolution
+        // --------------------
+
+        public Result<bool> ResolveNextCombatStep()
+        {
+            if (CurrentRound is null)
+                return Result<bool>.Fail("No active round.");
+
+            var nextActionResult = CurrentRound.SelectNextActionToResolve();
+            if (!nextActionResult.IsSuccess)
+                return Result<bool>.Fail(nextActionResult.Error!);
+
+            var actionChoice = nextActionResult.Value!;
+
+            var ctxResult = BuildGameContextForCurrentCreature(actionChoice.ActorId);
+            if (!ctxResult.IsSuccess)
+                return Result<bool>.Fail(ctxResult.Error!);
+
+            // 1) Compute the combat result (damage, crit, etc.)
+            var resolutionResult = _ruleSet.Combat.Resolve(ctxResult.Value!, actionChoice);
+            if (!resolutionResult.IsSuccess)
+                return Result<bool>.Fail(resolutionResult.Error!);
+
+            // 2) Apply the combat result on the creatures
+            var applyResult = _ruleSet.Combat.ApplyCombatResult(resolutionResult.Value!, AllCreatures);
+            if (!applyResult.IsSuccess)
+                return Result<bool>.Fail(applyResult.Error!);
+
+            // 3) Event could be raised here (currently commented out in your version)
+
+            var cursorResult = CurrentRound.AdvanceActionResolutionCursor();
+            if (!cursorResult.IsSuccess)
+                return Result<bool>.Fail(cursorResult.Error!);
+
+            // 4) If resolution is done, finalize the round.
+            if (CurrentRound.IsCombatResolutionCompleted)
+            {
+                AddEvent(new CombatResolutionCompleted(
+                    Id,
+                    CurrentRound.Id,
+                    RoundNumber,
+                    _clock.UtcNow));
+
+                FinalizeCurrentRound();
+                return Result<bool>.Ok(true);
+            }
+
+            return Result<bool>.Ok(false);
+        }
+
+        private void FinalizeCurrentRound()
+        {
+            ArgumentNullException.ThrowIfNull(CurrentRound);
+
+            // 1) End-of-round cleanup (conditions, etc.)
+            var cleanupResult = CurrentRound.MoveToEndOfRoundCleanup();
+            if (!cleanupResult.IsSuccess)
+                throw new InvalidOperationException(cleanupResult.Error);
+
+            // TODO: apply end-of-round effects here (conditions, etc.)
+
+            // 2) Is the match finished?
+            if (TryEndMatchIfNeeded())
+            {
+                CurrentRound.MarkEndOfRoundFinalized();
+                return;
+            }
+
+            // 3) Round ended but match continues
+            AddEvent(new RoundEnded(
+                Id,
+                CurrentRound.Id,
+                RoundNumber,
+                _clock.UtcNow));
+
+            CurrentRound.MarkEndOfRoundFinalized();
+
+            // 4) Start next round
+            StartNextRound();
+        }
+
+        private bool TryEndMatchIfNeeded()
+        {
+            if (Player1Team!.IsDead || Player2Team!.IsDead)
+            {
+                Lifecycle.MoveTo(MatchState.Ended);
+                // AddEvent(new MatchEnded(Id, _clock.UtcNow));
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Ends the current player turn.
+        /// </summary>
+        public Result EndTurn(PlayerId actor)
+        {
+            if (State != MatchState.Started)
+                return Result.Fail(MatchErrors.NotStarted);
+
+            AddEvent(new TurnAdvanced(Id, RoundNumber, _clock.UtcNow));
+            return Result.Ok();
+        }
+
+        // --------------------
+        // Creature context
+        // --------------------
+
+        private Result<CreaturePerspective> BuildGameContextForCurrentCreature(CreatureId creatureId)
+        {
+            if (Player1Team is null || Player2Team is null)
+                throw new InvalidOperationException("Teams are not initialized.");
+
+            if (State != MatchState.Started)
+                throw new InvalidOperationException("Match is not started.");
+
+            return CreaturePerspective.FromMatch(creatureId, this);
+        }
     }
 }

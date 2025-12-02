@@ -1,6 +1,5 @@
 ﻿using DA.Game.Domain2.Matches.Contexts;
-using DA.Game.Domain2.Matches.RuleSets;
-using DA.Game.Domain2.Matches.Services;
+using DA.Game.Domain2.Matches.Messages;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Evolution;
 using DA.Game.Domain2.Matches.ValueObjects.Phases;
@@ -8,280 +7,347 @@ using DA.Game.Domain2.Matches.ValueObjects.Planning;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
-using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Utilities;
 using System.Collections.ObjectModel;
 
 namespace DA.Game.Domain2.Matches.Entities
 {
-    public class Round : Entity<RoundId>
+    /// <summary>
+    /// Round is a pure state + state-machine holder:
+    /// - Knows phases & subphases.
+    /// - Stores choices (evolution, speed, intents, combat actions).
+    /// - Does NOT know ruleset / max counts / resources.
+    /// </summary>
+    public sealed class Round : Entity<RoundId>
     {
-        private const string MaxChoicesAlreadySubmittedMessage =
-            "Nombre maximum de choix déjà soumis pour ce joueur.";
+        // --------------------
+        // Lifecycle
+        // --------------------
 
-        // Une seule timeline
-        public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
-
-        // Deux curseurs pour deux passes distinctes
-        public TurnCursor RevealCursor { get; private set; } = TurnCursor.Start;
-        public TurnCursor ResolveCursor { get; private set; } = TurnCursor.Start;
-
-        private readonly Dictionary<CreatureId, CombatActionChoice> _combatChoices = new();
-        private readonly Dictionary<CreatureId, CombatActionIntent> _intents = new();
-
-        private readonly HashSet<SpellUnlockChoice> _p1Evolution = new();
-        private readonly HashSet<SpellUnlockChoice> _p2Evolution = new();
-        private readonly HashSet<SpeedChoice> _p1Speed = new();
-        private readonly HashSet<SpeedChoice> _p2Speed = new();
-
-        public int Number { get; private set; }
         public RoundLifecycle Lifecycle { get; } = new();
+        public RoundSubPhaseLifecycle SubLifecycle { get; } = new();
 
         public RoundPhase Phase => Lifecycle.Phase;
-        public IReadOnlyCollection<SpellUnlockChoice> Player1Choices => _p1Evolution;
-        public IReadOnlyCollection<SpellUnlockChoice> Player2Choices => _p2Evolution;
+        public RoundSubPhase? SubPhase => SubLifecycle.SubPhase;
 
-        public IReadOnlyCollection<SpeedChoice> Player1SpeedChoices => _p1Speed;
-        public IReadOnlyCollection<SpeedChoice> Player2SpeedChoices => _p2Speed;
+        // --------------------
+        // Timeline + cursors
+        // --------------------
 
-        public ReadOnlyDictionary<CreatureId, CombatActionChoice> CombatActionChoices =>
-            _combatChoices.AsReadOnly();
+        /// <summary>
+        /// The combat activation order for this round.
+        /// </summary>
+        public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
 
-        private readonly IGameResources _resources;
-        private readonly RuleSet _ruleSet;
+        /// <summary>
+        /// Cursor used during the reveal/target selection pass.
+        /// </summary>
+        public TurnCursor RevealCursor { get; private set; } = TurnCursor.Start;
 
-        protected Round(RoundId id, IGameResources resources, RuleSet ruleSet) : base(id)
+        /// <summary>
+        /// Cursor used during the combat resolution pass.
+        /// </summary>
+        public TurnCursor ResolveCursor { get; private set; } = TurnCursor.Start;
+
+        // --------------------
+        // Stored decisions
+        // --------------------
+
+        private readonly Dictionary<CreatureId, CombatActionChoice> _combatActionsByCreature = new();
+        private readonly Dictionary<CreatureId, CombatActionIntent> _combatIntentsByCreature = new();
+
+        private readonly HashSet<SpellUnlockChoice> _player1EvolutionChoices = new();
+        private readonly HashSet<SpellUnlockChoice> _player2EvolutionChoices = new();
+
+        private readonly HashSet<SpeedChoice> _player1SpeedChoices = new();
+        private readonly HashSet<SpeedChoice> _player2SpeedChoices = new();
+
+        public int Number { get; }
+
+        public IReadOnlyCollection<SpellUnlockChoice> Player1EvolutionChoices => _player1EvolutionChoices;
+        public IReadOnlyCollection<SpellUnlockChoice> Player2EvolutionChoices => _player2EvolutionChoices;
+
+        public IReadOnlyCollection<SpeedChoice> Player1SpeedChoices => _player1SpeedChoices;
+        public IReadOnlyCollection<SpeedChoice> Player2SpeedChoices => _player2SpeedChoices;
+
+        public ReadOnlyDictionary<CreatureId, CombatActionChoice> CombatActionsByCreature =>
+            _combatActionsByCreature.AsReadOnly();
+
+        public ReadOnlyDictionary<CreatureId, CombatActionIntent> CombatIntentsByCreature =>
+            _combatIntentsByCreature.AsReadOnly();
+
+        public bool IsCombatResolutionCompleted { get; private set; }
+
+        // --------------------
+        // Ctor / factories
+        // --------------------
+
+        private Round(RoundId id) : base(id)
         {
             Number = id.Value;
-            _resources = resources;
-            _ruleSet = ruleSet;
         }
 
-        public static Round StartFirst(IGameResources resources, RuleSet ruleSet) =>
-            new(RoundId.New(1), resources, ruleSet);
+        public static Round StartFirst() =>
+            new(RoundId.New(1));
 
         public static Round StartNext(Round previous)
         {
             ArgumentNullException.ThrowIfNull(previous);
-            return new Round(RoundId.New(previous.Number + 1), previous._resources, previous._ruleSet);
+            return new Round(RoundId.New(previous.Number + 1));
         }
 
         // --------------------
-        // Phase Évolution
+        // Evolution phase
         // --------------------
 
         public Result InitializeEvolutionPhase()
         {
-            return Lifecycle.MoveTo(RoundPhase.Planning);
+            var phaseTransition = Lifecycle.MoveTo(RoundPhase.Planning);
+            if (!phaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Planning, RoundSubPhase.Planning_Evolution);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            return Result.Ok();
         }
 
-        public Result SubmitEvolutionChoice(CreaturePerspective ctx, SpellUnlockChoice choice)
+        public Result SubmitEvolutionChoice(CreaturePerspective perspective, SpellUnlockChoice choice)
         {
-            ArgumentNullException.ThrowIfNull(ctx);
+            ArgumentNullException.ThrowIfNull(perspective);
+            ArgumentNullException.ThrowIfNull(choice);
 
-            if (Phase != RoundPhase.Planning)
-                return Result.Fail("Phase invalide pour soumettre une évolution.");
+            if (Phase != RoundPhase.Planning || SubPhase != RoundSubPhase.Planning_Evolution)
+                return Result.Fail(RoundErrorCodes.D101_INVALID_PHASE_EVOLUTION);
 
-            if (ctx.Actor.OwnerSlot == PlayerSlot.Player1)
-            {
-                if (_p1Evolution.Count >= 2)
-                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
-                if (!_p1Evolution.Add(choice))
-                    return Result.Fail("Choix déjà soumis.");
-            }
-            else
-            {
-                if (_p2Evolution.Count >= 2)
-                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
-                if (!_p2Evolution.Add(choice))
-                    return Result.Fail("Choix déjà soumis.");
-            }
+            var targetSet = perspective.Actor.OwnerSlot == PlayerSlot.Player1
+                ? _player1EvolutionChoices
+                : _player2EvolutionChoices;
+
+            // Only uniqueness per creature – max counts are enforced by Match/RuleSet.
+            if (!targetSet.Add(choice))
+                return Result.Fail(RoundErrorCodes.D102_EVOLUTION_ALREADY_SUBMITTED);
 
             return Result.Ok();
         }
 
         // --------------------
-        // Phase Vitesse
+        // Speed phase
         // --------------------
 
         public Result InitializeSpeedPhase()
         {
-            return Lifecycle.MoveTo(RoundPhase.Planning);
+            var phaseTransition = Lifecycle.MoveTo(RoundPhase.Planning);
+            if (!phaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Planning, RoundSubPhase.Planning_Speed);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            return Result.Ok();
         }
 
-        public Result SubmitSpeedChoice(CreaturePerspective ctx, SpeedChoice choice)
+        public Result SubmitSpeedChoice(CreaturePerspective perspective, SpeedChoice choice)
         {
-            ArgumentNullException.ThrowIfNull(ctx);
+            ArgumentNullException.ThrowIfNull(perspective);
+            ArgumentNullException.ThrowIfNull(choice);
 
-            if (Phase != RoundPhase.Planning)
-                return Result.Fail("Phase invalide pour soumettre un choix de vitesse.");
+            if (Phase != RoundPhase.Planning || SubPhase != RoundSubPhase.Planning_Speed)
+                return Result.Fail(RoundErrorCodes.D201_INVALID_PHASE_SPEED);
 
-            if (ctx.Actor.OwnerSlot == PlayerSlot.Player1)
-            {
-                if (_p1Speed.Count >= 3)
-                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
-                if (!_p1Speed.Add(choice))
-                    return Result.Fail("Choix déjà soumis.");
-            }
-            else
-            {
-                if (_p2Speed.Count >= 3)
-                    return Result.Fail(MaxChoicesAlreadySubmittedMessage);
-                if (!_p2Speed.Add(choice))
-                    return Result.Fail("Choix déjà soumis.");
-            }
+            var targetSet = perspective.Actor.OwnerSlot == PlayerSlot.Player1
+                ? _player1SpeedChoices
+                : _player2SpeedChoices;
+
+            if (!targetSet.Add(choice))
+                return Result.Fail(RoundErrorCodes.D202_SPEED_ALREADY_SUBMITTED);
+
+            return Result.Ok();
+        }
+
+        public Result InitializeTurnOrderResolution(CombatTimeline timeline)
+        {
+            ArgumentNullException.ThrowIfNull(timeline);
+
+            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Planning, RoundSubPhase.Planning_TurnOrderResolution);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            Timeline = timeline;
+            RevealCursor = TurnCursor.Start;
+            ResolveCursor = TurnCursor.Start;
 
             return Result.Ok();
         }
 
         // --------------------
-        // Phase Combat – init
+        // Combat – initialization
         // --------------------
 
-        public void InitializeCombatPhase()
+        public Result InitializeCombatPhase()
         {
-            Lifecycle.MoveTo(RoundPhase.Combat);
-        }
+            var phaseTransition = Lifecycle.MoveTo(RoundPhase.Combat);
+            if (!phaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
 
-        /// <summary>
-        /// Phase de résolution de vitesse : on fixe la timeline, puis
-        /// on reset les deux curseurs (révélation & résolution).
-        /// </summary>
-        public void InitializeSpeedResolutionPhase(CombatTimeline timeline)
-        {
-            Timeline = timeline ?? CombatTimeline.Empty;
+            var subPhaseTransition = SubLifecycle.InitializeForPhase(RoundPhase.Combat);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
 
-            RevealCursor = TurnCursor.Start;
-            ResolveCursor = TurnCursor.Start;
-
-            IsSpeedResolutionCompleted = true;
-            Lifecycle.MoveTo(RoundPhase.Combat);
+            return Result.Ok();
         }
 
         // --------------------
-        // Combat intents (spell sans target)
+        // Combat intents (spell without targets)
         // --------------------
 
-        public Result<CombatActionIntent> SubmitCombatIntent(CreaturePerspective ctx, CombatActionIntent intent)
+        public Result<CombatActionIntent> SubmitCombatIntent(CreaturePerspective perspective, CombatActionIntent intent)
         {
-            ArgumentNullException.ThrowIfNull(ctx);
+            ArgumentNullException.ThrowIfNull(perspective);
             ArgumentNullException.ThrowIfNull(intent);
 
-            if (Phase != RoundPhase.Combat)
-                return Result<CombatActionIntent>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
+            if (Phase != RoundPhase.Combat || SubPhase != RoundSubPhase.Combat_IntentSelection)
+                return Result<CombatActionIntent>.Fail(RoundErrorCodes.D301_INVALID_PHASE_INTENT);
 
-            if (_intents.ContainsKey(intent.ActorId))
-                return Result<CombatActionIntent>.Fail("Cette créature a déjà soumis une action pour ce round.");
+            if (_combatIntentsByCreature.ContainsKey(intent.ActorId))
+                return Result<CombatActionIntent>.Fail(RoundErrorCodes.D302_INTENT_ALREADY_SUBMITTED);
 
-            _intents[intent.ActorId] = intent;
-
-            if (_intents.Count == ctx.Creatures.Count)
-            {
-                IsCombatActionIntentSubmitPhaseCompleted = true;
-            }
+            _combatIntentsByCreature[intent.ActorId] = intent;
 
             return Result<CombatActionIntent>.Ok(intent);
         }
 
         // --------------------
-        // Combat choices (spell + targets)
+        // Combat actions (spell + targets)
         // --------------------
 
-        public Result<CombatActionChoice> SubmitCombatAction(CreaturePerspective ctx, CombatActionChoice choice)
+        public Result InitializeCombatReveal()
         {
-            ArgumentNullException.ThrowIfNull(ctx);
+            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Combat, RoundSubPhase.Combat_RevealAndTarget);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            return Result.Ok();
+        }
+
+        public Result<CombatActionChoice> SubmitCombatAction(CreaturePerspective perspective, CombatActionChoice choice)
+        {
+            ArgumentNullException.ThrowIfNull(perspective);
             ArgumentNullException.ThrowIfNull(choice);
 
-            if (Phase != RoundPhase.Combat)
-                return Result<CombatActionChoice>.Fail("Phase invalide pour soumettre un choix d'action de combat.");
+            if (Phase != RoundPhase.Combat || SubPhase != RoundSubPhase.Combat_RevealAndTarget)
+                return Result<CombatActionChoice>.Fail(RoundErrorCodes.D351_INVALID_PHASE_COMBAT_ACTION);
 
-            if (_combatChoices.ContainsKey(choice.ActorId))
-                return Result<CombatActionChoice>.Fail("Cette créature a déjà soumis une action pour ce round.");
+            if (_combatActionsByCreature.ContainsKey(choice.ActorId))
+                return Result<CombatActionChoice>.Fail(RoundErrorCodes.D352_COMBAT_ACTION_ALREADY_SUBMITTED);
 
-            _combatChoices[choice.ActorId] = choice;
-
-            if (_combatChoices.Count == ctx.Creatures.Count)
-            {
-                IsCombatActionRequestPhaseCompleted = true;
-            }
+            _combatActionsByCreature[choice.ActorId] = choice;
 
             return Result<CombatActionChoice>.Ok(choice);
         }
 
         // --------------------
-        // Pass 1 : révéler les intents dans l’ordre de la timeline
+        // Pass 1 : reveal intents in timeline order
         // --------------------
 
-        public Result<CombatActionIntent> SelectNextIntentToRevealTarget()
+        public Result<CombatActionIntent> SelectNextIntentToReveal()
         {
-            if (Timeline is null || Timeline.Slots.Count == 0)
-                return Result<CombatActionIntent>.Fail("Timeline non initialisé pour ce round.");
+            if (Phase != RoundPhase.Combat || SubPhase != RoundSubPhase.Combat_RevealAndTarget)
+                return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I301_INVALID_PHASE_FOR_REVEAL);
+
+            if (Timeline.Slots.Count == 0)
+                return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I401_TIMELINE_NOT_INITIALIZED);
 
             if (RevealCursor.IsEnd(Timeline.Slots.Count))
-                return Result<CombatActionIntent>.Fail("Tous les intents ont déjà été révélés pour ce round.");
+                return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I402_ALL_INTENTS_ALREADY_REVEALED);
 
             var slot = Timeline.Slots[RevealCursor.Index];
 
-            if (!_intents.TryGetValue(slot.CreatureId, out var intent))
-                return Result<CombatActionIntent>.Fail("Rien de soumis pour cette créature.");
+            if (!_combatIntentsByCreature.TryGetValue(slot.CreatureId, out var intent))
+                return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I403_NO_INTENT_FOR_CREATURE);
 
-            // Avance le curseur de révélation
             RevealCursor = RevealCursor.MoveNext();
 
             return Result<CombatActionIntent>.Ok(intent);
         }
 
         // --------------------
-        // Pass 2 : résoudre les actions (spell + target) dans le même ordre
+        // Pass 2 : resolve actions in the same order
         // --------------------
+
+        public Result InitializeCombatResolution()
+        {
+            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Combat, RoundSubPhase.Combat_ActionResolution);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            return Result.Ok();
+        }
 
         public Result<CombatActionChoice> SelectNextActionToResolve()
         {
-            if (Timeline is null || Timeline.Slots.Count == 0)
-                return Result<CombatActionChoice>.Fail("Timeline non initialisé pour ce round.");
+            if (Phase != RoundPhase.Combat || SubPhase != RoundSubPhase.Combat_ActionResolution)
+                return Result<CombatActionChoice>.InvariantFail(RoundErrorCodes.I302_INVALID_PHASE_FOR_RESOLUTION);
+
+            if (Timeline.Slots.Count == 0)
+                return Result<CombatActionChoice>.InvariantFail(RoundErrorCodes.I401_TIMELINE_NOT_INITIALIZED);
 
             if (ResolveCursor.IsEnd(Timeline.Slots.Count))
-                return Result<CombatActionChoice>.Fail("Le round est déjà complété.");
+                return Result<CombatActionChoice>.InvariantFail(RoundErrorCodes.I404_COMBAT_RESOLUTION_ALREADY_COMPLETED);
 
             var slot = Timeline.Slots[ResolveCursor.Index];
 
-            if (!_combatChoices.TryGetValue(slot.CreatureId, out var choice))
-                return Result<CombatActionChoice>.Fail("Rien de soumis pour cette créature.");
-
-            if (ResolveCursor.IsEnd(Timeline.Slots.Count))
-                IsCombatResolutionCompleted = true;
+            if (!_combatActionsByCreature.TryGetValue(slot.CreatureId, out var choice))
+                return Result<CombatActionChoice>.InvariantFail(RoundErrorCodes.I405_NO_ACTION_FOR_CREATURE);
 
             return Result<CombatActionChoice>.Ok(choice);
         }
 
-        public Result MoveToNextAction()
+        public Result AdvanceActionResolutionCursor()
         {
-            // Avance le curseur de résolution
+            if (Timeline.Slots.Count == 0)
+                return Result.InvariantFail(RoundErrorCodes.I401_TIMELINE_NOT_INITIALIZED);
+
+            if (ResolveCursor.IsEnd(Timeline.Slots.Count))
+                return Result.InvariantFail(RoundErrorCodes.I404_COMBAT_RESOLUTION_ALREADY_COMPLETED);
+
             ResolveCursor = ResolveCursor.MoveNext();
+
+            if (ResolveCursor.IsEnd(Timeline.Slots.Count))
+                IsCombatResolutionCompleted = true;
+
             return Result.Ok();
         }
+
         // --------------------
-        // Fin de round
+        // End of round
         // --------------------
 
-        public void DoCleanup()
+        public Result MoveToEndOfRoundCleanup()
         {
-            Lifecycle.MoveTo(RoundPhase.EndOfRound);
+            var phaseTransition = Lifecycle.MoveTo(RoundPhase.EndOfRound);
+            if (!phaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            var subPhaseTransition = SubLifecycle.InitializeForPhase(RoundPhase.EndOfRound);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I501_INVALID_PHASE_FOR_ROUND_FINALIZATION);
+
+            return Result.Ok();
         }
 
-        // --------------------
-        // Flags / états dérivés
-        // --------------------
+        public Result MarkEndOfRoundFinalized()
+        {
+            if (Phase != RoundPhase.EndOfRound || SubPhase != RoundSubPhase.End_Cleanup)
+                return Result.InvariantFail(RoundErrorCodes.I501_INVALID_PHASE_FOR_ROUND_FINALIZATION);
 
-        public bool IsEvolutionPhaseComplete =>
-            _p1Evolution.Count == 2 && _p2Evolution.Count == 2;
+            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.EndOfRound, RoundSubPhase.End_Finalization);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I501_INVALID_PHASE_FOR_ROUND_FINALIZATION);
 
-        public bool IsSpeedChoicePhaseComplete =>
-            _p1Speed.Count == 3 && _p2Speed.Count == 3;
-
-        public bool IsCombatActionRequestPhaseCompleted { get; private set; }
-        public bool IsCombatActionIntentSubmitPhaseCompleted { get; private set; }
-        public bool IsSpeedResolutionCompleted { get; private set; }
-        public bool IsCombatResolutionCompleted { get; private set; }
+            return Result.Ok();
+        }
     }
 }

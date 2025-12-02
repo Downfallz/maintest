@@ -26,7 +26,9 @@ public static class RuleSetV1
         //    TimelineBuilder: new TimelineBuilderV1());
 
         // --- Combat Rules
-        var combat = new CombatRules(new AttackChoiceValidationService(
+        var combat = new CombatRules(
+            new IntentValidationService(new CombatActionSelectionPolicyV1(), new CostPolicyV1()),
+                new AttackChoiceValidationService(
                 new CombatActionSelectionPolicyV1(), 
                 new CostPolicyV1(), 
                 new TargetingPolicyV1()),
