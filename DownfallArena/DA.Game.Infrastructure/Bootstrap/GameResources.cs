@@ -1,6 +1,7 @@
 ﻿using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 
 namespace DA.Game.Infrastructure.Bootstrap;
 
@@ -12,18 +13,22 @@ public sealed class GameResources : IGameResources
 {
     private readonly IReadOnlyDictionary<SpellId, Spell> _spells;
     private readonly IReadOnlyDictionary<CreatureDefId, CreatureDefinitionRef> _characters;
+    private readonly IReadOnlyDictionary<TalentTreeId, TalentTree> _talentTrees;
 
     public IReadOnlyList<Spell> Spells => _spells.Values.ToList();
     public IReadOnlyList<CreatureDefinitionRef> Creatures => _characters.Values.ToList();
+    public IReadOnlyList<TalentTree> TalentTrees => _talentTrees.Values.ToList();
     public string Version { get; }
 
     private GameResources(
         IReadOnlyDictionary<SpellId, Spell> spells,
         IReadOnlyDictionary<CreatureDefId, CreatureDefinitionRef> characters,
+        IReadOnlyDictionary<TalentTreeId, TalentTree> talentTrees,
         string version)
     {
         _spells = spells;
         _characters = characters;
+        _talentTrees = talentTrees;
         Version = version;
     }
 
@@ -33,16 +38,19 @@ public sealed class GameResources : IGameResources
     public static GameResources Create(
         IEnumerable<Spell> spells,
         IEnumerable<CreatureDefinitionRef> characters,
+        IEnumerable<TalentTree> talentTrees,
         string version)
     {
         ArgumentNullException.ThrowIfNull(spells);
         ArgumentNullException.ThrowIfNull(characters);
+        ArgumentNullException.ThrowIfNull(talentTrees);
         ArgumentException.ThrowIfNullOrEmpty(version);
 
         var dictSpells = spells.ToDictionary(s => s.Id);
         var dictChars = characters.ToDictionary(c => c.Id);
+        var dictTalentTrees = talentTrees.ToDictionary(t => t.Id);
 
-        return new GameResources(dictSpells, dictChars, version);
+        return new GameResources(dictSpells, dictChars, dictTalentTrees, version);
     }
 
     public Spell GetSpell(SpellId id)
@@ -60,4 +68,7 @@ public sealed class GameResources : IGameResources
 
     public bool TryGetCreature(CreatureDefId id, out CreatureDefinitionRef? def)
         => _characters.TryGetValue(id, out def);
+
+    public bool TryGetTalentTree(TalentTreeId id, out TalentTree? talentTree)
+        => _talentTrees.TryGetValue(id, out talentTree);
 }

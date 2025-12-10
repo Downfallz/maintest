@@ -15,14 +15,131 @@
     <Content Include="..\Data\Creatures\main.v1.json" Link="Data\Creatures\main.v1.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Data\Spells\basic_attack.v1.json" Link="Data\Spells\basic_attack.v1.json">
+    <Content Include="..\Data\Spells\base\basic_attack.v1.json" Link="Data\Spells\base\basic_attack.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\base\heavy_strike.v1.json" Link="Data\Spells\base\heavy_strike.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\base\wait.v1.json" Link="Data\Spells\base\wait.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\berserker\enraged_charge.v1.json" Link="Data\Spells\brawler\berserker\enraged_charge.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\berserker\psycho_rush.v1.json" Link="Data\Spells\brawler\berserker\psycho_rush.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\berserker\tornado.v1.json" Link="Data\Spells\brawler\berserker\tornado.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\guard.v1.json" Link="Data\Spells\brawler\guard.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\mercenary\chain_slash.v1.json" Link="Data\Spells\brawler\mercenary\chain_slash.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\mercenary\protective_slam.v1.json" Link="Data\Spells\brawler\mercenary\protective_slam.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\mercenary\thundering_seal.v1.json" Link="Data\Spells\brawler\mercenary\thundering_seal.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\pummel.v1.json" Link="Data\Spells\brawler\pummel.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\warlord\crushing_stomp.v1.json" Link="Data\Spells\brawler\warlord\crushing_stomp.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\warlord\full_plate.v1.json" Link="Data\Spells\brawler\warlord\full_plate.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\brawler\warlord\restorative_gush.v1.json" Link="Data\Spells\brawler\warlord\restorative_gush.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\assassin\death_squad.v1.json" Link="Data\Spells\scoundrel\assassin\death_squad.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\assassin\momentum.v1.json" Link="Data\Spells\scoundrel\assassin\momentum.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\assassin\mortal_wound.v1.json" Link="Data\Spells\scoundrel\assassin\mortal_wound.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\leech\hateful_sacrifice.v1.json" Link="Data\Spells\scoundrel\leech\hateful_sacrifice.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\leech\parasite_jab.v1.json" Link="Data\Spells\scoundrel\leech\parasite_jab.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\leech\soul_devourer.v1.json" Link="Data\Spells\scoundrel\leech\soul_devourer.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\poison_slash.v1.json" Link="Data\Spells\scoundrel\poison_slash.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\throwing_star.v1.json" Link="Data\Spells\scoundrel\throwing_star.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\trickster\infectious_blast.v1.json" Link="Data\Spells\scoundrel\trickster\infectious_blast.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\trickster\noxious_cure.v1.json" Link="Data\Spells\scoundrel\trickster\noxious_cure.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\scoundrel\trickster\tranquilizer_dart.v1.json" Link="Data\Spells\scoundrel\trickster\tranquilizer_dart.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\lightning_bolt.v1.json" Link="Data\Spells\sorcerer\lightning_bolt.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\necromancer\crazed_specter.v1.json" Link="Data\Spells\sorcerer\necromancer\crazed_specter.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\necromancer\revenant_guards.v1.json" Link="Data\Spells\sorcerer\necromancer\revenant_guards.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\necromancer\summon_minions.v1.json" Link="Data\Spells\sorcerer\necromancer\summon_minions.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\rejuvenate.v1.json" Link="Data\Spells\sorcerer\rejuvenate.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\shaman\healing_screech.v1.json" Link="Data\Spells\sorcerer\shaman\healing_screech.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\shaman\restorative_burst.v1.json" Link="Data\Spells\sorcerer\shaman\restorative_burst.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\shaman\toxic_waves.v1.json" Link="Data\Spells\sorcerer\shaman\toxic_waves.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\wizard\engulfing_flames.v1.json" Link="Data\Spells\sorcerer\wizard\engulfing_flames.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\wizard\ice_spear.v1.json" Link="Data\Spells\sorcerer\wizard\ice_spear.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\Spells\sorcerer\wizard\meteor.v1.json" Link="Data\Spells\sorcerer\wizard\meteor.v1.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Data\TalentTrees\talent_tree.v1.json" Link="Data\TalentTrees\talent_tree.v1.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Data\Creatures\" />
-    <Folder Include="Data\Spells\" />
+    <Folder Include="Data\Spells\brawler\mercenary\" />
+    <Folder Include="Data\Spells\brawler\berserker\" />
+    <Folder Include="Data\Spells\base\" />
+    <Folder Include="Data\Spells\brawler\warlord\" />
+    <Folder Include="Data\Spells\scoundrel\leech\" />
+    <Folder Include="Data\Spells\scoundrel\assassin\" />
+    <Folder Include="Data\Spells\scoundrel\trickster\" />
+    <Folder Include="Data\Spells\sorcerer\necromancer\" />
+    <Folder Include="Data\Spells\sorcerer\shaman\" />
+    <Folder Include="Data\Spells\sorcerer\wizard\" />
   </ItemGroup>
 
   <ItemGroup>

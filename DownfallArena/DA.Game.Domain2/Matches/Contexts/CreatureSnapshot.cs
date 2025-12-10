@@ -1,6 +1,8 @@
 ﻿using DA.Game.Domain2.Matches.Entities;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 using DA.Game.Shared.Contracts.Resources.Stats;
 using DA.Game.Shared.Utilities;
 
@@ -29,7 +31,9 @@ public sealed record CreatureSnapshot : ValueObject
     public bool IsDead => !IsAlive;
 
     public Defense TotalDefense => Defense.Of(BaseDefense.Value + BonusDefense.Value);
+    public TalentTreeId? TalentTreeId { get; private set; }
 
+    public IReadOnlyList<SpellId> KnownSpellIds { get; private set; }
     public CreatureSnapshot(
         CreatureId characterId,
         PlayerSlot ownerSlot,
@@ -43,7 +47,9 @@ public sealed record CreatureSnapshot : ValueObject
         Initiative baseInitiative,
         CriticalChance baseCritical,
         CriticalChance bonusCritical,
-        Defense bonusDefense)
+        Defense bonusDefense,
+        TalentTreeId? talentTreeId,
+        IReadOnlyList<SpellId> knownSpellIds)
     {
         CharacterId = characterId;
         OwnerSlot = ownerSlot;
@@ -58,6 +64,8 @@ public sealed record CreatureSnapshot : ValueObject
         BaseCritical = baseCritical;
         BonusCritical = bonusCritical;
         BonusDefense = bonusDefense;
+        TalentTreeId = talentTreeId;
+        KnownSpellIds = knownSpellIds;
     }
 
     public static CreatureSnapshot From(CombatCreature character)
@@ -77,8 +85,14 @@ public sealed record CreatureSnapshot : ValueObject
             character.BaseInitiative,
             character.BaseCritical,
             character.BonusCritical,
-            character.BonusDefense
+            character.BonusDefense,
+            character.TalentTreeId,
+            character.KnownSpellIds
         );
     }
+
+    // API claire pour les talents
+    public bool KnowsSpell(SpellId spellId) =>
+        KnownSpellIds.Contains(spellId);
 }
 

@@ -11,6 +11,7 @@ using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Evolution;
 using DA.Game.Domain2.Matches.ValueObjects.Phases;
 using DA.Game.Domain2.Matches.ValueObjects.Planning;
+using DA.Game.Domain2.Shared.Extensions;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -171,6 +172,16 @@ namespace DA.Game.Domain2.Matches.Aggregates
             var ctxResult = BuildGameContextForCurrentCreature(choice.CharacterId);
             if (!ctxResult.IsSuccess)
                 return Result.Fail(ctxResult.Error!);
+
+            var talentTreeTest = _resources.TryGetTalentTree(ctxResult.Value!.Actor.TalentTreeId.Value, out var talentTree);
+
+            var test = _ruleSet.Planning.ValidateSpellUnlock(ctxResult.Value!, talentTree, choice);
+            if (!test.IsSuccess)
+                return test;
+            var creatureResult = AllCreatures.FindCreature(ctxResult.Value.ActorId, "error");
+            if (!creatureResult.IsSuccess)
+                return Result.Fail(creatureResult.Error!);
+            creatureResult.Value!.UnlockSpell(choice.SpellRef.Id);
 
             var roundResult = CurrentRound!.SubmitEvolutionChoice(ctxResult.Value!, choice);
             if (!roundResult.IsSuccess)

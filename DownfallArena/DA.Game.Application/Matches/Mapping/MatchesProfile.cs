@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using DA.Game.Application.Matches.DTOs;
+using DA.Game.Application.Matches.ReadModels;
 using DA.Game.Domain2.Matches.Aggregates;
 using DA.Game.Domain2.Matches.Contexts;
 using DA.Game.Domain2.Matches.Entities;
+using DA.Game.Domain2.Matches.Services.Queries;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Evolution;
 using DA.Game.Domain2.Matches.ValueObjects.Phases;
@@ -27,5 +29,7 @@ public class MatchesProfile : Profile
         CreateMap<MatchLifecycle, MatchLifecycleDto>().ReverseMap();
         CreateMap<Round, RoundDto>().ReverseMap();
         CreateMap<Match, MatchDto>().ReverseMap();
+        CreateMap<PlayerUnlockableSpells, PlayerUnlockableSpellsView>().ReverseMap();
+        CreateMap<CreatureUnlockableSpells, CreatureUnlockableSpellsView>().ReverseMap();
     }
 }

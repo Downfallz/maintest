@@ -68,6 +68,7 @@ public static class ServiceCollectionExtensions
 
         // Handlers (Application)
         services.ConfigureAppServices();
+
         //    services.AddSingleton<IPolicy>(sp =>
         //new MLPolicy(modelPath: "C:\\gamedata\\model-reward.zip", new GameFeatureExtractor()));
 

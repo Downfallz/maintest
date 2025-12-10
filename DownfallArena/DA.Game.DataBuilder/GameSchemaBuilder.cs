@@ -34,15 +34,17 @@ internal static class GameSchemaBuilder
 
         var spellsDir = Path.Combine(sourceDir, DownfallArenaJsonOptions.FOLDER_SPELLS);
         var creaturesDir = Path.Combine(sourceDir, DownfallArenaJsonOptions.FOLDER_CREATURES);
+        var talentTreesDir = Path.Combine(sourceDir, DownfallArenaJsonOptions.FOLDER_TALENT_TREES);
 
         var spells = await LoadDefinitionsAsync<SpellDefinitionDto>(spellsDir, logger, cancellationToken);
         var creatures = await LoadDefinitionsAsync<CreatureDefinitionDto>(creaturesDir, logger, cancellationToken);
+        var talentTrees = await LoadDefinitionsAsync<TalentTreeDefinitionDto>(talentTreesDir, logger, cancellationToken);
         var aliases = await ReadAliasesAsync(sourceDir, logger, cancellationToken);
 
-        logger?.LogInformation("Loaded {SpellCount} spells and {CreatureCount} creatures.",
-            spells.Count, creatures.Count);
+        logger?.LogInformation("Loaded {SpellCount} spells and {CreatureCount} creatures. and {TalentTreeCount} talent trees.",
+            spells.Count, creatures.Count, talentTrees.Count);
 
-        var schemaWithoutHash = CreateSchema(spells, creatures, aliases);
+        var schemaWithoutHash = CreateSchema(spells, creatures, aliases, talentTrees);
 
         ValidateSchema(schemaWithoutHash, logger);
 
@@ -80,13 +82,15 @@ internal static class GameSchemaBuilder
     private static GameSchema CreateSchema(
         IReadOnlyList<SpellDefinitionDto> spells,
         IReadOnlyList<CreatureDefinitionDto> creatures,
-        Dictionary<string, string>? aliases)
+        Dictionary<string, string>? aliases,
+        IReadOnlyList<TalentTreeDefinitionDto> talentTrees)
         => new()
         {
             SchemaVersion = 1,
             Spells = spells,
             Creatures = creatures,
             Aliases = aliases,
+            TalentTrees = talentTrees,
             BuildHash = string.Empty // temporarily empty, replaced later
         };
 
@@ -103,6 +107,8 @@ internal static class GameSchemaBuilder
         if (schema.Creatures is null || schema.Creatures.Count == 0)
             throw new InvalidOperationException("Game schema must contain at least one creature.");
 
+        if (schema.TalentTrees is null || schema.TalentTrees.Count == 0)
+            throw new InvalidOperationException("Game schema must contain at least one talent tree.");
         // Example: warn if aliases is missing (but not fatal)
         if (schema.Aliases is null)
         {

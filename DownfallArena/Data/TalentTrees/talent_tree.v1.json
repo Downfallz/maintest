@@ -1,0 +1,486 @@
+{
+  "id": "talent-tree:base_creature:v1",
+  "name": "Base Creature Talent Tree",
+
+  "root": {
+    "code": "BaseCreature",
+    "name": "Base Creature",
+
+    "prerequisites": {
+      "allOf": [],
+      "anyOf": []
+    },
+
+    "spells": [
+      {
+        "id": "spell:basic_attack",
+        "prerequisites": {
+          "allOf": [],
+          "anyOf": []
+        }
+      },
+      {
+        "id": "spell:heavy_strike",
+        "prerequisites": {
+          "allOf": [],
+          "anyOf": []
+        }
+      },
+      {
+        "id": "spell:wait",
+        "prerequisites": {
+          "allOf": [],
+          "anyOf": []
+        }
+      }
+    ],
+
+    "children": [
+      {
+        "code": "Brawler",
+        "name": "Brawler",
+
+        "prerequisites": {
+          "allOf": [
+            "spell:basic_attack",
+            "spell:heavy_strike",
+            "spell:wait"
+          ],
+          "anyOf": []
+        },
+
+        "spells": [
+          {
+            "id": "spell:pummel",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          },
+          {
+            "id": "spell:guard",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          }
+        ],
+
+        "children": [
+          {
+            "code": "Mercenary",
+            "name": "Mercenary",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:pummel",
+                "spell:guard"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:protective_slam",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:chain_slash",
+                "prerequisites": {
+                  "allOf": [ "spell:protective_slam" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:thundering_seal",
+                "prerequisites": {
+                  "allOf": [ "spell:protective_slam" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          },
+          {
+            "code": "Warlord",
+            "name": "Warlord",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:pummel",
+                "spell:guard"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:full_plate",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:restorative_gush",
+                "prerequisites": {
+                  "allOf": [ "spell:full_plate" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:crushing_stomp",
+                "prerequisites": {
+                  "allOf": [ "spell:full_plate" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          },
+          {
+            "code": "Berserker",
+            "name": "Berserker",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:pummel",
+                "spell:guard"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:enraged_charge",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:tornado",
+                "prerequisites": {
+                  "allOf": [ "spell:enraged_charge" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:psycho_rush",
+                "prerequisites": {
+                  "allOf": [ "spell:enraged_charge" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          }
+        ]
+      },
+
+      {
+        "code": "Scoundrel",
+        "name": "Scoundrel",
+
+        "prerequisites": {
+          "allOf": [
+            "spell:basic_attack",
+            "spell:heavy_strike",
+            "spell:wait"
+          ],
+          "anyOf": []
+        },
+
+        "spells": [
+          {
+            "id": "spell:poison_slash",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          },
+          {
+            "id": "spell:throwing_star",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          }
+        ],
+
+        "children": [
+          {
+            "code": "Leech",
+            "name": "Leech",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:poison_slash",
+                "spell:throwing_star"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:parasite_jab",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:hateful_sacrifice",
+                "prerequisites": {
+                  "allOf": [ "spell:parasite_jab" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:soul_devourer",
+                "prerequisites": {
+                  "allOf": [ "spell:parasite_jab" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          },
+          {
+            "code": "Assassin",
+            "name": "Assassin",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:poison_slash",
+                "spell:throwing_star"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:momentum",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:death_squad",
+                "prerequisites": {
+                  "allOf": [ "spell:momentum" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:mortal_wound",
+                "prerequisites": {
+                  "allOf": [ "spell:momentum" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          },
+          {
+            "code": "Trickster",
+            "name": "Trickster",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:poison_slash",
+                "spell:throwing_star"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:noxious_cure",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:tranquilizer_dart",
+                "prerequisites": {
+                  "allOf": [ "spell:noxious_cure" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:infectious_blast",
+                "prerequisites": {
+                  "allOf": [ "spell:noxious_cure" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          }
+        ]
+      },
+
+      {
+        "code": "Sorcerer",
+        "name": "Sorcerer",
+
+        "prerequisites": {
+          "allOf": [
+            "spell:basic_attack",
+            "spell:heavy_strike",
+            "spell:wait"
+          ],
+          "anyOf": []
+        },
+
+        "spells": [
+          {
+            "id": "spell:lightning_bolt",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          },
+          {
+            "id": "spell:rejuvenate",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          }
+        ],
+
+        "children": [
+          {
+            "code": "Wizard",
+            "name": "Wizard",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:lightning_bolt",
+                "spell:rejuvenate"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:meteor",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:engulfing_flames",
+                "prerequisites": {
+                  "allOf": [ "spell:meteor" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:ice_spear",
+                "prerequisites": {
+                  "allOf": [ "spell:meteor" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          },
+
+          {
+            "code": "Necromancer",
+            "name": "Necromancer",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:lightning_bolt",
+                "spell:rejuvenate"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:summon_minions",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:revenant_guards",
+                "prerequisites": {
+                  "allOf": [ "spell:summon_minions" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:crazed_specter",
+                "prerequisites": {
+                  "allOf": [ "spell:summon_minions" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          },
+
+          {
+            "code": "Shaman",
+            "name": "Shaman",
+
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": [
+                "spell:lightning_bolt",
+                "spell:rejuvenate"
+              ]
+            },
+
+            "spells": [
+              {
+                "id": "spell:healing_screech",
+                "prerequisites": {
+                  "allOf": [],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:toxic_waves",
+                "prerequisites": {
+                  "allOf": [ "spell:healing_screech" ],
+                  "anyOf": []
+                }
+              },
+              {
+                "id": "spell:restoring_burst",
+                "prerequisites": {
+                  "allOf": [ "spell:healing_screech" ],
+                  "anyOf": []
+                }
+              }
+            ],
+
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

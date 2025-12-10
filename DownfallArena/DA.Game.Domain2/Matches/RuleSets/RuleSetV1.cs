@@ -17,7 +17,8 @@ public static class RuleSetV1
         var phase = new PhaseRules(new MatchPhasePolicyV1());
 
         // --- Evolution Rules
-        var evolution = new PlanningRules(new CombatTimelineBuilderServiceV1(),
+        var evolution = new PlanningRules(new TalentUnlockService(),
+            new CombatTimelineBuilderServiceV1(),
             new InitiativePolicyV1());
 
         //// --- Speed Rules

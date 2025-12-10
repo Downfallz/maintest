@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using DA.Game.Application.Learning.Abstractions;
-using DA.Game.Application.Matches.Features.JoinMatch;
-using DA.Game.Application.Matches.Features.PlayTurn;
+using DA.Game.Application.Matches.Features.Commands.JoinMatch;
+using DA.Game.Application.Matches.Features.Commands.PlayTurn;
 using DA.Game.Application.Matches.Ports;
 using DA.Game.Application.Matches.ReadModels;
 using DA.Game.Application.Players.Ports;

@@ -12,9 +12,16 @@ public static class GameResourcesFactory
 
         var schema = JsonSerializer.Deserialize<GameSchema>(json, DownfallArenaJsonOptions.ReadOptions)
                      ?? throw new InvalidOperationException("Invalid schema file");
+
         Validate(schema);
 
-        var gameResources = GameResources.Create(schema.Spells.Select(s => s.ToRef()), schema.Creatures.Select(c => c.ToRef()), schema.BuildHash);
+        var aliasResolver = new SchemaAliasResolver(schema);
+
+        var spells = schema.Spells.Select(s => s.ToRef(aliasResolver)).ToArray();
+        var creatures = schema.Creatures.Select(c => c.ToRef(aliasResolver)).ToArray();
+        var talentTrees = schema.TalentTrees.Select(t => t.ToRef(aliasResolver)).ToArray();
+
+        var gameResources = GameResources.Create(spells, creatures, talentTrees, schema.BuildHash);
         return gameResources;
     }
 

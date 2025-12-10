@@ -1,4 +1,5 @@
 ﻿using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 using DA.Game.Shared.Contracts.Resources.Stats;
 
 namespace DA.Game.Shared.Contracts.Resources.Creatures;
@@ -11,6 +12,7 @@ public sealed record CreatureDefinitionRef(
     Defense BaseDefense,
     Initiative BaseInitiative,
     CriticalChance BaseCritChance,
+    TalentTreeId? TalentTreeId,                 // <-- nouveau
     IReadOnlyList<SpellId> StartingSpellIds
 )
 {
@@ -22,6 +24,7 @@ public sealed record CreatureDefinitionRef(
         Defense baseDefense,
         Initiative baseInitiative,
         CriticalChance baseCritChance,
+        TalentTreeId? talentTreeId,             // <-- nouveau param
         IReadOnlyList<SpellId> startingSpellIds)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -30,7 +33,6 @@ public sealed record CreatureDefinitionRef(
         if (startingSpellIds is null || startingSpellIds.Count == 0)
             throw new ArgumentException("StartingSpellIds cannot be null or empty.", nameof(startingSpellIds));
 
-        // Optionnel mais safe : éviter les SpellId par défaut
         for (var i = 0; i < startingSpellIds.Count; i++)
         {
             if (startingSpellIds[i].Equals(default(SpellId)))
@@ -45,6 +47,7 @@ public sealed record CreatureDefinitionRef(
             baseDefense,
             baseInitiative,
             baseCritChance,
+            talentTreeId,
             startingSpellIds
         );
     }

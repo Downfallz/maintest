@@ -1,0 +1,8 @@
+﻿using DA.Game.Application.Shared.Primitives;
+using DA.Game.Shared.Contracts.Matches.Ids;
+using DA.Game.Shared.Contracts.Players;
+using DA.Game.Shared.Utilities;
+
+namespace DA.Game.Application.Matches.Features.Commands.JoinMatch;
+
+public sealed record JoinMatchCommand(MatchId MatchId, PlayerRef PlayerRef) : ICommand<Result<JoinMatchResult>>;

@@ -10,6 +10,7 @@ public static class DownfallArenaJsonOptions
     public const string FILENAME_SCHEMAHASH = "schema.hash";
     public const string FOLDER_SPELLS = "spells";
     public const string FOLDER_CREATURES = "creatures";
+    public const string FOLDER_TALENT_TREES = "talenttrees";
     public const string FOLDER_DATA = "Data";
     public const string FOLDER_DST = "dst";
 

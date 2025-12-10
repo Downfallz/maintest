@@ -1,4 +1,6 @@
-﻿using FluentValidation;
+﻿using DA.Game.Domain2.Matches.Services.Planning;
+using DA.Game.Domain2.Matches.Services.Queries;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Scrutor;
@@ -41,6 +43,8 @@ public static class ServiceCollectionExtensions
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
+        services.AddScoped<ITalentQueryService, TalentQueryService>();
+        services.AddScoped<ITalentUnlockService, TalentUnlockService>();
         return services;
     }
 }

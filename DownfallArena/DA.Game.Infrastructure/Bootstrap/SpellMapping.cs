@@ -58,19 +58,24 @@ public static class SpellMapping
     }
 
 
-    public static Spell ToRef(this SpellDefinitionDto dto)
+    public static Spell ToRef(this SpellDefinitionDto dto, IIdAliasResolver alias)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        return new Spell(SpellId.New(dto.Id)
-            , dto.Name
-            , dto.SpellType
-            , dto.CreatureClass
-            , Initiative.Of(dto.Initiative)
-            , Energy.Of(dto.EnergyCost)
-            , CriticalChance.Of(dto.CriticalChance)
-            , dto.Targeting.ToRef()
-            , dto.Effects.Select(e => e.ToRef()).ToArray()
-        );
+        ArgumentNullException.ThrowIfNull(alias);
 
+        // Alias resolution happens here
+        var canonicalId = alias.Resolve(dto.Id);
+
+        return new Spell(
+            SpellId.New(canonicalId),
+            dto.Name,
+            dto.SpellType,
+            dto.CreatureClass,
+            Initiative.Of(dto.Initiative),
+            Energy.Of(dto.EnergyCost),
+            CriticalChance.Of(dto.CriticalChance),
+            dto.Targeting.ToRef(),
+            dto.Effects.Select(e => e.ToRef()).ToArray()
+        );
     }
 }

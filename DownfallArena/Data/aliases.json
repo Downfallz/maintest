@@ -1,3 +1,52 @@
 {
-  "spell:basic_attack": "spell:basic_attack:v1"
+  "spell:basic_attack": "spell:basic_attack:v1",
+  "spell:heavy_strike": "spell:heavy_strike:v1",
+  "spell:wait": "spell:wait:v1",
+
+  "spell:pummel": "spell:pummel:v1",
+  "spell:guard": "spell:guard:v1",
+
+  "spell:protective_slam": "spell:protective_slam:v1",
+  "spell:chain_slash": "spell:chain_slash:v1",
+  "spell:thundering_seal": "spell:thundering_seal:v1",
+
+  "spell:full_plate": "spell:full_plate:v1",
+  "spell:restorative_gush": "spell:restorative_gush:v1",
+  "spell:crushing_stomp": "spell:crushing_stomp:v1",
+
+  "spell:enraged_charge": "spell:enraged_charge:v1",
+  "spell:tornado": "spell:tornado:v1",
+  "spell:psycho_rush": "spell:psycho_rush:v1",
+
+  "spell:poison_slash": "spell:poison_slash:v1",
+  "spell:throwing_star": "spell:throwing_star:v1",
+
+  "spell:parasite_jab": "spell:parasite_jab:v1",
+  "spell:hateful_sacrifice": "spell:hateful_sacrifice:v1",
+  "spell:soul_devourer": "spell:soul_devourer:v1",
+
+  "spell:momentum": "spell:momentum:v1",
+  "spell:death_squad": "spell:death_squad:v1",
+  "spell:mortal_wound": "spell:mortal_wound:v1",
+
+  "spell:noxious_cure": "spell:noxious_cure:v1",
+  "spell:tranquilizer_dart": "spell:tranquilizer_dart:v1",
+  "spell:infectious_blast": "spell:infectious_blast:v1",
+
+  "spell:lightning_bolt": "spell:lightning_bolt:v1",
+  "spell:rejuvenate": "spell:rejuvenate:v1",
+
+  "spell:meteor": "spell:meteor:v1",
+  "spell:engulfing_flames": "spell:engulfing_flames:v1",
+  "spell:ice_spear": "spell:ice_spear:v1",
+
+  "spell:summon_minions": "spell:summon_minions:v1",
+  "spell:revenant_guards": "spell:revenant_guards:v1",
+  "spell:crazed_specter": "spell:crazed_specter:v1",
+
+  "spell:healing_screech": "spell:healing_screech:v1",
+  "spell:toxic_waves": "spell:toxic_waves:v1",
+  "spell:restoring_burst": "spell:restoring_burst:v1",
+
+  "talent-tree:base_creature" : "talent-tree:base_creature:v1"
 }

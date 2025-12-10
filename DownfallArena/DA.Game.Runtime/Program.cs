@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using DA.Game.Application.Matches.DTOs;
-using DA.Game.Application.Matches.Features.CreateMatch;
-using DA.Game.Application.Matches.Features.JoinMatch;
-using DA.Game.Application.Matches.Features.SubmitCombatActionChoice;
-using DA.Game.Application.Matches.Features.SubmitEvolutionChoice;
-using DA.Game.Application.Matches.Features.SubmitSpeedChoice;
+using DA.Game.Application.Matches.Features.Commands.CreateMatch;
+using DA.Game.Application.Matches.Features.Commands.JoinMatch;
+using DA.Game.Application.Matches.Features.Commands.ResolveNextCombatAction;
+using DA.Game.Application.Matches.Features.Commands.RevealNextActionBindTargets;
+using DA.Game.Application.Matches.Features.Commands.SubmitCombatIntent;
+using DA.Game.Application.Matches.Features.Commands.SubmitEvolutionChoice;
+using DA.Game.Application.Matches.Features.Commands.SubmitSpeedChoice;
 using DA.Game.Application.Players.Features.Create;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -88,18 +90,39 @@ namespace DA.Game.Runtime
             var joinMatchResult2 = await mediator.Send(new JoinMatchCommand(matchId, pr2));
             while (true)
             {
+
+                var unlockable1 = await mediator.Send(new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player1));
+                var unlockable2 = await mediator.Send(new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player2));
+                IReadOnlyList<SpellId> u;
+
+                var unlock1 = (u = unlockable1.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(1)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
+                var s1 = gamere.Spells.Single(x => x.Id == unlock1);
+                var unlock2 = (u = unlockable1.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(2)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
+                var s2 = gamere.Spells.Single(x => x.Id == unlock2);
+                var unlock4 = (u = unlockable2.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(4)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
+                var s4 = gamere.Spells.Single(x => x.Id == unlock4);
+                var unlock5 = (u = unlockable2.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(5)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
+                var s5 = gamere.Spells.Single(x => x.Id == unlock5);
+
                 var re1 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
                 PlayerSlot.Player1,
-                new SpellUnlockChoiceDto(CreatureId.New(1), basicAttack)));
+                new SpellUnlockChoiceDto(CreatureId.New(1), s1)));
                 var re2 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
                     PlayerSlot.Player1,
-                    new SpellUnlockChoiceDto(CreatureId.New(2), basicAttack)));
+                    new SpellUnlockChoiceDto(CreatureId.New(2), s2)));
                 var re3 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
                     PlayerSlot.Player2,
-                    new SpellUnlockChoiceDto(CreatureId.New(4), basicAttack)));
+                    new SpellUnlockChoiceDto(CreatureId.New(4), s4)));
                 var re4 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
                     PlayerSlot.Player2,
-                    new SpellUnlockChoiceDto(CreatureId.New(5), basicAttack)));
+                    new SpellUnlockChoiceDto(CreatureId.New(5), s5)));
+
+
+
+
+
+
+
 
                 var speed1 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
                     PlayerSlot.Player1,

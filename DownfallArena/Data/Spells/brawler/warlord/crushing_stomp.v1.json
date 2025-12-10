@@ -1,0 +1,21 @@
+{
+  "id": "spell:crushing_stomp:v1",
+  "name": "Crushing Stomp",
+  "spellType": "Offensive",
+  "characterClass": "Creature",
+  "initiative": 1,
+  "level": 0,
+  "energyCost": 0,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 1
+    }
+  ]
+}

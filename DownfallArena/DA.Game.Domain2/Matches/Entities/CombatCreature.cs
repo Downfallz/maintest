@@ -4,6 +4,7 @@ using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 using DA.Game.Shared.Contracts.Resources.Stats;
 
 namespace DA.Game.Domain2.Matches.Entities;
@@ -16,7 +17,7 @@ public class CombatCreature : Entity<CreatureId>
     {
         ArgumentNullException.ThrowIfNull(creatureDefinitionTemplate);
 
-        return new CombatCreature(id)
+        var creature = new CombatCreature(id)
         {
             BaseHealth = creatureDefinitionTemplate.BaseHp,
             BaseEnergy = creatureDefinitionTemplate.BaseEnergy,
@@ -30,9 +31,18 @@ public class CombatCreature : Entity<CreatureId>
             BonusDefense = Defense.Of(0),
             BonusCritical = CriticalChance.Of(0),
             IsStunned = false,
-            OwnerSlot = playerSlot
+            OwnerSlot = playerSlot,
+            TalentTreeId = creatureDefinitionTemplate.TalentTreeId
         };
+        creature._knownSpellIds.AddRange(creatureDefinitionTemplate.StartingSpellIds);
+        return creature;
     }
+
+    public TalentTreeId? TalentTreeId { get; private set; }
+    // Spells connus par la créature (starter + talents débloqués)
+    public IReadOnlyList<SpellId> KnownSpellIds => _knownSpellIds.AsReadOnly();
+    private readonly List<SpellId> _knownSpellIds = new();
+
     public required IReadOnlyList<SpellId> StartingSpellIds { get; set; }
     public required Health BaseHealth { get; set; }
     public required Energy BaseEnergy { get; set; }
@@ -48,6 +58,17 @@ public class CombatCreature : Entity<CreatureId>
     public bool IsDead => Health.IsDead();
     public bool IsAlive => !IsDead;
     public PlayerSlot OwnerSlot { get; set; }
+
+ 
+
+    public void UnlockSpell(SpellId spellId)
+    {
+        if (IsDead)
+            return;
+
+        if (!_knownSpellIds.Contains(spellId))
+            _knownSpellIds.Add(spellId);
+    }
 
     public void TakeDamage(int damage)
     {
