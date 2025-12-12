@@ -19,6 +19,7 @@ using DA.Game.Shared.Contracts.Players;
 using DA.Game.Shared.Contracts.Players.Ids;
 using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Contracts.Resources.Creatures;
+using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 using DA.Game.Shared.Utilities;
 using System;
 using System.Collections.Generic;
@@ -141,10 +142,21 @@ namespace DA.Game.Domain2.Matches.Aggregates
 
         private void InitializeRound()
         {
+            AddEvent(new RoundInitialized(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
             // TODO: round start effects (+2 Energy, conditions, etc.) will be handled here later.
 
-            AddEvent(new RoundInitialized(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
+
+            InitializeCurrentRoundOnGoingEffect();
+
+            // TODO: ongoing
+
             InitializeCurrentRoundEvolution();
+        }
+        private void InitializeCurrentRoundOnGoingEffect()
+        {
+            var result = CurrentRound!.InitializeOnGoingEffectPhase();
+            if (!result.IsSuccess)
+                throw new InvalidOperationException(result.Error);
         }
 
         private void InitializeCurrentRoundEvolution()
@@ -165,7 +177,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
         {
             ArgumentNullException.ThrowIfNull(choice);
 
-            var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitEvolutionChoice(this);
+            var guard = _ruleSet.Phase.EnsureCanSubmitEvolutionChoice(this);
             if (!guard.IsSuccess)
                 return guard;
 
@@ -174,13 +186,17 @@ namespace DA.Game.Domain2.Matches.Aggregates
                 return Result.Fail(ctxResult.Error!);
 
             var talentTreeTest = _resources.TryGetTalentTree(ctxResult.Value!.Actor.TalentTreeId.Value, out var talentTree);
+            if (!talentTreeTest)
+                return Result.Fail("Could not find talent tree.");
 
-            var test = _ruleSet.Planning.ValidateSpellUnlock(ctxResult.Value!, talentTree, choice);
-            if (!test.IsSuccess)
-                return test;
+            var spellUnlockResult = _ruleSet.Planning.ValidateSpellUnlock(ctxResult.Value!, talentTree, choice);
+            if (!spellUnlockResult.IsSuccess)
+                return spellUnlockResult;
+
             var creatureResult = AllCreatures.FindCreature(ctxResult.Value.ActorId, "error");
             if (!creatureResult.IsSuccess)
                 return Result.Fail(creatureResult.Error!);
+
             creatureResult.Value!.UnlockSpell(choice.SpellRef.Id);
 
             var roundResult = CurrentRound!.SubmitEvolutionChoice(ctxResult.Value!, choice);
@@ -193,7 +209,11 @@ namespace DA.Game.Domain2.Matches.Aggregates
                 choice,
                 _clock.UtcNow));
 
-            if (IsEvolutionPhaseComplete(CurrentRound))
+            var resultPhaseEval = _ruleSet.Phase.EvaluateEvolutionPhaseCompleted(this, _resources);
+            if (!resultPhaseEval.IsSuccess)
+                return Result.Fail(resultPhaseEval.Error!);
+
+            if (resultPhaseEval.Value!.CanAdvance)
             {
                 AddEvent(new EvolutionPhaseCompleted(
                     Id,
@@ -205,9 +225,6 @@ namespace DA.Game.Domain2.Matches.Aggregates
             return roundResult;
         }
 
-        private static bool IsEvolutionPhaseComplete(Round round) =>
-            round.Player1EvolutionChoices.Count == 2 &&
-            round.Player2EvolutionChoices.Count == 2;
 
         // --------------------
         // Speed
@@ -215,7 +232,15 @@ namespace DA.Game.Domain2.Matches.Aggregates
 
         public Result InitializeCurrentRoundSpeedPhase()
         {
-            return CurrentRound!.InitializeSpeedPhase();
+            var resultPhaseEval = _ruleSet.Phase.EvaluateEvolutionPhaseCompleted(this, _resources);
+            if (!resultPhaseEval.IsSuccess)
+                return Result.Fail(resultPhaseEval.Error!);
+
+            if (resultPhaseEval.Value!.CanAdvance)
+            {
+                return CurrentRound!.InitializeSpeedPhase();
+            }
+            return Result.Fail("Cannot initialize speed phase yet.");
         }
 
         /// <summary>
@@ -225,13 +250,21 @@ namespace DA.Game.Domain2.Matches.Aggregates
         {
             ArgumentNullException.ThrowIfNull(speedChoice);
 
-            var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitSpeedChoice(this);
+            var guard = _ruleSet.Phase.EnsureCanSubmitSpeedChoice(this);
             if (!guard.IsSuccess)
                 return guard;
 
             var ctxResult = BuildGameContextForCurrentCreature(speedChoice.CreatureId);
             if (!ctxResult.IsSuccess)
                 return Result.Fail(ctxResult.Error!);
+
+            var speedChoiceResult = _ruleSet.Planning.ValidateSpeedChoice(ctxResult.Value!, speedChoice);
+            if (!speedChoiceResult.IsSuccess)
+                return speedChoiceResult;
+
+            var creatureResult = AllCreatures.FindCreature(ctxResult.Value.ActorId, "error");
+            if (!creatureResult.IsSuccess)
+                return Result.Fail(creatureResult.Error!);
 
             var roundResult = CurrentRound!.SubmitSpeedChoice(ctxResult.Value!, speedChoice);
             if (!roundResult.IsSuccess)
@@ -243,23 +276,23 @@ namespace DA.Game.Domain2.Matches.Aggregates
                 speedChoice,
                 _clock.UtcNow));
 
-            if (IsSpeedPhaseComplete(CurrentRound))
+            var resultPhaseEval = _ruleSet.Phase.EvaluateSpeedPhaseCompleted(this);
+            if (!resultPhaseEval.IsSuccess)
+                return Result.Fail(resultPhaseEval.Error!);
+
+            if (resultPhaseEval.Value!.CanAdvance)
             {
                 AddEvent(new SpeedPhaseCompleted(
-                    Id,
-                    CurrentRound.Id,
-                    RoundNumber,
-                    _clock.UtcNow));
+                                    Id,
+                                    CurrentRound.Id,
+                                    RoundNumber,
+                                    _clock.UtcNow));
                 InitializeCurrentRoundSpeedResolutionPhase();
                 InitializeCurrentRoundCombatPhase();
             }
 
             return roundResult;
         }
-
-        private static bool IsSpeedPhaseComplete(Round round) =>
-            round.Player1SpeedChoices.Count == 3 &&
-            round.Player2SpeedChoices.Count == 3;
 
         private void InitializeCurrentRoundSpeedResolutionPhase()
         {
@@ -294,7 +327,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
         {
             ArgumentNullException.ThrowIfNull(intent);
 
-            var guard = _ruleSet.Phase.MatchPhase.EnsureCanSubmitCombatAction(this);
+            var guard = _ruleSet.Phase.EnsureCanSubmitCombatAction(this);
             if (!guard.IsSuccess)
                 return guard;
 
@@ -316,7 +349,12 @@ namespace DA.Game.Domain2.Matches.Aggregates
                 _clock.UtcNow));
 
             // When all intents are submitted, we transition to speed resolution / timeline.
-            if (IsIntentPhaseComplete(CurrentRound))
+
+            var resultPhaseEval = _ruleSet.Phase.EvaluateCombatPlanningPhaseCompleted(this);
+            if (!resultPhaseEval.IsSuccess)
+                return Result.Fail(resultPhaseEval.Error!);
+
+            if (resultPhaseEval.Value!.CanAdvance)
             {
                 InitializeCurrentRoundCombatReveal();
                 AddEvent(new CombatActionSubmitIntentCompleted(
@@ -324,14 +362,11 @@ namespace DA.Game.Domain2.Matches.Aggregates
                     CurrentRound.Id,
                     RoundNumber,
                     _clock.UtcNow));
-
-
             }
 
             return Result.Ok();
         }
-        private static bool IsIntentPhaseComplete(Round round) =>
-            round.CombatIntentsByCreature.Count == 6;
+
         // --------------------
         // Combat – reveal + bind targets
         // --------------------
@@ -372,7 +407,11 @@ namespace DA.Game.Domain2.Matches.Aggregates
                 actionChoice,
                 _clock.UtcNow));
 
-            if (IsCombatActionSubmissionCompleted(CurrentRound))
+            var resultPhaseEval = _ruleSet.Phase.EvaluateCombatActionPhaseCompleted(this);
+            if (!resultPhaseEval.IsSuccess)
+                return Result.Fail(resultPhaseEval.Error!);
+
+            if (resultPhaseEval.Value!.CanAdvance)
             {
                 InitializeCurrentRoundCombatResolution();
                 AddEvent(new CombatActionRequestPhaseCompleted(
@@ -384,8 +423,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
 
             return Result.Ok();
         }
-        private static bool IsCombatActionSubmissionCompleted(Round round) =>
-            round.CombatActionsByCreature.Count == 6;
+
         private Result InitializeCurrentRoundCombatResolution()
         {
             CurrentRound!.InitializeCombatResolution();
@@ -413,17 +451,19 @@ namespace DA.Game.Domain2.Matches.Aggregates
 
             // 1) Compute the combat result (damage, crit, etc.)
             var resolutionResult = _ruleSet.Combat.Resolve(ctxResult.Value!, actionChoice);
-            if (!resolutionResult.IsSuccess)
+            if (resolutionResult.IsInvariant)
                 return Result<bool>.Fail(resolutionResult.Error!);
-
-            // 2) Apply the combat result on the creatures
-            var applyResult = _ruleSet.Combat.ApplyCombatResult(resolutionResult.Value!, AllCreatures);
-            if (!applyResult.IsSuccess)
-                return Result<bool>.Fail(applyResult.Error!);
+            else if (resolutionResult.IsSuccess)
+            {
+                // 2) Apply the combat result on the creatures
+                var applyResult = _ruleSet.Combat.ApplyCombatResult(resolutionResult.Value!, AllCreatures);
+                if (!applyResult.IsSuccess)
+                    return Result<bool>.Fail(applyResult.Error!);
+            }
 
             // 3) Event could be raised here (currently commented out in your version)
 
-            var cursorResult = CurrentRound.AdvanceActionResolutionCursor();
+            var cursorResult = CurrentRound.AdvanceCombatResolutionCursor();
             if (!cursorResult.IsSuccess)
                 return Result<bool>.Fail(cursorResult.Error!);
 
@@ -448,7 +488,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
             ArgumentNullException.ThrowIfNull(CurrentRound);
 
             // 1) End-of-round cleanup (conditions, etc.)
-            var cleanupResult = CurrentRound.MoveToEndOfRoundCleanup();
+            var cleanupResult = CurrentRound.InitializeEndOfRoundCleanup();
             if (!cleanupResult.IsSuccess)
                 throw new InvalidOperationException(cleanupResult.Error);
 

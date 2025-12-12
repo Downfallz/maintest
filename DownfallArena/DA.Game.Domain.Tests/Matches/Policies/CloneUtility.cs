@@ -28,7 +28,9 @@ internal static class CloneUtility
             baseInitiative: original.BaseInitiative,
             baseCritical: baseCritical ?? original.BaseCritical,
             bonusCritical: bonusCritical ?? original.BonusCritical,
-            bonusDefense: original.BonusDefense
+            bonusDefense: original.BonusDefense,
+            talentTreeId: original.TalentTreeId,
+            knownSpellIds: original.KnownSpellIds
         );
     }
 }

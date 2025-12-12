@@ -13,7 +13,7 @@ namespace DA.Game.Domain2.Matches.RuleSets;
 
 public sealed class PlanningRules(ITalentUnlockService talentUnlockService,
     ICombatTimelineBuilderService combatTimelineBuilderService,
-    IInitiativePolicy initiativePlicy)
+    ISpeedChoicePolicy speedChoicePolicy)
 {
     public CombatTimeline BuildTimeline(
         Team team1,
@@ -27,5 +27,10 @@ public sealed class PlanningRules(ITalentUnlockService talentUnlockService,
     public Result ValidateSpellUnlock(CreaturePerspective creaturePerspective, TalentTree? tree, SpellUnlockChoice choice)
     {
         return talentUnlockService.ValidateSpellUnlock(creaturePerspective, tree, choice);
+    }
+
+    public Result ValidateSpeedChoice(CreaturePerspective creaturePerspective, SpeedChoice choice)
+    {
+        return speedChoicePolicy.EnsureCreatureCanPlaySpeedChoice(creaturePerspective, choice);
     }
 }

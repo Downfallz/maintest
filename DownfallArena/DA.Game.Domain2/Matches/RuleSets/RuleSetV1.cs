@@ -4,7 +4,9 @@ using DA.Game.Domain2.Matches.Policies.Planning;
 using DA.Game.Domain2.Matches.Services.Combat;
 using DA.Game.Domain2.Matches.Services.Combat.Resolution;
 using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
+using DA.Game.Domain2.Matches.Services.Phases;
 using DA.Game.Domain2.Matches.Services.Planning;
+using DA.Game.Domain2.Matches.Services.Queries;
 using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Domain2.Matches.RuleSets;
@@ -14,12 +16,16 @@ public static class RuleSetV1
     public static RuleSet Create()
     {
         // --- Phase Rules
-        var phase = new PhaseRules(new MatchPhasePolicyV1());
+        var phase = new PhaseRules(new MatchPhasePolicyV1(),
+            new SpeedProgressionEvaluatorService(),
+            new EvolutionProgressionEvaluatorService(new TalentQueryService(new TalentUnlockService())),
+            new CombatPlanningProgressionEvaluatorService(),
+            new CombatActionProgressionEvaluatorService());
 
         // --- Evolution Rules
         var evolution = new PlanningRules(new TalentUnlockService(),
             new CombatTimelineBuilderServiceV1(),
-            new InitiativePolicyV1());
+            new SpeedChoicePolicy());
 
         //// --- Speed Rules
         //var speed = new SpeedRules(
@@ -28,13 +34,14 @@ public static class RuleSetV1
 
         // --- Combat Rules
         var combat = new CombatRules(
-            new IntentValidationService(new CombatActionSelectionPolicyV1(), new CostPolicyV1()),
+            new IntentValidationService(new CombatActionSelectionPolicyV1(), new CostPolicyV1(), new UnlockedPolicyV1()),
                 new AttackChoiceValidationService(
                 new CombatActionSelectionPolicyV1(), 
                 new CostPolicyV1(), 
                 new TargetingPolicyV1()),
             new CombatActionResolutionService(
                 new CombatActionResolutionPolicyV1(),
+                new UnlockedPolicyV1(),
                 new CostPolicyV1(),
                 new TargetingPolicyV1(),
                 new EffectComputationServiceV1(),

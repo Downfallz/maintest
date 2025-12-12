@@ -5,6 +5,7 @@ using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 using DA.Game.Shared.Contracts.Resources.Stats;
 using FluentAssertions;
 using System;
@@ -44,6 +45,7 @@ public class CombatCreatureTests
             baseDefense,
             baseInitiative,
             baseCrit,
+            talentTreeId: null,
             spells
         );
         var playerSLot = PlayerSlot.Player1;
@@ -292,6 +294,7 @@ public class CombatCreatureTests
         Defense baseDefense,
         Initiative baseInitiative,
         CriticalChance baseCrit,
+        TalentTreeId? talentTreeId,
         IReadOnlyList<SpellId> startingSpells)
     {
 
@@ -303,6 +306,7 @@ public class CombatCreatureTests
              baseDefense,
              baseInitiative,
              baseCrit,
+             talentTreeId,
              startingSpells
          );
     }

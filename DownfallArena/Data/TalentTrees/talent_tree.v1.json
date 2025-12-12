@@ -469,7 +469,7 @@
                 }
               },
               {
-                "id": "spell:restoring_burst",
+                "id": "spell:restorative_burst",
                 "prerequisites": {
                   "allOf": [ "spell:healing_screech" ],
                   "anyOf": []

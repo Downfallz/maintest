@@ -1,5 +1,6 @@
 ﻿using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 using DA.Game.Shared.Contracts.Resources.Stats;
 using DA.Game.Shared.Tests;
 namespace DA.Game.Shared.Contracts.Tests.Resources.Creatures;
@@ -16,6 +17,7 @@ public class CharacterDefinitionRefTests
         Defense defense,
         Initiative initiative,
         CriticalChance crit,
+        TalentTreeId? talentTreeId,
         SpellId spell1,
         SpellId spell2)
     {
@@ -29,6 +31,7 @@ public class CharacterDefinitionRefTests
             defense,
             initiative,
             crit,
+            talentTreeId,
             spells
         );
 
@@ -39,6 +42,7 @@ public class CharacterDefinitionRefTests
         Assert.Equal(defense, def.BaseDefense);
         Assert.Equal(initiative, def.BaseInitiative);
         Assert.Equal(crit, def.BaseCritChance);
+        Assert.Equal(talentTreeId, def.TalentTreeId);
         Assert.Same(spells, def.StartingSpellIds);
     }
 
@@ -54,6 +58,7 @@ public class CharacterDefinitionRefTests
         Defense defense,
         Initiative initiative,
         CriticalChance crit,
+        TalentTreeId? talentTreeId,
         SpellId spell)
     {
         var spells = new List<SpellId> { spell };
@@ -67,6 +72,7 @@ public class CharacterDefinitionRefTests
                 defense,
                 initiative,
                 crit,
+                talentTreeId,
                 spells));
     }
 
@@ -78,6 +84,7 @@ public class CharacterDefinitionRefTests
         Energy energy,
         Defense defense,
         Initiative initiative,
+        TalentTreeId? talentTreeId,
         CriticalChance crit)
     {
         Assert.Throws<ArgumentException>(() =>
@@ -89,6 +96,7 @@ public class CharacterDefinitionRefTests
                 defense,
                 initiative,
                 crit,
+                talentTreeId,
                 new List<SpellId>()));
     }
 
@@ -100,7 +108,8 @@ public class CharacterDefinitionRefTests
         Energy energy,
         Defense defense,
         Initiative initiative,
-        CriticalChance crit)
+        CriticalChance crit,
+        TalentTreeId? talentTreeId)
     {
         var spells = new List<SpellId>();
 
@@ -113,6 +122,7 @@ public class CharacterDefinitionRefTests
                 defense,
                 initiative,
                 crit,
+                talentTreeId,
                 spells));
     }
 
@@ -124,6 +134,7 @@ public class CharacterDefinitionRefTests
         Energy energy,
         Defense defense,
         Initiative initiative,
+        TalentTreeId? talentTreeId,
         CriticalChance crit)
     {
         var spells = new List<SpellId> { default(SpellId) };
@@ -137,6 +148,7 @@ public class CharacterDefinitionRefTests
                 defense,
                 initiative,
                 crit,
+                talentTreeId,
                 spells));
     }
 }

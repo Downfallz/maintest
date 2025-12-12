@@ -30,7 +30,7 @@ public sealed class RoundSubPhaseLifecycle
     private const string I607_CANNOT_MOVE_BACKWARDS_IN_FLOW =
         "I607 - Cannot move backwards in subphase flow for this round phase.";
 
-    public RoundSubPhase? SubPhase { get; private set; }
+    public RoundSubPhase? SubPhase { get; private set; } = RoundSubPhase.Start_EnergyGain;
 
     /// <summary>
     /// Defines the ordered subphase flow for each main round phase.
@@ -40,8 +40,8 @@ public sealed class RoundSubPhaseLifecycle
         {
             [RoundPhase.StartOfRound] = new[]
             {
-                RoundSubPhase.Start_OngoingEffects,
-                RoundSubPhase.Start_EnergyGain
+                RoundSubPhase.Start_EnergyGain,
+                RoundSubPhase.Start_OngoingEffects
             },
             [RoundPhase.Planning] = new[]
             {

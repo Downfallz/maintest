@@ -1,4 +1,6 @@
-﻿using DA.Game.Domain2.Matches.Services.Planning;
+﻿using DA.Game.Domain2.Matches.Services.Combat.RevealAndTarget;
+using DA.Game.Domain2.Matches.Services.Phases;
+using DA.Game.Domain2.Matches.Services.Planning;
 using DA.Game.Domain2.Matches.Services.Queries;
 using FluentValidation;
 using MediatR;
@@ -45,6 +47,13 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITalentQueryService, TalentQueryService>();
         services.AddScoped<ITalentUnlockService, TalentUnlockService>();
+        services.AddScoped<IBoardStateQueryService, BoardStateQueryService>();
+        services.AddScoped<IPlayerOptionsQueryService, PlayerOptionsQueryService>();
+        services.AddScoped<ISpeedProgressionEvaluatorService, SpeedProgressionEvaluatorService>();
+        services.AddScoped<IEvolutionProgressionEvaluatorService, EvolutionProgressionEvaluatorService>();
+        services.AddScoped<ICombatPlanningProgressionEvaluatorService, CombatPlanningProgressionEvaluatorService>();
+        services.AddScoped<ICombatActionProgressionEvaluatorService, CombatActionProgressionEvaluatorService>();
+        services.AddScoped<ILegalTargetsResolverService, LegalTargetsResolverService>();
         return services;
     }
 }

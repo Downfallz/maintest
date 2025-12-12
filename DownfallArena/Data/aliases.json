@@ -46,7 +46,7 @@
 
   "spell:healing_screech": "spell:healing_screech:v1",
   "spell:toxic_waves": "spell:toxic_waves:v1",
-  "spell:restoring_burst": "spell:restoring_burst:v1",
+  "spell:restorative_burst": "spell:restorative_burst:v1",
 
   "talent-tree:base_creature" : "talent-tree:base_creature:v1"
 }

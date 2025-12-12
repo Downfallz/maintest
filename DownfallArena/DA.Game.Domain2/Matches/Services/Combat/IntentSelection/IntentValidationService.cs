@@ -8,7 +8,8 @@ namespace DA.Game.Domain2.Matches.Services.Combat.Resolution;
 
 public sealed class IntentValidationService(
     ICombatActionSelectionPolicy attackChoicePolicy,
-    ICostPolicy costPolicy)
+    ICostPolicy costPolicy,
+    IUnlockedPolicy unlockedPolicy)
     : IIntentValidationService
 {
     public Result EnsureSubmittedIntentIsValid(CreaturePerspective ctx, CombatActionIntent intent)
@@ -25,6 +26,14 @@ public sealed class IntentValidationService(
         }
 
         // 2) Cost / energy
+        var unlockResult = unlockedPolicy.EnsureCreatureHasUnlockedSpell(ctx, intent.SpellRef);
+        if (!unlockResult.IsSuccess)
+        {
+            // Preserve invariant flag and error message
+            return unlockResult;
+        }
+
+        // 3) Cost / energy
         var costPolicyResult = costPolicy.EnsureCreatureHasEnoughEnergy(ctx, intent.SpellRef);
         if (!costPolicyResult.IsSuccess)
         {

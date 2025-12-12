@@ -20,5 +20,6 @@ public sealed record CombatCharacterDto(
     int BonusRetaliate,
     bool IsStunned,
     bool IsAlive,
-    bool IsDead
+    bool IsDead,
+    IReadOnlyList<SpellId> KnownSpellIds
 );

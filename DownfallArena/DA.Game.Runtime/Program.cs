@@ -7,6 +7,8 @@ using DA.Game.Application.Matches.Features.Commands.RevealNextActionBindTargets;
 using DA.Game.Application.Matches.Features.Commands.SubmitCombatIntent;
 using DA.Game.Application.Matches.Features.Commands.SubmitEvolutionChoice;
 using DA.Game.Application.Matches.Features.Commands.SubmitSpeedChoice;
+using DA.Game.Application.Matches.Features.Queries.get_;
+using DA.Game.Application.Matches.Features.Queries.GetPlayerOptions;
 using DA.Game.Application.Players.Features.Create;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -24,6 +26,44 @@ namespace DA.Game.Runtime
 {
     internal class Program
     {
+        // -------------------------------------------------
+        // Helper
+        // -------------------------------------------------
+        static T PickRandom<T>(IReadOnlyList<T> list)
+        {
+            if (list is null || list.Count == 0)
+                throw new InvalidOperationException("Cannot pick a random element from an empty list.");
+
+            return list[Random.Shared.Next(list.Count)];
+        }
+        static SkillSpeed PickRandomSpeed()
+        {
+            return Random.Shared.Next(2) == 0
+                ? SkillSpeed.Quick
+                : SkillSpeed.Standard;
+        }
+        static IReadOnlyList<CreatureId> PickDistinctTargets(
+    IReadOnlyList<CreatureId> pool,
+    int count)
+        {
+            if (count <= 0)
+                return Array.Empty<CreatureId>();
+
+            if (pool.Count < count)
+                throw new InvalidOperationException($"Not enough targets. Need {count}, have {pool.Count}.");
+
+            var remaining = pool.ToList();
+            var selected = new List<CreatureId>(count);
+
+            for (var i = 0; i < count; i++)
+            {
+                var idx = Random.Shared.Next(remaining.Count);
+                selected.Add(remaining[idx]);
+                remaining.RemoveAt(idx);
+            }
+
+            return selected;
+        }
         static async Task Main(string[] args)
         {
             using var host = Host.CreateDefaultBuilder(args)
@@ -90,102 +130,225 @@ namespace DA.Game.Runtime
             var joinMatchResult2 = await mediator.Send(new JoinMatchCommand(matchId, pr2));
             while (true)
             {
+                // -------------------------------------------------
+                // Fetch options + unlockables
+                // -------------------------------------------------
+                var optionEvol1 = await mediator.Send(
+                    new GetPlayerOptionsQuery(matchId, PlayerSlot.Player1));
 
-                var unlockable1 = await mediator.Send(new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player1));
-                var unlockable2 = await mediator.Send(new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player2));
-                IReadOnlyList<SpellId> u;
+                var optionEvol2 = await mediator.Send(
+                    new GetPlayerOptionsQuery(matchId, PlayerSlot.Player2));
 
-                var unlock1 = (u = unlockable1.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(1)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
-                var s1 = gamere.Spells.Single(x => x.Id == unlock1);
-                var unlock2 = (u = unlockable1.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(2)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
-                var s2 = gamere.Spells.Single(x => x.Id == unlock2);
-                var unlock4 = (u = unlockable2.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(4)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
-                var s4 = gamere.Spells.Single(x => x.Id == unlock4);
-                var unlock5 = (u = unlockable2.Value!.Creatures.Single(x => x.CreatureId == CreatureId.New(5)).UnlockableSpellIds)[Random.Shared.Next(u.Count)];
-                var s5 = gamere.Spells.Single(x => x.Id == unlock5);
+                var unlockable1 = await mediator.Send(
+                    new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player1));
 
-                var re1 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
-                PlayerSlot.Player1,
-                new SpellUnlockChoiceDto(CreatureId.New(1), s1)));
-                var re2 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
-                    PlayerSlot.Player1,
-                    new SpellUnlockChoiceDto(CreatureId.New(2), s2)));
-                var re3 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new SpellUnlockChoiceDto(CreatureId.New(4), s4)));
-                var re4 = await mediator.Send(new SubmitEvolutionChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new SpellUnlockChoiceDto(CreatureId.New(5), s5)));
+                var unlockable2 = await mediator.Send(
+                    new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player2));
+
+                // -------------------------------------------------
+                // PLAYER 1 — Evolution POC
+                // -------------------------------------------------
+                var evol1 = optionEvol1.Value!.Evolution;
+
+                if (evol1 is not null && evol1.RemainingPicks > 0)
+                {
+                    for (var i = 0; i < evol1.RemainingPicks; i++)
+                    {
+                        // Pick a random legal creature
+                        var creatureId = PickRandom(evol1.LegalCreatureIds);
+
+                        // Get its unlockable spells
+                        var unlockableSpells = unlockable1.Value!.Creatures
+                            .Single(c => c.CreatureId == creatureId)
+                            .UnlockableSpellIds;
+
+                        // Pick a random spell
+                        var spellId = PickRandom(unlockableSpells);
+
+                        // Optional: resolve Spell from resources / game repo
+                        var spell = gamere.Spells.Single(s => s.Id == spellId);
+
+                        // -----------------------------------------
+                        // Submit evolution choice (POC)
+                        // -----------------------------------------
+                        await mediator.Send(
+                            new SubmitEvolutionChoiceCommand(
+                                matchId,
+                                PlayerSlot.Player1,
+                                new SpellUnlockChoiceDto(
+                                creatureId,
+                                spell)));
+                    }
+                }
+                // -------------------------------------------------
+                // PLAYER 2 — Evolution POC
+                // -------------------------------------------------
+                var evol2 = optionEvol2.Value!.Evolution;
+
+                if (evol2 is not null && evol2.RemainingPicks > 0)
+                {
+                    for (var i = 0; i < evol2.RemainingPicks; i++)
+                    {
+                        var creatureId = PickRandom(evol2.LegalCreatureIds);
+
+                        var unlockableSpells = unlockable2.Value!.Creatures
+                            .Single(c => c.CreatureId == creatureId)
+                            .UnlockableSpellIds;
+
+                        var spellId = PickRandom(unlockableSpells);
+                        var spell = gamere.Spells.Single(s => s.Id == spellId);
+
+                        // -----------------------------------------
+                        // Submit evolution choice (POC)
+                        // -----------------------------------------
+                        await mediator.Send(
+                            new SubmitEvolutionChoiceCommand(
+                                matchId,
+                                PlayerSlot.Player2,
+                                new SpellUnlockChoiceDto(
+                                creatureId,
+                                spell)));
+                    }
+                }
+
+
+
+                var ttt = await mediator.Send(new GetBoardStateForPlayerQuery(matchId, PlayerSlot.Player1));
+
+                // -------------------------------------------------
+                // Fetch options
+                // -------------------------------------------------
+                var optionsP1 = await mediator.Send(
+                    new GetPlayerOptionsQuery(matchId, PlayerSlot.Player1));
+
+                var optionsP2 = await mediator.Send(
+                    new GetPlayerOptionsQuery(matchId, PlayerSlot.Player2));
+
+                // -------------------------------------------------
+                // PLAYER 1 — Speed POC
+                // -------------------------------------------------
+                var speedOptionsP1 = optionsP1.Value!.Speed;
+
+                if (speedOptionsP1 is not null && speedOptionsP1.Remaining > 0)
+                {
+                    foreach (var creatureId in speedOptionsP1.RequiredCreatures)
+                    {
+                        var speed = PickRandomSpeed();
+
+                        await mediator.Send(new SubmitSpeedChoiceCommand(
+                            matchId,
+                            PlayerSlot.Player1,
+                            new SpeedChoiceDto(creatureId, speed)));
+                    }
+                }
+
+                // -------------------------------------------------
+                // PLAYER 2 — Speed POC
+                // -------------------------------------------------
+                var speedOptionsP2 = optionsP2.Value!.Speed;
+
+                if (speedOptionsP2 is not null && speedOptionsP2.Remaining > 0)
+                {
+                    foreach (var creatureId in speedOptionsP2.RequiredCreatures)
+                    {
+                        var speed = PickRandomSpeed();
+
+                        await mediator.Send(new SubmitSpeedChoiceCommand(
+                            matchId,
+                            PlayerSlot.Player2,
+                            new SpeedChoiceDto(creatureId, speed)));
+                    }
+                }
+                // -------------------------------------------------
+                // Fetch options + board states
+                // -------------------------------------------------
+                var combatOptionsP1 = await mediator.Send(new GetPlayerOptionsQuery(matchId, PlayerSlot.Player1));
+                var combatOptionsP2 = await mediator.Send(new GetPlayerOptionsQuery(matchId, PlayerSlot.Player2));
+
+                var boardP1 = await mediator.Send(new GetBoardStateForPlayerQuery(matchId, PlayerSlot.Player1));
+                var boardP2 = await mediator.Send(new GetBoardStateForPlayerQuery(matchId, PlayerSlot.Player2));
+
+                // -------------------------------------------------
+                // PLAYER 1 — Combat Intent POC (random known spell)
+                // -------------------------------------------------
+                var planningP1 = combatOptionsP1.Value!.CombatPlanning;
+
+                if (planningP1 is not null && planningP1.MissingCreatureIds.Count > 0)
+                {
+                    foreach (var creatureId in planningP1.MissingCreatureIds)
+                    {
+                        var creature = boardP1.Value!.FriendlyCreatures
+                            .Single(c => c.Id == creatureId);
+
+                        var spellId = PickRandom(creature.KnownSpellIds);
+                        var spell = gamere.Spells.Single(s => s.Id == spellId);
+
+                        await mediator.Send(new SubmitCombatIntentCommand(
+                            matchId,
+                            PlayerSlot.Player1,
+                            new CombatIntentDto(creatureId, spell)));
+                    }
+                }
+
+                // -------------------------------------------------
+                // PLAYER 2 — Combat Intent POC (random known spell)
+                // -------------------------------------------------
+                var planningP2 = combatOptionsP2.Value!.CombatPlanning;
+
+                if (planningP2 is not null && planningP2.MissingCreatureIds.Count > 0)
+                {
+                    foreach (var creatureId in planningP2.MissingCreatureIds)
+                    {
+                        var creature = boardP2.Value!.FriendlyCreatures
+                            .Single(c => c.Id == creatureId);
+
+                        var spellId = PickRandom(creature.KnownSpellIds);
+                        var spell = gamere.Spells.Single(s => s.Id == spellId);
+
+                        await mediator.Send(new SubmitCombatIntentCommand(
+                            matchId,
+                            PlayerSlot.Player2,
+                            new CombatIntentDto(creatureId, spell)));
+                    }
+                }
 
 
 
 
 
+                // ---------------------------------------
+                // Reveal loop (controls both players)
+                // ---------------------------------------
+                while (true)
+                {
+                    // Since you control both players, just query both and use whichever exposes CombatAction.
+                    var opt1 = await mediator.Send(new GetPlayerOptionsQuery(matchId, PlayerSlot.Player1));
+                    var opt2 = await mediator.Send(new GetPlayerOptionsQuery(matchId, PlayerSlot.Player2));
 
+                    var action = opt1.Value?.CombatAction ?? opt2.Value?.CombatAction;
 
+                    // Not in reveal subphase or no reveal pending
+                    if (action is null || action.NextActorId is null || action.RemainingReveals <= 0)
+                        break;
 
-                var speed1 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                    PlayerSlot.Player1,
-                    new SpeedChoiceDto(CreatureId.New(1), SkillSpeed.Quick)));
+                    var actorId = action.NextActorId.Value;
 
-                var speed2 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                    PlayerSlot.Player1,
-                    new SpeedChoiceDto(CreatureId.New(2), SkillSpeed.Quick)));
+                    // If no legal targets, you can either break or throw (POC).
+                    if (action.LegalTargetIds.Count == 0 && action.MinTargets > 0)
+                        throw new InvalidOperationException($"No legal targets for actor {actorId.Value}.");
 
-                var speed3 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                    PlayerSlot.Player1,
-                    new SpeedChoiceDto(CreatureId.New(3), SkillSpeed.Quick)));
+                    // Pick a random target count between Min and Max.
+                    var k = action.MaxTargets <= 0
+                        ? 0
+                        : Random.Shared.Next(action.MinTargets, action.MaxTargets + 1);
 
-                var speed4 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new SpeedChoiceDto(CreatureId.New(4), SkillSpeed.Quick)));
+                    var targets = PickDistinctTargets(action.LegalTargetIds, k);
 
-                var speed5 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new SpeedChoiceDto(CreatureId.New(5), SkillSpeed.Quick)));
-
-                var speed6 = await mediator.Send(new SubmitSpeedChoiceCommand(matchId,
-                    PlayerSlot.Player2,
-                    new SpeedChoiceDto(CreatureId.New(6), SkillSpeed.Quick)));
-
-                var action1 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatIntentDto(CreatureId.New(1), basicAttack)));
-                var action2 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatIntentDto(CreatureId.New(2), basicAttack)));
-                var action3 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatIntentDto(CreatureId.New(3), basicAttack)));
-                var action4 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatIntentDto(CreatureId.New(4), basicAttack)));
-                var action5 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatIntentDto(CreatureId.New(5), basicAttack)));
-                var action6 = await mediator.Send(new SubmitCombatIntentCommand(matchId,
-                    PlayerSlot.Player1,
-                    new CombatIntentDto(CreatureId.New(6), basicAttack)));
-
-                var target1 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
-                    PlayerSlot.Player1, CreatureId.New(1),
-                     new List<CreatureId>() { new CreatureId(4) }));
-                var target2 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
-                    PlayerSlot.Player1, CreatureId.New(2),
-                     new List<CreatureId>() { new CreatureId(4) }));
-                var target3 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
-                    PlayerSlot.Player1, CreatureId.New(3),
-                     new List<CreatureId>() { new CreatureId(4) }));
-                var target4 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
-                    PlayerSlot.Player1, CreatureId.New(4),
-                     new List<CreatureId>() { new CreatureId(1) }));
-                var target5 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
-                    PlayerSlot.Player1, CreatureId.New(5),
-                     new List<CreatureId>() { new CreatureId(1) }));
-                var target6 = await mediator.Send(new RevealNextActionBindTargetsCommand(matchId,
-                    PlayerSlot.Player1, CreatureId.New(6),
-                     new List<CreatureId>() { new CreatureId(1) }));
-
+                    await mediator.Send(new RevealNextActionBindTargetsCommand(
+                        matchId,
+                        actorId,
+                        targets.ToList()));
+                }
                
                 var roundEnded = false;
                 while (!roundEnded)

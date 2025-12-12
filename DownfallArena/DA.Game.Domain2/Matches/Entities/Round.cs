@@ -54,7 +54,8 @@ namespace DA.Game.Domain2.Matches.Entities
         // --------------------
 
         private readonly Dictionary<CreatureId, CombatActionChoice> _combatActionsByCreature = new();
-        private readonly Dictionary<CreatureId, CombatActionIntent> _combatIntentsByCreature = new();
+        private readonly Dictionary<CreatureId, CombatActionIntent> _player1CombatIntentsByCreature = new();
+        private readonly Dictionary<CreatureId, CombatActionIntent> _player2CombatIntentsByCreature = new();
 
         private readonly HashSet<SpellUnlockChoice> _player1EvolutionChoices = new();
         private readonly HashSet<SpellUnlockChoice> _player2EvolutionChoices = new();
@@ -70,11 +71,14 @@ namespace DA.Game.Domain2.Matches.Entities
         public IReadOnlyCollection<SpeedChoice> Player1SpeedChoices => _player1SpeedChoices;
         public IReadOnlyCollection<SpeedChoice> Player2SpeedChoices => _player2SpeedChoices;
 
+        public ReadOnlyDictionary<CreatureId, CombatActionIntent> Player1CombatIntentsByCreature =>
+            _player1CombatIntentsByCreature.AsReadOnly();
+        public ReadOnlyDictionary<CreatureId, CombatActionIntent> Player2CombatIntentsByCreature =>
+            _player2CombatIntentsByCreature.AsReadOnly();
+
         public ReadOnlyDictionary<CreatureId, CombatActionChoice> CombatActionsByCreature =>
             _combatActionsByCreature.AsReadOnly();
 
-        public ReadOnlyDictionary<CreatureId, CombatActionIntent> CombatIntentsByCreature =>
-            _combatIntentsByCreature.AsReadOnly();
 
         public bool IsCombatResolutionCompleted { get; private set; }
 
@@ -96,6 +100,14 @@ namespace DA.Game.Domain2.Matches.Entities
             return new Round(RoundId.New(previous.Number + 1));
         }
 
+        public Result InitializeOnGoingEffectPhase()
+        {
+            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.StartOfRound, RoundSubPhase.Start_OngoingEffects);
+            if (!subPhaseTransition.IsSuccess)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
+            return Result.Ok();
+        }
         // --------------------
         // Evolution phase
         // --------------------
@@ -106,7 +118,7 @@ namespace DA.Game.Domain2.Matches.Entities
             if (!phaseTransition.IsSuccess)
                 return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
 
-            var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Planning, RoundSubPhase.Planning_Evolution);
+            var subPhaseTransition = SubLifecycle.InitializeForPhase(RoundPhase.Planning);
             if (!subPhaseTransition.IsSuccess)
                 return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
 
@@ -171,6 +183,9 @@ namespace DA.Game.Domain2.Matches.Entities
         {
             ArgumentNullException.ThrowIfNull(timeline);
 
+            if (Phase != RoundPhase.Planning)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
             var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Planning, RoundSubPhase.Planning_TurnOrderResolution);
             if (!subPhaseTransition.IsSuccess)
                 return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
@@ -181,6 +196,7 @@ namespace DA.Game.Domain2.Matches.Entities
 
             return Result.Ok();
         }
+
 
         // --------------------
         // Combat – initialization
@@ -210,11 +226,14 @@ namespace DA.Game.Domain2.Matches.Entities
 
             if (Phase != RoundPhase.Combat || SubPhase != RoundSubPhase.Combat_IntentSelection)
                 return Result<CombatActionIntent>.Fail(RoundErrorCodes.D301_INVALID_PHASE_INTENT);
+            var targetSet = perspective.Actor.OwnerSlot == PlayerSlot.Player1
+                ? _player1CombatIntentsByCreature
+                : _player2CombatIntentsByCreature;
 
-            if (_combatIntentsByCreature.ContainsKey(intent.ActorId))
+            if (targetSet.ContainsKey(intent.ActorId))
                 return Result<CombatActionIntent>.Fail(RoundErrorCodes.D302_INTENT_ALREADY_SUBMITTED);
 
-            _combatIntentsByCreature[intent.ActorId] = intent;
+            targetSet[intent.ActorId] = intent;
 
             return Result<CombatActionIntent>.Ok(intent);
         }
@@ -225,6 +244,9 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result InitializeCombatReveal()
         {
+            if (Phase != RoundPhase.Combat)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
             var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Combat, RoundSubPhase.Combat_RevealAndTarget);
             if (!subPhaseTransition.IsSuccess)
                 return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
@@ -257,15 +279,15 @@ namespace DA.Game.Domain2.Matches.Entities
             if (Phase != RoundPhase.Combat || SubPhase != RoundSubPhase.Combat_RevealAndTarget)
                 return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I301_INVALID_PHASE_FOR_REVEAL);
 
-            if (Timeline.Slots.Count == 0)
+            if (Timeline.Count == 0)
                 return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I401_TIMELINE_NOT_INITIALIZED);
 
-            if (RevealCursor.IsEnd(Timeline.Slots.Count))
+            if (RevealCursor.IsEnd(Timeline.Count))
                 return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I402_ALL_INTENTS_ALREADY_REVEALED);
 
             var slot = Timeline.Slots[RevealCursor.Index];
-
-            if (!_combatIntentsByCreature.TryGetValue(slot.CreatureId, out var intent))
+            CombatActionIntent? intent;
+            if ((!_player1CombatIntentsByCreature.TryGetValue(slot.CreatureId, out intent)) && (!_player2CombatIntentsByCreature.TryGetValue(slot.CreatureId, out intent)))
                 return Result<CombatActionIntent>.InvariantFail(RoundErrorCodes.I403_NO_INTENT_FOR_CREATURE);
 
             RevealCursor = RevealCursor.MoveNext();
@@ -279,6 +301,9 @@ namespace DA.Game.Domain2.Matches.Entities
 
         public Result InitializeCombatResolution()
         {
+            if (Phase != RoundPhase.Combat)
+                return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
+
             var subPhaseTransition = SubLifecycle.MoveTo(RoundPhase.Combat, RoundSubPhase.Combat_ActionResolution);
             if (!subPhaseTransition.IsSuccess)
                 return Result.InvariantFail(RoundErrorCodes.I001_INVALID_PHASE_TRANSITION);
@@ -291,10 +316,10 @@ namespace DA.Game.Domain2.Matches.Entities
             if (Phase != RoundPhase.Combat || SubPhase != RoundSubPhase.Combat_ActionResolution)
                 return Result<CombatActionChoice>.InvariantFail(RoundErrorCodes.I302_INVALID_PHASE_FOR_RESOLUTION);
 
-            if (Timeline.Slots.Count == 0)
+            if (Timeline.Count == 0)
                 return Result<CombatActionChoice>.InvariantFail(RoundErrorCodes.I401_TIMELINE_NOT_INITIALIZED);
 
-            if (ResolveCursor.IsEnd(Timeline.Slots.Count))
+            if (ResolveCursor.IsEnd(Timeline.Count))
                 return Result<CombatActionChoice>.InvariantFail(RoundErrorCodes.I404_COMBAT_RESOLUTION_ALREADY_COMPLETED);
 
             var slot = Timeline.Slots[ResolveCursor.Index];
@@ -305,17 +330,17 @@ namespace DA.Game.Domain2.Matches.Entities
             return Result<CombatActionChoice>.Ok(choice);
         }
 
-        public Result AdvanceActionResolutionCursor()
+        public Result AdvanceCombatResolutionCursor()
         {
-            if (Timeline.Slots.Count == 0)
+            if (Timeline.Count == 0)
                 return Result.InvariantFail(RoundErrorCodes.I401_TIMELINE_NOT_INITIALIZED);
 
-            if (ResolveCursor.IsEnd(Timeline.Slots.Count))
+            if (ResolveCursor.IsEnd(Timeline.Count))
                 return Result.InvariantFail(RoundErrorCodes.I404_COMBAT_RESOLUTION_ALREADY_COMPLETED);
 
             ResolveCursor = ResolveCursor.MoveNext();
 
-            if (ResolveCursor.IsEnd(Timeline.Slots.Count))
+            if (ResolveCursor.IsEnd(Timeline.Count))
                 IsCombatResolutionCompleted = true;
 
             return Result.Ok();
@@ -325,7 +350,7 @@ namespace DA.Game.Domain2.Matches.Entities
         // End of round
         // --------------------
 
-        public Result MoveToEndOfRoundCleanup()
+        public Result InitializeEndOfRoundCleanup()
         {
             var phaseTransition = Lifecycle.MoveTo(RoundPhase.EndOfRound);
             if (!phaseTransition.IsSuccess)
@@ -349,5 +374,10 @@ namespace DA.Game.Domain2.Matches.Entities
 
             return Result.Ok();
         }
+
+        public override string ToString() =>
+    $"Round #{Number} – Phase={Phase}, SubPhase={SubPhase}, " +
+    $"Intents1={_player1CombatIntentsByCreature.Count}, Intents2={_player2CombatIntentsByCreature.Count}, Actions={_combatActionsByCreature.Count}";
+
     }
 }

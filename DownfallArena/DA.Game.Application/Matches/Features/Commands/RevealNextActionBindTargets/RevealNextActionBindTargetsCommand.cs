@@ -6,4 +6,4 @@ using DA.Game.Shared.Utilities;
 
 namespace DA.Game.Application.Matches.Features.Commands.RevealNextActionBindTargets;
 
-public sealed record RevealNextActionBindTargetsCommand(MatchId MatchId, PlayerSlot slot, CreatureId sourceId, IReadOnlyList<CreatureId> TargetIds) : ICommand<Result<RevealNextActionBindTargetsResult>>;
+public sealed record RevealNextActionBindTargetsCommand(MatchId MatchId, CreatureId sourceId, IReadOnlyList<CreatureId> TargetIds) : ICommand<Result<RevealNextActionBindTargetsResult>>;
