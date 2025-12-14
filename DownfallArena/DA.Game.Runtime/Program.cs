@@ -9,6 +9,7 @@ using DA.Game.Application.Matches.Features.Commands.SubmitEvolutionChoice;
 using DA.Game.Application.Matches.Features.Commands.SubmitSpeedChoice;
 using DA.Game.Application.Matches.Features.Queries.get_;
 using DA.Game.Application.Matches.Features.Queries.GetPlayerOptions;
+using DA.Game.Application.Matches.ReadModels;
 using DA.Game.Application.Players.Features.Create;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
@@ -133,17 +134,11 @@ namespace DA.Game.Runtime
                 // -------------------------------------------------
                 // Fetch options + unlockables
                 // -------------------------------------------------
+
                 var optionEvol1 = await mediator.Send(
                     new GetPlayerOptionsQuery(matchId, PlayerSlot.Player1));
-
-                var optionEvol2 = await mediator.Send(
-                    new GetPlayerOptionsQuery(matchId, PlayerSlot.Player2));
-
                 var unlockable1 = await mediator.Send(
                     new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player1));
-
-                var unlockable2 = await mediator.Send(
-                    new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player2));
 
                 // -------------------------------------------------
                 // PLAYER 1 — Evolution POC
@@ -154,8 +149,15 @@ namespace DA.Game.Runtime
                 {
                     for (var i = 0; i < evol1.RemainingPicks; i++)
                     {
+                        optionEvol1 = await mediator.Send(
+                            new GetPlayerOptionsQuery(matchId, PlayerSlot.Player1));
+
+                        unlockable1 = await mediator.Send(
+                            new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player1));
+                        var actualEvol1 = optionEvol1.Value!.Evolution;
+
                         // Pick a random legal creature
-                        var creatureId = PickRandom(evol1.LegalCreatureIds);
+                        var creatureId = PickRandom(actualEvol1.LegalCreatureIds);
 
                         // Get its unlockable spells
                         var unlockableSpells = unlockable1.Value!.Creatures
@@ -171,24 +173,41 @@ namespace DA.Game.Runtime
                         // -----------------------------------------
                         // Submit evolution choice (POC)
                         // -----------------------------------------
-                        await mediator.Send(
+                        var result = await mediator.Send(
                             new SubmitEvolutionChoiceCommand(
                                 matchId,
                                 PlayerSlot.Player1,
                                 new SpellUnlockChoiceDto(
                                 creatureId,
                                 spell)));
+
+                        if (!result.IsSuccess)
+                            Console.WriteLine($"Failed to submit evolution choice for Player 1: {result.Error}");
                     }
                 }
+
+
                 // -------------------------------------------------
                 // PLAYER 2 — Evolution POC
                 // -------------------------------------------------
+                var optionEvol2 = await mediator.Send(
+                    new GetPlayerOptionsQuery(matchId, PlayerSlot.Player2));
+
+                var unlockable2 = await mediator.Send(
+                    new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player2));
                 var evol2 = optionEvol2.Value!.Evolution;
 
                 if (evol2 is not null && evol2.RemainingPicks > 0)
                 {
                     for (var i = 0; i < evol2.RemainingPicks; i++)
                     {
+                        optionEvol2 = await mediator.Send(
+                    new GetPlayerOptionsQuery(matchId, PlayerSlot.Player2));
+
+                        unlockable2 = await mediator.Send(
+                            new GetUnlockableSpellsForPlayerQuery(matchId, PlayerSlot.Player2));
+                        var actualEvol2 = optionEvol2.Value!.Evolution;
+
                         var creatureId = PickRandom(evol2.LegalCreatureIds);
 
                         var unlockableSpells = unlockable2.Value!.Creatures
@@ -201,13 +220,15 @@ namespace DA.Game.Runtime
                         // -----------------------------------------
                         // Submit evolution choice (POC)
                         // -----------------------------------------
-                        await mediator.Send(
+                        var result = await mediator.Send(
                             new SubmitEvolutionChoiceCommand(
                                 matchId,
                                 PlayerSlot.Player2,
                                 new SpellUnlockChoiceDto(
                                 creatureId,
                                 spell)));
+                        if (!result.IsSuccess)
+                            Console.WriteLine($"Failed to submit evolution choice for Player 2: {result.Error}");
                     }
                 }
 
@@ -235,10 +256,12 @@ namespace DA.Game.Runtime
                     {
                         var speed = PickRandomSpeed();
 
-                        await mediator.Send(new SubmitSpeedChoiceCommand(
+                        var result = await mediator.Send(new SubmitSpeedChoiceCommand(
                             matchId,
                             PlayerSlot.Player1,
                             new SpeedChoiceDto(creatureId, speed)));
+                        if (!result.IsSuccess)
+                            Console.WriteLine($"Failed to submit evolution choice for Player 1: {result.Error}");
                     }
                 }
 
@@ -253,10 +276,12 @@ namespace DA.Game.Runtime
                     {
                         var speed = PickRandomSpeed();
 
-                        await mediator.Send(new SubmitSpeedChoiceCommand(
+                        var result = await mediator.Send(new SubmitSpeedChoiceCommand(
                             matchId,
                             PlayerSlot.Player2,
                             new SpeedChoiceDto(creatureId, speed)));
+                        if (!result.IsSuccess)
+                            Console.WriteLine($"Failed to submit evolution choice for Player 2: {result.Error}");
                     }
                 }
                 // -------------------------------------------------
@@ -351,11 +376,16 @@ namespace DA.Game.Runtime
                 }
                
                 var roundEnded = false;
+                CombatStepOutcomeView stepOutcome = null!;
                 while (!roundEnded)
                 {
                     var z = await mediator.Send(new ResolveNextCombatActionCommand(matchId));
-                    roundEnded = z!.Value!.RoundHasEnded;
+                    stepOutcome = z!.Value!.stepOutcome;
+                    roundEnded = z!.Value!.stepOutcome.IsRoundCompleted;
                 }
+
+                if (stepOutcome.IsMatchEnded)
+                    break;
             }
             
             

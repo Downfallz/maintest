@@ -86,6 +86,7 @@ public sealed class CombatActionResolutionService(
             originalChoice: choice,
             effectiveChoice: effectiveChoice,
             instantEffects: raw.InstantEffects,
+            overtimeEffects: raw.Conditions,
             critical: crit,
             targetingFailures: report.PerTargetFailures);
 

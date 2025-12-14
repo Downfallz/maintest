@@ -2,4 +2,5 @@
 
 public sealed record RuleSet(PhaseRules Phase,
     PlanningRules Planning,
-    CombatRules Combat);
+    CombatRules Combat,
+    ConditionRules Conditions);

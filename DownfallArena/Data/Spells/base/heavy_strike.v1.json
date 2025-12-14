@@ -16,6 +16,11 @@
     {
       "kind": "Damage",
       "amount": 1
+    },
+    {
+      "kind": "Bleed",
+      "amountPerTick": 1,
+      "durationRounds": 1
     }
   ]
 }

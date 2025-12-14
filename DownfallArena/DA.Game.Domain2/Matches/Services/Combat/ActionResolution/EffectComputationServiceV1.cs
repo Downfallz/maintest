@@ -1,5 +1,6 @@
 ﻿using DA.Game.Domain2.Matches.Aggregates;
 using DA.Game.Domain2.Matches.Entities;
+using DA.Game.Domain2.Matches.Services.Combat.Conditions;
 using DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Shared.Contracts.Matches.Enums;
@@ -63,7 +64,12 @@ public sealed class EffectComputationServiceV1 : IEffectComputationService
         CombatActionChoice intent,
         Bleed bleed)
     {
+        var condition = ConditionFactory.FromOverTimeEffect(bleed);
+
         return intent.TargetIds.Select(targetId =>
-            new ConditionApplication(targetId));
+            new ConditionApplication(
+                intent.ActorId,
+                targetId,
+                condition));
     }
 }

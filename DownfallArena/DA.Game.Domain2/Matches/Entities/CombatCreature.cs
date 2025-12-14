@@ -1,9 +1,13 @@
-﻿using DA.Game.Domain2.Matches.ValueObjects;
+﻿using DA.Game.Domain2.Matches.Entities.Conditions;
+using DA.Game.Domain2.Matches.Services.Combat;
+using DA.Game.Domain2.Matches.Services.Combat.Conditions;
+using DA.Game.Domain2.Matches.ValueObjects;
 using DA.Game.Domain2.Shared.Primitives;
 using DA.Game.Shared.Contracts.Matches.Enums;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Contracts.Resources.Creatures;
 using DA.Game.Shared.Contracts.Resources.Spells;
+using DA.Game.Shared.Contracts.Resources.Spells.Enums;
 using DA.Game.Shared.Contracts.Resources.Spells.Talents;
 using DA.Game.Shared.Contracts.Resources.Stats;
 
@@ -119,63 +123,13 @@ public class CombatCreature : Entity<CreatureId>
         CurrentInitiative = CurrentInitiative.WithAdded(initiative);
     }
 
-    //private readonly List<ActiveCondition> _conditions = new();
+    private readonly ConditionCollection _conditions = new();
 
-    //public IReadOnlyList<ActiveCondition> Conditions => _conditions;
+    public ConditionCollection Conditions => _conditions;
+    public int RetaliateValue { get; private set; }
 
-    //public void AddCondition(ConditionDefinition def)
-    //{
-    //    // Do not apply stun twice if already stunned
-    //    if (def.StatKind == EffectKind.Stun && IsStunned)
-    //        return;
-
-    //    if (!def.IsStackable)
-    //    {
-    //        var existing = _conditions.FirstOrDefault(c => c.Definition.Name == def.Name);
-    //        if (existing is not null)
-    //            return;
-    //    }
-
-    //    _conditions.Add(new ActiveCondition(def));
-    //}
-
-    //public void ResolveConditionsAtRoundStart()
-    //{
-    //    var expired = new List<ActiveCondition>();
-
-    //    foreach (var cond in _conditions)
-    //    {
-    //        // OverTime: apply per-tick effect
-    //        if (cond.Definition.Type == ConditionType.OverTime)
-    //        {
-    //            ApplyOverTimeEffect(cond.Definition);
-    //        }
-
-    //        cond.TickRound();
-
-    //        if (cond.IsExpired)
-    //            expired.Add(cond);
-    //    }
-
-    //    foreach (var c in expired)
-    //        _conditions.Remove(c);
-    //}
-
-    //private void ApplyOverTimeEffect(ConditionDefinition def)
-    //{
-    //    switch (def.StatKind)
-    //    {
-    //        case EffectKind.Damage:
-    //            TakeDamage(def.AmountPerTick);
-    //            break;
-    //        case EffectKind.Health:
-    //            Heal(def.AmountPerTick);
-    //            break;
-    //            // etc. si tu veux des DoT sur Energy, etc.
-    //    }
-    //}
-
-
+    public void AddCondition(ConditionInstance condition)
+        => _conditions.Add(condition);
 }
 
 

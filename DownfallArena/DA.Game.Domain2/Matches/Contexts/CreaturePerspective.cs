@@ -46,12 +46,12 @@ public sealed record CreaturePerspective(
             .ToList();
 
         if (snapshots.Count == 0)
-            return Result<CreaturePerspective>.Fail("Match has no creatures.");
+            return Result<CreaturePerspective>.InvariantFail("Match has no creatures.");
 
         // Actor must exist
         var actor = snapshots.SingleOrDefault(c => c.CharacterId == creatureId);
         if (actor is null)
-            return Result<CreaturePerspective>.Fail("Actor not found in match.");
+            return Result<CreaturePerspective>.InvariantFail("Actor not found in match.");
 
         return Result<CreaturePerspective>.Ok(
             new CreaturePerspective(creatureId, 

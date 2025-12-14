@@ -9,6 +9,7 @@ using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Domain2.Matches.ValueObjects.Evolution;
 using DA.Game.Domain2.Matches.ValueObjects.Phases;
 using DA.Game.Domain2.Matches.ValueObjects.Planning;
+using static DA.Game.Domain2.Matches.Aggregates.Match;
 
 namespace DA.Game.Application.Matches.Mapping;
 
@@ -70,5 +71,6 @@ public class MatchesProfile : Profile
         CreateMap<EvolutionOptions, EvolutionOptionsView>();
         CreateMap<CombatPlanningOptions, CombatPlanningOptionsView>();
         CreateMap<CombatActionOptions, CombatActionOptionsView>();
+        CreateMap<CombatStepOutcome, CombatStepOutcomeView>();
     }
 }

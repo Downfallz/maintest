@@ -1,4 +1,5 @@
 ﻿using DA.Game.Domain2.Matches.Entities;
+using DA.Game.Domain2.Matches.Services.Combat.ActionResolution.Execution;
 using DA.Game.Domain2.Matches.ValueObjects.Combat;
 using DA.Game.Shared.Contracts.Matches.Ids;
 using DA.Game.Shared.Utilities;
@@ -8,7 +9,8 @@ using System.Linq;
 
 namespace DA.Game.Domain2.Matches.Services.Combat.Resolution.Execution;
 
-public sealed class CombatActionExecutionService(IInstantEffectService instantEffectService) : ICombatActionExecutionService
+public sealed class CombatActionExecutionService(IInstantEffectService instantEffectService,
+    IConditionEffectService conditionEffectService) : ICombatActionExecutionService
 {
     // -------------------------------
     // INVARIANT FAILURES (Ixxx)
@@ -30,7 +32,15 @@ public sealed class CombatActionExecutionService(IInstantEffectService instantEf
 
             instantEffectService.ApplyInstantEffect(instant, targetResult.Value!);
         }
+        // 2) Apply conditions (overtime/buffs/debuffs)
+        foreach (var cond in result.OvertimeEffects)
+        {
+            var targetResult = FindCreature(cond.TargetId, allCreatures);
+            if (!targetResult.IsSuccess)
+                return Result.InvariantFail(targetResult.Error!);
 
+            conditionEffectService.ApplyCondition(cond, targetResult.Value!);
+        }
         return Result.Ok();
     }
 

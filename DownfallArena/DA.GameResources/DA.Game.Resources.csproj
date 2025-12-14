@@ -72,7 +72,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DA.Domain\DA.Game.Domain.csproj" />
-    <ProjectReference Include="..\DA.Game.TalentsManagement\DA.Game.TalentsManagement.csproj" />
   </ItemGroup>
 
   <ItemGroup>

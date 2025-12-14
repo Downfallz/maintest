@@ -24,6 +24,7 @@ using DA.Game.Shared.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace DA.Game.Domain2.Matches.Aggregates
 {
@@ -31,7 +32,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
     /// Represents a match between two players.
     /// Orchestrates the lifecycle: join, rounds, evolutions, turns.
     /// </summary>
-    public sealed class Match : AggregateRoot<MatchId>
+    public sealed partial class Match : AggregateRoot<MatchId>
     {
         private readonly IGameResources _resources;
         private readonly RuleSet _ruleSet;
@@ -112,7 +113,10 @@ namespace DA.Game.Domain2.Matches.Aggregates
         {
             InitializeTeams();
 
-            Lifecycle.MoveTo(MatchState.Started);
+            var result = Lifecycle.MoveTo(MatchState.Started);
+            if (result.IsInvariantFailure())
+                throw new InvalidOperationException(result.Error);
+
             AddEvent(new MatchStarted(Id, _clock.UtcNow));
 
             InitializeFirstRound();
@@ -145,10 +149,13 @@ namespace DA.Game.Domain2.Matches.Aggregates
             AddEvent(new RoundInitialized(Id, CurrentRound!.Id, RoundNumber, _clock.UtcNow));
             // TODO: round start effects (+2 Energy, conditions, etc.) will be handled here later.
 
+            foreach (var c in AllCreatures)
+                c.GainEnergy(2);
+
 
             InitializeCurrentRoundOnGoingEffect();
 
-            // TODO: ongoing
+            _ruleSet.Conditions.ResolveStartOfRound(AllCreatures);
 
             InitializeCurrentRoundEvolution();
         }
@@ -220,6 +227,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
                     CurrentRound.Id,
                     RoundNumber,
                     _clock.UtcNow));
+                InitializeCurrentRoundSpeedPhase();
             }
 
             return roundResult;
@@ -230,7 +238,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
         // Speed
         // --------------------
 
-        public Result InitializeCurrentRoundSpeedPhase()
+        private Result InitializeCurrentRoundSpeedPhase()
         {
             var resultPhaseEval = _ruleSet.Phase.EvaluateEvolutionPhaseCompleted(this, _resources);
             if (!resultPhaseEval.IsSuccess)
@@ -430,44 +438,38 @@ namespace DA.Game.Domain2.Matches.Aggregates
             return Result.Ok();
         }
 
-        // --------------------
-        // Combat – resolution
-        // --------------------
-
-        public Result<bool> ResolveNextCombatStep()
+        public Result<CombatStepOutcome> ResolveNextCombatStep()
         {
             if (CurrentRound is null)
-                return Result<bool>.Fail("No active round.");
+                return Result<CombatStepOutcome>.Fail("No active round.");
 
             var nextActionResult = CurrentRound.SelectNextActionToResolve();
             if (!nextActionResult.IsSuccess)
-                return Result<bool>.Fail(nextActionResult.Error!);
+                return Result<CombatStepOutcome>.Fail(nextActionResult.Error!);
 
             var actionChoice = nextActionResult.Value!;
-
             var ctxResult = BuildGameContextForCurrentCreature(actionChoice.ActorId);
             if (!ctxResult.IsSuccess)
-                return Result<bool>.Fail(ctxResult.Error!);
+                return Result<CombatStepOutcome>.Fail(ctxResult.Error!);
 
             // 1) Compute the combat result (damage, crit, etc.)
             var resolutionResult = _ruleSet.Combat.Resolve(ctxResult.Value!, actionChoice);
             if (resolutionResult.IsInvariant)
-                return Result<bool>.Fail(resolutionResult.Error!);
-            else if (resolutionResult.IsSuccess)
+                return Result<CombatStepOutcome>.Fail(resolutionResult.Error!);
+
+            if (resolutionResult.IsSuccess)
             {
                 // 2) Apply the combat result on the creatures
                 var applyResult = _ruleSet.Combat.ApplyCombatResult(resolutionResult.Value!, AllCreatures);
                 if (!applyResult.IsSuccess)
-                    return Result<bool>.Fail(applyResult.Error!);
+                    return Result<CombatStepOutcome>.Fail(applyResult.Error!);
             }
-
-            // 3) Event could be raised here (currently commented out in your version)
 
             var cursorResult = CurrentRound.AdvanceCombatResolutionCursor();
             if (!cursorResult.IsSuccess)
-                return Result<bool>.Fail(cursorResult.Error!);
+                return Result<CombatStepOutcome>.Fail(cursorResult.Error!);
 
-            // 4) If resolution is done, finalize the round.
+            // 3) If resolution is done, finalize the round.
             if (CurrentRound.IsCombatResolutionCompleted)
             {
                 AddEvent(new CombatResolutionCompleted(
@@ -477,10 +479,28 @@ namespace DA.Game.Domain2.Matches.Aggregates
                     _clock.UtcNow));
 
                 FinalizeCurrentRound();
-                return Result<bool>.Ok(true);
+
+                // After finalization, match might have ended.
+                var isMatchEnded = State == MatchState.Ended;
+
+                return Result<CombatStepOutcome>.Ok(new CombatStepOutcome(
+                    DidResolveStep: true,
+                    IsRoundCompleted: true,
+                    IsMatchEnded: isMatchEnded,
+                    MatchState: State,
+                    MatchId: Id,
+                    RoundId: CurrentRound?.Id,
+                    RoundNumber: RoundNumber));
             }
 
-            return Result<bool>.Ok(false);
+            return Result<CombatStepOutcome>.Ok(new CombatStepOutcome(
+                DidResolveStep: true,
+                IsRoundCompleted: false,
+                IsMatchEnded: State == MatchState.Ended,
+                MatchState: State,
+                MatchId: Id,
+                RoundId: CurrentRound.Id,
+                RoundNumber: RoundNumber));
         }
 
         private void FinalizeCurrentRound()
@@ -525,6 +545,7 @@ namespace DA.Game.Domain2.Matches.Aggregates
 
             return false;
         }
+
 
         /// <summary>
         /// Ends the current player turn.
