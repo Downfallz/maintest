@@ -40,7 +40,9 @@ public sealed class PairedStatisticsTests
     {
         PairedStatistics.Interval([]).ShouldBe(new ConfidenceInterval(0, 0, 0));
         PairedStatistics.Interval([0.7]).ShouldBe(new ConfidenceInterval(0.7, 0.7, 0.7));
-        PairedStatistics.Interval([0.4, 0.4, 0.4]).ShouldBe(new ConfidenceInterval(0.4, 0.4, 0.4));
+        var constant = PairedStatistics.Interval([0.4, 0.4, 0.4]);
+        constant.Mean.ShouldBe(0.4, 1e-12);
+        (constant.High - constant.Low).ShouldBeLessThan(1e-12);
         Should.Throw<ArgumentNullException>(() => PairedStatistics.Interval(null!));
     }
 

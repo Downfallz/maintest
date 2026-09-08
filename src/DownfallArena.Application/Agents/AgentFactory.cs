@@ -3,9 +3,9 @@ using DownfallArena.SharedKernel.Randomness;
 namespace DownfallArena.Application.Agents;
 
 /// <summary>
-/// The agent registry: turns a spec into a seated agent, with the random source its decisions draw from.
+/// The registry of the agents the engine ships: one case per <see cref="AgentKind"/>.
 /// </summary>
-public sealed class AgentFactory
+public sealed class AgentFactory : IAgentFactory
 {
     public IPlayerAgent Create(AgentSpec spec, IRandomSource random)
     {

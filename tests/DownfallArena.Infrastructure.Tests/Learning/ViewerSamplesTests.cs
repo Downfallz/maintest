@@ -132,8 +132,10 @@ public sealed class ViewerSamplesTests
 
     /// <summary>
     /// Every key path of a JSON value: objects contribute their property names (prefixed by their kind when they
-    /// carry one), arrays "[]", and objects keyed by numbers (dictionaries) "*".
+    /// carry one), arrays "[]", and dictionaries (keyed by numbers or by content ids) "*".
     /// </summary>
+    private static bool IsMapKey(string name) => name.All(char.IsAsciiDigit) || name.Contains(':', StringComparison.Ordinal);
+
     private static void Collect(JsonElement element, string prefix, HashSet<string> shapes)
     {
         if (element.ValueKind == JsonValueKind.Array)
@@ -153,7 +155,7 @@ public sealed class ViewerSamplesTests
 
         var kind = element.TryGetProperty("kind", out var value) && value.ValueKind == JsonValueKind.String ? $"<{value.GetString()}>" : string.Empty;
         var properties = element.EnumerateObject().ToList();
-        var dictionary = properties.Count > 0 && properties.TrueForAll(property => property.Name.All(char.IsAsciiDigit));
+        var dictionary = properties.Count > 0 && properties.TrueForAll(property => IsMapKey(property.Name));
         foreach (var property in properties)
         {
             var path = $"{prefix}{kind}.{(dictionary ? "*" : property.Name)}";

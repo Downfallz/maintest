@@ -68,7 +68,7 @@ internal sealed class GameSession
         Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Seed {_seed}.");
 
     public IPlayerAgent Agent(AgentSpec spec, int slot) =>
-        _services.GetRequiredService<AgentFactory>().Create(spec, _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((_seed * 31) + slot)));
+        _services.GetRequiredService<IAgentFactory>().Create(spec, _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((_seed * 31) + slot)));
 
     public async Task PlayAsync(IPlayerAgent player1, IPlayerAgent player2, string player1Name, string player2Name)
     {

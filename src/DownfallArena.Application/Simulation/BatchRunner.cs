@@ -22,7 +22,7 @@ public sealed class BatchRunner(
     IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>> boardState,
     MatchDriver driver,
     IRandomSourceFactory random,
-    AgentFactory agents)
+    IAgentFactory agents)
 {
     public Task<BatchResult> RunAsync(SimulationScenario scenario, CancellationToken cancellationToken = default) =>
         RunAsync(scenario, null, cancellationToken);

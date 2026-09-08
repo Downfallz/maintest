@@ -74,7 +74,7 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
         };
     }
 
-    private static IReadOnlyDictionary<string, int> Usage(IntentCounter firstBatch, PlayerSlot slotInFirst, IntentCounter secondBatch, PlayerSlot slotInSecond)
+    private static Dictionary<string, int> Usage(IntentCounter firstBatch, PlayerSlot slotInFirst, IntentCounter secondBatch, PlayerSlot slotInSecond)
     {
         var usage = new Dictionary<string, int>(firstBatch.UsageOf(slotInFirst), StringComparer.Ordinal);
         foreach (var (spell, count) in secondBatch.UsageOf(slotInSecond))
