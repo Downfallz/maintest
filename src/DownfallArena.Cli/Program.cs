@@ -42,7 +42,10 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(seed)
     .AddGameResources(options.SchemaPath);
-builder.Services.AddSingleton<IDomainEventListener>(new ConsoleMatchLog(Console.Out));
+if (options.Command is "play" or "human")
+{
+    builder.Services.AddSingleton<IDomainEventListener>(new ConsoleMatchLog(Console.Out));
+}
 
 using var host = builder.Build();
 var services = host.Services;

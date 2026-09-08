@@ -4,13 +4,24 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Application.Simulation;
 
 /// <summary>
-/// One simulated match: how it ended, how long it took, and what health each team kept.
+/// One simulated match: which content and seed produced it, how it ended, how long it took, and what health
+/// each team kept. The content hash and the seed are what a replay needs.
 /// </summary>
-public sealed record MatchResult(
-    int Index,
-    int Seed,
-    MatchId MatchId,
-    MatchOutcome Outcome,
-    int Rounds,
-    int Player1RemainingHealth,
-    int Player2RemainingHealth);
+public sealed record MatchResult
+{
+    public required int Index { get; init; }
+
+    public required int Seed { get; init; }
+
+    public required MatchId MatchId { get; init; }
+
+    public required string ContentHash { get; init; }
+
+    public required MatchOutcome Outcome { get; init; }
+
+    public required int Rounds { get; init; }
+
+    public required int Player1RemainingHealth { get; init; }
+
+    public required int Player2RemainingHealth { get; init; }
+}

@@ -21,6 +21,7 @@ public sealed class BatchRunnerTests
         batch.Results.Select(result => result.Index).ShouldBe([0, 1, 2]);
         batch.Results.Select(result => result.Seed).ShouldBe([10, 11, 12]);
         batch.Results.Select(result => result.MatchId).Distinct().Count().ShouldBe(3);
+        batch.Results.ShouldAllBe(result => result.ContentHash == "test-content");
         batch.Results.ShouldAllBe(result => result.Rounds >= 1);
         batch.Results.ShouldAllBe(result => result.Outcome.Reason == MatchEndReason.RoundCap || Math.Min(result.Player1RemainingHealth, result.Player2RemainingHealth) == 0);
         factory.Seeds.Take(3).ShouldBe([10, (10 * 31) + 1, (10 * 31) + 2]);

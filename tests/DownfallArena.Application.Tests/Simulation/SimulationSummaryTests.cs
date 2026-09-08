@@ -59,6 +59,15 @@ public sealed class SimulationSummaryTests
         Should.Throw<ArgumentNullException>(() => SimulationSummary.Of(null!));
     }
 
-    private static MatchResult Result(int index, PlayerSlot? winner, MatchEndReason reason, int rounds, int health1, int health2) =>
-        new(index, 100 + index, MatchId.New(), new MatchOutcome(winner, reason), rounds, health1, health2);
+    private static MatchResult Result(int index, PlayerSlot? winner, MatchEndReason reason, int rounds, int health1, int health2) => new()
+    {
+        Index = index,
+        Seed = 100 + index,
+        MatchId = MatchId.New(),
+        ContentHash = "test-content",
+        Outcome = new MatchOutcome(winner, reason),
+        Rounds = rounds,
+        Player1RemainingHealth = health1,
+        Player2RemainingHealth = health2,
+    };
 }

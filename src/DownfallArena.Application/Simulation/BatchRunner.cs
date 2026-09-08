@@ -48,14 +48,17 @@ public sealed class BatchRunner(
         var outcome = Accept(await driver.PlayAsync(matchId, player1, player2, cancellationToken));
 
         var board = Accept(await boardState.HandleAsync(new GetBoardStateForPlayer(matchId, PlayerSlot.Player1), cancellationToken));
-        return new MatchResult(
-            index,
-            seed,
-            matchId,
-            outcome,
-            board.RoundNumber ?? 0,
-            board.Allies.Sum(creature => creature.Health.Value),
-            board.Enemies.Sum(creature => creature.Health.Value));
+        return new MatchResult
+        {
+            Index = index,
+            Seed = seed,
+            MatchId = matchId,
+            ContentHash = board.ContentHash,
+            Outcome = outcome,
+            Rounds = board.RoundNumber ?? 0,
+            Player1RemainingHealth = board.Allies.Sum(creature => creature.Health.Value),
+            Player2RemainingHealth = board.Enemies.Sum(creature => creature.Health.Value),
+        };
     }
 
     private RandomAgent Agent(AgentKind kind, int seed) =>

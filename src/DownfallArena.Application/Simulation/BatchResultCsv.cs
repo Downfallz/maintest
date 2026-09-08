@@ -3,11 +3,12 @@ using System.Globalization;
 namespace DownfallArena.Application.Simulation;
 
 /// <summary>
-/// Renders a batch as CSV, one line per match, for spreadsheets and future learning datasets.
+/// Renders a batch as CSV, one line per match, for spreadsheets and future learning datasets. Every row carries
+/// the content hash and the seed, so rows from different content versions stay distinguishable and replayable.
 /// </summary>
 public static class BatchResultCsv
 {
-    public const string Header = "index,seed,match_id,winner,reason,rounds,player1_remaining_health,player2_remaining_health";
+    public const string Header = "index,seed,content_hash,match_id,winner,reason,rounds,player1_remaining_health,player2_remaining_health";
 
     public static void Write(BatchResult batch, TextWriter writer)
     {
@@ -29,6 +30,7 @@ public static class BatchResultCsv
             ',',
             result.Index.ToString(CultureInfo.InvariantCulture),
             result.Seed.ToString(CultureInfo.InvariantCulture),
+            result.ContentHash,
             result.MatchId.ToString(),
             result.Outcome.Winner?.ToString() ?? "Draw",
             result.Outcome.Reason.ToString(),

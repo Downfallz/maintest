@@ -12,8 +12,8 @@ public sealed class BatchResultCsvTests
         var matchId = MatchId.From(Guid.Parse("11111111-2222-3333-4444-555555555555"));
         var results = new List<MatchResult>
         {
-            new(0, 42, matchId, new MatchOutcome(PlayerSlot.Player2, MatchEndReason.Elimination), 7, 0, 13),
-            new(1, 43, matchId, new MatchOutcome(null, MatchEndReason.RoundCap), 30, 9, 9),
+            Result(0, 42, matchId, new MatchOutcome(PlayerSlot.Player2, MatchEndReason.Elimination), 7, 0, 13),
+            Result(1, 43, matchId, new MatchOutcome(null, MatchEndReason.RoundCap), 30, 9, 9),
         };
         var batch = new BatchResult(Scenario(), results, SimulationSummary.Of(results));
         using var writer = new StringWriter();
@@ -22,9 +22,9 @@ public sealed class BatchResultCsvTests
 
         writer.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ShouldBe(
         [
-            "index,seed,match_id,winner,reason,rounds,player1_remaining_health,player2_remaining_health",
-            "0,42,11111111-2222-3333-4444-555555555555,Player2,Elimination,7,0,13",
-            "1,43,11111111-2222-3333-4444-555555555555,Draw,RoundCap,30,9,9",
+            "index,seed,content_hash,match_id,winner,reason,rounds,player1_remaining_health,player2_remaining_health",
+            "0,42,abc123,11111111-2222-3333-4444-555555555555,Player2,Elimination,7,0,13",
+            "1,43,abc123,11111111-2222-3333-4444-555555555555,Draw,RoundCap,30,9,9",
         ]);
     }
 
@@ -37,6 +37,18 @@ public sealed class BatchResultCsvTests
         Should.Throw<ArgumentNullException>(() => BatchResultCsv.Write(batch, null!));
         Should.Throw<ArgumentNullException>(() => BatchResultCsv.Line(null!));
     }
+
+    private static MatchResult Result(int index, int seed, MatchId matchId, MatchOutcome outcome, int rounds, int health1, int health2) => new()
+    {
+        Index = index,
+        Seed = seed,
+        MatchId = matchId,
+        ContentHash = "abc123",
+        Outcome = outcome,
+        Rounds = rounds,
+        Player1RemainingHealth = health1,
+        Player2RemainingHealth = health2,
+    };
 
     private static SimulationScenario Scenario() => new()
     {
