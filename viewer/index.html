@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Downfall Arena viewer</title>
   <link rel="stylesheet" href="viewer.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.js" integrity="sha384-zYPBGXwO4633CABX/5Spf6emCKUJCfoOkhOMYyxMsatqQZPnDblmmOewfjsIVWCM" crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
@@ -81,7 +81,7 @@
     function runFor(key) {
       let run = state.artifacts.find(artifact => artifact.kind === 'run' && artifact.key === key);
       if (!run) {
-        const name = key === 'files' ? 'run (loose files)' : key.split('/').filter(Boolean).pop();
+        const name = key === 'files' ? 'run (loose files)' : key.split('/').findLast(Boolean);
         run = { kind: 'run', key, name, manifest: null, episodes: [], steps: [], csv: [], traces: [] };
         state.artifacts.push(run);
       }
@@ -156,7 +156,7 @@
         else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
         else node.setAttribute(key, value);
       }
-      for (const child of [].concat(children)) node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+      for (const child of [children].flat()) node.append(child instanceof Node ? child : document.createTextNode(String(child)));
       return node;
     }
 
@@ -367,11 +367,17 @@
       MatchStarted: (event) => `Match started (content ${shortId(event.contentHash)})`,
       RoundStarted: (event) => `Round ${event.roundId}`,
       SubPhaseEntered: (event) => event.subPhase,
-      OngoingEffectsApplied: (event, names) => event.bleedTicks.length ? `Bleeds: ${event.bleedTicks.map(tick => `${names[tick.creature]} takes ${tick.damage}`).join(', ')}` : 'No ongoing effects',
+      OngoingEffectsApplied: (event, names) => {
+        const ticks = event.bleedTicks.map(tick => `${names[tick.creature]} takes ${tick.damage}`).join(', ');
+        return ticks ? `Bleeds: ${ticks}` : 'No ongoing effects';
+      },
       EvolutionChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} unlocks ${spellName(event.choice.spell)}`,
       EvolutionPassed: (event) => `${event.slot} passes`,
       SpeedChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} goes ${event.choice.speed}`,
-      TimelineBuilt: (event, names) => `Timeline: ${event.timeline.slots.map(slot => `${names[slot.creature]} (${slot.speed})`).join(', ')}`,
+      TimelineBuilt: (event, names) => {
+        const slots = event.timeline.slots.map(slot => `${names[slot.creature]} (${slot.speed})`).join(', ');
+        return `Timeline: ${slots}`;
+      },
       IntentSubmitted: (event, names) => `${event.slot}: ${names[event.intent.actor]} intends ${spellName(event.intent.spell)}`,
       ActionRevealed: (event, names) => `${names[event.action.actor]} reveals ${spellName(event.action.spell)} on ${event.action.targets.map(id => names[id]).join(', ') || 'nobody'}`,
       [RESOLVED]: (event, names) => describeResolution(event.resolution, names),
@@ -388,11 +394,13 @@
       return describer ? describer(event, names) : event.kind;
     }
 
+    const CHIP_CLASSES = { Stun: 'chip stun', DefenseBuff: 'chip buff' };
+
     function conditionChip(condition) {
       const effect = condition.effect;
       const amount = effect.amountPerRound ?? effect.amount ?? '';
       const remaining = condition.remainingRounds === null ? 'permanent' : `${condition.remainingRounds}r`;
-      const kindClass = effect.kind === 'Stun' ? 'chip stun' : (effect.kind === 'DefenseBuff' ? 'chip buff' : 'chip');
+      const kindClass = CHIP_CLASSES[effect.kind] || 'chip';
       return el('span', { class: kindClass }, `${effect.kind} ${amount} (${remaining})`);
     }
 
@@ -450,7 +458,8 @@
         detail.append(el('p', {}, `Energy spent: ${resolution.energySpent}`), el('ul', {}, resolution.outcomes.map(outcome => el('li', {}, outcomeItem(outcome, names)))));
       }
       if (resolution.droppedTargets.length) {
-        detail.append(el('p', {}, `Dropped targets: ${resolution.droppedTargets.map(dropped => `${names[dropped.target] || 'action'} (${dropped.error.code})`).join(', ')}`));
+        const dropped = resolution.droppedTargets.map(failure => `${names[failure.target] || 'action'} (${failure.error.code})`).join(', ');
+        detail.append(el('p', {}, `Dropped targets: ${dropped}`));
       }
       return detail;
     }
@@ -487,13 +496,19 @@
       ]);
     }
 
+    function outcomeLabel(outcome) {
+      if (!outcome) return 'in progress';
+      if (outcome.winner) return `${outcome.winner} wins by ${outcome.reason}`;
+      return `Draw by ${outcome.reason}`;
+    }
+
     function renderTrace(artifact) {
       const trace = artifact.trace;
       const entry = trace.entries[artifact.cursor];
       const board = entry.player1;
       const names = namesOf(board);
       const outcome = trace.outcome;
-      const outcomeText = outcome ? (outcome.winner ? `${outcome.winner} wins by ${outcome.reason}` : `Draw by ${outcome.reason}`) : 'in progress';
+      const outcomeText = outcomeLabel(outcome);
       const detail = entry.event.kind === RESOLVED ? resolutionDetail(entry.event.resolution, names) : el('p', {}, describe(entry.event, names));
       const view = el('div');
       view.append(
@@ -522,7 +537,11 @@
     function bestIteration(rows) {
       const flagged = rows.find(row => row.best);
       if (flagged) return flagged;
-      return rows.reduce((best, row) => (row.winRate > (best ? best.winRate : -1) ? row : best), null);
+      let best = null;
+      for (const row of rows) {
+        if (!best || row.winRate > best.winRate) best = row;
+      }
+      return best;
     }
 
     function trainingTable(rows, best) {
@@ -595,6 +614,12 @@
       return artifact.trace.stamp;
     }
 
+    function deltaClassOf(delta) {
+      if (delta > 0) return 'delta-up';
+      if (delta < 0) return 'delta-down';
+      return '';
+    }
+
     function renderComparison(a, b) {
       const changed = stampDiff(stampOf(a), stampOf(b));
       const table = el('table');
@@ -604,7 +629,7 @@
       left.forEach(([label, value, digits], index) => {
         const other = right[index][1];
         const delta = other - value;
-        const deltaClass = delta > 0 ? 'delta-up' : (delta < 0 ? 'delta-down' : '');
+        const deltaClass = deltaClassOf(delta);
         table.append(el('tr', {}, [el('td', {}, label), el('td', { class: 'num' }, fixed(value, digits)), el('td', { class: 'num' }, fixed(other, digits)), el('td', { class: `num ${deltaClass}` }, `${delta > 0 ? '+' : ''}${fixed(delta, digits)}`)]));
       });
       const axes = changed.size ? `Changed: ${[...changed].join(', ')}` : 'Same run stamp on both sides (or no stamp).';
