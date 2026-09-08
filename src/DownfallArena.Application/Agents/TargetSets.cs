@@ -25,7 +25,12 @@ public static class TargetSets
     public static IEnumerable<IReadOnlyList<CreatureId>> Combinations(IReadOnlyList<CreatureId> candidates, int size)
     {
         ArgumentNullException.ThrowIfNull(candidates);
+        ArgumentOutOfRangeException.ThrowIfNegative(size);
+        return Enumerate(candidates, size);
+    }
 
+    private static IEnumerable<IReadOnlyList<CreatureId>> Enumerate(IReadOnlyList<CreatureId> candidates, int size)
+    {
         if (size == 0)
         {
             yield return [];
@@ -35,7 +40,7 @@ public static class TargetSets
         for (var first = 0; first <= candidates.Count - size; first++)
         {
             var head = candidates[first];
-            foreach (var tail in Combinations([.. candidates.Skip(first + 1)], size - 1))
+            foreach (var tail in Enumerate([.. candidates.Skip(first + 1)], size - 1))
             {
                 yield return [head, .. tail];
             }

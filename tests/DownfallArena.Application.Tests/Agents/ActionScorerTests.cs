@@ -78,7 +78,7 @@ public sealed class ActionScorerTests
     public void Best_picks_the_target_set_with_the_highest_score()
     {
         var board = Board(enemyHealth: 20, actorEnergy: 2, actorSpells: [TestContent.Strike, TestContent.Slam]);
-        board[2] = board[2] with { Health = Health.Of(3) };
+        board[1] = board[1] with { Health = Health.Of(3) };
 
         var strike = Scorer.Best(board[0], TestContent.Strike, board).ShouldNotBeNull();
         strike.Targets.ShouldBe([Three]);

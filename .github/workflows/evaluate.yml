@@ -46,8 +46,13 @@ jobs:
       - name: Build game content
         run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
 
+      # Inputs reach the shell through the environment, never through the script text.
       - name: Evaluate
-        run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- evaluate --p1 "${{ inputs.p1 }}" --p2 "${{ inputs.p2 }}" --seeds "${{ inputs.seeds }}" --out evaluation.json
+        env:
+          AGENT_A: ${{ inputs.p1 }}
+          AGENT_B: ${{ inputs.p2 }}
+          SEEDS: ${{ inputs.seeds }}
+        run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- evaluate --p1 "$AGENT_A" --p2 "$AGENT_B" --seeds "$SEEDS" --out evaluation.json
 
       - name: Upload the evaluation
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
