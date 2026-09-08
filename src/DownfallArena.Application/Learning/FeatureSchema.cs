@@ -80,7 +80,7 @@ public sealed class FeatureSchema
     {
         ArgumentNullException.ThrowIfNull(resources);
         ArgumentNullException.ThrowIfNull(ruleSet);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(ruleSet.TeamSize, MaxTeamSize, nameof(ruleSet));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ruleSet.TeamSize, MaxTeamSize);
 
         var spells = resources.Spells.Select(spell => spell.Id).OrderBy(spell => spell.Value, StringComparer.Ordinal).ToList();
         var nodes = resources.TalentTrees
