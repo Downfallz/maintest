@@ -106,7 +106,7 @@ Fix: `SystemRandom.NextDouble` only produced 100 distinct values; the new implem
 
 Legacy tests to mine: `CombatCreatureTests` (14), stats, `ConditionCollection`.
 
-### Phase 4. Round: phases, sub-phases, choices, timeline
+### Phase 4. Round: phases, sub-phases, choices, timeline (done)
 
 - `RoundLifecycle`, `RoundSubPhaseLifecycle` (table-driven, forward-only, idempotent same-phase moves).
 - `Round` entity as pure state: evolution choices, speed choices, intents, targeted actions, `CombatTimeline`,
