@@ -117,7 +117,7 @@ Legacy tests to mine: `CombatCreatureTests` (14), stats, `ConditionCollection`.
 Legacy tests to mine: lifecycle tests (20), `TurnCursorTests` (11), the commented-out `RoundTests` (267 lines,
 the best spec of the round contract).
 
-### Phase 5. Planning rules
+### Phase 5. Planning rules (done)
 
 - `TalentUnlockService` (unlockable spells from the tree and known spells; validation with error catalogue).
 - `SpeedChoicePolicy`, `CombatTimelineBuilder` (Quick before Standard, initiative descending, deterministic
