@@ -14,7 +14,7 @@ public interface IPlayerAgent
 
     Speed DecideSpeed(PlayerBoardState board, CreatureId creature);
 
-    SpellId DecideIntent(PlayerBoardState board, IntentOption option);
+    SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption);
 
     IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options);
 }

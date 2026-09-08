@@ -10,7 +10,7 @@ internal sealed class TestRandom(uint seed) : IRandomSource
     private uint _state = seed;
 
     public int NextInt32(int minInclusive, int maxExclusive) =>
-        minInclusive + (int)(Next() % (uint)(maxExclusive - minInclusive));
+        minInclusive + (int)((Next() >> 16) % (uint)(maxExclusive - minInclusive));
 
     public double NextDouble() => Next() / 4294967296.0;
 

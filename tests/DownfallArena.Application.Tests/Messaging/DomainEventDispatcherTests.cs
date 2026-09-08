@@ -46,7 +46,7 @@ public sealed class DomainEventDispatcherTests
         await Should.ThrowAsync<ArgumentNullException>(() => new Recorder<MatchStarted>().HandleAsync(null!, TestContext.Current.CancellationToken));
     }
 
-    private sealed class Recorder<TEvent> : DomainEventHandler<TEvent>
+    private sealed class Recorder<TEvent> : DomainEventListener<TEvent>
         where TEvent : IDomainEvent
     {
         public List<TEvent> Seen { get; } = [];

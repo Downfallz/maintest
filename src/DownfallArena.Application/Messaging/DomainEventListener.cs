@@ -3,9 +3,9 @@ using DownfallArena.SharedKernel.Primitives;
 namespace DownfallArena.Application.Messaging;
 
 /// <summary>
-/// Base for typed domain event handlers: events of another type are ignored.
+/// Base for typed domain event listeners: events of another type are ignored.
 /// </summary>
-public abstract class DomainEventHandler<TEvent> : IDomainEventHandler
+public abstract class DomainEventListener<TEvent> : IDomainEventListener
     where TEvent : IDomainEvent
 {
     public Type EventType => typeof(TEvent);

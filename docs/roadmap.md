@@ -166,7 +166,7 @@ Done: `MatchPlayTests` plays scripted matches to an elimination, to the round ca
 ### Phase 8. Application: use cases, projections, agents (done)
 
 - Messaging (ADR 0008): `ICommandHandler<TCommand, TResult>`, `IQueryHandler<TQuery, TResult>`, typed
-  `DomainEventHandler<TEvent>`, and `DomainEventDispatcher` (matches handlers on event type, no reflection).
+  `DomainEventListener<TEvent>`, and `DomainEventDispatcher` (matches handlers on event type, no reflection).
 - Commands, one per `Match` method: `CreateMatch`, `JoinMatch`, `SubmitEvolutionChoice`, `PassEvolution`,
   `SubmitSpeedChoice`, `SubmitIntent`, `SubmitAction`, `ResolveNextAction`. Queries: `GetBoardStateForPlayer`,
   `GetPlayerOptions`. One handler each; `MatchWorkflow` holds the shared load, call, save, dispatch steps.
