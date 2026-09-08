@@ -18,8 +18,15 @@ This document states what the engine does today and what is decided for next. Id
   and the targeted actions bound in timeline order; a reveal cursor and a resolve cursor track combat. Wrong
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
+- Planning rules (phase 5): a spell is unlockable when its talent node's prerequisites and its own are met by
+  the creature's known spells; an evolution choice must target an own, living creature, an unlockable spell,
+  within the rule set's picks per round, and the sub-phase completes when no player has an effective pick left
+  (capped by what their living creatures can unlock). A speed choice must target an own, living, unstunned
+  creature, and the sub-phase completes when every such creature has one. The timeline orders Quick before
+  Standard, initiative descending, then player slot, then creature id. The `RuleSet` value object carries team
+  size, energy per round, evolution picks per round, the round cap, and the critical multiplier.
 
-Phases 5 to 7 of `docs/roadmap.md` implement the rules below.
+Phases 6 and 7 of `docs/roadmap.md` implement the rules below.
 
 ## Decided
 

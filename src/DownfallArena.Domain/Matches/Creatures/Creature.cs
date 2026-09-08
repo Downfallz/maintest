@@ -165,6 +165,7 @@ public sealed class Creature : Entity<CreatureId>
         Owner = Owner,
         DefinitionId = Definition.Id,
         Name = Name,
+        TalentTree = Definition.TalentTree,
         Health = Health,
         MaxHealth = MaxHealth,
         Energy = Energy,

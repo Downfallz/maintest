@@ -16,6 +16,8 @@ public sealed record CreatureSnapshot
 
     public required string Name { get; init; }
 
+    public required TalentTreeId TalentTree { get; init; }
+
     public required Health Health { get; init; }
 
     public required Health MaxHealth { get; init; }
