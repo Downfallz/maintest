@@ -128,17 +128,19 @@ the best spec of the round contract).
 Fix: legacy unlocked the spell on the creature before the round accepted the choice; a rejected duplicate left
 the spell unlocked. Validate fully, then mutate.
 
-### Phase 6. Combat rules
+### Phase 6. Combat rules (done)
 
-- Intent validation (phase, alive, not stunned, knows spell, can afford), targeting policy producing a full
-  `TargetingReport` (all failures, per target), legal targets resolver, `CombatActionGate`.
-- Resolution pipeline: global targeting failure fizzles the action, per-target failure filters targets,
-  effects computed per target, **crit multiplier applied**, **energy spent**, result applied to creatures,
-  conditions attached. Condition ticks at start of round and end of round (legacy only did start).
-- Conditions and effects follow the phase 2 taxonomy; unknown kinds are a compile error, not a `NotSupported`.
+- `IntentRules` (alive, not stunned, knows the spell, can afford it; gate lists the timeline creatures without
+  an intent), `TargetingRules` (a full `TargetingReport` with global and per-target failures, and the legal
+  targets of a spell), `ActionRules` (any targeting failure blocks the binding; gate follows the reveal cursor).
+- `ResolutionRules` computes a `CombatResolution` without touching the creatures: an actor that cannot act or
+  a global targeting failure fizzles, per-target failures drop targets, one outcome per effect and target with
+  the **crit multiplier applied to damage** and the **energy cost recorded**. `CombatExecution` applies it.
+- `UpkeepRules`: energy gain and bleed damage at the start of the round, condition countdown at cleanup. The
+  first countdown after an application does not count, so a one-round effect lasts through the next round.
+- Effects and outcomes are closed taxonomies; an unhandled kind is an invariant violation, not a `NotSupported`.
 
-Legacy tests to mine: resolution, crit, effect, execution, damage tests, plus the commented-out targeting
-(469 lines), resolution policy and cost policy tests.
+Fix: legacy never applied the crit multiplier nor spent the energy; both are covered by tests now.
 
 ### Phase 7. Match aggregate and phase driver
 

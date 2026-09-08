@@ -21,12 +21,26 @@ public sealed class ConditionTests
         condition.RemainingRounds.ShouldBe(1);
         creature.IsStunned.ShouldBeTrue();
 
+        creature.TickConditions().ShouldBeEmpty();
         var expired = creature.TickConditions();
 
         expired.ShouldBe([condition]);
         condition.IsExpired.ShouldBeTrue();
         creature.IsStunned.ShouldBeFalse();
         creature.Conditions.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void The_first_tick_after_application_does_not_count()
+    {
+        var creature = Spawn();
+        var condition = creature.Apply(Bleed.Of(1, rounds: 2)).ShouldNotBeNull();
+
+        creature.TickConditions();
+        condition.RemainingRounds.ShouldBe(2);
+
+        creature.TickConditions();
+        condition.RemainingRounds.ShouldBe(1);
     }
 
     [Fact]
@@ -45,14 +59,18 @@ public sealed class ConditionTests
     public void Refreshing_effects_restart_the_existing_duration_and_keep_its_amount()
     {
         var creature = Spawn();
-        var first = creature.Apply(Bleed.Of(1, rounds: 2));
+        var first = creature.Apply(Bleed.Of(1, rounds: 2)).ShouldNotBeNull();
         creature.TickConditions();
+        creature.TickConditions();
+        first.RemainingRounds.ShouldBe(1);
 
         var refreshed = creature.Apply(Bleed.Of(5, rounds: 2));
 
         refreshed.ShouldBeSameAs(first);
         creature.Conditions.ShouldHaveSingleItem().RemainingRounds.ShouldBe(2);
         ((Bleed)creature.Conditions[0].Effect).AmountPerRound.ShouldBe(1);
+        creature.TickConditions();
+        first.RemainingRounds.ShouldBe(2);
     }
 
     [Fact]
@@ -64,6 +82,7 @@ public sealed class ConditionTests
         creature.Apply(DefenseBuff.Of(9, Duration.OfRounds(1), StackingPolicy.Ignore)).ShouldBeNull();
 
         creature.TotalDefense.ShouldBe(Defense.Of(2));
+        creature.TickConditions();
         creature.TickConditions();
         creature.Apply(DefenseBuff.Of(9, Duration.OfRounds(1), StackingPolicy.Ignore)).ShouldNotBeNull();
         creature.TotalDefense.ShouldBe(Defense.Of(9));

@@ -14,13 +14,16 @@ internal static class Content
     public static readonly TalentTreeId TreeId = TalentTreeId.Parse("talent-tree:base:v1");
 
     public static Spell Spell(string id = "spell:strike:v1", params Effect[] effects) =>
+        Spell(id, TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 0, effects);
+
+    public static Spell Spell(string id, TargetingSpec targeting, int cost = 0, double criticalChance = 0, params Effect[] effects) =>
         Domain.Resources.Spell.Create(
             SpellId.Parse(id),
             "Strike",
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
-            TargetingSpec.SingleTarget(TargetOrigin.Enemy),
+            new SpellStats(Initiative.Of(1), Energy.Of(cost), CriticalChance.Of(criticalChance)),
+            targeting,
             effects.Length == 0 ? [Damage.Of(1)] : effects);
 
     public static CreatureDefinition Creature(string id = "creature:main:v1", params string[] startingSpells) =>

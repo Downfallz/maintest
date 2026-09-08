@@ -38,7 +38,11 @@ public sealed record RuleSet
         ArgumentOutOfRangeException.ThrowIfNegative(energyPerRound);
         ArgumentOutOfRangeException.ThrowIfNegative(evolutionPicksPerRound);
         ArgumentOutOfRangeException.ThrowIfLessThan(roundCap, 1);
-        ArgumentOutOfRangeException.ThrowIfLessThan(criticalMultiplier, 1.0);
+        if (!double.IsFinite(criticalMultiplier) || criticalMultiplier < 1.0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(criticalMultiplier), criticalMultiplier, "The critical multiplier must be a finite number of at least 1.");
+        }
+
         return new RuleSet(teamSize, energyPerRound, evolutionPicksPerRound, roundCap, criticalMultiplier);
     }
 }
