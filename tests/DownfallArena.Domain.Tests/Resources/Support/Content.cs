@@ -19,10 +19,8 @@ internal static class Content
             "Strike",
             SpellType.Offensive,
             CreatureClass.Creature,
-            Initiative.Of(1),
-            Energy.Of(0),
-            CriticalChance.None,
-            TargetingSpec.Single(TargetOrigin.Enemy),
+            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            TargetingSpec.SingleTarget(TargetOrigin.Enemy),
             effects.Length == 0 ? [Damage.Of(1)] : effects);
 
     public static CreatureDefinition Creature(string id = "creature:main:v1", params string[] startingSpells) =>
@@ -30,11 +28,7 @@ internal static class Content
             CreatureDefinitionId.Parse(id),
             "Main",
             CreatureClass.Creature,
-            Health.Of(20),
-            Energy.Of(0),
-            Defense.Of(0),
-            Initiative.Of(5),
-            CriticalChance.Of(0.05),
+            new CreatureStats(Health.Of(20), Energy.Of(0), Defense.Of(0), Initiative.Of(5), CriticalChance.Of(0.05)),
             TreeId,
             startingSpells.Length == 0 ? [SpellId.Parse("spell:strike:v1")] : [.. startingSpells.Select(SpellId.Parse)]);
 

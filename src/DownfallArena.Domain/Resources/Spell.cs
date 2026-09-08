@@ -1,6 +1,5 @@
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
-using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Domain.Resources;
 
@@ -14,9 +13,7 @@ public sealed class Spell
         string name,
         SpellType type,
         CreatureClass creatureClass,
-        Initiative initiative,
-        Energy cost,
-        CriticalChance criticalChance,
+        SpellStats stats,
         TargetingSpec targeting,
         IReadOnlyList<Effect> effects)
     {
@@ -24,9 +21,7 @@ public sealed class Spell
         Name = name;
         Type = type;
         CreatureClass = creatureClass;
-        Initiative = initiative;
-        Cost = cost;
-        CriticalChance = criticalChance;
+        Stats = stats;
         Targeting = targeting;
         Effects = effects;
     }
@@ -39,11 +34,7 @@ public sealed class Spell
 
     public CreatureClass CreatureClass { get; }
 
-    public Initiative Initiative { get; }
-
-    public Energy Cost { get; }
-
-    public CriticalChance CriticalChance { get; }
+    public SpellStats Stats { get; }
 
     public TargetingSpec Targeting { get; }
 
@@ -54,17 +45,13 @@ public sealed class Spell
         string name,
         SpellType type,
         CreatureClass creatureClass,
-        Initiative initiative,
-        Energy cost,
-        CriticalChance criticalChance,
+        SpellStats stats,
         TargetingSpec targeting,
         IReadOnlyList<Effect> effects)
     {
         ArgumentNullException.ThrowIfNull(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(initiative);
-        ArgumentNullException.ThrowIfNull(cost);
-        ArgumentNullException.ThrowIfNull(criticalChance);
+        ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(targeting);
         ArgumentNullException.ThrowIfNull(effects);
 
@@ -73,6 +60,6 @@ public sealed class Spell
             throw new ArgumentException("A spell must have at least one effect.", nameof(effects));
         }
 
-        return new Spell(id, name, type, creatureClass, initiative, cost, criticalChance, targeting, [.. effects]);
+        return new Spell(id, name, type, creatureClass, stats, targeting, [.. effects]);
     }
 }

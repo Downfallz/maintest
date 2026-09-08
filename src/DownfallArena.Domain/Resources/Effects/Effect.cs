@@ -9,10 +9,4 @@ public abstract record Effect
     protected Effect()
     {
     }
-
-    protected static int Positive(int value, string parameterName)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(value, 1, parameterName);
-        return value;
-    }
 }

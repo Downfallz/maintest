@@ -14,9 +14,7 @@ public sealed class CreatureDefinitionTests
 
         creature.Id.ShouldBe(CreatureDefinitionId.Parse("creature:brute:v1"));
         creature.Name.ShouldBe("Main");
-        creature.BaseHealth.ShouldBe(Health.Of(20));
-        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
-        creature.BaseCriticalChance.ShouldBe(CriticalChance.Of(0.05));
+        creature.BaseStats.ShouldBe(new CreatureStats(Health.Of(20), Energy.Of(0), Defense.Of(0), Initiative.Of(5), CriticalChance.Of(0.05)));
         creature.TalentTree.ShouldBe(Content.TreeId);
         creature.StartingSpells.ShouldBe([SpellId.Parse("spell:a:v1"), SpellId.Parse("spell:b:v1")]);
     }
@@ -26,10 +24,10 @@ public sealed class CreatureDefinitionTests
     {
         Should.Throw<ArgumentException>(() => CreatureDefinition.Create(
             CreatureDefinitionId.Parse("creature:x:v1"), "", CreatureClass.Creature,
-            Health.Of(1), Energy.Of(0), Defense.Of(0), Initiative.Of(0), CriticalChance.None, Content.TreeId, [SpellId.Parse("spell:a:v1")]));
+            new CreatureStats(Health.Of(1), Energy.Of(0), Defense.Of(0), Initiative.Of(0), CriticalChance.None), Content.TreeId, [SpellId.Parse("spell:a:v1")]));
 
         Should.Throw<ArgumentException>(() => CreatureDefinition.Create(
             CreatureDefinitionId.Parse("creature:x:v1"), "X", CreatureClass.Creature,
-            Health.Of(1), Energy.Of(0), Defense.Of(0), Initiative.Of(0), CriticalChance.None, Content.TreeId, []));
+            new CreatureStats(Health.Of(1), Energy.Of(0), Defense.Of(0), Initiative.Of(0), CriticalChance.None), Content.TreeId, []));
     }
 }

@@ -13,14 +13,40 @@ namespace DownfallArena.Infrastructure.Resources;
 /// </summary>
 public static class GameSchemaMapper
 {
+    private const string AmountField = "amount";
+
     public static GameResources ToGameResources(GameSchema schema)
     {
         ArgumentNullException.ThrowIfNull(schema);
 
         var problems = new List<string>();
-        var spells = schema.Spells.Select(dto => MapSpell(dto, problems)).OfType<Spell>().ToList();
-        var creatures = schema.Creatures.Select(dto => MapCreature(dto, problems)).OfType<CreatureDefinition>().ToList();
-        var trees = schema.TalentTrees.Select(dto => MapTalentTree(dto, problems)).OfType<TalentTree>().ToList();
+        var spells = new List<Spell>();
+        var creatures = new List<CreatureDefinition>();
+        var trees = new List<TalentTree>();
+
+        foreach (var dto in schema.Spells)
+        {
+            if (MapSpell(dto, problems) is { } spell)
+            {
+                spells.Add(spell);
+            }
+        }
+
+        foreach (var dto in schema.Creatures)
+        {
+            if (MapCreature(dto, problems) is { } creature)
+            {
+                creatures.Add(creature);
+            }
+        }
+
+        foreach (var dto in schema.TalentTrees)
+        {
+            if (MapTalentTree(dto, problems) is { } tree)
+            {
+                trees.Add(tree);
+            }
+        }
 
         if (problems.Count > 0)
         {
@@ -53,9 +79,7 @@ public static class GameSchemaMapper
                 dto.Name,
                 type.Value,
                 creatureClass.Value,
-                Initiative.Of(dto.Initiative),
-                Energy.Of(dto.EnergyCost),
-                CriticalChance.Of(dto.CriticalChance),
+                new SpellStats(Initiative.Of(dto.Initiative), Energy.Of(dto.EnergyCost), CriticalChance.Of(dto.CriticalChance)),
                 targeting,
                 effects),
             context,
@@ -74,7 +98,7 @@ public static class GameSchemaMapper
         if (scope == TargetScope.SingleTarget)
         {
             return dto.MaxTargets is null or 1
-                ? TargetingSpec.Single(origin.Value)
+                ? TargetingSpec.SingleTarget(origin.Value)
                 : Problem<TargetingSpec>(problems, $"{context}: a single-target spell cannot have 'maxTargets' other than 1.");
         }
 
@@ -88,19 +112,19 @@ public static class GameSchemaMapper
 
         return dto.Kind.ToUpperInvariant() switch
         {
-            "DAMAGE" => Instant(dto.Amount, "amount", effectContext, problems, Damage.Of),
-            "HEAL" => Instant(dto.Amount, "amount", effectContext, problems, Heal.Of),
-            "ENERGYGAIN" => Instant(dto.Amount, "amount", effectContext, problems, EnergyGain.Of),
+            "DAMAGE" => Instant(dto.Amount, AmountField, effectContext, problems, Damage.Of),
+            "HEAL" => Instant(dto.Amount, AmountField, effectContext, problems, Heal.Of),
+            "ENERGYGAIN" => Instant(dto.Amount, AmountField, effectContext, problems, EnergyGain.Of),
             "BLEED" => Rounds(dto, effectContext, problems) is { } rounds && Require(dto.AmountPerRound, "amountPerRound", effectContext, problems) is { } amount
                 ? Guard<Effect>(() => Bleed.Of(amount, rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
                 : null,
             "STUN" => Rounds(dto, effectContext, problems) is { } rounds
                 ? Guard<Effect>(() => Stun.For(rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
                 : null,
-            "DEFENSEBUFF" => Lasting(dto, effectContext, problems) is { } duration && Require(dto.Amount, "amount", effectContext, problems) is { } amount
+            "DEFENSEBUFF" => Lasting(dto, effectContext, problems) is { } duration && Require(dto.Amount, AmountField, effectContext, problems) is { } amount
                 ? Guard<Effect>(() => DefenseBuff.Of(amount, duration, stacking ?? StackingPolicy.Stack), effectContext, problems)
                 : null,
-            "INITIATIVEDEBUFF" => Lasting(dto, effectContext, problems) is { } duration && Require(dto.Amount, "amount", effectContext, problems) is { } amount
+            "INITIATIVEDEBUFF" => Lasting(dto, effectContext, problems) is { } duration && Require(dto.Amount, AmountField, effectContext, problems) is { } amount
                 ? Guard<Effect>(() => InitiativeDebuff.Of(amount, duration, stacking ?? StackingPolicy.Stack), effectContext, problems)
                 : null,
             _ => Problem<Effect>(problems, $"{context}: unknown effect kind '{dto.Kind}'. See data/README.md for the supported kinds."),
@@ -160,11 +184,12 @@ public static class GameSchemaMapper
                 id,
                 dto.Name,
                 creatureClass.Value,
-                Health.Of(dto.BaseHealth),
-                Energy.Of(dto.BaseEnergy),
-                Defense.Of(dto.BaseDefense),
-                Initiative.Of(dto.BaseInitiative),
-                CriticalChance.Of(dto.BaseCriticalChance),
+                new CreatureStats(
+                    Health.Of(dto.BaseHealth),
+                    Energy.Of(dto.BaseEnergy),
+                    Defense.Of(dto.BaseDefense),
+                    Initiative.Of(dto.BaseInitiative),
+                    CriticalChance.Of(dto.BaseCriticalChance)),
                 talentTree,
                 startingSpells),
             context,

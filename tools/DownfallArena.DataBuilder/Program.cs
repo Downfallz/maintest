@@ -9,22 +9,22 @@ try
     var schema = GameSchemaBuilder.Build(dataDirectory);
     GameSchemaBuilder.Write(schema, outputDirectory);
 
-    Console.WriteLine($"Built {schema.Spells.Count} spells, {schema.Creatures.Count} creatures, {schema.TalentTrees.Count} talent trees from '{dataDirectory}'.");
-    Console.WriteLine($"Content hash {schema.ContentHash} written to '{outputDirectory}'.");
+    await Console.Out.WriteLineAsync($"Built {schema.Spells.Count} spells, {schema.Creatures.Count} creatures, {schema.TalentTrees.Count} talent trees from '{dataDirectory}'.");
+    await Console.Out.WriteLineAsync($"Content hash {schema.ContentHash} written to '{outputDirectory}'.");
     return 0;
 }
 catch (InvalidGameContentException exception)
 {
-    Console.Error.WriteLine("Invalid game content:");
+    await Console.Error.WriteLineAsync("Invalid game content:");
     foreach (var problem in exception.Problems)
     {
-        Console.Error.WriteLine(" - " + problem);
+        await Console.Error.WriteLineAsync(" - " + problem);
     }
 
     return 1;
 }
 catch (DirectoryNotFoundException exception)
 {
-    Console.Error.WriteLine(exception.Message);
+    await Console.Error.WriteLineAsync(exception.Message);
     return 1;
 }

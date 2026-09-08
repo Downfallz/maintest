@@ -9,5 +9,9 @@ public sealed record Heal : InstantEffect
 
     public int Amount { get; }
 
-    public static Heal Of(int amount) => new(Positive(amount, nameof(amount)));
+    public static Heal Of(int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(amount, 1);
+        return new Heal(amount);
+    }
 }

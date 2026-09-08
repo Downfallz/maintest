@@ -58,7 +58,7 @@ public sealed class GameSchemaBuilderTests
         strike.Effects.ShouldBe([Damage.Of(1), Bleed.Of(1, 2)]);
         var guard = resources.GetSpell(SpellId.Parse("spell:guard:v1"));
         guard.Effects.ShouldBe([DefenseBuff.Of(2, Duration.Permanent, StackingPolicy.Ignore)]);
-        guard.Targeting.ShouldBe(TargetingSpec.Single(TargetOrigin.Self));
+        guard.Targeting.ShouldBe(TargetingSpec.SingleTarget(TargetOrigin.Self));
         resources.GetCreature(CreatureDefinitionId.Parse("creature:main:v1")).StartingSpells.ShouldBe([strike.Id]);
         resources.GetTalentTree(TalentTreeId.Parse("talent-tree:base:v1")).Spells.Count().ShouldBe(2);
     }

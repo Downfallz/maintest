@@ -9,5 +9,9 @@ public sealed record Damage : InstantEffect
 
     public int Amount { get; }
 
-    public static Damage Of(int amount) => new(Positive(amount, nameof(amount)));
+    public static Damage Of(int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(amount, 1);
+        return new Damage(amount);
+    }
 }

@@ -1,5 +1,4 @@
 using DownfallArena.SharedKernel.Identifiers;
-using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Domain.Resources;
 
@@ -12,22 +11,14 @@ public sealed class CreatureDefinition
         CreatureDefinitionId id,
         string name,
         CreatureClass creatureClass,
-        Health baseHealth,
-        Energy baseEnergy,
-        Defense baseDefense,
-        Initiative baseInitiative,
-        CriticalChance baseCriticalChance,
+        CreatureStats baseStats,
         TalentTreeId talentTree,
         IReadOnlyList<SpellId> startingSpells)
     {
         Id = id;
         Name = name;
         CreatureClass = creatureClass;
-        BaseHealth = baseHealth;
-        BaseEnergy = baseEnergy;
-        BaseDefense = baseDefense;
-        BaseInitiative = baseInitiative;
-        BaseCriticalChance = baseCriticalChance;
+        BaseStats = baseStats;
         TalentTree = talentTree;
         StartingSpells = startingSpells;
     }
@@ -38,15 +29,7 @@ public sealed class CreatureDefinition
 
     public CreatureClass CreatureClass { get; }
 
-    public Health BaseHealth { get; }
-
-    public Energy BaseEnergy { get; }
-
-    public Defense BaseDefense { get; }
-
-    public Initiative BaseInitiative { get; }
-
-    public CriticalChance BaseCriticalChance { get; }
+    public CreatureStats BaseStats { get; }
 
     public TalentTreeId TalentTree { get; }
 
@@ -56,21 +39,13 @@ public sealed class CreatureDefinition
         CreatureDefinitionId id,
         string name,
         CreatureClass creatureClass,
-        Health baseHealth,
-        Energy baseEnergy,
-        Defense baseDefense,
-        Initiative baseInitiative,
-        CriticalChance baseCriticalChance,
+        CreatureStats baseStats,
         TalentTreeId talentTree,
         IReadOnlyList<SpellId> startingSpells)
     {
         ArgumentNullException.ThrowIfNull(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentNullException.ThrowIfNull(baseHealth);
-        ArgumentNullException.ThrowIfNull(baseEnergy);
-        ArgumentNullException.ThrowIfNull(baseDefense);
-        ArgumentNullException.ThrowIfNull(baseInitiative);
-        ArgumentNullException.ThrowIfNull(baseCriticalChance);
+        ArgumentNullException.ThrowIfNull(baseStats);
         ArgumentNullException.ThrowIfNull(talentTree);
         ArgumentNullException.ThrowIfNull(startingSpells);
 
@@ -79,7 +54,6 @@ public sealed class CreatureDefinition
             throw new ArgumentException("A creature definition must have at least one starting spell.", nameof(startingSpells));
         }
 
-        return new CreatureDefinition(
-            id, name, creatureClass, baseHealth, baseEnergy, baseDefense, baseInitiative, baseCriticalChance, talentTree, [.. startingSpells]);
+        return new CreatureDefinition(id, name, creatureClass, baseStats, talentTree, [.. startingSpells]);
     }
 }

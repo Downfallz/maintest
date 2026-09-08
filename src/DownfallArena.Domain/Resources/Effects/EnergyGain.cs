@@ -9,5 +9,9 @@ public sealed record EnergyGain : InstantEffect
 
     public int Amount { get; }
 
-    public static EnergyGain Of(int amount) => new(Positive(amount, nameof(amount)));
+    public static EnergyGain Of(int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(amount, 1);
+        return new EnergyGain(amount);
+    }
 }

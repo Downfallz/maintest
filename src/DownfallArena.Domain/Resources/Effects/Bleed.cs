@@ -13,6 +13,9 @@ public sealed record Bleed : LastingEffect
 
     public int AmountPerRound { get; }
 
-    public static Bleed Of(int amountPerRound, int rounds, StackingPolicy stacking = StackingPolicy.Refresh) =>
-        new(Positive(amountPerRound, nameof(amountPerRound)), Duration.OfRounds(rounds), stacking);
+    public static Bleed Of(int amountPerRound, int rounds, StackingPolicy stacking = StackingPolicy.Refresh)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(amountPerRound, 1);
+        return new Bleed(amountPerRound, Duration.OfRounds(rounds), stacking);
+    }
 }

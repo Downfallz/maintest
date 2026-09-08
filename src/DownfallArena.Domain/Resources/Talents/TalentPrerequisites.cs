@@ -7,7 +7,7 @@ namespace DownfallArena.Domain.Resources.Talents;
 /// </summary>
 public sealed class TalentPrerequisites
 {
-    public static readonly TalentPrerequisites None = new(new HashSet<SpellId>(), new HashSet<SpellId>());
+    public static readonly TalentPrerequisites None = new([], []);
 
     private TalentPrerequisites(HashSet<SpellId> allOf, HashSet<SpellId> anyOf)
     {

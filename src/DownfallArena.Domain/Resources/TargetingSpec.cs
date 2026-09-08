@@ -21,7 +21,7 @@ public sealed record TargetingSpec
     /// </summary>
     public int? MaxTargets { get; }
 
-    public static TargetingSpec Single(TargetOrigin origin) => new(origin, TargetScope.SingleTarget, 1);
+    public static TargetingSpec SingleTarget(TargetOrigin origin) => new(origin, TargetScope.SingleTarget, 1);
 
     public static TargetingSpec Multi(TargetOrigin origin, int? maxTargets = null)
     {

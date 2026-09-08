@@ -17,10 +17,8 @@ public sealed class SpellTests
         spell.Name.ShouldBe("Strike");
         spell.Type.ShouldBe(SpellType.Offensive);
         spell.CreatureClass.ShouldBe(CreatureClass.Creature);
-        spell.Initiative.ShouldBe(Initiative.Of(1));
-        spell.Cost.ShouldBe(Energy.Of(0));
-        spell.CriticalChance.ShouldBe(CriticalChance.None);
-        spell.Targeting.ShouldBe(TargetingSpec.Single(TargetOrigin.Enemy));
+        spell.Stats.ShouldBe(new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None));
+        spell.Targeting.ShouldBe(TargetingSpec.SingleTarget(TargetOrigin.Enemy));
         spell.Effects.ShouldBe([Damage.Of(4), Bleed.Of(1, 2)]);
     }
 
@@ -29,11 +27,11 @@ public sealed class SpellTests
     {
         Should.Throw<ArgumentException>(() => Spell.Create(
             SpellId.Parse("spell:x:v1"), " ", SpellType.Passive, CreatureClass.Creature,
-            Initiative.Of(0), Energy.Of(0), CriticalChance.None, TargetingSpec.Single(TargetOrigin.Self), [Damage.Of(1)]));
+            new SpellStats(Initiative.Of(0), Energy.Of(0), CriticalChance.None), TargetingSpec.SingleTarget(TargetOrigin.Self), [Damage.Of(1)]));
 
         Should.Throw<ArgumentException>(() => Spell.Create(
             SpellId.Parse("spell:x:v1"), "X", SpellType.Passive, CreatureClass.Creature,
-            Initiative.Of(0), Energy.Of(0), CriticalChance.None, TargetingSpec.Single(TargetOrigin.Self), []));
+            new SpellStats(Initiative.Of(0), Energy.Of(0), CriticalChance.None), TargetingSpec.SingleTarget(TargetOrigin.Self), []));
     }
 
     [Fact]
