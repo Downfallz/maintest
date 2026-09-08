@@ -28,6 +28,13 @@ public sealed class FileArtifactWriter : IArtifactWriter
         await JsonSerializer.SerializeAsync(stream, value, ArtifactJson.DocumentOptions, cancellationToken);
     }
 
+    public async Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        var path = Resolve(relativePath);
+        await using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+        await stream.FlushAsync(cancellationToken);
+    }
+
     public async Task AppendJsonLinesAsync<TValue>(string relativePath, IEnumerable<TValue> values, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(values);

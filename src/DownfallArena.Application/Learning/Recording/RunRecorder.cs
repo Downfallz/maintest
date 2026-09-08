@@ -37,8 +37,16 @@ public sealed class RunRecorder(
 
     public int Episodes { get; private set; }
 
-    /// <summary>Writes the manifest with zero counts, so an interrupted run still says what it was.</summary>
-    public Task StartAsync(CancellationToken cancellationToken = default) => WriteManifestAsync(cancellationToken);
+    /// <summary>
+    /// Starts the dataset files empty and writes the manifest with zero counts, so a reused directory never mixes
+    /// two runs and an interrupted run still says what it was.
+    /// </summary>
+    public async Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        await writer.StartJsonLinesAsync(StepsFile, cancellationToken);
+        await writer.StartJsonLinesAsync(EpisodesFile, cancellationToken);
+        await WriteManifestAsync(cancellationToken);
+    }
 
     public IPlayerAgent Wrap(MatchId matchId, IPlayerAgent agent)
     {

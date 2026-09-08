@@ -9,6 +9,9 @@ public interface IArtifactWriter
     /// <summary>Writes one JSON document, replacing any previous one at that path.</summary>
     Task WriteJsonAsync<TValue>(string relativePath, TValue value, CancellationToken cancellationToken = default);
 
+    /// <summary>Creates the JSON lines file at that path empty, replacing any previous one.</summary>
+    Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default);
+
     /// <summary>Appends one JSON line per value to the file at that path, creating it when needed.</summary>
     Task AppendJsonLinesAsync<TValue>(string relativePath, IEnumerable<TValue> values, CancellationToken cancellationToken = default);
 }

@@ -70,8 +70,7 @@ switch (options.Command)
         await PlayAsync(new ConsoleAgent(Console.In, Console.Out), new RandomAgent(RandomFor(2)), "Human", "Random");
         return 0;
     case "simulate":
-        await SimulateAsync();
-        return 0;
+        return await SimulateAsync();
     default:
         await Console.Error.WriteLineAsync($"Unknown command '{options.Command}'. {CliOptions.Usage}");
         return 2;
@@ -96,8 +95,14 @@ async Task PlayAsync(IPlayerAgent player1, IPlayerAgent player2, string player1N
     }
 }
 
-async Task SimulateAsync()
+async Task<int> SimulateAsync()
 {
+    if (options.Record is { } directory && Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
+    {
+        await Console.Error.WriteLineAsync($"Run directory '{directory}' is not empty. Record each run in its own directory.");
+        return 1;
+    }
+
     var scenario = new SimulationScenario
     {
         RuleSet = rules,
@@ -138,6 +143,7 @@ async Task SimulateAsync()
     Console.WriteLine($"Rounds: average {summary.AverageRounds.ToString("F1", CultureInfo.InvariantCulture)}, min {summary.MinRounds}, max {summary.MaxRounds}.");
     Console.WriteLine($"Remaining health: Player1 {summary.AveragePlayer1RemainingHealth.ToString("F1", CultureInfo.InvariantCulture)}, Player2 {summary.AveragePlayer2RemainingHealth.ToString("F1", CultureInfo.InvariantCulture)}.");
     Console.WriteLine($"Results written to '{options.Output}'.");
+    return 0;
 }
 
 // The trace recorder keeps every event of every match it sees, so it is only registered when something reads it.

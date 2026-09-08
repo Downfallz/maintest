@@ -21,6 +21,13 @@ internal sealed class MemoryArtifactWriter : IArtifactWriter
         return Task.CompletedTask;
     }
 
+    public Task StartJsonLinesAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        Lines[relativePath] = [];
+        Writes.Add(relativePath);
+        return Task.CompletedTask;
+    }
+
     public Task AppendJsonLinesAsync<TValue>(string relativePath, IEnumerable<TValue> values, CancellationToken cancellationToken = default)
     {
         if (!Lines.TryGetValue(relativePath, out var lines))

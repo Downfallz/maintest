@@ -52,6 +52,22 @@ public sealed class FileArtifactWriterTests
     }
 
     [Fact]
+    public async Task Starting_a_lines_file_empties_a_previous_one()
+    {
+        using var directory = new ContentDirectory();
+        var writer = new FileArtifactWriter(directory.Path);
+        var path = Path.Combine(directory.Path, "steps.jsonl");
+
+        await writer.StartJsonLinesAsync("steps.jsonl", TestContext.Current.CancellationToken);
+        File.Exists(path).ShouldBeTrue();
+        await writer.AppendJsonLinesAsync("steps.jsonl", [new { Index = 0 }], TestContext.Current.CancellationToken);
+        await writer.StartJsonLinesAsync("steps.jsonl", TestContext.Current.CancellationToken);
+        await writer.AppendJsonLinesAsync("steps.jsonl", [new { Index = 1 }], TestContext.Current.CancellationToken);
+
+        (await File.ReadAllLinesAsync(path, TestContext.Current.CancellationToken)).ShouldBe(["""{"index":1}"""]);
+    }
+
+    [Fact]
     public async Task Paths_that_leave_the_root_and_empty_values_are_refused()
     {
         using var directory = new ContentDirectory();
@@ -61,6 +77,7 @@ public sealed class FileArtifactWriterTests
         await Should.ThrowAsync<ArgumentException>(() => writer.WriteJsonAsync("../outside.json", new { }, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentException>(() => writer.WriteJsonAsync(rooted, new { }, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentException>(() => writer.AppendJsonLinesAsync(" ", Array.Empty<object>(), TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(() => writer.StartJsonLinesAsync("../steps.jsonl", TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => writer.WriteJsonAsync<object>("a.json", null!, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => writer.AppendJsonLinesAsync<object>("a.jsonl", null!, TestContext.Current.CancellationToken));
         Should.Throw<ArgumentException>(() => new FileArtifactWriter(" "));

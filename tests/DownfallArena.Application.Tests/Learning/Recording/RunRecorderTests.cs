@@ -25,8 +25,11 @@ public sealed class RunRecorderTests
         var recorder = Recorder(writer, tracer);
         var runner = Handlers.Runner(store.WorkflowWith(tracer), new TestRandomFactory());
 
+        await writer.AppendJsonLinesAsync(RunRecorder.StepsFile, ["a line of an earlier run"], TestContext.Current.CancellationToken);
         await recorder.StartAsync(TestContext.Current.CancellationToken);
         writer.Document<RunManifest>(RunRecorder.ManifestFile).Matches.ShouldBe(0);
+        writer.LinesOf<object>(RunRecorder.StepsFile).ShouldBeEmpty();
+        writer.LinesOf<object>(RunRecorder.EpisodesFile).ShouldBeEmpty();
 
         var batch = await runner.RunAsync(Scenario(matches: 2), recorder, TestContext.Current.CancellationToken);
         await recorder.FinishAsync(TestContext.Current.CancellationToken);
@@ -70,7 +73,7 @@ public sealed class RunRecorderTests
             tracer.EntriesOf(result.MatchId).ShouldBeEmpty();
         }
 
-        writer.Writes[0].ShouldBe(RunRecorder.ManifestFile);
+        writer.Writes.Take(4).ShouldBe([RunRecorder.StepsFile, RunRecorder.StepsFile, RunRecorder.EpisodesFile, RunRecorder.ManifestFile]);
         writer.Writes[^1].ShouldBe(RunRecorder.ManifestFile);
     }
 

@@ -25,7 +25,8 @@ writes the trace of that one match. `runs/` is git-ignored: artifacts are output
 ```
 
 The manifest is written twice: when the run starts, with zero counts, so an interrupted run still says what
-it was; and when it finishes, with the final counts.
+it was; and when it finishes, with the final counts. Starting a run empties `steps.jsonl` and `episodes.jsonl`,
+and `simulate --record` refuses a directory that is not empty, so two runs never mix.
 
 ## JSON conventions
 
