@@ -62,5 +62,9 @@ on the benchmark seeds replays exactly. That is what makes the benchmark digest 
 | energy | 0.2 | keeping energy for later is worth a little |
 | risk | 2.0 | a wasted action costs two damage |
 
+A heuristic agent is stamped as `Heuristic:<path>@<fingerprint>`, the fingerprint being eight hex digits of the
+weights the file held when the run started, so two runs on different weights at the same path never share a
+stamp.
+
 A weights file lists any subset of these names in camelCase (`{ "kill": 8, "risk": 1 }`); a missing name
 keeps the built-in value, an unknown one is an error, every value must be a finite number.

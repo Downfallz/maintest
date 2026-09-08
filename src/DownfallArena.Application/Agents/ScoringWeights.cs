@@ -1,3 +1,7 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+
 namespace DownfallArena.Application.Agents;
 
 /// <summary>
@@ -17,6 +21,16 @@ public sealed record ScoringWeights(
 {
     /// <summary>The greedy agent's weights: a kill is worth five damage, a stun three, energy kept and buffs a little, a wasted action costs two.</summary>
     public static ScoringWeights Default { get; } = new(Damage: 1.0, Kill: 5.0, Heal: 0.8, Stun: 3.0, Bleed: 0.8, Buff: 0.5, Energy: 0.2, Risk: 2.0);
+
+    /// <summary>Eight hex digits that change with any weight, the version a heuristic agent's spec carries.</summary>
+    public string Fingerprint
+    {
+        get
+        {
+            var text = string.Join(",", new[] { Damage, Kill, Heal, Stun, Bleed, Buff, Energy, Risk }.Select(value => value.ToString("R", CultureInfo.InvariantCulture)));
+            return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..8];
+        }
+    }
 
     public ScoringWeights Validated()
     {

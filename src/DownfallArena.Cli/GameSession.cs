@@ -36,8 +36,10 @@ internal sealed class GameSession
 
     public GameSession(IServiceProvider services, CliOptions options, int seed)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        var agents = services.GetRequiredService<IAgentFactory>();
         _services = services;
-        _options = options;
+        _options = options with { Player1 = agents.Resolve(options.Player1), Player2 = agents.Resolve(options.Player2) };
         _seed = seed;
         _resources = services.GetRequiredService<IGameResources>();
         _schema = FeatureSchema.Build(_resources, _rules);

@@ -18,6 +18,36 @@ public sealed class AgentSpecTests
     }
 
     [Fact]
+    public void A_resolved_spec_carries_a_version_after_the_path()
+    {
+        AgentSpec.Parse("heuristic:w.json@abcd1234").ShouldBe(new AgentSpec(AgentKind.Heuristic, "w.json", "abcd1234"));
+        new AgentSpec(AgentKind.Heuristic, "w.json", "abcd1234").ToString().ShouldBe("Heuristic:w.json@abcd1234");
+        AgentSpec.Parse("heuristic:w.json@").ShouldBe(new AgentSpec(AgentKind.Heuristic, "w.json"));
+    }
+
+    [Fact]
+    public void Resolving_a_heuristic_spec_fingerprints_the_weights_it_loads()
+    {
+        var factory = Handlers.Agents();
+
+        factory.Resolve(AgentSpec.Random).ShouldBe(AgentSpec.Random);
+        factory.Resolve(AgentSpec.Greedy).ShouldBe(AgentSpec.Greedy);
+        var resolved = factory.Resolve(AgentSpec.Parse("heuristic:w.json"));
+        resolved.Version.ShouldBe(ScoringWeights.Default.Fingerprint);
+        resolved.ToString().ShouldBe($"Heuristic:w.json@{ScoringWeights.Default.Fingerprint}");
+        Should.Throw<ArgumentException>(() => factory.Resolve(new AgentSpec(AgentKind.Heuristic)));
+        Should.Throw<ArgumentNullException>(() => factory.Resolve(null!));
+    }
+
+    [Fact]
+    public void The_fingerprint_changes_with_any_weight()
+    {
+        ScoringWeights.Default.Fingerprint.ShouldMatch("^[0-9a-f]{8}$");
+        ScoringWeights.Default.Fingerprint.ShouldBe(ScoringWeights.Default.Fingerprint);
+        (ScoringWeights.Default with { Risk = 2.5 }).Fingerprint.ShouldNotBe(ScoringWeights.Default.Fingerprint);
+    }
+
+    [Fact]
     public void The_text_form_round_trips()
     {
         AgentSpec.Random.ToString().ShouldBe("Random");
