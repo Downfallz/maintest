@@ -5,7 +5,7 @@ namespace DownfallArena.Domain.Matches.Rounds;
 /// </summary>
 public static class RoundFlow
 {
-    private static readonly IReadOnlyDictionary<RoundSubPhase, RoundPhase> Phases = new Dictionary<RoundSubPhase, RoundPhase>
+    private static readonly Dictionary<RoundSubPhase, RoundPhase> Phases = new()
     {
         [RoundSubPhase.EnergyGain] = RoundPhase.StartOfRound,
         [RoundSubPhase.OngoingEffects] = RoundPhase.StartOfRound,

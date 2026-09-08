@@ -18,12 +18,12 @@ public sealed class Round : Entity<RoundId>
 
     private readonly Dictionary<PlayerSlot, Dictionary<CreatureId, CombatIntent>> _intents = new()
     {
-        [PlayerSlot.Player1] = new Dictionary<CreatureId, CombatIntent>(),
-        [PlayerSlot.Player2] = new Dictionary<CreatureId, CombatIntent>(),
+        [PlayerSlot.Player1] = [],
+        [PlayerSlot.Player2] = [],
     };
 
-    private readonly Dictionary<CreatureId, SpeedChoice> _speedChoices = new();
-    private readonly Dictionary<CreatureId, CombatAction> _actions = new();
+    private readonly Dictionary<CreatureId, SpeedChoice> _speedChoices = [];
+    private readonly Dictionary<CreatureId, CombatAction> _actions = [];
 
     private Round(RoundId id)
         : base(id)
