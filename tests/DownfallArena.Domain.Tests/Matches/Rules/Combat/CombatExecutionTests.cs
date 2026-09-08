@@ -62,6 +62,28 @@ public sealed class CombatExecutionTests
     }
 
     [Fact]
+    public void A_target_killed_by_an_outcome_ignores_the_following_ones()
+    {
+        var creatures = Arena.FourCreatures();
+        var ghoul = Arena.Find(creatures, Arena.Ghoul);
+        ghoul.TakeDamage(19);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Ghoul]);
+        var resolution = CombatResolution.Resolved(
+            action,
+            [Arena.Ghoul],
+            [],
+            isCritical: false,
+            Energy.Of(0),
+            [new DamageOutcome(Arena.Ghoul, 1, false), new ConditionOutcome(Arena.Ghoul, Stun.For(1)), new HealOutcome(Arena.Ghoul, 5)]);
+
+        CombatExecution.Apply(resolution, creatures);
+
+        ghoul.IsDead.ShouldBeTrue();
+        ghoul.Conditions.ShouldBeEmpty();
+        ghoul.Health.ShouldBe(Health.Of(0));
+    }
+
+    [Fact]
     public void A_fizzled_action_changes_nothing()
     {
         var creatures = Arena.FourCreatures();

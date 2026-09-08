@@ -1,4 +1,3 @@
-using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources;
@@ -82,8 +81,9 @@ public sealed class TargetingRulesTests
 
         var report = TargetingRules.Check(Actor(creatures), Arena.Resources.GetSpell(Arena.Strike), [Arena.Archer, Arena.Ghoul], creatures);
 
-        report.FirstFailure.ShouldNotBeNull().ShouldBe(new TargetingFailure(null, CombatErrors.ExactlyOneTarget));
-        report.FirstFailure.IsGlobal.ShouldBeTrue();
+        var first = report.FirstFailure.ShouldNotBeNull();
+        first.ShouldBe(new TargetingFailure(null, CombatErrors.ExactlyOneTarget));
+        first.IsGlobal.ShouldBeTrue();
         report.InvalidTargets.ShouldBe([Arena.Archer]);
     }
 

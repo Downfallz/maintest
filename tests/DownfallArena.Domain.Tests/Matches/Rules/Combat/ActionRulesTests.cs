@@ -64,6 +64,12 @@ public sealed class ActionRulesTests
     }
 
     [Fact]
+    public void An_empty_timeline_has_nothing_to_reveal()
+    {
+        ActionRules.Evaluate(Arena.RoundAt(RoundSubPhase.RevealAndTarget)).ShouldBe(new ActionGateResult(true, 0, null));
+    }
+
+    [Fact]
     public void Null_arguments_are_rejected()
     {
         var creatures = Arena.Snapshots(Arena.FourCreatures());

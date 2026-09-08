@@ -20,7 +20,9 @@ public sealed class Condition
     public LastingEffect Effect { get; }
 
     /// <summary>
-    /// Rounds left before the condition expires; <c>null</c> when permanent.
+    /// Countdowns left before the condition expires, not counting the first one after application;
+    /// <c>null</c> when permanent. A one-round condition applied in combat therefore reports one remaining
+    /// round through the cleanup of that round and expires at the cleanup of the next.
     /// </summary>
     public int? RemainingRounds { get; private set; }
 

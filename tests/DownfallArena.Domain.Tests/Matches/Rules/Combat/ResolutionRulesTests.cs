@@ -112,13 +112,36 @@ public sealed class ResolutionRulesTests
     [Fact]
     public void A_global_targeting_failure_fizzles_the_action()
     {
-        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.UnlockSpell(Arena.Guard);
+        knight.GainEnergy(1);
+        var creatures = Arena.Snapshots(living);
 
         var none = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), []);
         Resolve(none, creatures, NoCrit).FizzleReason.ShouldBe(CombatErrors.NoTargets);
 
         var two = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Ghoul, Arena.Wraith]);
         Resolve(two, creatures, NoCrit).FizzleReason.ShouldBe(CombatErrors.ExactlyOneTarget);
+
+        var other = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Guard), [Arena.Archer]);
+        Resolve(other, creatures, NoCrit).FizzleReason.ShouldBe(CombatErrors.SelfOnly);
+    }
+
+    [Fact]
+    public void A_self_spell_attaches_its_condition_to_the_caster()
+    {
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.UnlockSpell(Arena.Guard);
+        knight.GainEnergy(1);
+        var guard = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Guard), [Arena.Knight]);
+
+        var resolution = Resolve(guard, Arena.Snapshots(living), NoCrit);
+
+        resolution.Fizzled.ShouldBeFalse();
+        resolution.EnergySpent.ShouldBe(Energy.Of(1));
+        resolution.Outcomes.ShouldBe([new ConditionOutcome(Arena.Knight, DefenseBuff.Of(2, Duration.OfRounds(1)))]);
     }
 
     [Fact]

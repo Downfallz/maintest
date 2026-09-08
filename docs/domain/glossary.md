@@ -49,6 +49,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by Player slot then Creature id. | decided |
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |
+| Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
+| Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. | decided |
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
 | Reveal and target | The step where the next Intent on the timeline is revealed and its targets chosen, producing a Combat action. | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
