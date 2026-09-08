@@ -51,11 +51,7 @@ if (options.Command is "play" or "human")
     builder.Services.AddSingleton<IDomainEventListener>(new ConsoleMatchLog(Console.Out));
 }
 
-if (options.Trace is not null || options.Record is not null)
-{
-    builder.Services.AddSingleton<MatchTraceRecorder>();
-    builder.Services.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
-}
+AddTracing(builder.Services, options);
 
 using var host = builder.Build();
 var services = host.Services;
@@ -142,6 +138,16 @@ async Task SimulateAsync()
     Console.WriteLine($"Rounds: average {summary.AverageRounds.ToString("F1", CultureInfo.InvariantCulture)}, min {summary.MinRounds}, max {summary.MaxRounds}.");
     Console.WriteLine($"Remaining health: Player1 {summary.AveragePlayer1RemainingHealth.ToString("F1", CultureInfo.InvariantCulture)}, Player2 {summary.AveragePlayer2RemainingHealth.ToString("F1", CultureInfo.InvariantCulture)}.");
     Console.WriteLine($"Results written to '{options.Output}'.");
+}
+
+// The trace recorder keeps every event of every match it sees, so it is only registered when something reads it.
+static void AddTracing(IServiceCollection services, CliOptions options)
+{
+    if (options.Trace is not null || options.Record is not null)
+    {
+        services.AddSingleton<MatchTraceRecorder>();
+        services.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
+    }
 }
 
 RunStamp Stamp(string player1Agent, string player2Agent) =>

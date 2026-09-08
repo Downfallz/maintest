@@ -71,7 +71,7 @@ public sealed class RecordingAgentTests
         var inner = Substitute.For<IPlayerAgent>();
         inner.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(Speed.Quick);
         inner.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(TestContent.Strike);
-        inner.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(new[] { CreatureId.From(4) });
+        inner.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns([CreatureId.From(4)]);
         var steps = new List<StepRecord>();
         var agent = new RecordingAgent(inner, Observations, Actions, steps);
         var board = Board();

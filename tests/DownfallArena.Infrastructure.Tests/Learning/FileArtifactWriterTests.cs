@@ -43,8 +43,8 @@ public sealed class FileArtifactWriterTests
         using var directory = new ContentDirectory();
         var writer = new FileArtifactWriter(directory.Path);
 
-        await writer.AppendJsonLinesAsync("steps.jsonl", new[] { new { Index = 0 }, new { Index = 1 } }, TestContext.Current.CancellationToken);
-        await writer.AppendJsonLinesAsync("steps.jsonl", new[] { new { Index = 2 } }, TestContext.Current.CancellationToken);
+        await writer.AppendJsonLinesAsync("steps.jsonl", [new { Index = 0 }, new { Index = 1 }], TestContext.Current.CancellationToken);
+        await writer.AppendJsonLinesAsync("steps.jsonl", [new { Index = 2 }], TestContext.Current.CancellationToken);
         await writer.AppendJsonLinesAsync("steps.jsonl", Array.Empty<object>(), TestContext.Current.CancellationToken);
 
         var lines = await File.ReadAllLinesAsync(Path.Combine(directory.Path, "steps.jsonl"), TestContext.Current.CancellationToken);

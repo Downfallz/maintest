@@ -18,7 +18,12 @@ public static class Returns
         ArgumentOutOfRangeException.ThrowIfNegative(enemyHealth);
         ArgumentOutOfRangeException.ThrowIfNegative(totalMaxHealth);
 
-        var result = outcome.Winner is null ? 0.0 : outcome.Winner == slot ? 1.0 : -1.0;
+        var result = outcome.Winner switch
+        {
+            null => 0.0,
+            var winner when winner == slot => 1.0,
+            _ => -1.0,
+        };
         var margin = totalMaxHealth == 0 ? 0.0 : (double)(ownHealth - enemyHealth) / totalMaxHealth;
         return result + (HealthMarginWeight * margin);
     }
