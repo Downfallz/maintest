@@ -16,7 +16,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
 
     public FeatureSchema Schema => schema;
 
-    public EncodedAction Pass() => new(PassKey, ActionCode.Pass);
+    public static EncodedAction Pass() => new(PassKey, ActionCode.Pass);
 
     public EncodedAction Evolve(BoardSlots slots, EvolutionChoice choice)
     {
@@ -27,7 +27,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
         return new EncodedAction(string.Create(CultureInfo.InvariantCulture, $"evolve:{slot}:{choice.Spell.Value}"), new ActionCode(ActionKind.Evolve, slot, schema.SpellIndex(choice.Spell), -1, 0));
     }
 
-    public EncodedAction Speed(BoardSlots slots, SpeedChoice choice)
+    public static EncodedAction Speed(BoardSlots slots, SpeedChoice choice)
     {
         ArgumentNullException.ThrowIfNull(slots);
         ArgumentNullException.ThrowIfNull(choice);
@@ -45,7 +45,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
         return new EncodedAction(string.Create(CultureInfo.InvariantCulture, $"intent:{slot}:{intent.Spell.Value}"), new ActionCode(ActionKind.Intent, slot, schema.SpellIndex(intent.Spell), -1, 0));
     }
 
-    public EncodedAction Targets(BoardSlots slots, CreatureId actor, IReadOnlyList<CreatureId> targets)
+    public static EncodedAction Targets(BoardSlots slots, CreatureId actor, IReadOnlyList<CreatureId> targets)
     {
         ArgumentNullException.ThrowIfNull(slots);
         ArgumentNullException.ThrowIfNull(targets);
@@ -78,7 +78,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
     private IEnumerable<EncodedAction> EvolutionCandidates(BoardSlots slots, EvolutionOptions options) =>
         options.Creatures.SelectMany(creature => creature.UnlockableSpells.Select(spell => Evolve(slots, new EvolutionChoice(creature.Creature, spell))));
 
-    private IEnumerable<EncodedAction> SpeedCandidates(BoardSlots slots, SpeedOptions options) =>
+    private static IEnumerable<EncodedAction> SpeedCandidates(BoardSlots slots, SpeedOptions options) =>
         options.Missing.SelectMany(creature => new[]
         {
             Speed(slots, new SpeedChoice(creature, SpeedValue.Quick)),
@@ -88,7 +88,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
     private IEnumerable<EncodedAction> IntentCandidates(BoardSlots slots, IntentOptions options) =>
         options.Creatures.SelectMany(creature => creature.CastableSpells.Select(spell => Intent(slots, new CombatIntent(creature.Creature, spell))));
 
-    private IEnumerable<EncodedAction> TargetCandidates(BoardSlots slots, TargetOptions options)
+    private static IEnumerable<EncodedAction> TargetCandidates(BoardSlots slots, TargetOptions options)
     {
         var legal = options.LegalTargets;
         if (!legal.IsCastable)

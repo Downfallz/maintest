@@ -27,19 +27,19 @@ public sealed class ActionEncoderTests
     [Fact]
     public void Every_kind_of_decision_has_a_key_naming_the_acting_slot_and_a_code()
     {
-        Encoder.Pass().ShouldBe(new EncodedAction("pass", ActionCode.Pass));
+        ActionEncoder.Pass().ShouldBe(new EncodedAction("pass", ActionCode.Pass));
         ActionCode.Pass.ShouldBe(new ActionCode(ActionKind.Pass, -1, -1, -1, 0));
         Encoder.Evolve(Slots, new EvolutionChoice(Two, TestContent.Guard))
             .ShouldBe(new EncodedAction("evolve:1:spell:guard:v1", new ActionCode(ActionKind.Evolve, 1, 0, -1, 0)));
-        Encoder.Speed(Slots, new SpeedChoice(One, Speed.Quick))
+        ActionEncoder.Speed(Slots, new SpeedChoice(One, Speed.Quick))
             .ShouldBe(new EncodedAction("speed:0:Quick", new ActionCode(ActionKind.Speed, 0, -1, 0, 0)));
-        Encoder.Speed(Slots, new SpeedChoice(Two, Speed.Standard))
+        ActionEncoder.Speed(Slots, new SpeedChoice(Two, Speed.Standard))
             .ShouldBe(new EncodedAction("speed:1:Standard", new ActionCode(ActionKind.Speed, 1, -1, 1, 0)));
         Encoder.Intent(Slots, new CombatIntent(One, TestContent.Strike))
             .ShouldBe(new EncodedAction("intent:0:spell:strike:v1", new ActionCode(ActionKind.Intent, 0, 3, -1, 0)));
-        Encoder.Targets(Slots, Two, [Four, Three])
+        ActionEncoder.Targets(Slots, Two, [Four, Three])
             .ShouldBe(new EncodedAction("targets:1:2,3", new ActionCode(ActionKind.Targets, 1, -1, -1, 0b1100)));
-        Encoder.Targets(Slots, One, [])
+        ActionEncoder.Targets(Slots, One, [])
             .ShouldBe(new EncodedAction("targets:0:", new ActionCode(ActionKind.Targets, 0, -1, -1, 0)));
         Encoder.Schema.ShouldBeSameAs(Schema);
     }
@@ -159,14 +159,14 @@ public sealed class ActionEncoderTests
     {
         Should.Throw<ArgumentNullException>(() => Encoder.Evolve(null!, new EvolutionChoice(One, TestContent.Guard)));
         Should.Throw<ArgumentNullException>(() => Encoder.Evolve(Slots, null!));
-        Should.Throw<ArgumentNullException>(() => Encoder.Speed(null!, new SpeedChoice(One, Speed.Quick)));
-        Should.Throw<ArgumentNullException>(() => Encoder.Speed(Slots, null!));
+        Should.Throw<ArgumentNullException>(() => ActionEncoder.Speed(null!, new SpeedChoice(One, Speed.Quick)));
+        Should.Throw<ArgumentNullException>(() => ActionEncoder.Speed(Slots, null!));
         Should.Throw<ArgumentNullException>(() => Encoder.Intent(null!, new CombatIntent(One, TestContent.Strike)));
         Should.Throw<ArgumentNullException>(() => Encoder.Intent(Slots, null!));
-        Should.Throw<ArgumentNullException>(() => Encoder.Targets(null!, One, []));
-        Should.Throw<ArgumentNullException>(() => Encoder.Targets(Slots, One, null!));
+        Should.Throw<ArgumentNullException>(() => ActionEncoder.Targets(null!, One, []));
+        Should.Throw<ArgumentNullException>(() => ActionEncoder.Targets(Slots, One, null!));
         Should.Throw<ArgumentNullException>(() => Encoder.Candidates(null!, new PlayerOptions { Kind = PlayerOptionsKind.Waiting }));
         Should.Throw<ArgumentNullException>(() => Encoder.Candidates(Slots, null!));
-        Should.Throw<ArgumentOutOfRangeException>(() => Encoder.Targets(Slots, CreatureId.From(9), []));
+        Should.Throw<ArgumentOutOfRangeException>(() => ActionEncoder.Targets(Slots, CreatureId.From(9), []));
     }
 }

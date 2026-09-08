@@ -31,6 +31,7 @@ public sealed class FeatureSchema
 
     private FeatureSchema(int teamSize, int roundCap, IReadOnlyList<SpellId> spells, IReadOnlyList<string> talentNodes)
     {
+        Version = CurrentVersion;
         TeamSize = teamSize;
         RoundCap = roundCap;
         Spells = spells;
@@ -41,7 +42,8 @@ public sealed class FeatureSchema
         _indexes = FeatureNames.Select((name, index) => (name, index)).ToDictionary(pair => pair.name, pair => pair.index);
     }
 
-    public string Version => CurrentVersion;
+    /// <summary>The version of the layout this schema follows.</summary>
+    public string Version { get; }
 
     public int TeamSize { get; }
 
