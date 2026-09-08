@@ -32,6 +32,18 @@ public sealed class LayerDependencyTests
     }
 
     [Fact]
+    public void Domain_references_only_the_base_class_library()
+    {
+        var foreignReferences = DomainAssembly
+            .GetReferencedAssemblies()
+            .Select(reference => reference.Name ?? string.Empty)
+            .Where(name => !IsBaseClassLibrary(name))
+            .ToList();
+
+        foreignReferences.ShouldBeEmpty("Domain must not reference any package or project. Found: " + string.Join(", ", foreignReferences));
+    }
+
+    [Fact]
     public void Application_does_not_depend_on_infrastructure_or_hosts()
     {
         var result = Types.InAssembly(ApplicationAssembly)
@@ -65,6 +77,10 @@ public sealed class LayerDependencyTests
 
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
+
+    private static bool IsBaseClassLibrary(string assemblyName) =>
+        assemblyName.StartsWith("System", StringComparison.Ordinal)
+        || assemblyName is "netstandard" or "mscorlib";
 
     private static string Describe(NetArchTest.Rules.TestResult result) =>
         result.IsSuccessful
