@@ -28,7 +28,7 @@ tools/
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
-  DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Created with the first aggregate.
+  DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
   DownfallArena.Application.Tests   Use case tests with NSubstitute for ports.
   DownfallArena.Infrastructure.Tests Adapter tests (in-memory, file-backed, seeded random).
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
@@ -76,6 +76,8 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 - Expected failures return `Result` / `Result<T>` with a `DomainError(Code, Message)`. Error codes are stable and
   namespaced by aggregate (`Match.AlreadyStarted`). Exceptions mean a bug or a broken invariant.
 - State changes go through aggregate methods that protect invariants. No public setters on domain types.
+  Entity mutators (`Creature`, `Round`) are `internal`: only `Match` and the rules it runs change them.
+  `DownfallArena.Domain.Tests` reaches them through `InternalsVisibleTo`.
 - Domain events are immutable records named in the past tense (`RoundEnded`), raised via `RaiseDomainEvent`.
 - Use the words in `docs/domain/glossary.md`. If you need a word that is not there, add it in the same change.
 - Time comes from `TimeProvider`, randomness from `IRandomSource` (SharedKernel). Never `DateTime.Now` or

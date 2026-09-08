@@ -165,8 +165,8 @@ Done: `MatchPlayTests` plays scripted matches to an elimination, to the round ca
 
 ### Phase 8. Application: use cases, projections, agents
 
-- Commands: `CreateMatch`, `JoinMatch`, `SubmitEvolutionChoice`, `SubmitSpeedChoice`, `SubmitCombatIntent`,
-  `RevealNextActionAndBindTargets`, `ResolveNextCombatStep`. Queries: `GetBoardStateForPlayer`,
+- Commands, one per `Match` method: `CreateMatch`, `JoinMatch`, `SubmitEvolutionChoice`, `PassEvolution`,
+  `SubmitSpeedChoice`, `SubmitIntent`, `SubmitAction`, `ResolveNextAction`. Queries: `GetBoardStateForPlayer`,
   `GetPlayerOptions`. One handler each, no mediator (decision B).
 - Projections: `PlayerBoardState`, `PlayerOptions` (exactly one options set per sub-phase).
 - Ports: `IMatchRepository`, `IPlayerAgent` (options-driven: evolution, speed, intent, targets).
