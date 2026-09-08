@@ -40,7 +40,10 @@ Three things, in this order:
   one HTML file with plain JavaScript that opens them from disk. No server, no build step, no framework.
 - **Small steps, one PR per phase**, tests alongside, docs updated, same working agreement as the engine.
 
-## Vocabulary (to add to the glossary in phase L0)
+## Vocabulary
+
+The terms below are the authoritative entries of the "Learning" section of
+[`domain/glossary.md`](domain/glossary.md); this table repeats them for reading convenience.
 
 | Term | Definition |
 | --- | --- |
@@ -65,9 +68,9 @@ Three things, in this order:
 
 - ADR 0013: the learning stack (Python for training, JSON weights as the first exchange format, where the
   Python project lives, what CI runs for it, the static viewer).
-- Glossary entries above. `docs/learning/features.md` created with the schema versioning rule: a feature
-  list is immutable once published; a change (a new condition kind, a new stat) is a new version, and a
-  model records the version it was trained on.
+- `docs/learning/features.md` created with the schema versioning rule: a feature list is immutable once
+  published; a change (a new condition kind, a new stat) is a new version, and a model records the version
+  it was trained on.
 - Settle the decisions listed at the end of this document.
 
 ### Phase L1. Run stamp, observations, action encoding (Application, `Learning/`)
@@ -82,8 +85,11 @@ Three things, in this order:
   number over round cap, phase, sub-phase, timeline position, revealed enemy actions this round. Missing
   slots are zero-filled so team size can vary. Adding a condition kind to the domain changes the observation
   length: that is a new schema version by construction, and a test fails until it is published.
-- `ActionEncoding`: a stable key per decision (`evolve:<spell>`, `pass`, `speed:<Quick|Standard>`,
-  `intent:<spell>`, `targets:<slot indices>`) and a per-kind numeric encoding (target slots as a bitmask).
+- `ActionEncoding`: a stable key per decision that always names the acting creature by its team slot,
+  since speed, intent, and targets are asked once per creature on the same board and two creatures can
+  unlock the same spell: `evolve:<slot>:<spell>`, `pass`, `speed:<slot>:<Quick|Standard>`,
+  `intent:<slot>:<spell>`, `targets:<slot>:<target slots>`; and a per-kind numeric encoding (the acting slot
+  as an index, target slots as a bitmask).
 - Tests: same board gives the same vector; mirrored board (slots swapped) gives the mirrored vector; the
   vector length matches the published schema; every spell and every condition kind of the content has a
   stable index.
@@ -124,23 +130,29 @@ Three things, in this order:
   <kind[:path]>` and `--p2 <kind[:path]>`.
 - Mirrored evaluation: each seed is played twice with the agents swapped, which cancels the Player1
   first-mover bias the phase 7 tests showed.
-- `Evaluation` result: win rate of each agent with a Wilson confidence interval, draw rate, average rounds,
+- `Evaluation` result: win rate of each agent with a confidence interval, draw rate, average rounds,
   average remaining health, spell usage counts (entropy, so a dominant spell shows), fizzle rate, share of
-  matches ending by round cap. Written as `evaluation.json` (stamped) and printed as one table.
+  matches ending by round cap. The two mirrored matches of a seed are paired, not independent, so the
+  interval is computed over the seed pairs (each pair contributes the agent's mean score over its two
+  matches; a bootstrap over pairs gives the interval), never over the individual matches. Written as
+  `evaluation.json` (stamped) and printed as one table.
 - `benchmark-seeds.json` fixed in the repo (decision G). `benchmark` command: plays the benchmark seeds with
   `Greedy` versus `Greedy` and writes `benchmarks/<content-hash>.json` (per seed: outcome, rounds, final
   health). CI runs it against the committed digest and fails on any difference; regenerating the digest is a
   deliberate commit with a journal entry. This is the engine-change detector.
-- Tests on the statistics (intervals, mirroring, entropy) with hand-built results; a test that the digest
-  of the test content is stable across two runs.
+- Tests on the statistics (paired intervals, mirroring, entropy) with hand-built results, including one
+  where perfectly correlated pairs widen the interval; a test that the digest of the test content is stable
+  across two runs.
 
 ### Phase L5. Baseline agents without a model
 
 - `GreedyAgent`: one-step lookahead using the domain rules on snapshots. Intent: for each castable spell and
-  each legal target set, estimate the resolution (`ResolutionRules.Resolve` on the snapshots with a no-crit
-  random) and score it: damage dealt, kills, healing, conditions applied, energy kept. Targets: the set with
-  the best score for the declared spell. Evolution: the unlockable spell with the highest estimated value.
-  Speed: Quick when a kill is on the table, Standard otherwise.
+  each legal target set, resolve twice with `ResolutionRules.Resolve` on the snapshots (a forced crit and a
+  forced non-crit random source) and weight the two outcomes by the actual critical chance of the actor and
+  spell, so the expected damage includes the critical contribution; score the expectation: damage dealt,
+  kills, healing, conditions applied, energy kept. Targets: the set with the best score for the declared
+  spell. Evolution: the unlockable spell with the highest estimated value. Speed: Quick when a kill is on
+  the table, Standard otherwise.
 - `HeuristicAgent`: the same scoring with explicit weights (`damage`, `kill`, `heal`, `stun`, `energy`,
   `risk`) read from a JSON file, so the weights can be tuned by search in L6 without a model runtime.
 - Both deterministic given the seed; tests pin their choices on small boards. Greedy versus random on the
@@ -192,6 +204,13 @@ dotnet run --project src/DownfallArena.Cli -- simulate --p1 policy:models/value/
 Then one journal entry, and any artifact dropped on the viewer. Changing a spell means running the lines
 again on the new content hash; fixing a bug means running them on the new engine version with the same
 content hash. The comparison report says which axis moved and what it did to the numbers.
+
+A retrained policy on new content mixes two effects, the content and the training, so the comparison never
+rests on it alone. The report always includes the fixed rows that move for one reason only: the deterministic
+baselines (`Random`, `Greedy`) on both content versions, and the previous policy, frozen, on both versions
+when its feature schema still applies (numeric edits keep the schema; adding a spell or a condition kind
+changes it, and the report then says the frozen policy could not run and only the baselines compare). The
+retrained policy is a third row, read against those two.
 
 ## What the content needs from us
 
