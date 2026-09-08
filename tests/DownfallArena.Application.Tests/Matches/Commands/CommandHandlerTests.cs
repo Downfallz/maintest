@@ -17,10 +17,10 @@ public sealed class CommandHandlerTests
         var store = new MatchStore();
         var handler = new CreateMatchHandler(store.Workflow, TestContent.Resources, new TestRandom(1));
 
-        var result = await handler.HandleAsync(new CreateMatch(MatchStore.TwoOnTwo()));
+        var result = await handler.HandleAsync(new CreateMatch(MatchStore.TwoOnTwo()), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        var match = (await store.Repository.FindAsync(result.Value)).ShouldNotBeNull();
+        var match = (await store.Repository.FindAsync(result.Value, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         match.State.ShouldBe(MatchState.WaitingForPlayers);
         match.RuleSet.TeamSize.ShouldBe(2);
         match.ContentHash.ShouldBe("test-content");
@@ -34,9 +34,9 @@ public sealed class CommandHandlerTests
         var match = store.Empty();
         var handler = new JoinMatchHandler(store.Workflow);
 
-        var first = await handler.HandleAsync(new JoinMatch(match.Id, MatchStore.Alice, MatchStore.Roster(match.RuleSet)));
-        var again = await handler.HandleAsync(new JoinMatch(match.Id, MatchStore.Alice, MatchStore.Roster(match.RuleSet)));
-        var missing = await handler.HandleAsync(new JoinMatch(MatchId.New(), MatchStore.Bob, MatchStore.Roster(match.RuleSet)));
+        var first = await handler.HandleAsync(new JoinMatch(match.Id, MatchStore.Alice, MatchStore.Roster(match.RuleSet)), TestContext.Current.CancellationToken);
+        var again = await handler.HandleAsync(new JoinMatch(match.Id, MatchStore.Alice, MatchStore.Roster(match.RuleSet)), TestContext.Current.CancellationToken);
+        var missing = await handler.HandleAsync(new JoinMatch(MatchId.New(), MatchStore.Bob, MatchStore.Roster(match.RuleSet)), TestContext.Current.CancellationToken);
 
         first.Value.ShouldBe(PlayerSlot.Player1);
         again.Error.ShouldBe(MatchErrors.PlayerAlreadyJoined);
@@ -50,10 +50,10 @@ public sealed class CommandHandlerTests
         var store = new MatchStore();
         var match = store.Started();
 
-        (await new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(new SubmitEvolutionChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Guard))).IsSuccess.ShouldBeTrue();
-        (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player1))).IsSuccess.ShouldBeTrue();
-        (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player2))).IsSuccess.ShouldBeTrue();
-        (await new SubmitSpeedChoiceHandler(store.Workflow).HandleAsync(new SubmitSpeedChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), Speed.Quick))).IsSuccess.ShouldBeTrue();
+        (await new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(new SubmitEvolutionChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Guard), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await new SubmitSpeedChoiceHandler(store.Workflow).HandleAsync(new SubmitSpeedChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), Speed.Quick), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
         match.Creatures[0].KnowsSpell(TestContent.Guard).ShouldBeTrue();
         var round = match.CurrentRound.ShouldNotBeNull();
@@ -74,21 +74,21 @@ public sealed class CommandHandlerTests
 
         foreach (var slot in match.CurrentRound.ShouldNotBeNull().Timeline.Slots)
         {
-            (await intents.HandleAsync(new SubmitIntent(match.Id, slot.Owner, slot.Creature, TestContent.Strike))).IsSuccess.ShouldBeTrue();
+            (await intents.HandleAsync(new SubmitIntent(match.Id, slot.Owner, slot.Creature, TestContent.Strike), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         }
 
-        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Strike, [CreatureId.From(2)]))).Error.ShouldBe(CombatErrors.EnemiesOnly);
-        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Strike, [CreatureId.From(3)]))).IsSuccess.ShouldBeTrue();
-        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(2), TestContent.Strike, [CreatureId.From(3)]))).IsSuccess.ShouldBeTrue();
-        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player2, CreatureId.From(3), TestContent.Strike, [CreatureId.From(1)]))).IsSuccess.ShouldBeTrue();
-        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player2, CreatureId.From(4), TestContent.Strike, [CreatureId.From(1)]))).IsSuccess.ShouldBeTrue();
+        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Strike, [CreatureId.From(2)]), TestContext.Current.CancellationToken)).Error.ShouldBe(CombatErrors.EnemiesOnly);
+        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Strike, [CreatureId.From(3)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player1, CreatureId.From(2), TestContent.Strike, [CreatureId.From(3)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player2, CreatureId.From(3), TestContent.Strike, [CreatureId.From(1)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await actions.HandleAsync(new SubmitAction(match.Id, PlayerSlot.Player2, CreatureId.From(4), TestContent.Strike, [CreatureId.From(1)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
-        var step = await resolve.HandleAsync(new ResolveNextAction(match.Id));
+        var step = await resolve.HandleAsync(new ResolveNextAction(match.Id), TestContext.Current.CancellationToken);
 
         step.Value.RoundId.ShouldBe(RoundId.First);
         step.Value.Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 3, false)]);
         step.Value.RoundCompleted.ShouldBeFalse();
-        (await resolve.HandleAsync(new ResolveNextAction(MatchId.New()))).Error.ShouldBe(ApplicationErrors.MatchNotFound);
+        (await resolve.HandleAsync(new ResolveNextAction(MatchId.New()), TestContext.Current.CancellationToken)).Error.ShouldBe(ApplicationErrors.MatchNotFound);
     }
 
     [Fact]
@@ -96,13 +96,13 @@ public sealed class CommandHandlerTests
     {
         var store = new MatchStore();
 
-        await Should.ThrowAsync<ArgumentNullException>(() => new CreateMatchHandler(store.Workflow, TestContent.Resources, new TestRandom(1)).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new JoinMatchHandler(store.Workflow).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new PassEvolutionHandler(store.Workflow).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitSpeedChoiceHandler(store.Workflow).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitIntentHandler(store.Workflow).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitActionHandler(store.Workflow).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new ResolveNextActionHandler(store.Workflow).HandleAsync(null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => new CreateMatchHandler(store.Workflow, TestContent.Resources, new TestRandom(1)).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new JoinMatchHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new PassEvolutionHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitSpeedChoiceHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitIntentHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new SubmitActionHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new ResolveNextActionHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
     }
 }

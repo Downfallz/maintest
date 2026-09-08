@@ -15,10 +15,10 @@ public sealed class InMemoryMatchRepositoryTests
         var repository = new InMemoryMatchRepository();
         var match = Match.Create(MatchId.New(), Substitute.For<IGameResources>(), RuleSet.Default, new SeededRandomSource(1));
 
-        await repository.SaveAsync(match);
+        await repository.SaveAsync(match, TestContext.Current.CancellationToken);
 
-        (await repository.FindAsync(match.Id)).ShouldBeSameAs(match);
-        (await repository.FindAsync(MatchId.New())).ShouldBeNull();
+        (await repository.FindAsync(match.Id, TestContext.Current.CancellationToken)).ShouldBeSameAs(match);
+        (await repository.FindAsync(MatchId.New(), TestContext.Current.CancellationToken)).ShouldBeNull();
         repository.Count.ShouldBe(1);
     }
 
@@ -28,8 +28,8 @@ public sealed class InMemoryMatchRepositoryTests
         var repository = new InMemoryMatchRepository();
         var match = Match.Create(MatchId.New(), Substitute.For<IGameResources>(), RuleSet.Default, new SeededRandomSource(1));
 
-        await repository.SaveAsync(match);
-        await repository.SaveAsync(match);
+        await repository.SaveAsync(match, TestContext.Current.CancellationToken);
+        await repository.SaveAsync(match, TestContext.Current.CancellationToken);
 
         repository.Count.ShouldBe(1);
     }
@@ -37,6 +37,6 @@ public sealed class InMemoryMatchRepositoryTests
     [Fact]
     public async Task A_null_match_is_rejected()
     {
-        await Should.ThrowAsync<ArgumentNullException>(() => new InMemoryMatchRepository().SaveAsync(null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => new InMemoryMatchRepository().SaveAsync(null!, TestContext.Current.CancellationToken));
     }
 }

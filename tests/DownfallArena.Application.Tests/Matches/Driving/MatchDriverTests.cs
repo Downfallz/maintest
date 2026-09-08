@@ -22,7 +22,7 @@ public sealed class MatchDriverTests
         var match = store.Started(random: new TestRandom(42));
         var driver = Driver(store);
 
-        var outcome = await driver.PlayAsync(match.Id, new RandomAgent(new TestRandom(1)), new RandomAgent(new TestRandom(2)));
+        var outcome = await driver.PlayAsync(match.Id, new RandomAgent(new TestRandom(1)), new RandomAgent(new TestRandom(2)), TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
         match.State.ShouldBe(MatchState.Ended);
@@ -54,7 +54,7 @@ public sealed class MatchDriverTests
         passer.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(TestContent.Strike);
         passer.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(call => [call.Arg<TargetOptions>().LegalTargets.Candidates[0]]);
 
-        var outcome = await Driver(store).PlayAsync(match.Id, passer, passer);
+        var outcome = await Driver(store).PlayAsync(match.Id, passer, passer, TestContext.Current.CancellationToken);
 
         outcome.Value.ShouldBe(new MatchOutcome(null, MatchEndReason.RoundCap));
         match.Creatures.ShouldAllBe(creature => creature.KnownSpells.Count == 1);
@@ -69,7 +69,7 @@ public sealed class MatchDriverTests
         cheater.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
             .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.Slam)));
 
-        await Should.ThrowAsync<InvalidOperationException>(() => Driver(store).PlayAsync(match.Id, cheater, cheater));
+        await Should.ThrowAsync<InvalidOperationException>(() => Driver(store).PlayAsync(match.Id, cheater, cheater, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -79,10 +79,10 @@ public sealed class MatchDriverTests
         var waiting = store.Empty();
         var agent = new RandomAgent(new TestRandom(1));
 
-        (await Driver(store).PlayAsync(MatchId.New(), agent, agent)).Error.ShouldBe(ApplicationErrors.MatchNotFound);
-        (await Driver(store).PlayAsync(waiting.Id, agent, agent)).Error.ShouldBe(MatchErrors.NotInProgress);
-        await Should.ThrowAsync<ArgumentNullException>(() => Driver(store).PlayAsync(waiting.Id, null!, agent));
-        await Should.ThrowAsync<ArgumentNullException>(() => Driver(store).PlayAsync(waiting.Id, agent, null!));
+        (await Driver(store).PlayAsync(MatchId.New(), agent, agent, TestContext.Current.CancellationToken)).Error.ShouldBe(ApplicationErrors.MatchNotFound);
+        (await Driver(store).PlayAsync(waiting.Id, agent, agent, TestContext.Current.CancellationToken)).Error.ShouldBe(MatchErrors.NotInProgress);
+        await Should.ThrowAsync<ArgumentNullException>(() => Driver(store).PlayAsync(waiting.Id, null!, agent, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => Driver(store).PlayAsync(waiting.Id, agent, null!, TestContext.Current.CancellationToken));
     }
 
     private static MatchDriver Driver(MatchStore store) =>
@@ -106,7 +106,7 @@ public sealed class MatchDriverTests
         store.Dispatcher.DispatchAsync(Arg.Any<Match>(), Arg.Any<CancellationToken>())
             .Returns(call => recorder.RecordAsync(call.Arg<Match>()));
 
-        await Driver(store).PlayAsync(match.Id, new RandomAgent(new TestRandom(seed + 1)), new RandomAgent(new TestRandom(seed + 2)));
+        await Driver(store).PlayAsync(match.Id, new RandomAgent(new TestRandom(seed + 1)), new RandomAgent(new TestRandom(seed + 2)), TestContext.Current.CancellationToken);
 
         return (match.Outcome, recorder.Rounds, recorder.Resolutions);
     }

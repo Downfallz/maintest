@@ -1,6 +1,7 @@
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;

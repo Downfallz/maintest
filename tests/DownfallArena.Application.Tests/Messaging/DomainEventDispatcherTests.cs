@@ -19,7 +19,7 @@ public sealed class DomainEventDispatcherTests
         var starts = new Recorder<MatchStarted>();
         var dispatcher = new DomainEventDispatcher([joins, starts]);
 
-        await dispatcher.DispatchAsync(match);
+        await dispatcher.DispatchAsync(match, TestContext.Current.CancellationToken);
 
         joins.Seen.Select(joined => joined.Player).ShouldBe([MatchStore.Alice, MatchStore.Bob]);
         starts.Seen.ShouldHaveSingleItem().MatchId.ShouldBe(match.Id);
@@ -31,7 +31,7 @@ public sealed class DomainEventDispatcherTests
     {
         var handler = new Recorder<MatchStarted>();
 
-        await handler.HandleAsync(new RoundStarted(MatchId.New(), RoundId.First));
+        await handler.HandleAsync(new RoundStarted(MatchId.New(), RoundId.First), TestContext.Current.CancellationToken);
 
         handler.Seen.ShouldBeEmpty();
         handler.EventType.ShouldBe(typeof(MatchStarted));
@@ -42,8 +42,8 @@ public sealed class DomainEventDispatcherTests
     {
         var dispatcher = new DomainEventDispatcher([]);
 
-        await Should.ThrowAsync<ArgumentNullException>(() => dispatcher.DispatchAsync<int>(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new Recorder<MatchStarted>().HandleAsync(null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => dispatcher.DispatchAsync<int>(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new Recorder<MatchStarted>().HandleAsync(null!, TestContext.Current.CancellationToken));
     }
 
     private sealed class Recorder<TEvent> : DomainEventHandler<TEvent>

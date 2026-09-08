@@ -16,8 +16,8 @@ public sealed class QueryHandlerTests
         var match = store.Started();
         var handler = new GetBoardStateForPlayerHandler(store.Workflow);
 
-        var board = await handler.HandleAsync(new GetBoardStateForPlayer(match.Id, PlayerSlot.Player2));
-        var missing = await handler.HandleAsync(new GetBoardStateForPlayer(MatchId.New(), PlayerSlot.Player2));
+        var board = await handler.HandleAsync(new GetBoardStateForPlayer(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken);
+        var missing = await handler.HandleAsync(new GetBoardStateForPlayer(MatchId.New(), PlayerSlot.Player2), TestContext.Current.CancellationToken);
 
         board.Value.Slot.ShouldBe(PlayerSlot.Player2);
         board.Value.Allies.Select(creature => creature.Id).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
@@ -31,8 +31,8 @@ public sealed class QueryHandlerTests
         var match = store.Started();
         var handler = new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources);
 
-        var options = await handler.HandleAsync(new GetPlayerOptions(match.Id, PlayerSlot.Player1));
-        var missing = await handler.HandleAsync(new GetPlayerOptions(MatchId.New(), PlayerSlot.Player1));
+        var options = await handler.HandleAsync(new GetPlayerOptions(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken);
+        var missing = await handler.HandleAsync(new GetPlayerOptions(MatchId.New(), PlayerSlot.Player1), TestContext.Current.CancellationToken);
 
         options.Value.Kind.ShouldBe(PlayerOptionsKind.Evolution);
         missing.Error.ShouldBe(ApplicationErrors.MatchNotFound);
@@ -43,7 +43,7 @@ public sealed class QueryHandlerTests
     {
         var store = new MatchStore();
 
-        await Should.ThrowAsync<ArgumentNullException>(() => new GetBoardStateForPlayerHandler(store.Workflow).HandleAsync(null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources).HandleAsync(null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => new GetBoardStateForPlayerHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources).HandleAsync(null!, TestContext.Current.CancellationToken));
     }
 }

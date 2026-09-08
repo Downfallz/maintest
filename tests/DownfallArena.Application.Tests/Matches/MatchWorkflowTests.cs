@@ -16,9 +16,9 @@ public sealed class MatchWorkflowTests
         var store = new MatchStore();
         var unknown = MatchId.New();
 
-        var command = await store.Workflow.ExecuteAsync(unknown, _ => Result.Success());
-        var valued = await store.Workflow.ExecuteAsync(unknown, _ => Result.Success(1));
-        var query = await store.Workflow.QueryAsync(unknown, _ => 1);
+        var command = await store.Workflow.ExecuteAsync(unknown, _ => Result.Success(), TestContext.Current.CancellationToken);
+        var valued = await store.Workflow.ExecuteAsync(unknown, _ => Result.Success(1), TestContext.Current.CancellationToken);
+        var query = await store.Workflow.QueryAsync(unknown, _ => 1, TestContext.Current.CancellationToken);
 
         command.Error.ShouldBe(ApplicationErrors.MatchNotFound);
         valued.Error.ShouldBe(ApplicationErrors.MatchNotFound);
@@ -33,7 +33,7 @@ public sealed class MatchWorkflowTests
         var store = new MatchStore();
         var match = store.Started();
 
-        var result = await store.Workflow.ExecuteAsync(match.Id, current => current.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(1), Speed.Quick)));
+        var result = await store.Workflow.ExecuteAsync(match.Id, current => current.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(1), Speed.Quick)), TestContext.Current.CancellationToken);
 
         result.Error.ShouldBe(RoundErrors.SpeedNotOpen);
         await store.Repository.DidNotReceive().SaveAsync(Arg.Any<Match>(), Arg.Any<CancellationToken>());
@@ -46,7 +46,7 @@ public sealed class MatchWorkflowTests
         var store = new MatchStore();
         var match = store.Started();
 
-        var result = await store.Workflow.ExecuteAsync(match.Id, current => current.PassEvolution(PlayerSlot.Player1));
+        var result = await store.Workflow.ExecuteAsync(match.Id, current => current.PassEvolution(PlayerSlot.Player1), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         store.Calls.ShouldBe(["save", "dispatch"]);
@@ -60,7 +60,7 @@ public sealed class MatchWorkflowTests
         var store = new MatchStore();
         var match = store.Started();
 
-        var result = await store.Workflow.QueryAsync(match.Id, current => current.State);
+        var result = await store.Workflow.QueryAsync(match.Id, current => current.State, TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe(MatchState.InProgress);
     }
@@ -70,9 +70,9 @@ public sealed class MatchWorkflowTests
     {
         var store = new MatchStore();
 
-        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.ExecuteAsync(MatchId.New(), (Func<Match, Result>)null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.ExecuteAsync(MatchId.New(), (Func<Match, Result<int>>)null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.QueryAsync(MatchId.New(), (Func<Match, int>)null!));
-        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.CommitAsync(null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.ExecuteAsync(MatchId.New(), (Func<Match, Result>)null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.ExecuteAsync(MatchId.New(), (Func<Match, Result<int>>)null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.QueryAsync(MatchId.New(), (Func<Match, int>)null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => store.Workflow.CommitAsync(null!, TestContext.Current.CancellationToken));
     }
 }
