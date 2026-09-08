@@ -33,15 +33,25 @@ public sealed class ViewerSamplesTests
         var run = Path.Combine(scratch.Path, "run");
         await RecordAsync(run, TestContext.Current.CancellationToken);
 
-        ShapesOf(Path.Combine(SampleRun, RunRecorder.ManifestFile)).ShouldBe(ShapesOf(Path.Combine(run, RunRecorder.ManifestFile)));
-        ShapesOfLines(Path.Combine(SampleRun, RunRecorder.StepsFile)).ShouldBe(ShapesOfLines(Path.Combine(run, RunRecorder.StepsFile)));
-        ShapesOfLines(Path.Combine(SampleRun, RunRecorder.EpisodesFile)).ShouldBe(ShapesOfLines(Path.Combine(run, RunRecorder.EpisodesFile)));
+        AssertSameShape(ShapesOf(Path.Combine(SampleRun, RunRecorder.ManifestFile)), ShapesOf(Path.Combine(run, RunRecorder.ManifestFile)), "manifest");
+        AssertSameShape(ShapesOfLines(Path.Combine(SampleRun, RunRecorder.StepsFile)), ShapesOfLines(Path.Combine(run, RunRecorder.StepsFile)), "steps");
+        AssertSameShape(ShapesOfLines(Path.Combine(SampleRun, RunRecorder.EpisodesFile)), ShapesOfLines(Path.Combine(run, RunRecorder.EpisodesFile)), "episodes");
 
         var sampleTrace = ShapesOf(Directory.GetFiles(Path.Combine(SampleRun, RunRecorder.TracesDirectory)).Single());
         var realTraces = Directory.GetFiles(Path.Combine(run, RunRecorder.TracesDirectory)).SelectMany(ShapesOf).ToHashSet(StringComparer.Ordinal);
-        realTraces.ShouldNotBeEmpty();
-        realTraces.Where(path => !sampleTrace.Contains(path)).ShouldBeEmpty("the engine records key paths the sample trace does not have");
-        sampleTrace.Where(path => !path.Contains('<', StringComparison.Ordinal) && !realTraces.Contains(path)).ShouldBeEmpty("the sample trace has key paths the engine does not record");
+        AssertSameShape(sampleTrace, realTraces, "traces");
+    }
+
+    /// <summary>
+    /// Every key path the engine writes must be in the sample, and every sample key path outside a kind-specific
+    /// part must be written by the engine. Kind-specific parts (a Pass step, a Stun outcome) may be missing from
+    /// a short real run, but when a kind is present on both sides its keys are compared by the first rule.
+    /// </summary>
+    private static void AssertSameShape(HashSet<string> sample, HashSet<string> real, string what)
+    {
+        real.ShouldNotBeEmpty(what);
+        real.Where(path => !sample.Contains(path)).ShouldBeEmpty($"{what}: the engine records key paths the sample does not have");
+        sample.Where(path => !path.Contains('<', StringComparison.Ordinal) && !real.Contains(path)).ShouldBeEmpty($"{what}: the sample has key paths the engine does not record");
     }
 
     [Fact]
