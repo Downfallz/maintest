@@ -26,7 +26,19 @@ This document states what the engine does today and what is decided for next. Id
   Standard, initiative descending, then player slot, then creature id. The `RuleSet` value object carries team
   size, energy per round, evolution picks per round, the round cap, and the critical multiplier.
 
-Phases 6 and 7 of `docs/roadmap.md` implement the rules below.
+- Combat rules (phase 6): an intent is valid for an own, living, unstunned creature that knows the spell and can
+  afford it; the sub-phase completes when every creature on the timeline has one. Binding targets checks the
+  spell's targeting spec fully (count, duplicates, origin, existence, death) and any failure blocks the action.
+  Resolution re-checks against the current state: an actor that cannot act any more, or a global targeting
+  failure, fizzles the action at no cost; a target that became invalid is dropped and the action fizzles only
+  when none remains. The critical roll adds the creature's and the spell's chances and multiplies damage only,
+  floored; damage is then reduced by the target's total defense, floor zero. The energy cost is spent, instant
+  effects apply, lasting effects attach as conditions. At the start of a round living creatures gain the rule
+  set's energy and bleeds deal their summed damage, ignoring defense. At cleanup every condition counts one
+  round down, except that the first countdown after an application does not count: a one-round stun applied
+  in combat stuns the creature for the whole next round.
+
+Phase 7 of `docs/roadmap.md` implements the rules below.
 
 ## Decided
 
@@ -42,8 +54,7 @@ Phases 6 and 7 of `docs/roadmap.md` implement the rules below.
 
 1. **Start of round**
    1. `EnergyGain`: every living Creature gains the Rule set's energy per round (two in the prototypes).
-   2. `OngoingEffects`: round modifiers reset (stun, temporary defense), then Conditions marked for start of
-      round apply (bleed damage, stun), tick, and expire when their duration is over.
+   2. `OngoingEffects`: bleed Conditions deal their damage, which ignores Defense.
 2. **Planning**
    1. `Evolution`: each Player may unlock Spells from the Talent tree, up to the Rule set's picks per round
       (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. The
@@ -61,15 +72,18 @@ Phases 6 and 7 of `docs/roadmap.md` implement the rules below.
       targets must satisfy the Spell's targeting spec (origin, scope, count). Completes when the cursor reaches
       the end of the timeline.
    3. `ActionResolution`: following the timeline, each Combat action resolves in turn:
+      - a dead or stunned actor fizzles, as does an actor that no longer knows or can afford the Spell;
       - targeting is checked again against the current state; a global failure fizzles the action, a per-target
-        failure drops that target;
-      - a dead or stunned actor fizzles;
+        failure drops that target, and the action fizzles when no target remains;
+      - a fizzled action costs nothing;
       - the energy cost is spent;
-      - a critical roll multiplies damage by the Rule set's crit multiplier;
+      - a critical roll (creature chance plus Spell chance) multiplies damage by the Rule set's crit
+        multiplier, floored;
       - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy);
       - lasting effects attach as Conditions per their stacking policy.
 4. **End of round**
-   1. `Cleanup`: Conditions marked for end of round apply and tick; dead Creatures are marked.
+   1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an
+      application does not count.
    2. `Finalization`: the Win condition is checked; either the Match ends or the next Round starts.
 
 ### Determinism

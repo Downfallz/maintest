@@ -25,7 +25,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Spell stats | The numbers of a Spell: Initiative, energy cost, Critical chance. | decided |
 | Spell | An action a Creature can perform in Combat: type, class, initiative, energy cost, critical chance, targeting spec, and effects. | decided |
 | Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012): instant `Damage`, `Heal`, `EnergyGain`; lasting `Bleed`, `Stun`, `DefenseBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
-| Condition | A lasting Effect attached to a Creature (stun, bleed, defense buff) with a Duration and a Stacking policy. Ticks at start and end of round. | decided |
+| Condition | A lasting Effect attached to a Creature (stun, bleed, defense buff) with a Duration and a Stacking policy. Bleeds deal damage at the start of the round; every Condition counts down at Cleanup, and the first countdown after an application does not count. | decided |
 | Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |
 | Stacking policy | What applying a lasting Effect does when the Creature already carries it: `Stack` (add another), `Refresh` (restart the duration), `Ignore`. | decided |
 | Data builder | The tool that consolidates the authored content under `data/` into one validated `game.schema.json` with a Content hash (ADR 0009). | decided |
@@ -53,7 +53,10 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Reveal and target | The step where the next Intent on the timeline is revealed and its targets chosen, producing a Combat action. | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |
-| Fizzle | A Combat action that resolves with no effect because its targeting failed globally; a per-target failure only removes that target. | decided |
+| Fizzle | A Combat action that resolves with no effect and at no cost because its actor cannot act any more, its targeting failed globally, or no target remains; a per-target failure only removes that target. | decided |
+| Targeting report | Every targeting failure of a Combat action at once: global ones (count, duplicates, self-only) and per-target ones (unknown, dead, wrong origin). | decided |
+| Legal targets | The Creatures a Spell may target right now, with the minimum and maximum count. | decided |
+| Outcome | One computed consequence of a Resolution on one target (damage after crit and Defense, heal, energy, a Condition to attach), applied by the execution step. | decided |
 | Perspective | The read-only, actor-relative view of a Match (allies, enemies, phase, choices, timeline) handed to rules and projections instead of the aggregate. | decided |
 | Snapshot | An immutable copy of a Creature's state (or of a Condition) used by Perspectives and projections. | decided |
 | Player slot | The seat a Player occupies in a Match (`Player1`, `Player2`). Creatures and choices are attributed to a slot. | decided |

@@ -3,10 +3,14 @@ using DownfallArena.Domain.Resources.Effects;
 namespace DownfallArena.Domain.Matches.Creatures;
 
 /// <summary>
-/// A lasting effect attached to a creature, counting down its remaining rounds.
+/// A lasting effect attached to a creature, counting down its remaining rounds. The first tick after application
+/// does not count: an effect applied during a round lasts through the following rounds, so a one-round stun
+/// applied in combat stuns the creature for the whole next round.
 /// </summary>
 public sealed class Condition
 {
+    private bool _fresh = true;
+
     internal Condition(LastingEffect effect)
     {
         Effect = effect;
@@ -26,10 +30,20 @@ public sealed class Condition
 
     public ConditionSnapshot Snapshot() => new(Effect, RemainingRounds);
 
-    internal void Refresh() => RemainingRounds = Effect.Duration.Rounds;
+    internal void Refresh()
+    {
+        RemainingRounds = Effect.Duration.Rounds;
+        _fresh = true;
+    }
 
     internal void Tick()
     {
+        if (_fresh)
+        {
+            _fresh = false;
+            return;
+        }
+
         if (RemainingRounds is > 0)
         {
             RemainingRounds--;
