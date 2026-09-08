@@ -54,6 +54,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |
 | Fizzle | A Combat action that resolves with no effect because its targeting failed globally; a per-target failure only removes that target. | decided |
 | Perspective | The read-only, actor-relative view of a Match (allies, enemies, phase, choices, timeline) handed to rules and projections instead of the aggregate. | decided |
+| Snapshot | An immutable copy of a Creature's state (or of a Condition) used by Perspectives and projections. | decided |
+| Player slot | The seat a Player occupies in a Match (`Player1`, `Player2`). Creatures and choices are attributed to a slot. | decided |
 
 ## Engineering terms
 

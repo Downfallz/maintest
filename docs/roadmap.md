@@ -95,7 +95,7 @@ Fix: `SystemRandom.NextDouble` only produced 100 distinct values; the new implem
 - Content: keep the 38 spell files as scaffolding but fix the schema drift (`characterClass`, `level`) and give
   `main.v1.json` defense, initiative, crit and class. Content design itself is out of scope here.
 
-### Phase 3. Creatures, teams, conditions
+### Phase 3. Creatures, teams, conditions (done)
 
 - `CombatCreature`: closed API. No public setters. Mutations through `TakeDamage`, `Heal`, `GainEnergy`,
   `SpendEnergy`, `UnlockSpell`, `Apply(Condition)`, `Stun`, `ClearRoundModifiers`. Legacy exposed 13 setters and
