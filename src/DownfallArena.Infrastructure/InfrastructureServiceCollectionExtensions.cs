@@ -1,15 +1,40 @@
+using DownfallArena.Application.Matches.Ports;
+using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Matches;
+using DownfallArena.Infrastructure.Randomness;
+using DownfallArena.Infrastructure.Resources;
+using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace DownfallArena.Infrastructure;
 
 public static class InfrastructureServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers infrastructure adapters (repositories, game resource loaders, ...).
+    /// Registers the adapters: the in-memory match repository and the seeded random source. Without a seed
+    /// the source is seeded once per process; pass one to replay.
     /// </summary>
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, int? randomSeed = null)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddSingleton<IMatchRepository, InMemoryMatchRepository>();
+        services.TryAddSingleton<IRandomSource>(_ => new SeededRandomSource(randomSeed ?? Random.Shared.Next()));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the game resources loaded from a consolidated <c>game.schema.json</c> (ADR 0009). The file is
+    /// read once, when the resources are first resolved.
+    /// </summary>
+    public static IServiceCollection AddGameResources(this IServiceCollection services, string schemaPath)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaPath);
+
+        services.TryAddSingleton<IGameResources>(_ => GameSchemaBuilder.Load(schemaPath));
 
         return services;
     }

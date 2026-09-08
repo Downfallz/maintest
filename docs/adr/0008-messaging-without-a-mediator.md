@@ -15,7 +15,7 @@ generic results), and the coupling leaked a framework into the domain.
 We will define, in Application, `ICommandHandler<TCommand, TResult>` and `IQueryHandler<TQuery, TResult>`,
 one implementation per use case, registered in dependency injection and resolved directly by hosts. Domain
 events stay plain records implementing the framework-free `IDomainEvent`; after a repository save, the
-application dispatches the aggregate's events to `IDomainEventHandler<TEvent>` implementations, then clears
+application dispatches the aggregate's events to `IDomainEventListener<TEvent>` implementations, then clears
 them. No dispatcher library, no reflection-based pipeline.
 
 ## Consequences
@@ -31,4 +31,5 @@ them. No dispatcher library, no reflection-based pipeline.
 
 ## Follow-up
 
-- Phase 8 introduces the handler interfaces and the event dispatch.
+- Phase 8 introduces the handler interfaces and the event dispatch. The event handler base is named
+  `DomainEventListener<TEvent>`: analyzer CA1711 reserves the `EventHandler` suffix for delegates.

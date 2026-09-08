@@ -1,4 +1,18 @@
+using DownfallArena.Application.Agents;
+using DownfallArena.Application.Matches.Commands;
+using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Ports;
+using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Application.Messaging;
+using DownfallArena.Application.Tests.Support;
+using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Resources;
+using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
+using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 
 namespace DownfallArena.Application.Tests;
 
@@ -26,6 +40,32 @@ public sealed class ApplicationServiceCollectionExtensionsTests
 
         using var provider = services.BuildServiceProvider();
         provider.GetRequiredService<TimeProvider>().ShouldBeSameAs(custom);
+    }
+
+    [Fact]
+    public void AddApplication_registers_every_use_case_the_driver_and_the_agents_over_the_ports()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IMatchRepository>());
+        services.AddSingleton<IGameResources>(TestContent.Resources);
+        services.AddSingleton<IRandomSource>(new TestRandom(1));
+
+        services.AddApplication();
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IDomainEventDispatcher>().ShouldBeOfType<DomainEventDispatcher>();
+        provider.GetRequiredService<ICommandHandler<CreateMatch, Result<MatchId>>>().ShouldBeOfType<CreateMatchHandler>();
+        provider.GetRequiredService<ICommandHandler<JoinMatch, Result<PlayerSlot>>>().ShouldBeOfType<JoinMatchHandler>();
+        provider.GetRequiredService<ICommandHandler<SubmitEvolutionChoice, Result>>().ShouldBeOfType<SubmitEvolutionChoiceHandler>();
+        provider.GetRequiredService<ICommandHandler<PassEvolution, Result>>().ShouldBeOfType<PassEvolutionHandler>();
+        provider.GetRequiredService<ICommandHandler<SubmitSpeedChoice, Result>>().ShouldBeOfType<SubmitSpeedChoiceHandler>();
+        provider.GetRequiredService<ICommandHandler<SubmitIntent, Result>>().ShouldBeOfType<SubmitIntentHandler>();
+        provider.GetRequiredService<ICommandHandler<SubmitAction, Result>>().ShouldBeOfType<SubmitActionHandler>();
+        provider.GetRequiredService<ICommandHandler<ResolveNextAction, Result<CombatStep>>>().ShouldBeOfType<ResolveNextActionHandler>();
+        provider.GetRequiredService<IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>>>().ShouldBeOfType<GetBoardStateForPlayerHandler>();
+        provider.GetRequiredService<IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>>().ShouldBeOfType<GetPlayerOptionsHandler>();
+        provider.GetRequiredService<MatchDriver>().ShouldNotBeNull();
+        provider.GetRequiredService<RandomAgent>().ShouldNotBeNull();
     }
 
     [Fact]

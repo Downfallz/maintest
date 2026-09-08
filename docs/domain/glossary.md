@@ -74,4 +74,11 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Term | Definition | Status |
 | --- | --- | --- |
 | Shared kernel | The dependency-free project holding primitives, identifiers, stats, and shared ports (ADR 0007). | decided |
+| Command | A request to change a Match (`JoinMatch`, `SubmitIntent`, ...), one per aggregate method, handled by one `ICommandHandler` (ADR 0008). | decided |
+| Query | A read-only request (`GetBoardStateForPlayer`, `GetPlayerOptions`) handled by one `IQueryHandler`. | decided |
+| Player board state | The projection of a Match for one Player: both teams as Snapshots, the round position, their own hidden choices, the public timeline and revealed actions. | decided |
+| Player options | The projection of the one decision a Player can make in the current Sub-phase, with everything they may pick from; built from the Progression gates and the targeting rules. | decided |
+| Player agent | Something that decides for a Player from their Player options: a bot, a script, a UI adapter. | decided |
+| Random agent | The Player agent that picks uniformly among the options; the baseline for every other agent. | decided |
+| Match driver | The application service that plays a started Match to its outcome through the commands, asking each Player agent in turn. | decided |
 | Domain error | The stable, coded outcome of a rule violation (`Match.AlreadyStarted`), returned in a `Result`. Invariant violations throw instead. | decided |

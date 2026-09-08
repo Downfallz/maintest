@@ -45,7 +45,11 @@ This document states what the engine does today and what is decided for next. Id
   finalization: the win condition of ADR 0011 either ends the match or starts the next round. Every step
   raises a domain event, and the match is stamped with the content hash of its game resources (ADR 0009).
 
-Phases 8 and 9 of `docs/roadmap.md` build on the rules below.
+- Application (phase 8): commands and queries over the match, projections of what a player sees and can
+  decide, agents that decide from those options, and a driver that plays a match to its outcome. No rule lives
+  there: the options come from the same gates the aggregate enforces.
+
+Phase 9 of `docs/roadmap.md` builds the hosts on the rules below.
 
 ## Decided
 
@@ -77,7 +81,8 @@ Phases 8 and 9 of `docs/roadmap.md` build on the rules below.
       valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature
       has an Intent.
    2. `RevealAndTarget`: following the timeline, the next Intent is revealed and its owner binds targets. The
-      targets must satisfy the Spell's targeting spec (origin, scope, count). Completes when the cursor reaches
+      targets must satisfy the Spell's targeting spec (origin, scope, count). An Intent whose Spell has no legal
+      target any more is revealed with no targets and fizzles at resolution. Completes when the cursor reaches
       the end of the timeline.
    3. `ActionResolution`: following the timeline, each Combat action resolves in turn:
       - a dead or stunned actor fizzles, as does an actor that no longer knows or can afford the Spell;

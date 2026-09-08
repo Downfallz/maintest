@@ -41,6 +41,18 @@ public sealed class ActionRulesTests
     }
 
     [Fact]
+    public void An_intent_without_a_legal_target_is_revealed_with_no_targets_only()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Ghoul).TakeDamage(99);
+        Arena.Find(living, Arena.Wraith).TakeDamage(99);
+        var creatures = Arena.Snapshots(living);
+
+        Validate(PlayerSlot.Player1, Arena.Knight, Arena.Strike, [], creatures).IsSuccess.ShouldBeTrue();
+        Validate(PlayerSlot.Player1, Arena.Knight, Arena.Strike, [Arena.Ghoul], creatures).Error.ShouldBe(CombatErrors.NoLegalTarget);
+    }
+
+    [Fact]
     public void The_gate_follows_the_reveal_cursor()
     {
         var round = Arena.CombatRoundAt(RoundSubPhase.IntentSelection);

@@ -7,7 +7,9 @@ namespace DownfallArena.Domain.Matches.Rules.Combat;
 
 /// <summary>
 /// Rules of the RevealAndTarget sub-phase: the owner of the revealed intent binds targets that satisfy the spell.
-/// Any targeting failure blocks the action here; at resolution time, only global failures fizzle it.
+/// Any targeting failure blocks the action here; at resolution time, only global failures fizzle it. An intent
+/// whose spell has no legal target any more (every enemy died at the start of the round, for instance) is
+/// revealed with no targets, so the timeline always moves on, and it fizzles at resolution.
 /// </summary>
 public static class ActionRules
 {
@@ -34,7 +36,13 @@ public static class ActionRules
             return canAct;
         }
 
-        var report = TargetingRules.Check(actor, resources.GetSpell(action.Spell), action.Targets, creatures);
+        var spell = resources.GetSpell(action.Spell);
+        if (!TargetingRules.LegalTargets(actor, spell, creatures).IsCastable)
+        {
+            return action.Targets.Count == 0 ? Result.Success() : Result.Failure(CombatErrors.NoLegalTarget);
+        }
+
+        var report = TargetingRules.Check(actor, spell, action.Targets, creatures);
         return report.FirstFailure is { } failure ? Result.Failure(failure.Error) : Result.Success();
     }
 

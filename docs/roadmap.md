@@ -163,16 +163,21 @@ Fix: `ResolveNextAction` reports the round the action belonged to, not the round
 
 Done: `MatchPlayTests` plays scripted matches to an elimination, to the round cap, and to a draw.
 
-### Phase 8. Application: use cases, projections, agents
+### Phase 8. Application: use cases, projections, agents (done)
 
+- Messaging (ADR 0008): `ICommandHandler<TCommand, TResult>`, `IQueryHandler<TQuery, TResult>`, typed
+  `DomainEventListener<TEvent>`, and `DomainEventDispatcher` (matches handlers on event type, no reflection).
 - Commands, one per `Match` method: `CreateMatch`, `JoinMatch`, `SubmitEvolutionChoice`, `PassEvolution`,
   `SubmitSpeedChoice`, `SubmitIntent`, `SubmitAction`, `ResolveNextAction`. Queries: `GetBoardStateForPlayer`,
-  `GetPlayerOptions`. One handler each, no mediator (decision B).
-- Projections: `PlayerBoardState`, `PlayerOptions` (exactly one options set per sub-phase).
-- Ports: `IMatchRepository`, `IPlayerAgent` (options-driven: evolution, speed, intent, targets).
-- `RandomAgent` that only ever picks from `GetPlayerOptions`, with the injected random source.
-- `MatchDriver` that plays a match to completion through the public commands.
-- Infrastructure: in-memory repository, seeded random source.
+  `GetPlayerOptions`. One handler each; `MatchWorkflow` holds the shared load, call, save, dispatch steps.
+- Projections: `PlayerBoardState` (both teams as snapshots, own hidden choices, public timeline and revealed
+  actions) and `PlayerOptions` (one decision kind per sub-phase, built from the same gates and targeting
+  rules the aggregate enforces).
+- Ports: `IMatchRepository`; `IPlayerAgent` decides evolution (or pass), speed, intent, and targets from the
+  options. `RandomAgent` picks uniformly among them with the injected random source.
+- `MatchDriver` plays a started match to its outcome through the public commands; a refused decision is an
+  invariant violation.
+- Infrastructure: `InMemoryMatchRepository`, `SeededRandomSource`, `AddGameResources(schemaPath)`.
 
 Dropped from legacy: `ITurnDecider`/`PlayerAction` string bag, `PlayTurn`, the second simulation stack,
 AutoMapper, FluentValidation pipeline, MediatR behaviours, ML folder (kept in `legacy/` for later).
