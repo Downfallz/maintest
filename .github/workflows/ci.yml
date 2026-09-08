@@ -69,6 +69,13 @@ jobs:
         if: env.SONAR_TOKEN != '' && !cancelled()
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
+      - name: Report SonarCloud quality gate and issues
+        if: env.SONAR_TOKEN != '' && !cancelled()
+        env:
+          SONAR_PULL_REQUEST: ${{ github.event.pull_request.number }}
+          SONAR_BRANCH: ${{ github.ref_name }}
+        run: .github/scripts/sonar-report.sh
+
       - name: Upload test results and coverage
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5

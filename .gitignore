@@ -12,6 +12,7 @@ obj/
 *.nupkg
 *.snupkg
 TestResults/
+.sonarqube/
 coverage/
 *.coverage
 *.coveragexml

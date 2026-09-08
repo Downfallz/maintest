@@ -15,8 +15,10 @@ Coverage is a useful signal for a domain that is meant to be exhaustively unit-t
 We will run SonarCloud analysis from the CI workflow using the scanner for .NET, pinned as a local tool in
 `.config/dotnet-tools.json`. The workflow wraps build and test between `dotnet sonarscanner begin` and
 `end`, tests write a Visual Studio coverage XML report that the scanner uploads, and `legacy/` stays
-excluded. The Sonar steps are skipped when the `SONAR_TOKEN` secret is absent, so forks and unconfigured
-clones still build and test normally.
+excluded. A final step (`.github/scripts/sonar-report.sh`) waits for the analysis, prints the quality gate
+status and every open issue and hotspot into the CI log, and fails the job when the gate fails, so the
+verdict is readable from GitHub alone. The Sonar steps are skipped when the `SONAR_TOKEN` secret is
+absent, so forks and unconfigured clones still build and test normally.
 
 ## Consequences
 
