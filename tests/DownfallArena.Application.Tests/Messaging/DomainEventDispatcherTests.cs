@@ -27,6 +27,19 @@ public sealed class DomainEventDispatcherTests
     }
 
     [Fact]
+    public async Task A_failing_listener_leaves_the_events_on_the_aggregate()
+    {
+        var store = new MatchStore();
+        var match = store.Empty();
+        match.Join(MatchStore.Alice, MatchStore.Roster(match.RuleSet));
+        var dispatcher = new DomainEventDispatcher([new Failing()]);
+
+        await Should.ThrowAsync<InvalidOperationException>(() => dispatcher.DispatchAsync(match, TestContext.Current.CancellationToken));
+
+        match.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<PlayerJoined>();
+    }
+
+    [Fact]
     public async Task A_handler_ignores_events_of_another_type()
     {
         var handler = new Recorder<MatchStarted>();
@@ -44,6 +57,12 @@ public sealed class DomainEventDispatcherTests
 
         await Should.ThrowAsync<ArgumentNullException>(() => dispatcher.DispatchAsync<int>(null!, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => new Recorder<MatchStarted>().HandleAsync(null!, TestContext.Current.CancellationToken));
+    }
+
+    private sealed class Failing : DomainEventListener<PlayerJoined>
+    {
+        protected override Task HandleAsync(PlayerJoined domainEvent, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The listener is broken.");
     }
 
     private sealed class Recorder<TEvent> : DomainEventListener<TEvent>

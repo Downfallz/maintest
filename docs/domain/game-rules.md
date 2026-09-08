@@ -81,7 +81,8 @@ Phase 9 of `docs/roadmap.md` builds the hosts on the rules below.
       valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature
       has an Intent.
    2. `RevealAndTarget`: following the timeline, the next Intent is revealed and its owner binds targets. The
-      targets must satisfy the Spell's targeting spec (origin, scope, count). Completes when the cursor reaches
+      targets must satisfy the Spell's targeting spec (origin, scope, count). An Intent whose Spell has no legal
+      target any more is revealed with no targets and fizzles at resolution. Completes when the cursor reaches
       the end of the timeline.
    3. `ActionResolution`: following the timeline, each Combat action resolves in turn:
       - a dead or stunned actor fizzles, as does an actor that no longer knows or can afford the Spell;

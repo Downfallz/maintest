@@ -70,6 +70,15 @@ public sealed class RandomAgentTests
     }
 
     [Fact]
+    public void Targets_are_empty_when_nothing_is_castable()
+    {
+        var agent = new RandomAgent(new ScriptedRandom(0));
+        var options = new TargetOptions(CreatureId.From(1), TestContent.Strike, new LegalTargets(1, 1, []));
+
+        agent.DecideTargets(Board, options).ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Null_options_are_rejected()
     {
         var agent = new RandomAgent(new TestRandom(1));

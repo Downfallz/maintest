@@ -3,7 +3,8 @@ using DownfallArena.SharedKernel.Primitives;
 namespace DownfallArena.Application.Messaging;
 
 /// <summary>
-/// Hands the events an aggregate raised to their handlers, in order, then clears them (ADR 0008).
+/// Hands the events an aggregate raised to their listeners, in order, and clears them once all were handled
+/// (ADR 0008). A listener that throws leaves the events on the aggregate.
 /// </summary>
 public interface IDomainEventDispatcher
 {

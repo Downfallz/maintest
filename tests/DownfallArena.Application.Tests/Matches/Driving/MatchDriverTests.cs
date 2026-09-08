@@ -48,16 +48,31 @@ public sealed class MatchDriverTests
     {
         var store = new MatchStore();
         var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1), new TestRandom(1));
-        var passer = Substitute.For<IPlayerAgent>();
-        passer.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
-        passer.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(Speed.Standard);
-        passer.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(TestContent.Strike);
-        passer.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(call => [call.Arg<TargetOptions>().LegalTargets.Candidates[0]]);
+        var passer = Scripted(TestContent.Strike);
 
         var outcome = await Driver(store).PlayAsync(match.Id, passer, passer, TestContext.Current.CancellationToken);
 
         outcome.Value.ShouldBe(new MatchOutcome(null, MatchEndReason.RoundCap));
         match.Creatures.ShouldAllBe(creature => creature.KnownSpells.Count == 1);
+    }
+
+    [Fact]
+    public async Task An_intent_left_without_a_legal_target_is_revealed_empty_and_the_match_still_ends()
+    {
+        var store = new MatchStore();
+        var match = store.Empty(random: new TestRandom(1));
+        match.Join(MatchStore.Alice, [TestContent.Bleeder, TestContent.Bleeder]).IsSuccess.ShouldBeTrue();
+        match.Join(MatchStore.Bob, MatchStore.Roster(match.RuleSet)).IsSuccess.ShouldBeTrue();
+        var bleeder = Scripted(TestContent.Rend);
+        var striker = Scripted(TestContent.Strike);
+
+        var outcome = await Driver(store).PlayAsync(match.Id, bleeder, striker, TestContext.Current.CancellationToken);
+
+        // Round 1: the bleeders rend one enemy each. Round 2 starts by killing both enemies; the bleeders' intents
+        // are revealed without targets and fizzle, and the round ends with Player2 defeated.
+        outcome.Value.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
+        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(2);
+        bleeder.Received(2).DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Is<TargetOptions>(options => !options.LegalTargets.IsCastable));
     }
 
     [Fact]
@@ -83,6 +98,28 @@ public sealed class MatchDriverTests
         (await Driver(store).PlayAsync(waiting.Id, agent, agent, TestContext.Current.CancellationToken)).Error.ShouldBe(MatchErrors.NotInProgress);
         await Should.ThrowAsync<ArgumentNullException>(() => Driver(store).PlayAsync(waiting.Id, null!, agent, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => Driver(store).PlayAsync(waiting.Id, agent, null!, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// An agent that passes, chooses Standard, declares the given spell, and hits the first legal target that no
+    /// revealed action of the round targets yet (or the first one when every candidate is taken).
+    /// </summary>
+    private static IPlayerAgent Scripted(SpellId spell)
+    {
+        var agent = Substitute.For<IPlayerAgent>();
+        agent.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
+        agent.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(Speed.Standard);
+        agent.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(spell);
+        agent.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(call => FreshTarget(call.Arg<PlayerBoardState>(), call.Arg<TargetOptions>()));
+        return agent;
+    }
+
+    private static IReadOnlyList<CreatureId> FreshTarget(PlayerBoardState board, TargetOptions options)
+    {
+        var taken = board.RevealedActions.SelectMany(action => action.Targets).ToHashSet();
+        var candidates = options.LegalTargets.Candidates;
+        var fresh = candidates.Where(candidate => !taken.Contains(candidate)).ToList();
+        return [.. (fresh.Count > 0 ? fresh : candidates).Take(1)];
     }
 
     private static MatchDriver Driver(MatchStore store) =>

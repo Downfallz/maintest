@@ -38,6 +38,11 @@ public sealed class RandomAgent(IRandomSource random) : IPlayerAgent
         ArgumentNullException.ThrowIfNull(options);
 
         var legal = options.LegalTargets;
+        if (!legal.IsCastable)
+        {
+            return [];
+        }
+
         var pool = legal.Candidates.ToList();
         var count = Math.Min(random.NextInt32(legal.MinTargets, legal.MaxTargets + 1), pool.Count);
         var targets = new List<CreatureId>(count);
