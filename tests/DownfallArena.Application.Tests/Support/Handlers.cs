@@ -1,3 +1,4 @@
+using DownfallArena.Application.Agents;
 using DownfallArena.Application.Matches;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
@@ -31,5 +32,6 @@ internal static class Handlers
             new JoinMatchHandler(workflow),
             new GetBoardStateForPlayerHandler(workflow),
             Driver(workflow),
-            random);
+            random,
+            new AgentFactory());
 }

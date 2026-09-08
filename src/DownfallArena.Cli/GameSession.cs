@@ -1,5 +1,6 @@
 using System.Globalization;
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Learning.Tracing;
@@ -10,6 +11,7 @@ using DownfallArena.Application.Ports;
 using DownfallArena.Application.Simulation;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Evaluation;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
@@ -19,8 +21,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace DownfallArena.Cli;
 
 /// <summary>
-/// The commands of the console host over a built service provider: one match with a log, or a batch with its
-/// CSV and, when asked, a recorded run. Everything here is composition; the rules live in Application.
+/// The commands of the console host over a built service provider: one match with a log, a batch with its CSV
+/// and, when asked, a recorded run, an evaluation, or the benchmark digest check. Everything here is
+/// composition; the rules live in Application.
 /// </summary>
 internal sealed class GameSession
 {
@@ -44,22 +47,28 @@ internal sealed class GameSession
 
     /// <summary>
     /// The trace recorder keeps every event of every match it sees, so it is only registered when something
-    /// reads it back: a trace file or a recorded run.
+    /// reads it back: a trace file or a recorded run. The combat counters listen for the commands that report
+    /// fizzle and crit rates.
     /// </summary>
-    public static void AddTracing(IServiceCollection serviceCollection, CliOptions cliOptions)
+    public static void AddListeners(IServiceCollection serviceCollection, CliOptions cliOptions)
     {
         if (cliOptions.Trace is not null || cliOptions.Record is not null)
         {
             serviceCollection.AddSingleton<MatchTraceRecorder>();
             serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
         }
+
+        if (cliOptions.Command is "evaluate" or "benchmark")
+        {
+            serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<CombatStatsRecorder>());
+        }
     }
 
     public void PrintStamp() =>
         Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Seed {_seed}.");
 
-    public IPlayerAgent RandomBot(int slot) =>
-        new RandomAgent(_services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((_seed * 31) + slot)));
+    public IPlayerAgent Agent(AgentSpec spec, int slot) =>
+        _services.GetRequiredService<IAgentFactory>().Create(spec, _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((_seed * 31) + slot)));
 
     public async Task PlayAsync(IPlayerAgent player1, IPlayerAgent player2, string player1Name, string player2Name)
     {
@@ -90,6 +99,8 @@ internal sealed class GameSession
             RuleSet = _rules,
             Player1Roster = Roster,
             Player2Roster = Roster,
+            Player1Agent = _options.Player1,
+            Player2Agent = _options.Player2,
             Matches = _options.Matches,
             BaseSeed = _seed,
         };
@@ -117,6 +128,68 @@ internal sealed class GameSession
         Console.WriteLine($"Results written to '{_options.Output}'.");
         return 0;
     }
+
+    public async Task<int> EvaluateAsync()
+    {
+        var explicitSeeds = _options.Seeds is { } file ? BenchmarkStore.LoadSeeds(file) : null;
+        IReadOnlyList<int> seeds = explicitSeeds ?? [.. Enumerable.Range(0, _options.Matches).Select(index => unchecked(_seed + index))];
+        Console.WriteLine($"Evaluating {_options.Player1} against {_options.Player2} on {seeds.Count} seeds, mirrored...");
+        var evaluation = await EvaluateAsync(_options.Player1, _options.Player2, seeds, explicitSeeds is null ? _seed : SeedSets.IdentityOf(seeds));
+        EvaluationConsole.Print(evaluation, Console.Out);
+
+        var fullPath = Path.GetFullPath(_options.Output);
+        await new FileArtifactWriter(Path.GetDirectoryName(fullPath) ?? ".").WriteJsonAsync(Path.GetFileName(fullPath), evaluation);
+        Console.WriteLine($"Evaluation written to '{_options.Output}'.");
+        return 0;
+    }
+
+    /// <summary>
+    /// Plays the benchmark seeds with the baseline agents and compares the outcomes with the committed digest of
+    /// this content, or writes it. A missing or different digest is a failure with the digest printed, so the
+    /// intended fix is one commit away.
+    /// </summary>
+    public async Task<int> BenchmarkAsync()
+    {
+        var store = new BenchmarkStore(_options.Benchmarks);
+        var seeds = store.LoadSeeds();
+        Console.WriteLine($"Benchmark: {AgentSpec.Random} against {AgentSpec.Random} on {seeds.Count} seeds, mirrored, content {_resources.Version}...");
+        var digest = BenchmarkDigest.Of(await EvaluateAsync(AgentSpec.Random, AgentSpec.Random, seeds, SeedSets.IdentityOf(seeds)));
+
+        if (_options.Write)
+        {
+            Console.WriteLine($"Benchmark digest written to '{store.WriteDigest(digest)}'. Commit it with a journal entry.");
+            return 0;
+        }
+
+        var committed = store.TryLoadDigest(_resources.Version);
+        if (committed is null)
+        {
+            await Console.Error.WriteLineAsync($"No benchmark digest for content {_resources.Version} under '{store.Directory}'. Run 'benchmark --write' and commit '{store.DigestPath(_resources.Version)}' with a journal entry. The digest of this run follows.");
+            Console.WriteLine(BenchmarkStore.Serialize(digest));
+            return 1;
+        }
+
+        var differences = digest.DifferencesFrom(committed);
+        if (differences.Count == 0)
+        {
+            Console.WriteLine($"Benchmark digest verified: {digest.Entries.Count} matches unchanged on content {_resources.Version}.");
+            return 0;
+        }
+
+        await Console.Error.WriteLineAsync($"Benchmark digest differs in {differences.Count} place(s) from '{store.DigestPath(_resources.Version)}'. An intended engine or content change regenerates it with 'benchmark --write' and a journal entry.");
+        foreach (var difference in differences.Take(25))
+        {
+            await Console.Error.WriteLineAsync("  " + difference);
+        }
+
+        return 1;
+    }
+
+    /// <summary>The stamp's base seed is the identity of the seed set when the seeds came from a file, so a repeated run stamps the same.</summary>
+    private Task<EvaluationResult> EvaluateAsync(AgentSpec agentA, AgentSpec agentB, IReadOnlyList<int> seeds, int baseSeed) =>
+        _services.GetRequiredService<EvaluationRunner>().RunAsync(
+            new EvaluationScenario { RuleSet = _rules, Roster = Roster, AgentA = agentA, AgentB = agentB, Seeds = seeds },
+            RunStamp.Create(EngineVersion.Current, _resources, _rules, _schema, agentA.ToString(), agentB.ToString(), baseSeed));
 
     private RunRecorder Recorder(string runDirectory, SimulationScenario scenario) =>
         new(

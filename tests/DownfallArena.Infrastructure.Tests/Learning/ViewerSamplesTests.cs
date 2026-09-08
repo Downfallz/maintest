@@ -1,5 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Application;
+using DownfallArena.Application.Agents;
+using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Learning.Tracing;
@@ -40,6 +42,7 @@ public sealed class ViewerSamplesTests
         var sampleTrace = ShapesOf(Directory.GetFiles(Path.Combine(SampleRun, RunRecorder.TracesDirectory)).Single());
         var realTraces = Directory.GetFiles(Path.Combine(run, RunRecorder.TracesDirectory)).SelectMany(ShapesOf).ToHashSet(StringComparer.Ordinal);
         AssertSameShape(sampleTrace, realTraces, "traces");
+        AssertSameShape(ShapesOf(Path.Combine(SamplesDirectory, "evaluation.json")), ShapesOf(Path.Combine(run, "evaluation.json")), "evaluation");
     }
 
     /// <summary>
@@ -83,6 +86,7 @@ public sealed class ViewerSamplesTests
         services.AddSingleton<IGameResources>(resources);
         services.AddSingleton<MatchTraceRecorder>();
         services.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
+        services.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<CombatStatsRecorder>());
         await using var provider = services.BuildServiceProvider();
 
         var recorder = new RunRecorder(
@@ -98,6 +102,12 @@ public sealed class ViewerSamplesTests
         await recorder.StartAsync(cancellationToken);
         await provider.GetRequiredService<BatchRunner>().RunAsync(scenario, recorder, cancellationToken);
         await recorder.FinishAsync(cancellationToken);
+
+        var evaluation = await provider.GetRequiredService<EvaluationRunner>().RunAsync(
+            new EvaluationScenario { RuleSet = rules, Roster = roster, AgentA = AgentSpec.Random, AgentB = AgentSpec.Random, Seeds = [1, 2] },
+            recorder.Stamp,
+            cancellationToken);
+        await new FileArtifactWriter(runDirectory).WriteJsonAsync("evaluation.json", evaluation, cancellationToken);
     }
 
     private static HashSet<string> ShapesOf(string path)
@@ -122,8 +132,10 @@ public sealed class ViewerSamplesTests
 
     /// <summary>
     /// Every key path of a JSON value: objects contribute their property names (prefixed by their kind when they
-    /// carry one), arrays "[]", and objects keyed by numbers (dictionaries) "*".
+    /// carry one), arrays "[]", and dictionaries (keyed by numbers or by content ids) "*".
     /// </summary>
+    private static bool IsMapKey(string name) => name.All(char.IsAsciiDigit) || name.Contains(':', StringComparison.Ordinal);
+
     private static void Collect(JsonElement element, string prefix, HashSet<string> shapes)
     {
         if (element.ValueKind == JsonValueKind.Array)
@@ -143,7 +155,7 @@ public sealed class ViewerSamplesTests
 
         var kind = element.TryGetProperty("kind", out var value) && value.ValueKind == JsonValueKind.String ? $"<{value.GetString()}>" : string.Empty;
         var properties = element.EnumerateObject().ToList();
-        var dictionary = properties.Count > 0 && properties.TrueForAll(property => property.Name.All(char.IsAsciiDigit));
+        var dictionary = properties.Count > 0 && properties.TrueForAll(property => IsMapKey(property.Name));
         foreach (var property in properties)
         {
             var path = $"{prefix}{kind}.{(dictionary ? "*" : property.Name)}";

@@ -36,7 +36,7 @@ if (options.Command is "play" or "human")
     builder.Services.AddSingleton<IDomainEventListener>(new ConsoleMatchLog(Console.Out));
 }
 
-GameSession.AddTracing(builder.Services, options);
+GameSession.AddListeners(builder.Services, options);
 
 using var host = builder.Build();
 var session = new GameSession(host.Services, options, seed);
@@ -45,13 +45,17 @@ session.PrintStamp();
 switch (options.Command)
 {
     case "play":
-        await session.PlayAsync(session.RandomBot(1), session.RandomBot(2), "Random", "Random");
+        await session.PlayAsync(session.Agent(options.Player1, 1), session.Agent(options.Player2, 2), options.Player1.ToString(), options.Player2.ToString());
         return 0;
     case "human":
-        await session.PlayAsync(new ConsoleAgent(Console.In, Console.Out), session.RandomBot(2), "Human", "Random");
+        await session.PlayAsync(new ConsoleAgent(Console.In, Console.Out), session.Agent(options.Player2, 2), "Human", options.Player2.ToString());
         return 0;
     case "simulate":
         return await session.SimulateAsync();
+    case "evaluate":
+        return await session.EvaluateAsync();
+    case "benchmark":
+        return await session.BenchmarkAsync();
     default:
         await Console.Error.WriteLineAsync($"Unknown command '{options.Command}'. {CliOptions.Usage}");
         return 2;

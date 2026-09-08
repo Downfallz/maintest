@@ -87,6 +87,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Match trace | The full record of one Match: every domain event with both Player board states after the command that raised it, enough to replay it in the Viewer without the engine. | decided |
 | Run manifest | The `manifest.json` of a recorded run: its Run stamp, the Feature schema id and feature names, and the counts of Matches, Steps, and Episodes. | decided |
 | Evaluation | A batch of mirrored Matches between two Player agents on the Benchmark seeds, reported as win rates with confidence intervals over seed pairs, and a Run stamp. | decided |
+| Agent spec | Which Player agent to seat: an agent kind and, for kinds that read a file, its path; written `random` or `kind:path`. | decided |
+| Seed pair | One Benchmark seed played twice with the two Player agents swapped; the unit an Evaluation's intervals are computed over. | decided |
 | Benchmark seeds | The fixed seed set every Evaluation uses, so two content versions, two engine versions, or two agents compare on the same Matches. | decided |
 | Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |
 | Viewer | The static HTML page that renders Match traces, batches, Evaluations, training runs, and comparisons. | decided |

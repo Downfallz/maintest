@@ -1,0 +1,189 @@
+{
+  "stamp": {
+    "engineVersion": "9ed6894a1c2b",
+    "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+    "ruleSet": {
+      "teamSize": 2,
+      "energyPerRound": 2,
+      "evolutionPicksPerRound": 2,
+      "roundCap": 5,
+      "criticalMultiplier": 2.0
+    },
+    "featureSchema": "features:v1+924e1b806bac",
+    "player1Agent": "Random",
+    "player2Agent": "Random",
+    "baseSeed": 1
+  },
+  "agentA": {
+    "agent": "Random",
+    "wins": 3,
+    "winRate": {
+      "mean": 0.5,
+      "low": 0,
+      "high": 1
+    },
+    "score": {
+      "mean": 0.5,
+      "low": 0,
+      "high": 1
+    },
+    "averageRemainingHealth": 22.0,
+    "spellUsage": {
+      "spell:strike:v1": 19,
+      "spell:guard:v1": 13,
+      "spell:rend:v1": 8,
+      "spell:slam:v1": 7
+    },
+    "spellEntropy": 1.8850606911315617,
+    "actions": 47,
+    "fizzles": 2,
+    "criticals": 3,
+    "fizzleRate": 0.0425531914893617,
+    "criticalRate": 0.06382978723404255
+  },
+  "agentB": {
+    "agent": "Random",
+    "wins": 3,
+    "winRate": {
+      "mean": 0.5,
+      "low": 0,
+      "high": 1
+    },
+    "score": {
+      "mean": 0.5,
+      "low": 0,
+      "high": 1
+    },
+    "averageRemainingHealth": 24.0,
+    "spellUsage": {
+      "spell:strike:v1": 23,
+      "spell:rend:v1": 6,
+      "spell:guard:v1": 15,
+      "spell:slam:v1": 9
+    },
+    "spellEntropy": 1.8282150971906175,
+    "actions": 53,
+    "fizzles": 0,
+    "criticals": 2,
+    "fizzleRate": 0.0,
+    "criticalRate": 0.03773584905660377
+  },
+  "matches": 6,
+  "draws": 0,
+  "averageRounds": 5.0,
+  "roundCapShare": 1.0,
+  "pairs": [
+    {
+      "seed": 1,
+      "aFirst": {
+        "index": 0,
+        "seed": 1,
+        "matchId": "01a04d1c-fe5b-791b-b358-4f8cd8f16adf",
+        "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+        "outcome": {
+          "winner": "Player2",
+          "reason": "RoundCap",
+          "isDraw": false
+        },
+        "rounds": 5,
+        "player1RemainingHealth": 18,
+        "player2RemainingHealth": 20
+      },
+      "bFirst": {
+        "index": 0,
+        "seed": 4,
+        "matchId": "01a04d1e-9eda-74da-ae28-6af31a6916c7",
+        "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+        "outcome": {
+          "winner": "Player1",
+          "reason": "RoundCap",
+          "isDraw": false
+        },
+        "rounds": 5,
+        "player1RemainingHealth": 31,
+        "player2RemainingHealth": 18
+      },
+      "scoreOfA": 0.0,
+      "winsOfA": 0,
+      "winsOfB": 2,
+      "draws": 0,
+      "remainingHealthOfA": 36,
+      "remainingHealthOfB": 51
+    },
+    {
+      "seed": 2,
+      "aFirst": {
+        "index": 1,
+        "seed": 2,
+        "matchId": "01a04d2a-23ea-7dcf-b656-ebf2f2a4d27b",
+        "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+        "outcome": {
+          "winner": "Player1",
+          "reason": "RoundCap",
+          "isDraw": false
+        },
+        "rounds": 5,
+        "player1RemainingHealth": 23,
+        "player2RemainingHealth": 20
+      },
+      "bFirst": {
+        "index": 1,
+        "seed": 5,
+        "matchId": "01a04d24-cf67-7416-96f2-3eefbde5c099",
+        "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+        "outcome": {
+          "winner": "Player2",
+          "reason": "RoundCap",
+          "isDraw": false
+        },
+        "rounds": 5,
+        "player1RemainingHealth": 16,
+        "player2RemainingHealth": 25
+      },
+      "scoreOfA": 1.0,
+      "winsOfA": 2,
+      "winsOfB": 0,
+      "draws": 0,
+      "remainingHealthOfA": 48,
+      "remainingHealthOfB": 36
+    },
+    {
+      "seed": 3,
+      "aFirst": {
+        "index": 2,
+        "seed": 3,
+        "matchId": "01a04d1e-a6b3-797b-8858-d8da8b529b4a",
+        "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+        "outcome": {
+          "winner": "Player1",
+          "reason": "RoundCap",
+          "isDraw": false
+        },
+        "rounds": 5,
+        "player1RemainingHealth": 27,
+        "player2RemainingHealth": 26
+      },
+      "bFirst": {
+        "index": 2,
+        "seed": 6,
+        "matchId": "01a04d27-8985-792e-8528-0d5ad26b9496",
+        "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+        "outcome": {
+          "winner": "Player1",
+          "reason": "RoundCap",
+          "isDraw": false
+        },
+        "rounds": 5,
+        "player1RemainingHealth": 31,
+        "player2RemainingHealth": 21
+      },
+      "scoreOfA": 0.5,
+      "winsOfA": 1,
+      "winsOfB": 1,
+      "draws": 0,
+      "remainingHealthOfA": 48,
+      "remainingHealthOfB": 57
+    }
+  ],
+  "drawRate": 0.0
+}

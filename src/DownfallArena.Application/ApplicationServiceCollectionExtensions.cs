@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Matches;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
@@ -44,7 +45,10 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<MatchQueryHandlers>();
         services.TryAddTransient<MatchDriver>();
         services.TryAddTransient<RandomAgent>();
+        services.TryAddSingleton<IAgentFactory, AgentFactory>();
         services.TryAddTransient<BatchRunner>();
+        services.TryAddSingleton<CombatStatsRecorder>();
+        services.TryAddTransient<EvaluationRunner>();
 
         return services;
     }
