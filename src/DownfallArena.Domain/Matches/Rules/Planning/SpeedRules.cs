@@ -45,8 +45,9 @@ public static class SpeedRules
     }
 
     private static List<CreatureId> Missing(PlayerSlot slot, IReadOnlyList<CreatureSnapshot> creatures, Round round) =>
-        creatures
+    [
+        .. creatures
             .Where(creature => creature.Owner == slot && creature.IsAlive && !creature.IsStunned && round.SpeedChoiceOf(creature.Id) is null)
-            .Select(creature => creature.Id)
-            .ToList();
+            .Select(creature => creature.Id),
+    ];
 }
