@@ -69,6 +69,25 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Snapshot | An immutable copy of a Creature's state (or of a Condition) used by Perspectives and projections. | decided |
 | Player slot | The seat a Player occupies in a Match (`Player1`, `Player2`). Creatures and choices are attributed to a slot. | decided |
 
+## Learning
+
+| Term | Definition | Status |
+| --- | --- | --- |
+| Run stamp | The identity of a simulation, evaluation, or training run: Engine version, Content hash, Rule set, feature schema version, Player agent kinds and versions, base seed. Present on every artifact. | decided |
+| Engine version | The git commit the engine was built from, plus a dirty flag, injected into the assemblies at build. | decided |
+| Observation | The numeric view of a Match for one Player at one decision: the feature vector built from their Player board state. | decided |
+| Action | One decision as the engine sees it: an Evolution choice or pass, a Speed choice, an Intent, a target set; keyed with the acting Creature's team slot. | decided |
+| Step | One (Observation, options, Action) taken by one Player in one Match. | decided |
+| Episode | One Match from a Player's point of view: its Steps and its final Return. | decided |
+| Return | The reward of an Episode: win, loss, or draw, shaped by the remaining-Health margin. | decided |
+| Policy | A function from Observation and options to an Action. Random agent, greedy agent, and learned agents are policies. | decided |
+| Dataset | Recorded Steps and Episodes, in JSON lines, with a manifest carrying the Run stamp. | decided |
+| Match trace | The full record of one Match: every domain event and the board after each, enough to replay it in the Viewer without the engine. | decided |
+| Evaluation | A batch of mirrored Matches between two Player agents on the Benchmark seeds, reported as win rates with confidence intervals over seed pairs, and a Run stamp. | decided |
+| Benchmark seeds | The fixed seed set every Evaluation uses, so two content versions, two engine versions, or two agents compare on the same Matches. | decided |
+| Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |
+| Viewer | The static HTML page that renders Match traces, batches, Evaluations, training runs, and comparisons. | decided |
+
 ## Engineering terms
 
 | Term | Definition | Status |
