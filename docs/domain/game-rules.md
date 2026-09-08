@@ -8,8 +8,13 @@ This document states what the engine does today and what is decided for next. Id
 - Shared kernel: identifiers and stats (phase 1).
 - Game resources: spells with the closed effect taxonomy (ADR 0012), targeting specs, talent trees with
   prerequisites, creature definitions, and the data builder that validates and hashes the content (phase 2).
+- Creatures and teams (phase 3): a creature spawns from its definition with the base stats and starting spells;
+  damage floors health at zero and kills; healing is capped at the maximum; energy is spent only when affordable;
+  a dead creature ignores damage, healing, energy, spells, and conditions. Conditions follow the stacking policy
+  of their effect and count down when the rules tick them; stun, total defense, and current initiative are
+  derived from the active conditions. A team is defeated when none of its creatures is alive.
 
-Phases 3 to 7 of `docs/roadmap.md` implement the rules below.
+Phases 4 to 7 of `docs/roadmap.md` implement the rules below.
 
 ## Decided
 

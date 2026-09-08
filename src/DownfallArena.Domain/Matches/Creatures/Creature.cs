@@ -1,0 +1,178 @@
+using DownfallArena.Domain.Resources;
+using DownfallArena.Domain.Resources.Effects;
+using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
+using DownfallArena.SharedKernel.Stats;
+
+namespace DownfallArena.Domain.Matches.Creatures;
+
+/// <summary>
+/// A combat unit in a match, spawned from a creature definition. Every state change goes through a method that
+/// protects the invariants; derived values (stun, total defense, current initiative) come from the conditions.
+/// </summary>
+public sealed class Creature : Entity<CreatureId>
+{
+    private readonly HashSet<SpellId> _knownSpells;
+    private readonly ConditionSet _conditions = new();
+
+    private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
+        : base(id)
+    {
+        Owner = owner;
+        Definition = definition;
+        Health = definition.BaseStats.Health;
+        Energy = definition.BaseStats.Energy;
+        _knownSpells = [.. definition.StartingSpells];
+    }
+
+    public PlayerSlot Owner { get; }
+
+    public CreatureDefinition Definition { get; }
+
+    public string Name => Definition.Name;
+
+    public CreatureStats BaseStats => Definition.BaseStats;
+
+    public Health Health { get; private set; }
+
+    public Health MaxHealth => BaseStats.Health;
+
+    public Energy Energy { get; private set; }
+
+    public IReadOnlySet<SpellId> KnownSpells => _knownSpells;
+
+    public IReadOnlyList<Condition> Conditions => _conditions.Active;
+
+    public bool IsDead => Health.IsZero;
+
+    public bool IsAlive => !IsDead;
+
+    public bool IsStunned => IsAlive && _conditions.Has<Stun>();
+
+    public Defense TotalDefense => BaseStats.Defense.Plus(_conditions.Sum<DefenseBuff>(buff => buff.Amount));
+
+    public Initiative CurrentInitiative => BaseStats.Initiative.Minus(_conditions.Sum<InitiativeDebuff>(debuff => debuff.Amount));
+
+    public CriticalChance CriticalChance => BaseStats.CriticalChance;
+
+    public static Creature Spawn(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        return new Creature(id, owner, definition);
+    }
+
+    public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
+
+    public Result UnlockSpell(SpellId spellId)
+    {
+        ArgumentNullException.ThrowIfNull(spellId);
+
+        if (IsDead)
+        {
+            return Result.Failure(CreatureErrors.Dead);
+        }
+
+        return _knownSpells.Add(spellId) ? Result.Success() : Result.Failure(CreatureErrors.SpellAlreadyKnown);
+    }
+
+    /// <summary>
+    /// Removes health already reduced by defense. Returns the damage actually dealt; a dead creature takes none.
+    /// </summary>
+    public int TakeDamage(int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(amount);
+
+        if (IsDead)
+        {
+            return 0;
+        }
+
+        var dealt = Math.Min(amount, Health.Value);
+        Health = Health.Minus(amount);
+        return dealt;
+    }
+
+    /// <summary>
+    /// Restores health up to the maximum. Returns the amount actually healed; a dead creature cannot be healed.
+    /// </summary>
+    public int Heal(int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(amount);
+
+        if (IsDead)
+        {
+            return 0;
+        }
+
+        var healed = Math.Min(amount, MaxHealth.Value - Health.Value);
+        Health = Health.Plus(healed);
+        return healed;
+    }
+
+    /// <summary>
+    /// Returns the energy actually gained; a dead creature gains none.
+    /// </summary>
+    public int GainEnergy(int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(amount);
+
+        if (IsDead)
+        {
+            return 0;
+        }
+
+        Energy = Energy.Plus(amount);
+        return amount;
+    }
+
+    public Result SpendEnergy(Energy cost)
+    {
+        ArgumentNullException.ThrowIfNull(cost);
+
+        if (IsDead)
+        {
+            return Result.Failure(CreatureErrors.Dead);
+        }
+
+        if (Energy < cost)
+        {
+            return Result.Failure(CreatureErrors.NotEnoughEnergy);
+        }
+
+        Energy = Energy.Minus(cost.Value);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Attaches a lasting effect per its stacking policy. Returns the resulting condition, or <c>null</c> when the
+    /// application was ignored or the creature is dead.
+    /// </summary>
+    public Condition? Apply(LastingEffect effect)
+    {
+        ArgumentNullException.ThrowIfNull(effect);
+        return IsDead ? null : _conditions.Apply(effect);
+    }
+
+    /// <summary>
+    /// Counts one round down on every condition and returns the ones that expired. The rules decide when in the
+    /// round this happens.
+    /// </summary>
+    public IReadOnlyList<Condition> TickConditions() => _conditions.Tick();
+
+    public CreatureSnapshot Snapshot() => new()
+    {
+        Id = Id,
+        Owner = Owner,
+        DefinitionId = Definition.Id,
+        Name = Name,
+        Health = Health,
+        MaxHealth = MaxHealth,
+        Energy = Energy,
+        TotalDefense = TotalDefense,
+        CurrentInitiative = CurrentInitiative,
+        CriticalChance = CriticalChance,
+        IsStunned = IsStunned,
+        KnownSpells = _knownSpells.ToHashSet(),
+        Conditions = [.. _conditions.Active.Select(condition => condition.Snapshot())],
+    };
+}

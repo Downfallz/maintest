@@ -1,0 +1,128 @@
+using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Creatures;
+using DownfallArena.Domain.Tests.Resources.Support;
+using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Stats;
+
+namespace DownfallArena.Domain.Tests.Matches.Creatures;
+
+public sealed class CreatureTests
+{
+    private static Creature Spawn() => Creature.Spawn(CreatureId.From(1), PlayerSlot.Player1, Content.Creature());
+
+    [Fact]
+    public void A_spawned_creature_starts_with_its_definition_stats_and_spells()
+    {
+        var creature = Spawn();
+
+        creature.Id.ShouldBe(CreatureId.From(1));
+        creature.Owner.ShouldBe(PlayerSlot.Player1);
+        creature.Name.ShouldBe("Main");
+        creature.Health.ShouldBe(Health.Of(20));
+        creature.MaxHealth.ShouldBe(Health.Of(20));
+        creature.Energy.ShouldBe(Energy.Of(0));
+        creature.TotalDefense.ShouldBe(Defense.Of(0));
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(5));
+        creature.CriticalChance.ShouldBe(CriticalChance.Of(0.05));
+        creature.KnownSpells.ShouldBe([SpellId.Parse("spell:strike:v1")]);
+        creature.IsAlive.ShouldBeTrue();
+        creature.IsStunned.ShouldBeFalse();
+        creature.Conditions.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Damage_reduces_health_floors_at_zero_and_kills()
+    {
+        var creature = Spawn();
+
+        creature.TakeDamage(5).ShouldBe(5);
+        creature.Health.ShouldBe(Health.Of(15));
+
+        creature.TakeDamage(50).ShouldBe(15);
+        creature.Health.ShouldBe(Health.Of(0));
+        creature.IsDead.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void A_dead_creature_takes_no_damage_and_cannot_be_healed_or_energised()
+    {
+        var creature = Spawn();
+        creature.TakeDamage(20);
+
+        creature.TakeDamage(3).ShouldBe(0);
+        creature.Heal(3).ShouldBe(0);
+        creature.GainEnergy(3).ShouldBe(0);
+        creature.SpendEnergy(Energy.Of(0)).Error.ShouldBe(CreatureErrors.Dead);
+        creature.UnlockSpell(SpellId.Parse("spell:new:v1")).Error.ShouldBe(CreatureErrors.Dead);
+        creature.Health.ShouldBe(Health.Of(0));
+        creature.Energy.ShouldBe(Energy.Of(0));
+    }
+
+    [Fact]
+    public void Healing_is_capped_at_the_maximum_health()
+    {
+        var creature = Spawn();
+        creature.TakeDamage(6);
+
+        creature.Heal(4).ShouldBe(4);
+        creature.Heal(10).ShouldBe(2);
+        creature.Health.ShouldBe(Health.Of(20));
+    }
+
+    [Fact]
+    public void Energy_is_gained_and_spent_only_when_affordable()
+    {
+        var creature = Spawn();
+
+        creature.GainEnergy(3).ShouldBe(3);
+        creature.SpendEnergy(Energy.Of(4)).Error.ShouldBe(CreatureErrors.NotEnoughEnergy);
+        creature.SpendEnergy(Energy.Of(2)).IsSuccess.ShouldBeTrue();
+        creature.Energy.ShouldBe(Energy.Of(1));
+    }
+
+    [Fact]
+    public void Negative_amounts_are_programming_errors()
+    {
+        var creature = Spawn();
+
+        Should.Throw<ArgumentOutOfRangeException>(() => creature.TakeDamage(-1));
+        Should.Throw<ArgumentOutOfRangeException>(() => creature.Heal(-1));
+        Should.Throw<ArgumentOutOfRangeException>(() => creature.GainEnergy(-1));
+    }
+
+    [Fact]
+    public void Unlocking_a_spell_adds_it_once()
+    {
+        var creature = Spawn();
+        var guard = SpellId.Parse("spell:guard:v1");
+
+        creature.UnlockSpell(guard).IsSuccess.ShouldBeTrue();
+        creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
+
+        creature.KnowsSpell(guard).ShouldBeTrue();
+        creature.KnownSpells.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void A_snapshot_copies_the_current_state()
+    {
+        var creature = Spawn();
+        creature.TakeDamage(4);
+        creature.GainEnergy(2);
+
+        var snapshot = creature.Snapshot();
+        creature.TakeDamage(1);
+
+        snapshot.Id.ShouldBe(creature.Id);
+        snapshot.Owner.ShouldBe(PlayerSlot.Player1);
+        snapshot.DefinitionId.ShouldBe(creature.Definition.Id);
+        snapshot.Name.ShouldBe("Main");
+        snapshot.Health.ShouldBe(Health.Of(16));
+        snapshot.MaxHealth.ShouldBe(Health.Of(20));
+        snapshot.Energy.ShouldBe(Energy.Of(2));
+        snapshot.IsAlive.ShouldBeTrue();
+        snapshot.IsStunned.ShouldBeFalse();
+        snapshot.KnowsSpell(SpellId.Parse("spell:strike:v1")).ShouldBeTrue();
+        snapshot.Conditions.ShouldBeEmpty();
+    }
+}
