@@ -5,8 +5,11 @@ This document states what the engine does today and what is decided for next. Id
 
 ## Implemented
 
-Nothing yet beyond the shared kernel (identifiers, stats). Phases 2 to 7 of `docs/roadmap.md` implement the
-rules below.
+- Shared kernel: identifiers and stats (phase 1).
+- Game resources: spells with the closed effect taxonomy (ADR 0012), targeting specs, talent trees with
+  prerequisites, creature definitions, and the data builder that validates and hashes the content (phase 2).
+
+Phases 3 to 7 of `docs/roadmap.md` implement the rules below.
 
 ## Decided
 

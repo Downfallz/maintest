@@ -67,7 +67,7 @@ Decisions this shape rests on (settled in phase 0):
 
 Done when the docs describe the engine we are about to build and nothing else.
 
-### Phase 1. Shared kernel: primitives, ids, stats, ports
+### Phase 1. Shared kernel: primitives, ids, stats, ports (done, PR #5)
 
 Create `src/DownfallArena.SharedKernel` (ADR 0007), move the primitives there, and carry over, close to
 verbatim, with their tests (37 stat cases, id format tests):
@@ -80,7 +80,7 @@ verbatim, with their tests (37 stat cases, id format tests):
 
 Fix: `SystemRandom.NextDouble` only produced 100 distinct values; the new implementation must be continuous.
 
-### Phase 2. Game resources: spells, effects, talents, creature definitions
+### Phase 2. Game resources: spells, effects, talents, creature definitions (done, PR #5)
 
 - `Spell` (id, name, type, class, initiative, energy cost, crit chance, targeting, effects), `TargetingSpec`,
   `TalentTree` with `allOf`/`anyOf` prerequisites, `CreatureDefinition`, `IGameResources` with symmetric

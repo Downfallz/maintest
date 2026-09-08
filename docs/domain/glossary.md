@@ -22,8 +22,11 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Creature definition | Static content describing a kind of Creature (base stats, starting Spells, Talent tree). Loaded from Game resources, never created during play. | decided |
 | Stat | A non-negative value object on a Creature: Health, Energy, Defense, Initiative. Critical chance is a probability in [0, 1]. | decided |
 | Spell | An action a Creature can perform in Combat: type, class, initiative, energy cost, critical chance, targeting spec, and effects. | decided |
-| Effect | One consequence of a Spell on a target, from a closed taxonomy (damage, heal, energy gain, defense buff, bleed, stun, ...). Instant or lasting. | inherited |
-| Condition | A lasting Effect attached to a Creature (stun, bleed, defense buff) with a duration in rounds and a stacking policy. Ticks at start and end of round. | decided |
+| Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012): instant `Damage`, `Heal`, `EnergyGain`; lasting `Bleed`, `Stun`, `DefenseBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
+| Condition | A lasting Effect attached to a Creature (stun, bleed, defense buff) with a Duration and a Stacking policy. Ticks at start and end of round. | decided |
+| Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |
+| Stacking policy | What applying a lasting Effect does when the Creature already carries it: `Stack` (add another), `Refresh` (restart the duration), `Ignore`. | decided |
+| Data builder | The tool that consolidates the authored content under `data/` into one validated `game.schema.json` with a Content hash (ADR 0009). | decided |
 | Talent tree | The tree of Spells a Creature can unlock, with `allOf`/`anyOf` prerequisites per node. | decided |
 | Game resources | The static, versioned catalogue of Creature definitions, Spells, and Talent trees. | decided |
 | Content hash | The SHA-256 of the consolidated Game resources; stamped on every match and simulation result as the resources version (ADR 0009). | decided |

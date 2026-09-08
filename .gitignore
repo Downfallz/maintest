@@ -61,3 +61,6 @@ desktop.ini
 *.pfx
 *.key
 secrets.json
+
+# Generated game content
+data/dst/

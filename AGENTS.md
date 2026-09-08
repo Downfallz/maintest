@@ -23,6 +23,9 @@ src/
   DownfallArena.Application    Use cases, ports (interfaces owned here), orchestration. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
   DownfallArena.Cli            Composition root and console entry point.
+tools/
+  DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
+data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Created with the first aggregate.
@@ -47,6 +50,7 @@ dotnet test --no-build                    # Microsoft.Testing.Platform runner (s
 dotnet test --no-build -- --coverage      # with code coverage
 dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to fix
 dotnet run --project src/DownfallArena.Cli
+dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content
 ```
 
 Run build, tests, and format check before declaring any task done. CI runs exactly these, then sends the
@@ -59,7 +63,8 @@ Sonar quality gate covers C#, shell scripts, and workflows, and must pass on eve
 2. SharedKernel references nothing. Domain references no NuGet package and no project other than SharedKernel.
    SharedKernel holds no game rules (ADR 0007).
 3. Application owns its ports (interfaces). Infrastructure implements them. Domain never sees them.
-4. Cli is the only place where concrete adapters are wired together.
+4. Cli is the only place where concrete adapters are wired together. Tools under `tools/` may reference
+   Infrastructure; nothing references a tool.
 
 If a task genuinely needs a rule to change, write an ADR first and update the architecture tests in the same PR.
 

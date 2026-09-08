@@ -25,7 +25,7 @@ public abstract partial record VersionedId
 
     public sealed override string ToString() => Value;
 
-    protected static TSelf Parse<TSelf>(string text)
+    public static TSelf Parse<TSelf>(string text)
         where TSelf : VersionedId, IVersionedId<TSelf>
     {
         return TryParse<TSelf>(text, out var id)
@@ -33,7 +33,7 @@ public abstract partial record VersionedId
             : throw new FormatException($"'{text}' is not a valid {typeof(TSelf).Name}. Expected '{TSelf.Kind}:<name>:v<number>'.");
     }
 
-    protected static bool TryParse<TSelf>(string? text, [NotNullWhen(true)] out TSelf? id)
+    public static bool TryParse<TSelf>(string? text, [NotNullWhen(true)] out TSelf? id)
         where TSelf : VersionedId, IVersionedId<TSelf>
     {
         id = null;

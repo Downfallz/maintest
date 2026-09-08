@@ -59,13 +59,16 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.xml"
           /d:sonar.exclusions="legacy/**,artifacts/**"
-          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**"
+          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**"
 
       - name: Build (warnings are errors)
         run: dotnet build --no-restore --configuration Release
 
       - name: Test with coverage
         run: dotnet test --no-build --configuration Release -- --coverage --coverage-output-format xml
+
+      - name: Build game content
+        run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
 
       - name: End SonarCloud analysis
         if: env.SONAR_TOKEN != '' && !cancelled()

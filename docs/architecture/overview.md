@@ -41,8 +41,11 @@ they appear).
 invokes one method, persists, and dispatches the events. Ports are interfaces owned by this layer.
 `AddApplication` registers everything, including `TimeProvider.System` as the default clock.
 
-**Infrastructure** implements the ports: in-memory or file-backed repositories, JSON game data, a seeded
-random source for reproducible simulations. `AddInfrastructure` registers the adapters.
+**Infrastructure** implements the ports: in-memory or file-backed repositories, a seeded random source for
+reproducible simulations, and the game content pipeline (`Resources/`): the schema DTOs, the builder that
+turns `data/` into a validated, hashed `game.schema.json`, and the loader that maps it to `IGameResources`.
+`AddInfrastructure` registers the adapters. `tools/DownfallArena.DataBuilder` is the command-line front of
+the builder (ADR 0009).
 
 **Cli** is the composition root. It is the only project that references Infrastructure, and it contains no
 logic beyond wiring and presentation.

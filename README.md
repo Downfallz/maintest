@@ -32,7 +32,9 @@ Requires the .NET SDK version in `global.json`. A devcontainer is provided in `.
 | `src/DownfallArena.Application` | Use cases and ports. |
 | `src/DownfallArena.Infrastructure` | Adapters implementing the ports. |
 | `src/DownfallArena.Cli` | Composition root and console entry point. |
-| `tests/` | Shared kernel, application, infrastructure, and architecture tests. |
+| `tools/DownfallArena.DataBuilder` | Validates and consolidates the game content. |
+| `data/` | Authored game content: creatures, spells, talent trees. |
+| `tests/` | Shared kernel, domain, application, infrastructure, and architecture tests. |
 | `docs/` | Roadmap, ADRs, architecture notes, domain glossary and rules. |
 | `legacy/` | Frozen prototypes. Read-only. |
 
