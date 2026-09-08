@@ -93,19 +93,25 @@ The terms below are the authoritative entries of the "Learning" section of
 - Tests pin the vector length and every index for the test content, the mirroring, the condition sums, the
   keys and codes, and the candidate enumeration including target combinations.
 
-### Phase L2. Recording: datasets and match traces
+### Phase L2. Recording: datasets and match traces (done, Application `Learning/Recording`, `Learning/Tracing`)
 
-- `RecordingAgent` wraps any `IPlayerAgent`: for every decision it records the step (observation, the
-  options' encoded action keys, the chosen action) with match id, slot, round, sub-phase. At `MatchEnded`
-  the recorder closes the two episodes with the outcome and the return.
-- `MatchTraceRecorder`, a domain event listener: every event of a match with the two board states after it,
-  serialized as `trace.json`. This is what the viewer replays, and what a bug report attaches.
-- `IArtifactWriter` port (JSON and JSON lines), Infrastructure adapter writing under
-  `runs/<run-id>/` (`manifest.json` with the run stamp, `steps.jsonl`, `episodes.jsonl`, `traces/<match>.json`).
-- CLI: `simulate --record <dir>` and `play --trace <file>`. Return = `+1` win, `-1` loss, `0` draw, plus
-  `0.1 x` health margin fraction (decision C).
-- Tests: a recorded match yields one episode per player with as many steps as decisions, returns sum to
-  zero between the two players, the trace replays to the same final board, stamps present everywhere.
+- `RecordingAgent` wraps any `IPlayerAgent`: for every decision it records a `StepRecord` (observation, the
+  candidate action keys, the chosen key and code) with match id, slot, round, sub-phase, and refuses a choice
+  the options do not offer.
+- `RunRecorder` writes a run: `manifest.json` (run stamp, schema id and feature names, counts),
+  `steps.jsonl`, `episodes.jsonl`, and `traces/<match>.json` when a `MatchTraceRecorder` is attached. A match
+  is closed by the runner once its final board is known (the return needs it), through `IMatchRecorder`,
+  which `BatchRunner.RunAsync(scenario, recorder)` calls; `EpisodeRecord` and `Returns` compute
+  `+1 / -1 / 0 + 0.1 x` health margin (decision C).
+- `MatchTraceRecorder`, a domain event listener on `IMatchEvent` (every match event now names its match):
+  every event of a match with both players' boards after the command that raised it.
+- `IArtifactWriter` port (JSON documents and JSON lines); `FileArtifactWriter` and `ArtifactJson` in
+  Infrastructure define the one JSON dialect every artifact uses (`docs/learning/artifacts.md`).
+- CLI: `simulate --record <dir>` and `play --trace <file>`; every command prints the engine version, the
+  content hash, the schema id, and the seed.
+- Tests: a recorded match yields as many steps as decisions, every step's action is among its candidates,
+  one episode per player whose returns sum to zero, a trace whose last entry carries the final board and the
+  outcome, and the stamp on the manifest and every trace.
 
 ### Phase L3. Viewer (static HTML, `viewer/`)
 

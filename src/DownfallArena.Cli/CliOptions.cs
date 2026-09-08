@@ -4,11 +4,13 @@ namespace DownfallArena.Cli;
 
 /// <summary>
 /// The parsed command line: a command and its options. Usage:
-/// <c>play|human|simulate [--seed N] [--matches N] [--out file] [--schema path]</c>.
+/// <c>play|human|simulate [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--trace file]</c>.
 /// </summary>
-internal sealed record CliOptions(string Command, int? Seed, int Matches, string Output, string SchemaPath)
+internal sealed record CliOptions(string Command, int? Seed, int Matches, string Output, string SchemaPath, string? Record, string? Trace)
 {
     public const string DefaultSchemaPath = "data/dst/game.schema.json";
+
+    public const string Usage = "Usage: play|human|simulate [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--trace file]";
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -19,6 +21,8 @@ internal sealed record CliOptions(string Command, int? Seed, int Matches, string
         var matches = 100;
         var output = "simulation.csv";
         var schema = DefaultSchemaPath;
+        string? record = null;
+        string? trace = null;
 
         var index = command == args.ElementAtOrDefault(0) ? 1 : 0;
         while (index < args.Count)
@@ -39,6 +43,12 @@ internal sealed record CliOptions(string Command, int? Seed, int Matches, string
                 case "--schema":
                     schema = value;
                     break;
+                case "--record":
+                    record = value;
+                    break;
+                case "--trace":
+                    trace = value;
+                    break;
                 default:
                     throw new ArgumentException($"Unknown option '{option}'.");
             }
@@ -46,6 +56,6 @@ internal sealed record CliOptions(string Command, int? Seed, int Matches, string
             index += 2;
         }
 
-        return new CliOptions(command, seed, matches, output, schema);
+        return new CliOptions(command, seed, matches, output, schema, record, trace);
     }
 }

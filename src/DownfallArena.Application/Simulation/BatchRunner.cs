@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
@@ -22,7 +23,11 @@ public sealed class BatchRunner(
     MatchDriver driver,
     IRandomSourceFactory random)
 {
-    public async Task<BatchResult> RunAsync(SimulationScenario scenario, CancellationToken cancellationToken = default)
+    public Task<BatchResult> RunAsync(SimulationScenario scenario, CancellationToken cancellationToken = default) =>
+        RunAsync(scenario, null, cancellationToken);
+
+    /// <summary>Plays the scenario and, when a recorder is given, records every match through it.</summary>
+    public async Task<BatchResult> RunAsync(SimulationScenario scenario, IMatchRecorder? recorder, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(scenario);
         ArgumentOutOfRangeException.ThrowIfNegative(scenario.Matches);
@@ -30,24 +35,35 @@ public sealed class BatchRunner(
         var results = new List<MatchResult>(scenario.Matches);
         for (var index = 0; index < scenario.Matches; index++)
         {
-            results.Add(await PlayOneAsync(scenario, index, cancellationToken));
+            results.Add(await PlayOneAsync(scenario, index, recorder, cancellationToken));
         }
 
         return new BatchResult(scenario, results, SimulationSummary.Of(results));
     }
 
-    private async Task<MatchResult> PlayOneAsync(SimulationScenario scenario, int index, CancellationToken cancellationToken)
+    private async Task<MatchResult> PlayOneAsync(SimulationScenario scenario, int index, IMatchRecorder? recorder, CancellationToken cancellationToken)
     {
         var seed = scenario.SeedOf(index);
         var matchId = Accept(await createMatch.HandleAsync(new CreateMatch(scenario.RuleSet, seed), cancellationToken));
         Accept(await joinMatch.HandleAsync(new JoinMatch(matchId, PlayerId.New(), scenario.Player1Roster), cancellationToken));
         Accept(await joinMatch.HandleAsync(new JoinMatch(matchId, PlayerId.New(), scenario.Player2Roster), cancellationToken));
 
-        var player1 = Agent(scenario.Player1Agent, unchecked((seed * 31) + 1));
-        var player2 = Agent(scenario.Player2Agent, unchecked((seed * 31) + 2));
+        IPlayerAgent player1 = Agent(scenario.Player1Agent, unchecked((seed * 31) + 1));
+        IPlayerAgent player2 = Agent(scenario.Player2Agent, unchecked((seed * 31) + 2));
+        if (recorder is not null)
+        {
+            player1 = recorder.Wrap(matchId, player1);
+            player2 = recorder.Wrap(matchId, player2);
+        }
+
         var outcome = Accept(await driver.PlayAsync(matchId, player1, player2, cancellationToken));
 
         var board = Accept(await boardState.HandleAsync(new GetBoardStateForPlayer(matchId, PlayerSlot.Player1), cancellationToken));
+        if (recorder is not null)
+        {
+            await recorder.MatchPlayedAsync(matchId, seed, board, cancellationToken);
+        }
+
         return new MatchResult
         {
             Index = index,

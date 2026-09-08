@@ -50,6 +50,9 @@ internal sealed class MatchStore
 
     public MatchWorkflow Workflow { get; }
 
+    /// <summary>A workflow over the same repository whose dispatcher really calls these listeners.</summary>
+    public MatchWorkflow WorkflowWith(params IDomainEventListener[] listeners) => new(Repository, new DomainEventDispatcher(listeners));
+
     public static RuleSet TwoOnTwo(int roundCap = 30) => RuleSet.Create(2, 2, 2, roundCap, 2.0);
 
     public static List<CreatureDefinitionId> Roster(RuleSet rules) => [.. Enumerable.Repeat(TestContent.Main, rules.TeamSize)];

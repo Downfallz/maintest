@@ -23,6 +23,8 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # consol
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot, with a log
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a bot
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
+dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
+dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
 ```
 
 Requires the .NET SDK version in `global.json`. A devcontainer is provided in `.devcontainer/`.
