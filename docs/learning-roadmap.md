@@ -160,19 +160,26 @@ The terms below are the authoritative entries of the "Learning" section of
   digest comparison naming every changed, missing, or extra entry, the store's read and write, and the
   committed seed list.
 
-### Phase L5. Baseline agents without a model
+### Phase L5. Baseline agents without a model (done, `docs/learning/agents.md`)
 
-- `GreedyAgent`: one-step lookahead using the domain rules on snapshots. Intent: for each castable spell and
-  each legal target set, resolve twice with `ResolutionRules.Resolve` on the snapshots (a forced crit and a
-  forced non-crit random source) and weight the two outcomes by the actual critical chance of the actor and
-  spell, so the expected damage includes the critical contribution; score the expectation: damage dealt,
-  kills, healing, conditions applied, energy kept. Targets: the set with the best score for the declared
-  spell. Evolution: the unlockable spell with the highest estimated value. Speed: Quick when a kill is on
-  the table, Standard otherwise.
-- `HeuristicAgent`: the same scoring with explicit weights (`damage`, `kill`, `heal`, `stun`, `energy`,
-  `risk`) read from a JSON file, so the weights can be tuned by search in L6 without a model runtime.
-- Both deterministic given the seed; tests pin their choices on small boards. Greedy versus random on the
-  benchmark seeds is the first number in the journal, and the first benchmark digest is committed here.
+- `ActionScorer`: one-step lookahead using the domain rules on snapshots. For an action, resolve twice with
+  `ResolutionRules.Resolve` (a forced crit and a forced miss) and weight the two scores by the actor's
+  critical chance for the spell, so the expected damage includes the critical contribution; score damage
+  dealt (capped at the target's health), kills, healing (capped at what was missing), stuns, bleeds as future
+  damage, buffs, energy kept, and a risk penalty for a fizzle or dropped targets.
+- `HeuristicAgent`: the lookahead with explicit weights (`damage`, `kill`, `heal`, `stun`, `bleed`, `buff`,
+  `energy`, `risk`). Intent: the castable spell whose best target set scores best. Targets: the best set for
+  the declared spell at reveal time. Speed: Quick when a kill is on the table, Standard otherwise. Evolution:
+  the unlockable spell worth the most as if known and affordable; pass only when nothing is unlockable.
+- `GreedyAgent`: the heuristic agent with the built-in weights (`learning/weights/greedy.json` holds the same
+  values as a file). `AgentKind` has `Random`, `Greedy`, `Heuristic`; the weights file comes through the
+  `IScoringWeightsSource` port (`JsonScoringWeightsSource` in Infrastructure).
+- Both deterministic; tests pin their choices on small boards (a bleed over a hit, a kill over a bleed, the
+  target it can kill, both targets of a stun, Quick only with a kill available, the most valuable unlock) and
+  the greedy digest replays identically.
+- The benchmark baseline moves from `Random` to `Greedy`, which regenerates the digest once (journal). Greedy
+  versus Random on the benchmark seeds is the first evaluation number in the journal; the `Evaluate` workflow
+  (`workflow_dispatch`) runs an evaluation on the CI runners and keeps `evaluation.json` as an artifact.
 
 ### Phase L6. Learning loop (Python, `learning/`)
 

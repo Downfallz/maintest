@@ -1,4 +1,5 @@
 using System.Globalization;
+using DownfallArena.Application.Agents;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.SharedKernel.Identifiers;
@@ -101,27 +102,6 @@ public sealed class ActionEncoder(FeatureSchema schema)
             return [Targets(slots, options.Actor, options.Spell, [])];
         }
 
-        return Enumerable.Range(legal.MinTargets, legal.MaxTargets - legal.MinTargets + 1)
-            .SelectMany(size => Combinations(legal.Candidates, size))
-            .Select(targets => Targets(slots, options.Actor, options.Spell, targets));
-    }
-
-    /// <summary>All subsets of the given size, in candidate order.</summary>
-    private static IEnumerable<IReadOnlyList<CreatureId>> Combinations(IReadOnlyList<CreatureId> candidates, int size)
-    {
-        if (size == 0)
-        {
-            yield return [];
-            yield break;
-        }
-
-        for (var first = 0; first <= candidates.Count - size; first++)
-        {
-            var head = candidates[first];
-            foreach (var tail in Combinations([.. candidates.Skip(first + 1)], size - 1))
-            {
-                yield return [head, .. tail];
-            }
-        }
+        return TargetSets.Of(legal).Select(targets => Targets(slots, options.Actor, options.Spell, targets));
     }
 }

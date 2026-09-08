@@ -1,10 +1,12 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Matches;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Ports;
 using DownfallArena.Application.Simulation;
+using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Support;
 
@@ -26,6 +28,14 @@ internal static class Handlers
                 new GetBoardStateForPlayerHandler(workflow),
                 new GetPlayerOptionsHandler(workflow, TestContent.Resources)));
 
+    /// <summary>The agent registry over the test content; the heuristic weights come from a substitute that returns the defaults.</summary>
+    public static AgentFactory Agents()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        return new AgentFactory(TestContent.Resources, weights);
+    }
+
     public static BatchRunner Runner(MatchWorkflow workflow, IRandomSourceFactory random) =>
         new(
             new CreateMatchHandler(workflow, TestContent.Resources, random),
@@ -33,5 +43,5 @@ internal static class Handlers
             new GetBoardStateForPlayerHandler(workflow),
             Driver(workflow),
             random,
-            new AgentFactory());
+            Agents());
 }

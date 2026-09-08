@@ -8,6 +8,8 @@ public sealed record AgentSpec(AgentKind Kind, string? Path = null)
 {
     public static AgentSpec Random { get; } = new(AgentKind.Random);
 
+    public static AgentSpec Greedy { get; } = new(AgentKind.Greedy);
+
     public static AgentSpec Parse(string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);

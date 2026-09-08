@@ -86,7 +86,7 @@ public sealed class BatchRunnerTests
                     new GetBoardStateForPlayerHandler(store.Workflow),
                     new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources))),
             factory,
-            new AgentFactory());
+            Handlers.Agents());
 
     private static List<string> Comparable(BatchResult batch) =>
         [.. batch.Results.Select(result => $"{result.Seed}:{result.Outcome}:{result.Rounds}:{result.Player1RemainingHealth}:{result.Player2RemainingHealth}")];

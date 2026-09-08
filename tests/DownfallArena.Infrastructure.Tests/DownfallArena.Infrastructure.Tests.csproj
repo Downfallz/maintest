@@ -17,6 +17,7 @@
   <ItemGroup>
     <Content Include="..\..\viewer\samples\**\*" Link="samples\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\benchmarks\benchmark-seeds.json" Link="benchmarks\benchmark-seeds.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\learning\weights\*.json" Link="weights\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

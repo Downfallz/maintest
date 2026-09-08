@@ -53,8 +53,8 @@ public sealed class BatchRunner(
         Accept(await joinMatch.HandleAsync(new JoinMatch(matchId, PlayerId.New(), scenario.Player1Roster), cancellationToken));
         Accept(await joinMatch.HandleAsync(new JoinMatch(matchId, PlayerId.New(), scenario.Player2Roster), cancellationToken));
 
-        var player1 = Agent(scenario.Player1Agent, unchecked((seed * 31) + 1));
-        var player2 = Agent(scenario.Player2Agent, unchecked((seed * 31) + 2));
+        var player1 = Agent(scenario.Player1Agent, scenario.RuleSet, unchecked((seed * 31) + 1));
+        var player2 = Agent(scenario.Player2Agent, scenario.RuleSet, unchecked((seed * 31) + 2));
         if (recorder is not null)
         {
             player1 = recorder.Wrap(matchId, player1);
@@ -82,7 +82,7 @@ public sealed class BatchRunner(
         };
     }
 
-    private IPlayerAgent Agent(AgentSpec spec, int seed) => agents.Create(spec, random.Create(seed));
+    private IPlayerAgent Agent(AgentSpec spec, RuleSet rules, int seed) => agents.Create(spec, rules, random.Create(seed));
 
     private static TValue Accept<TValue>(Result<TValue> result) =>
         result.IsSuccess

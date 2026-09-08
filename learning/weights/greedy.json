@@ -1,0 +1,10 @@
+{
+  "damage": 1.0,
+  "kill": 5.0,
+  "heal": 0.8,
+  "stun": 3.0,
+  "bleed": 0.8,
+  "buff": 0.5,
+  "energy": 0.2,
+  "risk": 2.0
+}
