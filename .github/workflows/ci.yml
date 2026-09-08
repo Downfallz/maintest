@@ -20,30 +20,54 @@ env:
 
 jobs:
   build-and-test:
-    name: Build, format check, test
+    name: Build, format check, test, analyse
     runs-on: ubuntu-latest
+    env:
+      # Sonar steps are skipped when the token is absent (forks, or the secret not configured yet).
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_PROJECT_KEY: Downfallz_maintest
+      SONAR_ORGANIZATION: downfallz
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+          # Full history so SonarCloud can attribute new code and blame lines.
+          fetch-depth: 0
 
       - name: Set up .NET (version from global.json)
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           global-json-file: global.json
 
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build (warnings are errors)
-        run: dotnet build --no-restore --configuration Release
+      - name: Restore packages and tools
+        run: |
+          dotnet restore
+          dotnet tool restore
 
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
 
+      - name: Begin SonarCloud analysis
+        if: env.SONAR_TOKEN != ''
+        run: >
+          dotnet sonarscanner begin
+          /k:"$SONAR_PROJECT_KEY"
+          /o:"$SONAR_ORGANIZATION"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.xml"
+          /d:sonar.exclusions="legacy/**,artifacts/**"
+
+      - name: Build (warnings are errors)
+        run: dotnet build --no-restore --configuration Release
+
       - name: Test with coverage
-        run: dotnet test --no-build --configuration Release -- --coverage --coverage-output-format cobertura
+        run: dotnet test --no-build --configuration Release -- --coverage --coverage-output-format xml
+
+      - name: End SonarCloud analysis
+        if: env.SONAR_TOKEN != '' && !cancelled()
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
       - name: Upload test results and coverage
         if: always()
@@ -51,4 +75,4 @@ jobs:
         with:
           name: test-results
           path: TestResults/**
-          if-no-files-found: ignore
+          if-no-files-found: warn

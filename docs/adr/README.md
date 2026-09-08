@@ -11,3 +11,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0003](0003-dotnet-10-layered-solution.md) | .NET 10 solution with enforced clean-architecture layering | Accepted |
 | [0004](0004-testing-stack.md) | Testing stack: xUnit v3, Microsoft.Testing.Platform, Shouldly, NSubstitute, NetArchTest | Accepted |
 | [0005](0005-ai-assisted-development-kit.md) | AGENTS.md and Claude Code kit as first-class project assets | Accepted |
+| [0006](0006-sonarcloud-analysis-from-ci.md) | Run SonarCloud analysis from CI with the scanner for .NET | Accepted |
