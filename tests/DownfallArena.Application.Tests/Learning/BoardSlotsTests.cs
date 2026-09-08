@@ -62,6 +62,8 @@ public sealed class BoardSlotsTests
         Should.Throw<ArgumentNullException>(() => slots.MaskOf(null!));
         Should.Throw<ArgumentNullException>(() => BoardSlots.Of(null!, 1));
         Should.Throw<ArgumentOutOfRangeException>(() => BoardSlots.Of(board, 0));
+        Should.Throw<ArgumentOutOfRangeException>(() => BoardSlots.Of(board, BoardSlots.MaxTeamSize + 1));
+        BoardSlots.Of(board, BoardSlots.MaxTeamSize).SlotOf(CreatureId.From(3)).ShouldBe(BoardSlots.MaxTeamSize);
         Should.Throw<InvalidOperationException>(() => BoardSlots.Of(board with { Allies = [Boards.Creature(1, PlayerSlot.Player1), Boards.Creature(2, PlayerSlot.Player1)] }, 1));
     }
 }

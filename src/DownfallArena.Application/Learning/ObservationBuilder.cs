@@ -33,7 +33,7 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
             WriteCreature(board.Enemies[index], features, schema.CreatureOffset(schema.TeamSize + index));
         }
 
-        return new Observation(schema.Version, features);
+        return new Observation(schema.Id, features);
     }
 
     private void WriteGlobals(PlayerBoardState board, BoardSlots slots, float[] features)

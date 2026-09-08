@@ -9,6 +9,9 @@ namespace DownfallArena.Application.Learning;
 /// </summary>
 public sealed class BoardSlots
 {
+    /// <summary>The largest team size a board supports, so that a target mask holds one bit per slot in an <c>int</c>.</summary>
+    public const int MaxTeamSize = 16;
+
     private readonly Dictionary<CreatureId, int> _slots;
 
     private BoardSlots(Dictionary<CreatureId, int> slots, int teamSize)
@@ -23,6 +26,7 @@ public sealed class BoardSlots
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentOutOfRangeException.ThrowIfLessThan(teamSize, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(teamSize, MaxTeamSize);
 
         if (board.Allies.Count > teamSize || board.Enemies.Count > teamSize)
         {

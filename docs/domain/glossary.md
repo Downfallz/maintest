@@ -76,7 +76,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Run stamp | The identity of a simulation, evaluation, or training run: Engine version, Content hash, Rule set, feature schema version, Player agent kinds and versions, base seed. Present on every artifact. | decided |
 | Engine version | The git commit the engine was built from, plus a dirty flag, injected into the assemblies at build. | decided |
 | Observation | The numeric view of a Match for one Player at one decision: the feature vector built from their Player board state. | decided |
-| Feature schema | The published, immutable layout of an Observation for one content and Rule set: which feature sits at which index, under a version such as `features:v1`. | decided |
+| Feature schema | The published, immutable layout of an Observation for one content and Rule set: which feature sits at which index, under a version such as `features:v1`; its id adds a fingerprint of the concrete layout. | decided |
 | Board slot | A Creature's position in an Observation: its index among the Player's own Creatures, or the Team size plus its index among the enemies. Action keys name the acting Creature by it. | decided |
 | Action | One decision as the engine sees it: an Evolution choice or pass, a Speed choice, an Intent, a target set; keyed with the acting Creature's team slot. | decided |
 | Step | One (Observation, options, Action) taken by one Player in one Match. | decided |

@@ -5,7 +5,7 @@ namespace DownfallArena.Application.Learning;
 
 /// <summary>
 /// The identity of a run, present on every learning artifact so two runs compare on one axis at a time:
-/// engine version, content hash, rule set, feature schema version, agents, base seed (ADR 0013).
+/// engine version, content hash, rule set, feature schema id, agents, base seed (ADR 0013).
 /// </summary>
 public sealed record RunStamp
 {
@@ -44,7 +44,7 @@ public sealed record RunStamp
             EngineVersion = engine.ToString(),
             ContentHash = resources.Version,
             RuleSet = RuleSetStamp.Of(ruleSet),
-            FeatureSchema = schema.Version,
+            FeatureSchema = schema.Id,
             Player1Agent = player1Agent,
             Player2Agent = player2Agent,
             BaseSeed = baseSeed,

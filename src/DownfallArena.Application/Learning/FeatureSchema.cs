@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
@@ -6,11 +9,16 @@ namespace DownfallArena.Application.Learning;
 
 /// <summary>
 /// The layout of an observation for one content and rule set: which feature sits at which index. Published
-/// versions are immutable (<c>docs/learning/features.md</c>); any change to the layout is a new version.
+/// versions are immutable (<c>docs/learning/features.md</c>); any change to the layout rules is a new version, and
+/// the <see cref="Id"/> adds a fingerprint of the concrete layout so two schemas of the same version but different
+/// content or rule set never pass for each other.
 /// </summary>
 public sealed class FeatureSchema
 {
     public const string CurrentVersion = "features:v1";
+
+    /// <summary>The largest team size a schema supports: target masks hold one bit per board slot in an <c>int</c>.</summary>
+    public const int MaxTeamSize = BoardSlots.MaxTeamSize;
 
     /// <summary>The condition kinds of the closed effect taxonomy (ADR 0012), in feature order.</summary>
     public static IReadOnlyList<string> ConditionKinds { get; } = ["Bleed", "Stun", "DefenseBuff", "InitiativeDebuff"];
@@ -40,10 +48,17 @@ public sealed class FeatureSchema
         _nodeIndexes = talentNodes.Select((node, index) => (node, index)).ToDictionary(pair => pair.node, pair => pair.index);
         FeatureNames = [.. GlobalFeatures, .. CreatureBlocks(teamSize, spells, talentNodes)];
         _indexes = FeatureNames.Select((name, index) => (name, index)).ToDictionary(pair => pair.name, pair => pair.index);
+        Id = $"{Version}+{Fingerprint(FeatureNames, roundCap)}";
     }
 
-    /// <summary>The version of the layout this schema follows.</summary>
+    /// <summary>The version of the layout rules this schema follows.</summary>
     public string Version { get; }
+
+    /// <summary>
+    /// The version plus a fingerprint of the concrete layout (every feature name and the round cap), the string
+    /// observations and artifacts carry: same id, same vector length, same meaning at every index.
+    /// </summary>
+    public string Id { get; }
 
     public int TeamSize { get; }
 
@@ -65,6 +80,7 @@ public sealed class FeatureSchema
     {
         ArgumentNullException.ThrowIfNull(resources);
         ArgumentNullException.ThrowIfNull(ruleSet);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ruleSet.TeamSize, MaxTeamSize, nameof(ruleSet));
 
         var spells = resources.Spells.Select(spell => spell.Id).OrderBy(spell => spell.Value, StringComparer.Ordinal).ToList();
         var nodes = resources.TalentTrees
@@ -99,6 +115,12 @@ public sealed class FeatureSchema
         ArgumentOutOfRangeException.ThrowIfNegative(boardSlot);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(boardSlot, 2 * TeamSize);
         return GlobalFeatures.Count + (boardSlot * CreatureLength);
+    }
+
+    private static string Fingerprint(IReadOnlyList<string> featureNames, int roundCap)
+    {
+        var layout = string.Join('\n', featureNames) + "\n" + roundCap.ToString(CultureInfo.InvariantCulture);
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(layout)))[..12];
     }
 
     private static IEnumerable<string> CreatureBlocks(int teamSize, IReadOnlyList<SpellId> spells, IReadOnlyList<string> nodes)

@@ -11,12 +11,15 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
    different normalization, a different team size bound: new version, new section below. The builder's
    tests pin the vector length and the index of every feature, so a domain change that alters the vector
    fails the build until the new version is published here.
-3. **Artifacts carry their version.** Datasets (manifest), models (`policy.json`), and evaluations record
-   the schema version they were built with. A `PolicyAgent` refuses a schema version it does not know; the
-   Python side refuses to mix versions unless asked.
-4. **Content is part of the layout.** Spell bits and talent bits are indexed from the content in a stable
-   order (spell ids sorted ordinally). Adding a spell changes the layout, so a content change that adds or
-   removes spells is a new schema version too; a numeric edit to an existing spell is not.
+3. **Artifacts carry the schema id.** The id is the version plus a fingerprint of the concrete layout
+   (`features:v1+<12 hex>`, hashed from every feature name and the round cap). Datasets (manifest), models
+   (`policy.json`), evaluations, and every observation record the id they were built with. A `PolicyAgent`
+   refuses an id it does not know; the Python side refuses to mix ids unless asked.
+4. **Content and rule set are part of the layout.** Spell bits and talent bits are indexed from the content
+   in a stable order (spell ids sorted ordinally), the team size sets the number of blocks, the round cap the
+   normalization of the round number. Adding a spell or changing the team size keeps the version but changes
+   the fingerprint, so two schemas of the same version never pass for each other; a numeric edit to an
+   existing spell changes neither.
 
 ## Versions
 
@@ -25,7 +28,8 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 Built by `FeatureSchema.Build(resources, ruleSet)` and filled by `ObservationBuilder` (Application,
 `Learning/`). Let `T` be the rule set's team size, `S` the number of spells in the content, `N` the number of
 talent nodes in the content. A creature block has `C = 6 + 2 x 4 + S + N` features and the vector has
-`5 + 2 x T x C`. `FeatureSchema.FeatureNames` lists every index by name; the tests pin the names below.
+`5 + 2 x T x C`. `T` is at most 16 (`BoardSlots.MaxTeamSize`), so that a target mask holds one bit per board
+slot in an `int`. `FeatureSchema.FeatureNames` lists every index by name; the tests pin the names below.
 
 Global block, indexes 0 to 4:
 
@@ -72,10 +76,11 @@ Action encoding (`ActionEncoder`, same phase). Every key names the acting creatu
 | Unlock a spell | `evolve:<slot>:<spell id>` | (Evolve, slot, spell index in the schema or -1, -1, 0) |
 | Speed | `speed:<slot>:Quick` or `speed:<slot>:Standard` | (Speed, slot, -1, 0 or 1, 0) |
 | Intent | `intent:<slot>:<spell id>` | (Intent, slot, spell index or -1, -1, 0) |
-| Targets | `targets:<slot>:<board slots ascending, comma-separated>` | (Targets, slot, -1, -1, one bit per target board slot) |
+| Targets | `targets:<slot>:<spell id>:<board slots ascending, comma-separated>` | (Targets, slot, spell index or -1, -1, one bit per target board slot) |
 
-A spell that cannot be cast (no legal candidate left) has the single action `targets:<slot>:` with an empty
-mask: the engine reveals it with no targets and it fizzles. `ActionEncoder.Candidates(slots, options)` lists
+The spell is part of a target action because the observation does not carry the actor's intent and two spells
+can share a legal target set. A spell that cannot be cast (no legal candidate left) has the single action
+`targets:<slot>:<spell id>:` with an empty mask: the engine reveals it with no targets and it fizzles. `ActionEncoder.Candidates(slots, options)` lists
 the actions a `PlayerOptions` offers in a stable order: every unlock then `pass`; both speeds per creature;
 every castable spell per creature; every combination of legal targets of the allowed sizes, smallest first,
 in candidate order.

@@ -1,6 +1,7 @@
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -17,6 +18,20 @@ public sealed class FeatureSchemaTests
         FeatureSchema.CurrentVersion.ShouldBe("features:v1");
         Schema.TeamSize.ShouldBe(2);
         Schema.RoundCap.ShouldBe(30);
+    }
+
+    [Fact]
+    public void The_id_fingerprints_the_concrete_layout()
+    {
+        var same = FeatureSchema.Build(TestContent.Resources, MatchStore.TwoOnTwo());
+        var otherTeamSize = FeatureSchema.Build(TestContent.Resources, RuleSet.Create(3, 2, 2, 30, 2.0));
+        var otherRoundCap = FeatureSchema.Build(TestContent.Resources, MatchStore.TwoOnTwo(roundCap: 8));
+        var otherContent = FeatureSchema.Build(GameResources.Create("other", [], [], []), MatchStore.TwoOnTwo());
+
+        Schema.Id.ShouldBe(same.Id);
+        Schema.Id.ShouldMatch("^features:v1\\+[0-9a-f]{12}$");
+        new[] { Schema.Id, otherTeamSize.Id, otherRoundCap.Id, otherContent.Id }.Distinct(StringComparer.Ordinal).Count().ShouldBe(4);
+        FeatureSchema.Build(TestContent.Resources, RuleSet.Create(2, 9, 9, 30, 9.0)).Id.ShouldBe(Schema.Id);
     }
 
     [Fact]
@@ -108,5 +123,7 @@ public sealed class FeatureSchemaTests
         Should.Throw<ArgumentNullException>(() => FeatureSchema.Build(null!, MatchStore.TwoOnTwo()));
         Should.Throw<ArgumentNullException>(() => FeatureSchema.Build(TestContent.Resources, null!));
         Should.Throw<ArgumentNullException>(() => FeatureSchema.NodeKey(null!, "root"));
+        Should.Throw<ArgumentOutOfRangeException>(() => FeatureSchema.Build(TestContent.Resources, RuleSet.Create(FeatureSchema.MaxTeamSize + 1, 2, 2, 30, 2.0)));
+        FeatureSchema.Build(TestContent.Resources, RuleSet.Create(FeatureSchema.MaxTeamSize, 2, 2, 30, 2.0)).CreatureOffset(31).ShouldBe(5 + (31 * Schema.CreatureLength));
     }
 }

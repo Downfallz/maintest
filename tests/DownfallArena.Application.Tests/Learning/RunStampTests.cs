@@ -16,7 +16,7 @@ public sealed class RunStampTests
         stamp.EngineVersion.ShouldBe("abc123def456-dirty");
         stamp.ContentHash.ShouldBe("test-content");
         stamp.RuleSet.ShouldBe(new RuleSetStamp(2, 2, 2, 30, 2.0));
-        stamp.FeatureSchema.ShouldBe("features:v1");
+        stamp.FeatureSchema.ShouldBe(Schema.Id);
         stamp.Player1Agent.ShouldBe("random");
         stamp.Player2Agent.ShouldBe("random");
         stamp.BaseSeed.ShouldBe(42);
@@ -38,6 +38,7 @@ public sealed class RunStampTests
         stamp.DifferencesFrom(stamp with { EngineVersion = "abc123def456" }).ShouldBe(["engine"]);
         stamp.DifferencesFrom(stamp with { RuleSet = RuleSetStamp.Of(RuleSet.Default) }).ShouldBe(["rules"]);
         stamp.DifferencesFrom(stamp with { FeatureSchema = "features:v2" }).ShouldBe(["schema"]);
+        stamp.DifferencesFrom(stamp with { FeatureSchema = FeatureSchema.Build(TestContent.Resources, RuleSet.Default).Id }).ShouldBe(["schema"]);
         stamp.DifferencesFrom(stamp with { Player2Agent = "greedy" }).ShouldBe(["agents"]);
         stamp.DifferencesFrom(stamp with { BaseSeed = 7 }).ShouldBe(["seed"]);
         stamp.DifferencesFrom(stamp with { ContentHash = "other", BaseSeed = 7 }).ShouldBe(["content", "seed"]);

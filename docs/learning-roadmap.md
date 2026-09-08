@@ -81,14 +81,15 @@ The terms below are the authoritative entries of the "Learning" section of
 - `RunStamp`: engine version, content hash from `IGameResources.Version`, rule set values (`RuleSetStamp`),
   feature schema version, both agent names, base seed. `DifferencesFrom` names the axes on which two stamps
   differ, so a comparison can refuse to mix more than one.
-- `FeatureSchema` and `Observation`: the published layout `features:v1` (`docs/learning/features.md`) and the
-  fixed-length `float` vector `ObservationBuilder` fills from a `PlayerBoardState`. Board slots put own
+- `FeatureSchema` and `Observation`: the published layout `features:v1` (`docs/learning/features.md`), whose
+  id adds a fingerprint of the concrete layout (content and rule set), and the fixed-length `float` vector
+  `ObservationBuilder` fills from a `PlayerBoardState`. Board slots put own
   creatures first and enemies after, so the two players' vectors mirror each other; missing slots stay zero.
   The condition kinds are compared with the domain's `LastingEffect` subclasses by a test, so a new kind fails
   the build until a new schema version is published.
 - `ActionEncoder`: the stable key and `ActionCode` of every decision, always naming the acting creature's board
   slot (`pass`, `evolve:<slot>:<spell>`, `speed:<slot>:<Quick|Standard>`, `intent:<slot>:<spell>`,
-  `targets:<slot>:<target slots>`), and `Candidates` listing every action a `PlayerOptions` offers.
+  `targets:<slot>:<spell>:<target slots>`), and `Candidates` listing every action a `PlayerOptions` offers.
 - Tests pin the vector length and every index for the test content, the mirroring, the condition sums, the
   keys and codes, and the candidate enumeration including target combinations.
 

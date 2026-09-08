@@ -35,7 +35,8 @@
   </PropertyGroup>
 
   <!--
-    Engine version stamp (ADR 0013): the git commit, with a -dirty suffix when the tree has local changes, goes
+    Engine version stamp (ADR 0013): the git commit, with a -dirty suffix when the tree has local changes (untracked
+    files included, since the compile glob picks up a new source file before it is added), goes
     into the assemblies' informational version as "+<commit>[-dirty]". EngineVersion in Application reads it
     back so every learning artifact names the engine that produced it. Without git the version stays unknown.
     Runs before the SDK appends its own (full, never dirty) revision so the short form always wins.
@@ -45,7 +46,7 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="EngineCommit" />
       <Output TaskParameter="ExitCode" PropertyName="EngineCommitExitCode" />
     </Exec>
-    <Exec Command="git status --porcelain --untracked-files=no" Condition="'$(EngineCommitExitCode)' == '0'" ConsoleToMSBuild="true" IgnoreExitCode="true" EchoOff="true" StandardOutputImportance="low" StandardErrorImportance="low" ContinueOnError="true">
+    <Exec Command="git status --porcelain --untracked-files=normal" Condition="'$(EngineCommitExitCode)' == '0'" ConsoleToMSBuild="true" IgnoreExitCode="true" EchoOff="true" StandardOutputImportance="low" StandardErrorImportance="low" ContinueOnError="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="EngineDirtyFiles" />
     </Exec>
     <PropertyGroup Condition="'$(EngineCommitExitCode)' == '0' and '$(EngineCommit)' != ''">

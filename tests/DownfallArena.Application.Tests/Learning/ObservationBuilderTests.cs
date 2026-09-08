@@ -23,7 +23,8 @@ public sealed class ObservationBuilderTests
         var observation = Builder.Build(board);
 
         observation.ShouldBe(Builder.Build(board));
-        observation.SchemaVersion.ShouldBe("features:v1");
+        observation.SchemaId.ShouldBe(Schema.Id);
+        observation.SchemaId.ShouldStartWith("features:v1+");
         observation.Features.Count.ShouldBe(Schema.Length);
         Builder.Schema.ShouldBeSameAs(Schema);
     }

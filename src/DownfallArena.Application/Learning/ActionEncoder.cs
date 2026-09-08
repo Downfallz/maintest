@@ -45,15 +45,20 @@ public sealed class ActionEncoder(FeatureSchema schema)
         return new EncodedAction(string.Create(CultureInfo.InvariantCulture, $"intent:{slot}:{intent.Spell.Value}"), new ActionCode(ActionKind.Intent, slot, schema.SpellIndex(intent.Spell), -1, 0));
     }
 
-    public static EncodedAction Targets(BoardSlots slots, CreatureId actor, IReadOnlyList<CreatureId> targets)
+    /// <summary>
+    /// The targets bound to a revealed spell. The spell is part of the action: the observation does not carry the
+    /// actor's intent, and two spells can share a legal target set.
+    /// </summary>
+    public EncodedAction Targets(BoardSlots slots, CreatureId actor, SpellId spell, IReadOnlyList<CreatureId> targets)
     {
         ArgumentNullException.ThrowIfNull(slots);
+        ArgumentNullException.ThrowIfNull(spell);
         ArgumentNullException.ThrowIfNull(targets);
 
         var slot = slots.SlotOf(actor);
         var targetSlots = string.Join(',', targets.Select(slots.SlotOf).Order().Select(target => target.ToString(CultureInfo.InvariantCulture)));
-        var key = string.Create(CultureInfo.InvariantCulture, $"targets:{slot}:{targetSlots}");
-        return new EncodedAction(key, new ActionCode(ActionKind.Targets, slot, -1, -1, slots.MaskOf(targets)));
+        var key = string.Create(CultureInfo.InvariantCulture, $"targets:{slot}:{spell.Value}:{targetSlots}");
+        return new EncodedAction(key, new ActionCode(ActionKind.Targets, slot, schema.SpellIndex(spell), -1, slots.MaskOf(targets)));
     }
 
     /// <summary>
@@ -88,17 +93,17 @@ public sealed class ActionEncoder(FeatureSchema schema)
     private IEnumerable<EncodedAction> IntentCandidates(BoardSlots slots, IntentOptions options) =>
         options.Creatures.SelectMany(creature => creature.CastableSpells.Select(spell => Intent(slots, new CombatIntent(creature.Creature, spell))));
 
-    private static IEnumerable<EncodedAction> TargetCandidates(BoardSlots slots, TargetOptions options)
+    private IEnumerable<EncodedAction> TargetCandidates(BoardSlots slots, TargetOptions options)
     {
         var legal = options.LegalTargets;
         if (!legal.IsCastable)
         {
-            return [Targets(slots, options.Actor, [])];
+            return [Targets(slots, options.Actor, options.Spell, [])];
         }
 
         return Enumerable.Range(legal.MinTargets, legal.MaxTargets - legal.MinTargets + 1)
             .SelectMany(size => Combinations(legal.Candidates, size))
-            .Select(targets => Targets(slots, options.Actor, targets));
+            .Select(targets => Targets(slots, options.Actor, options.Spell, targets));
     }
 
     /// <summary>All subsets of the given size, in candidate order.</summary>

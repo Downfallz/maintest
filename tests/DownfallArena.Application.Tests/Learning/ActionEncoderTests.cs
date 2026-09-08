@@ -37,10 +37,10 @@ public sealed class ActionEncoderTests
             .ShouldBe(new EncodedAction("speed:1:Standard", new ActionCode(ActionKind.Speed, 1, -1, 1, 0)));
         Encoder.Intent(Slots, new CombatIntent(One, TestContent.Strike))
             .ShouldBe(new EncodedAction("intent:0:spell:strike:v1", new ActionCode(ActionKind.Intent, 0, 3, -1, 0)));
-        ActionEncoder.Targets(Slots, Two, [Four, Three])
-            .ShouldBe(new EncodedAction("targets:1:2,3", new ActionCode(ActionKind.Targets, 1, -1, -1, 0b1100)));
-        ActionEncoder.Targets(Slots, One, [])
-            .ShouldBe(new EncodedAction("targets:0:", new ActionCode(ActionKind.Targets, 0, -1, -1, 0)));
+        Encoder.Targets(Slots, Two, TestContent.Slam, [Four, Three])
+            .ShouldBe(new EncodedAction("targets:1:spell:slam:v1:2,3", new ActionCode(ActionKind.Targets, 1, 2, -1, 0b1100)));
+        Encoder.Targets(Slots, One, TestContent.Strike, [])
+            .ShouldBe(new EncodedAction("targets:0:spell:strike:v1:", new ActionCode(ActionKind.Targets, 0, 3, -1, 0)));
         Encoder.Schema.ShouldBeSameAs(Schema);
     }
 
@@ -51,6 +51,8 @@ public sealed class ActionEncoderTests
 
         Encoder.Intent(Slots, new CombatIntent(One, unknown))
             .ShouldBe(new EncodedAction("intent:0:spell:unknown:v1", new ActionCode(ActionKind.Intent, 0, -1, -1, 0)));
+        Encoder.Targets(Slots, One, unknown, [Three])
+            .ShouldBe(new EncodedAction("targets:0:spell:unknown:v1:2", new ActionCode(ActionKind.Targets, 0, -1, -1, 0b0100)));
     }
 
     [Fact]
@@ -108,8 +110,20 @@ public sealed class ActionEncoderTests
 
         var candidates = Encoder.Candidates(Slots, options);
 
-        candidates.Select(candidate => candidate.Key).ShouldBe(["targets:0:2", "targets:0:3", "targets:0:2,3"]);
+        candidates.Select(candidate => candidate.Key).ShouldBe(["targets:0:spell:slam:v1:2", "targets:0:spell:slam:v1:3", "targets:0:spell:slam:v1:2,3"]);
         candidates.Select(candidate => candidate.Code.TargetMask).ShouldBe([0b0100, 0b1000, 0b1100]);
+        candidates.ShouldAllBe(candidate => candidate.Code.SpellIndex == Schema.SpellIndex(TestContent.Slam));
+    }
+
+    [Fact]
+    public void The_same_targets_for_another_spell_are_another_action()
+    {
+        var slam = Encoder.Targets(Slots, One, TestContent.Slam, [Three]);
+        var strike = Encoder.Targets(Slots, One, TestContent.Strike, [Three]);
+
+        slam.Key.ShouldNotBe(strike.Key);
+        slam.Code.ShouldNotBe(strike.Code);
+        slam.Code.TargetMask.ShouldBe(strike.Code.TargetMask);
     }
 
     [Fact]
@@ -129,7 +143,7 @@ public sealed class ActionEncoderTests
 
         var keys = Encoder.Candidates(slots, options).Select(candidate => candidate.Key);
 
-        keys.ShouldBe(["targets:0:3,4", "targets:0:3,5", "targets:0:4,5", "targets:0:3,4,5"]);
+        keys.ShouldBe(["targets:0:spell:slam:v1:3,4", "targets:0:spell:slam:v1:3,5", "targets:0:spell:slam:v1:4,5", "targets:0:spell:slam:v1:3,4,5"]);
     }
 
     [Fact]
@@ -141,7 +155,7 @@ public sealed class ActionEncoderTests
             Target = new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [])),
         };
 
-        Encoder.Candidates(Slots, options).ShouldBe([new EncodedAction("targets:1:", new ActionCode(ActionKind.Targets, 1, -1, -1, 0))]);
+        Encoder.Candidates(Slots, options).ShouldBe([new EncodedAction("targets:1:spell:strike:v1:", new ActionCode(ActionKind.Targets, 1, 3, -1, 0))]);
     }
 
     [Theory]
@@ -163,10 +177,11 @@ public sealed class ActionEncoderTests
         Should.Throw<ArgumentNullException>(() => ActionEncoder.Speed(Slots, null!));
         Should.Throw<ArgumentNullException>(() => Encoder.Intent(null!, new CombatIntent(One, TestContent.Strike)));
         Should.Throw<ArgumentNullException>(() => Encoder.Intent(Slots, null!));
-        Should.Throw<ArgumentNullException>(() => ActionEncoder.Targets(null!, One, []));
-        Should.Throw<ArgumentNullException>(() => ActionEncoder.Targets(Slots, One, null!));
+        Should.Throw<ArgumentNullException>(() => Encoder.Targets(null!, One, TestContent.Strike, []));
+        Should.Throw<ArgumentNullException>(() => Encoder.Targets(Slots, One, null!, []));
+        Should.Throw<ArgumentNullException>(() => Encoder.Targets(Slots, One, TestContent.Strike, null!));
         Should.Throw<ArgumentNullException>(() => Encoder.Candidates(null!, new PlayerOptions { Kind = PlayerOptionsKind.Waiting }));
         Should.Throw<ArgumentNullException>(() => Encoder.Candidates(Slots, null!));
-        Should.Throw<ArgumentOutOfRangeException>(() => ActionEncoder.Targets(Slots, CreatureId.From(9), []));
+        Should.Throw<ArgumentOutOfRangeException>(() => Encoder.Targets(Slots, CreatureId.From(9), TestContent.Strike, []));
     }
 }
