@@ -21,7 +21,8 @@ public sealed class BatchRunner(
     ICommandHandler<JoinMatch, Result<PlayerSlot>> joinMatch,
     IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>> boardState,
     MatchDriver driver,
-    IRandomSourceFactory random)
+    IRandomSourceFactory random,
+    AgentFactory agents)
 {
     public Task<BatchResult> RunAsync(SimulationScenario scenario, CancellationToken cancellationToken = default) =>
         RunAsync(scenario, null, cancellationToken);
@@ -31,6 +32,10 @@ public sealed class BatchRunner(
     {
         ArgumentNullException.ThrowIfNull(scenario);
         ArgumentOutOfRangeException.ThrowIfNegative(scenario.Matches);
+        if (scenario.Seeds is { } seeds && seeds.Count < scenario.Matches)
+        {
+            throw new ArgumentException($"The scenario plays {scenario.Matches} matches but lists only {seeds.Count} seeds.", nameof(scenario));
+        }
 
         var results = new List<MatchResult>(scenario.Matches);
         for (var index = 0; index < scenario.Matches; index++)
@@ -48,8 +53,8 @@ public sealed class BatchRunner(
         Accept(await joinMatch.HandleAsync(new JoinMatch(matchId, PlayerId.New(), scenario.Player1Roster), cancellationToken));
         Accept(await joinMatch.HandleAsync(new JoinMatch(matchId, PlayerId.New(), scenario.Player2Roster), cancellationToken));
 
-        IPlayerAgent player1 = Agent(scenario.Player1Agent, unchecked((seed * 31) + 1));
-        IPlayerAgent player2 = Agent(scenario.Player2Agent, unchecked((seed * 31) + 2));
+        var player1 = Agent(scenario.Player1Agent, unchecked((seed * 31) + 1));
+        var player2 = Agent(scenario.Player2Agent, unchecked((seed * 31) + 2));
         if (recorder is not null)
         {
             player1 = recorder.Wrap(matchId, player1);
@@ -77,12 +82,7 @@ public sealed class BatchRunner(
         };
     }
 
-    private RandomAgent Agent(AgentKind kind, int seed) =>
-        kind switch
-        {
-            AgentKind.Random => new RandomAgent(random.Create(seed)),
-            _ => throw new InvalidOperationException($"Agent kind '{kind}' has no implementation."),
-        };
+    private IPlayerAgent Agent(AgentSpec spec, int seed) => agents.Create(spec, random.Create(seed));
 
     private static TValue Accept<TValue>(Result<TValue> result) =>
         result.IsSuccess

@@ -1,3 +1,4 @@
+using DownfallArena.Application.Agents;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Queries;
@@ -84,7 +85,8 @@ public sealed class BatchRunnerTests
                 new MatchQueryHandlers(
                     new GetBoardStateForPlayerHandler(store.Workflow),
                     new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources))),
-            factory);
+            factory,
+            new AgentFactory());
 
     private static List<string> Comparable(BatchResult batch) =>
         [.. batch.Results.Select(result => $"{result.Seed}:{result.Outcome}:{result.Rounds}:{result.Player1RemainingHealth}:{result.Player2RemainingHealth}")];

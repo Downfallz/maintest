@@ -14,7 +14,7 @@
     <label class="button">Open files<input id="files" type="file" multiple hidden></label>
     <label class="button">Open a run directory<input id="directory" type="file" webkitdirectory hidden></label>
   </header>
-  <div id="drop" class="drop">Drop a run directory, <code>manifest.json</code>, <code>steps.jsonl</code>, <code>episodes.jsonl</code>, a trace, <code>simulation.csv</code>, or <code>training.jsonl</code> here.</div>
+  <div id="drop" class="drop">Drop a run directory, <code>manifest.json</code>, <code>steps.jsonl</code>, <code>episodes.jsonl</code>, a trace, <code>simulation.csv</code>, <code>evaluation.json</code>, or <code>training.jsonl</code> here.</div>
   <main>
     <nav>
       <h2>Artifacts</h2>
@@ -60,6 +60,7 @@
     function classifyDocument(doc) {
       if (Array.isArray(doc.entries) && doc.matchId) return { type: 'trace', data: doc };
       if (doc.featureNames && doc.stamp) return { type: 'manifest', data: doc };
+      if (Array.isArray(doc.pairs) && doc.agentA) return { type: 'evaluation', data: doc };
       return { type: 'unknown' };
     }
 
@@ -100,6 +101,7 @@
           state.artifacts.push({ kind: 'trace', name, trace: classified.data, cursor: 0 });
           break;
         case 'training': state.artifacts.push({ kind: 'training', name, rows: classified.data }); break;
+        case 'evaluation': state.artifacts.push({ kind: 'evaluation', name, evaluation: classified.data }); break;
         default: console.warn(`Ignored ${name}: not a known artifact.`);
       }
     }
@@ -588,6 +590,55 @@
       return view;
     }
 
+    // ---------- evaluations ----------
+
+    function agentCard(report) {
+      const usage = Object.entries(report.spellUsage).sort((a, b) => b[1] - a[1]).map(([spell, count]) => `${spellName(spell)} ${count}`).join(', ') || 'none';
+      return el('div', { class: 'card' }, [
+        el('h3', {}, report.agent),
+        el('div', { class: 'stats' }, [
+          rateStat('Win rate', report.winRate),
+          stat('Score', fixed(report.score.mean, 3), `${fixed(report.score.low, 3)} to ${fixed(report.score.high, 3)}; one half is even`),
+          stat('Remaining health', fixed(report.averageRemainingHealth), 'average per match'),
+          stat('Spell entropy', `${fixed(report.spellEntropy, 2)} bits`, 'zero means one spell only'),
+          stat('Fizzles', report.actions ? pct(report.fizzleRate) : '-', report.actions ? `of ${report.actions} actions` : 'no combat listener'),
+          stat('Crits', report.actions ? pct(report.criticalRate) : '-', 'of resolved actions'),
+        ]),
+        el('p', {}, `Intents: ${usage}`),
+      ]);
+    }
+
+    function pairsTable(pairs) {
+      const table = el('table');
+      table.append(el('tr', {}, ['Seed', 'A first: winner', 'Rounds', 'B first: winner', 'Rounds', 'Score of A'].map(text => el('th', {}, text))));
+      for (const pair of pairs.slice(0, 200)) {
+        table.append(el('tr', {}, [
+          el('td', { class: 'num' }, pair.seed), el('td', {}, pair.aFirst.outcome.winner || 'draw'), el('td', { class: 'num' }, pair.aFirst.rounds),
+          el('td', {}, pair.bFirst.outcome.winner || 'draw'), el('td', { class: 'num' }, pair.bFirst.rounds), el('td', { class: 'num' }, fixed(pair.scoreOfA, 2)),
+        ]));
+      }
+      return el('div', { class: 'card' }, [el('h3', {}, `Seed pairs${pairs.length > 200 ? ' (first 200)' : ''}`), table]);
+    }
+
+    function renderEvaluation(artifact) {
+      const evaluation = artifact.evaluation;
+      const view = el('div');
+      view.append(
+        el('div', { class: 'card' }, [
+          el('div', { class: 'title' }, [el('h2', {}, `${evaluation.agentA.agent} vs ${evaluation.agentB.agent}`), el('span', { class: 'muted' }, `${evaluation.pairs.length} seeds, mirrored`)]),
+          stampList(evaluation.stamp),
+        ]),
+        el('div', { class: 'stats' }, [
+          stat('Matches', evaluation.matches, `${evaluation.draws} draws (${pct(evaluation.drawRate)})`),
+          stat('Rounds', fixed(evaluation.averageRounds), 'average'),
+          stat('Round cap', pct(evaluation.roundCapShare), 'of matches'),
+        ]),
+        el('div', { class: 'charts' }, [agentCard(evaluation.agentA), agentCard(evaluation.agentB)]),
+        pairsTable(evaluation.pairs),
+      );
+      return view;
+    }
+
     // ---------- comparison ----------
 
     function metricsOf(artifact) {
@@ -605,6 +656,14 @@
         const last = rows[rows.length - 1] || {};
         return [['Iterations', rows.length, 0], ['Best win rate', best.winRate ?? 0, 3], ['Best iteration', best.iteration ?? 0, 0], ['Final loss', last.loss ?? 0, 4]];
       }
+      if (artifact.kind === 'evaluation') {
+        const evaluation = artifact.evaluation;
+        return [
+          ['Matches', evaluation.matches, 0], ['A win rate', evaluation.agentA.winRate.mean, 3], ['B win rate', evaluation.agentB.winRate.mean, 3], ['Draw rate', evaluation.drawRate, 3],
+          ['Average rounds', evaluation.averageRounds, 2], ['A spell entropy', evaluation.agentA.spellEntropy, 2], ['B spell entropy', evaluation.agentB.spellEntropy, 2],
+          ['A fizzle rate', evaluation.agentA.fizzleRate, 3], ['B fizzle rate', evaluation.agentB.fizzleRate, 3],
+        ];
+      }
       const trace = artifact.trace;
       return [['Events', trace.entries.length, 0], ['Rounds', trace.entries[trace.entries.length - 1].round ?? 0, 0], ['Player 1 won', trace.outcome && trace.outcome.winner === PLAYER1 ? 1 : 0, 0]];
     }
@@ -612,6 +671,7 @@
     function stampOf(artifact) {
       if (artifact.kind === 'run') return artifact.manifest ? artifact.manifest.stamp : null;
       if (artifact.kind === 'training') return artifact.rows[0] ? artifact.rows[0].stamp : null;
+      if (artifact.kind === 'evaluation') return artifact.evaluation.stamp;
       return artifact.trace.stamp;
     }
 
@@ -663,6 +723,7 @@
       if (selected.kind === 'comparison') view.replaceChildren(renderComparison(selected.a, selected.b));
       else if (selected.kind === 'run') view.replaceChildren(renderRun(selected));
       else if (selected.kind === 'trace') view.replaceChildren(renderTrace(selected));
+      else if (selected.kind === 'evaluation') view.replaceChildren(renderEvaluation(selected));
       else view.replaceChildren(renderTraining(selected));
     }
 

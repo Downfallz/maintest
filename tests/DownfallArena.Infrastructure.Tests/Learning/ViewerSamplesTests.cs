@@ -1,5 +1,7 @@
 using System.Text.Json;
 using DownfallArena.Application;
+using DownfallArena.Application.Agents;
+using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Learning.Tracing;
@@ -40,6 +42,7 @@ public sealed class ViewerSamplesTests
         var sampleTrace = ShapesOf(Directory.GetFiles(Path.Combine(SampleRun, RunRecorder.TracesDirectory)).Single());
         var realTraces = Directory.GetFiles(Path.Combine(run, RunRecorder.TracesDirectory)).SelectMany(ShapesOf).ToHashSet(StringComparer.Ordinal);
         AssertSameShape(sampleTrace, realTraces, "traces");
+        AssertSameShape(ShapesOf(Path.Combine(SamplesDirectory, "evaluation.json")), ShapesOf(Path.Combine(run, "evaluation.json")), "evaluation");
     }
 
     /// <summary>
@@ -83,6 +86,7 @@ public sealed class ViewerSamplesTests
         services.AddSingleton<IGameResources>(resources);
         services.AddSingleton<MatchTraceRecorder>();
         services.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
+        services.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<CombatStatsRecorder>());
         await using var provider = services.BuildServiceProvider();
 
         var recorder = new RunRecorder(
@@ -98,6 +102,12 @@ public sealed class ViewerSamplesTests
         await recorder.StartAsync(cancellationToken);
         await provider.GetRequiredService<BatchRunner>().RunAsync(scenario, recorder, cancellationToken);
         await recorder.FinishAsync(cancellationToken);
+
+        var evaluation = await provider.GetRequiredService<EvaluationRunner>().RunAsync(
+            new EvaluationScenario { RuleSet = rules, Roster = roster, AgentA = AgentSpec.Random, AgentB = AgentSpec.Random, Seeds = [1, 2] },
+            recorder.Stamp,
+            cancellationToken);
+        await new FileArtifactWriter(runDirectory).WriteJsonAsync("evaluation.json", evaluation, cancellationToken);
     }
 
     private static HashSet<string> ShapesOf(string path)

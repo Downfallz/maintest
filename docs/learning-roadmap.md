@@ -135,25 +135,30 @@ The terms below are the authoritative entries of the "Learning" section of
   change in what the engine writes fails the build until the samples follow. Real data comes from
   `simulate --record` and `play --trace`.
 
-### Phase L4. Evaluation harness and benchmark digest
+### Phase L4. Evaluation harness and benchmark digest (done)
 
-- Agent registry: `AgentKind` grows (`Random`, `Greedy`, `Heuristic`, `Policy`), the CLI gets `--p1
-  <kind[:path]>` and `--p2 <kind[:path]>`.
-- Mirrored evaluation: each seed is played twice with the agents swapped, which cancels the Player1
-  first-mover bias the phase 7 tests showed.
-- `Evaluation` result: win rate of each agent with a confidence interval, draw rate, average rounds,
-  average remaining health, spell usage counts (entropy, so a dominant spell shows), fizzle rate, share of
-  matches ending by round cap. The two mirrored matches of a seed are paired, not independent, so the
-  interval is computed over the seed pairs (each pair contributes the agent's mean score over its two
-  matches; a bootstrap over pairs gives the interval), never over the individual matches. Written as
-  `evaluation.json` (stamped) and printed as one table.
-- `benchmark-seeds.json` fixed in the repo (decision G). `benchmark` command: plays the benchmark seeds with
-  `Greedy` versus `Greedy` and writes `benchmarks/<content-hash>.json` (per seed: outcome, rounds, final
-  health). CI runs it against the committed digest and fails on any difference; regenerating the digest is a
-  deliberate commit with a journal entry. This is the engine-change detector.
-- Tests on the statistics (paired intervals, mirroring, entropy) with hand-built results, including one
-  where perfectly correlated pairs widen the interval; a test that the digest of the test content is stable
-  across two runs.
+- Agent registry: `AgentSpec` (a kind and an optional path, `random` or `kind:path`) parsed by the CLI's
+  `--p1` and `--p2`, seated by `AgentFactory`. `AgentKind` holds `Random` until L5 and L7 add the others;
+  `SimulationScenario` takes specs and an explicit seed list.
+- Mirrored evaluation: `EvaluationRunner` plays each seed twice with the agents swapped, which cancels the
+  Player1 first-mover bias the phase 7 tests showed.
+- `EvaluationResult`: per agent, wins and win rate with a 95% interval, the mean score (win 1, draw one half,
+  loss 0), average remaining health, intents per spell with their entropy (so a dominant spell shows), fizzle
+  and crit rates (from `CombatStatsRecorder`, an event listener); shared: draw rate, average rounds, share of
+  matches ending by the round cap; and every seed pair. The two mirrored matches of a seed are paired, not
+  independent, so the interval is a normal interval over the per-pair means, never over the individual
+  matches. Written as `evaluation.json` (stamped, read by the viewer) and printed as one table by
+  `evaluate --p1 <agent> --p2 <agent> [--seeds file | --matches N --seed S]`.
+- `benchmarks/benchmark-seeds.json` fixed in the repo (decision G, 200 seeds). `benchmark` plays them with
+  the baseline agents and compares the outcomes with the committed `benchmarks/<content-hash>.json` (per
+  seed and order: winner, reason, rounds, final health); CI fails on any difference or a missing digest, and
+  `benchmark --write` regenerates it as a deliberate commit with a journal entry. This is the engine-change
+  detector. The baseline is `Random` versus `Random` until `Greedy` lands in L5, which regenerates the
+  digest once.
+- Tests: paired intervals (perfectly correlated pairs widen the interval), entropy, seed pair scoring, the
+  runner on the test content (two matches per seed, reports, combat rates, and the same digest twice), the
+  digest comparison naming every changed, missing, or extra entry, the store's read and write, and the
+  committed seed list.
 
 ### Phase L5. Baseline agents without a model
 

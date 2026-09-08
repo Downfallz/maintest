@@ -25,6 +25,8 @@ dotnet run --project src/DownfallArena.Cli -- human                     # you ag
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 random --p2 random --seeds benchmarks/benchmark-seeds.json
+dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
 ```
 
 Requires the .NET SDK version in `global.json`. A devcontainer is provided in `.devcontainer/`.

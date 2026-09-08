@@ -83,6 +83,26 @@ One line per player per match, written once the match ended:
 | `remainingHealth`, `enemyRemainingHealth` | The sums at the end of the match. |
 | `return` | Win `+1`, loss `-1`, draw `0`, plus `0.1 x (remainingHealth - enemyRemainingHealth) / total maximum health` of both teams. The two returns of a match sum to zero. |
 
+## `evaluation.json`
+
+Written by `evaluate` (and computed by `benchmark`): two agents on a seed list, each seed played twice with
+the agents swapped.
+
+| Field | Meaning |
+| --- | --- |
+| `stamp` | The run stamp; `player1Agent` and `player2Agent` are agent A and agent B. |
+| `agentA`, `agentB` | Per agent: `agent` (its spec), `wins`, `winRate` and `score` (`mean`, `low`, `high`: a 95% interval over the seed pairs; the score counts a win 1, a draw one half, a loss 0), `averageRemainingHealth`, `spellUsage` (intents per spell id), `spellEntropy` (bits), `actions`, `fizzles`, `criticals`, `fizzleRate`, `criticalRate`. |
+| `matches`, `draws`, `drawRate`, `averageRounds`, `roundCapShare` | The shared numbers over every match. |
+| `pairs[]` | Per seed: `seed`, `aFirst` and `bFirst` (the match result of each order: `outcome`, `rounds`, remaining health per slot), `scoreOfA`, `winsOfA`, `winsOfB`, `draws`, `remainingHealthOfA`, `remainingHealthOfB`. |
+
+## `benchmarks/`
+
+`benchmark-seeds.json` holds the fixed seed list (`{"seeds": [...]}`). `<content-hash>.json` is the benchmark
+digest of that content: `contentHash`, `engineVersion` (informative), `agentA`, `agentB`, and `entries[]`
+with, per seed and order (`AB`: agent A as player 1, `BA`: agent B as player 1), `winner` (`Player1`,
+`Player2`, or `Draw`), `reason`, `rounds`, `player1Health`, `player2Health`. Plain values only, so CI reads it
+back without the engine's converters. See `benchmarks/README.md` for the check and the regeneration.
+
 ## `training.jsonl` (written by the Python side, L6)
 
 One line per training iteration, the contract the viewer reads:
@@ -114,5 +134,5 @@ intents included, since a trace is a debugging record rather than something a pl
 ## Reading artifacts
 
 `viewer/index.html` opens any of these files from disk (see `viewer/README.md`): a run directory or a CSV as
-a batch, a trace as a match to step through, `training.jsonl` as a training run, and two artifacts of the
-same kind as a comparison with the stamp diff.
+a batch, a trace as a match to step through, `evaluation.json` as an evaluation, `training.jsonl` as a
+training run, and two artifacts of the same kind as a comparison with the stamp diff.

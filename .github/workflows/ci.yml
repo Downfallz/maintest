@@ -70,6 +70,10 @@ jobs:
       - name: Build game content
         run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
 
+      # The engine-change detector (ADR 0013): the benchmark seeds must replay to the committed digest of this content.
+      - name: Verify benchmark digest
+        run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
+
       - name: End SonarCloud analysis
         if: env.SONAR_TOKEN != '' && !cancelled()
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
