@@ -61,7 +61,7 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 
 - Aggregates extend `AggregateRoot<TId>`, entities extend `Entity<TId>`, value objects are `record`s or
   `readonly record struct`s. Identifiers are strongly typed (`MatchId`, not `Guid`).
-- Expected failures return `Result` / `Result<T>` with an `Error(Code, Message)`. Error codes are stable and
+- Expected failures return `Result` / `Result<T>` with a `DomainError(Code, Message)`. Error codes are stable and
   namespaced by aggregate (`Match.AlreadyStarted`). Exceptions mean a bug or a broken invariant.
 - State changes go through aggregate methods that protect invariants. No public setters on domain types.
 - Domain events are immutable records named in the past tense (`RoundEnded`), raised via `RaiseDomainEvent`.

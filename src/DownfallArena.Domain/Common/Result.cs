@@ -6,14 +6,14 @@ namespace DownfallArena.Domain.Common;
 /// </summary>
 public class Result
 {
-    protected Result(bool isSuccess, Error error)
+    protected Result(bool isSuccess, DomainError error)
     {
-        if (isSuccess && error != Error.None)
+        if (isSuccess && error != DomainError.None)
         {
             throw new ArgumentException("A successful result cannot carry an error.", nameof(error));
         }
 
-        if (!isSuccess && error == Error.None)
+        if (!isSuccess && error == DomainError.None)
         {
             throw new ArgumentException("A failed result must carry an error.", nameof(error));
         }
@@ -26,15 +26,15 @@ public class Result
 
     public bool IsFailure => !IsSuccess;
 
-    public Error Error { get; }
+    public DomainError Error { get; }
 
-    public static Result Success() => new(true, Error.None);
+    public static Result Success() => new(true, DomainError.None);
 
-    public static Result Failure(Error error) => new(false, error);
+    public static Result Failure(DomainError error) => new(false, error);
 
-    public static Result<TValue> Success<TValue>(TValue value) => new(value, true, Error.None);
+    public static Result<TValue> Success<TValue>(TValue value) => new(value, true, DomainError.None);
 
-    public static Result<TValue> Failure<TValue>(Error error) => new(default, false, error);
+    public static Result<TValue> Failure<TValue>(DomainError error) => new(default, false, error);
 }
 
 /// <summary>
@@ -44,7 +44,7 @@ public sealed class Result<TValue> : Result
 {
     private readonly TValue? _value;
 
-    internal Result(TValue? value, bool isSuccess, Error error)
+    internal Result(TValue? value, bool isSuccess, DomainError error)
         : base(isSuccess, error)
     {
         _value = value;

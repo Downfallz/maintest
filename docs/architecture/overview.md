@@ -25,7 +25,7 @@ Dependencies point downward only. The domain knows nothing about the layers abov
 **Domain** is the game. It is pure C#: no packages, no I/O, no time, no randomness. It exposes aggregates
 whose methods return `Result` for rule violations and raise domain events for things that happened.
 Bounded contexts are folders (`Matches/` today; `Players/`, `Rosters/`, ... as they appear). `Common/`
-holds the building blocks (`Entity`, `AggregateRoot`, `IDomainEvent`, `Result`, `Error`).
+holds the building blocks (`Entity`, `AggregateRoot`, `IDomainEvent`, `Result`, `DomainError`).
 
 **Application** turns intents into domain calls. A use case handler loads an aggregate through a port,
 invokes one method, persists, and dispatches the events. Ports are interfaces owned by this layer.
@@ -43,7 +43,7 @@ logic beyond wiring and presentation.
 2. It calls the matching Application handler with a command DTO.
 3. The handler loads the `Match` aggregate, calls `match.SubmitCombatAction(...)`, gets a `Result`.
 4. On success the handler persists the aggregate and dispatches its domain events; on failure it returns
-   the `Error` to the host, which presents it.
+   the `DomainError` to the host, which presents it.
 5. Event handlers (Application) react: advance the phase when all players have acted, record history for
    analysis, notify observers.
 

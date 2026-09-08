@@ -4,7 +4,7 @@ namespace DownfallArena.Domain.Tests.Common;
 
 public sealed class ResultTests
 {
-    private static readonly Error SomeError = new("Test.Failed", "Something went wrong.");
+    private static readonly DomainError SomeError = new("Test.Failed", "Something went wrong.");
 
     [Fact]
     public void Success_carries_no_error()
@@ -13,7 +13,7 @@ public sealed class ResultTests
 
         result.IsSuccess.ShouldBeTrue();
         result.IsFailure.ShouldBeFalse();
-        result.Error.ShouldBe(Error.None);
+        result.Error.ShouldBe(DomainError.None);
     }
 
     [Fact]

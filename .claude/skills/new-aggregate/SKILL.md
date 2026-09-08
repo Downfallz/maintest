@@ -13,7 +13,7 @@ Create, under `src/DownfallArena.Domain/<Context>/`:
 - `<Name>Id.cs`: `public readonly record struct <Name>Id(Guid Value)` with `New()` using `Guid.CreateVersion7()`.
 - `<Name>.cs`: `public sealed class <Name> : AggregateRoot<<Name>Id>` with a private constructor, a static
   `Create(...)` factory returning `Result<<Name>>`, and one method per behaviour returning `Result`.
-- `<Name>Errors.cs`: `public static class <Name>Errors` with one `Error` per rule violation, code
+- `<Name>Errors.cs`: `public static class <Name>Errors` with one `DomainError` per rule violation, code
   `<Name>.<Rule>`.
 - `Events/<Something>Happened.cs`: one `sealed record` per event, implementing `IDomainEvent`.
 
