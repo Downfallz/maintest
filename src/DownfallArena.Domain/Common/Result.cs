@@ -30,9 +30,16 @@ public class Result
 
     public static Result Success() => new(true, DomainError.None);
 
-    public static Result Failure(DomainError error) => new(false, error);
+    /// <summary>
+    /// A successful result always carries a value. Use the non-generic <see cref="Success()"/> for void outcomes.
+    /// </summary>
+    public static Result<TValue> Success<TValue>(TValue value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return new Result<TValue>(value, true, DomainError.None);
+    }
 
-    public static Result<TValue> Success<TValue>(TValue value) => new(value, true, DomainError.None);
+    public static Result Failure(DomainError error) => new(false, error);
 
     public static Result<TValue> Failure<TValue>(DomainError error) => new(default, false, error);
 }
@@ -50,7 +57,7 @@ public sealed class Result<TValue> : Result
         _value = value;
     }
 
-    public TValue Value => IsSuccess
-        ? _value!
+    public TValue Value => IsSuccess && _value is { } value
+        ? value
         : throw new InvalidOperationException("The value of a failed result cannot be accessed.");
 }

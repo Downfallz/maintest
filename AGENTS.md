@@ -46,7 +46,8 @@ dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to
 dotnet run --project src/DownfallArena.Cli
 ```
 
-Run build, tests, and format check before declaring any task done. CI runs exactly these.
+Run build, tests, and format check before declaring any task done. CI runs exactly these. SonarCloud also
+analyses every pull request (C#, shell scripts, workflows) and its quality gate must pass.
 
 ## Architecture rules (enforced by tests/DownfallArena.Architecture.Tests)
 

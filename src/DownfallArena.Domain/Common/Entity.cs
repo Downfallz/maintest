@@ -3,7 +3,7 @@ namespace DownfallArena.Domain.Common;
 /// <summary>
 /// Base class for objects with identity. Two entities are equal when they share the same concrete type and Id.
 /// </summary>
-public abstract class Entity<TId> : IEquatable<Entity<TId>>
+public abstract class Entity<TId>
     where TId : notnull
 {
     protected Entity(TId id)
@@ -13,9 +13,9 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
 
     public TId Id { get; }
 
-    public bool Equals(Entity<TId>? other)
+    public override bool Equals(object? obj)
     {
-        if (other is null)
+        if (obj is not Entity<TId> other)
         {
             return false;
         }
@@ -27,8 +27,6 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
 
         return GetType() == other.GetType() && EqualityComparer<TId>.Default.Equals(Id, other.Id);
     }
-
-    public override bool Equals(object? obj) => obj is Entity<TId> other && Equals(other);
 
     public override int GetHashCode() => HashCode.Combine(GetType(), Id);
 }

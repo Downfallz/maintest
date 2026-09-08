@@ -18,6 +18,7 @@ fi
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 case "$FILE" in
   "$PROJECT_DIR"/legacy/*) exit 0 ;;
+  *) ;;
 esac
 
 REL="$(realpath --relative-to="$PROJECT_DIR" "$FILE" 2> /dev/null || echo "$FILE")"

@@ -34,6 +34,12 @@ public sealed class ResultTests
     }
 
     [Fact]
+    public void Successful_result_refuses_a_null_value()
+    {
+        Should.Throw<ArgumentNullException>(() => Result.Success<string?>(null));
+    }
+
+    [Fact]
     public void Failed_result_refuses_to_expose_a_value()
     {
         var result = Result.Failure<int>(SomeError);

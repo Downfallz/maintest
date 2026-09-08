@@ -4,7 +4,7 @@
 # It never fails the session: if the SDK cannot be installed, it prints why and exits 0.
 set -uo pipefail
 
-if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+if [[ "${CLAUDE_CODE_REMOTE:-}" != "true" ]]; then
   exit 0
 fi
 
@@ -12,18 +12,22 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 INSTALL_DIR="${DOTNET_INSTALL_DIR:-$HOME/.dotnet}"
 CHANNEL="$(sed -n 's/.*"version": *"\([0-9]*\.[0-9]*\)\..*/\1/p' "$PROJECT_DIR/global.json" | head -n 1)"
 CHANNEL="${CHANNEL:-10.0}"
+# Direct URL (dot.net/v1/dotnet-install.sh redirects here); no redirect following, HTTPS only.
+INSTALL_SCRIPT_URL="https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh"
 
 # True when the dotnet on PATH satisfies global.json (dotnet --version fails otherwise).
 sdk_satisfies_global_json() {
   (cd "$PROJECT_DIR" && dotnet --version > /dev/null 2>&1)
+  return $?
 }
 
 sdk_version() {
   (cd "$PROJECT_DIR" && dotnet --version 2> /dev/null)
+  return $?
 }
 
 persist_env() {
-  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
     {
       echo "export DOTNET_ROOT=\"$INSTALL_DIR\""
       echo "export PATH=\"$INSTALL_DIR:$INSTALL_DIR/tools:\$PATH\""
@@ -32,10 +36,11 @@ persist_env() {
       echo "export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1"
     } >> "$CLAUDE_ENV_FILE"
   fi
+  return 0
 }
 
 # Prefer a previous install of this hook over whatever the image ships, then validate against global.json.
-if [ -x "$INSTALL_DIR/dotnet" ]; then
+if [[ -x "$INSTALL_DIR/dotnet" ]]; then
   export DOTNET_ROOT="$INSTALL_DIR"
   export PATH="$INSTALL_DIR:$INSTALL_DIR/tools:$PATH"
 fi
@@ -44,11 +49,12 @@ if command -v dotnet > /dev/null 2>&1 && sdk_satisfies_global_json; then
   echo "[session-start] dotnet SDK $(sdk_version) satisfies global.json"
   case "$(command -v dotnet)" in
     "$INSTALL_DIR"/*) persist_env ;;
+    *) ;;
   esac
 else
   echo "[session-start] No SDK satisfying global.json found. Installing channel $CHANNEL into $INSTALL_DIR"
   SCRIPT="$(mktemp)"
-  if curl -fsSL --max-time 60 https://dot.net/v1/dotnet-install.sh -o "$SCRIPT" \
+  if curl --proto '=https' --tlsv1.2 -fsS --max-time 60 "$INSTALL_SCRIPT_URL" -o "$SCRIPT" \
     && bash "$SCRIPT" --channel "$CHANNEL" --install-dir "$INSTALL_DIR" --no-path > /dev/null; then
     export DOTNET_ROOT="$INSTALL_DIR"
     export PATH="$INSTALL_DIR:$INSTALL_DIR/tools:$PATH"
