@@ -152,8 +152,8 @@ The terms below are the authoritative entries of the "Learning" section of
 - `benchmarks/benchmark-seeds.json` fixed in the repo (decision G, 200 seeds). `benchmark` plays them with
   the baseline agents and compares the outcomes with the committed `benchmarks/<content-hash>.json` (per
   seed and order: winner, reason, rounds, final health); CI fails on any difference or a missing digest, and
-  `benchmark --write` regenerates it as a deliberate commit with a journal entry. This is the engine-change
-  detector. The baseline is `Random` versus `Random` until `Greedy` lands in L5, which regenerates the
+  `benchmark --write` regenerates it as a deliberate commit with a journal entry (`docs/learning/journal.md`,
+  whose first entry is that first digest). This is the engine-change detector. The baseline is `Random` versus `Random` until `Greedy` lands in L5, which regenerates the
   digest once.
 - Tests: paired intervals (perfectly correlated pairs widen the interval), entropy, seed pair scoring, the
   runner on the test content (two matches per seed, reports, combat rates, and the same digest twice), the
