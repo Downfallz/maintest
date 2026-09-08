@@ -13,4 +13,9 @@
     <Content Include="..\..\data\**\*.json" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The viewer samples, so a test keeps their shape aligned with what the engine records. -->
+  <ItemGroup>
+    <Content Include="..\..\viewer\samples\**\*" Link="samples\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

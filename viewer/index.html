@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Downfall Arena viewer</title>
+  <link rel="stylesheet" href="viewer.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Downfall Arena viewer</h1>
+    <span class="hint">Traces, batches, training runs, comparisons. Nothing leaves this page.</span>
+    <label class="button">Open files<input id="files" type="file" multiple hidden></label>
+    <label class="button">Open a run directory<input id="directory" type="file" webkitdirectory hidden></label>
+  </header>
+  <div id="drop" class="drop">Drop a run directory, <code>manifest.json</code>, <code>steps.jsonl</code>, <code>episodes.jsonl</code>, a trace, <code>simulation.csv</code>, or <code>training.jsonl</code> here.</div>
+  <main>
+    <nav>
+      <h2>Artifacts</h2>
+      <ul id="list"></ul>
+      <h2>Compare</h2>
+      <select id="compare-a" aria-label="First artifact to compare"></select>
+      <select id="compare-b" aria-label="Second artifact to compare"></select>
+      <button id="compare" type="button" class="button">Compare</button>
+    </nav>
+    <section id="view"><p class="empty">Open an artifact to start. The samples under <code>viewer/samples</code> show every kind.</p></section>
+  </main>
+  <script>
+    'use strict';
+
+    const PLAYER1 = 'Player1';
+    const PLAYER2 = 'Player2';
+    const RESOLVED = 'CombatActionResolved';
+    const state = { artifacts: [], selected: null, charts: [] };
+
+    // ---------- loading ----------
+
+    function parseJsonLines(text) {
+      return text.split(/\r?\n/).filter(line => line.trim()).map(line => JSON.parse(line));
+    }
+
+    function parseCsv(text) {
+      const [head, ...rows] = text.trim().split(/\r?\n/);
+      const columns = head.split(',');
+      return rows.map(row => {
+        const values = row.split(',');
+        return Object.fromEntries(columns.map((column, index) => [column, values[index]]));
+      });
+    }
+
+    function classifyLines(rows) {
+      const first = rows[0] || {};
+      if ('iteration' in first) return { type: 'training', data: rows };
+      if ('observation' in first) return { type: 'steps', data: rows };
+      if ('return' in first) return { type: 'episodes', data: rows };
+      return { type: 'unknown' };
+    }
+
+    function classifyDocument(doc) {
+      if (Array.isArray(doc.entries) && doc.matchId) return { type: 'trace', data: doc };
+      if (doc.featureNames && doc.stamp) return { type: 'manifest', data: doc };
+      return { type: 'unknown' };
+    }
+
+    function classify(name, text) {
+      const lower = name.toLowerCase();
+      if (lower.endsWith('.csv')) return { type: 'csv', data: parseCsv(text) };
+      if (lower.endsWith('.jsonl')) return classifyLines(parseJsonLines(text));
+      if (lower.endsWith('.json')) return classifyDocument(JSON.parse(text));
+      return { type: 'unknown' };
+    }
+
+    function runKeyOf(path) {
+      const parts = path.split('/');
+      parts.pop();
+      if (parts[parts.length - 1] === 'traces') parts.pop();
+      return parts.join('/') || 'files';
+    }
+
+    function runFor(key) {
+      let run = state.artifacts.find(artifact => artifact.kind === 'run' && artifact.key === key);
+      if (!run) {
+        const name = key === 'files' ? 'run (loose files)' : key.split('/').filter(Boolean).pop();
+        run = { kind: 'run', key, name, manifest: null, episodes: [], steps: [], csv: [], traces: [] };
+        state.artifacts.push(run);
+      }
+      return run;
+    }
+
+    function addClassified(path, name, classified) {
+      const run = () => runFor(runKeyOf(path));
+      switch (classified.type) {
+        case 'manifest': run().manifest = classified.data; break;
+        case 'episodes': run().episodes.push(...classified.data); break;
+        case 'steps': run().steps.push(...classified.data); break;
+        case 'csv': run().csv.push(...classified.data); break;
+        case 'trace':
+          run().traces.push(classified.data);
+          state.artifacts.push({ kind: 'trace', name, trace: classified.data, cursor: 0 });
+          break;
+        case 'training': state.artifacts.push({ kind: 'training', name, rows: classified.data }); break;
+        default: console.warn(`Ignored ${name}: not a known artifact.`);
+      }
+    }
+
+    async function addFiles(entries) {
+      for (const { file, path } of entries) {
+        try {
+          addClassified(path, file.name, classify(file.name, await file.text()));
+        } catch (error) {
+          console.warn(`Ignored ${file.name}: ${error.message}`);
+        }
+      }
+      state.artifacts = state.artifacts.filter(artifact => artifact.kind !== 'run' || artifact.manifest || artifact.episodes.length || artifact.csv.length || artifact.steps.length);
+      if (!state.selected && state.artifacts.length) state.selected = state.artifacts[0];
+      render();
+    }
+
+    function readEntry(entry, prefix) {
+      return new Promise(resolve => {
+        if (entry.isFile) {
+          entry.file(file => resolve([{ file, path: prefix + file.name }]));
+          return;
+        }
+        const reader = entry.createReader();
+        const collected = [];
+        const readBatch = () => reader.readEntries(async batch => {
+          if (!batch.length) {
+            resolve(collected);
+            return;
+          }
+          for (const child of batch) collected.push(...await readEntry(child, `${prefix}${entry.name}/`));
+          readBatch();
+        });
+        readBatch();
+      });
+    }
+
+    async function dropped(transfer) {
+      const entries = [];
+      for (const item of transfer.items) {
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry) entries.push(...await readEntry(entry, ''));
+        else if (item.getAsFile()) entries.push({ file: item.getAsFile(), path: item.getAsFile().name });
+      }
+      await addFiles(entries);
+    }
+
+    // ---------- helpers ----------
+
+    function el(tag, attrs = {}, children = []) {
+      const node = document.createElement(tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        if (key === 'class') node.className = value;
+        else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+        else node.setAttribute(key, value);
+      }
+      for (const child of [].concat(children)) node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+      return node;
+    }
+
+    const pct = value => `${(value * 100).toFixed(1)}%`;
+    const fixed = (value, digits = 1) => Number(value).toFixed(digits);
+    const shortId = id => String(id).slice(0, 8);
+    const spellName = id => String(id).split(':')[1] || id;
+
+    function wilson(successes, total) {
+      if (!total) return { rate: 0, low: 0, high: 0 };
+      const z = 1.96;
+      const p = successes / total;
+      const denominator = 1 + (z * z) / total;
+      const centre = p + (z * z) / (2 * total);
+      const margin = z * Math.sqrt((p * (1 - p)) / total + (z * z) / (4 * total * total));
+      return { rate: p, low: (centre - margin) / denominator, high: (centre + margin) / denominator };
+    }
+
+    function histogram(values, bins) {
+      const counts = new Array(bins.length).fill(0);
+      for (const value of values) {
+        const index = bins.findIndex((bin, i) => value <= bin || i === bins.length - 1);
+        counts[index] += 1;
+      }
+      return counts;
+    }
+
+    function chart(canvas, config) {
+      if (typeof Chart === 'undefined') {
+        canvas.replaceWith(el('p', { class: 'muted' }, 'Charts need the Chart.js CDN; open the page online once, or read the tables.'));
+        return;
+      }
+      state.charts.push(new Chart(canvas, config));
+    }
+
+    function stampList(stamp, changed = new Set()) {
+      if (!stamp) return el('p', { class: 'muted' }, 'No run stamp (open the manifest too).');
+      const rules = stamp.ruleSet || {};
+      const rows = [
+        ['Engine', stamp.engineVersion, 'engine'], ['Content', stamp.contentHash, 'content'],
+        ['Rules', `team ${rules.teamSize}, energy ${rules.energyPerRound}, picks ${rules.evolutionPicksPerRound}, cap ${rules.roundCap}, crit x${rules.criticalMultiplier}`, 'rules'],
+        ['Schema', stamp.featureSchema, 'schema'], ['Agents', `${stamp.player1Agent} vs ${stamp.player2Agent}`, 'agents'], ['Base seed', stamp.baseSeed, 'seed'],
+      ];
+      const list = el('dl', { class: 'stamp' });
+      for (const [label, value, axis] of rows) {
+        list.append(el('dt', {}, label), el('dd', { class: changed.has(axis) ? 'changed mono' : 'mono' }, value ?? '-'));
+      }
+      return list;
+    }
+
+    function stampDiff(a, b) {
+      if (!a || !b) return new Set();
+      const changed = new Set();
+      if (a.contentHash !== b.contentHash) changed.add('content');
+      if (a.engineVersion !== b.engineVersion) changed.add('engine');
+      if (JSON.stringify(a.ruleSet) !== JSON.stringify(b.ruleSet)) changed.add('rules');
+      if (a.featureSchema !== b.featureSchema) changed.add('schema');
+      if (a.player1Agent !== b.player1Agent || a.player2Agent !== b.player2Agent) changed.add('agents');
+      if (a.baseSeed !== b.baseSeed) changed.add('seed');
+      return changed;
+    }
+
+    // ---------- batches ----------
+
+    function resultsOf(run) {
+      if (run.episodes.length) {
+        return run.episodes.filter(episode => episode.slot === PLAYER1).map(episode => ({
+          matchId: episode.matchId, seed: episode.seed, winner: episode.outcome.winner, reason: episode.outcome.reason,
+          rounds: episode.rounds, player1Health: episode.remainingHealth, player2Health: episode.enemyRemainingHealth,
+        }));
+      }
+      return run.csv.map(row => ({
+        matchId: row.match_id, seed: Number(row.seed), winner: row.winner || null, reason: row.reason,
+        rounds: Number(row.rounds), player1Health: Number(row.player1_remaining_health), player2Health: Number(row.player2_remaining_health),
+      }));
+    }
+
+    function spellUsage(steps) {
+      const usage = {};
+      for (const step of steps.filter(s => s.kind === 'Intent')) {
+        const spell = step.action.split(':').slice(2).join(':');
+        usage[spell] = usage[spell] || { [PLAYER1]: 0, [PLAYER2]: 0 };
+        usage[spell][step.slot] += 1;
+      }
+      return usage;
+    }
+
+    function combatStats(traces) {
+      const resolutions = traces.flatMap(trace => trace.entries.filter(entry => entry.event.kind === RESOLVED).map(entry => entry.event.resolution));
+      return {
+        actions: resolutions.length,
+        fizzles: resolutions.filter(resolution => resolution.fizzled).length,
+        crits: resolutions.filter(resolution => resolution.isCritical).length,
+      };
+    }
+
+    function summarize(run) {
+      const results = resultsOf(run);
+      const n = results.length;
+      const average = pick => (n ? results.reduce((sum, result) => sum + pick(result), 0) / n : 0);
+      return {
+        results,
+        matches: n,
+        player1: wilson(results.filter(result => result.winner === PLAYER1).length, n),
+        player2: wilson(results.filter(result => result.winner === PLAYER2).length, n),
+        draws: wilson(results.filter(result => !result.winner).length, n),
+        averageRounds: average(result => result.rounds),
+        averageHealth1: average(result => result.player1Health),
+        averageHealth2: average(result => result.player2Health),
+        roundCap: results.filter(result => result.reason === 'RoundCap').length,
+        usage: spellUsage(run.steps),
+        combat: combatStats(run.traces),
+      };
+    }
+
+    function stat(label, value, sub = '') {
+      return el('div', { class: 'stat' }, [el('div', { class: 'label' }, label), el('div', { class: 'value' }, value), el('div', { class: 'sub' }, sub)]);
+    }
+
+    function rateStat(label, rate) {
+      return stat(label, pct(rate.rate), `95% CI ${pct(rate.low)} to ${pct(rate.high)}`);
+    }
+
+    function batchCharts(summary) {
+      const charts = el('div', { class: 'charts' });
+      const rounds = summary.results.map(result => result.rounds);
+      const maxRound = Math.max(1, ...rounds);
+      const roundBins = Array.from({ length: maxRound }, (_, i) => i + 1);
+      const roundsCanvas = el('canvas');
+      const healthCanvas = el('canvas');
+      const usageCanvas = el('canvas');
+      charts.append(
+        el('div', { class: 'card' }, [el('h3', {}, 'Rounds per match'), roundsCanvas]),
+        el('div', { class: 'card' }, [el('h3', {}, 'Remaining health at the end'), healthCanvas]),
+        el('div', { class: 'card' }, [el('h3', {}, 'Intents per spell'), usageCanvas]),
+      );
+      const maxHealth = Math.max(1, ...summary.results.map(result => Math.max(result.player1Health, result.player2Health)));
+      const healthBins = Array.from({ length: 10 }, (_, i) => Math.ceil(((i + 1) * maxHealth) / 10));
+      const spells = Object.keys(summary.usage).sort();
+      requestAnimationFrame(() => {
+        chart(roundsCanvas, { type: 'bar', data: { labels: roundBins, datasets: [{ label: 'matches', data: histogram(rounds, roundBins), backgroundColor: '#2563eb' }] }, options: { plugins: { legend: { display: false } } } });
+        chart(healthCanvas, { type: 'bar', data: { labels: healthBins.map(bin => `<= ${bin}`), datasets: [
+          { label: PLAYER1, data: histogram(summary.results.map(result => result.player1Health), healthBins), backgroundColor: '#2563eb' },
+          { label: PLAYER2, data: histogram(summary.results.map(result => result.player2Health), healthBins), backgroundColor: '#dc2626' },
+        ] } });
+        chart(usageCanvas, { type: 'bar', data: { labels: spells.map(spellName), datasets: [
+          { label: PLAYER1, data: spells.map(spell => summary.usage[spell][PLAYER1]), backgroundColor: '#2563eb' },
+          { label: PLAYER2, data: spells.map(spell => summary.usage[spell][PLAYER2]), backgroundColor: '#dc2626' },
+        ] } });
+      });
+      return charts;
+    }
+
+    function resultsTable(results) {
+      const table = el('table');
+      table.append(el('tr', {}, ['Match', 'Seed', 'Winner', 'Reason', 'Rounds', 'P1 health', 'P2 health'].map(text => el('th', {}, text))));
+      for (const result of results.slice(0, 200)) {
+        table.append(el('tr', {}, [
+          el('td', { class: 'mono' }, shortId(result.matchId)), el('td', { class: 'num' }, result.seed ?? '-'), el('td', {}, result.winner || 'draw'),
+          el('td', {}, result.reason), el('td', { class: 'num' }, result.rounds), el('td', { class: 'num' }, result.player1Health), el('td', { class: 'num' }, result.player2Health),
+        ]));
+      }
+      return el('div', { class: 'card' }, [el('h3', {}, `Matches${results.length > 200 ? ' (first 200)' : ''}`), table]);
+    }
+
+    function renderRun(run) {
+      const summary = summarize(run);
+      const combat = summary.combat;
+      const fizzleText = combat.actions ? `${pct(combat.fizzles / combat.actions)} of ${combat.actions} actions` : 'open the traces';
+      const view = el('div');
+      view.append(
+        el('div', { class: 'card' }, [
+          el('div', { class: 'title' }, [el('h2', {}, run.name), el('span', { class: 'muted' }, run.manifest ? `${run.manifest.steps} steps, ${run.manifest.episodes} episodes, schema ${run.manifest.schemaVersion}` : 'batch')]),
+          stampList(run.manifest ? run.manifest.stamp : null),
+        ]),
+        el('div', { class: 'stats' }, [
+          stat('Matches', summary.matches, `${summary.roundCap} by round cap`),
+          rateStat('Player 1 wins', summary.player1), rateStat('Player 2 wins', summary.player2), rateStat('Draws', summary.draws),
+          stat('Rounds', fixed(summary.averageRounds), 'average'),
+          stat('Remaining health', `${fixed(summary.averageHealth1)} / ${fixed(summary.averageHealth2)}`, 'P1 / P2 average'),
+          stat('Fizzles', combat.actions ? pct(combat.fizzles / combat.actions) : '-', fizzleText),
+          stat('Crits', combat.actions ? pct(combat.crits / combat.actions) : '-', combat.actions ? 'of resolved actions' : 'open the traces'),
+        ]),
+        batchCharts(summary),
+        resultsTable(summary.results),
+      );
+      return view;
+    }
+
+    // ---------- traces ----------
+
+    function namesOf(board) {
+      const names = {};
+      for (const creature of [...board.allies, ...board.enemies]) names[creature.id] = `${creature.name} #${creature.id}`;
+      return names;
+    }
+
+    function describeResolution(resolution, names) {
+      const actor = names[resolution.action.actor];
+      const spell = spellName(resolution.action.spell);
+      if (resolution.fizzled) return `${actor}: ${spell} fizzles (${resolution.fizzleReason.code})`;
+      const crit = resolution.isCritical ? ' CRITICAL' : '';
+      return `${actor}: ${spell}${crit} on ${resolution.effectiveTargets.map(id => names[id]).join(', ') || 'nobody'}`;
+    }
+
+    const DESCRIBERS = {
+      PlayerJoined: (event) => `${event.slot} joined`,
+      MatchStarted: (event) => `Match started (content ${shortId(event.contentHash)})`,
+      RoundStarted: (event) => `Round ${event.roundId}`,
+      SubPhaseEntered: (event) => event.subPhase,
+      OngoingEffectsApplied: (event, names) => event.bleedTicks.length ? `Bleeds: ${event.bleedTicks.map(tick => `${names[tick.creature]} takes ${tick.damage}`).join(', ')}` : 'No ongoing effects',
+      EvolutionChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} unlocks ${spellName(event.choice.spell)}`,
+      EvolutionPassed: (event) => `${event.slot} passes`,
+      SpeedChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} goes ${event.choice.speed}`,
+      TimelineBuilt: (event, names) => `Timeline: ${event.timeline.slots.map(slot => `${names[slot.creature]} (${slot.speed})`).join(', ')}`,
+      IntentSubmitted: (event, names) => `${event.slot}: ${names[event.intent.actor]} intends ${spellName(event.intent.spell)}`,
+      ActionRevealed: (event, names) => `${names[event.action.actor]} reveals ${spellName(event.action.spell)} on ${event.action.targets.map(id => names[id]).join(', ') || 'nobody'}`,
+      [RESOLVED]: (event, names) => describeResolution(event.resolution, names),
+      ConditionsExpired: (event, names) => {
+        const expired = Object.entries(event.expired).map(([id, conditions]) => `${names[id]}: ${conditions.map(condition => condition.effect.kind).join(', ')}`);
+        return expired.length ? `Expired: ${expired.join('; ')}` : 'Nothing expired';
+      },
+      RoundEnded: (event) => `Round ${event.roundId} ended`,
+      MatchEnded: (event) => event.outcome.winner ? `${event.outcome.winner} wins (${event.outcome.reason})` : `Draw (${event.outcome.reason})`,
+    };
+
+    function describe(event, names) {
+      const describer = DESCRIBERS[event.kind];
+      return describer ? describer(event, names) : event.kind;
+    }
+
+    function conditionChip(condition) {
+      const effect = condition.effect;
+      const amount = effect.amountPerRound ?? effect.amount ?? '';
+      const remaining = condition.remainingRounds === null ? 'permanent' : `${condition.remainingRounds}r`;
+      const kindClass = effect.kind === 'Stun' ? 'chip stun' : (effect.kind === 'DefenseBuff' ? 'chip buff' : 'chip');
+      return el('span', { class: kindClass }, `${effect.kind} ${amount} (${remaining})`);
+    }
+
+    function creatureCard(creature, intent) {
+      const fraction = creature.maxHealth ? creature.health / creature.maxHealth : 0;
+      const tags = [`E ${creature.energy}`, `D ${creature.totalDefense}`, `I ${creature.currentInitiative}`];
+      if (creature.isStunned) tags.push('STUNNED');
+      const bar = el('div', { class: fraction <= 0.3 ? 'bar low' : 'bar' }, el('div', { style: `width:${Math.round(fraction * 100)}%` }));
+      const chips = el('div', { class: 'chips' }, creature.conditions.map(conditionChip));
+      chips.append(...creature.knownSpells.map(spell => el('span', { class: 'chip spell' }, spellName(spell))));
+      if (intent) chips.append(el('span', { class: 'chip intent' }, `intends ${spellName(intent.spell)}`));
+      return el('div', { class: creature.isAlive ? 'creature' : 'creature dead' }, [
+        el('div', { class: 'name' }, [`${creature.name} #${creature.id}`, el('span', { class: 'tags' }, tags.join(' · '))]),
+        bar,
+        el('div', { class: 'muted' }, `${creature.health} / ${creature.maxHealth}`),
+        chips,
+      ]);
+    }
+
+    function teamPanel(title, slot, creatures, intents) {
+      return el('div', { class: `team ${slot.toLowerCase()}` }, [el('h4', {}, title), ...creatures.map(creature => creatureCard(creature, intents.find(intent => intent.actor === creature.id)))]);
+    }
+
+    function timelineStrip(board, names) {
+      if (!board.timeline.length) return el('p', { class: 'muted' }, 'No timeline yet this round.');
+      const strip = el('div', { class: 'timeline' });
+      board.timeline.forEach((slot, index) => {
+        const revealed = board.revealedActions[index];
+        let cls = `slot ${slot.owner.toLowerCase()}`;
+        if (index < board.resolveCursor) cls += ' resolved';
+        else if (index < board.revealCursor) cls += ' revealed';
+        const label = revealed ? `${names[slot.creature]}: ${spellName(revealed.spell)}` : `${names[slot.creature]} (${slot.speed})`;
+        strip.append(el('span', { class: cls }, label));
+      });
+      return strip;
+    }
+
+    function outcomeItem(outcome, names) {
+      const target = names[outcome.target];
+      switch (outcome.kind) {
+        case 'DamageOutcome': return `${target} takes ${outcome.amount}${outcome.critical ? ' (critical)' : ''}`;
+        case 'HealOutcome': return `${target} heals ${outcome.amount}`;
+        case 'EnergyOutcome': return `${target} gains ${outcome.amount} energy`;
+        case 'ConditionOutcome': return `${target} gets ${outcome.effect.kind}`;
+        default: return `${target}: ${outcome.kind}`;
+      }
+    }
+
+    function resolutionDetail(resolution, names) {
+      const detail = el('div', { class: 'detail' });
+      if (resolution.fizzled) {
+        detail.append(el('p', { class: 'fizzle' }, `Fizzled: ${resolution.fizzleReason.code}`), el('p', {}, resolution.fizzleReason.message));
+      } else {
+        if (resolution.isCritical) detail.append(el('p', { class: 'crit' }, 'Critical hit'));
+        detail.append(el('p', {}, `Energy spent: ${resolution.energySpent}`), el('ul', {}, resolution.outcomes.map(outcome => el('li', {}, outcomeItem(outcome, names)))));
+      }
+      if (resolution.droppedTargets.length) {
+        detail.append(el('p', {}, `Dropped targets: ${resolution.droppedTargets.map(dropped => `${names[dropped.target] || 'action'} (${dropped.error.code})`).join(', ')}`));
+      }
+      return detail;
+    }
+
+    function eventList(artifact, names) {
+      const entries = artifact.trace.entries;
+      const current = entries[artifact.cursor];
+      const list = el('ol');
+      entries.forEach((entry, index) => {
+        if (entry.round !== current.round) return;
+        const kind = entry.event.kind;
+        let cls = kind === 'SubPhaseEntered' ? 'phase' : '';
+        if (kind === RESOLVED || kind === 'ActionRevealed') cls = 'combat';
+        if (index === artifact.cursor) cls += ' current';
+        list.append(el('li', { class: cls.trim(), onclick: () => moveTo(artifact, index) }, [el('span', { class: 'seq' }, index), describe(entry.event, names)]));
+      });
+      return el('div', { class: 'card events' }, [el('h3', {}, `Round ${current.round ?? '-'}`), list]);
+    }
+
+    function moveTo(artifact, index) {
+      artifact.cursor = Math.max(0, Math.min(artifact.trace.entries.length - 1, index));
+      render();
+    }
+
+    function traceControls(artifact) {
+      const entries = artifact.trace.entries;
+      const rounds = [...new Set(entries.map(entry => entry.round).filter(round => round !== null))];
+      const select = el('select', { 'aria-label': 'Jump to round', onchange: event => moveTo(artifact, entries.findIndex(entry => entry.round === Number(event.target.value))) },
+        rounds.map(round => el('option', { value: round, ...(entries[artifact.cursor].round === round ? { selected: 'selected' } : {}) }, `Round ${round}`)));
+      const button = (text, target) => el('button', { type: 'button', class: 'button', onclick: () => moveTo(artifact, target) }, text);
+      return el('div', { class: 'controls' }, [
+        button('First', 0), button('Previous', artifact.cursor - 1), button('Next', artifact.cursor + 1), button('Last', entries.length - 1), select,
+        el('span', { class: 'position' }, `${artifact.cursor + 1} / ${entries.length} (arrow keys step)`),
+      ]);
+    }
+
+    function renderTrace(artifact) {
+      const trace = artifact.trace;
+      const entry = trace.entries[artifact.cursor];
+      const board = entry.player1;
+      const names = namesOf(board);
+      const outcome = trace.outcome;
+      const outcomeText = outcome ? (outcome.winner ? `${outcome.winner} wins by ${outcome.reason}` : `Draw by ${outcome.reason}`) : 'in progress';
+      const detail = entry.event.kind === RESOLVED ? resolutionDetail(entry.event.resolution, names) : el('p', {}, describe(entry.event, names));
+      const view = el('div');
+      view.append(
+        el('div', { class: 'card' }, [
+          el('div', { class: 'title' }, [el('h2', {}, `Match ${shortId(trace.matchId)}`), el('span', { class: 'muted' }, `seed ${trace.seed ?? '-'}`), el('span', { class: `outcome ${(outcome && outcome.winner ? outcome.winner : '').toLowerCase()}` }, outcomeText)]),
+          stampList(trace.stamp),
+        ]),
+        traceControls(artifact),
+        el('div', { class: 'trace' }, [
+          eventList(artifact, names),
+          el('div', {}, [
+            el('div', { class: 'card' }, [el('h3', {}, `${entry.event.kind} · round ${entry.round ?? '-'} · ${entry.subPhase ?? 'before the first round'}`), detail]),
+            el('div', { class: 'card' }, [el('h3', {}, 'Timeline'), timelineStrip(board, names)]),
+            el('div', { class: 'card teams' }, [
+              teamPanel('Player 1', PLAYER1, board.allies, board.intents),
+              teamPanel('Player 2', PLAYER2, board.enemies, entry.player2.intents),
+            ]),
+          ]),
+        ]),
+      );
+      return view;
+    }
+
+    // ---------- training ----------
+
+    function bestIteration(rows) {
+      const flagged = rows.find(row => row.best);
+      if (flagged) return flagged;
+      return rows.reduce((best, row) => (row.winRate > (best ? best.winRate : -1) ? row : best), null);
+    }
+
+    function trainingTable(rows, best) {
+      const table = el('table');
+      table.append(el('tr', {}, ['Iteration', 'Loss', 'Win rate', 'Interval', 'Matches'].map(text => el('th', {}, text))));
+      for (const row of rows) {
+        const interval = row.winRateLow === undefined ? '-' : `${pct(row.winRateLow)} to ${pct(row.winRateHigh)}`;
+        table.append(el('tr', { class: row === best ? 'delta-up' : '' }, [
+          el('td', { class: 'num' }, row.iteration), el('td', { class: 'num' }, fixed(row.loss, 4)), el('td', { class: 'num' }, pct(row.winRate)), el('td', {}, interval), el('td', { class: 'num' }, row.matches ?? '-'),
+        ]));
+      }
+      return table;
+    }
+
+    function renderTraining(artifact) {
+      const rows = [...artifact.rows].sort((a, b) => a.iteration - b.iteration);
+      const best = bestIteration(rows);
+      const lossCanvas = el('canvas');
+      const winCanvas = el('canvas');
+      const pointRadius = rows.map(row => (row === best ? 6 : 2));
+      requestAnimationFrame(() => {
+        chart(lossCanvas, { type: 'line', data: { labels: rows.map(row => row.iteration), datasets: [{ label: 'loss', data: rows.map(row => row.loss), borderColor: '#dc2626', pointRadius }] } });
+        chart(winCanvas, { type: 'line', data: { labels: rows.map(row => row.iteration), datasets: [
+          { label: 'win rate', data: rows.map(row => row.winRate), borderColor: '#2563eb', pointRadius },
+          { label: 'low', data: rows.map(row => row.winRateLow ?? null), borderColor: 'rgba(37,99,235,0.2)', pointRadius: 0 },
+          { label: 'high', data: rows.map(row => row.winRateHigh ?? null), borderColor: 'rgba(37,99,235,0.2)', pointRadius: 0, fill: '-1', backgroundColor: 'rgba(37,99,235,0.1)' },
+        ] } });
+      });
+      const view = el('div');
+      view.append(
+        el('div', { class: 'card' }, [
+          el('div', { class: 'title' }, [el('h2', {}, artifact.name), el('span', { class: 'muted' }, `${rows.length} iterations`)]),
+          stampList(rows[0] ? rows[0].stamp : null),
+        ]),
+        el('div', { class: 'stats' }, [
+          stat('Best iteration', best ? best.iteration : '-', best ? `win rate ${pct(best.winRate)}` : ''),
+          stat('Final loss', rows.length ? fixed(rows[rows.length - 1].loss, 4) : '-'),
+          stat('Final win rate', rows.length ? pct(rows[rows.length - 1].winRate) : '-'),
+        ]),
+        el('div', { class: 'charts' }, [el('div', { class: 'card' }, [el('h3', {}, 'Loss'), lossCanvas]), el('div', { class: 'card' }, [el('h3', {}, 'Evaluation win rate'), winCanvas])]),
+        el('div', { class: 'card' }, [el('h3', {}, 'Iterations'), trainingTable(rows, best)]),
+      );
+      return view;
+    }
+
+    // ---------- comparison ----------
+
+    function metricsOf(artifact) {
+      if (artifact.kind === 'run') {
+        const summary = summarize(artifact);
+        return [
+          ['Matches', summary.matches, 0], ['Player 1 win rate', summary.player1.rate, 3], ['Player 2 win rate', summary.player2.rate, 3], ['Draw rate', summary.draws.rate, 3],
+          ['Average rounds', summary.averageRounds, 2], ['P1 remaining health', summary.averageHealth1, 2], ['P2 remaining health', summary.averageHealth2, 2],
+          ['Fizzle rate', summary.combat.actions ? summary.combat.fizzles / summary.combat.actions : 0, 3],
+        ];
+      }
+      if (artifact.kind === 'training') {
+        const rows = artifact.rows;
+        const best = bestIteration(rows) || {};
+        const last = rows[rows.length - 1] || {};
+        return [['Iterations', rows.length, 0], ['Best win rate', best.winRate ?? 0, 3], ['Best iteration', best.iteration ?? 0, 0], ['Final loss', last.loss ?? 0, 4]];
+      }
+      const trace = artifact.trace;
+      return [['Events', trace.entries.length, 0], ['Rounds', trace.entries[trace.entries.length - 1].round ?? 0, 0], ['Player 1 won', trace.outcome && trace.outcome.winner === PLAYER1 ? 1 : 0, 0]];
+    }
+
+    function stampOf(artifact) {
+      if (artifact.kind === 'run') return artifact.manifest ? artifact.manifest.stamp : null;
+      if (artifact.kind === 'training') return artifact.rows[0] ? artifact.rows[0].stamp : null;
+      return artifact.trace.stamp;
+    }
+
+    function renderComparison(a, b) {
+      const changed = stampDiff(stampOf(a), stampOf(b));
+      const table = el('table');
+      table.append(el('tr', {}, [el('th', {}, 'Metric'), el('th', { class: 'num' }, a.name), el('th', { class: 'num' }, b.name), el('th', { class: 'num' }, 'Delta')]));
+      const left = metricsOf(a);
+      const right = metricsOf(b);
+      left.forEach(([label, value, digits], index) => {
+        const other = right[index][1];
+        const delta = other - value;
+        const deltaClass = delta > 0 ? 'delta-up' : (delta < 0 ? 'delta-down' : '');
+        table.append(el('tr', {}, [el('td', {}, label), el('td', { class: 'num' }, fixed(value, digits)), el('td', { class: 'num' }, fixed(other, digits)), el('td', { class: `num ${deltaClass}` }, `${delta > 0 ? '+' : ''}${fixed(delta, digits)}`)]));
+      });
+      const axes = changed.size ? `Changed: ${[...changed].join(', ')}` : 'Same run stamp on both sides (or no stamp).';
+      return el('div', {}, [
+        el('div', { class: 'card' }, [el('div', { class: 'title' }, [el('h2', {}, `${a.name} vs ${b.name}`), el('span', { class: 'muted' }, axes)]),
+          el('div', { class: 'charts' }, [el('div', { class: 'card' }, [el('h3', {}, a.name), stampList(stampOf(a), changed)]), el('div', { class: 'card' }, [el('h3', {}, b.name), stampList(stampOf(b), changed)])])]),
+        el('div', { class: 'card' }, [el('h3', {}, 'Metrics'), table]),
+      ]);
+    }
+
+    // ---------- shell ----------
+
+    function renderSidebar() {
+      const list = document.getElementById('list');
+      list.replaceChildren(...state.artifacts.map(artifact => el('li', { class: artifact === state.selected ? 'selected' : '', onclick: () => { state.selected = artifact; render(); } }, [artifact.name, el('span', { class: 'kind' }, artifact.kind)])));
+      for (const id of ['compare-a', 'compare-b']) {
+        const select = document.getElementById(id);
+        const previous = select.value;
+        select.replaceChildren(...state.artifacts.map((artifact, index) => el('option', { value: index }, `${artifact.name} (${artifact.kind})`)));
+        if (previous) select.value = previous;
+      }
+    }
+
+    function renderView() {
+      const view = document.getElementById('view');
+      for (const existing of state.charts) existing.destroy();
+      state.charts = [];
+      const selected = state.selected;
+      if (!selected) return;
+      if (selected.kind === 'comparison') view.replaceChildren(renderComparison(selected.a, selected.b));
+      else if (selected.kind === 'run') view.replaceChildren(renderRun(selected));
+      else if (selected.kind === 'trace') view.replaceChildren(renderTrace(selected));
+      else view.replaceChildren(renderTraining(selected));
+    }
+
+    function render() {
+      renderSidebar();
+      renderView();
+    }
+
+    function compare() {
+      const a = state.artifacts[Number(document.getElementById('compare-a').value)];
+      const b = state.artifacts[Number(document.getElementById('compare-b').value)];
+      if (!a || !b || a === b) return;
+      if (a.kind !== b.kind) {
+        document.getElementById('view').replaceChildren(el('p', { class: 'empty' }, 'Compare two artifacts of the same kind.'));
+        return;
+      }
+      state.selected = { kind: 'comparison', name: 'comparison', a, b };
+      render();
+    }
+
+    function toEntries(fileList) {
+      return [...fileList].map(file => ({ file, path: file.webkitRelativePath || file.name }));
+    }
+
+    document.getElementById('files').addEventListener('change', event => addFiles(toEntries(event.target.files)));
+    document.getElementById('directory').addEventListener('change', event => addFiles(toEntries(event.target.files)));
+    document.getElementById('compare').addEventListener('click', compare);
+    const drop = document.getElementById('drop');
+    for (const type of ['dragenter', 'dragover']) drop.addEventListener(type, event => { event.preventDefault(); drop.classList.add('active'); });
+    for (const type of ['dragleave', 'drop']) drop.addEventListener(type, event => { event.preventDefault(); drop.classList.remove('active'); });
+    drop.addEventListener('drop', event => dropped(event.dataTransfer));
+    document.addEventListener('keydown', event => {
+      const selected = state.selected;
+      if (!selected || selected.kind !== 'trace' || event.target.tagName === 'SELECT') return;
+      if (event.key === 'ArrowRight') moveTo(selected, selected.cursor + 1);
+      if (event.key === 'ArrowLeft') moveTo(selected, selected.cursor - 1);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+index,seed,content_hash,match_id,winner,reason,rounds,player1_remaining_health,player2_remaining_health
+0,1,a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4,01a04d1c-fe5b-791b-b358-4f8cd8f16adf,Player2,RoundCap,5,18,20
+1,2,a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4,01a04d2a-23ea-7dcf-b656-ebf2f2a4d27b,Player1,RoundCap,5,23,20
+2,3,a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4,01a04d1e-a6b3-797b-8858-d8da8b529b4a,Player1,RoundCap,5,27,26
+3,4,a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4,01a04d1e-9eda-74da-ae28-6af31a6916c7,Player1,RoundCap,5,31,18
+4,5,a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4,01a04d24-cf67-7416-96f2-3eefbde5c099,Player2,RoundCap,5,16,25
+5,6,a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4,01a04d27-8985-792e-8528-0d5ad26b9496,Player1,RoundCap,5,31,21
