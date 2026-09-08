@@ -1,8 +1,10 @@
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Domain.Tests.Matches.Rules.Planning;
 
@@ -86,6 +88,6 @@ public sealed class EvolutionRulesTests
         gate.CanAdvance.ShouldBeTrue();
     }
 
-    private static SharedKernel.Primitives.Result Validate(PlayerSlot slot, EvolutionChoice choice, IReadOnlyList<Domain.Matches.Creatures.CreatureSnapshot> creatures, Round round) =>
+    private static Result Validate(PlayerSlot slot, EvolutionChoice choice, IReadOnlyList<CreatureSnapshot> creatures, Round round) =>
         EvolutionRules.ValidateChoice(slot, choice, creatures, round, Arena.Resources, RuleSet.Default);
 }
