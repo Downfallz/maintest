@@ -10,4 +10,9 @@
     <ProjectReference Include="..\DownfallArena.SharedKernel\DownfallArena.SharedKernel.csproj" />
   </ItemGroup>
 
+  <!-- Entity mutators are internal so that only the aggregate root can reach them; domain tests exercise them directly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DownfallArena.Domain.Tests" />
+  </ItemGroup>
+
 </Project>

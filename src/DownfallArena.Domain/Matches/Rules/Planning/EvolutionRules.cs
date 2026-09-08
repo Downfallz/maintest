@@ -43,7 +43,7 @@ public static class EvolutionRules
             return Result.Failure(PlanningErrors.CreatureDead);
         }
 
-        if (round.EvolutionChoicesOf(slot).Count >= rules.EvolutionPicksPerRound)
+        if (round.HasPassedEvolution(slot) || round.EvolutionChoicesOf(slot).Count >= rules.EvolutionPicksPerRound)
         {
             return Result.Failure(PlanningErrors.NoPicksLeft);
         }
@@ -61,7 +61,7 @@ public static class EvolutionRules
 
     /// <summary>
     /// The sub-phase is complete when no player has an effective pick left: picks are capped by the rule set and
-    /// by how many spells the player's living creatures can actually unlock.
+    /// by how many spells the player's living creatures can actually unlock, and a player who passed has none.
     /// </summary>
     public static EvolutionGateResult Evaluate(
         IReadOnlyList<CreatureSnapshot> creatures,
@@ -86,7 +86,7 @@ public static class EvolutionRules
         IGameResources resources,
         RuleSet rules)
     {
-        var remaining = Math.Max(0, rules.EvolutionPicksPerRound - round.EvolutionChoicesOf(slot).Count);
+        var remaining = round.HasPassedEvolution(slot) ? 0 : Math.Max(0, rules.EvolutionPicksPerRound - round.EvolutionChoicesOf(slot).Count);
         if (remaining == 0)
         {
             return 0;

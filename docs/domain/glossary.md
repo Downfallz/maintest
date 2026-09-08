@@ -12,6 +12,9 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Team | The set of Creatures a Player commands during a Match. Defeated when all its Creatures are dead. | decided |
 | Rule set | The tunable parameters of a Match: team size, evolution picks per round, energy gain per round, round cap, damage and crit formulas. | decided |
 | Win condition | The match ends when a Team is defeated at the end of a round, or when the round cap is reached (ADR 0011). | decided |
+| Match outcome | How a Match ended: the winning Player slot, or a draw, and the reason (`Elimination`, `RoundCap`). | decided |
+| Match state | Where a Match is in its life: `WaitingForPlayers`, `InProgress`, `Ended`. | decided |
+| Roster | The Creature definitions a Player brings to a Match; its size is the Rule set's team size. | decided |
 | Board | Whether positions on a board matter (range, adjacency) or the game is slot-based only. | open |
 
 ## Creatures and content
@@ -42,8 +45,10 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Phase | One of Start of round, Planning, Combat, End of round. Forward-only within a Round. | decided |
 | Sub-phase | A step inside a Phase with its own expected player actions and completion rule. | decided |
 | Progression gate | A pure domain service that says whether the current Sub-phase is complete and, if not, what is missing (which Creatures, how many picks). Shared by the engine, the UI, and bots. | decided |
+| Phase driver | The loop inside the Match that runs each automatic step or asks the Progression gate, advances the Sub-phase, and raises an event, until the Round waits on a Player or the Match ends. | decided |
 | Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built. | decided |
 | Evolution | A Planning decision where a Player unlocks a Spell for a Creature from its Talent tree, within the picks allowed by the Rule set. | decided |
+| Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
 | Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
 | Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by Player slot then Creature id. | decided |
@@ -54,6 +59,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
 | Reveal and target | The step where the next Intent on the timeline is revealed and its targets chosen, producing a Combat action. | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
+| Combat step | The result of resolving one Combat action through the Match: the Resolution, and whether it completed the Round or the Match. | decided |
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |
 | Fizzle | A Combat action that resolves with no effect and at no cost because its actor cannot act any more, its targeting failed globally, or no target remains; a per-target failure only removes that target. | decided |
 | Targeting report | Every targeting failure of a Combat action at once: global ones (count, duplicates, self-only) and per-target ones (unknown, dead, wrong origin). | decided |

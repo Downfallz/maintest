@@ -38,7 +38,14 @@ This document states what the engine does today and what is decided for next. Id
   round down, except that the first countdown after an application does not count: a one-round stun applied
   in combat stuns the creature for the whole next round.
 
-Phase 7 of `docs/roadmap.md` implements the rules below.
+- Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
+  starts when the second one joins. Every player action is validated by the rules before anything changes; the
+  driver then runs the automatic steps and the progression gates until the round waits on a player again. A
+  player may pass their remaining evolution picks. Resolving the last action of the timeline runs cleanup and
+  finalization: the win condition of ADR 0011 either ends the match or starts the next round. Every step
+  raises a domain event, and the match is stamped with the content hash of its game resources (ADR 0009).
+
+Phases 8 and 9 of `docs/roadmap.md` build on the rules below.
 
 ## Decided
 
@@ -57,8 +64,9 @@ Phase 7 of `docs/roadmap.md` implements the rules below.
    2. `OngoingEffects`: bleed Conditions deal their damage, which ignores Defense.
 2. **Planning**
    1. `Evolution`: each Player may unlock Spells from the Talent tree, up to the Rule set's picks per round
-      (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. The
-      sub-phase completes when both Players have no pick left or nothing left to unlock.
+      (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. A
+      Player may pass their remaining picks. The sub-phase completes when both Players have no pick left,
+      nothing left to unlock, or passed.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
       such Creature has a choice.

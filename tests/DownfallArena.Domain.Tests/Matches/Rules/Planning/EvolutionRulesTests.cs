@@ -88,6 +88,21 @@ public sealed class EvolutionRulesTests
         gate.CanAdvance.ShouldBeTrue();
     }
 
+    [Fact]
+    public void A_player_who_passed_has_no_pick_left()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var round = Arena.RoundAt(RoundSubPhase.Evolution);
+        round.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Guard), creatures, round).Error.ShouldBe(PlanningErrors.NoPicksLeft);
+        var gate = EvolutionRules.Evaluate(creatures, round, Arena.Resources, RuleSet.Default);
+        gate.ShouldBe(new EvolutionGateResult(false, 0, 2));
+
+        round.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+        EvolutionRules.Evaluate(creatures, round, Arena.Resources, RuleSet.Default).CanAdvance.ShouldBeTrue();
+    }
+
     private static Result Validate(PlayerSlot slot, EvolutionChoice choice, IReadOnlyList<CreatureSnapshot> creatures, Round round) =>
         EvolutionRules.ValidateChoice(slot, choice, creatures, round, Arena.Resources, RuleSet.Default);
 }

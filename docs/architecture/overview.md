@@ -54,11 +54,11 @@ logic beyond wiring and presentation.
 
 1. A host receives an intent (a player submits a combat action).
 2. It calls the matching Application handler with a command DTO.
-3. The handler loads the `Match` aggregate, calls `match.SubmitCombatAction(...)`, gets a `Result`.
+3. The handler loads the `Match` aggregate, calls `match.SubmitAction(...)`, gets a `Result`.
 4. On success the handler persists the aggregate and dispatches its domain events; on failure it returns
    the `DomainError` to the host, which presents it.
-5. Event handlers (Application) react: advance the phase when all players have acted, record history for
-   analysis, notify observers.
+5. Event handlers (Application) react: record history for analysis, notify observers. The phase itself
+   advances inside the aggregate (the phase driver), not in a handler.
 
 ## Determinism
 
