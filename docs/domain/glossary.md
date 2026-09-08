@@ -45,6 +45,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built. | decided |
 | Evolution | A Planning decision where a Player unlocks a Spell for a Creature from its Talent tree, within the picks allowed by the Rule set. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
+| Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
 | Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by Player slot then Creature id. | decided |
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |

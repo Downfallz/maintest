@@ -13,8 +13,13 @@ This document states what the engine does today and what is decided for next. Id
   a dead creature ignores damage, healing, energy, spells, and conditions. Conditions follow the stacking policy
   of their effect and count down when the rules tick them; stun, total defense, and current initiative are
   derived from the active conditions. A team is defeated when none of its creatures is alive.
+- Round (phase 4): a forward-only walk through the ten sub-phases of ADR 0010. The round stores evolution
+  choices per player, one speed choice per creature, one intent per creature (kept per player until revealed),
+  and the targeted actions bound in timeline order; a reveal cursor and a resolve cursor track combat. Wrong
+  sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
+  outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
 
-Phases 4 to 7 of `docs/roadmap.md` implement the rules below.
+Phases 5 to 7 of `docs/roadmap.md` implement the rules below.
 
 ## Decided
 
