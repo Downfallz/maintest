@@ -92,7 +92,8 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 
 ## How to work on a task
 
-1. Read the relevant ADRs in `docs/adr/` and the glossary before touching the domain.
+1. Read `docs/roadmap.md` (which phase the task belongs to), the relevant ADRs in `docs/adr/`, and the
+   glossary before touching the domain.
 2. For non-trivial work, state a short plan first: which layer, which aggregate, which tests.
 3. Write or update tests alongside the code. Red, green, then refactor.
 4. Run `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`.
