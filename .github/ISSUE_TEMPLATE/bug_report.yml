@@ -1,0 +1,27 @@
+name: Bug report
+description: Something in the engine behaves differently from the documented rules.
+labels: [bug]
+body:
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: Quote the rule from docs/domain/game-rules.md or the glossary if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: A failing test is the best reproduction. Otherwise, the sequence of actions.
+      render: csharp
+  - type: input
+    id: version
+    attributes:
+      label: Commit or branch
