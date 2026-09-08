@@ -20,56 +20,10 @@ public static class TargetingRules
         ArgumentNullException.ThrowIfNull(targets);
         ArgumentNullException.ThrowIfNull(creatures);
 
-        var spec = spell.Targeting;
-        var failures = new List<TargetingFailure>();
-
-        if (targets.Count == 0)
-        {
-            failures.Add(new TargetingFailure(null, CombatErrors.NoTargets));
-        }
-
-        if (spec.Scope == TargetScope.SingleTarget && targets.Count > 1)
-        {
-            failures.Add(new TargetingFailure(null, CombatErrors.ExactlyOneTarget));
-        }
-        else if (spec.MaxTargets is { } max && targets.Count > max)
-        {
-            failures.Add(new TargetingFailure(null, CombatErrors.TooManyTargets));
-        }
-
-        if (targets.Distinct().Count() != targets.Count)
-        {
-            failures.Add(new TargetingFailure(null, CombatErrors.DuplicateTargets));
-        }
-
-        if (spec.Origin == TargetOrigin.Self && targets.Any(target => target != actor.Id))
-        {
-            failures.Add(new TargetingFailure(null, CombatErrors.SelfOnly));
-        }
-
+        var failures = GlobalFailures(actor, spell.Targeting, targets).ToList();
         foreach (var targetId in targets.Distinct())
         {
-            var target = creatures.FirstOrDefault(candidate => candidate.Id == targetId);
-            if (target is null)
-            {
-                failures.Add(new TargetingFailure(targetId, CombatErrors.UnknownTarget));
-                continue;
-            }
-
-            if (target.IsDead)
-            {
-                failures.Add(new TargetingFailure(targetId, CombatErrors.TargetDead));
-            }
-
-            if (spec.Origin == TargetOrigin.Ally && target.Owner != actor.Owner)
-            {
-                failures.Add(new TargetingFailure(targetId, CombatErrors.AlliesOnly));
-            }
-
-            if (spec.Origin == TargetOrigin.Enemy && target.Owner == actor.Owner)
-            {
-                failures.Add(new TargetingFailure(targetId, CombatErrors.EnemiesOnly));
-            }
+            failures.AddRange(TargetFailures(actor, spell.Targeting, targetId, creatures));
         }
 
         return failures.Count == 0 ? TargetingReport.Clean : new TargetingReport(failures);
@@ -93,5 +47,57 @@ public static class TargetingRules
 
         var max = spec.Scope == TargetScope.SingleTarget ? 1 : Math.Min(spec.MaxTargets ?? candidates.Count, candidates.Count);
         return new LegalTargets(1, Math.Max(1, max), candidates);
+    }
+
+    private static IEnumerable<TargetingFailure> GlobalFailures(CreatureSnapshot actor, TargetingSpec spec, IReadOnlyList<CreatureId> targets)
+    {
+        if (targets.Count == 0)
+        {
+            yield return new TargetingFailure(null, CombatErrors.NoTargets);
+        }
+
+        if (spec.Scope == TargetScope.SingleTarget && targets.Count > 1)
+        {
+            yield return new TargetingFailure(null, CombatErrors.ExactlyOneTarget);
+        }
+        else if (spec.MaxTargets is { } max && targets.Count > max)
+        {
+            yield return new TargetingFailure(null, CombatErrors.TooManyTargets);
+        }
+
+        if (targets.Distinct().Count() != targets.Count)
+        {
+            yield return new TargetingFailure(null, CombatErrors.DuplicateTargets);
+        }
+
+        if (spec.Origin == TargetOrigin.Self && targets.Any(target => target != actor.Id))
+        {
+            yield return new TargetingFailure(null, CombatErrors.SelfOnly);
+        }
+    }
+
+    private static IEnumerable<TargetingFailure> TargetFailures(CreatureSnapshot actor, TargetingSpec spec, CreatureId targetId, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var target = creatures.FirstOrDefault(candidate => candidate.Id == targetId);
+        if (target is null)
+        {
+            yield return new TargetingFailure(targetId, CombatErrors.UnknownTarget);
+            yield break;
+        }
+
+        if (target.IsDead)
+        {
+            yield return new TargetingFailure(targetId, CombatErrors.TargetDead);
+        }
+
+        if (spec.Origin == TargetOrigin.Ally && target.Owner != actor.Owner)
+        {
+            yield return new TargetingFailure(targetId, CombatErrors.AlliesOnly);
+        }
+
+        if (spec.Origin == TargetOrigin.Enemy && target.Owner == actor.Owner)
+        {
+            yield return new TargetingFailure(targetId, CombatErrors.EnemiesOnly);
+        }
     }
 }
