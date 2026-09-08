@@ -142,18 +142,24 @@ the spell unlocked. Validate fully, then mutate.
 
 Fix: legacy never applied the crit multiplier nor spent the energy; both are covered by tests now.
 
-### Phase 7. Match aggregate and phase driver
+### Phase 7. Match aggregate and phase driver (done)
 
-- `Match`: join, start, one public method per player action, `ResolveNextCombatStep`, `EndTurn` removed.
-- A `PhaseDriver` (or equivalent) owns "gate says advance, raise event, initialize next sub-phase" so the
-  four copies of that logic in the legacy `Match` become one.
-- Complete event set: `MatchEnded` (missing), `CombatActionResolved` (never raised), consistent event payloads.
-- `MatchLifecycle` failures become exceptions (invariant) instead of silently swallowed results.
-- Win condition from decision F. Round cap from the rule set.
+- `Match`: `Join` (roster of creature definitions, team size from the rule set, auto-start on the second
+  player), one method per player action (`SubmitEvolutionChoice`, `PassEvolution`, `SubmitSpeedChoice`,
+  `SubmitIntent`, `SubmitAction`), `ResolveNextAction` returning a `CombatStep`. No `EndTurn`.
+- The phase driver is one private loop in `Match`: run the automatic step or ask the progression gate, advance,
+  raise `SubPhaseEntered`, repeat until the round waits on a player or the match ends.
+- Events: `PlayerJoined`, `MatchStarted`, `RoundStarted`, `SubPhaseEntered`, `OngoingEffectsApplied`,
+  `EvolutionChoiceSubmitted`, `EvolutionPassed`, `SpeedChoiceSubmitted`, `TimelineBuilt`, `IntentSubmitted`,
+  `ActionRevealed`, `CombatActionResolved`, `RoundEnded`, `MatchEnded`. Payloads carry the match id, the round
+  id, and the domain object; no timestamps in the domain (the application layer stamps them).
+- `WinCondition` implements ADR 0011; the round cap comes from the rule set. Lifecycle violations throw.
+- A player may pass their remaining evolution picks, so the Evolution sub-phase never waits on a player who
+  has nothing they want to unlock.
 
-Fix: `ResolveNextCombatStep` reported the next round's id after finalizing; report the completed round.
+Fix: `ResolveNextAction` reports the round the action belonged to, not the round that just started.
 
-Done when a scripted match (two players, fixed choices, seeded random) plays to the end in a domain test.
+Done: `MatchPlayTests` plays scripted matches to an elimination, to the round cap, and to a draw.
 
 ### Phase 8. Application: use cases, projections, agents
 

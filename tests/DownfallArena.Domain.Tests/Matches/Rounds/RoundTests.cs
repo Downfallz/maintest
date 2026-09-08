@@ -72,6 +72,22 @@ public sealed class RoundTests
     }
 
     [Fact]
+    public void Evolution_passes_are_accepted_once_per_player_during_evolution_only()
+    {
+        var round = Round.First();
+
+        round.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(RoundErrors.EvolutionNotOpen);
+
+        AdvanceTo(round, RoundSubPhase.Evolution);
+
+        round.HasPassedEvolution(PlayerSlot.Player1).ShouldBeFalse();
+        round.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        round.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(RoundErrors.EvolutionAlreadyPassed);
+        round.HasPassedEvolution(PlayerSlot.Player1).ShouldBeTrue();
+        round.HasPassedEvolution(PlayerSlot.Player2).ShouldBeFalse();
+    }
+
+    [Fact]
     public void Speed_choices_are_accepted_once_per_creature_during_speed_only()
     {
         var round = Round.First();

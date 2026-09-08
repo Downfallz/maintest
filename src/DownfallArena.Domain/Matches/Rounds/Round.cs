@@ -22,6 +22,7 @@ public sealed class Round : Entity<RoundId>
         [PlayerSlot.Player2] = [],
     };
 
+    private readonly HashSet<PlayerSlot> _evolutionPasses = [];
     private readonly Dictionary<CreatureId, SpeedChoice> _speedChoices = [];
     private readonly Dictionary<CreatureId, CombatAction> _actions = [];
 
@@ -90,6 +91,21 @@ public sealed class Round : Entity<RoundId>
 
         choices.Add(choice);
         return Result.Success();
+    }
+
+    public bool HasPassedEvolution(PlayerSlot slot) => _evolutionPasses.Contains(slot);
+
+    /// <summary>
+    /// Records that a player gives up their remaining evolution picks for this round.
+    /// </summary>
+    public Result PassEvolution(PlayerSlot slot)
+    {
+        if (SubPhase != RoundSubPhase.Evolution)
+        {
+            return Result.Failure(RoundErrors.EvolutionNotOpen);
+        }
+
+        return _evolutionPasses.Add(slot) ? Result.Success() : Result.Failure(RoundErrors.EvolutionAlreadyPassed);
     }
 
     public IReadOnlyCollection<SpeedChoice> SpeedChoices => _speedChoices.Values;

@@ -8,6 +8,8 @@ public static class RoundErrors
 
     public static readonly DomainError EvolutionAlreadySubmitted = new("Round.EvolutionAlreadySubmitted", "This evolution choice was already submitted.");
 
+    public static readonly DomainError EvolutionAlreadyPassed = new("Round.EvolutionAlreadyPassed", "This player already passed their evolution picks for the round.");
+
     public static readonly DomainError SpeedNotOpen = new("Round.SpeedNotOpen", "Speed choices are not accepted in the current sub-phase.");
 
     public static readonly DomainError SpeedAlreadyChosen = new("Round.SpeedAlreadyChosen", "A speed was already chosen for this creature.");
