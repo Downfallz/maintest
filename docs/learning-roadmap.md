@@ -73,26 +73,25 @@ The terms below are the authoritative entries of the "Learning" section of
   it was trained on.
 - The decisions listed at the end of this document are settled (all recommendations accepted).
 
-### Phase L1. Run stamp, observations, action encoding (Application, `Learning/`)
+### Phase L1. Run stamp, observations, action encoding (done, Application `Learning/`)
 
-- `RunStamp`: engine version read from the assembly's informational version (set from `git rev-parse` in
-  `Directory.Build.props` and in CI), content hash from `IGameResources.Version`, rule set values, feature
-  schema version, agent kinds and versions, base seed. Serializable, printed by every CLI command.
-- `Observation`: a fixed-length `float[]` plus a schema version, built from `PlayerBoardState` by a pure
-  `ObservationBuilder`. Per own creature slot and per enemy slot: alive, health fraction, energy, stunned,
-  defense bonus, initiative, one value per condition kind of the closed taxonomy (ADR 0012: amount and
-  remaining rounds), one bit per known spell of the content, one bit per talent node unlocked. Global: round
-  number over round cap, phase, sub-phase, timeline position, revealed enemy actions this round. Missing
-  slots are zero-filled so team size can vary. Adding a condition kind to the domain changes the observation
-  length: that is a new schema version by construction, and a test fails until it is published.
-- `ActionEncoding`: a stable key per decision that always names the acting creature by its team slot,
-  since speed, intent, and targets are asked once per creature on the same board and two creatures can
-  unlock the same spell: `evolve:<slot>:<spell>`, `pass`, `speed:<slot>:<Quick|Standard>`,
-  `intent:<slot>:<spell>`, `targets:<slot>:<target slots>`; and a per-kind numeric encoding (the acting slot
-  as an index, target slots as a bitmask).
-- Tests: same board gives the same vector; mirrored board (slots swapped) gives the mirrored vector; the
-  vector length matches the published schema; every spell and every condition kind of the content has a
-  stable index.
+- `EngineVersion`: the git commit and dirty flag, read from the assembly's informational version. The
+  `StampEngineVersion` target in `Directory.Build.props` sets it from `git rev-parse` and `git status` at
+  build; without git the version is `unknown`.
+- `RunStamp`: engine version, content hash from `IGameResources.Version`, rule set values (`RuleSetStamp`),
+  feature schema version, both agent names, base seed. `DifferencesFrom` names the axes on which two stamps
+  differ, so a comparison can refuse to mix more than one.
+- `FeatureSchema` and `Observation`: the published layout `features:v1` (`docs/learning/features.md`), whose
+  id adds a fingerprint of the concrete layout (content and rule set), and the fixed-length `float` vector
+  `ObservationBuilder` fills from a `PlayerBoardState`. Board slots put own
+  creatures first and enemies after, so the two players' vectors mirror each other; missing slots stay zero.
+  The condition kinds are compared with the domain's `LastingEffect` subclasses by a test, so a new kind fails
+  the build until a new schema version is published.
+- `ActionEncoder`: the stable key and `ActionCode` of every decision, always naming the acting creature's board
+  slot (`pass`, `evolve:<slot>:<spell>`, `speed:<slot>:<Quick|Standard>`, `intent:<slot>:<spell>`,
+  `targets:<slot>:<spell>:<target slots>`), and `Candidates` listing every action a `PlayerOptions` offers.
+- Tests pin the vector length and every index for the test content, the mirroring, the condition sums, the
+  keys and codes, and the candidate enumeration including target combinations.
 
 ### Phase L2. Recording: datasets and match traces
 
