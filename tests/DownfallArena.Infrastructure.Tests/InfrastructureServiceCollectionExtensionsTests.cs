@@ -1,4 +1,5 @@
 using DownfallArena.Application.Matches.Ports;
+using DownfallArena.Application.Ports;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Randomness;
@@ -22,6 +23,7 @@ public sealed class InfrastructureServiceCollectionExtensionsTests
         provider.GetRequiredService<IMatchRepository>().ShouldBeOfType<InMemoryMatchRepository>();
         provider.GetRequiredService<IMatchRepository>().ShouldBeSameAs(provider.GetRequiredService<IMatchRepository>());
         provider.GetRequiredService<IRandomSource>().ShouldBeOfType<SeededRandomSource>().Seed.ShouldBe(99);
+        provider.GetRequiredService<IRandomSourceFactory>().ShouldBeOfType<SeededRandomSourceFactory>();
     }
 
     [Fact]

@@ -15,15 +15,17 @@ public sealed class CommandHandlerTests
     public async Task CreateMatch_stores_a_new_match_with_the_rule_set_and_returns_its_id()
     {
         var store = new MatchStore();
-        var handler = new CreateMatchHandler(store.Workflow, TestContent.Resources, new TestRandom(1));
+        var factory = new TestRandomFactory();
+        var handler = new CreateMatchHandler(store.Workflow, TestContent.Resources, factory);
 
-        var result = await handler.HandleAsync(new CreateMatch(MatchStore.TwoOnTwo()), TestContext.Current.CancellationToken);
+        var result = await handler.HandleAsync(new CreateMatch(MatchStore.TwoOnTwo(), 7), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         var match = (await store.Repository.FindAsync(result.Value, TestContext.Current.CancellationToken)).ShouldNotBeNull();
         match.State.ShouldBe(MatchState.WaitingForPlayers);
         match.RuleSet.TeamSize.ShouldBe(2);
         match.ContentHash.ShouldBe("test-content");
+        factory.Seeds.ShouldBe([7]);
         await store.Dispatcher.Received(1).DispatchAsync(match, Arg.Any<CancellationToken>());
     }
 
@@ -96,7 +98,7 @@ public sealed class CommandHandlerTests
     {
         var store = new MatchStore();
 
-        await Should.ThrowAsync<ArgumentNullException>(() => new CreateMatchHandler(store.Workflow, TestContent.Resources, new TestRandom(1)).HandleAsync(null!, TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentNullException>(() => new CreateMatchHandler(store.Workflow, TestContent.Resources, new TestRandomFactory()).HandleAsync(null!, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => new JoinMatchHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentNullException>(() => new PassEvolutionHandler(store.Workflow).HandleAsync(null!, TestContext.Current.CancellationToken));

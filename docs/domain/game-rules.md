@@ -49,7 +49,9 @@ This document states what the engine does today and what is decided for next. Id
   decide, agents that decide from those options, and a driver that plays a match to its outcome. No rule lives
   there: the options come from the same gates the aggregate enforces.
 
-Phase 9 of `docs/roadmap.md` builds the hosts on the rules below.
+- Hosts (phase 9): a console host plays bot versus bot, human versus bot, and batches of seeded matches
+  summarized as win rates, rounds, and remaining health. A seed, the content hash, and the players' decisions
+  replay a match identically.
 
 ## Decided
 
