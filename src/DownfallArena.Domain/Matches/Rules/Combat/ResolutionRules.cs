@@ -60,10 +60,15 @@ public static class ResolutionRules
     private static EffectOutcome Outcome(Effect effect, CreatureSnapshot target, double multiplier, bool isCritical) =>
         effect switch
         {
-            Damage damage => new DamageOutcome(target.Id, Math.Max(0, (int)Math.Floor(damage.Amount * multiplier) - target.TotalDefense.Value), isCritical),
+            Damage damage => new DamageOutcome(target.Id, Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value), isCritical),
             Heal heal => new HealOutcome(target.Id, heal.Amount),
             EnergyGain energy => new EnergyOutcome(target.Id, energy.Amount),
             LastingEffect lasting => new ConditionOutcome(target.Id, lasting),
             _ => throw new InvalidOperationException($"Effect '{effect.GetType().Name}' has no resolution rule."),
         };
+
+    /// <summary>
+    /// The floored product, capped at the largest damage a creature can take so a huge multiplier cannot overflow.
+    /// </summary>
+    private static int Multiplied(int amount, double multiplier) => (int)Math.Min(Math.Floor(amount * multiplier), int.MaxValue);
 }

@@ -78,6 +78,18 @@ public sealed class ResolutionRulesTests
     }
 
     [Fact]
+    public void A_huge_multiplier_caps_the_damage_instead_of_overflowing()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(3, Duration.OfRounds(1)));
+        var rules = RuleSet.Create(3, 2, 2, 30, double.MaxValue);
+
+        var resolution = ResolutionRules.Resolve(Strike(Arena.Ghoul), Arena.Snapshots(living), Arena.Resources, rules, Crit);
+
+        resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, int.MaxValue - 3, true)]);
+    }
+
+    [Fact]
     public void An_actor_that_cannot_act_any_more_fizzles()
     {
         var living = Arena.FourCreatures();
