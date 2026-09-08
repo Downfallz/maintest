@@ -20,6 +20,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/DownfallArena.Domain.Tests/DownfallArena.Domain.Tests.csproj" />
     <Project Path="tests/DownfallArena.Application.Tests/DownfallArena.Application.Tests.csproj" />
+    <Project Path="tests/DownfallArena.Infrastructure.Tests/DownfallArena.Infrastructure.Tests.csproj" />
     <Project Path="tests/DownfallArena.Architecture.Tests/DownfallArena.Architecture.Tests.csproj" />
   </Folder>
 </Solution>

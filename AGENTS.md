@@ -25,6 +25,7 @@ src/
 tests/
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed).
   DownfallArena.Application.Tests   Use case tests with NSubstitute for ports.
+  DownfallArena.Infrastructure.Tests Adapter tests (in-memory, file-backed, seeded random).
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
 docs/
   adr/          Architecture Decision Records. New decision = new ADR.

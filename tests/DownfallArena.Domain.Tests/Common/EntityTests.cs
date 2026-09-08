@@ -17,6 +17,23 @@ public sealed class EntityTests
     }
 
     [Fact]
+    public void An_entity_equals_itself()
+    {
+        var creature = new Creature(Guid.CreateVersion7());
+
+        creature.Equals(creature).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void An_entity_does_not_equal_null_or_an_unrelated_object()
+    {
+        var creature = new Creature(Guid.CreateVersion7());
+
+        creature.Equals(null).ShouldBeFalse();
+        creature.Equals("not an entity").ShouldBeFalse();
+    }
+
+    [Fact]
     public void Entities_with_different_ids_are_not_equal()
     {
         var left = new Creature(Guid.CreateVersion7());

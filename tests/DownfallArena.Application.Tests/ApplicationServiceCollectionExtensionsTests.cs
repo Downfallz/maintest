@@ -28,6 +28,12 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         provider.GetRequiredService<TimeProvider>().ShouldBeSameAs(custom);
     }
 
+    [Fact]
+    public void AddApplication_rejects_a_null_service_collection()
+    {
+        Should.Throw<ArgumentNullException>(() => ApplicationServiceCollectionExtensions.AddApplication(null!));
+    }
+
     private sealed class FakeTimeProvider : TimeProvider
     {
     }

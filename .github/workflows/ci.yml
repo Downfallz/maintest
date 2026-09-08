@@ -48,6 +48,7 @@ jobs:
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
 
+      # The CLI project is the composition root: wiring only, exercised by running the app, not by unit tests.
       - name: Begin SonarCloud analysis
         if: env.SONAR_TOKEN != ''
         run: >
@@ -58,6 +59,7 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.xml"
           /d:sonar.exclusions="legacy/**,artifacts/**"
+          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**"
 
       - name: Build (warnings are errors)
         run: dotnet build --no-restore --configuration Release

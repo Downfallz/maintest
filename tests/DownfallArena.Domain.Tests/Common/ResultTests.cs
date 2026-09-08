@@ -44,6 +44,24 @@ public sealed class ResultTests
     {
         var result = Result.Failure<int>(SomeError);
 
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(SomeError);
         Should.Throw<InvalidOperationException>(() => _ = result.Value);
+    }
+
+    [Fact]
+    public void A_success_cannot_carry_an_error()
+    {
+        Should.Throw<ArgumentException>(() => new ProbeResult(isSuccess: true, SomeError));
+    }
+
+    [Fact]
+    public void A_failure_must_carry_an_error()
+    {
+        Should.Throw<ArgumentException>(() => new ProbeResult(isSuccess: false, DomainError.None));
+    }
+
+    private sealed class ProbeResult(bool isSuccess, DomainError error) : Result(isSuccess, error)
+    {
     }
 }
