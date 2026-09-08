@@ -45,7 +45,11 @@ This document states what the engine does today and what is decided for next. Id
   finalization: the win condition of ADR 0011 either ends the match or starts the next round. Every step
   raises a domain event, and the match is stamped with the content hash of its game resources (ADR 0009).
 
-Phases 8 and 9 of `docs/roadmap.md` build on the rules below.
+- Application (phase 8): commands and queries over the match, projections of what a player sees and can
+  decide, agents that decide from those options, and a driver that plays a match to its outcome. No rule lives
+  there: the options come from the same gates the aggregate enforces.
+
+Phase 9 of `docs/roadmap.md` builds the hosts on the rules below.
 
 ## Decided
 

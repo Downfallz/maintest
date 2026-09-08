@@ -50,7 +50,7 @@ the builder (ADR 0009).
 **Cli** is the composition root. It is the only project that references Infrastructure, and it contains no
 logic beyond wiring and presentation.
 
-## Flow of a command (target state)
+## Flow of a command
 
 1. A host receives an intent (a player submits a combat action).
 2. It calls the matching Application handler with a command DTO.
