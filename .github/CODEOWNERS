@@ -1,0 +1,5 @@
+# Default owner for everything. Reviews on architecture and agent instructions are mandatory.
+*               @downfallz
+/docs/adr/      @downfallz
+/AGENTS.md      @downfallz
+/.claude/       @downfallz

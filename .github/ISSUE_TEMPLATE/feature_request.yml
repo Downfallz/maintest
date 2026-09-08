@@ -1,0 +1,27 @@
+name: Feature or rule proposal
+description: Propose a game rule, an engine capability, or a tooling improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Use glossary terms. If this settles an open question in game-rules.md, say which.
+    validations:
+      required: true
+  - type: dropdown
+    id: adr
+    attributes:
+      label: Does this need an ADR?
+      options:
+        - "Yes, it is hard to reverse"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true

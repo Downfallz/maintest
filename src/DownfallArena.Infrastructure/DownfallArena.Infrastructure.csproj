@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Adapters: persistence, game data files, external services.
+    Implements the ports declared in Application. Never referenced by Domain or Application.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\DownfallArena.Application\DownfallArena.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

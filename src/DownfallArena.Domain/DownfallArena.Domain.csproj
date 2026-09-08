@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The domain layer has NO dependencies: no NuGet packages, no other projects.
+    Everything here is pure C#: aggregates, entities, value objects, domain events, domain services.
+    This constraint is enforced by tests/DownfallArena.Architecture.Tests.
+  -->
+
+</Project>

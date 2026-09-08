@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Executable architecture rules. If a layer starts depending on something it must not,
+    this project fails the build in CI instead of a reviewer noticing three months later.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DownfallArena.Domain\DownfallArena.Domain.csproj" />
+    <ProjectReference Include="..\..\src\DownfallArena.Application\DownfallArena.Application.csproj" />
+    <ProjectReference Include="..\..\src\DownfallArena.Infrastructure\DownfallArena.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/solution-items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="AGENTS.md" />
+    <File Path="CLAUDE.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/DownfallArena.Domain/DownfallArena.Domain.csproj" />
+    <Project Path="src/DownfallArena.Application/DownfallArena.Application.csproj" />
+    <Project Path="src/DownfallArena.Infrastructure/DownfallArena.Infrastructure.csproj" />
+    <Project Path="src/DownfallArena.Cli/DownfallArena.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DownfallArena.Domain.Tests/DownfallArena.Domain.Tests.csproj" />
+    <Project Path="tests/DownfallArena.Application.Tests/DownfallArena.Application.Tests.csproj" />
+    <Project Path="tests/DownfallArena.Architecture.Tests/DownfallArena.Architecture.Tests.csproj" />
+  </Folder>
+</Solution>

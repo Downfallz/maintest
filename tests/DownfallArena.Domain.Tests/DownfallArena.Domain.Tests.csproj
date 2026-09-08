@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DownfallArena.Domain\DownfallArena.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
