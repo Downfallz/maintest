@@ -48,5 +48,5 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: test-results
-          path: artifacts/**/TestResults/**
+          path: TestResults/**
           if-no-files-found: ignore
