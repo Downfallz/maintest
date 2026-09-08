@@ -1,4 +1,4 @@
-namespace DownfallArena.Domain.Common;
+namespace DownfallArena.SharedKernel.Primitives;
 
 /// <summary>
 /// Outcome of a domain operation. Expected failures (rule violations) are returned, never thrown.

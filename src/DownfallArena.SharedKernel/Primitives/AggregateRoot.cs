@@ -1,4 +1,4 @@
-namespace DownfallArena.Domain.Common;
+namespace DownfallArena.SharedKernel.Primitives;
 
 /// <summary>
 /// Consistency boundary. Aggregates raise domain events that the application layer dispatches after persistence.

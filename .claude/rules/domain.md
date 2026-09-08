@@ -1,11 +1,13 @@
 ---
 paths:
+  - "src/DownfallArena.SharedKernel/**"
   - "src/DownfallArena.Domain/**"
 ---
 
-# Domain layer rules
+# Domain and shared kernel rules
 
-- This project has zero dependencies. If you feel the need for a package here, stop and reconsider the design.
+- SharedKernel has zero dependencies and no game rules; Domain depends on SharedKernel only. If you feel the
+  need for a package here, stop and reconsider the design (ADR 0007).
 - Model with the glossary (`docs/domain/glossary.md`). Names in code must match names in the glossary exactly.
 - Aggregates: one aggregate root per consistency boundary. Only the root is reachable from outside; child
   entities are modified through root methods. Keep aggregates small.

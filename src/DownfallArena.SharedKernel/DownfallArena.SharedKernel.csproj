@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared kernel (ADR 0007): primitives, identifiers, stats, and shared ports.
+    NO dependencies and NO game rules. Referenced by Domain and, through it, by every layer above.
+    Enforced by tests/DownfallArena.Architecture.Tests.
+  -->
+
+</Project>

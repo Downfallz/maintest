@@ -1,4 +1,4 @@
-namespace DownfallArena.Domain.Common;
+namespace DownfallArena.SharedKernel.Primitives;
 
 /// <summary>
 /// Base class for objects with identity. Two entities are equal when they share the same concrete type and Id.

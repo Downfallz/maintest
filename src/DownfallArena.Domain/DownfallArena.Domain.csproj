@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    The domain layer has NO dependencies: no NuGet packages, no other projects.
-    Everything here is pure C#: aggregates, entities, value objects, domain events, domain services.
+    The domain layer: aggregates, entities, value objects, domain events, domain services.
+    Its only dependency is the SharedKernel. No NuGet packages.
     This constraint is enforced by tests/DownfallArena.Architecture.Tests.
   -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\DownfallArena.SharedKernel\DownfallArena.SharedKernel.csproj" />
+  </ItemGroup>
 
 </Project>

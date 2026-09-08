@@ -1,4 +1,4 @@
-namespace DownfallArena.Domain.Common;
+namespace DownfallArena.SharedKernel.Primitives;
 
 /// <summary>
 /// A domain error with a stable, machine-readable code and a human-readable message.

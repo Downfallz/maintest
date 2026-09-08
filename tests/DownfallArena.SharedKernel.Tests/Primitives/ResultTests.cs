@@ -1,6 +1,6 @@
-using DownfallArena.Domain.Common;
+using DownfallArena.SharedKernel.Primitives;
 
-namespace DownfallArena.Domain.Tests.Common;
+namespace DownfallArena.SharedKernel.Tests.Primitives;
 
 public sealed class ResultTests
 {
