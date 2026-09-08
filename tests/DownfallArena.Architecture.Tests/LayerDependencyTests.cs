@@ -66,7 +66,7 @@ public sealed class LayerDependencyTests
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
 
-    private static string Describe(TestResult result) =>
+    private static string Describe(NetArchTest.Rules.TestResult result) =>
         result.IsSuccessful
             ? "OK"
             : "Offending types: " + string.Join(", ", result.FailingTypeNames ?? []);
