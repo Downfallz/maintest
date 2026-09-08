@@ -49,15 +49,15 @@ public class Result
 /// </summary>
 public sealed class Result<TValue> : Result
 {
-    private readonly TValue? _value;
-
     internal Result(TValue? value, bool isSuccess, DomainError error)
         : base(isSuccess, error)
     {
-        _value = value;
+        UnderlyingValue = value;
     }
 
-    public TValue Value => IsSuccess && _value is { } value
+    public TValue Value => IsSuccess && UnderlyingValue is { } value
         ? value
         : throw new InvalidOperationException("The value of a failed result cannot be accessed.");
+
+    private TValue? UnderlyingValue { get; }
 }

@@ -75,7 +75,7 @@ jobs:
         if: env.SONAR_TOKEN != '' && !cancelled()
         env:
           SONAR_PULL_REQUEST: ${{ github.event.pull_request.number }}
-          SONAR_BRANCH: ${{ github.ref_name }}
+          SONAR_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: .github/scripts/sonar-report.sh
 
       - name: Upload test results and coverage

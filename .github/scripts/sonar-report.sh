@@ -23,12 +23,14 @@ if [[ ! -f "$REPORT_TASK" ]]; then
 fi
 
 read_property() {
-  sed -n "s/^$1=//p" "$REPORT_TASK" | head -n 1
+  local name="$1"
+  sed -n "s/^$name=//p" "$REPORT_TASK" | head -n 1
   return 0
 }
 
 api() {
-  curl --proto '=https' --tlsv1.2 -fsS -H "Authorization: Bearer $SONAR_TOKEN" "$SONAR_HOST/api/$1"
+  local path="$1"
+  curl --proto '=https' --tlsv1.2 -fsS -H "Authorization: Bearer $SONAR_TOKEN" "$SONAR_HOST/api/$path"
   return $?
 }
 
@@ -87,7 +89,7 @@ jq -r '.hotspots[]
 echo "::endgroup::"
 
 if [[ "$GATE_STATUS" != "OK" ]]; then
-  echo "::error::SonarCloud quality gate failed ($GATE_STATUS). See the issues above."
+  echo "::error::SonarCloud quality gate failed ($GATE_STATUS). See the issues above." >&2
   exit 1
 fi
 
