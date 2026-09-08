@@ -131,9 +131,10 @@ internal sealed class GameSession
 
     public async Task<int> EvaluateAsync()
     {
-        var seeds = _options.Seeds is { } file ? BenchmarkStore.LoadSeeds(file) : [.. Enumerable.Range(0, _options.Matches).Select(index => unchecked(_seed + index))];
+        var explicitSeeds = _options.Seeds is { } file ? BenchmarkStore.LoadSeeds(file) : null;
+        IReadOnlyList<int> seeds = explicitSeeds ?? [.. Enumerable.Range(0, _options.Matches).Select(index => unchecked(_seed + index))];
         Console.WriteLine($"Evaluating {_options.Player1} against {_options.Player2} on {seeds.Count} seeds, mirrored...");
-        var evaluation = await EvaluateAsync(_options.Player1, _options.Player2, seeds);
+        var evaluation = await EvaluateAsync(_options.Player1, _options.Player2, seeds, explicitSeeds is null ? _seed : SeedSets.IdentityOf(seeds));
         EvaluationConsole.Print(evaluation, Console.Out);
 
         var fullPath = Path.GetFullPath(_options.Output);
@@ -152,7 +153,7 @@ internal sealed class GameSession
         var store = new BenchmarkStore(_options.Benchmarks);
         var seeds = store.LoadSeeds();
         Console.WriteLine($"Benchmark: {AgentSpec.Random} against {AgentSpec.Random} on {seeds.Count} seeds, mirrored, content {_resources.Version}...");
-        var digest = BenchmarkDigest.Of(await EvaluateAsync(AgentSpec.Random, AgentSpec.Random, seeds));
+        var digest = BenchmarkDigest.Of(await EvaluateAsync(AgentSpec.Random, AgentSpec.Random, seeds, SeedSets.IdentityOf(seeds)));
 
         if (_options.Write)
         {
@@ -184,10 +185,11 @@ internal sealed class GameSession
         return 1;
     }
 
-    private Task<EvaluationResult> EvaluateAsync(AgentSpec agentA, AgentSpec agentB, IReadOnlyList<int> seeds) =>
+    /// <summary>The stamp's base seed is the identity of the seed set when the seeds came from a file, so a repeated run stamps the same.</summary>
+    private Task<EvaluationResult> EvaluateAsync(AgentSpec agentA, AgentSpec agentB, IReadOnlyList<int> seeds, int baseSeed) =>
         _services.GetRequiredService<EvaluationRunner>().RunAsync(
             new EvaluationScenario { RuleSet = _rules, Roster = Roster, AgentA = agentA, AgentB = agentB, Seeds = seeds },
-            Stamp(agentA.ToString(), agentB.ToString()));
+            RunStamp.Create(EngineVersion.Current, _resources, _rules, _schema, agentA.ToString(), agentB.ToString(), baseSeed));
 
     private RunRecorder Recorder(string runDirectory, SimulationScenario scenario) =>
         new(

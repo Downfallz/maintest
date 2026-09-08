@@ -90,7 +90,7 @@ the agents swapped.
 
 | Field | Meaning |
 | --- | --- |
-| `stamp` | The run stamp; `player1Agent` and `player2Agent` are agent A and agent B. |
+| `stamp` | The run stamp; `player1Agent` and `player2Agent` are agent A and agent B. When the seeds came from a file, `baseSeed` is the identity of that seed list (`SeedSets.IdentityOf`), the same on every run. |
 | `agentA`, `agentB` | Per agent: `agent` (its spec), `wins`, `winRate` and `score` (`mean`, `low`, `high`: a 95% interval over the seed pairs; the score counts a win 1, a draw one half, a loss 0), `averageRemainingHealth`, `spellUsage` (intents per spell id), `spellEntropy` (bits), `actions`, `fizzles`, `criticals`, `fizzleRate`, `criticalRate`. |
 | `matches`, `draws`, `drawRate`, `averageRounds`, `roundCapShare` | The shared numbers over every match. |
 | `pairs[]` | Per seed: `seed`, `aFirst` and `bFirst` (the match result of each order: `outcome`, `rounds`, remaining health per slot), `scoreOfA`, `winsOfA`, `winsOfB`, `draws`, `remainingHealthOfA`, `remainingHealthOfB`. |
