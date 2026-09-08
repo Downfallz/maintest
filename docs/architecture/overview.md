@@ -4,7 +4,7 @@
 
 ```
 +---------------------------------------------------------------+
-|  Hosts        DownfallArena.Cli   (later: Simulation, Api, Ui)|
+|  Hosts        DownfallArena.Cli   (later: Api, Ui)            |
 +---------------------------------------------------------------+
 |  Adapters     DownfallArena.Infrastructure                    |
 |               repositories, game data loaders, clocks, rng     |
@@ -48,7 +48,9 @@ turns `data/` into a validated, hashed `game.schema.json`, and the loader that m
 the builder (ADR 0009).
 
 **Cli** is the composition root. It is the only project that references Infrastructure, and it contains no
-logic beyond wiring and presentation.
+logic beyond wiring and presentation: `play` narrates a bot-versus-bot match from its domain events, `human`
+turns the player's options into numbered prompts, `simulate` runs the Application's `BatchRunner` and writes
+the CSV. The simulation itself (scenario, runner, summary) lives in Application so any host can reuse it.
 
 ## Flow of a command
 

@@ -20,9 +20,9 @@ DownfallArena.slnx            Solution (XML format, .NET 10 SDK)
 src/
   DownfallArena.SharedKernel   Primitives (Entity, AggregateRoot, Result, DomainError), ids, stats, shared ports. No dependencies.
   DownfallArena.Domain         Pure domain model. Depends on SharedKernel only. Aggregates, entities, value objects, events.
-  DownfallArena.Application    Use cases, ports (interfaces owned here), orchestration. Depends on Domain.
+  DownfallArena.Application    Use cases, ports (interfaces owned here), projections, agents, simulation. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
-  DownfallArena.Cli            Composition root and console entry point.
+  DownfallArena.Cli            Composition root and console host: play, human, simulate.
 tools/
   DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
@@ -49,8 +49,10 @@ dotnet build --no-restore                 # warnings are errors
 dotnet test --no-build                    # Microsoft.Testing.Platform runner (see global.json)
 dotnet test --no-build -- --coverage      # with code coverage
 dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to fix
-dotnet run --project src/DownfallArena.Cli
 dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content
+dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
+dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
+dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 ```
 
 Run build, tests, and format check before declaring any task done. CI runs exactly these, then sends the

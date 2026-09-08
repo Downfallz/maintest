@@ -81,4 +81,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Player agent | Something that decides for a Player from their Player options: a bot, a script, a UI adapter. | decided |
 | Random agent | The Player agent that picks uniformly among the options; the baseline for every other agent. | decided |
 | Match driver | The application service that plays a started Match to its outcome through the commands, asking each Player agent in turn. | decided |
+| Simulation scenario | What a batch plays: Rule set, both rosters and Player agents, match count, base seed; match `i` uses seed `base + i`. | decided |
+| Match result | One simulated Match: seed, Match outcome, rounds played, remaining Health per Team. | decided |
+| Simulation summary | The balance numbers of a batch: win rates by Player slot, draw rate, rounds, remaining Health. | decided |
 | Domain error | The stable, coded outcome of a rule violation (`Match.AlreadyStarted`), returned in a `Result`. Invariant violations throw instead. | decided |

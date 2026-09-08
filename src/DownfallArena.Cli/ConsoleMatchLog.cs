@@ -1,0 +1,53 @@
+using DownfallArena.Application.Messaging;
+using DownfallArena.Domain.Matches.Events;
+using DownfallArena.SharedKernel.Primitives;
+
+namespace DownfallArena.Cli;
+
+/// <summary>
+/// Narrates a match from its domain events, one readable line per event that matters to a spectator.
+/// </summary>
+internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
+{
+    public Type EventType => typeof(IDomainEvent);
+
+    public Task HandleAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default)
+    {
+        if (Describe(domainEvent) is { } line)
+        {
+            writer.WriteLine(line);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static string? Describe(IDomainEvent domainEvent) =>
+        domainEvent switch
+        {
+            MatchStarted started => $"Match started (content {started.ContentHash[..Math.Min(8, started.ContentHash.Length)]}).",
+            RoundStarted round => $"--- Round {round.RoundId.Number} ---",
+            EvolutionChoiceSubmitted evolution => $"{evolution.Slot}: creature {evolution.Choice.Creature} unlocks {evolution.Choice.Spell.Value}.",
+            EvolutionPassed passed => $"{passed.Slot} passes.",
+            TimelineBuilt timeline => "Timeline: " + string.Join(", ", timeline.Timeline.Slots.Select(slot => $"{slot.Creature} ({slot.Speed})")),
+            ActionRevealed revealed => $"Creature {revealed.Action.Actor} reveals {revealed.Action.Spell.Value} on [{string.Join(", ", revealed.Action.Targets)}].",
+            CombatActionResolved resolved => Describe(resolved),
+            OngoingEffectsApplied bleeds when bleeds.BleedTicks.Count > 0 => "Bleeds: " + string.Join(", ", bleeds.BleedTicks.Select(tick => $"creature {tick.Creature} takes {tick.Damage}")),
+            MatchEnded ended => ended.Outcome.IsDraw
+                ? $"Match ended in a draw after round {ended.RoundId.Number} ({ended.Outcome.Reason})."
+                : $"Match ended: {ended.Outcome.Winner} wins after round {ended.RoundId.Number} ({ended.Outcome.Reason}).",
+            _ => null,
+        };
+
+    private static string Describe(CombatActionResolved resolved)
+    {
+        var resolution = resolved.Resolution;
+        if (resolution.Fizzled)
+        {
+            return $"  Creature {resolution.Action.Actor}: {resolution.Action.Spell.Value} fizzles ({resolution.FizzleReason?.Code}).";
+        }
+
+        var crit = resolution.IsCritical ? " CRITICAL" : string.Empty;
+        var outcomes = string.Join(", ", resolution.Outcomes.Select(outcome => outcome.ToString()));
+        return $"  Creature {resolution.Action.Actor}: {resolution.Action.Spell.Value}{crit} -> {outcomes}";
+    }
+}

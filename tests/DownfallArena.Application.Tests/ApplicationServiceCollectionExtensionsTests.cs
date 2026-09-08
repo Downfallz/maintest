@@ -5,6 +5,8 @@ using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Messaging;
+using DownfallArena.Application.Ports;
+using DownfallArena.Application.Simulation;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
@@ -49,6 +51,7 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IMatchRepository>());
         services.AddSingleton<IGameResources>(TestContent.Resources);
         services.AddSingleton<IRandomSource>(new TestRandom(1));
+        services.AddSingleton<IRandomSourceFactory>(new TestRandomFactory());
 
         services.AddApplication();
 
@@ -66,6 +69,7 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         provider.GetRequiredService<IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>>().ShouldBeOfType<GetPlayerOptionsHandler>();
         provider.GetRequiredService<MatchDriver>().ShouldNotBeNull();
         provider.GetRequiredService<RandomAgent>().ShouldNotBeNull();
+        provider.GetRequiredService<BatchRunner>().ShouldNotBeNull();
     }
 
     [Fact]

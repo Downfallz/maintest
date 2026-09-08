@@ -182,12 +182,20 @@ Done: `MatchPlayTests` plays scripted matches to an elimination, to the round ca
 Dropped from legacy: `ITurnDecider`/`PlayerAction` string bag, `PlayTurn`, the second simulation stack,
 AutoMapper, FluentValidation pipeline, MediatR behaviours, ML folder (kept in `legacy/` for later).
 
-### Phase 9. Hosts: CLI and simulation
+### Phase 9. Hosts: CLI and simulation (done)
 
-- CLI: play bot vs bot with a readable log; then human vs bot with prompts (Spectre.Console is fine here,
-  it is a host).
-- `DownfallArena.Simulation`: batch runner (N matches, seed per match), metrics (win rate by slot, rounds,
-  damage), CSV output. This is the balance tool and the future ML dataset source.
+- CLI (`src/DownfallArena.Cli`): `play` (bot vs bot with a readable event log), `human` (numbered prompts
+  against a random bot), `simulate` (a batch to CSV plus a summary). Options `--seed`, `--matches`, `--out`,
+  `--schema`. Plain console, no UI package; the CLI stays the only composition root.
+- Simulation lives in Application (`Simulation/`): `SimulationScenario` (rule set, rosters, agents, match
+  count, base seed; match `i` uses seed `base + i`), `BatchRunner` (through the public commands and the
+  `MatchDriver`), `MatchResult`, `SimulationSummary` (win rates by slot, draws, rounds, remaining health),
+  `BatchResultCsv`. This is the balance tool and the future learning dataset source.
+- `CreateMatch` takes a seed and `IRandomSourceFactory` (port) builds the match's random source, so every
+  result replays from its seed.
+
+Legacy: everything the new solution needed is ported. `legacy/` still holds the learning notes
+(`DA.Game.Tests/ml.md`, `Learning/`) the backlog refers to; deleting the folder is a separate decision.
 
 ### Backlog (after phase 9)
 

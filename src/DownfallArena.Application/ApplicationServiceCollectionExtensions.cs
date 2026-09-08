@@ -5,6 +5,7 @@ using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Application.Messaging;
+using DownfallArena.Application.Simulation;
 using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
@@ -17,7 +18,8 @@ public static class ApplicationServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the use cases, the projections' handlers, the event dispatcher, the agents, and the driver.
-    /// The ports (<c>IMatchRepository</c>, <c>IGameResources</c>, <c>IRandomSource</c>) come from Infrastructure.
+    /// The ports (<c>IMatchRepository</c>, <c>IGameResources</c>, <c>IRandomSource</c>, <c>IRandomSourceFactory</c>) come
+    /// from Infrastructure.
     /// </summary>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
@@ -42,6 +44,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<MatchQueryHandlers>();
         services.TryAddTransient<MatchDriver>();
         services.TryAddTransient<RandomAgent>();
+        services.TryAddTransient<BatchRunner>();
 
         return services;
     }

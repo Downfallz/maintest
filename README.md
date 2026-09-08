@@ -9,8 +9,9 @@ Domain-Driven Design, clean architecture, executable architecture rules, ADRs, a
 
 ## Status
 
-Clean slate. The solution builds, the layering is enforced by tests, and the domain is a placeholder.
-Earlier prototypes live under [`legacy/`](legacy/README.md) as frozen reference material.
+The engine plays complete matches: domain, application layer, in-memory adapters, a console host, and a batch
+simulator. Game rules are still evolving (`docs/domain/game-rules.md`). Earlier prototypes live under
+[`legacy/`](legacy/README.md) as frozen reference material.
 
 ## Quick start
 
@@ -18,7 +19,10 @@ Earlier prototypes live under [`legacy/`](legacy/README.md) as frozen reference 
 dotnet restore
 dotnet build
 dotnet test
-dotnet run --project src/DownfallArena.Cli
+dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # consolidate the game content
+dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot, with a log
+dotnet run --project src/DownfallArena.Cli -- human                     # you against a bot
+dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 ```
 
 Requires the .NET SDK version in `global.json`. A devcontainer is provided in `.devcontainer/`.
