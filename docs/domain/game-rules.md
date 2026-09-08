@@ -48,8 +48,9 @@ Phases 6 and 7 of `docs/roadmap.md` implement the rules below.
    1. `Evolution`: each Player may unlock Spells from the Talent tree, up to the Rule set's picks per round
       (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. The
       sub-phase completes when both Players have no pick left or nothing left to unlock.
-   2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. Completes when
-      every such Creature has a choice.
+   2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
+      Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
+      such Creature has a choice.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
       then Standard slots by Initiative descending; ties by Player slot, then Creature id.
 3. **Combat**
@@ -79,7 +80,6 @@ replays identically. Time comes from `TimeProvider`, randomness from `IRandomSou
 ## Open questions
 
 - Board: slot-based teams only, or positions with range and adjacency.
-- Whether a stunned Creature still chooses a Speed (it skips its slot either way).
 - Team composition between Matches: fixed roster, drafting, or swapping.
 - Sudden death after the round cap instead of a health tiebreak.
 - How much of the ML/simulation work (`legacy/DownfallArena/DA.Game.Tests/ml.md`) shapes the event model.
