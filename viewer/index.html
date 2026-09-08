@@ -228,8 +228,9 @@
           rounds: episode.rounds, player1Health: episode.remainingHealth, player2Health: episode.enemyRemainingHealth,
         }));
       }
+      // The batch CSV writes the sentinel "Draw" where the episodes carry a null winner.
       return run.csv.map(row => ({
-        matchId: row.match_id, seed: Number(row.seed), winner: row.winner || null, reason: row.reason,
+        matchId: row.match_id, seed: Number(row.seed), winner: row.winner && row.winner !== 'Draw' ? row.winner : null, reason: row.reason,
         rounds: Number(row.rounds), player1Health: Number(row.player1_remaining_health), player2Health: Number(row.player2_remaining_health),
       }));
     }
