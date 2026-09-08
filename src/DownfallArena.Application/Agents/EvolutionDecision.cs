@@ -16,7 +16,7 @@ public sealed record EvolutionDecision
 
     public bool IsPass => Choice is null;
 
-    public static EvolutionDecision Pass { get; } = new(null);
+    public static EvolutionDecision Pass { get; } = new((EvolutionChoice?)null);
 
     public static EvolutionDecision Unlock(EvolutionChoice choice)
     {
