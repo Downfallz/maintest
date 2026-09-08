@@ -1,5 +1,9 @@
 # Downfall Arena
 
+[![CI](https://github.com/Downfallz/maintest/actions/workflows/ci.yml/badge.svg)](https://github.com/Downfallz/maintest/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Downfallz_maintest&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Downfallz_maintest)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Downfallz_maintest&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Downfallz_maintest)
+
 A turn-based tactical board game engine in .NET, and a playground for professional engineering practice:
 Domain-Driven Design, clean architecture, executable architecture rules, ADRs, and AI-assisted development.
 
