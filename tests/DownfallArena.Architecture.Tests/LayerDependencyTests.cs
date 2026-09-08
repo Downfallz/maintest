@@ -70,12 +70,13 @@ public sealed class LayerDependencyTests
         result.IsSuccessful.ShouldBeTrue(Describe(result));
     }
 
-    private static List<string> ForeignReferences(Assembly assembly, params string[] allowedAssemblies) =>
-        assembly
+    private static string[] ForeignReferences(Assembly assembly, params string[] allowedAssemblies) =>
+    [
+        .. assembly
             .GetReferencedAssemblies()
             .Select(reference => reference.Name ?? string.Empty)
-            .Where(name => !IsBaseClassLibrary(name) && !allowedAssemblies.Contains(name, StringComparer.Ordinal))
-            .ToList();
+            .Where(name => !IsBaseClassLibrary(name) && !allowedAssemblies.Contains(name, StringComparer.Ordinal)),
+    ];
 
     private static bool IsBaseClassLibrary(string assemblyName) =>
         assemblyName.StartsWith("System", StringComparison.Ordinal)

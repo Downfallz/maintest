@@ -75,7 +75,7 @@ verbatim, with their tests (37 stat cases, id format tests):
 - Ids: `MatchId`, `PlayerId`, `RoundId`, `CreatureId`, and the versioned content ids `SpellId`,
   `CreatureDefinitionId`, `TalentTreeId` (with the validation it never had) in the `kind:name:vN` format.
 - Stats: `Health`, `Energy`, `Defense`, `Initiative` on a shared non-negative base; `CriticalChance` in [0, 1].
-- Port: `IRandomSource` (`NextDouble`, `Next(min, max)`); time stays `TimeProvider`.
+- Port: `IRandomSource` (`NextDouble`, `NextInt32(min, max)`); time stays `TimeProvider`.
 - `TurnCursor` moves to phase 4 with `Round`: it is a match concept, not a shared one.
 
 Fix: `SystemRandom.NextDouble` only produced 100 distinct values; the new implementation must be continuous.
