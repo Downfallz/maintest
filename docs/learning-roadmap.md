@@ -1,6 +1,6 @@
 # Learning roadmap
 
-Status: Proposed (2026-09-08). Companion to [`roadmap.md`](roadmap.md), which is complete: the engine plays
+Status: Accepted (2026-09-08, decisions A to J settled in ADR 0013). Companion to [`roadmap.md`](roadmap.md), which is complete: the engine plays
 whole matches, the CLI simulates batches, and every result carries its seed and content hash. This document
 is the plan for agents smarter than `RandomAgent`, for the loop that lets us change the content (spells,
 classes, talents) **or the engine** (a bug fix, a new condition kind) and measure what it did, and for the
@@ -64,14 +64,14 @@ The terms below are the authoritative entries of the "Learning" section of
 
 ## Phases
 
-### Phase L0. Decisions and vocabulary (docs only)
+### Phase L0. Decisions and vocabulary (done, docs only)
 
 - ADR 0013: the learning stack (Python for training, JSON weights as the first exchange format, where the
   Python project lives, what CI runs for it, the static viewer).
 - `docs/learning/features.md` created with the schema versioning rule: a feature list is immutable once
   published; a change (a new condition kind, a new stat) is a new version, and a model records the version
   it was trained on.
-- Settle the decisions listed at the end of this document.
+- The decisions listed at the end of this document are settled (all recommendations accepted).
 
 ### Phase L1. Run stamp, observations, action encoding (Application, `Learning/`)
 
@@ -221,7 +221,7 @@ one content pass that gives each class three or four spells with real difference
 initiative), so the yardstick measures something. Content authoring itself stays a backlog item; the loop is
 the deliverable here.
 
-## Decisions to settle before L1
+## Decisions (settled in ADR 0013)
 
 | | Question | Recommendation |
 | --- | --- | --- |
