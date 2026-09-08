@@ -34,4 +34,24 @@
     <UseArtifactsOutput>true</UseArtifactsOutput>
   </PropertyGroup>
 
+  <!--
+    Engine version stamp (ADR 0013): the git commit, with a -dirty suffix when the tree has local changes, goes
+    into the assemblies' informational version as "+<commit>[-dirty]". EngineVersion in Application reads it
+    back so every learning artifact names the engine that produced it. Without git the version stays unknown.
+    Runs before the SDK appends its own (full, never dirty) revision so the short form always wins.
+  -->
+  <Target Name="StampEngineVersion" BeforeTargets="AddSourceRevisionToInformationalVersion;GetAssemblyVersion" Condition="'$(EngineVersionFromGit)' != 'false'">
+    <Exec Command="git rev-parse --short=12 HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" EchoOff="true" StandardOutputImportance="low" StandardErrorImportance="low" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="EngineCommit" />
+      <Output TaskParameter="ExitCode" PropertyName="EngineCommitExitCode" />
+    </Exec>
+    <Exec Command="git status --porcelain --untracked-files=no" Condition="'$(EngineCommitExitCode)' == '0'" ConsoleToMSBuild="true" IgnoreExitCode="true" EchoOff="true" StandardOutputImportance="low" StandardErrorImportance="low" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="EngineDirtyFiles" />
+    </Exec>
+    <PropertyGroup Condition="'$(EngineCommitExitCode)' == '0' and '$(EngineCommit)' != ''">
+      <EngineDirtySuffix Condition="'$(EngineDirtyFiles)' != ''">-dirty</EngineDirtySuffix>
+      <SourceRevisionId>$(EngineCommit)$(EngineDirtySuffix)</SourceRevisionId>
+    </PropertyGroup>
+  </Target>
+
 </Project>

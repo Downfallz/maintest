@@ -20,7 +20,7 @@ DownfallArena.slnx            Solution (XML format, .NET 10 SDK)
 src/
   DownfallArena.SharedKernel   Primitives (Entity, AggregateRoot, Result, DomainError), ids, stats, shared ports. No dependencies.
   DownfallArena.Domain         Pure domain model. Depends on SharedKernel only. Aggregates, entities, value objects, events.
-  DownfallArena.Application    Use cases, ports (interfaces owned here), projections, agents, simulation. Depends on Domain.
+  DownfallArena.Application    Use cases, ports (interfaces owned here), projections, agents, simulation, learning encodings. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
   DownfallArena.Cli            Composition root and console host: play, human, simulate.
 tools/
