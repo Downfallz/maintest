@@ -36,8 +36,10 @@ internal sealed class GameSession
 
     public GameSession(IServiceProvider services, CliOptions options, int seed)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        var agents = services.GetRequiredService<IAgentFactory>();
         _services = services;
-        _options = options;
+        _options = options with { Player1 = agents.Resolve(options.Player1), Player2 = agents.Resolve(options.Player2) };
         _seed = seed;
         _resources = services.GetRequiredService<IGameResources>();
         _schema = FeatureSchema.Build(_resources, _rules);
@@ -68,7 +70,7 @@ internal sealed class GameSession
         Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Seed {_seed}.");
 
     public IPlayerAgent Agent(AgentSpec spec, int slot) =>
-        _services.GetRequiredService<IAgentFactory>().Create(spec, _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((_seed * 31) + slot)));
+        _services.GetRequiredService<IAgentFactory>().Create(spec, _rules, _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((_seed * 31) + slot)));
 
     public async Task PlayAsync(IPlayerAgent player1, IPlayerAgent player2, string player1Name, string player2Name)
     {
@@ -152,8 +154,10 @@ internal sealed class GameSession
     {
         var store = new BenchmarkStore(_options.Benchmarks);
         var seeds = store.LoadSeeds();
-        Console.WriteLine($"Benchmark: {AgentSpec.Random} against {AgentSpec.Random} on {seeds.Count} seeds, mirrored, content {_resources.Version}...");
-        var digest = BenchmarkDigest.Of(await EvaluateAsync(AgentSpec.Random, AgentSpec.Random, seeds, SeedSets.IdentityOf(seeds)));
+        Console.WriteLine($"Benchmark: {AgentSpec.Greedy} against {AgentSpec.Greedy} on {seeds.Count} seeds, mirrored, content {_resources.Version}...");
+        var evaluation = await EvaluateAsync(AgentSpec.Greedy, AgentSpec.Greedy, seeds, SeedSets.IdentityOf(seeds));
+        EvaluationConsole.Print(evaluation, Console.Out);
+        var digest = BenchmarkDigest.Of(evaluation);
 
         if (_options.Write)
         {

@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Ports;
@@ -52,6 +53,7 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         services.AddSingleton<IGameResources>(TestContent.Resources);
         services.AddSingleton<IRandomSource>(new TestRandom(1));
         services.AddSingleton<IRandomSourceFactory>(new TestRandomFactory());
+        services.AddSingleton(Substitute.For<IScoringWeightsSource>());
 
         services.AddApplication();
 

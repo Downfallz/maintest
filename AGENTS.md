@@ -28,6 +28,7 @@ tools/
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
 benchmarks/                    The fixed benchmark seeds and one outcome digest per content hash, verified in CI. See benchmarks/README.md.
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
+learning/                      Learning side: heuristic weights now, the Python training project later (docs/learning-roadmap.md).
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
@@ -57,7 +58,7 @@ dotnet run --project src/DownfallArena.Cli -- human                     # you ag
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
-dotnet run --project src/DownfallArena.Cli -- evaluate --p1 random --p2 random --seeds benchmarks/benchmark-seeds.json
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
 ```
 

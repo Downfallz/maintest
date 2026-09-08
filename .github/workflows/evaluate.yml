@@ -1,0 +1,61 @@
+name: Evaluate
+
+# Runs one evaluation on the CI runners and keeps evaluation.json as an artifact: the numbers that go in
+# docs/learning/journal.md without a local build.
+on:
+  workflow_dispatch:
+    inputs:
+      p1:
+        description: "Agent A (kind, or kind:path)"
+        default: greedy
+      p2:
+        description: "Agent B (kind, or kind:path)"
+        default: random
+      seeds:
+        description: "Seed file"
+        default: benchmarks/benchmark-seeds.json
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  evaluate:
+    name: Evaluate ${{ inputs.p1 }} against ${{ inputs.p2 }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      - name: Build game content
+        run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+
+      # Inputs reach the shell through the environment, never through the script text.
+      - name: Evaluate
+        env:
+          AGENT_A: ${{ inputs.p1 }}
+          AGENT_B: ${{ inputs.p2 }}
+          SEEDS: ${{ inputs.seeds }}
+        run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- evaluate --p1 "$AGENT_A" --p2 "$AGENT_B" --seeds "$SEEDS" --out evaluation.json
+
+      - name: Upload the evaluation
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: evaluation
+          path: evaluation.json

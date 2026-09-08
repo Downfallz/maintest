@@ -16,5 +16,5 @@ dotnet run --project src/DownfallArena.Cli -- benchmark --write
 then commit the new file with an entry in `docs/learning/journal.md` saying what changed and why. The seeds
 themselves change only by a decision recorded in the journal.
 
-The baseline agents are `Random` versus `Random` until the greedy agent lands (phase L5), which regenerates
-the digest once.
+The baseline agents are `Greedy` versus `Greedy` (`docs/learning/agents.md`): deterministic, so the digest
+changes only when the engine or the content does.
