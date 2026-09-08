@@ -6,4 +6,4 @@ namespace DownfallArena.Domain.Matches.Events;
 /// <summary>
 /// A player took a slot in the match and their team was formed.
 /// </summary>
-public sealed record PlayerJoined(MatchId MatchId, PlayerSlot Slot, PlayerId Player) : IDomainEvent;
+public sealed record PlayerJoined(MatchId MatchId, PlayerSlot Slot, PlayerId Player) : IMatchEvent;

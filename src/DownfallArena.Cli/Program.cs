@@ -1,6 +1,9 @@
 using System.Globalization;
 using DownfallArena.Application;
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning;
+using DownfallArena.Application.Learning.Recording;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Messaging;
@@ -10,6 +13,7 @@ using DownfallArena.Cli;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure;
+using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 using DownfallArena.SharedKernel.Randomness;
@@ -25,7 +29,7 @@ try
 catch (Exception exception) when (exception is ArgumentException or FormatException or OverflowException)
 {
     await Console.Error.WriteLineAsync(exception.Message);
-    await Console.Error.WriteLineAsync("Usage: play|human|simulate [--seed N] [--matches N] [--out file] [--schema path]");
+    await Console.Error.WriteLineAsync(CliOptions.Usage);
     return 2;
 }
 
@@ -47,31 +51,38 @@ if (options.Command is "play" or "human")
     builder.Services.AddSingleton<IDomainEventListener>(new ConsoleMatchLog(Console.Out));
 }
 
+if (options.Trace is not null || options.Record is not null)
+{
+    builder.Services.AddSingleton<MatchTraceRecorder>();
+    builder.Services.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
+}
+
 using var host = builder.Build();
 var services = host.Services;
 var resources = services.GetRequiredService<IGameResources>();
 var rules = RuleSet.Default;
 var roster = Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize).ToList();
+var schema = FeatureSchema.Build(resources, rules);
+Console.WriteLine($"Engine {EngineVersion.Current}. Content {resources.Version}. Schema {schema.Id}. Seed {seed}.");
 
 switch (options.Command)
 {
     case "play":
-        await PlayAsync(new RandomAgent(RandomFor(1)), new RandomAgent(RandomFor(2)));
+        await PlayAsync(new RandomAgent(RandomFor(1)), new RandomAgent(RandomFor(2)), "Random", "Random");
         return 0;
     case "human":
-        await PlayAsync(new ConsoleAgent(Console.In, Console.Out), new RandomAgent(RandomFor(2)));
+        await PlayAsync(new ConsoleAgent(Console.In, Console.Out), new RandomAgent(RandomFor(2)), "Human", "Random");
         return 0;
     case "simulate":
         await SimulateAsync();
         return 0;
     default:
-        await Console.Error.WriteLineAsync($"Unknown command '{options.Command}'. Usage: play|human|simulate [--seed N] [--matches N] [--out file] [--schema path]");
+        await Console.Error.WriteLineAsync($"Unknown command '{options.Command}'. {CliOptions.Usage}");
         return 2;
 }
 
-async Task PlayAsync(IPlayerAgent player1, IPlayerAgent player2)
+async Task PlayAsync(IPlayerAgent player1, IPlayerAgent player2, string player1Name, string player2Name)
 {
-    Console.WriteLine($"Seed {seed}. Content {resources.Version}.");
     var matchId = Accept(await services.GetRequiredService<ICommandHandler<CreateMatch, Result<MatchId>>>().HandleAsync(new CreateMatch(rules, seed)));
     var join = services.GetRequiredService<ICommandHandler<JoinMatch, Result<PlayerSlot>>>();
     Accept(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster)));
@@ -79,6 +90,14 @@ async Task PlayAsync(IPlayerAgent player1, IPlayerAgent player2)
 
     var outcome = Accept(await services.GetRequiredService<MatchDriver>().PlayAsync(matchId, player1, player2));
     Console.WriteLine(outcome.IsDraw ? $"Draw ({outcome.Reason})." : $"{outcome.Winner} wins ({outcome.Reason}).");
+
+    if (options.Trace is { } traceFile)
+    {
+        var trace = services.GetRequiredService<MatchTraceRecorder>().Complete(matchId, Stamp(player1Name, player2Name), seed);
+        var fullPath = Path.GetFullPath(traceFile);
+        await new FileArtifactWriter(Path.GetDirectoryName(fullPath) ?? ".").WriteJsonAsync(Path.GetFileName(fullPath), trace);
+        Console.WriteLine($"Trace written to '{traceFile}' ({trace.Entries.Count} events).");
+    }
 }
 
 async Task SimulateAsync()
@@ -93,7 +112,25 @@ async Task SimulateAsync()
     };
 
     Console.WriteLine($"Simulating {scenario.Matches} match(es) from seed {seed} on content {resources.Version}...");
-    var batch = await services.GetRequiredService<BatchRunner>().RunAsync(scenario);
+    RunRecorder? recorder = null;
+    if (options.Record is { } runDirectory)
+    {
+        recorder = new RunRecorder(
+            new FileArtifactWriter(runDirectory),
+            Stamp(scenario.Player1Agent.ToString(), scenario.Player2Agent.ToString()),
+            new ObservationBuilder(schema, resources),
+            new ActionEncoder(schema),
+            TimeProvider.System,
+            services.GetRequiredService<MatchTraceRecorder>());
+        await recorder.StartAsync();
+    }
+
+    var batch = await services.GetRequiredService<BatchRunner>().RunAsync(scenario, recorder);
+    if (recorder is not null)
+    {
+        await recorder.FinishAsync();
+        Console.WriteLine($"Recorded {recorder.Steps} steps, {recorder.Episodes} episodes and {recorder.Matches} traces under '{options.Record}'.");
+    }
 
     await using (var writer = new StreamWriter(options.Output))
     {
@@ -106,6 +143,9 @@ async Task SimulateAsync()
     Console.WriteLine($"Remaining health: Player1 {summary.AveragePlayer1RemainingHealth.ToString("F1", CultureInfo.InvariantCulture)}, Player2 {summary.AveragePlayer2RemainingHealth.ToString("F1", CultureInfo.InvariantCulture)}.");
     Console.WriteLine($"Results written to '{options.Output}'.");
 }
+
+RunStamp Stamp(string player1Agent, string player2Agent) =>
+    RunStamp.Create(EngineVersion.Current, resources, rules, schema, player1Agent, player2Agent, seed);
 
 IRandomSource RandomFor(int slot) => services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((seed * 31) + slot));
 

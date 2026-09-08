@@ -22,7 +22,7 @@ src/
   DownfallArena.Domain         Pure domain model. Depends on SharedKernel only. Aggregates, entities, value objects, events.
   DownfallArena.Application    Use cases, ports (interfaces owned here), projections, agents, simulation, learning encodings. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
-  DownfallArena.Cli            Composition root and console host: play, human, simulate.
+  DownfallArena.Cli            Composition root and console host: play, human, simulate, with recording and tracing.
 tools/
   DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
@@ -53,6 +53,8 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # valida
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
+dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
+dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
 ```
 
 Run build, tests, and format check before declaring any task done. CI runs exactly these, then sends the

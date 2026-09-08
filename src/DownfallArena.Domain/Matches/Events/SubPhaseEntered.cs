@@ -7,4 +7,4 @@ namespace DownfallArena.Domain.Matches.Events;
 /// <summary>
 /// The round moved to a sub-phase. Raised for every transition, so the UI and bots follow one event.
 /// </summary>
-public sealed record SubPhaseEntered(MatchId MatchId, RoundId RoundId, RoundSubPhase SubPhase) : IDomainEvent;
+public sealed record SubPhaseEntered(MatchId MatchId, RoundId RoundId, RoundSubPhase SubPhase) : IMatchEvent;

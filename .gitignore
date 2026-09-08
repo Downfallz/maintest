@@ -64,3 +64,7 @@ secrets.json
 
 # Generated game content
 data/dst/
+
+# Learning artifacts (docs/learning/artifacts.md)
+runs/
+*.trace.json

@@ -84,7 +84,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Return | The reward of an Episode: win, loss, or draw, shaped by the remaining-Health margin. | decided |
 | Policy | A function from Observation and options to an Action. Random agent, greedy agent, and learned agents are policies. | decided |
 | Dataset | Recorded Steps and Episodes, in JSON lines, with a manifest carrying the Run stamp. | decided |
-| Match trace | The full record of one Match: every domain event and the board after each, enough to replay it in the Viewer without the engine. | decided |
+| Match trace | The full record of one Match: every domain event with both Player board states after the command that raised it, enough to replay it in the Viewer without the engine. | decided |
+| Run manifest | The `manifest.json` of a recorded run: its Run stamp, the Feature schema id and feature names, and the counts of Matches, Steps, and Episodes. | decided |
 | Evaluation | A batch of mirrored Matches between two Player agents on the Benchmark seeds, reported as win rates with confidence intervals over seed pairs, and a Run stamp. | decided |
 | Benchmark seeds | The fixed seed set every Evaluation uses, so two content versions, two engine versions, or two agents compare on the same Matches. | decided |
 | Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |

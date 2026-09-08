@@ -7,4 +7,4 @@ namespace DownfallArena.Domain.Matches.Events;
 /// <summary>
 /// The bleed ticks of the start of the round were dealt.
 /// </summary>
-public sealed record OngoingEffectsApplied(MatchId MatchId, RoundId RoundId, IReadOnlyList<BleedTick> BleedTicks) : IDomainEvent;
+public sealed record OngoingEffectsApplied(MatchId MatchId, RoundId RoundId, IReadOnlyList<BleedTick> BleedTicks) : IMatchEvent;
