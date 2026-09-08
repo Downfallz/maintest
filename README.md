@@ -50,6 +50,7 @@ rules, subagents, skills, and hooks. See [docs/README.md](docs/README.md) for th
 ## Documentation
 
 - [Roadmap](docs/roadmap.md)
+- [Learning roadmap](docs/learning-roadmap.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decision records](docs/adr/README.md)
 - [Domain glossary](docs/domain/glossary.md)

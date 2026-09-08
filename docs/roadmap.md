@@ -201,7 +201,8 @@ Legacy: everything the new solution needed is ported. `legacy/` still holds the 
 
 - Content authoring: real spells, classes, talent prerequisites; schema documentation.
 - Persistence beyond memory; API host; UI (Blazor or web front) per ADR when needed.
-- Learning: feature extraction and policies from simulation output (legacy `Learning/` as reference).
+- Learning: agents smarter than random and the content iteration loop; planned in
+  [`learning-roadmap.md`](learning-roadmap.md).
 - Property-based tests for resolution ordering and timeline determinism.
 
 ## Working agreement per phase
