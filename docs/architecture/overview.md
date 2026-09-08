@@ -15,17 +15,27 @@
 |  Domain       DownfallArena.Domain                            |
 |               aggregates, entities, value objects, events      |
 +---------------------------------------------------------------+
+|  Kernel       DownfallArena.SharedKernel                      |
+|               primitives, identifiers, stats, shared ports     |
++---------------------------------------------------------------+
+
+Tools (outside the stack): tools/DownfallArena.DataBuilder consolidates game content (ADR 0009).
 ```
 
-Dependencies point downward only. The domain knows nothing about the layers above it.
-`tests/DownfallArena.Architecture.Tests` turns this diagram into failing tests.
+Dependencies point downward only. The domain knows nothing about the layers above it, and the shared kernel
+knows nothing at all. `tests/DownfallArena.Architecture.Tests` turns this diagram into failing tests.
 
 ## Layers
 
+**SharedKernel** (ADR 0007) holds what every layer shares and no game rule: the building blocks (`Entity`,
+`AggregateRoot`, `IDomainEvent`, `Result`, `DomainError`), strongly typed identifiers (including the versioned
+content ids `SpellId`, `CreatureDefinitionId`, `TalentTreeId`), the stats (`Health`, `Energy`, `Defense`,
+`Initiative`, `CriticalChance`), and the `IRandomSource` port.
+
 **Domain** is the game. It is pure C#: no packages, no I/O, no time, no randomness. It exposes aggregates
 whose methods return `Result` for rule violations and raise domain events for things that happened.
-Bounded contexts are folders (`Matches/` today; `Players/`, `Rosters/`, ... as they appear). `Common/`
-holds the building blocks (`Entity`, `AggregateRoot`, `IDomainEvent`, `Result`, `DomainError`).
+Bounded contexts are folders (`Resources/` and `Matches/` per the roadmap; `Players/`, `Rosters/`, ... as
+they appear).
 
 **Application** turns intents into domain calls. A use case handler loads an aggregate through a port,
 invokes one method, persists, and dispatches the events. Ports are interfaces owned by this layer.

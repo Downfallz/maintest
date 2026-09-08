@@ -27,12 +27,13 @@ Requires the .NET SDK version in `global.json`. A devcontainer is provided in `.
 
 | Path | Purpose |
 | --- | --- |
-| `src/DownfallArena.Domain` | Pure domain model. No dependencies. |
+| `src/DownfallArena.SharedKernel` | Primitives, identifiers, stats, shared ports. No dependencies. |
+| `src/DownfallArena.Domain` | Pure domain model. Depends on SharedKernel only. |
 | `src/DownfallArena.Application` | Use cases and ports. |
 | `src/DownfallArena.Infrastructure` | Adapters implementing the ports. |
 | `src/DownfallArena.Cli` | Composition root and console entry point. |
-| `tests/` | Domain, application, and architecture tests. |
-| `docs/` | ADRs, architecture notes, domain glossary and rules. |
+| `tests/` | Shared kernel, application, infrastructure, and architecture tests. |
+| `docs/` | Roadmap, ADRs, architecture notes, domain glossary and rules. |
 | `legacy/` | Frozen prototypes. Read-only. |
 
 ## Working with AI agents
@@ -42,6 +43,7 @@ rules, subagents, skills, and hooks. See [docs/README.md](docs/README.md) for th
 
 ## Documentation
 
+- [Roadmap](docs/roadmap.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decision records](docs/adr/README.md)
 - [Domain glossary](docs/domain/glossary.md)

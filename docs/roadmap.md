@@ -1,6 +1,6 @@
 # Roadmap: rebuild the engine from the Domain2 prototype
 
-Status: Proposed (2026-09-08). This is the plan for carrying the best of `legacy/DownfallArena/DA.Game.Domain2`
+Status: Accepted (2026-09-08, decisions A to F settled in ADRs 0007 to 0011). This is the plan for carrying the best of `legacy/DownfallArena/DA.Game.Domain2`
 (and its Application, Infrastructure, Shared and test projects) into the clean solution, refining as we go.
 Each phase is one or two pull requests, ships with tests, and leaves `main` green. Phases are ordered by
 dependency: nothing in phase N needs anything from phase N+1.
@@ -22,39 +22,43 @@ dependency: nothing in phase N needs anything from phase N+1.
 ## Target shape
 
 ```
-src/DownfallArena.Domain
-  Common/            Entity, AggregateRoot, DomainError, Result, IDomainEvent (exists)
-  Kernel/            Ids, Stats (Health, Energy, Defense, Initiative, CriticalChance), TurnCursor, ports (IRandomSource)
+src/DownfallArena.SharedKernel   no dependencies; shared by every layer
+  Primitives/        Entity, AggregateRoot, DomainError, Result, IDomainEvent
+  Identifiers/       MatchId, PlayerId, RoundId, CreatureId, SpellId, CreatureDefinitionId, TalentTreeId
+  Stats/             Health, Energy, Defense, Initiative, CriticalChance
+  Randomness/        IRandomSource (port)
+src/DownfallArena.Domain         depends on SharedKernel only
   Resources/         Spell, TargetingSpec, Effect taxonomy, TalentTree, CreatureDefinition, IGameResources
   Matches/           Match aggregate, Round, Team, CombatCreature, conditions, phases, choices, events, errors
     Rules/           planning, combat, conditions, progression gates (pure services, no aggregate parameter)
     Views/           CreaturePerspective, board state, player options (read-only projections)
 src/DownfallArena.Application
-  Matches/           commands, queries, handlers, ports (IMatchRepository), agents (IPlayerAgent), simulation driver
+  Matches/           commands, queries, handlers, ports (IMatchRepository), agents (IPlayerAgent), match driver
 src/DownfallArena.Infrastructure
-  Resources/         JSON loading, alias resolution, content hash
+  Resources/         consolidated game schema loading, alias resolution, content hash check
   Persistence/       in-memory repositories
   Randomness/        seeded random source
 src/DownfallArena.Cli            plays a match (human vs bot, bot vs bot)
 src/DownfallArena.Simulation     batch runner, metrics (phase 9)
+tools/DownfallArena.DataBuilder  consolidates Data/** JSON into game.schema.json with a content hash
 ```
 
-Decisions this shape implies (each becomes an ADR when its phase starts):
+Decisions this shape rests on (settled in phase 0):
 
-| # | Decision | Recommendation |
-| --- | --- | --- |
-| A | Separate "Shared" project for ids, stats, resource contracts? | No. Domain has no dependencies, so these live in `Domain/Kernel` and `Domain/Resources`. Application maps to DTOs at its boundary. |
-| B | Mediator library? | No. A minimal `ICommandHandler<TCommand, TResult>` / `IQueryHandler` pair registered in DI. Revisit only if pipelines (validation, logging, transactions) become real. |
-| C | Game data pipeline | Infrastructure loads the `Data/**` JSON folder directly, resolves aliases, and hashes the content. The separate DataBuilder step and `game.schema.json` are dropped. |
-| D | Domain events | Framework-free records (already the case). Dispatched by the Application after a save. |
-| E | Sub-phases | Keep the phase and sub-phase machines, delete `Planning_EvolutionResolution` (never entered) unless a rule needs it. |
-| F | Win condition | Last team standing, plus a round cap from the rule set to guarantee termination in simulations. Recorded in game-rules.md. |
+| # | Decision | Outcome | ADR |
+| --- | --- | --- | --- |
+| A | Where do shared ids, stats, and primitives live? | A dependency-free `SharedKernel` project below Domain. | 0007 |
+| B | Mediator library? | No. Minimal `ICommandHandler` / `IQueryHandler` interfaces registered in DI. | 0008 |
+| C | Game data pipeline | Keep the DataBuilder: it consolidates `Data/**` into one validated `game.schema.json` with a content hash, which Infrastructure loads. Spell tuning stays a JSON-editing workflow. | 0009 |
+| D | Domain events | Framework-free records, dispatched by the Application after a save. | 0008 |
+| E | Sub-phases | Keep the phase and sub-phase machines; `Planning_EvolutionResolution` is dropped. | 0010 |
+| F | Win condition | Last team standing, plus a round cap from the rule set. | 0011 |
 
 ## Phases
 
 ### Phase 0. Decisions and vocabulary (docs only)
 
-- ADRs for decisions A to F.
+- ADRs for decisions A to F (0007 to 0011).
 - Glossary: promote the `inherited` terms that phases 1 to 7 will implement to `decided`, with the exact
   names the code will use. Add: Activation slot, Reveal, Fizzle, Progression gate, Perspective, Content hash.
 - `docs/domain/game-rules.md`: write the round sequence from the legacy `Match` (it is precise: energy gain,
@@ -63,15 +67,16 @@ Decisions this shape implies (each becomes an ADR when its phase starts):
 
 Done when the docs describe the engine we are about to build and nothing else.
 
-### Phase 1. Kernel: ids, stats, cursor, ports
+### Phase 1. Shared kernel: primitives, ids, stats, ports
 
-Carry over, close to verbatim, with their tests (37 stat cases, id format tests):
+Create `src/DownfallArena.SharedKernel` (ADR 0007), move the primitives there, and carry over, close to
+verbatim, with their tests (37 stat cases, id format tests):
 
-- Ids: `MatchId` (exists), `RoundId`, `CreatureId`, `PlayerId`, `SpellId`, `CreatureDefinitionId`,
-  `TalentTreeId` (add the validation it never had). Versioned string ids keep the `kind:name:vN` format.
+- Ids: `MatchId`, `PlayerId`, `RoundId`, `CreatureId`, and the versioned content ids `SpellId`,
+  `CreatureDefinitionId`, `TalentTreeId` (with the validation it never had) in the `kind:name:vN` format.
 - Stats: `Health`, `Energy`, `Defense`, `Initiative` on a shared non-negative base; `CriticalChance` in [0, 1].
-- `TurnCursor` (immutable index with `Start`, `MoveNext`, `IsEnd`).
-- Ports owned by Domain: `IRandomSource` (`NextDouble`, `Next(min, max)`); time stays `TimeProvider`.
+- Port: `IRandomSource` (`NextDouble`, `Next(min, max)`); time stays `TimeProvider`.
+- `TurnCursor` moves to phase 4 with `Round`: it is a match concept, not a shared one.
 
 Fix: `SystemRandom.NextDouble` only produced 100 distinct values; the new implementation must be continuous.
 
@@ -83,8 +88,10 @@ Fix: `SystemRandom.NextDouble` only produced 100 distinct values; the new implem
 - **Redesign the effect taxonomy** (ADR): a closed set of effect records (`Damage`, `Heal`, `EnergyGain`,
   `DefenseBuff`, `Bleed`, `Stun`, ...) with duration and stacking policy where relevant. The legacy `Effect.Kind`
   was never assigned and half the kinds were silently ignored; this is the root of most combat bugs.
-- Infrastructure: JSON loader for `Data/Creatures`, `Data/Spells`, `Data/TalentTrees`, `Data/aliases.json`,
-  content hash as `IGameResources.Version`, schema validation with precise errors (the legacy TODO).
+- `tools/DownfallArena.DataBuilder` (ADR 0009): consolidates `Data/Creatures`, `Data/Spells`,
+  `Data/TalentTrees`, `Data/aliases.json` into `game.schema.json` with a content hash, validating the schema
+  with precise errors (the legacy TODO). Infrastructure loads the consolidated file; the hash becomes
+  `IGameResources.Version`.
 - Content: keep the 38 spell files as scaffolding but fix the schema drift (`characterClass`, `level`) and give
   `main.v1.json` defense, initiative, crit and class. Content design itself is out of scope here.
 

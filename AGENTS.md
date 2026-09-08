@@ -18,12 +18,14 @@ prototypes under `legacy/` as inspiration only (see `legacy/README.md`).
 ```
 DownfallArena.slnx            Solution (XML format, .NET 10 SDK)
 src/
-  DownfallArena.Domain         Pure domain model. No dependencies. Aggregates, entities, value objects, events.
+  DownfallArena.SharedKernel   Primitives (Entity, AggregateRoot, Result, DomainError), ids, stats, shared ports. No dependencies.
+  DownfallArena.Domain         Pure domain model. Depends on SharedKernel only. Aggregates, entities, value objects, events.
   DownfallArena.Application    Use cases, ports (interfaces owned here), orchestration. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
   DownfallArena.Cli            Composition root and console entry point.
 tests/
-  DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed).
+  DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
+  DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Created with the first aggregate.
   DownfallArena.Application.Tests   Use case tests with NSubstitute for ports.
   DownfallArena.Infrastructure.Tests Adapter tests (in-memory, file-backed, seeded random).
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
@@ -53,8 +55,9 @@ Sonar quality gate covers C#, shell scripts, and workflows, and must pass on eve
 
 ## Architecture rules (enforced by tests/DownfallArena.Architecture.Tests)
 
-1. Dependencies point inward: Cli -> Infrastructure -> Application -> Domain. Never the other way.
-2. Domain references no NuGet package and no other project.
+1. Dependencies point inward: Cli -> Infrastructure -> Application -> Domain -> SharedKernel. Never the other way.
+2. SharedKernel references nothing. Domain references no NuGet package and no project other than SharedKernel.
+   SharedKernel holds no game rules (ADR 0007).
 3. Application owns its ports (interfaces). Infrastructure implements them. Domain never sees them.
 4. Cli is the only place where concrete adapters are wired together.
 
@@ -63,14 +66,15 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 ## Domain conventions
 
 - Aggregates extend `AggregateRoot<TId>`, entities extend `Entity<TId>`, value objects are `record`s or
-  `readonly record struct`s. Identifiers are strongly typed (`MatchId`, not `Guid`).
+  `readonly record struct`s. Identifiers are strongly typed (`MatchId`, not `Guid`) and live in
+  `SharedKernel/Identifiers`; content ids are versioned (`SpellId.Parse("spell:pummel:v1")`).
 - Expected failures return `Result` / `Result<T>` with a `DomainError(Code, Message)`. Error codes are stable and
   namespaced by aggregate (`Match.AlreadyStarted`). Exceptions mean a bug or a broken invariant.
 - State changes go through aggregate methods that protect invariants. No public setters on domain types.
 - Domain events are immutable records named in the past tense (`RoundEnded`), raised via `RaiseDomainEvent`.
 - Use the words in `docs/domain/glossary.md`. If you need a word that is not there, add it in the same change.
-- Time comes from `TimeProvider`, randomness from an injected abstraction. Never `DateTime.Now` or `new Random()`
-  inside the domain: simulations must be reproducible.
+- Time comes from `TimeProvider`, randomness from `IRandomSource` (SharedKernel). Never `DateTime.Now` or
+  `new Random()` inside the domain: simulations must be reproducible.
 
 ## Coding conventions
 
