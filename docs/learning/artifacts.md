@@ -83,6 +83,20 @@ One line per player per match, written once the match ended:
 | `remainingHealth`, `enemyRemainingHealth` | The sums at the end of the match. |
 | `return` | Win `+1`, loss `-1`, draw `0`, plus `0.1 x (remainingHealth - enemyRemainingHealth) / total maximum health` of both teams. The two returns of a match sum to zero. |
 
+## `training.jsonl` (written by the Python side, L6)
+
+One line per training iteration, the contract the viewer reads:
+
+| Field | Meaning |
+| --- | --- |
+| `iteration` | The iteration number, increasing. |
+| `loss` | The training loss of that iteration. |
+| `winRate` | The evaluation win rate of the model of that iteration against the baseline. |
+| `winRateLow`, `winRateHigh` | The confidence interval of `winRate` (optional). |
+| `matches` | How many evaluation matches produced `winRate` (optional). |
+| `best` | `true` on the iteration the run keeps; without it the viewer marks the highest `winRate` (optional). |
+| `stamp` | The run stamp (at least on the first line). |
+
 ## `traces/<match-id>.json`
 
 The full record of one match (`MatchTraceRecorder`), what the viewer replays and what a bug report attaches:
@@ -96,3 +110,9 @@ The full record of one match (`MatchTraceRecorder`), what the viewer replays and
 Events are dispatched once the command that raised them is saved, so the boards of an entry are the boards
 after that command: the entries of one command share them. Each board is the player's own view, hidden
 intents included, since a trace is a debugging record rather than something a player sees.
+
+## Reading artifacts
+
+`viewer/index.html` opens any of these files from disk (see `viewer/README.md`): a run directory or a CSV as
+a batch, a trace as a match to step through, `training.jsonl` as a training run, and two artifacts of the
+same kind as a comparison with the stamp diff.

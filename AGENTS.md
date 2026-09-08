@@ -26,6 +26,7 @@ src/
 tools/
   DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
+viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.

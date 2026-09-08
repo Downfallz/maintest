@@ -113,21 +113,27 @@ The terms below are the authoritative entries of the "Learning" section of
   one episode per player whose returns sum to zero, a trace whose last entry carries the final board and the
   outcome, and the stamp on the manifest and every trace.
 
-### Phase L3. Viewer (static HTML, `viewer/`)
+### Phase L3. Viewer (static HTML, `viewer/`) (done)
 
-- One `viewer/index.html` with plain JavaScript and a charting library from a CDN, opened from disk, that
-  accepts a file (drag and drop or file picker) and renders it by kind:
-  - **Trace**: the timeline of a match round by round: health bars per creature after each action, the
-    revealed actions with their outcomes, fizzles and crits marked, conditions shown as chips, the outcome.
-    Step forward and backward, jump to a round.
-  - **Batch or evaluation**: win rates with their intervals, draw rate, rounds histogram, remaining-health
-    distributions, spell usage, fizzle rate, the run stamp in the header.
-  - **Training run** (`training.jsonl` written by the Python side): loss and evaluation win rate per
-    iteration, best iteration marked.
+- `viewer/index.html` (plain JavaScript, Chart.js from a CDN) and `viewer/viewer.css`, opened from disk. It
+  takes files by drag and drop, a file picker, or a directory picker, tells them apart by content, and
+  renders by kind:
+  - **Trace**: the match round by round, every event with both teams after it: health bars, energy, defense,
+    initiative, conditions as chips, known spells, intents, the timeline with revealed and resolved actions,
+    outcomes, fizzles and crits marked, the outcome. Step forward and backward (buttons or arrow keys), jump
+    to a round.
+  - **Batch**: from a run directory (`episodes.jsonl`, `steps.jsonl`, `manifest.json`, traces) or a
+    `simulation.csv`: win rates with Wilson 95% intervals, draw rate, rounds histogram, remaining-health
+    distributions, intents per spell, fizzle and crit rates when traces are included, the run stamp.
+    Evaluations (L4) will be read the same way once their file exists.
+  - **Training run** (`training.jsonl`, contract in `docs/learning/artifacts.md`): loss and evaluation win
+    rate per iteration, best iteration marked.
   - **Comparison**: two artifacts of the same kind side by side with deltas, and the stamp diff at the top
-    (what moved: content, engine, agent, seeds).
-- No build step: the page is a single file; a second file holds the CSS. Tested by hand with the sample
-  artifacts committed under `viewer/samples/`, which the tests of L2 regenerate.
+    (what moved: content, engine, rules, schema, agents, seeds).
+- Samples under `viewer/samples/` (a small run with one full trace, a CSV, a training file), generated to the
+  documented shape. `ViewerSamplesTests` records a real run and compares key paths with the samples, so a
+  change in what the engine writes fails the build until the samples follow. Real data comes from
+  `simulate --record` and `play --trace`.
 
 ### Phase L4. Evaluation harness and benchmark digest
 
