@@ -6,7 +6,8 @@ namespace DownfallArena.Domain.Matches.Rounds;
 /// <summary>
 /// One cycle of play: a forward-only walk through the sub-phases of <see cref="RoundFlow"/> and the store of the
 /// choices made along the way. The round knows the flow and what was submitted; it knows no rule about who may
-/// submit what, and nothing about creatures or spells beyond their ids.
+/// submit what, and nothing about creatures or spells beyond their ids. Its mutators are internal: the
+/// <see cref="Match"/> aggregate is the only way to move a round forward.
 /// </summary>
 public sealed class Round : Entity<RoundId>
 {
@@ -66,7 +67,7 @@ public sealed class Round : Entity<RoundId>
     /// <summary>
     /// Moves to the next sub-phase. Moving past the last one is an invariant violation.
     /// </summary>
-    public void Advance()
+    internal void Advance()
     {
         SubPhase = RoundFlow.After(SubPhase)
             ?? throw new InvalidOperationException($"Round {Number} is finalized and cannot advance.");
@@ -74,7 +75,7 @@ public sealed class Round : Entity<RoundId>
 
     public IReadOnlyList<EvolutionChoice> EvolutionChoicesOf(PlayerSlot slot) => _evolutionChoices[slot];
 
-    public Result SubmitEvolutionChoice(PlayerSlot slot, EvolutionChoice choice)
+    internal Result SubmitEvolutionChoice(PlayerSlot slot, EvolutionChoice choice)
     {
         ArgumentNullException.ThrowIfNull(choice);
 
@@ -98,7 +99,7 @@ public sealed class Round : Entity<RoundId>
     /// <summary>
     /// Records that a player gives up their remaining evolution picks for this round.
     /// </summary>
-    public Result PassEvolution(PlayerSlot slot)
+    internal Result PassEvolution(PlayerSlot slot)
     {
         if (SubPhase != RoundSubPhase.Evolution)
         {
@@ -112,7 +113,7 @@ public sealed class Round : Entity<RoundId>
 
     public SpeedChoice? SpeedChoiceOf(CreatureId creature) => _speedChoices.GetValueOrDefault(creature);
 
-    public Result SubmitSpeedChoice(SpeedChoice choice)
+    internal Result SubmitSpeedChoice(SpeedChoice choice)
     {
         ArgumentNullException.ThrowIfNull(choice);
 
@@ -129,7 +130,7 @@ public sealed class Round : Entity<RoundId>
     /// <summary>
     /// Installs the timeline built by the planning rules and resets both cursors.
     /// </summary>
-    public void SetTimeline(CombatTimeline timeline)
+    internal void SetTimeline(CombatTimeline timeline)
     {
         ArgumentNullException.ThrowIfNull(timeline);
         RequireSubPhase(RoundSubPhase.TurnOrderResolution, "set the timeline");
@@ -149,7 +150,7 @@ public sealed class Round : Entity<RoundId>
     public CombatIntent? IntentOf(CreatureId creature) =>
         _intents[PlayerSlot.Player1].GetValueOrDefault(creature) ?? _intents[PlayerSlot.Player2].GetValueOrDefault(creature);
 
-    public Result SubmitIntent(PlayerSlot slot, CombatIntent intent)
+    internal Result SubmitIntent(PlayerSlot slot, CombatIntent intent)
     {
         ArgumentNullException.ThrowIfNull(intent);
 
@@ -178,7 +179,7 @@ public sealed class Round : Entity<RoundId>
     /// <summary>
     /// Accepts the targeted action for the intent at the reveal cursor and moves the cursor forward.
     /// </summary>
-    public Result SubmitAction(CombatAction action)
+    internal Result SubmitAction(CombatAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
@@ -213,7 +214,7 @@ public sealed class Round : Entity<RoundId>
     /// <summary>
     /// The action at the resolve cursor. Missing actions and wrong sub-phases are invariant violations.
     /// </summary>
-    public CombatAction NextActionToResolve()
+    internal CombatAction NextActionToResolve()
     {
         RequireSubPhase(RoundSubPhase.ActionResolution, "resolve an action");
 
@@ -224,7 +225,7 @@ public sealed class Round : Entity<RoundId>
             ?? throw new InvalidOperationException($"Creature {slot.Creature} is on the timeline without a bound action.");
     }
 
-    public void MarkActionResolved()
+    internal void MarkActionResolved()
     {
         RequireSubPhase(RoundSubPhase.ActionResolution, "mark an action resolved");
 

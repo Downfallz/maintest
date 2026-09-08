@@ -13,6 +13,4 @@ public static class MatchErrors
     public static readonly DomainError UnknownCreatureDefinition = new("Match.UnknownCreatureDefinition", "The roster names a creature definition that is not in the game resources.");
 
     public static readonly DomainError NotInProgress = new("Match.NotInProgress", "The match has not started or has already ended.");
-
-    public static readonly DomainError NothingToResolve = new("Match.NothingToResolve", "No combat action is waiting for resolution.");
 }

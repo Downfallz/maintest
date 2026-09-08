@@ -20,23 +20,30 @@ namespace DownfallArena.Domain.Matches;
 /// </summary>
 public sealed class Match : AggregateRoot<MatchId>
 {
+    // Collaborators, not state: a match reconstituted from its state gets them supplied again. The content hash
+    // pins which resources they must be (ADR 0009).
     private readonly IGameResources _resources;
     private readonly IRandomSource _random;
+
     private readonly Dictionary<PlayerSlot, PlayerId> _players = [];
     private readonly Dictionary<PlayerSlot, Team> _teams = [];
-    private int _nextCreatureNumber = 1;
+    private readonly List<Creature> _creatures = [];
 
-    private Match(MatchId id, IGameResources resources, RuleSet rules, IRandomSource random)
+    private Match(MatchId id, IGameResources resources, RuleSet ruleSet, IRandomSource random)
         : base(id)
     {
         _resources = resources;
-        Rules = rules;
         _random = random;
+        RuleSet = ruleSet;
+        ContentHash = resources.Version;
     }
 
     public MatchState State { get; private set; } = MatchState.WaitingForPlayers;
 
-    public RuleSet Rules { get; }
+    public RuleSet RuleSet { get; }
+
+    /// <summary>The content hash of the game resources the match plays with (ADR 0009).</summary>
+    public string ContentHash { get; }
 
     public Round? CurrentRound { get; private set; }
 
@@ -46,23 +53,21 @@ public sealed class Match : AggregateRoot<MatchId>
     public IReadOnlyDictionary<PlayerSlot, PlayerId> Players => _players;
 
     /// <summary>Every creature of the match, Player1's team first.</summary>
-    public IReadOnlyList<Creature> Creatures =>
-        [.. _teams.OrderBy(entry => entry.Key).SelectMany(entry => entry.Value.Creatures)];
+    public IReadOnlyList<Creature> Creatures => _creatures;
 
-    public static Match Create(MatchId id, IGameResources resources, RuleSet rules, IRandomSource random)
+    public static Match Create(MatchId id, IGameResources resources, RuleSet ruleSet, IRandomSource random)
     {
         ArgumentNullException.ThrowIfNull(resources);
-        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(ruleSet);
         ArgumentNullException.ThrowIfNull(random);
-        return new Match(id, resources, rules, random);
+        return new Match(id, resources, ruleSet, random);
     }
 
     public PlayerSlot? SlotOf(PlayerId player) =>
         _players.Where(entry => entry.Value == player).Select(entry => (PlayerSlot?)entry.Key).FirstOrDefault();
 
-    /// <summary>The team of a slot. Asking before the player joined is an invariant violation.</summary>
-    public Team TeamOf(PlayerSlot slot) =>
-        _teams.GetValueOrDefault(slot) ?? throw new InvalidOperationException($"No player has joined as {slot} yet.");
+    /// <summary>The team of a slot, or <c>null</c> while no player has joined as that slot.</summary>
+    public Team? TeamOf(PlayerSlot slot) => _teams.GetValueOrDefault(slot);
 
     public IReadOnlyList<CreatureSnapshot> Snapshots() => [.. Creatures.Select(creature => creature.Snapshot())];
 
@@ -83,7 +88,7 @@ public sealed class Match : AggregateRoot<MatchId>
             return Result.Failure<PlayerSlot>(MatchErrors.PlayerAlreadyJoined);
         }
 
-        if (roster.Count != Rules.TeamSize)
+        if (roster.Count != RuleSet.TeamSize)
         {
             return Result.Failure<PlayerSlot>(MatchErrors.WrongTeamSize);
         }
@@ -94,8 +99,10 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         var slot = _players.ContainsKey(PlayerSlot.Player1) ? PlayerSlot.Player2 : PlayerSlot.Player1;
+        var team = Team.Form(slot, Spawn(slot, roster));
         _players[slot] = player;
-        _teams[slot] = Team.Form(slot, Spawn(slot, roster));
+        _teams[slot] = team;
+        _creatures.AddRange(team.Creatures);
         RaiseDomainEvent(new PlayerJoined(Id, slot, player));
 
         if (_players.Count == 2)
@@ -117,7 +124,7 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         var round = ActiveRound;
-        var validated = EvolutionRules.ValidateChoice(slot, choice, Snapshots(), round, _resources, Rules);
+        var validated = EvolutionRules.ValidateChoice(slot, choice, Snapshots(), round, _resources, RuleSet);
         if (validated.IsFailure)
         {
             return validated;
@@ -254,7 +261,7 @@ public sealed class Match : AggregateRoot<MatchId>
     /// </summary>
     public Result<CombatStep> ResolveNextAction()
     {
-        var open = RequireSubPhase(RoundSubPhase.ActionResolution, MatchErrors.NothingToResolve);
+        var open = RequireSubPhase(RoundSubPhase.ActionResolution, RoundErrors.ResolutionNotOpen);
         if (open.IsFailure)
         {
             return Result.Failure<CombatStep>(open.Error);
@@ -262,7 +269,7 @@ public sealed class Match : AggregateRoot<MatchId>
 
         var round = ActiveRound;
         var action = round.NextActionToResolve();
-        var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, Rules, _random);
+        var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, RuleSet, _random);
         CombatExecution.Apply(resolution, Creatures);
         round.MarkActionResolved();
         RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution));
@@ -279,8 +286,8 @@ public sealed class Match : AggregateRoot<MatchId>
         var creatures = new List<Creature>(roster.Count);
         foreach (var definition in roster)
         {
-            creatures.Add(Creature.Spawn(CreatureId.From(_nextCreatureNumber), slot, _resources.GetCreature(definition)));
-            _nextCreatureNumber++;
+            var number = _creatures.Count + creatures.Count + 1;
+            creatures.Add(Creature.Spawn(CreatureId.From(number), slot, _resources.GetCreature(definition)));
         }
 
         return creatures;
@@ -289,7 +296,7 @@ public sealed class Match : AggregateRoot<MatchId>
     private void Start()
     {
         State = MatchState.InProgress;
-        RaiseDomainEvent(new MatchStarted(Id, _players[PlayerSlot.Player1], _players[PlayerSlot.Player2]));
+        RaiseDomainEvent(new MatchStarted(Id, _players[PlayerSlot.Player1], _players[PlayerSlot.Player2], ContentHash));
         BeginRound(Round.First());
         Drive();
     }
@@ -302,7 +309,7 @@ public sealed class Match : AggregateRoot<MatchId>
     }
 
     private Creature CreatureOf(CreatureId id) =>
-        Creatures.FirstOrDefault(creature => creature.Id == id)
+        _creatures.Find(creature => creature.Id == id)
             ?? throw new InvalidOperationException($"Creature {id} is not in match {Id}.");
 
     private Result RequireSubPhase(RoundSubPhase expected, DomainError notOpen)
@@ -334,19 +341,22 @@ public sealed class Match : AggregateRoot<MatchId>
         var creatures = Creatures;
         return round.SubPhase switch
         {
-            RoundSubPhase.EnergyGain => Automatic(() => UpkeepRules.EnergyGain(creatures, Rules)),
+            RoundSubPhase.EnergyGain => Automatic(() => UpkeepRules.EnergyGain(creatures, RuleSet)),
             RoundSubPhase.OngoingEffects => Automatic(() => RaiseDomainEvent(new OngoingEffectsApplied(Id, round.Id, UpkeepRules.OngoingEffects(creatures)))),
-            RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, Rules).CanAdvance),
+            RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
             RoundSubPhase.IntentSelection => AdvanceIf(IntentRules.Evaluate(round).CanAdvance),
             RoundSubPhase.RevealAndTarget => AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
             RoundSubPhase.ActionResolution => AdvanceIf(round.IsCombatResolved),
-            RoundSubPhase.Cleanup => Automatic(() => UpkeepRules.Cleanup(creatures)),
+            RoundSubPhase.Cleanup => Automatic(() => RaiseDomainEvent(new ConditionsExpired(Id, round.Id, Expired(UpkeepRules.Cleanup(creatures))))),
             RoundSubPhase.Finalization => FinalizeRound(),
             _ => throw new InvalidOperationException($"Sub-phase {round.SubPhase} has no driver step."),
         };
     }
+
+    private static Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>> Expired(IReadOnlyDictionary<CreatureId, IReadOnlyList<Condition>> expired) =>
+        expired.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<ConditionSnapshot>)[.. entry.Value.Select(condition => condition.Snapshot())]);
 
     private bool Automatic(Action step)
     {
@@ -380,7 +390,7 @@ public sealed class Match : AggregateRoot<MatchId>
         var round = ActiveRound;
         RaiseDomainEvent(new RoundEnded(Id, round.Id));
 
-        var outcome = WinCondition.Evaluate(_teams[PlayerSlot.Player1], _teams[PlayerSlot.Player2], round.Number, Rules);
+        var outcome = WinCondition.Evaluate(_teams[PlayerSlot.Player1], _teams[PlayerSlot.Player2], round.Number, RuleSet);
         if (outcome is not null)
         {
             State = MatchState.Ended;

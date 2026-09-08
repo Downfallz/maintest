@@ -31,8 +31,8 @@ public sealed class MatchPlayTests
         match.State.ShouldBe(MatchState.Ended);
         var outcome = match.Outcome.ShouldNotBeNull();
         outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
-        match.TeamOf(PlayerSlot.Player2).IsDefeated.ShouldBeTrue();
-        match.TeamOf(PlayerSlot.Player1).Find(CreatureId.From(2)).ShouldNotBeNull().Health.ShouldBe(Health.Of(2));
+        Table.TeamOf(match, PlayerSlot.Player2).IsDefeated.ShouldBeTrue();
+        Table.CreatureNumber(match, 2).Health.ShouldBe(Health.Of(2));
         match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(11);
         match.CurrentRound.IsFinalized.ShouldBeTrue();
         match.DomainEvents.OfType<MatchEnded>().Single().ShouldBe(new MatchEnded(match.Id, RoundId.From(11), outcome));
@@ -54,8 +54,8 @@ public sealed class MatchPlayTests
 
         // Round 4: creature 1 kills creature 3, creature 2 loses its only target, creature 3 is dead, creature 4 kills creature 1.
         steps.Select(step => step.Resolution.FizzleReason).ShouldBe([null, CombatErrors.AllTargetsInvalid, CombatErrors.ActorDead, null]);
-        match.TeamOf(PlayerSlot.Player1).Find(CreatureId.From(1)).ShouldNotBeNull().IsDead.ShouldBeTrue();
-        match.TeamOf(PlayerSlot.Player2).Find(CreatureId.From(3)).ShouldNotBeNull().IsDead.ShouldBeTrue();
+        Table.CreatureNumber(match, 1).IsDead.ShouldBeTrue();
+        Table.CreatureNumber(match, 3).IsDead.ShouldBeTrue();
         match.State.ShouldBe(MatchState.InProgress);
         match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(5);
     }
@@ -81,14 +81,14 @@ public sealed class MatchPlayTests
 
         var steps = Table.ResolveAll(match);
 
-        steps[3].MatchEnded.ShouldBeTrue();
+        steps[3].MatchCompleted.ShouldBeTrue();
         steps[3].RoundCompleted.ShouldBeTrue();
         match.State.ShouldBe(MatchState.Ended);
         match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.RoundCap));
-        match.TeamOf(PlayerSlot.Player1).TotalHealth.ShouldBe(37);
-        match.TeamOf(PlayerSlot.Player2).TotalHealth.ShouldBe(34);
-        match.TeamOf(PlayerSlot.Player2).Find(CreatureId.From(3)).ShouldNotBeNull().TotalDefense.ShouldBe(Defense.Of(2));
-        match.DomainEvents.OfType<MatchEnded>().Single().LastRound.ShouldBe(RoundId.First);
+        Table.TeamOf(match, PlayerSlot.Player1).TotalHealth.ShouldBe(37);
+        Table.TeamOf(match, PlayerSlot.Player2).TotalHealth.ShouldBe(34);
+        Table.CreatureNumber(match, 3).TotalDefense.ShouldBe(Defense.Of(2));
+        match.DomainEvents.OfType<MatchEnded>().Single().RoundId.ShouldBe(RoundId.First);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed class MatchPlayTests
 
         var steps = Table.PlayRound(match);
 
-        steps[3].MatchEnded.ShouldBeTrue();
+        steps[3].MatchCompleted.ShouldBeTrue();
         var outcome = match.Outcome.ShouldNotBeNull();
         outcome.ShouldBe(new MatchOutcome(null, MatchEndReason.RoundCap));
         outcome.IsDraw.ShouldBeTrue();
@@ -117,6 +117,6 @@ public sealed class MatchPlayTests
 
         step.Resolution.IsCritical.ShouldBeTrue();
         step.Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 6, true)]);
-        match.TeamOf(PlayerSlot.Player2).Find(CreatureId.From(3)).ShouldNotBeNull().Health.ShouldBe(Health.Of(14));
+        Table.CreatureNumber(match, 3).Health.ShouldBe(Health.Of(14));
     }
 }

@@ -43,7 +43,7 @@ This document states what the engine does today and what is decided for next. Id
   driver then runs the automatic steps and the progression gates until the round waits on a player again. A
   player may pass their remaining evolution picks. Resolving the last action of the timeline runs cleanup and
   finalization: the win condition of ADR 0011 either ends the match or starts the next round. Every step
-  raises a domain event.
+  raises a domain event, and the match is stamped with the content hash of its game resources (ADR 0009).
 
 Phases 8 and 9 of `docs/roadmap.md` build on the rules below.
 

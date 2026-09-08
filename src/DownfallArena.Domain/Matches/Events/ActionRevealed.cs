@@ -6,4 +6,4 @@ namespace DownfallArena.Domain.Matches.Events;
 /// <summary>
 /// The next intent of the timeline was revealed and bound to its targets.
 /// </summary>
-public sealed record ActionRevealed(MatchId MatchId, RoundId Round, CombatAction Action) : IDomainEvent;
+public sealed record ActionRevealed(MatchId MatchId, RoundId RoundId, CombatAction Action) : IDomainEvent;

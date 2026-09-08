@@ -31,9 +31,14 @@ internal static class Table
         return match;
     }
 
-    public static List<CreatureDefinitionId> Roster(Match match) => [.. Enumerable.Repeat(Main, match.Rules.TeamSize)];
+    public static List<CreatureDefinitionId> Roster(Match match) => [.. Enumerable.Repeat(Main, match.RuleSet.TeamSize)];
 
-    public static IEnumerable<Creature> Living(Match match, PlayerSlot slot) => match.TeamOf(slot).LivingCreatures;
+    public static Team TeamOf(Match match, PlayerSlot slot) => match.TeamOf(slot).ShouldNotBeNull();
+
+    public static Creature CreatureNumber(Match match, int number) =>
+        match.Creatures.FirstOrDefault(creature => creature.Id == CreatureId.From(number)).ShouldNotBeNull();
+
+    public static IEnumerable<Creature> Living(Match match, PlayerSlot slot) => TeamOf(match, slot).LivingCreatures;
 
     public static void PassEvolution(Match match)
     {

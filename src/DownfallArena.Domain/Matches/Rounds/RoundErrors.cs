@@ -24,5 +24,7 @@ public static class RoundErrors
 
     public static readonly DomainError NotThisCreaturesTurn = new("Round.NotThisCreaturesTurn", "The next intent to reveal belongs to another creature.");
 
+    public static readonly DomainError ResolutionNotOpen = new("Round.ResolutionNotOpen", "No combat action is waiting for resolution in the current sub-phase.");
+
     public static readonly DomainError ActionDoesNotMatchIntent = new("Round.ActionDoesNotMatchIntent", "The action must use the spell declared in the intent.");
 }

@@ -9,6 +9,7 @@ namespace DownfallArena.Domain.Matches.Creatures;
 /// <summary>
 /// A combat unit in a match, spawned from a creature definition. Every state change goes through a method that
 /// protects the invariants; derived values (stun, total defense, current initiative) come from the conditions.
+/// The mutators are internal: only the <see cref="Match"/> aggregate and the rules it runs may change a creature.
 /// </summary>
 public sealed class Creature : Entity<CreatureId>
 {
@@ -63,7 +64,7 @@ public sealed class Creature : Entity<CreatureId>
 
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
 
-    public Result UnlockSpell(SpellId spellId)
+    internal Result UnlockSpell(SpellId spellId)
     {
         ArgumentNullException.ThrowIfNull(spellId);
 
@@ -78,7 +79,7 @@ public sealed class Creature : Entity<CreatureId>
     /// <summary>
     /// Removes health already reduced by defense. Returns the damage actually dealt; a dead creature takes none.
     /// </summary>
-    public int TakeDamage(int amount)
+    internal int TakeDamage(int amount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
 
@@ -95,7 +96,7 @@ public sealed class Creature : Entity<CreatureId>
     /// <summary>
     /// Restores health up to the maximum. Returns the amount actually healed; a dead creature cannot be healed.
     /// </summary>
-    public int Heal(int amount)
+    internal int Heal(int amount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
 
@@ -112,7 +113,7 @@ public sealed class Creature : Entity<CreatureId>
     /// <summary>
     /// Returns the energy actually gained; a dead creature gains none.
     /// </summary>
-    public int GainEnergy(int amount)
+    internal int GainEnergy(int amount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
 
@@ -125,7 +126,7 @@ public sealed class Creature : Entity<CreatureId>
         return amount;
     }
 
-    public Result SpendEnergy(Energy cost)
+    internal Result SpendEnergy(Energy cost)
     {
         ArgumentNullException.ThrowIfNull(cost);
 
@@ -147,7 +148,7 @@ public sealed class Creature : Entity<CreatureId>
     /// Attaches a lasting effect per its stacking policy. Returns the resulting condition, or <c>null</c> when the
     /// application was ignored or the creature is dead.
     /// </summary>
-    public Condition? Apply(LastingEffect effect)
+    internal Condition? Apply(LastingEffect effect)
     {
         ArgumentNullException.ThrowIfNull(effect);
         return IsDead ? null : _conditions.Apply(effect);
@@ -157,7 +158,7 @@ public sealed class Creature : Entity<CreatureId>
     /// Counts one round down on every condition and returns the ones that expired. The rules decide when in the
     /// round this happens.
     /// </summary>
-    public IReadOnlyList<Condition> TickConditions() => _conditions.Tick();
+    internal IReadOnlyList<Condition> TickConditions() => _conditions.Tick();
 
     public CreatureSnapshot Snapshot() => new()
     {

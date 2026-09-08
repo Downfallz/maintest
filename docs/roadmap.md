@@ -151,8 +151,10 @@ Fix: legacy never applied the crit multiplier nor spent the energy; both are cov
   raise `SubPhaseEntered`, repeat until the round waits on a player or the match ends.
 - Events: `PlayerJoined`, `MatchStarted`, `RoundStarted`, `SubPhaseEntered`, `OngoingEffectsApplied`,
   `EvolutionChoiceSubmitted`, `EvolutionPassed`, `SpeedChoiceSubmitted`, `TimelineBuilt`, `IntentSubmitted`,
-  `ActionRevealed`, `CombatActionResolved`, `RoundEnded`, `MatchEnded`. Payloads carry the match id, the round
-  id, and the domain object; no timestamps in the domain (the application layer stamps them).
+  `ActionRevealed`, `CombatActionResolved`, `ConditionsExpired`, `RoundEnded`, `MatchEnded`. Payloads carry the
+  match id, the round id, and the domain object; no timestamps in the domain (the application layer stamps
+  them). `MatchStarted` carries the content hash (ADR 0009).
+- `Round` and `Creature` mutators are internal: only the aggregate root and the rules it runs change them.
 - `WinCondition` implements ADR 0011; the round cap comes from the rule set. Lifecycle violations throw.
 - A player may pass their remaining evolution picks, so the Evolution sub-phase never waits on a player who
   has nothing they want to unlock.

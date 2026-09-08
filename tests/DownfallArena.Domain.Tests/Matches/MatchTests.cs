@@ -27,8 +27,9 @@ public sealed class MatchTests
 
         match.State.ShouldBe(MatchState.InProgress);
         match.Players[PlayerSlot.Player2].ShouldBe(Table.Bob);
-        match.TeamOf(PlayerSlot.Player1).Creatures.Select(creature => creature.Id).ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
-        match.TeamOf(PlayerSlot.Player2).Creatures.Select(creature => creature.Id).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
+        Table.TeamOf(match, PlayerSlot.Player1).Creatures.Select(creature => creature.Id).ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
+        Table.TeamOf(match, PlayerSlot.Player2).Creatures.Select(creature => creature.Id).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
+        match.ContentHash.ShouldBe(Arena.Resources.Version);
         match.Creatures.Count.ShouldBe(4);
         match.Creatures.ShouldAllBe(creature => creature.Energy == Energy.Of(2));
         var round = match.CurrentRound.ShouldNotBeNull();
@@ -48,7 +49,7 @@ public sealed class MatchTests
         ]);
         match.DomainEvents.OfType<SubPhaseEntered>().Select(entered => entered.SubPhase)
             .ShouldBe([RoundSubPhase.EnergyGain, RoundSubPhase.OngoingEffects, RoundSubPhase.Evolution]);
-        match.DomainEvents.OfType<MatchStarted>().Single().ShouldBe(new MatchStarted(match.Id, Table.Alice, Table.Bob));
+        match.DomainEvents.OfType<MatchStarted>().Single().ShouldBe(new MatchStarted(match.Id, Table.Alice, Table.Bob, Arena.Resources.Version));
     }
 
     [Fact]
@@ -63,7 +64,8 @@ public sealed class MatchTests
 
         match.Join(Table.Alice, Table.Roster(match)).IsSuccess.ShouldBeTrue();
         match.Join(Table.Alice, Table.Roster(match)).Error.ShouldBe(MatchErrors.PlayerAlreadyJoined);
-        Should.Throw<InvalidOperationException>(() => match.TeamOf(PlayerSlot.Player2));
+        match.TeamOf(PlayerSlot.Player1).ShouldNotBeNull().Owner.ShouldBe(PlayerSlot.Player1);
+        match.TeamOf(PlayerSlot.Player2).ShouldBeNull();
 
         match.Join(Table.Bob, Table.Roster(match)).IsSuccess.ShouldBeTrue();
         match.Join(PlayerId.New(), Table.Roster(match)).Error.ShouldBe(MatchErrors.AlreadyStarted);
@@ -92,7 +94,7 @@ public sealed class MatchTests
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(creature, Speed.Quick)).Error.ShouldBe(RoundErrors.SpeedNotOpen);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(creature, Arena.Strike)).Error.ShouldBe(RoundErrors.IntentsNotOpen);
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(creature, Arena.Strike), [])).Error.ShouldBe(RoundErrors.TargetingNotOpen);
-        match.ResolveNextAction().Error.ShouldBe(MatchErrors.NothingToResolve);
+        match.ResolveNextAction().Error.ShouldBe(RoundErrors.ResolutionNotOpen);
 
         Table.PassEvolution(match);
 
@@ -110,7 +112,7 @@ public sealed class MatchTests
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.Guard)).IsSuccess.ShouldBeTrue();
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.Guard)).Error.ShouldBe(PlanningErrors.SpellAlreadyKnown);
 
-        match.TeamOf(PlayerSlot.Player1).Find(knight).ShouldNotBeNull().KnowsSpell(Arena.Guard).ShouldBeTrue();
+        Table.CreatureNumber(match, 1).KnowsSpell(Arena.Guard).ShouldBeTrue();
         match.CurrentRound.ShouldNotBeNull().SubPhase.ShouldBe(RoundSubPhase.Evolution);
 
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
@@ -181,22 +183,23 @@ public sealed class MatchTests
         var steps = Table.ResolveAll(match);
 
         steps.Count.ShouldBe(4);
-        steps.Take(3).ShouldAllBe(step => !step.RoundCompleted && !step.MatchEnded && step.Round == RoundId.First);
-        steps[3].Round.ShouldBe(RoundId.First);
+        steps.Take(3).ShouldAllBe(step => !step.RoundCompleted && !step.MatchCompleted && step.RoundId == RoundId.First);
+        steps[3].RoundId.ShouldBe(RoundId.First);
         steps[3].RoundCompleted.ShouldBeTrue();
-        steps[3].MatchEnded.ShouldBeFalse();
+        steps[3].MatchCompleted.ShouldBeFalse();
         steps[3].Resolution.Fizzled.ShouldBeFalse();
         steps[0].Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 3, false)]);
 
-        match.TeamOf(PlayerSlot.Player2).Find(CreatureId.From(3)).ShouldNotBeNull().Health.ShouldBe(Health.Of(14));
-        match.TeamOf(PlayerSlot.Player1).Find(CreatureId.From(1)).ShouldNotBeNull().Health.ShouldBe(Health.Of(14));
+        Table.CreatureNumber(match, 3).Health.ShouldBe(Health.Of(14));
+        Table.CreatureNumber(match, 1).Health.ShouldBe(Health.Of(14));
         match.Creatures.ShouldAllBe(creature => creature.Energy == Energy.Of(4));
         var round = match.CurrentRound.ShouldNotBeNull();
         round.Number.ShouldBe(2);
         round.SubPhase.ShouldBe(RoundSubPhase.Evolution);
         match.DomainEvents.OfType<CombatActionResolved>().Count().ShouldBe(4);
-        match.DomainEvents.OfType<RoundEnded>().Single().Round.ShouldBe(RoundId.First);
-        match.DomainEvents.OfType<RoundStarted>().Select(started => started.Round.Number).ShouldBe([1, 2]);
+        match.DomainEvents.OfType<ConditionsExpired>().Single().Expired.ShouldBeEmpty();
+        match.DomainEvents.OfType<RoundEnded>().Single().RoundId.ShouldBe(RoundId.First);
+        match.DomainEvents.OfType<RoundStarted>().Select(started => started.RoundId.Number).ShouldBe([1, 2]);
         match.DomainEvents.OfType<MatchEnded>().ShouldBeEmpty();
     }
 
