@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Adapters: persistence, game data files, external services.
+    Adapters: game content loading, persistence, external services.
     Implements the ports declared in Application. Never referenced by Domain or Application.
   -->
 

@@ -12,12 +12,17 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/DownfallArena.SharedKernel/DownfallArena.SharedKernel.csproj" />
     <Project Path="src/DownfallArena.Domain/DownfallArena.Domain.csproj" />
     <Project Path="src/DownfallArena.Application/DownfallArena.Application.csproj" />
     <Project Path="src/DownfallArena.Infrastructure/DownfallArena.Infrastructure.csproj" />
     <Project Path="src/DownfallArena.Cli/DownfallArena.Cli.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/DownfallArena.DataBuilder/DownfallArena.DataBuilder.csproj" />
+  </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/DownfallArena.SharedKernel.Tests/DownfallArena.SharedKernel.Tests.csproj" />
     <Project Path="tests/DownfallArena.Domain.Tests/DownfallArena.Domain.Tests.csproj" />
     <Project Path="tests/DownfallArena.Application.Tests/DownfallArena.Application.Tests.csproj" />
     <Project Path="tests/DownfallArena.Infrastructure.Tests/DownfallArena.Infrastructure.Tests.csproj" />

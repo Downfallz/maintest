@@ -1,0 +1,25 @@
+{
+  "id": "spell:heavy_strike:v1",
+  "name": "Heavy Strike",
+  "spellType": "Offensive",
+  "creatureClass": "Creature",
+  "initiative": 1,
+  "energyCost": 0,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 1
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 1,
+      "durationRounds": 1
+    }
+  ]
+}

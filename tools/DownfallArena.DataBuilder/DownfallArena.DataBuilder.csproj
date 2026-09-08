@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Consolidates the authored content under data/ into data/dst/game.schema.json with its content hash (ADR 0009).
+    Usage: see data/README.md for the command line
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DownfallArena.Infrastructure\DownfallArena.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

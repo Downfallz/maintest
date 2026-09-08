@@ -1,0 +1,20 @@
+{
+  "id": "spell:noxious_cure:v1",
+  "name": "Noxious Cure",
+  "spellType": "Offensive",
+  "creatureClass": "Creature",
+  "initiative": 1,
+  "energyCost": 0,
+  "criticalChance": 0,
+  "targeting": {
+    "origin": "Enemy",
+    "scope": "SingleTarget",
+    "maxTargets": 1
+  },
+  "effects": [
+    {
+      "kind": "Damage",
+      "amount": 1
+    }
+  ]
+}
