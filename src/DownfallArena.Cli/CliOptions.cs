@@ -20,10 +20,12 @@ internal sealed record CliOptions(string Command, int? Seed, int Matches, string
         var output = "simulation.csv";
         var schema = DefaultSchemaPath;
 
-        for (var index = command == args.ElementAtOrDefault(0) ? 1 : 0; index < args.Count; index++)
+        var index = command == args.ElementAtOrDefault(0) ? 1 : 0;
+        while (index < args.Count)
         {
-            var value = index + 1 < args.Count ? args[index + 1] : throw new ArgumentException($"Option '{args[index]}' needs a value.");
-            switch (args[index])
+            var option = args[index];
+            var value = index + 1 < args.Count ? args[index + 1] : throw new ArgumentException($"Option '{option}' needs a value.");
+            switch (option)
             {
                 case "--seed":
                     seed = int.Parse(value, CultureInfo.InvariantCulture);
@@ -38,10 +40,10 @@ internal sealed record CliOptions(string Command, int? Seed, int Matches, string
                     schema = value;
                     break;
                 default:
-                    throw new ArgumentException($"Unknown option '{args[index]}'.");
+                    throw new ArgumentException($"Unknown option '{option}'.");
             }
 
-            index++;
+            index += 2;
         }
 
         return new CliOptions(command, seed, matches, output, schema);

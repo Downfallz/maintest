@@ -58,7 +58,7 @@ public sealed class BatchRunner(
             board.Enemies.Sum(creature => creature.Health.Value));
     }
 
-    private IPlayerAgent Agent(AgentKind kind, int seed) =>
+    private RandomAgent Agent(AgentKind kind, int seed) =>
         kind switch
         {
             AgentKind.Random => new RandomAgent(random.Create(seed)),
