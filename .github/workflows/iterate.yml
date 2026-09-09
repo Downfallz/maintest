@@ -65,19 +65,18 @@ jobs:
         with:
           global-json-file: global.json
 
-      # Nothing is ever built from a source distribution: the dependencies come from the locked wheels, and the
-      # learning project, which the loop needs installed because it calls its console scripts (train-value,
-      # report, evaluate-policy), goes in as a wheel built here from its own declarative backend. UV_NO_SYNC
-      # then keeps `uv run` inside the script from rebuilding the environment it was handed.
-      - name: Install uv and the learning project
+      # Only the locked wheels of the dependencies are installed, exactly as in the test job of ci.yml: nothing
+      # is built from source, so no packaging script runs here. The learning project itself is not installed
+      # either; the loop calls it as a module from src/, which is what PYTHONPATH is for, and UV_NO_SYNC keeps
+      # `uv run` from installing it behind our back. The virtual environment lives outside the checkout.
+      - name: Install uv and the dependencies of the learning project
         run: |
           pipx install uv==0.8.17
           echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
           echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+          echo "PYTHONPATH=$GITHUB_WORKSPACE/learning/src" >> "$GITHUB_ENV"
           export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
           uv sync --project learning --locked --no-build --no-install-project
-          uv build --project learning --wheel --out-dir "$RUNNER_TEMP/wheel"
-          uv pip install --python "$UV_PROJECT_ENVIRONMENT" --no-build --no-deps "$RUNNER_TEMP"/wheel/*.whl
 
       # Inputs reach the shell through the environment, never through the script text. They are empty on a
       # schedule or a push, where the defaults of the script are what we want anyway.

@@ -83,7 +83,9 @@ cd "$root"
 run="runs/$run_id"
 seeds="benchmarks/benchmark-seeds.json"
 cli=(dotnet run --project src/DownfallArena.Cli --no-build --configuration Release --)
-learning=(uv run --project learning)
+# Called as a module rather than through the console scripts, so an environment that holds only the locked
+# dependencies of the project can run the loop (what CI does: nothing is built from source there).
+learning=(uv run --project learning python -m downfall_learning.cli)
 
 if [[ -e "$run" ]]; then
   echo "Run directory '$run' exists; each iteration gets its own." >&2
