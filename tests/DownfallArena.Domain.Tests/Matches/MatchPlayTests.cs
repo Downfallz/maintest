@@ -68,7 +68,9 @@ public sealed class MatchPlayTests
     {
         var match = Table.Started(Table.TwoOnTwo(roundCap: 1));
 
-        // Bob's first creature learns Guard and guards instead of striking: Bob deals less and takes the same.
+        // Bob's first creature learns Guard and guards instead of striking. The unlock also raises its base
+        // initiative to 6 (ADR 0017), so it acts before both of Alice's: it guards, and the two strikes that
+        // follow land on 2 defense instead of none. Bob deals less and takes much less, and wins the tiebreak.
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
@@ -77,9 +79,9 @@ public sealed class MatchPlayTests
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(2), Arena.Strike)).IsSuccess.ShouldBeTrue();
         match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue();
         match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(4), Arena.Strike)).IsSuccess.ShouldBeTrue();
+        match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(3), Arena.Guard), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(1), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(2), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
-        match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(3), Arena.Guard), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(4), Arena.Strike), [CreatureId.From(1)])).IsSuccess.ShouldBeTrue();
 
         var steps = Table.ResolveAll(match);
@@ -87,9 +89,9 @@ public sealed class MatchPlayTests
         steps[3].MatchCompleted.ShouldBeTrue();
         steps[3].RoundCompleted.ShouldBeTrue();
         match.State.ShouldBe(MatchState.Ended);
-        match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.RoundCap));
+        match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player2, MatchEndReason.RoundCap));
         Table.TeamOf(match, PlayerSlot.Player1).TotalHealth.ShouldBe(37);
-        Table.TeamOf(match, PlayerSlot.Player2).TotalHealth.ShouldBe(34);
+        Table.TeamOf(match, PlayerSlot.Player2).TotalHealth.ShouldBe(38);
         Table.CreatureNumber(match, 3).TotalDefense.ShouldBe(Defense.Of(2));
         match.DomainEvents.OfType<MatchEnded>().Single().RoundId.ShouldBe(RoundId.First);
     }
@@ -108,9 +110,10 @@ public sealed class MatchPlayTests
             match.SubmitIntent(slot.Owner, new CombatIntent(slot.Creature, spell)).IsSuccess.ShouldBeTrue();
         }
 
+        // Creature 3 unlocked Guard, so its base initiative is 6 and it reveals before Alice's two.
+        match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(3), Arena.Guard), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(1), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(2), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
-        match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(3), Arena.Guard), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(4), Arena.Strike), [CreatureId.From(1)])).IsSuccess.ShouldBeTrue();
         Table.ResolveAll(match);
         Table.CreatureNumber(match, 3).TotalDefense.ShouldBe(Defense.Of(2));
