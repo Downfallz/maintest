@@ -21,22 +21,39 @@ first.
   to reach (`docs/learning/explained.md`: "the clone can never be better than what it copies") and it reached
   it: on 200 matches of `Greedy` self-play, the clone reproduced `Greedy`'s own strength almost exactly. 100%
   against `Random`.
-- **Value policy — a red flag, not yet a conclusion**: 0.0% against `Greedy` (0 wins, 0 draws, 400 matches),
-  but 99.5% against `Random`. A policy that loses every single mirrored match to a deterministic opponent
-  while still beating a uniform one plays coherently (its fizzle rate is 0.08%, far below every other agent's
-  4-5%, so it is not fizzling its way to a loss) but consistently picks the wrong action once the opponent
-  fights back. The likely cause: `train-value` gives a rare action key (most `targets:...` keys, since target
-  combinations are numerous) its own sample mean as a score once it has been seen at all — one lucky win on
-  200 matches can give a bad move a high score with no dataset large enough yet to average it out. Two ways
-  to check: raise `--min-samples` on `train-value` (fewer, better-supported action keys, more falling back to
-  the global mean) or record a bigger dataset before retraining; a trace of one losing match would also show
-  whether the policy repeats one specific bad move.
-- **Why it matters**: the loop runs end to end, produces a report, and the two learners already diverge in an
-  interesting way — cloning is a safe, boring reproduction of `Greedy`, value regression is more ambitious
-  and currently exploitable. Neither policy is committed under `models/` yet: only `report.json` was shared
-  here, not the trained files, and a citable number needs a clean (non-dirty) engine commit. Next: re-run on
-  merged `main` with a larger dataset and a higher `--min-samples`, then commit whichever policy is worth
-  keeping with its evaluation.
+- **Value policy — root cause found, with `policy.json` and `training.jsonl` in hand**: 0.0% against
+  `Greedy` (0 wins, 0 draws, 400 matches), 99.5% against `Random`. `training.jsonl` shows why the fit itself
+  is weak before the match numbers even come in: r² 0.216 and accuracy 25.7% on the 12,683 held-out steps
+  (validated on one match in five, never trained on) against 51,023 training steps — a linear model over 383
+  features explains barely a fifth of the return's variance. The evaluation's `spellUsage` shows what that
+  training failure does at the table: against `Greedy` the policy casts `heavy_strike` 16 times against 9499
+  `basic_attack`s (11996 actions total) — almost the mirror image of `Greedy`'s own play, which casts
+  `heavy_strike` roughly 96% of the time (L5 journal entry). Against `Random` it is far more reasonable
+  (10819 `heavy_strike` against 6193 `basic_attack`), so the policy is not broken in general, only around this
+  one choice.
+  The weights explain the "why": `intent:X:spell:basic_attack:v1` and `speed:X:Quick` carry the exact same
+  bias for creature slots 0 and 1 (`-0.467` and `-0.228` respectively, to the last digit) and an extreme
+  outlier for slot 2 (`-6.958` for `Quick`, `-6.355` for `basic_attack`, against a fallback of `0.012` and
+  every other bias in roughly `[-0.6, 1.7]`). The identical biases are not a coincidence: `docs/learning/artifacts.md`
+  already says the speed and intent sub-phases hand the agent the same board observation for a creature, and
+  `Greedy` picks `basic_attack` (and, separately, `Standard`) far less often than `heavy_strike`/`Quick` — the
+  same benchmark showed a 578-versus-15039 split. A linear ridge regression over 383 features, fit per action
+  key at the default `alpha=1.0`, overfits that thin, low-variance slice of `basic_attack` rows into a large
+  negative coefficient; slot 2 happening to draw the worst luck of the three explains the outlier. The value
+  agent then reads that coefficient at the table and avoids `heavy_strike` almost entirely.
+  Concretely worth trying next: raise `--min-samples` well past the default 5 so a rare key like
+  `basic_attack` falls back to the dataset-wide mean instead of fitting its own noisy row; raise the ridge
+  `--alpha` (383 features per key is a lot to regularize at the default strength); and record more than 200
+  matches so the rare choice gets enough support to fit honestly. None of these are engine bugs — the loop,
+  the encoding, and the training code did exactly what they were asked to; the data given to them was small
+  enough for the regression to memorize noise on one specific, rare action.
+- **Why it matters**: the loop runs end to end, produces a report, and the two learners diverge exactly as
+  the theory predicts — cloning is a safe, bounded reproduction of `Greedy` (and reached that bound), value
+  regression is more ambitious and, on 200 matches, currently overfits one rare-but-important choice into a
+  losing bot. This value policy is not committed under `models/`: on this evidence it is a "tune more" case,
+  not a "keep" case, and a citable number needs a clean (non-dirty) engine commit besides. Next: retrain with
+  a higher `--min-samples` and `--alpha` on a bigger recorded dataset, re-evaluate against `Greedy`, and only
+  then decide whether to commit it with its evaluation.
 
 ## 2026-09-08. Greedy against Random, the first measured gap
 
