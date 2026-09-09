@@ -1,8 +1,9 @@
 # Training
 
-The Python side of the learning stack (phase L6 of the [learning roadmap](../learning-roadmap.md), ADR 0013):
-the `learning/` project, managed with `uv`, that reads what the engine records and writes back what the engine
-and the viewer read. The engine never learns; it records datasets, evaluates agents, and hosts policies.
+The Python side of the learning stack (phases L6 and L7 of the [learning roadmap](../learning-roadmap.md),
+ADR 0013): the `learning/` project, managed with `uv`, that reads what the engine records and writes back
+what the engine and the viewer read. The engine never learns; it records datasets, evaluates agents, and
+hosts policies. New to this? Read [explained.md](explained.md) first.
 
 ## The project
 
@@ -20,6 +21,8 @@ learning/
     train_clone.py              behaviour cloning
     train_value.py              value regression
     search_weights.py           the weight search and the engine evaluator it runs
+    evaluate_policy.py          playing a trained policy with the engine, the win rate into its log
+    iteration.py                the report of one iteration and what moved since another
     cli.py                      the commands
   tests/                        pytest, with synthetic runs and the viewer samples as fixtures
   weights/                      scoring weights files for heuristic:<file> (greedy.json is the built-in set)
@@ -62,6 +65,23 @@ weights, so a policy file stays a plain dot product. `export-csv` writes the wid
 The weight search is the slow one: one engine run per candidate, a few seconds each on 400 matches, so ten
 iterations of sixteen take around ten minutes. A smaller seed file (`--seeds`) makes it faster and noisier.
 
+## Playing a policy
+
+`policy:<file>` seats a `PolicyAgent` in the engine: every decision builds the observation of the board,
+lists the candidate actions the options offer in the order a dataset records them, scores each key with the
+policy's row (or its fallback), and takes the best, the first on a tie. `AgentFactory` refuses a policy whose
+schema id is not the one the current content and rule set give, with a message naming both ids; the spec is
+stamped `Policy:<path>@<fingerprint>`, eight hex digits of the file's bytes.
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 policy:models/value/v1/policy.json --p2 greedy --seeds benchmarks/benchmark-seeds.json
+uv run --project learning evaluate-policy models/value/v1 --opponent greedy     # the same, and the win rate into training.jsonl
+```
+
+`evaluate-policy` writes `evaluation-vs-<opponent>.json` next to the model (or `--output`) and fills
+`winRate`, its interval, and `matches` on the kept iteration of the model's `training.jsonl`, unless
+`--no-log`. The engine's refusal of a foreign schema surfaces as an error with its message.
+
 ## The `policy.json` exchange format
 
 A policy is a linear scorer over action keys, read without an ML runtime:
@@ -89,9 +109,34 @@ A trained policy is committed under `models/<name>/<version>/` (`policy.json`, `
 (`runs/`); they are regenerated from seeds. `learning/weights/` holds the weights files the heuristic agent
 reads, the searched ones next to the built-in `greedy.json`.
 
-## What L7 adds
+## The loop (L7)
 
-The engine side of the exchange: `PolicyAgent` (`policy:<file>`), the iteration script that records, trains,
-evaluates, and compares runs, and the evaluation of clone and value policies against the baselines, which
-fills `winRate` in their `training.jsonl`. Until then, their rows carry the loss and the validation accuracy,
-and the viewer marks the best iteration by loss.
+`scripts/iterate.sh [--run <id>] [--against <id>] [--matches N] [--seed S]` runs one iteration and leaves
+everything under `runs/<id>/`:
+
+1. Build the engine and the content; check the benchmark digest (`benchmark`).
+2. Baselines on the benchmark seeds, mirrored: `random-vs-random`, `greedy-vs-greedy`, `greedy-vs-random`.
+3. Record a greedy self-play dataset (`simulate --record`).
+4. Train the value and clone policies on it (`train-value`, `train-clone`).
+5. Evaluate each policy against greedy and against random (`evaluate-policy`).
+6. With `--against`, replay the previous run's value policy on this content into
+   `previous-value-vs-greedy.json`; when its feature schema no longer applies, say so and go on.
+7. `report`: read every `evaluations/*.json`, refuse to mix engines or contents, write `report.json`, print
+   the table, and with `--against` the deltas and the stamp axis that moved.
+
+```
+runs/<id>/
+  evaluations/*.json      one evaluation per pair of agents
+  dataset/, dataset.csv   the recorded run and its summary
+  value/, clone/          policy.json, training.jsonl, evaluation-vs-*.json
+  report.json             the summary below
+```
+
+`report.json` holds the run's stamp and, per evaluation, the agents, the matches, and the metrics: `winRateA`
+with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when the
+agents are identical), `drawRate`, `averageRounds`, `roundCapShare`, `spellEntropyA`/`B`, `fizzleRateA`/`B`.
+These are the balance signals the roadmap asks the loop to show every time. `report --against <run>` adds the
+deltas for every evaluation both runs hold and lists the stamp axes that differ (content, engine, rules,
+schema); agents and seeds are expected to differ between evaluations and are not axes of a report.
+
+Then one entry in `journal.md`: what changed, the numbers, the decision.

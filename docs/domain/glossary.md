@@ -97,6 +97,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Weight search | Tuning the Scoring weights of the Heuristic agent by evaluating candidate weights files with the engine on the Benchmark seeds (cross-entropy method). | decided |
 | Behaviour cloning | Training a Policy to reproduce the actions of a recorded Dataset: a classifier from Observation to action key. | decided |
 | Value regression | Training a Policy to predict the Return of an Episode from an Observation and an action; the agent takes the option with the highest predicted Return. | decided |
+| Policy agent | The Player agent that plays a Policy file: scores the candidate actions of the options with the policy and takes the best; refuses a Policy trained under another Feature schema. | decided |
+| Iteration report | The `report.json` of one turn of the loop: every Evaluation of a run reduced to its balance signals, with the deltas and the Run stamp axis that moved since another run. | decided |
 
 ## Engineering terms
 

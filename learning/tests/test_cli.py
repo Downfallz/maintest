@@ -115,3 +115,28 @@ def test_the_script_entry_points_prepend_their_command(
 
     assert cli.export_csv_command() == 0
     assert (tmp_path / "steps.csv").is_file()
+
+
+def test_evaluate_policy_drives_the_engine_and_updates_the_model(
+    tmp_path: Path, fake_engine: list[str], capsys: pytest.CaptureFixture
+) -> None:
+    run = write_run(tmp_path / "run", matches=10)
+    cli.main(["train-value", str(run), "-o", str(tmp_path / "model")])
+
+    code = cli.main(
+        [
+            "evaluate-policy",
+            str(tmp_path / "model"),
+            "--opponent",
+            "random",
+            "--repo",
+            str(tmp_path),
+            "--engine",
+            *fake_engine,
+        ]
+    )
+
+    assert code == 0
+    assert (tmp_path / "model" / "evaluation-vs-random.json").is_file()
+    assert "win rate 0.7500" in capsys.readouterr().out
+    assert json.loads((tmp_path / "model" / "training.jsonl").read_text())["winRate"] == 0.75

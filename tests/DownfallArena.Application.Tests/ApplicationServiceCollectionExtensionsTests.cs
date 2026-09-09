@@ -54,6 +54,7 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         services.AddSingleton<IRandomSource>(new TestRandom(1));
         services.AddSingleton<IRandomSourceFactory>(new TestRandomFactory());
         services.AddSingleton(Substitute.For<IScoringWeightsSource>());
+        services.AddSingleton(Substitute.For<IPolicySource>());
 
         services.AddApplication();
 

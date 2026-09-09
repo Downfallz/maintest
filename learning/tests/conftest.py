@@ -200,12 +200,19 @@ def main() -> int:
         print("unknown command", file=sys.stderr)
         return 2
     options = dict(zip(arguments[1::2], arguments[2::2]))
-    weights = json.loads(Path(options["--p1"].split(":", 1)[1]).read_text())
-    if weights.get("damage", 1.0) < 0:
-        print("negative damage", file=sys.stderr)
-        return 1
-    distance = sum((weights.get(name, target) - target) ** 2 for name, target in TARGET.items())
-    score = max(0.0, min(1.0, 1.0 - 0.02 * distance))
+    kind, _, path = options["--p1"].partition(":")
+    if kind == "policy":
+        if "features:v1+" not in json.loads(Path(path).read_text())["schemaId"]:
+            print("Policy was trained under another feature schema.", file=sys.stderr)
+            return 1
+        score = 0.75 if options["--p2"] == "random" else 0.6
+    else:
+        weights = json.loads(Path(path).read_text())
+        if weights.get("damage", 1.0) < 0:
+            print("negative damage", file=sys.stderr)
+            return 1
+        distance = sum((weights.get(name, target) - target) ** 2 for name, target in TARGET.items())
+        score = max(0.0, min(1.0, 1.0 - 0.02 * distance))
     evaluation = json.loads(Path(__file__).with_name("template.json").read_text())
     for name in ("score", "winRate"):
         low, high = max(0.0, score - 0.05), min(1.0, score + 0.05)

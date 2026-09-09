@@ -30,6 +30,7 @@ benchmarks/                    The fixed benchmark seeds and one outcome digest 
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
+scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md).
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
@@ -59,11 +60,13 @@ dotnet run --project src/DownfallArena.Cli -- human                     # you ag
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
-dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>, policy:<policy.json>
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
 uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)   # the Python side
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
+uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log
+scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/, with report.json
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its

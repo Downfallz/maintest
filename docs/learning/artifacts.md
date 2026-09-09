@@ -128,6 +128,13 @@ A trained policy: the run stamp of its data, the feature schema, the action keys
 bias per key, and a fallback score. The fields and how a reader scores candidates are in
 `docs/learning/training.md`; committed under `models/<name>/<version>/`.
 
+## `report.json` (written by the Python side, L7)
+
+The summary of one iteration under `runs/<run-id>/`: the run's stamp and, per evaluation of
+`runs/<run-id>/evaluations/`, the agents, the matches, and the balance metrics (`winRateA` with its interval,
+`scoreA`, `player1WinShare`, `drawRate`, `averageRounds`, `roundCapShare`, spell entropies, fizzle rates).
+`docs/learning/training.md` says how it is built and compared.
+
 ## `traces/<match-id>.json`
 
 The full record of one match (`MatchTraceRecorder`), what the viewer replays and what a bug report attaches:

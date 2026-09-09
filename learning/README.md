@@ -14,6 +14,8 @@ uv run --project learning train-clone runs/greedy -o models/clone/v1
 uv run --project learning train-value runs/greedy -o models/value/v1
 uv run --project learning export-csv runs/greedy -o runs/greedy/steps.csv
 uv run --project learning compare-stamps runs/before/manifest.json runs/after/manifest.json
+uv run --project learning evaluate-policy models/value/v1 --opponent greedy    # needs the built CLI; win rate into training.jsonl
+uv run --project learning report runs/<id> --against runs/<previous>           # report.json of an iteration and what moved
 ```
 
 `weights/` holds the scoring weights files the `heuristic:<file>` agent reads; `greedy.json` is the built-in

@@ -80,7 +80,11 @@ class EngineCommand:
 
 
 class CliEvaluator:
-    """Evaluates a candidate with the engine's ``evaluate``, ``heuristic:<weights file>`` as agent A."""
+    """Evaluates an agent spec with the engine's ``evaluate`` against the opponent on the seed file.
+
+    ``evaluate`` takes the heuristic agent's weights (the search); ``evaluate_spec`` any spec the engine
+    knows (``policy:<file>`` for a trained policy).
+    """
 
     def __init__(self, engine: EngineCommand, workdir: Path) -> None:
         self._engine = engine
@@ -88,14 +92,23 @@ class CliEvaluator:
         self._workdir.mkdir(parents=True, exist_ok=True)
         self.calls = 0
 
+    @property
+    def opponent(self) -> str:
+        return self._engine.opponent
+
     def evaluate(self, weights: Mapping[str, float]) -> Score:
         weights_path = write_weights(self._workdir / "candidate-weights.json", weights)
-        output = self._workdir / "candidate-evaluation.json"
+        return self.evaluate_spec(f"heuristic:{weights_path}", self._workdir / "candidate-evaluation.json")
+
+    def evaluate_spec(self, spec: str, output: Path) -> Score:
+        """Runs one evaluation of ``spec`` as agent A and reads the evaluation it wrote to ``output``."""
+        output = Path(output)
+        output.parent.mkdir(parents=True, exist_ok=True)
         arguments = [
             *self._engine.command,
             "evaluate",
             "--p1",
-            f"heuristic:{weights_path}",
+            spec,
             "--p2",
             self._engine.opponent,
             "--seeds",

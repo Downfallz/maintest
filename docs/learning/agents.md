@@ -7,6 +7,7 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Random | `random` | Picks uniformly among the options. The floor every other agent is measured against; deterministic for a seed. |
 | Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
+| Policy | `policy:<policy.json>` | A trained policy (`docs/learning/training.md`): scores the candidate actions with one weight row per action key and takes the best. Refused when its feature schema is not the current one. |
 
 Every command takes `--p1` and `--p2`:
 

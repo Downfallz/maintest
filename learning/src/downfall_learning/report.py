@@ -24,6 +24,25 @@ class TrainingRow:
     best: bool = False
     extra: Mapping[str, float] = field(default_factory=dict)
 
+    @classmethod
+    def from_json(cls, data: Mapping[str, Any]) -> TrainingRow:
+        known = {"iteration", "loss", "winRate", "winRateLow", "winRateHigh", "matches", "best", "stamp"}
+        extra = {
+            key: float(value)
+            for key, value in data.items()
+            if key not in known and isinstance(value, int | float)
+        }
+        return cls(
+            iteration=int(data["iteration"]),
+            loss=float(data["loss"]),
+            win_rate=None if data.get("winRate") is None else float(data["winRate"]),
+            win_rate_low=None if data.get("winRateLow") is None else float(data["winRateLow"]),
+            win_rate_high=None if data.get("winRateHigh") is None else float(data["winRateHigh"]),
+            matches=None if data.get("matches") is None else int(data["matches"]),
+            best=bool(data.get("best", False)),
+            extra=extra,
+        )
+
     def to_json(self, stamp: RunStamp | None = None) -> dict[str, Any]:
         row: dict[str, Any] = {"iteration": self.iteration, "loss": self.loss}
         if self.win_rate is not None:
@@ -85,6 +104,34 @@ class TrainingLog:
 
     def best(self) -> TrainingRow | None:
         return next((row for row in self._rows if row.best), None)
+
+    def record_evaluation(self, win_rate: float, low: float, high: float, matches: int) -> TrainingRow:
+        """Fills the evaluation win rate of the kept iteration (the best, else the last) once played."""
+        if not self._rows:
+            raise ValueError("No iteration to record an evaluation on.")
+        target = self.best() or self._rows[-1]
+        updated = replace(target, win_rate=win_rate, win_rate_low=low, win_rate_high=high, matches=matches)
+        self._rows = [updated if row.iteration == target.iteration else row for row in self._rows]
+        self._write()
+        return updated
+
+    @classmethod
+    def load(cls, path: Path) -> TrainingLog:
+        """Reads a ``training.jsonl`` back, the stamp from its first row, so an evaluation can be added."""
+        path = Path(path)
+        rows: list[TrainingRow] = []
+        stamp: RunStamp | None = None
+        with path.open(encoding="utf-8") as file:
+            for line in file:
+                if not line.strip():
+                    continue
+                data = json.loads(line)
+                if stamp is None and "stamp" in data:
+                    stamp = RunStamp.from_json(data["stamp"])
+                rows.append(TrainingRow.from_json(data))
+        log = cls(stamp, path)
+        log._rows = rows
+        return log
 
     def _write(self) -> None:
         if self._path is None:
