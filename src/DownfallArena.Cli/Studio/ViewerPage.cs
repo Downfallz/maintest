@@ -13,7 +13,18 @@ internal static class ViewerPage
     private const string ScriptStart = "  <script>\n    'use strict';";
     private const string EmbeddedId = "embedded-artifacts";
 
-    public static string Render(string viewerDirectory, string run, IReadOnlyList<(string Name, string Text)> artifacts)
+    /// <summary>
+    /// The page carrying one run's artifacts, opening on the first of them.
+    /// </summary>
+    public static string Render(string viewerDirectory, string run, IReadOnlyList<(string Name, string Text)> artifacts) =>
+        Render(viewerDirectory, run, artifacts, compare: false);
+
+    /// <summary>
+    /// With <paramref name="compare"/> the page opens on the comparison of the two artifacts it carries. It has
+    /// to be said rather than guessed from the count: the Python side writes run pages that carry two
+    /// evaluations and nothing else, and those must keep opening on the first artifact.
+    /// </summary>
+    public static string Render(string viewerDirectory, string run, IReadOnlyList<(string Name, string Text)> artifacts, bool compare)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(viewerDirectory);
         ArgumentNullException.ThrowIfNull(artifacts);
@@ -34,6 +45,7 @@ internal static class ViewerPage
         var payload = JsonSerializer.Serialize(new
         {
             run,
+            compare,
             artifacts = artifacts.Select(artifact => new { path = $"{run}/{artifact.Name}", name = artifact.Name, text = artifact.Text }),
         });
 

@@ -22,19 +22,29 @@ public sealed record ScoringWeights(
     /// <summary>The greedy agent's weights: a kill is worth five damage, a stun three, energy kept and buffs a little, a wasted action costs two.</summary>
     public static ScoringWeights Default { get; } = new(Damage: 1.0, Kill: 5.0, Heal: 0.8, Stun: 3.0, Bleed: 0.8, Buff: 0.5, Energy: 0.2, Risk: 2.0);
 
+    /// <summary>
+    /// The weights under the names a weights file uses, in the order the fingerprint hashes them. One list, so
+    /// a name a file may carry, a name an error may print and a name a page may show cannot drift apart.
+    /// </summary>
+    public IReadOnlyList<(string Name, double Value)> Named =>
+    [
+        ("damage", Damage), ("kill", Kill), ("heal", Heal), ("stun", Stun),
+        ("bleed", Bleed), ("buff", Buff), ("energy", Energy), ("risk", Risk),
+    ];
+
     /// <summary>Eight hex digits that change with any weight, the version a heuristic agent's spec carries.</summary>
     public string Fingerprint
     {
         get
         {
-            var text = string.Join(",", new[] { Damage, Kill, Heal, Stun, Bleed, Buff, Energy, Risk }.Select(value => value.ToString("R", CultureInfo.InvariantCulture)));
+            var text = string.Join(",", Named.Select(weight => weight.Value.ToString("R", CultureInfo.InvariantCulture)));
             return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..8];
         }
     }
 
     public ScoringWeights Validated()
     {
-        foreach (var (name, value) in new[] { ("damage", Damage), ("kill", Kill), ("heal", Heal), ("stun", Stun), ("bleed", Bleed), ("buff", Buff), ("energy", Energy), ("risk", Risk) })
+        foreach (var (name, value) in Named)
         {
             if (!double.IsFinite(value))
             {

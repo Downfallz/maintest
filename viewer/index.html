@@ -177,13 +177,13 @@
     const spellName = id => String(id).split(':')[1] || id;
 
     function wilson(successes, total) {
-      if (!total) return { rate: 0, low: 0, high: 0 };
+      if (!total) return { mean: 0, low: 0, high: 0 };
       const z = 1.96;
       const p = successes / total;
       const denominator = 1 + (z * z) / total;
       const centre = p + (z * z) / (2 * total);
       const margin = z * Math.sqrt((p * (1 - p)) / total + (z * z) / (4 * total * total));
-      return { rate: p, low: (centre - margin) / denominator, high: (centre + margin) / denominator };
+      return { mean: p, low: (centre - margin) / denominator, high: (centre + margin) / denominator };
     }
 
     function histogram(values, bins) {
@@ -288,8 +288,10 @@
       return el('div', { class: 'stat' }, [el('div', { class: 'label' }, label), el('div', { class: 'value' }, value), el('div', { class: 'sub' }, sub)]);
     }
 
-    function rateStat(label, rate) {
-      return stat(label, pct(rate.rate), `95% CI ${pct(rate.low)} to ${pct(rate.high)}`);
+    // Takes the shape the engine writes for a ConfidenceInterval: mean, low, high. `wilson` builds the same
+    // shape, so a batch and an evaluation read alike — they did not, and an evaluation's win rate showed a dash.
+    function rateStat(label, interval) {
+      return stat(label, pct(interval.mean), `95% CI ${pct(interval.low)} to ${pct(interval.high)}`);
     }
 
     function batchCharts(summary) {
@@ -914,7 +916,7 @@
       if (artifact.kind === 'run') {
         const summary = summarize(artifact);
         return [
-          ['Matches', summary.matches, 0], ['Player 1 win rate', summary.player1.rate, 3], ['Player 2 win rate', summary.player2.rate, 3], ['Draw rate', summary.draws.rate, 3],
+          ['Matches', summary.matches, 0], ['Player 1 win rate', summary.player1.mean, 3], ['Player 2 win rate', summary.player2.mean, 3], ['Draw rate', summary.draws.mean, 3],
           ['Average rounds', summary.averageRounds, 2], ['P1 remaining health', summary.averageHealth1, 2], ['P2 remaining health', summary.averageHealth2, 2],
           ['Fizzle rate', summary.combat.actions ? summary.combat.fizzles / summary.combat.actions : 0, 3],
         ];
@@ -967,10 +969,88 @@
         table.append(el('tr', {}, [el('td', {}, label), el('td', { class: 'num' }, fixed(value, digits)), el('td', { class: 'num' }, fixed(other, digits)), el('td', { class: `num ${deltaClassOf(delta)}` }, `${delta > 0 ? '+' : ''}${fixed(delta, digits)}`)]));
       }
       const axes = changed.size ? `Changed: ${[...changed].join(', ')}` : 'Same run stamp on both sides (or no stamp).';
+      const spells = a.kind === 'evaluation' && b.kind === 'evaluation' ? spellDeltaTable(a, b) : null;
       return el('div', {}, [
         el('div', { class: 'card' }, [el('div', { class: 'title' }, [el('h2', {}, `${a.name} vs ${b.name}`), el('span', { class: 'muted' }, axes)]),
           el('div', { class: 'charts' }, [el('div', { class: 'card' }, [el('h3', {}, a.name), stampList(stampOf(a), changed)]), el('div', { class: 'card' }, [el('h3', {}, b.name), stampList(stampOf(b), changed)])])]),
         el('div', { class: 'card' }, [el('h3', {}, 'Metrics'), table]),
+        ...(spells ? [spells] : []),
+      ]);
+    }
+
+    // ---------- what a tuning change did, spell by spell ----------
+
+    // Totals per spell name rather than per versioned id, so a spell cut as :v2 lines up with the :v1 it
+    // replaced. That is the usual shape of a tuning change, and keying on the id would drop exactly the spell
+    // the author changed out of the comparison.
+    function spellsByName(outcomes) {
+      const totals = new Map();
+      for (const outcome of outcomes || []) {
+        const name = spellName(outcome.spell);
+        const row = totals.get(name) || { name, versions: new Set(), sides: 0, wins: 0, draws: 0 };
+        row.versions.add(String(outcome.spell).split(':')[2] || '?');
+        row.sides += outcome.sides;
+        row.wins += outcome.wins;
+        row.draws += outcome.draws;
+        totals.set(name, row);
+      }
+      for (const row of totals.values()) row.score = row.sides ? (row.wins + row.draws / 2) / row.sides : 0;
+      return totals;
+    }
+
+    function versionsOf(before, after) {
+      const versions = new Set([...(before ? before.versions : []), ...(after ? after.versions : [])]);
+      return [...versions].sort((left, right) => left.localeCompare(right)).join(', ');
+    }
+
+    function deltaCell(before, after) {
+      if (!before) return el('td', { class: 'num delta-up' }, 'new');
+      if (!after) return el('td', { class: 'num delta-down' }, 'gone');
+      const delta = after.score - before.score;
+      return el('td', { class: `num ${deltaClassOf(delta)}` }, `${delta > 0 ? '+' : ''}${pct(delta)}`);
+    }
+
+    function spellDeltaRows(left, right) {
+      const rows = [...new Set([...left.keys(), ...right.keys()])].map(name => ({
+        name,
+        before: left.get(name) || null,
+        after: right.get(name) || null,
+      }));
+      // Biggest move first, and the rows that only exist on one side after them: they are a fact about the
+      // content, not a measured change, so they should not head the table.
+      return rows.sort((one, other) => Math.abs(move(other)) - Math.abs(move(one)));
+    }
+
+    function move(row) {
+      return row.before && row.after ? row.after.score - row.before.score : 0;
+    }
+
+    function spellDeltaTable(a, b) {
+      const left = spellsByName(a.evaluation.spellOutcomes);
+      const right = spellsByName(b.evaluation.spellOutcomes);
+      const rows = spellDeltaRows(left, right);
+      if (!rows.length) return null;
+
+      const table = el('table');
+      table.append(el('tr', {}, ['Spell', 'Versions', 'Before', 'After', 'Delta', 'Sides']
+        .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
+      for (const row of rows) {
+        const sides = Math.min(row.before ? row.before.sides : 0, row.after ? row.after.sides : 0);
+        const thin = sides < ENOUGH_SIDES;
+        table.append(el('tr', { class: thin ? 'thin' : '' }, [
+          el('td', {}, [el('span', {}, row.name), thin ? el('span', { class: 'muted' }, ' · too few') : '']),
+          el('td', {}, versionsOf(row.before, row.after)),
+          el('td', { class: 'num' }, row.before ? pct(row.before.score) : '-'),
+          el('td', { class: 'num' }, row.after ? pct(row.after.score) : '-'),
+          deltaCell(row.before, row.after),
+          el('td', { class: 'num' }, sides),
+        ]));
+      }
+
+      return el('div', { class: 'card' }, [
+        el('h3', {}, 'What the change did, spell by spell'),
+        el('p', { class: 'muted' }, 'The share of the sides that declared a spell and went on to win, before and after. This delta is the honest reading of these shares: run the same seeds with the same agents on both sides and the survivorship of a talent-gated spell is the same on both, so it cancels. A spell cut as a new version lines up with the one it replaced, since the rows are keyed by name.'),
+        table,
       ]);
     }
 
@@ -1043,8 +1123,13 @@
       const carried = JSON.parse(embedded.textContent);
       addTexts(carried.artifacts || []);
       // A run page opens on its report; a page carrying only an evaluation or a trace (the studio's runs) opens
-      // on the first artifact it carries, so there is still nothing to pick.
-      state.selected = state.artifacts.find(artifact => artifact.kind === 'report') || state.artifacts[0] || null;
+      // on the first artifact it carries, so there is still nothing to pick. A page that says it is a comparison
+      // opens on the comparison, since opening on either side alone would hide what it came for. The flag is
+      // said rather than guessed from the count: a run of the loop can carry two evaluations and no report.
+      const [first, second] = state.artifacts;
+      state.selected = carried.compare && state.artifacts.length === 2 && first.kind === second.kind
+        ? { kind: 'comparison', name: 'comparison', a: first, b: second }
+        : state.artifacts.find(artifact => artifact.kind === 'report') || state.artifacts[0] || null;
       drop.textContent = `This page carries run ${carried.run || ''}. Drop another run's report.json, evaluations, or training.jsonl here to compare.`;
       render();
     }

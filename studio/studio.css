@@ -70,3 +70,23 @@ form { display: contents; }
 details { margin: 2px 0 8px 8px; }
 details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
 details[open] summary { margin-bottom: 6px; }
+
+.weights { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.weights h3 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.weights .hint { margin: 0 0 8px; }
+.weight-fields { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 8px; }
+.weight-fields label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.weight-fields input { width: 80px; font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+
+#runs-body, #audit-body { margin-top: 10px; max-height: 55vh; overflow: auto; }
+#runs-body table, #audit-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+#runs-body th, #audit-body th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); padding: 4px 8px 4px 0; }
+#runs-body td, #audit-body td { border-bottom: 1px solid var(--line); padding: 4px 8px 4px 0; vertical-align: top; }
+#runs-body td.num, #audit-body td.num, #runs-body th.num, #audit-body th.num { text-align: right; padding-right: 12px; font-variant-numeric: tabular-nums; }
+#runs-body .mono, #audit-body .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+.findings { margin: 0 0 12px; padding-left: 18px; }
+.findings li { margin-bottom: 4px; }
+.findings .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted); }
+.audit-line { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin-bottom: 10px; }
+.audit-line .warn { color: var(--warn); font-weight: 600; }

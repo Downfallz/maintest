@@ -34,11 +34,11 @@ internal sealed class StudioFiles
 
         if (!_routes.TryGetValue(path, out var route))
         {
-            return StudioResponse.OfText(404, "text/plain; charset=utf-8", $"No such page: {path}");
+            return StudioResponse.OfPlainText(404, $"No such page: {path}");
         }
 
         return File.Exists(route.Path)
             ? StudioResponse.OfText(200, route.ContentType, File.ReadAllText(route.Path))
-            : StudioResponse.OfText(500, "text/plain; charset=utf-8", $"'{route.Path}' is missing. Run the studio from the repository root.");
+            : StudioResponse.OfPlainText(500, $"'{route.Path}' is missing. Run the studio from the repository root.");
     }
 }

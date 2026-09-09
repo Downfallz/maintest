@@ -62,7 +62,7 @@ const TEMPLATES = {
   }),
 };
 
-const state = { catalogue: null, tab: 'spells', selected: null, draft: null, dirty: false, node: null, busy: false };
+const state = { catalogue: null, tab: 'spells', selected: null, draft: null, dirty: false, node: null, busy: false, runs: [], weights: null, audit: null };
 
 // ---------- small helpers ----------
 
@@ -832,6 +832,7 @@ async function run() {
     player2: agentSpec('p2'),
     matches: Number($('run-matches').value) || 20,
     seed: $('run-seed').value === '' ? null : Number($('run-seed').value),
+    weights: weightsPayload(),
   };
 
   // Opened here, on the click itself: a run outlasts the browser's user-activation window, so a window.open
@@ -859,6 +860,8 @@ async function run() {
   const link = element('a', { href: result.url, target: '_blank', rel: 'noopener', textContent: `${result.id} (seed ${result.seed})` });
   status.replaceChildren(link);
   if (tab) tab.location.replace(result.url);
+  state.runs = [result, ...state.runs];
+  renderRuns();
 }
 
 // ---------- wiring ----------
@@ -883,35 +886,217 @@ for (const tab of document.querySelectorAll('.tab')) {
   });
 }
 
-// The agents the engine can seat (docs/learning/agents.md). The two that read a file keep a box for its path,
-// so picking one does not mean remembering the spec syntax.
+// The agents the engine can seat (docs/learning/agents.md). The kinds that read a file keep a box for its
+// path, so picking one does not mean remembering the spec syntax; the heuristic agent can also be driven from
+// the weights panel below, and then it reads the file this run writes for itself.
 const AGENTS = [
   { value: 'random', label: 'Random — picks uniformly' },
   { value: 'greedy', label: 'Greedy — one-step lookahead, deterministic' },
   { value: 'explore:0.2', label: 'Explore 20% — greedy, one action in five at random' },
-  { value: 'heuristic:', label: 'Heuristic — greedy with weights from a file', path: 'learning/weights/greedy.json' },
-  { value: 'policy:', label: 'Policy — a trained policy from a file', path: 'models/clone/v1/policy.json' },
+  { value: 'heuristic-weights', label: 'Heuristic — with the weights below', weights: true, spec: () => 'heuristic:' },
+  { value: 'heuristic-file', label: 'Heuristic — with weights from a file', path: 'learning/weights/greedy.json', spec: path => `heuristic:${path}` },
+  { value: 'policy-file', label: 'Policy — a trained policy from a file', path: 'models/clone/v1/policy.json', spec: path => `policy:${path}` },
 ];
+
+const agentOf = slot => AGENTS.find(candidate => candidate.value === $(`run-${slot}`).value) || AGENTS[0];
 
 /** Fills one agent picker, and shows the path box only for the kinds that read a file. */
 function fillAgentPicker(slot) {
   const select = $(`run-${slot}`);
-  const path = $(`run-${slot}-path`);
   select.replaceChildren(...AGENTS.map(agent => element('option', { value: agent.value, textContent: agent.label })));
-  const sync = () => {
-    const agent = AGENTS.find(candidate => candidate.value === select.value);
-    path.hidden = !agent?.path;
-    if (agent?.path && !path.value) path.value = agent.path;
-  };
+  select.addEventListener('change', syncAgents);
+}
 
-  select.addEventListener('change', sync);
-  sync();
+/** Shows each slot's path box, and the weights panel when either slot is playing the panel's weights. */
+function syncAgents() {
+  for (const slot of ['p1', 'p2']) {
+    const agent = agentOf(slot);
+    const path = $(`run-${slot}-path`);
+    path.hidden = !agent.path;
+    if (agent.path && !path.value) path.value = agent.path;
+  }
+
+  $('run-weights').hidden = !['p1', 'p2'].some(slot => agentOf(slot).weights);
 }
 
 /** The agent spec the run panel is asking for: the kind, plus the file path when the kind reads one. */
 function agentSpec(slot) {
-  const value = $(`run-${slot}`).value;
-  return value.endsWith(':') ? value + $(`run-${slot}-path`).value.trim() : value;
+  const agent = agentOf(slot);
+  return agent.spec ? agent.spec($(`run-${slot}-path`).value.trim()) : agent.value;
+}
+
+// ---------- the weights panel ----------
+
+/** One box per weight the engine has, filled from the engine's own defaults rather than from a copy here. */
+async function loadWeights() {
+  if (state.weights) return;
+  const weights = await act('Reading the weights', () => call('/api/weights'));
+  if (!weights) return;
+  state.weights = weights;
+  $('run-weights-fields').replaceChildren(...weights.order.map(name => element('label', { textContent: name }, [
+    element('input', { id: `weight-${name}`, type: 'number', step: '0.1', value: String(weights.values[name]) }),
+  ])));
+  clearBanner();
+}
+
+function resetWeights() {
+  if (!state.weights) return;
+  for (const name of state.weights.order) $(`weight-${name}`).value = String(state.weights.values[name]);
+}
+
+/**
+ * The weights to play, or null when no slot is asking for them. An emptied box is left out rather than sent as
+ * a zero: a weights file that omits a name keeps the built-in value, and an empty field reads as "unset", not
+ * as "nothing". Number('') is 0, which would quietly play a very different agent.
+ */
+function weightsPayload() {
+  if (!state.weights || $('run-weights').hidden) return null;
+  const weights = {};
+  for (const name of state.weights.order) {
+    const text = $(`weight-${name}`).value.trim();
+    if (text !== '') weights[name] = Number(text);
+  }
+  return weights;
+}
+
+// ---------- the run list ----------
+
+async function loadRuns() {
+  const runs = await act('Reading the runs', () => call('/api/runs'));
+  if (!runs) return;
+  state.runs = runs;
+  renderRuns();
+  clearBanner();
+}
+
+function renderRuns() {
+  if (!state.runs.length) {
+    $('runs-body').replaceChildren(element('p', { className: 'hint', textContent: 'Nothing played yet. A run shows up here as soon as you play one.' }));
+    return;
+  }
+
+  const table = element('table');
+  table.append(element('tr', {}, ['', 'When', 'Mode', 'Player 1', 'Player 2', 'Seed', 'Matches', 'Content', '']
+    .map((text, index) => element('th', { className: index === 5 || index === 6 ? 'num' : '', textContent: text }))));
+  for (const run of state.runs) {
+    table.append(element('tr', {}, [
+      element('td', {}, [element('input', { type: 'checkbox', value: run.id, className: 'run-pick', ariaLabel: `Compare ${run.id}` })]),
+      element('td', { className: 'mono', textContent: new Date(run.at).toLocaleString() }),
+      element('td', { textContent: run.mode }),
+      element('td', { textContent: agentLabel(run, run.player1), title: run.player1 }),
+      element('td', { textContent: agentLabel(run, run.player2), title: run.player2 }),
+      element('td', { className: 'num', textContent: String(run.seed) }),
+      element('td', { className: 'num', textContent: String(run.matches) }),
+      element('td', { className: 'mono', textContent: (run.contentHash || '').slice(0, 12) }),
+      element('td', {}, [element('a', { href: run.url, target: '_blank', rel: 'noopener', textContent: 'Open' })]),
+    ]));
+  }
+
+  $('runs-body').replaceChildren(table);
+}
+
+/** A spec pointing into the run's own directory is the weights that run was played with; the path adds nothing. */
+function agentLabel(run, spec) {
+  return spec.includes(run.id) ? `${spec.split(':')[0]} (its own weights)` : spec;
+}
+
+/**
+ * Opens the two ticked runs side by side. Two runs on the same seeds and the same agents is what makes the
+ * delta about the content; the table above says the seed, the agents and the content of each, so the page can
+ * show what differs rather than decide for the author whether the comparison is fair.
+ */
+function compareRuns() {
+  const picked = [...document.querySelectorAll('.run-pick:checked')].map(box => box.value);
+  const status = $('runs-status');
+  if (picked.length !== 2) {
+    status.textContent = `Tick two runs to compare; ${picked.length} ticked.`;
+    return;
+  }
+
+  // Oldest first, whatever order they were ticked in: the page reads the left side as the before and the right
+  // as the after, and this list is newest first, so ticking from the top would otherwise reverse every delta.
+  const [before, after] = picked.toSorted((left, right) => Date.parse(runAt(left)) - Date.parse(runAt(right)));
+  status.textContent = '';
+  window.open(`/compare/${before}/${after}`, '_blank', 'noopener');
+}
+
+const runAt = id => state.runs.find(run => run.id === id)?.at || '';
+
+// ---------- the content audit ----------
+
+async function loadAudit() {
+  const result = await act('Auditing the content', () => call('/api/audit'));
+  if (!result) return;
+  state.audit = result;
+  renderAudit();
+  clearBanner();
+}
+
+function auditSummary(result) {
+  const audit = result.audit;
+  const line = element('div', { className: 'audit-line' }, [
+    element('span', { className: 'mono', textContent: `content ${audit.contentVersion.slice(0, 12)}` }),
+    element('span', { textContent: `${audit.creatures} creatures, ${audit.spells} spells, ${audit.talentTrees} talent trees` }),
+    element('span', { textContent: `reachability at ${audit.energyPerRound} energy per round over ${audit.roundCap} rounds` }),
+  ]);
+
+  // A digest is filed under the content hash it was measured on, so an edit leaves this content without one.
+  // Saying so beats letting an author think the benchmark is still watching their back.
+  line.append(result.benchmark.exists
+    ? element('span', { textContent: 'benchmark digest: present' })
+    : element('span', { className: 'warn', textContent: 'benchmark digest: none for this content yet' }));
+  return line;
+}
+
+function auditFindings(findings) {
+  if (!findings.length) {
+    return element('p', { className: 'hint', textContent: 'Nothing unreachable: every spell is on some creature or behind a gate one can open, and every talent node opens.' });
+  }
+
+  return element('ul', { className: 'findings' }, findings.map(finding => element('li', {}, [
+    element('span', { className: 'code', textContent: `${finding.code} ` }),
+    element('span', { className: 'mono', textContent: finding.subject }),
+    element('span', { textContent: ` — ${finding.message}` }),
+  ])));
+}
+
+function auditReach(reach) {
+  const table = element('table');
+  table.append(element('tr', {}, ['Spell', 'Class', 'Cost', 'Damage', 'Bleed', 'Heal', 'Damage/energy', 'Starts on', 'Reachable by']
+    .map((text, index) => element('th', { className: index >= 2 ? 'num' : '', textContent: text }))));
+  for (const row of reach) {
+    table.append(element('tr', {}, [
+      element('td', {}, [element('button', { type: 'button', className: 'link', textContent: row.name, onclick: () => selectSpell(row.spell) })]),
+      element('td', { textContent: row.creatureClass }),
+      element('td', { className: 'num', textContent: String(row.cost) }),
+      element('td', { className: 'num', textContent: String(row.damage) }),
+      element('td', { className: 'num', textContent: String(row.bleedDamage) }),
+      element('td', { className: 'num', textContent: String(row.healing) }),
+      element('td', { className: 'num', textContent: row.damagePerEnergy.toFixed(1) }),
+      element('td', { className: 'num', textContent: String(row.startingFor) }),
+      element('td', { className: 'num', textContent: String(row.reachableBy) }),
+    ]));
+  }
+
+  return table;
+}
+
+/** The audit talks in spell ids; the editor is keyed by file path, so go through the catalogue. */
+function selectSpell(id) {
+  const spell = documentsOf('spells').find(item => item.id === id);
+  if (spell) select(spell.path);
+}
+
+function renderAudit() {
+  const result = state.audit;
+  $('audit-body').replaceChildren(auditSummary(result), auditFindings(result.audit.findings), auditReach(result.audit.reach));
+}
+
+/** Shows one of the panels above the editor, loading what it needs the first time it is opened. */
+function togglePanel(id, load) {
+  const panel = $(id);
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) load();
 }
 
 /** How many seeds only means something for an evaluation; one match is one match. */
@@ -925,12 +1110,17 @@ $('run-mode').addEventListener('change', syncRunMode);
 syncRunMode();
 fillAgentPicker('p1');
 fillAgentPicker('p2');
+syncAgents();
 
 $('search').addEventListener('input', renderNav);
 $('new').addEventListener('click', create);
 $('build').addEventListener('click', build);
 $('run-go').addEventListener('click', run);
-$('run-panel').addEventListener('click', () => { $('run').hidden = !$('run').hidden; });
+$('run-weights-reset').addEventListener('click', resetWeights);
+$('runs-compare').addEventListener('click', compareRuns);
+$('run-panel').addEventListener('click', () => togglePanel('run', loadWeights));
+$('runs-panel').addEventListener('click', () => togglePanel('runs', loadRuns));
+$('audit-panel').addEventListener('click', () => togglePanel('audit', loadAudit));
 
 window.addEventListener('beforeunload', event => {
   if (state.dirty) event.preventDefault();

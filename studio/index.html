@@ -13,6 +13,8 @@
     <span id="hash" class="hint mono">content not built</span>
     <button id="build" type="button" class="button">Build</button>
     <button id="run-panel" type="button" class="button">Run a match</button>
+    <button id="runs-panel" type="button" class="button">Runs</button>
+    <button id="audit-panel" type="button" class="button">Audit</button>
   </header>
 
   <div id="banner" class="banner" hidden></div>
@@ -43,6 +45,27 @@
       <button id="run-go" type="button" class="button primary">Play it</button>
       <span id="run-status" class="hint"></span>
     </div>
+    <div id="run-weights" class="weights" hidden>
+      <h3>Scoring weights</h3>
+      <p class="hint">What the heuristic agent values, in points of effective damage (<code>docs/learning/agents.md</code>). They are written next to the run, so a result keeps the weights it was played with.</p>
+      <div id="run-weights-fields" class="weight-fields"></div>
+      <button id="run-weights-reset" type="button" class="button">Back to the built-in weights</button>
+    </div>
+  </section>
+
+  <section id="runs" class="run" hidden>
+    <h2>Runs</h2>
+    <div class="controls">
+      <button id="runs-compare" type="button" class="button primary">Compare the two ticked</button>
+      <span id="runs-status" class="hint"></span>
+      <span class="hint">Two runs on the same seeds and the same agents make the delta about the content; the older one is the before.</span>
+    </div>
+    <div id="runs-body"></div>
+  </section>
+
+  <section id="audit" class="run" hidden>
+    <h2>Content audit</h2>
+    <div id="audit-body"></div>
   </section>
 
   <main>

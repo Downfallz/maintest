@@ -10,6 +10,8 @@ internal sealed class StudioServer : IDisposable
 {
     private const string RunPrefix = "/runs/";
 
+    private const string ComparePrefix = "/compare/";
+
     private readonly HttpListener _listener = new();
     private readonly StudioApi _api;
     private readonly StudioFiles _files;
@@ -68,7 +70,7 @@ internal sealed class StudioServer : IDisposable
         }
         catch (Exception exception)
         {
-            response = StudioResponse.OfText(500, "text/plain; charset=utf-8", exception.Message);
+            response = StudioResponse.OfPlainText(500, exception.Message);
         }
 
         try
@@ -100,12 +102,32 @@ internal sealed class StudioServer : IDisposable
                 : await _api.HandleAsync(method, path, await ReadBodyAsync(context.Request));
         }
 
+        if (path.StartsWith(ComparePrefix, StringComparison.Ordinal))
+        {
+            return Comparison(path) is var (first, second)
+                ? _api.ComparePage(first, second, _viewerDirectory)
+                : StudioResponse.OfPlainText(404, "A comparison is '/compare/<run>/<run>'.");
+        }
+
         if (path.StartsWith(RunPrefix, StringComparison.Ordinal))
         {
             return _api.RunPage(path[RunPrefix.Length..].TrimEnd('/'), _viewerDirectory);
         }
 
         return _files.Get(path);
+    }
+
+    /// <summary>The two runs a comparison path names, or <c>null</c> when it does not name exactly two.</summary>
+    public static (string First, string Second)? Comparison(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        if (!path.StartsWith(ComparePrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var runs = path[ComparePrefix.Length..].TrimEnd('/').Split('/');
+        return runs.Length == 2 ? (runs[0], runs[1]) : null;
     }
 
     /// <summary>
@@ -121,13 +143,13 @@ internal sealed class StudioServer : IDisposable
         var site = request.Headers["Sec-Fetch-Site"];
         if (site is not null && !string.Equals(site, "same-origin", StringComparison.Ordinal) && !string.Equals(site, "none", StringComparison.Ordinal))
         {
-            return StudioResponse.OfText(403, "text/plain; charset=utf-8", $"The studio answers its own page only; this request came from {site}.");
+            return StudioResponse.OfPlainText(403, $"The studio answers its own page only; this request came from {site}.");
         }
 
         if (!string.Equals(request.HttpMethod, "GET", StringComparison.Ordinal)
             && request.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) != true)
         {
-            return StudioResponse.OfText(415, "text/plain; charset=utf-8", "The studio takes 'Content-Type: application/json' on a write.");
+            return StudioResponse.OfPlainText(415, "The studio takes 'Content-Type: application/json' on a write.");
         }
 
         return null;
