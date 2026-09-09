@@ -1,5 +1,5 @@
 {
-  "why": "ADR 0015 accepted and implemented: train-value now fits one state-value baseline on every step and regresses each action key on what it leaves, instead of on the raw match return. This repeats ci-5 exactly, same thousand-match explored dataset, same alpha 10 and min samples 10, so the baseline is the only thing that changed. Watch baselineR2 against r2 first: if they are close the action rows are still adding nothing, and then look at the win rate against greedy, zero seven runs in a row.",
+  "why": "ADR 0016 accepted and implemented: train-value now fits one state-value baseline on every step and regresses each action key on what it leaves, instead of on the raw match return. This repeats ci-5 exactly, same thousand-match explored dataset, same alpha 10 and min samples 10, so the baseline is the only thing that changed. Watch baselineR2 against r2 first: if they are close the action rows are still adding nothing, and then look at the win rate against greedy, zero seven runs in a row.",
   "matches": 1000,
   "seed": 1,
   "explore": 0.2,

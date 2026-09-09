@@ -7,7 +7,7 @@ namespace DownfallArena.Application.Agents;
 /// A trained policy as the engine reads it (<c>policy.json</c>, docs/learning/training.md): one weight row and
 /// one bias per action key, read under one feature schema. The score of a candidate action is its row's dot
 /// product with the observation plus its bias, or <see cref="Fallback"/> when the policy never saw that key.
-/// A <c>value</c> policy also carries a <see cref="PolicyBaseline"/>, added to every score (ADR 0015); a file
+/// A <c>value</c> policy also carries a <see cref="PolicyBaseline"/>, added to every score (ADR 0016); a file
 /// without one scores exactly as before. No ML runtime: a <c>clone</c> policy holds classifier logits, a
 /// <c>value</c> policy predicted returns, and both are read the same way.
 /// </summary>

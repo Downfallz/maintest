@@ -1,7 +1,7 @@
 namespace DownfallArena.Application.Agents;
 
 /// <summary>
-/// The part of a value policy's prediction that the position alone explains (ADR 0015): one weight row over
+/// The part of a value policy's prediction that the position alone explains (ADR 0016): one weight row over
 /// the features and one bias, shared by every action key at a state. Its value is added to every score, so a
 /// score stays a predicted return while each action row carries only what its own action adds to the
 /// position. Being the same number for every candidate, it never changes which one wins.

@@ -126,7 +126,7 @@ iteration by the lowest loss.
 
 A trained policy: the run stamp of its data, the feature schema, the action keys, one weight row and one
 bias per key, and a fallback score. A `value` policy also carries an optional `baseline` object, one
-`weights` row over the features and one `bias`, whose value is added to every score (ADR 0015); a file
+`weights` row over the features and one `bias`, whose value is added to every score (ADR 0016); a file
 without it reads as a baseline of zero, so policies written before it still load. The fields and how a
 reader scores candidates are in `docs/learning/training.md`; committed under `models/<name>/<version>/`.
 

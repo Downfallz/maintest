@@ -40,7 +40,7 @@ public sealed class JsonPolicySourceTests
         source.Load(Path.Combine(directory.Path, "other.json")).Fingerprint.ShouldNotBe(policy.Fingerprint);
         policy.Score("intent:0:spell:a:v1", [0.5f, 1f]).ShouldBe(1.8, 1e-9);
         policy.Score("unknown", [0.5f, 1f]).ShouldBe(-1e9);
-        policy.Baseline.ShouldBeNull("a file written before ADR 0015 carries none");
+        policy.Baseline.ShouldBeNull("a file written before ADR 0016 carries none");
     }
 
     [Fact]

@@ -22,12 +22,14 @@ src/
   DownfallArena.Domain         Pure domain model. Depends on SharedKernel only. Aggregates, entities, value objects, events.
   DownfallArena.Application    Use cases, ports (interfaces owned here), projections, agents, simulation, learning encodings. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
-  DownfallArena.Cli            Composition root and console host: play, human, simulate, with recording and tracing.
+  DownfallArena.Cli            Composition root and hosts: the console commands (play, human, simulate, evaluate,
+                               benchmark) and the content studio's HTTP host (ADR 0015).
 tools/
   DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
 benchmarks/                    The fixed benchmark seeds and one outcome digest per content hash, verified in CI. See benchmarks/README.md.
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
+studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
 scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md).
@@ -62,6 +64,7 @@ dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
 dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>, policy:<policy.json>, explore:<rate>
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
+dotnet run --project src/DownfallArena.Cli -- studio               # the content studio on http://127.0.0.1:5099 (studio/README.md)
 uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)   # the Python side
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps

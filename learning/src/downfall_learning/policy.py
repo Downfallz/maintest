@@ -3,7 +3,7 @@
 A policy holds one weight row and one bias per action key. The score of a candidate action is the dot
 product of its row with the observation plus its bias; a candidate the policy never saw scores ``fallback``.
 A ``value`` policy also carries a baseline, one row over the features shared by every action at a state
-(ADR 0015): its value is added to every score, so a score stays a predicted return while each action row
+(ADR 0016): its value is added to every score, so a score stays a predicted return while each action row
 carries only the part its own action is responsible for. A file without a baseline reads as a zero baseline,
 and since the baseline is the same for every candidate it never changes which one wins.
 The agent, here or in the engine's ``PolicyAgent``, picks the best-scoring candidate, the first on a tie.
@@ -31,7 +31,7 @@ UNSEEN_ACTION_SCORE = -1.0e9
 
 @dataclass(frozen=True, eq=False)
 class Baseline:
-    """The part of the return the position explains, shared by every action at a state (ADR 0015)."""
+    """The part of the return the position explains, shared by every action at a state (ADR 0016)."""
 
     weights: np.ndarray
     bias: float

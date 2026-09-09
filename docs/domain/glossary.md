@@ -32,6 +32,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |
 | Stacking policy | What applying a lasting Effect does when the Creature already carries it: `Stack` (add another), `Refresh` (restart the duration), `Ignore`. | decided |
 | Data builder | The tool that consolidates the authored content under `data/` into one validated `game.schema.json` with a Content hash (ADR 0009). | decided |
+| Content studio | The local page that browses, edits, versions and disables the authored content, and plays a match or an evaluation on it (ADR 0015). | decided |
+| Enabled | The authoring-only switch on an authored item: `"enabled": false` keeps it out of the build, and references to a disabled Spell are pruned (ADR 0015). | decided |
 | Talent tree | The tree of Spells a Creature can unlock, with `allOf`/`anyOf` prerequisites per node. | decided |
 | Game resources | The static, versioned catalogue of Creature definitions, Spells, and Talent trees. | decided |
 | Content hash | The SHA-256 of the consolidated Game resources; stamped on every match and simulation result as the resources version (ADR 0009). | decided |
@@ -97,7 +99,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Weight search | Tuning the Scoring weights of the Heuristic agent by evaluating candidate weights files with the engine on the Benchmark seeds (cross-entropy method). | decided |
 | Behaviour cloning | Training a Policy to reproduce the actions of a recorded Dataset: a classifier from Observation to action key. | decided |
 | Value regression | Training a Policy to predict the Return of an Episode from an Observation and an action; the agent takes the option with the highest predicted Return. | decided |
-| Baseline | The part of a Return that the Observation alone explains: one model fitted on every Step of a Dataset, without splitting by action, and carried in the Policy file (ADR 0015). | decided |
+| Baseline | The part of a Return that the Observation alone explains: one model fitted on every Step of a Dataset, without splitting by action, and carried in the Policy file (ADR 0016). | decided |
 | Advantage | What an action is worth beyond the position it was taken in: its Return minus the Baseline. What Value regression fits per action key. | decided |
 | Policy agent | The Player agent that plays a Policy file: scores the candidate actions of the options with the policy and takes the best; refuses a Policy trained under another Feature schema. | decided |
 | Exploring agent | The Greedy agent with a share of its decisions taken uniformly at random, used to record Datasets in which an action appears in states where Greedy would have chosen another (ADR 0014). | decided |

@@ -22,7 +22,7 @@ first.
   outcome of a match of about a hundred and fifty decisions: it measures the position far more than the move,
   and each row's intercept is calibrated on its own slice of positions. That is the same sentence as the very
   first diagnosis in this journal, and the data has now ruled out every explanation except it.
-- **Decision**: ADR 0015, proposed: fit one state-value model on every step and regress each action on the
+- **Decision**: ADR 0016, since accepted: fit one state-value model on every step and regress each action on the
   residual instead of the return. The baseline is the best-determined part of the model and subtracting it
   leaves each row only the part of the outcome its own action is responsible for.
 

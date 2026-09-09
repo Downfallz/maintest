@@ -1,6 +1,6 @@
 """Value regression: predict the episode return from (observation, action); the agent takes the best.
 
-The return is fitted in two parts (ADR 0015): one baseline over the observation alone, on every step, and
+The return is fitted in two parts (ADR 0016): one baseline over the observation alone, on every step, and
 one row per action key over what the baseline leaves. The baseline carries what the position is worth,
 so a row carries only what its own action adds to it, which is the quantity a policy compares.
 """
@@ -48,7 +48,7 @@ def train_value(
     scaling = Scaling.fit(dataset.observations[split.train])
     scaled = scaling.apply(dataset.observations)
 
-    # One state-value model over every training step, with no split by action (ADR 0015). A step's return is
+    # One state-value model over every training step, with no split by action (ADR 0016). A step's return is
     # the outcome of a whole match, so it measures the position far more than the move; fitted on all the
     # steps at once it is the best-determined part of the model, and every action row is then fitted on what
     # it leaves behind, which is the part that action is responsible for.

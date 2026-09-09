@@ -8,7 +8,7 @@ namespace DownfallArena.Infrastructure.Agents;
 /// <summary>
 /// Reads a <c>policy.json</c> written by the Python side (docs/learning/training.md): plain values, camelCase,
 /// the fields the engine needs and whatever else the trainer recorded (stamp, metrics) left alone. The
-/// <c>baseline</c> object is optional, since policies trained before ADR 0015 do not carry one. The
+/// <c>baseline</c> object is optional, since policies trained before ADR 0016 do not carry one. The
 /// fingerprint is taken over the file's bytes, so an edited file never passes for the one a run used.
 /// </summary>
 public sealed class JsonPolicySource : IPolicySource
@@ -48,7 +48,7 @@ public sealed class JsonPolicySource : IPolicySource
         }.Validated();
     }
 
-    /// <summary>The optional baseline (ADR 0015): a file written before it simply has none.</summary>
+    /// <summary>The optional baseline (ADR 0016): a file written before it simply has none.</summary>
     private static PolicyBaseline? ReadBaseline(JsonElement root, string path)
     {
         if (!root.TryGetProperty("baseline", out var element) || element.ValueKind == JsonValueKind.Null)
