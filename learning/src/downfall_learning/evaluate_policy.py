@@ -25,7 +25,7 @@ def evaluate_policy(
     it knows.
     """
     model = Path(model)
-    policy = model / POLICY_FILE
+    policy = (model / POLICY_FILE).resolve()
     if not policy.is_file():
         raise FileNotFoundError(f"'{model}' holds no {POLICY_FILE}.")
     score = evaluator.evaluate_spec(f"policy:{policy}", output or model / evaluation_name(evaluator.opponent))

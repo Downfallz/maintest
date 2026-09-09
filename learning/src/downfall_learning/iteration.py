@@ -156,12 +156,31 @@ def load_report(run: Path) -> Report:
 
 
 @dataclass(frozen=True)
+class Delta:
+    """The metrics of one current evaluation minus those of a previous one, and which one that was."""
+
+    previous_name: str
+    metrics: Mapping[str, float]
+
+    def to_json(self) -> dict[str, Any]:
+        return {"against": self.previous_name, **self.metrics}
+
+
+@dataclass(frozen=True)
 class Comparison:
-    """What moved between two reports: the stamp axes, and every metric of the evaluations both hold."""
+    """What moved between two reports.
+
+    ``deltas`` pair evaluations by the identity of both agents (their specs, fingerprint included), whatever
+    the file names: the baselines, and the previous run's policy replayed here against its own earlier result.
+    Those move for the stamp axes alone. ``retrained`` pairs evaluations by name whose agents differ (a newly
+    trained policy against the previous run's): the training moved too, so they are read against the others,
+    never on their own.
+    """
 
     previous: str
     axes: tuple[str, ...]
-    deltas: Mapping[str, Mapping[str, float]]
+    deltas: Mapping[str, Delta]
+    retrained: Mapping[str, Delta]
     only_in_current: tuple[str, ...]
     only_in_previous: tuple[str, ...]
 
@@ -169,10 +188,20 @@ class Comparison:
         return {
             "against": self.previous,
             "moved": list(self.axes),
-            "deltas": {name: dict(metrics) for name, metrics in self.deltas.items()},
+            "deltas": {name: delta.to_json() for name, delta in self.deltas.items()},
+            "retrained": {name: delta.to_json() for name, delta in self.retrained.items()},
             "onlyInCurrent": list(self.only_in_current),
             "onlyInPrevious": list(self.only_in_previous),
         }
+
+
+def _delta(current: EvaluationSummary, before: EvaluationSummary) -> Delta:
+    metrics = {
+        metric: current.metrics[metric] - before.metrics[metric]
+        for metric in METRICS
+        if metric in current.metrics and metric in before.metrics
+    }
+    return Delta(before.name, metrics)
 
 
 def compare_reports(current: Report, previous: Report) -> Comparison:
@@ -181,24 +210,29 @@ def compare_reports(current: Report, previous: Report) -> Comparison:
         for difference in current.stamp.differences_from(previous.stamp)
         if not difference.startswith(("agents:", "seed:"))
     )
-    deltas: dict[str, dict[str, float]] = {}
+    by_identity = {(summary.agent_a, summary.agent_b): summary for summary in previous.evaluations}
+    deltas: dict[str, Delta] = {}
+    retrained: dict[str, Delta] = {}
+    matched_previous: set[str] = set()
     for summary in current.evaluations:
-        before = previous.find(summary.name)
-        if before is None:
-            continue
-        deltas[summary.name] = {
-            metric: summary.metrics[metric] - before.metrics[metric]
-            for metric in METRICS
-            if metric in summary.metrics and metric in before.metrics
-        }
-    current_names = {summary.name for summary in current.evaluations}
-    previous_names = {summary.name for summary in previous.evaluations}
+        same_agents = by_identity.get((summary.agent_a, summary.agent_b))
+        same_name = previous.find(summary.name)
+        if same_agents is not None:
+            deltas[summary.name] = _delta(summary, same_agents)
+            matched_previous.add(same_agents.name)
+        elif same_name is not None:
+            retrained[summary.name] = _delta(summary, same_name)
+            matched_previous.add(same_name.name)
+    matched_current = set(deltas) | set(retrained)
     return Comparison(
         previous=previous.run,
         axes=axes,
         deltas=deltas,
-        only_in_current=tuple(sorted(current_names - previous_names)),
-        only_in_previous=tuple(sorted(previous_names - current_names)),
+        retrained=retrained,
+        only_in_current=tuple(sorted(s.name for s in current.evaluations if s.name not in matched_current)),
+        only_in_previous=tuple(
+            sorted(s.name for s in previous.evaluations if s.name not in matched_previous)
+        ),
     )
 
 
@@ -252,14 +286,22 @@ def format_report(report: Report, comparison: Comparison | None = None) -> str:
             else "nothing in the stamp (same engine, content, rules, schema)"
         )
         lines.append(f"Against {comparison.previous}: {moved}.")
-        for name, deltas in comparison.deltas.items():
-            changes = ", ".join(f"{metric} {value:+.3f}" for metric, value in deltas.items())
-            lines.append(f"  {name}: {changes}")
+        for name, delta in comparison.deltas.items():
+            lines.append(f"  {name} (same agents as {delta.previous_name}): {_changes(delta)}")
+        for name, delta in comparison.retrained.items():
+            lines.append(
+                f"  {name} (retrained, against {delta.previous_name}; the training moved too): "
+                f"{_changes(delta)}"
+            )
         if comparison.only_in_current:
             lines.append(f"  only here: {', '.join(comparison.only_in_current)}")
         if comparison.only_in_previous:
             lines.append(f"  only before: {', '.join(comparison.only_in_previous)}")
     return "\n".join(lines)
+
+
+def _changes(delta: Delta) -> str:
+    return ", ".join(f"{metric} {value:+.3f}" for metric, value in delta.metrics.items())
 
 
 def _pct(value: float) -> str:

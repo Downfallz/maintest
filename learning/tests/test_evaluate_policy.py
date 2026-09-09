@@ -47,6 +47,22 @@ def test_the_evaluation_lands_next_to_the_model_and_fills_its_log(
     assert rows[0]["stamp"]["featureSchema"].startswith("features:v1+")
 
 
+def test_paths_reach_the_engine_absolute_whatever_its_working_directory(
+    tmp_path: Path, fake_engine: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    model = a_model(tmp_path)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(tmp_path)
+    evaluator = CliEvaluator(EngineCommand(root=elsewhere, command=tuple(fake_engine)), Path("work"))
+
+    score = evaluate_policy(Path(model.name), evaluator, output=Path("out") / "frozen.json", update_log=False)
+
+    assert score.win_rate == 0.6
+    assert (tmp_path / "out" / "frozen.json").is_file()
+    assert (tmp_path / "work").is_dir()
+
+
 def test_the_output_and_the_log_can_be_left_alone(tmp_path: Path, fake_engine: list[str]) -> None:
     model = a_model(tmp_path)
     before = (model / "training.jsonl").read_text()

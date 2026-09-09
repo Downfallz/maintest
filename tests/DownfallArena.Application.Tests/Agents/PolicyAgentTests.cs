@@ -90,11 +90,13 @@ public sealed class PolicyAgentTests
         var source = Substitute.For<IPolicySource>();
         source.Load("good.json").Returns(Policy((RendIntent, 1.0)));
         source.Load("other.json").Returns(Policy((RendIntent, 1.0)) with { SchemaId = "features:v1+000000000000" });
+        source.Load("reordered.json").Returns(Policy((RendIntent, 1.0)) with { FeatureNames = [.. Schema.FeatureNames.Reverse()] });
         var factory = Handlers.Agents(source);
 
         factory.Resolve(AgentSpec.Parse("policy:good.json")).ToString().ShouldBe("Policy:good.json@0123abcd");
         factory.Create(AgentSpec.Parse("policy:good.json"), Rules, new TestRandom(1)).ShouldBeOfType<PolicyAgent>().Policy.Fingerprint.ShouldBe("0123abcd");
         Should.Throw<InvalidDataException>(() => factory.Create(AgentSpec.Parse("policy:other.json"), Rules, new TestRandom(1))).Message.ShouldContain(Schema.Id);
+        Should.Throw<InvalidDataException>(() => factory.Create(AgentSpec.Parse("policy:reordered.json"), Rules, new TestRandom(1))).Message.ShouldContain("order");
         Should.Throw<ArgumentException>(() => factory.Create(new AgentSpec(AgentKind.Policy), Rules, new TestRandom(1)));
     }
 

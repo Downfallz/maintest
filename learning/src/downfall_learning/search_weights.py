@@ -88,7 +88,8 @@ class CliEvaluator:
 
     def __init__(self, engine: EngineCommand, workdir: Path) -> None:
         self._engine = engine
-        self._workdir = Path(workdir)
+        # The engine runs in the repository root, so every path it gets is absolute.
+        self._workdir = Path(workdir).resolve()
         self._workdir.mkdir(parents=True, exist_ok=True)
         self.calls = 0
 
@@ -102,7 +103,7 @@ class CliEvaluator:
 
     def evaluate_spec(self, spec: str, output: Path) -> Score:
         """Runs one evaluation of ``spec`` as agent A and reads the evaluation it wrote to ``output``."""
-        output = Path(output)
+        output = Path(output).resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
         arguments = [
             *self._engine.command,

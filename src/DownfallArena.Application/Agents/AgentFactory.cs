@@ -55,9 +55,16 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
     {
         var policy = Policy(spec);
         var schema = _schemas.GetOrAdd(rules, ruleSet => FeatureSchema.Build(resources, ruleSet));
-        if (policy.SchemaId != schema.Id || policy.FeatureNames.Count != schema.Length)
+        if (policy.SchemaId != schema.Id)
         {
             throw new InvalidDataException($"Policy '{spec.Path}' was trained under feature schema '{policy.SchemaId}'; this content and rule set give '{schema.Id}'. Retrain it, or evaluate it on the content it knows.");
+        }
+
+        // The id is a fingerprint of the names, but an edited file can carry the id with other names: the rows
+        // are only meaningful on the exact feature order they were trained on.
+        if (!policy.FeatureNames.SequenceEqual(schema.FeatureNames, StringComparer.Ordinal))
+        {
+            throw new InvalidDataException($"Policy '{spec.Path}' names its features in another order than feature schema '{schema.Id}'.");
         }
 
         return new PolicyAgent(policy, new ObservationBuilder(schema, resources), new ActionEncoder(schema));

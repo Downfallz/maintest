@@ -89,28 +89,62 @@ def test_a_run_without_evaluations_is_refused(tmp_path: Path) -> None:
 
 def test_the_comparison_names_the_axis_that_moved_and_the_deltas(tmp_path: Path) -> None:
     current = build_report(a_run(tmp_path, "after", engine="fedcba654321", greedy_score=0.8))
-    previous = build_report(a_run(tmp_path, "before"))
     write_evaluation(
         tmp_path / "before",
         "value-vs-greedy",
         0.4,
-        stamp_json(player1Agent="Policy:p.json@1", player2Agent="Greedy"),
+        stamp_json(player1Agent="Policy:runs/before/value/policy.json@1", player2Agent="Greedy"),
     )
-    previous = build_report(tmp_path / "before")
+    previous = build_report(a_run(tmp_path, "before"))
 
     comparison = compare_reports(current, previous)
 
     assert comparison.previous == "before"
     assert comparison.axes == ("engine: abcdef123456 versus fedcba654321",)
-    assert comparison.deltas["greedy-vs-random"]["winRateA"] == pytest.approx(-0.1)
-    assert comparison.deltas["greedy-vs-greedy"]["winRateA"] == 0.0
+    assert comparison.deltas["greedy-vs-random"].metrics["winRateA"] == pytest.approx(-0.1)
+    assert comparison.deltas["greedy-vs-greedy"].metrics["winRateA"] == 0.0
+    assert comparison.deltas["greedy-vs-greedy"].previous_name == "greedy-vs-greedy"
+    assert comparison.retrained == {}
     assert comparison.only_in_previous == ("value-vs-greedy",)
     assert comparison.only_in_current == ()
     assert comparison.to_json()["moved"] == ["engine: abcdef123456 versus fedcba654321"]
+    assert comparison.to_json()["deltas"]["greedy-vs-random"]["against"] == "greedy-vs-random"
     text = format_report(current, comparison)
     assert "Against before: engine" in text
-    assert "greedy-vs-random: winRateA -0.100" in text
+    assert "greedy-vs-random (same agents as greedy-vs-random): winRateA -0.100" in text
     assert "only before: value-vs-greedy" in text
+
+
+def test_a_replayed_policy_pairs_with_its_own_result_and_a_retrained_one_is_flagged(tmp_path: Path) -> None:
+    frozen = stamp_json(player1Agent="Policy:runs/before/value/policy.json@1", player2Agent="Greedy")
+    fresh = stamp_json(
+        engineVersion="fedcba654321",
+        player1Agent="Policy:runs/after/value/policy.json@2",
+        player2Agent="Greedy",
+    )
+    write_evaluation(tmp_path / "before", "value-vs-greedy", 0.4, frozen)
+    previous = build_report(a_run(tmp_path, "before"))
+    write_evaluation(tmp_path / "after", "value-vs-greedy", 0.7, fresh)
+    write_evaluation(
+        tmp_path / "after", "previous-value-vs-greedy", 0.5, {**frozen, "engineVersion": "fedcba654321"}
+    )
+    current = build_report(a_run(tmp_path, "after", engine="fedcba654321"))
+
+    comparison = compare_reports(current, previous)
+
+    assert comparison.deltas["previous-value-vs-greedy"].previous_name == "value-vs-greedy"
+    assert comparison.deltas["previous-value-vs-greedy"].metrics["winRateA"] == pytest.approx(0.1)
+    assert comparison.retrained["value-vs-greedy"].previous_name == "value-vs-greedy"
+    assert comparison.retrained["value-vs-greedy"].metrics["winRateA"] == pytest.approx(0.3)
+    assert "value-vs-greedy" not in comparison.deltas
+    assert comparison.only_in_current == ()
+    assert comparison.only_in_previous == ()
+    text = format_report(current, comparison)
+    assert "previous-value-vs-greedy (same agents as value-vs-greedy): winRateA +0.100" in text
+    assert (
+        "value-vs-greedy (retrained, against value-vs-greedy; the training moved too): winRateA +0.300"
+        in text
+    )
 
 
 def test_the_same_stamp_reads_as_nothing_moved(tmp_path: Path) -> None:
@@ -132,5 +166,5 @@ def test_the_report_command_writes_and_prints(tmp_path: Path, capsys: pytest.Cap
     assert (run / "report.json").is_file()
     out = capsys.readouterr().out
     assert "Run cli" in out
-    assert "winRateA +0.200" in out
+    assert "greedy-vs-random (same agents as greedy-vs-random): winRateA +0.200" in out
     assert cli.main(["report", str(tmp_path / "missing")]) == 1
