@@ -53,16 +53,35 @@ on the benchmark seeds replays exactly. That is what makes the benchmark digest 
 
 ## Built-in weights
 
-| Weight | Value | Reading |
+Every weight is expressed in the same unit: **one point of effective damage**. `damage` is 1.0 by
+definition, and each other weight says how many points of damage that thing is worth to the bot. So a kill at
+5.0 means "worth five damage on top of the damage that killed", and the bot takes a kill over five points of
+damage spread elsewhere.
+
+| Weight | Value | In plain words |
 | --- | --- | --- |
-| damage | 1.0 | one point per effective damage |
-| kill | 5.0 | a kill is worth five damage |
-| heal | 0.8 | healing counts a little less than damage |
-| stun | 3.0 | a stun is worth three damage |
-| bleed | 0.8 | future damage is discounted |
-| buff | 0.5 | per point of defense per round |
-| energy | 0.2 | keeping energy for later is worth a little |
-| risk | 2.0 | a wasted action costs two damage |
+| damage | 1.0 | The unit. One point per point of damage that actually lands (damage past a target's health is not counted). |
+| kill | 5.0 | Finishing a creature is worth five damage on top of the hit. It buys the bot the enemy's whole future turn, so it is the strongest pull in the table. |
+| heal | 0.8 | Healing an ally is worth a little less than hurting an enemy: it only counts what the target was missing, and it does not shorten the match. |
+| stun | 3.0 | Taking a round away from a creature is worth three damage. Between a kill (all its rounds) and a plain hit (none). |
+| bleed | 0.8 | Damage over time is discounted against damage now: the target may die first, and the bot only counts the health it could still reach. |
+| buff | 0.5 | Half a point per point of defense per round. Defense is indirect: it may prevent damage that was never going to come. |
+| energy | 0.2 | Keeping a point of energy for the next round is worth a fifth of a damage. Enough to break a tie towards the cheaper spell, not enough to make the bot hoard. |
+| risk | 2.0 | A wasted action (a fizzle, or the share of targets that vanished before the spell resolved) costs two damage. Roughly one average hit thrown away. |
+
+### Where these numbers come from
+
+They were **hand-set as a starting point**, in the commit that introduced the agents (phase L5), from the
+readings above: pick damage as the unit, then say what a kill, a stun and a wasted turn are worth in damage.
+They are **not** the output of a search, and no searched weights file is committed. `ScoringWeights.Default`
+is the single source; `learning/weights/greedy.json` holds the same eight numbers so `heuristic:<file>` and
+`greedy` start from the same place, and a test on each side of the repository pins the two together.
+
+To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
+candidate set against a fixed opponent on the benchmark seeds and keeps what wins, and leave the result next
+to `greedy.json` under its own name. Changing `greedy.json` itself changes nothing for `greedy` (which reads
+the built-in values); changing `ScoringWeights.Default` changes the benchmark baseline, so the digest moves
+and CI asks for a new one.
 
 A heuristic agent is stamped as `Heuristic:<path>@<fingerprint>`, the fingerprint being eight hex digits of the
 weights the file held when the run started, so two runs on different weights at the same path never share a
