@@ -93,6 +93,10 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |
 | Viewer | The static HTML page that renders Match traces, batches, Evaluations, training runs, and comparisons. | decided |
 | Training run | The record of one training of a Policy on the Python side, one line per iteration (loss, evaluation win rate), with its Run stamp. | decided |
+| Policy file | A trained Policy as the engine reads it (`policy.json`): the Run stamp of its data, the Feature schema, one weight row and one bias per action key, a fallback score; the best-scoring candidate wins. | decided |
+| Weight search | Tuning the Scoring weights of the Heuristic agent by evaluating candidate weights files with the engine on the Benchmark seeds (cross-entropy method). | decided |
+| Behaviour cloning | Training a Policy to reproduce the actions of a recorded Dataset: a classifier from Observation to action key. | decided |
+| Value regression | Training a Policy to predict the Return of an Episode from an Observation and an action; the agent takes the option with the highest predicted Return. | decided |
 
 ## Engineering terms
 

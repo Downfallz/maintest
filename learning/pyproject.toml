@@ -1,0 +1,57 @@
+[project]
+name = "downfall-learning"
+version = "0.1.0"
+description = "The learning side of Downfall Arena: weight search, behaviour cloning, value regression (learning phase L6)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "numpy>=2.0",
+  "pandas>=2.2",
+  "scikit-learn>=1.5",
+]
+
+[project.scripts]
+downfall-learning = "downfall_learning.cli:main"
+train-clone = "downfall_learning.cli:train_clone_command"
+train-value = "downfall_learning.cli:train_value_command"
+search-weights = "downfall_learning.cli:search_weights_command"
+export-csv = "downfall_learning.cli:export_csv_command"
+compare-stamps = "downfall_learning.cli:compare_stamps_command"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff>=0.13",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "C4", "RUF", "PTH", "PLR", "PLW", "PLE"]
+ignore = [
+  "PLR2004", # magic values in tests and small numeric defaults read better inline
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR0913", "PLR0917"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# src/ on the path, so the tests run against the sources without the project installed (what CI does).
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true

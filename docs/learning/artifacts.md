@@ -105,7 +105,8 @@ back without the engine's converters. See `benchmarks/README.md` for the check a
 
 ## `training.jsonl` (written by the Python side, L6)
 
-One line per training iteration, the contract the viewer reads:
+One line per training iteration, the contract the viewer reads (`docs/learning/training.md` says which
+learner writes what):
 
 | Field | Meaning |
 | --- | --- |
@@ -116,6 +117,16 @@ One line per training iteration, the contract the viewer reads:
 | `matches` | How many evaluation matches produced `winRate` (optional). |
 | `best` | `true` on the iteration the run keeps; without it the viewer marks the highest `winRate` (optional). |
 | `stamp` | The run stamp (at least on the first line). |
+
+A learner may add numeric fields of its own (`accuracy`, `r2`, `bestScore`, `sigma`); the viewer lists them.
+A learner that was not evaluated against the engine writes no `winRate`, and the viewer then marks the best
+iteration by the lowest loss.
+
+## `policy.json` (written by the Python side, L6)
+
+A trained policy: the run stamp of its data, the feature schema, the action keys, one weight row and one
+bias per key, and a fallback score. The fields and how a reader scores candidates are in
+`docs/learning/training.md`; committed under `models/<name>/<version>/`.
 
 ## `traces/<match-id>.json`
 

@@ -19,6 +19,39 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
 jobs:
+  # The learning project (learning/, ADR 0013) has its own gate: ruff and pytest under uv.
+  learning:
+    name: Lint and test the learning project
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: learning
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      # The virtual environment lives outside the checkout, so nothing under learning/ is generated.
+      - name: Install uv
+        run: |
+          pipx install uv==0.8.17
+          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
+
+      # Only the locked wheels of the dependencies are installed, so no build script of any package runs; the
+      # tests import the project from src/ (pyproject pythonpath) and the tools run from that environment.
+      - name: Install the dependencies from the lock file
+        run: uv sync --locked --no-build --no-install-project
+
+      - name: Lint and format check
+        run: |
+          "$UV_PROJECT_ENVIRONMENT/bin/ruff" check .
+          "$UV_PROJECT_ENVIRONMENT/bin/ruff" format --check .
+
+      - name: Test with coverage
+        run: |
+          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=term
+
   build-and-test:
     name: Build, format check, test, analyse
     runs-on: ubuntu-latest
@@ -58,8 +91,10 @@ jobs:
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.xml"
-          /d:sonar.exclusions="legacy/**,artifacts/**"
+          /d:sonar.exclusions="legacy/**,artifacts/**,**/.venv/**"
           /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**"
+          /d:sonar.python.version="3.11,3.12,3.13"
+          /d:sonar.python.coverage.reportPaths="$RUNNER_TEMP/learning-coverage.xml"
 
       - name: Build (warnings are errors)
         run: dotnet build --no-restore --configuration Release
@@ -73,6 +108,17 @@ jobs:
       # The engine-change detector (ADR 0013): the benchmark seeds must replay to the committed digest of this content.
       - name: Verify benchmark digest
         run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
+
+      # The learning job is the gate for the Python side; this run only produces the coverage report the
+      # Sonar analysis of this job imports, so the quality gate sees the Python code with its coverage.
+      - name: Test the learning project for its coverage report
+        working-directory: learning
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
+        run: |
+          pipx install uv==0.8.17
+          uv sync --locked --no-build --no-install-project
+          "$UV_PROJECT_ENVIRONMENT/bin/pytest" --cov=downfall_learning --cov=tests --cov-report=xml:"$RUNNER_TEMP/learning-coverage.xml" -q
 
       - name: End SonarCloud analysis
         if: env.SONAR_TOKEN != '' && !cancelled()
