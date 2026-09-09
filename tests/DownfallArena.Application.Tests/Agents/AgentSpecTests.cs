@@ -49,7 +49,7 @@ public sealed class AgentSpecTests
     [Fact]
     public void The_built_in_weights_keep_the_fingerprint_committed_stamps_were_written_with()
     {
-        ScoringWeights.Default.Fingerprint.ShouldBe("47d485ec");
+        ScoringWeights.Default.Fingerprint.ShouldBe("7aff3a10");
     }
 
     [Fact]

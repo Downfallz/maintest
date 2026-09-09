@@ -102,6 +102,33 @@ public sealed class MatchTests
         match.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(RoundErrors.EvolutionNotOpen);
     }
 
+    /// <summary>
+    /// Every Arena spell has a Spell initiative of 1, so one unlock buys one point. Creature 3 belongs to
+    /// Player2, who loses every tie, which is what makes the move up the timeline visible.
+    /// </summary>
+    [Fact]
+    public void An_unlocked_spell_raises_the_creature_initiative_and_moves_it_up_the_timeline()
+    {
+        var match = Table.Started();
+        var ghoul = CreatureId.From(3);
+
+        Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(5));
+
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(ghoul, Arena.Guard)).IsSuccess.ShouldBeTrue();
+
+        Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(6));
+        Table.CreatureNumber(match, 3).CurrentInitiative.ShouldBe(Initiative.Of(6));
+
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+        Table.ChooseStandard(match);
+
+        var timeline = match.CurrentRound.ShouldNotBeNull().Timeline;
+        timeline.Slots.Select(slot => slot.Creature).ShouldBe(
+            [ghoul, CreatureId.From(1), CreatureId.From(2), CreatureId.From(4)]);
+        timeline.Slots[0].Initiative.ShouldBe(Initiative.Of(6));
+    }
+
     [Fact]
     public void An_evolution_choice_unlocks_the_spell_and_the_sub_phase_ends_when_both_players_are_done()
     {

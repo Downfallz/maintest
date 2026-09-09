@@ -22,3 +22,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0014](0014-exploration-in-recorded-datasets.md) | Record datasets with an exploring agent instead of reaching for reinforcement learning | Accepted |
 | [0015](0015-content-studio.md) | A local content studio: browse, edit, version and try the game content | Accepted |
 | [0016](0016-value-learning-on-an-advantage-baseline.md) | Learn action values against a state baseline instead of the raw match return | Accepted |
+| [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Accepted |
+| [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |

@@ -15,7 +15,7 @@ public sealed record SpellReach
 
     public required int Cost { get; init; }
 
-    public required int Initiative { get; init; }
+    public required int SpellInitiative { get; init; }
 
     /// <summary>Direct damage to one target.</summary>
     public required int Damage { get; init; }

@@ -99,6 +99,7 @@ public sealed class ObservationBuilderTests
             Health = Health.Of(10),
             Energy = Energy.Of(2),
             TotalDefense = Defense.Of(3),
+            BaseInitiative = Initiative.Of(6),
             CurrentInitiative = Initiative.Of(4),
             IsStunned = true,
             KnownSpells = new HashSet<SpellId> { TestContent.Strike, TestContent.Guard },

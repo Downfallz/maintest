@@ -73,7 +73,11 @@ listed in [spells.md](spells.md).
    1. `Evolution`: each Player may unlock Spells from the Talent tree, up to the Rule set's picks per round
       (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. A
       Player may pass their remaining picks. The sub-phase completes when both Players have no pick left,
-      nothing left to unlock, or passed.
+      nothing left to unlock, or passed. **An unlock raises the Creature's Base initiative by the unlocked
+      Spell's Spell initiative, for the rest of the Match** (ADR 0017): evolving is also how a Creature gets
+      faster, and it is paid once, at the unlock, not at each cast. The Current initiative the timeline orders
+      on is that base less the active debuffs, so a debuff can still pull a Creature back. A refused unlock
+      raises nothing.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
       such Creature has a choice.

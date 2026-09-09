@@ -168,9 +168,11 @@ The terms below are the authoritative entries of the "Learning" section of
   dealt (capped at the target's health), kills, healing (capped at what was missing), stuns, bleeds as future
   damage, buffs, energy kept, and a risk penalty for a fizzle or dropped targets.
 - `HeuristicAgent`: the lookahead with explicit weights (`damage`, `kill`, `heal`, `stun`, `bleed`, `buff`,
-  `energy`, `risk`). Intent: the castable spell whose best target set scores best. Targets: the best set for
-  the declared spell at reveal time. Speed: Quick when a kill is on the table, Standard otherwise. Evolution:
-  the unlockable spell worth the most as if known and affordable; pass only when nothing is unlockable.
+  `energy`, `risk`, `initiative`). Intent: the castable spell whose best target set scores best. Targets: the
+  best set for the declared spell at reveal time. Speed: Quick when a kill is on the table, Standard
+  otherwise. Evolution: the unlockable spell worth the most as if known and affordable, plus the base
+  initiative the unlock buys (ADR 0017), priced by the initiative weight (ADR 0018); pass only when nothing
+  is unlockable.
 - `GreedyAgent`: the heuristic agent with the built-in weights (`learning/weights/greedy.json` holds the same
   values as a file). `AgentKind` has `Random`, `Greedy`, `Heuristic`; the weights file comes through the
   `IScoringWeightsSource` port (`JsonScoringWeightsSource` in Infrastructure).
@@ -189,7 +191,7 @@ The terms below are the authoritative entries of the "Learning" section of
   schema versions this side reads), `policy.py`, `report.py` (`training.jsonl`), `export.py` (weights files,
   the wide CSV projection), `train_clone.py`, `train_value.py`, `search_weights.py`, `cli.py`.
 - Three learners, in order of cost:
-  1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the eight weights,
+  1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the nine weights,
      each candidate evaluated by the engine's `evaluate` as `heuristic:<file>` against an opponent on the
      benchmark seeds, the mean score as fitness. No dataset needed.
   2. **Behaviour cloning** (`train-clone`): a linear classifier from observation to action key on a

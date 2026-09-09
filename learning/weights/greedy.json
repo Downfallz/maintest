@@ -6,5 +6,6 @@
   "bleed": 0.8,
   "buff": 0.5,
   "energy": 0.2,
-  "risk": 2.0
+  "risk": 2.0,
+  "initiative": 0.5
 }

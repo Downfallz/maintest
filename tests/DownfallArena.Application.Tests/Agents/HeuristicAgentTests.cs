@@ -73,6 +73,24 @@ public sealed class HeuristicAgentTests
         Agent.DecideEvolution(board, new EvolutionOptions(2, [])).IsPass.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// The reordering the initiative weight exists for (ADR 0018): in this catalogue Guard is worth 1 in
+    /// combat against Strike's 3.15, and wins the pick anyway because unlocking it buys 6 initiative. At a
+    /// weight of zero the same board picks Strike, so it is the price and not the ordering that decides.
+    /// </summary>
+    [Fact]
+    public void An_evolution_pick_can_be_taken_for_the_initiative_it_buys_rather_than_the_damage()
+    {
+        var board = Board(enemyHealth: 20, actorSpells: []);
+        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Strike, TestContent.Guard])]);
+
+        new HeuristicAgent(ScoringWeights.Default, TestContent.GuardIsFaster, Rules)
+            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.Guard));
+
+        new HeuristicAgent(ScoringWeights.Default with { Initiative = 0 }, TestContent.GuardIsFaster, Rules)
+            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.Strike));
+    }
+
     [Fact]
     public void The_greedy_agent_is_the_heuristic_agent_with_the_built_in_weights()
     {

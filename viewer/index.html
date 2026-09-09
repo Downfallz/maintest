@@ -424,9 +424,18 @@
       return el('span', { class: kindClass }, `${effect.kind} ${amount} (${remaining})`);
     }
 
+    // The base is shown only when a debuff pulls the current one off it: "I 4 of 8" reads as debuffed,
+    // "I 8" as whole. Traces from before the base was recorded have no baseInitiative, and read as whole.
+    function initiativeTag(creature) {
+      const base = creature.baseInitiative;
+      return base === undefined || base === creature.currentInitiative
+        ? `I ${creature.currentInitiative}`
+        : `I ${creature.currentInitiative} of ${base}`;
+    }
+
     function creatureCard(creature, intent) {
       const fraction = creature.maxHealth ? creature.health / creature.maxHealth : 0;
-      const tags = [`E ${creature.energy}`, `D ${creature.totalDefense}`, `I ${creature.currentInitiative}`];
+      const tags = [`E ${creature.energy}`, `D ${creature.totalDefense}`, initiativeTag(creature)];
       if (creature.isStunned) tags.push('STUNNED');
       const bar = el('div', { class: fraction <= 0.3 ? 'bar low' : 'bar' }, el('div', { style: `width:${Math.round(fraction * 100)}%` }));
       const chips = el('div', { class: 'chips' }, creature.conditions.map(conditionChip));

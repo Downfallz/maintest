@@ -34,7 +34,8 @@ The score of one resolution, with the weights `w`:
 | `w.heal` x effective healing | healing capped at what the target was missing | for an ally, against an enemy |
 | `w.stun` per stun | a Stun on a target still alive after the damage | for an enemy, against an ally |
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
-| `w.buff` x amount x rounds | a DefenseBuff, or an InitiativeDebuff (amount only) | a buff for an ally, a debuff for an enemy, and the reverse against |
+| `w.buff` x amount x rounds | a DefenseBuff | a buff for an ally, a debuff for an enemy, and the reverse against |
+| `w.initiative` x amount | an InitiativeDebuff (amount only, no rounds) | a debuff on an enemy counts for, on an ally against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
 | `-w.risk` | a fizzle, or the share of targets dropped at resolution | always |
 
@@ -46,7 +47,9 @@ Decisions:
   spell is no longer castable.
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
 - **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
-  best target set on the current board); unlock the highest, pass only when nothing can be unlocked.
+  best target set on the current board), plus `w.initiative` x the spell's Spell initiative, the base
+  initiative the unlock buys for the rest of the match (ADR 0017, priced by ADR 0018); unlock the highest,
+  pass only when nothing can be unlocked.
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.
@@ -68,8 +71,9 @@ damage spread elsewhere.
 | buff | 0.5 | Half a point per point of defense per round. Defense is indirect: it may prevent damage that was never going to come. |
 | energy | 0.2 | Keeping a point of energy for the next round is worth a fifth of a damage. Enough to break a tie towards the cheaper spell, not enough to make the bot hoard. |
 | risk | 2.0 | A wasted action (a fizzle, or the share of targets that vanished before the spell resolved) costs two damage. Roughly one average hit thrown away. |
+| initiative | 0.5 | Half a point per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. Initiative only reorders the timeline, so it is priced like defense: real, indirect, and worth less than the hit it may let you land first. A first guess, and the weight `search-weights` has the least evidence about. |
 
-To feel out what one of them does, the content studio's run panel can play a heuristic agent from eight boxes
+To feel out what one of them does, the content studio's run panel can play a heuristic agent from nine boxes
 instead of a file: it writes what you set as `weights.json` next to the run, so the result keeps the weights it
 was played with, and two such runs compare side by side (`studio/README.md`). That is a way to look, not a way
 to tune — tuning is `search-weights` below.
@@ -79,7 +83,7 @@ to tune — tuning is `search-weights` below.
 They were **hand-set as a starting point**, in the commit that introduced the agents (phase L5), from the
 readings above: pick damage as the unit, then say what a kill, a stun and a wasted turn are worth in damage.
 They are **not** the output of a search, and no searched weights file is committed. `ScoringWeights.Default`
-is the single source; `learning/weights/greedy.json` holds the same eight numbers so `heuristic:<file>` and
+is the single source; `learning/weights/greedy.json` holds the same nine numbers so `heuristic:<file>` and
 `greedy` start from the same place, and a test on each side of the repository pins the two together.
 
 To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
@@ -87,7 +91,7 @@ candidate set against a fixed opponent on the benchmark seeds and keeps what win
 to `greedy.json` under its own name. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
-only moves when the new values actually change a decision: scaling all eight by the same positive factor
+only moves when the new values actually change a decision: scaling all nine by the same positive factor
 leaves every ranking, and the digest, untouched. A change that does move an outcome fails the benchmark check
 until `benchmark --write` regenerates the digest.
 

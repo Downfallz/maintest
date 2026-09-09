@@ -23,6 +23,7 @@ internal static class Boards
         MaxHealth = Health.Of(20),
         Energy = Energy.Of(0),
         TotalDefense = Defense.Of(0),
+        BaseInitiative = Initiative.Of(5),
         CurrentInitiative = Initiative.Of(5),
         CriticalChance = CriticalChance.Of(0.05),
         IsStunned = false,

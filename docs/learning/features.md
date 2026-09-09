@@ -21,6 +21,16 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
    the fingerprint, so two schemas of the same version never pass for each other; a numeric edit to an
    existing spell changes neither.
 
+## Decisions taken not to change the layout
+
+- **Base initiative is not a feature** (ADR 0017). Unlocking a spell raises a creature's base initiative, so
+  the creature now carries a base and a current one, and the block holds only `initiative`, the current. The
+  base is `initiative + InitiativeDebuff_amount`, and that amount feature sums every active debuff, so it is
+  recoverable — except where the debuffs floor the current initiative at zero, which loses the difference.
+  Publishing a `base_initiative` feature for that corner would be `features:v2`, and invalidating every run
+  in `docs/learning/journal.md` is a bigger price than the corner is worth. Revisit if a policy is ever
+  trained on content where a creature is routinely debuffed past zero.
+
 ## Versions
 
 ### features:v1 (published, phase L1)

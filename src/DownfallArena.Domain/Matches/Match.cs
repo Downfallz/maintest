@@ -130,13 +130,16 @@ public sealed class Match : AggregateRoot<MatchId>
             return validated;
         }
 
+        // Resolved before the round records the pick: an unknown id would throw, and half a mutation is worse
+        // than a refusal. Unreachable while ValidateChoice only passes spells the talent tree names.
+        var spell = _resources.GetSpell(choice.Spell);
         var accepted = round.SubmitEvolutionChoice(slot, choice);
         if (accepted.IsFailure)
         {
             return accepted;
         }
 
-        var unlocked = CreatureOf(choice.Creature).UnlockSpell(choice.Spell);
+        var unlocked = CreatureOf(choice.Creature).UnlockSpell(spell);
         if (unlocked.IsFailure)
         {
             throw new InvalidOperationException($"Creature {choice.Creature} refused a validated unlock: {unlocked.Error.Message}");

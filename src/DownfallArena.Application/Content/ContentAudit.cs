@@ -13,8 +13,8 @@ namespace DownfallArena.Application.Content;
 /// creature can ever use, spells no match can tell apart, and a spell stat every spell gives the same value.
 /// A spell nothing teaches, a talent node whose gate never opens, a spell that costs more energy than a whole
 /// match hands out, a talent tree no creature is on, spells whose numbers are all the same, and a number the
-/// engine reads on every cast that this content never varies. None of these stop a build — the content is
-/// valid and the engine plays it — so they are findings rather than problems.
+/// engine reads — at a cast, or at an unlock — that this content never varies. None of these stop a build —
+/// the content is valid and the engine plays it — so they are findings rather than problems.
 /// <para>
 /// Reachability is <see cref="TalentUnlocks.ReachableSpells"/>, the evolution rules' own gate applied until
 /// nothing new is learned. Since what a creature knows only grows, a gate shut at that fixed point is shut for
@@ -174,13 +174,14 @@ public static class ContentAudit
     }
 
     /// <summary>
-    /// The numbers of a spell that a match reads, with what it means for every spell to share one. Effects are
-    /// not here: two spells with the same effects are the <c>Spell.Indistinguishable</c> finding instead.
+    /// The numbers of a spell that a match reads, with what it means for every spell to share one. Subjects are
+    /// the authored field names, so a finding names what to edit in <c>data/Spells</c>. Effects are not here:
+    /// two spells with the same effects are the <c>Spell.Indistinguishable</c> finding instead.
     /// </summary>
     private static IReadOnlyList<(string Name, Func<Spell, double> Of, string Meaning)> SpellStats =>
     [
         ("energyCost", spell => spell.Stats.Cost.Value, "Energy never decides which spell a creature can cast."),
-        ("initiative", spell => spell.Stats.Initiative.Value, "The spell a creature declares never changes when it acts."),
+        ("initiative", spell => spell.Stats.SpellInitiative.Value, "Unlocking any spell raises a creature's Base initiative by the same amount, so which spell it unlocks never changes how soon it acts."),
         ("criticalChance", spell => spell.Stats.CriticalChance.Value, "A spell's critical chance is a bonus on the creature's own, so every cast crits at the creature's rate and no spell moves it."),
     ];
 
@@ -206,7 +207,7 @@ public static class ContentAudit
 
     /// <summary>Effects are compared as a set, since the same effects in another order are the same spell.</summary>
     private static string Signature(Spell spell) =>
-        $"{spell.Stats.Cost.Value}|{spell.Stats.Initiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{string.Join(";", spell.Effects.Select(effect => effect.ToString()).Order(StringComparer.Ordinal))}";
+        $"{spell.Stats.Cost.Value}|{spell.Stats.SpellInitiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{string.Join(";", spell.Effects.Select(effect => effect.ToString()).Order(StringComparer.Ordinal))}";
 
     /// <summary>A few names and then a count: a group of thirty would otherwise be a paragraph.</summary>
     private static string Names(IEnumerable<Spell> spells)
@@ -225,7 +226,7 @@ public static class ContentAudit
         Name = spell.Name,
         CreatureClass = spell.CreatureClass.ToString(),
         Cost = spell.Stats.Cost.Value,
-        Initiative = spell.Stats.Initiative.Value,
+        SpellInitiative = spell.Stats.SpellInitiative.Value,
         Damage = spell.Effects.OfType<Damage>().Sum(effect => effect.Amount),
         BleedDamage = spell.Effects.OfType<Bleed>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         Healing = spell.Effects.OfType<Heal>().Sum(effect => effect.Amount),

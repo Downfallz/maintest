@@ -17,12 +17,19 @@ internal static class Content
         Spell(id, TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 0, effects);
 
     public static Spell Spell(string id, TargetingSpec targeting, int cost = 0, double criticalChance = 0, params Effect[] effects) =>
+        Build(id, targeting, cost, criticalChance, initiative: 1, effects);
+
+    /// <summary>A spell whose Spell initiative is the point of the test; everything else is the default spell.</summary>
+    public static Spell SpellAtInitiative(string id, int initiative, params Effect[] effects) =>
+        Build(id, TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 0, initiative, effects);
+
+    private static Spell Build(string id, TargetingSpec targeting, int cost, double criticalChance, int initiative, Effect[] effects) =>
         Domain.Resources.Spell.Create(
             SpellId.Parse(id),
             "Strike",
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(cost), CriticalChance.Of(criticalChance)),
+            new SpellStats(Initiative.Of(initiative), Energy.Of(cost), CriticalChance.Of(criticalChance)),
             targeting,
             effects.Length == 0 ? [Damage.Of(1)] : effects);
 

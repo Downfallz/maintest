@@ -44,6 +44,9 @@ internal static class Arena
                 [new TalentSpell(Strike, TalentPrerequisites.None), Content.TalentSpell("spell:guard:v1", "spell:strike:v1")],
                 [Content.Node("brawler", Content.TalentSpell("spell:slam:v1")) with { Prerequisites = TalentPrerequisites.Of([Guard], []) }]))]);
 
+    /// <summary>The spell behind an id, for the unlocks that now need the whole spell and not just its name.</summary>
+    public static Spell SpellOf(SpellId id) => Resources.GetSpell(id);
+
     public static Creature Spawn(CreatureId id, PlayerSlot owner) => Creature.Spawn(id, owner, Content.Creature());
 
     /// <summary>

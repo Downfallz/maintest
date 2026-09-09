@@ -18,7 +18,7 @@ it runs on, not a service.
 | Panel | What you get |
 | --- | --- |
 | Creatures | Base stats, class, talent tree (one click away), starting spells (each one click away). |
-| Spells | Type, class, initiative, energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. Plus **Used by**: every creature and talent node that names the spell, and the aliases pointing at it. |
+| Spells | Type, class, spell initiative (what unlocking it adds to a creature's base initiative, ADR 0017), energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. Plus **Used by**: every creature and talent node that names the spell, and the aliases pointing at it. |
 | Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. |
 | Runs | Every run this studio has played, newest first, with its agents, seed, match count and content hash. Open one, or tick two and compare them. |
 | Audit | What no creature can reach, open or cast; what no match can tell apart; what no spell varies; and whether this content has a benchmark digest. Every spell's cost against what it does. |

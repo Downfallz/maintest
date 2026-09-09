@@ -212,7 +212,7 @@ public sealed class StudioApiTests : IDisposable
         var result = await AcceptAsync("GET", "/api/weights", string.Empty);
 
         result.GetProperty("order").EnumerateArray().Select(name => name.GetString()).ShouldBe(
-            ["damage", "kill", "heal", "stun", "bleed", "buff", "energy", "risk"]);
+            ["damage", "kill", "heal", "stun", "bleed", "buff", "energy", "risk", "initiative"]);
         result.GetProperty("values").GetProperty("kill").GetDouble().ShouldBe(ScoringWeights.Default.Kill);
         result.GetProperty("fingerprint").GetString().ShouldBe(ScoringWeights.Default.Fingerprint);
     }

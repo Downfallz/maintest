@@ -401,7 +401,7 @@ function spellEditor() {
     ['Name', textBox(draft, 'name')],
     ['Type', picker(draft, 'spellType', SPELL_TYPES)],
     ['Class', picker(draft, 'creatureClass', CREATURE_CLASSES)],
-    ['Initiative', numberBox(draft, 'initiative')],
+    ['Spell initiative', numberBox(draft, 'initiative', { min: 0 })],
     ['Energy cost', numberBox(draft, 'energyCost', { min: 0 })],
     ['Critical chance bonus', critField(draft)],
     ['Target origin', picker(draft.targeting, 'origin', TARGET_ORIGINS)],
@@ -543,7 +543,10 @@ function creatureEditor() {
     ['Health', numberBox(draft, 'baseHealth', { min: 1 })],
     ['Energy', numberBox(draft, 'baseEnergy', { min: 0 })],
     ['Defense', numberBox(draft, 'baseDefense', { min: 0 })],
-    ['Initiative', numberBox(draft, 'baseInitiative', { min: 0 })],
+    ['Initiative', element('div', { className: 'inline' }, [
+      numberBox(draft, 'baseInitiative', { min: 0 }),
+      element('span', { className: 'muted', textContent: 'at spawn; unlocking a spell raises it' }),
+    ])],
     ['Critical chance', element('div', { className: 'inline' }, [
       numberBox(draft, 'baseCriticalChance', { step: 0.01, min: 0 }),
       element('span', { className: 'muted', textContent: 'its own; a spell adds a bonus to it' }),

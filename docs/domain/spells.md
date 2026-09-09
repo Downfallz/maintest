@@ -23,7 +23,8 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Temporary` + `Stats.Defense`, `Length` | raise it for a few rounds | `DefenseBuff` with `durationRounds` |
 | `EffectType.Direct` + `Stats.Stun` | stun the targets | `Stun` |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
-| `SpellType`, `CharacterClass`, `Initiative`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
+| `SpellType`, `CharacterClass`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
+| `Initiative` | summed over a character's unlocked spells to *be* its initiative | Spell initiative: what the Creature's base gains, once, on unlocking it (ADR 0017) |
 | `NbTargets` | 1, or 2 and 3 for the sweeps | `targeting.scope` and `maxTargets` |
 | `Level` | depth in the talent tree | nothing: the tree in `data/TalentTrees` already says it |
 
@@ -67,8 +68,9 @@ That reads as a typo in the prototype; it is `Offensive` here.
 
 ## The spells
 
-The crit column is the Critical chance bonus, what the spell adds to its caster's own. Durations are
-in rounds.
+The crit column is the Critical chance bonus, what the spell adds to its caster's own. The initiative column
+is the Spell initiative, what a Creature gains once when it unlocks the spell — not a per-cast speed.
+Durations are in rounds.
 
 | Spell | Class | Type | Initiative | Energy | Crit | Targets | Effects |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -122,9 +124,15 @@ hit. The name and the length say a lasting wound, so it is a bleed here.
 - Passive spells: `SpellType.Passive` exists and does nothing. A passive is an always-on modifier the
   creature never spends an activation on.
 - Minions as a second resource, or the Necromancer keeps paying in energy.
-- A spell's initiative currently changes nothing: the Combat timeline is built in Planning, from the speed
-  choices and the Creature's own Initiative, before any Intent exists, so no rule reads a Spell's own
-  initiative (only the content audit does). Either the timeline learns to read it — which means ordering
-  after intents are declared, not before — or the field goes.
+- Whether a starting Spell should also give its Spell initiative. It does not today: the Creature definition's
+  `baseInitiative` is authored knowing the starting kit, so counting it twice would be double payment
+  (ADR 0017). The cost is that two Creatures knowing the same Spells can differ in Initiative depending on how
+  they got them.
+- What a point of Initiative is worth. The heuristic agents now price an unlock as its combat value plus
+  `w.initiative` times the Spell initiative, but that weight is set at 0.5 on reasoning alone (ADR 0018);
+  `search-weights` has never tuned it.
+- Whether the numbers are right for their new job. They were the prototype's per-cast speeds and are now
+  one-off unlock rewards, so nothing about them was chosen for this: 1 to 3 across the catalogue, and a
+  Creature that unlocks everything on one line gains 6 or 7 on a base of 5.
 - The permanent stat buffs stack every time they are cast, unbounded, as they did in the prototype. That is
   probably not what anyone wants at a round cap of 30.
