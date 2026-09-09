@@ -32,18 +32,21 @@ internal static class StudioHost
         }
 
         var store = new ContentStore(options.Data);
-        var runner = new StudioRunner(options, RunsDirectory);
+        var runner = new StudioRunner(options, RunsDirectory, TimeProvider.System);
         var schemaOutput = Path.GetDirectoryName(options.SchemaPath) is { Length: > 0 } directory ? directory : Path.Combine(options.Data, "dst");
 
         using var api = new StudioApi(store, runner, schemaOutput);
         using var server = new StudioServer(options.Port, api, new StudioFiles(StudioDirectory, ViewerDirectory), ViewerDirectory);
         using var stopping = new CancellationTokenSource();
 
-        Console.CancelKeyPress += (_, eventArgs) =>
+        // Held in a local so it can be taken off the static event: a second Ctrl+C during shutdown would
+        // otherwise cancel a token source that is already disposed.
+        ConsoleCancelEventHandler stop = (_, eventArgs) =>
         {
             eventArgs.Cancel = true;
             stopping.Cancel();
         };
+        Console.CancelKeyPress += stop;
 
         Console.WriteLine($"Content studio on {server.Url} — content '{store.Root}', schema '{options.SchemaPath}', runs under '{RunsDirectory}'.");
         Console.WriteLine("Ctrl+C to stop.");
@@ -56,6 +59,10 @@ internal static class StudioHost
         {
             await Console.Error.WriteLineAsync($"Cannot listen on {server.Url}: {exception.Message}. Another studio may be running; pass --port.");
             return 1;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= stop;
         }
 
         Console.WriteLine("Content studio stopped.");

@@ -11,6 +11,8 @@ namespace DownfallArena.Infrastructure.Resources.Authoring;
 /// </summary>
 public sealed class ContentStore
 {
+    private const string TemporarySuffix = ".tmp";
+
     private static readonly JsonSerializerOptions IndentedOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
     /// <summary>Stands in for the document of a file that does not parse, so the studio can still list it.</summary>
@@ -186,14 +188,28 @@ public sealed class ContentStore
         }
     }
 
+    /// <summary>
+    /// Writes through a temporary file so a failure leaves the previous content intact rather than half a
+    /// document, and cleans the temporary up so nothing unreviewable is left in the content tree.
+    /// </summary>
     private static void WriteAtomically(string path, string content)
     {
-        var temporary = path + ".tmp";
-        File.WriteAllText(temporary, content);
-        File.Move(temporary, path, overwrite: true);
+        var temporary = path + TemporarySuffix;
+        try
+        {
+            File.WriteAllText(temporary, content);
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary))
+            {
+                File.Delete(temporary);
+            }
+        }
     }
 
-    private IReadOnlyDictionary<string, string> ReadAliases()
+    private Dictionary<string, string> ReadAliases()
     {
         var path = Path.Combine(_root, GameSchemaBuilder.AliasesFile);
         if (!File.Exists(path))

@@ -26,10 +26,17 @@ page are the Cli's, which is already the composition root and already knows how 
 
 Authored items gain one optional field, `"enabled": false`, which excludes an item from the consolidated
 schema. References to a disabled spell are pruned (from starting spells, talent nodes and prerequisites)
-rather than reported, because a disabled spell is content that does not exist for the engine; a creature
-whose talent tree is disabled is an error, because it cannot be played. The flag is authoring-only: the
-builder clears it on the way into `game.schema.json`, so content where nothing is disabled hashes exactly as
-it did before.
+rather than reported, because a disabled spell is content that does not exist for the engine. Pruning stops
+where removing a reference would change a rule instead of removing content: a creature whose talent tree is
+disabled, a creature left with no starting spell, and a talent node whose every `anyOf` spell is disabled are
+errors. The last one matters most — an empty `anyOf` means "no requirement", so pruning it would silently
+unlock the branch it was gating rather than close it. The flag is authoring-only: the builder clears it on
+the way into `game.schema.json`, so content where nothing is disabled hashes exactly as it did before.
+
+Binding to the loopback address keeps the studio off the network but not out of the browser: any page the
+author has open can post a form at it. The API therefore takes writes only with `Content-Type:
+application/json`, which a cross-site form cannot set without a preflight this host does not answer, and
+refuses any request whose `Sec-Fetch-Site` says it came from elsewhere.
 
 ## Consequences
 
@@ -39,7 +46,9 @@ it did before.
   "valid content" and one definition of "what a run looks like".
 - Bad: one more host in the Cli, and a static page whose fields must follow the DTOs when they change.
 - Bad: `enabled` adds a second way for an item to be absent from a build; the builder prints what it pruned.
-- Neutral: the studio is a local authoring tool, bound to `127.0.0.1` and never part of a deployed game.
+- Neutral: the studio is a local authoring tool, bound to `127.0.0.1` and never part of a deployed game. It
+  has no authentication, because it has no identity to check: the fence is the same-origin one above, and the
+  process only runs while an author is using it.
 
 ## Alternatives considered
 

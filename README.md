@@ -27,7 +27,7 @@ dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
 dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>, policy:<policy.json>
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
-dotnet run --project src/DownfallArena.Cli -- studio                # browse, edit and try the game content (studio/README.md)
+dotnet run --project src/DownfallArena.Cli -- studio               # browse, edit and try the game content (studio/README.md)
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights (Python side, docs/learning/training.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # train a policy on a recorded run (or train-value)
 scripts/iterate.sh                                                   # one full turn of the learning loop (docs/learning/explained.md)

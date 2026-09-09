@@ -18,4 +18,9 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
+  <!-- The host and the studio are internal to the composition root; its tests exercise them directly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DownfallArena.Cli.Tests" />
+  </ItemGroup>
+
 </Project>

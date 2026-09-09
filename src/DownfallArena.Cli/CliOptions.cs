@@ -91,7 +91,14 @@ internal sealed record CliOptions
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
             Write = write,
             Data = values.GetValueOrDefault("--data") ?? DefaultData,
-            Port = values.TryGetValue("--port", out var port) ? int.Parse(port, CultureInfo.InvariantCulture) : DefaultPort,
+            Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
         };
+    }
+
+    /// <summary>A port the studio host can actually bind, rejected here so a typo is one line, not a stack.</summary>
+    private static int ParsePort(string text)
+    {
+        var port = int.Parse(text, CultureInfo.InvariantCulture);
+        return port is >= 1 and <= 65535 ? port : throw new ArgumentException($"Port {port} is not between 1 and 65535.", nameof(text));
     }
 }

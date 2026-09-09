@@ -22,7 +22,8 @@ src/
   DownfallArena.Domain         Pure domain model. Depends on SharedKernel only. Aggregates, entities, value objects, events.
   DownfallArena.Application    Use cases, ports (interfaces owned here), projections, agents, simulation, learning encodings. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
-  DownfallArena.Cli            Composition root and console host: play, human, simulate, with recording and tracing.
+  DownfallArena.Cli            Composition root and hosts: the console commands (play, human, simulate, evaluate,
+                               benchmark) and the content studio's HTTP host (ADR 0015).
 tools/
   DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.

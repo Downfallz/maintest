@@ -763,7 +763,13 @@ async function setEnabled(enabled) {
 
 async function remove(item) {
   if (!window.confirm(`Delete ${item.path}? The file goes away; git still has it.`)) return;
-  const result = await act('Deleting', () => call('/api/documents/delete', { kind: TABS[state.tab].kind, path: item.path }));
+  const result = await act('Deleting', async () => {
+    const deleted = await call('/api/documents/delete', { kind: TABS[state.tab].kind, path: item.path });
+    // An alias left pointing at a deleted item stops the content from building, so it goes with the file.
+    const aliases = Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id));
+    return { ...deleted, ...(await call('/api/aliases', { aliases })) };
+  });
+
   if (!result) return;
   adopt(result);
   state.selected = null;

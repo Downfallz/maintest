@@ -48,7 +48,9 @@ internal sealed class StudioApi : IDisposable
                 _ => Failed(404, $"No such endpoint: {method} {path}."),
             };
         }
-        catch (Exception exception) when (exception is InvalidGameContentException or ArgumentException or JsonException or IOException or InvalidOperationException or DirectoryNotFoundException)
+        // What the author got wrong answers 400. Anything else (a broken engine, a wiring mistake) is the host's
+        // 500: telling an author their content is bad when the engine failed would send them hunting.
+        catch (Exception exception) when (exception is InvalidGameContentException or ArgumentException or JsonException or IOException)
         {
             return Failed(400, exception.Message, Problems(exception));
         }
@@ -88,14 +90,14 @@ internal sealed class StudioApi : IDisposable
             throw new InvalidGameContentException("A document must be a JSON object.");
         }
 
-        var saved = _store.Save(request.Kind, request.Path, request.Document.GetRawText());
+        var saved = _store.Save(KindOf(request.Kind), request.Path, request.Document.GetRawText());
         return Ok(new { saved, catalogue = _store.Read() });
     }
 
     private StudioResponse DeleteDocument(string body)
     {
         var request = Parse<DeleteDocumentRequest>(body);
-        _store.Delete(request.Kind, request.Path);
+        _store.Delete(KindOf(request.Kind), request.Path);
         return Ok(new { deleted = request.Path, catalogue = _store.Read() });
     }
 
@@ -137,12 +139,19 @@ internal sealed class StudioApi : IDisposable
     private static StudioResponse Failed(int status, string message, IReadOnlyList<string>? problems = null) =>
         StudioResponse.OfJson(new { ok = false, message, problems = problems ?? Array.Empty<string>() }, JsonOptions, status);
 
+    /// <summary>
+    /// <c>ContentKind.Creature</c> is the enum's zero, so a request that omits or misspells <c>kind</c> would
+    /// otherwise mean "creature" and fail later with a message about the wrong folder.
+    /// </summary>
+    private static ContentKind KindOf(ContentKind? kind) =>
+        kind ?? throw new InvalidGameContentException($"'kind' is required, and one of {string.Join(", ", Enum.GetNames<ContentKind>())}.");
+
     private static IReadOnlyList<string> Problems(Exception exception) =>
         exception is InvalidGameContentException invalid ? invalid.Problems : [];
 
     private sealed record SaveDocumentRequest
     {
-        public ContentKind Kind { get; init; }
+        public ContentKind? Kind { get; init; }
 
         public string Path { get; init; } = string.Empty;
 
@@ -151,7 +160,7 @@ internal sealed class StudioApi : IDisposable
 
     private sealed record DeleteDocumentRequest
     {
-        public ContentKind Kind { get; init; }
+        public ContentKind? Kind { get; init; }
 
         public string Path { get; init; } = string.Empty;
     }

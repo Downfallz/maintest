@@ -18,6 +18,8 @@ internal static class CliHost
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        // No configuration source is read (no appsettings, no environment binding): every option this host has
+        // comes from CliOptions, so the command line is not handed to the builder.
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
         builder.Services

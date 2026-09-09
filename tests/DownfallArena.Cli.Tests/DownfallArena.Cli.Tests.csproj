@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DownfallArena.Cli\DownfallArena.Cli.csproj" />
+  </ItemGroup>
+
+  <!--
+    The real viewer page, because ViewerPage edits it by matching two literals from it (ADR 0015): a test that
+    rendered against a copy would keep passing after the viewer was re-indented, and the studio would 404.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\viewer\index.html" Link="viewer\index.html" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\viewer\viewer.css" Link="viewer\viewer.css" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\studio\index.html" Link="studio\index.html" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\studio\studio.css" Link="studio\studio.css" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\studio\studio.js" Link="studio\studio.js" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

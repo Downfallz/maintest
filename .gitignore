@@ -76,3 +76,6 @@ __pycache__/
 .ruff_cache/
 .coverage
 coverage.xml
+
+# The content studio writes a document through a temporary file next to it.
+*.json.tmp

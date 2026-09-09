@@ -7,6 +7,16 @@ namespace DownfallArena.Infrastructure.Tests.Resources;
 
 public sealed class GameSchemaBuilderTests
 {
+    private const string DisabledGuard = """
+        {
+          "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
+          "enabled": false,
+          "initiative": 2, "energyCost": 1, "criticalChance": 0,
+          "targeting": { "origin": "Self", "scope": "SingleTarget" },
+          "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
+        }
+        """;
+
     [Fact]
     public void Valid_content_builds_a_sorted_schema_with_resolved_references_and_a_hash()
     {
@@ -164,24 +174,85 @@ public sealed class GameSchemaBuilderTests
     public void A_disabled_spell_leaves_the_build_and_every_reference_to_it()
     {
         using var content = new ContentDirectory().WithValidContent()
-            .WithFile("Spells/brawler/guard.v1.json", """
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard)
+            .WithFile("Creatures/main.v1.json", """
                 {
-                  "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-                  "enabled": false,
-                  "initiative": 2, "energyCost": 1, "criticalChance": 0,
-                  "targeting": { "origin": "Self", "scope": "SingleTarget" },
-                  "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
+                  "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature",
+                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+                  "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike", "spell:guard"]
+                }
+                """)
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base",
+                  "root": {
+                    "code": "Base", "name": "Base",
+                    "spells": [ { "id": "spell:strike" } ],
+                    "children": [
+                      { "code": "Brawler", "name": "Brawler", "prerequisites": { "allOf": ["spell:strike", "spell:guard"], "anyOf": [] },
+                        "spells": [ { "id": "spell:guard", "prerequisites": { "allOf": ["spell:guard"], "anyOf": [] } } ] }
+                    ]
+                  }
                 }
                 """);
         var notes = new List<string>();
 
         var schema = GameSchemaBuilder.Build(content.Path, notes);
 
+        var brawler = schema.TalentTrees.Single().Root!.Children.Single();
         schema.Spells.Select(spell => spell.Id).ShouldBe(["spell:strike:v1"]);
-        schema.TalentTrees.Single().Root!.Children.Single().Spells.ShouldBeEmpty();
+        schema.Creatures.Single().StartingSpellIds.ShouldBe(["spell:strike:v1"]);
+        brawler.Spells.ShouldBeEmpty();
+        brawler.Prerequisites!.AllOf.ShouldBe(["spell:strike:v1"]);
         var note = string.Join("\n", notes);
         note.ShouldContain("Disabled spell 'spell:guard:v1' is not in the build.");
         note.ShouldContain("node 'Brawler': dropped disabled spell 'spell:guard:v1'.");
+        note.ShouldContain("creature 'creature:main:v1' starting spells: dropped disabled spell 'spell:guard:v1'.");
+        note.ShouldContain("node 'Brawler' prerequisites: dropped disabled spell 'spell:guard:v1'.");
+    }
+
+    [Fact]
+    public void A_disabled_creature_leaves_the_build()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Creatures/main.v1.json", """
+                {
+                  "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature", "enabled": false,
+                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+                  "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
+                }
+                """);
+        var notes = new List<string>();
+
+        GameSchemaBuilder.Build(content.Path, notes).Creatures.ShouldBeEmpty();
+
+        notes.ShouldContain("Disabled creature 'creature:main:v1' is not in the build.");
+    }
+
+    /// <summary>
+    /// An empty <c>anyOf</c> is no requirement at all, so pruning the last spell out of one would unlock the node
+    /// rather than close it. The builder refuses instead of quietly opening a talent branch.
+    /// </summary>
+    [Fact]
+    public void Disabling_every_spell_of_an_anyOf_gate_is_refused_rather_than_opening_the_node()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard)
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base",
+                  "root": {
+                    "code": "Base", "name": "Base",
+                    "spells": [ { "id": "spell:strike" } ],
+                    "children": [
+                      { "code": "Brawler", "name": "Brawler", "prerequisites": { "allOf": [], "anyOf": ["spell:guard"] }, "spells": [] }
+                    ]
+                  }
+                }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Problems.ShouldContain(problem => problem.Contains("every spell of its 'anyOf' is disabled", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -197,6 +268,24 @@ public sealed class GameSchemaBuilderTests
 
         Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
             .Problems.ShouldContain(problem => problem.Contains("talent tree 'talent-tree:base:v1' is disabled", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_creature_left_without_a_starting_spell_by_a_disable_says_so()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/strike.v1.json", """
+                {
+                  "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
+                  "enabled": false,
+                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+                  "effects": [ { "kind": "Damage", "amount": 1 } ]
+                }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Problems.ShouldContain(problem => problem.Contains("every starting spell is disabled", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -26,6 +26,12 @@ internal sealed class StudioFiles
 
     public StudioResponse Get(string path)
     {
+        // The browser asks for this on its own and the studio ships no icon; 204 answers it without a console error.
+        if (path == "/favicon.ico")
+        {
+            return new StudioResponse(204, "image/x-icon", []);
+        }
+
         if (!_routes.TryGetValue(path, out var route))
         {
             return StudioResponse.OfText(404, "text/plain; charset=utf-8", $"No such page: {path}");

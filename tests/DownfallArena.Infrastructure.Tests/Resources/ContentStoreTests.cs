@@ -98,6 +98,10 @@ public sealed class ContentStoreTests
         Should.Throw<InvalidGameContentException>(() => new ContentStore(content.Path).Save(kind, path, Guard));
     }
 
+    /// <summary>
+    /// The store deletes the one file it is told to; the alias and the references are the caller's to clean up,
+    /// which is why the studio rewrites the alias map in the same action.
+    /// </summary>
     [Fact]
     public void Deleting_removes_the_file_and_refuses_one_that_is_not_there()
     {
@@ -106,8 +110,35 @@ public sealed class ContentStoreTests
 
         store.Delete(ContentKind.Spell, "Spells/brawler/guard.v1.json");
 
-        store.Read().Spells.ShouldHaveSingleItem().Id.ShouldBe("spell:strike:v1");
+        var afterwards = store.Read();
+        afterwards.Spells.ShouldHaveSingleItem().Id.ShouldBe("spell:strike:v1");
+        afterwards.ContentHash.ShouldBeNull();
+        afterwards.Problems.ShouldContain(problem => problem.Contains("spell:guard", StringComparison.Ordinal));
         Should.Throw<FileNotFoundException>(() => store.Delete(ContentKind.Spell, "Spells/brawler/guard.v1.json"));
+    }
+
+    [Fact]
+    public void Reading_reports_what_the_enabled_switch_left_out()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", Guard.Replace("\"criticalChance\": 0", "\"criticalChance\": 0, \"enabled\": false", StringComparison.Ordinal));
+
+        var catalogue = new ContentStore(content.Path).Read();
+
+        catalogue.Spells.Single(spell => spell.Id == "spell:guard:v1").Enabled.ShouldBeFalse();
+        catalogue.ContentHash.ShouldNotBeNull();
+        catalogue.Notes.ShouldContain("Disabled spell 'spell:guard:v1' is not in the build.");
+    }
+
+    [Fact]
+    public void A_write_that_fails_leaves_no_temporary_file_behind()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var store = new ContentStore(content.Path);
+
+        Should.Throw<InvalidGameContentException>(() => store.Save(ContentKind.Spell, "Spells/broken.v1.json", "{ \"nmae\": 1 }"));
+
+        Directory.EnumerateFiles(content.Path, "*.tmp", SearchOption.AllDirectories).ShouldBeEmpty();
     }
 
     [Fact]

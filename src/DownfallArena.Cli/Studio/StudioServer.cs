@@ -95,7 +95,9 @@ internal sealed class StudioServer : IDisposable
 
         if (path.StartsWith("/api/", StringComparison.Ordinal))
         {
-            return await _api.HandleAsync(method, path, await ReadBodyAsync(context.Request));
+            return CrossSite(context.Request) is { } refusal
+                ? refusal
+                : await _api.HandleAsync(method, path, await ReadBodyAsync(context.Request));
         }
 
         if (path.StartsWith(RunPrefix, StringComparison.Ordinal))
@@ -104,6 +106,31 @@ internal sealed class StudioServer : IDisposable
         }
 
         return _files.Get(path);
+    }
+
+    /// <summary>
+    /// Refuses a request another site made on the author's behalf, or <c>null</c> to let it through. Binding to
+    /// the loopback address hides the studio from the network but not from the browser: any page the author has
+    /// open can post a form to it. A form cannot set <c>Content-Type: application/json</c> without a preflight,
+    /// and this host answers no preflight, so requiring it on a write is the fence. <c>Sec-Fetch-Site</c> closes
+    /// the same door from the other side when the browser sends it; a client that sends neither (curl) is not a
+    /// browser being used against its owner, and keeps working.
+    /// </summary>
+    private static StudioResponse? CrossSite(HttpListenerRequest request)
+    {
+        var site = request.Headers["Sec-Fetch-Site"];
+        if (site is not null && !string.Equals(site, "same-origin", StringComparison.Ordinal) && !string.Equals(site, "none", StringComparison.Ordinal))
+        {
+            return StudioResponse.OfText(403, "text/plain; charset=utf-8", $"The studio answers its own page only; this request came from {site}.");
+        }
+
+        if (!string.Equals(request.HttpMethod, "GET", StringComparison.Ordinal)
+            && request.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) != true)
+        {
+            return StudioResponse.OfText(415, "text/plain; charset=utf-8", "The studio takes 'Content-Type: application/json' on a write.");
+        }
+
+        return null;
     }
 
     private static async Task<string> ReadBodyAsync(HttpListenerRequest request)

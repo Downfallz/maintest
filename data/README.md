@@ -27,9 +27,18 @@ dotnet run --project src/DownfallArena.Cli -- studio
 
 Any creature, spell or talent tree may carry `"enabled": false` (ADR 0015). A disabled item leaves the
 consolidated schema, and every reference to a disabled **spell** is pruned: from `startingSpellIds`, from the
-`spells` of a talent node, and from `allOf` and `anyOf` prerequisites. A creature whose talent tree is disabled
-is an error, because it cannot be played, and so is a creature left with no starting spell. The builder prints
-one `note:` line per thing it left out.
+`spells` of a talent node, and from `allOf` and `anyOf` prerequisites. The builder prints one `note:` line per
+thing it left out.
+
+Three cases are errors rather than prunings, because removing the reference would change a rule instead of
+removing content:
+
+- a creature whose talent tree is disabled, since it cannot be played;
+- a creature left with no starting spell, since it needs at least one;
+- a talent node whose **every** `anyOf` spell is disabled, since an empty `anyOf` is no requirement at all —
+  pruning it would unlock the branch it gates instead of closing it.
+
+In each case, disable what depends on the item too, or leave one of those spells enabled.
 
 The flag is authoring-only: it never reaches `game.schema.json`, so writing `"enabled": true` changes nothing,
 including the content hash.

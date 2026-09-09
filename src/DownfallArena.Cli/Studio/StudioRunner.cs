@@ -16,16 +16,17 @@ internal sealed class StudioRunner
 
     private readonly CliOptions _options;
     private readonly string _runsDirectory;
+    private readonly TimeProvider _time;
 
-    public StudioRunner(CliOptions options, string runsDirectory)
+    public StudioRunner(CliOptions options, string runsDirectory, TimeProvider time)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(runsDirectory);
+        ArgumentNullException.ThrowIfNull(time);
         _options = options;
         _runsDirectory = runsDirectory;
+        _time = time;
     }
-
-    public string RunsDirectory => _runsDirectory;
 
     public async Task<StudioRunResult> RunAsync(StudioRunRequest request)
     {
@@ -35,18 +36,24 @@ internal sealed class StudioRunner
             throw new ArgumentException($"Unknown run mode '{request.Mode}'. Use '{StudioRunModes.Match}' or '{StudioRunModes.Evaluation}'.", nameof(request));
         }
 
+        if (request.Mode == StudioRunModes.Evaluation && request.Matches < 1)
+        {
+            throw new ArgumentException("An evaluation needs at least one seed.", nameof(request));
+        }
+
+        // What the request itself gets wrong is answered before what the working tree is missing.
         if (!File.Exists(_options.SchemaPath))
         {
             throw new InvalidGameContentException($"Game schema '{_options.SchemaPath}' does not exist yet. Build the content first.");
         }
 
-        if (request.Matches < 1)
-        {
-            throw new ArgumentException("A run needs at least one match.", nameof(request));
-        }
-
         var seed = request.Seed ?? Random.Shared.Next();
-        var id = string.Create(CultureInfo.InvariantCulture, $"{DateTime.UtcNow:yyyyMMdd-HHmmss}-{request.Mode}-{seed}");
+        // The stamp reads well in a directory listing; the suffix keeps two runs of the same second, mode and
+        // seed from writing over each other. It has to be random: a version 7 GUID is time-ordered, so its
+        // leading characters are a timestamp that two runs of the same second share.
+        var id = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{_time.GetUtcNow():yyyyMMdd-HHmmss}-{request.Mode}-{seed}-{Guid.NewGuid().ToString("N")[..6]}");
         var directory = Path.Combine(_runsDirectory, id);
         Directory.CreateDirectory(directory);
 
