@@ -41,6 +41,17 @@ public sealed class AgentSpecTests
         Should.Throw<ArgumentNullException>(() => factory.Resolve(null!));
     }
 
+    /// <summary>
+    /// The literal, not a self-comparison: the fingerprint is hashed from <c>Named</c>, whose order is now a
+    /// list one edit could reorder, and it is stamped into artifacts that are committed. A change here means
+    /// every stamp naming these weights no longer matches them, so it has to be deliberate.
+    /// </summary>
+    [Fact]
+    public void The_built_in_weights_keep_the_fingerprint_committed_stamps_were_written_with()
+    {
+        ScoringWeights.Default.Fingerprint.ShouldBe("47d485ec");
+    }
+
     [Fact]
     public void The_fingerprint_changes_with_any_weight()
     {

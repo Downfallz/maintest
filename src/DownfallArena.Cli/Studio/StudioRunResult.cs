@@ -28,5 +28,6 @@ internal sealed record StudioRunResult
 
     public required string Directory { get; init; }
 
+    /// <summary>The artifacts the run wrote, beside this record, which is written after them.</summary>
     public IReadOnlyList<string> Files { get; init; } = [];
 }

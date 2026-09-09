@@ -14,7 +14,7 @@ What it renders, by what you drop:
 | `evaluation.json` (from `evaluate` or `benchmark`) | **Evaluation**: both agents with win rates and paired intervals, scores, remaining health, spell entropy, fizzle and crit rates, **which spells the winning side was holding**, what every number means, and every seed pair. Two agents of the same spec are called out: the mirrored pass then replays the same matches, so the even split is arithmetic. |
 | `training.jsonl` (written by the Python side, L6) | **Training run**: loss and evaluation win rate per iteration, best iteration marked. |
 | `report.json` (written by `report`, L7) | **Iteration report**: every evaluation of a run in one table with the balance signals, a bar chart of win rates and player 1 shares, and the stamp; compare two reports for the deltas, matched by evaluation name. |
-| Two artifacts of the same kind, through the Compare selects | **Comparison**: the metrics side by side with deltas, and the run stamp diff (what moved: content, engine, rules, schema, agents, seeds). |
+| Two artifacts of the same kind, through the Compare selects | **Comparison**: the metrics side by side with deltas, and the run stamp diff (what moved: content, engine, rules, schema, agents, seeds). For two evaluations, also the spell-by-spell delta of the share of sides that declared a spell and won — keyed by spell name, so a spell cut as a new version lines up with the one it replaced. |
 
 Traces dropped alongside their run also feed the batch view (fizzle and crit rates) and appear on their own.
 
@@ -38,5 +38,9 @@ then drop `runs/random-vs-random` or `match.trace.json` on the page.
 `scripts/iterate.sh` (and `uv run --project learning report <run>`) writes `runs/<id>/report.html`: this
 page with `viewer.css` inlined and the run's `report.json`, evaluations, and `training.jsonl` files embedded
 in a `<script type="application/json" id="embedded-artifacts">` block. The page reads that block at start,
-lists the artifacts, and opens on the report, so nothing has to be dragged in; dropping more files still
-works, for a comparison with another run. The block is produced by `learning/src/downfall_learning/viewer.py`.
+lists the artifacts, and opens on the report — or on the first artifact when there is no report — so nothing
+has to be dragged in; dropping more files still works, for a comparison with another run. A block whose
+`compare` flag is set opens on the comparison of the two artifacts it carries instead, which is what the
+content studio's compare page sets (`studio/README.md`); the flag is said rather than inferred from the count,
+so a run carrying two evaluations and no report keeps opening on the first of them. The block is produced by
+`learning/src/downfall_learning/viewer.py` and, for the studio, by `ViewerPage` in the Cli.

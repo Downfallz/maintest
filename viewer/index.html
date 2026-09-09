@@ -987,13 +987,11 @@
       const totals = new Map();
       for (const outcome of outcomes || []) {
         const name = spellName(outcome.spell);
-        const row = totals.get(name) || { name, versions: new Set(), sides: 0, wins: 0, losses: 0, draws: 0, intents: 0 };
+        const row = totals.get(name) || { name, versions: new Set(), sides: 0, wins: 0, draws: 0 };
         row.versions.add(String(outcome.spell).split(':')[2] || '?');
         row.sides += outcome.sides;
         row.wins += outcome.wins;
-        row.losses += outcome.losses;
         row.draws += outcome.draws;
-        row.intents += outcome.intents;
         totals.set(name, row);
       }
       for (const row of totals.values()) row.score = row.sides ? (row.wins + row.draws / 2) / row.sides : 0;
@@ -1125,10 +1123,11 @@
       const carried = JSON.parse(embedded.textContent);
       addTexts(carried.artifacts || []);
       // A run page opens on its report; a page carrying only an evaluation or a trace (the studio's runs) opens
-      // on the first artifact it carries, so there is still nothing to pick. Two artifacts of one kind is the
-      // studio asking for a comparison, and opening on either one alone would hide what it came for.
+      // on the first artifact it carries, so there is still nothing to pick. A page that says it is a comparison
+      // opens on the comparison, since opening on either side alone would hide what it came for. The flag is
+      // said rather than guessed from the count: a run of the loop can carry two evaluations and no report.
       const [first, second] = state.artifacts;
-      state.selected = state.artifacts.length === 2 && first.kind === second.kind
+      state.selected = carried.compare && state.artifacts.length === 2 && first.kind === second.kind
         ? { kind: 'comparison', name: 'comparison', a: first, b: second }
         : state.artifacts.find(artifact => artifact.kind === 'report') || state.artifacts[0] || null;
       drop.textContent = `This page carries run ${carried.run || ''}. Drop another run's report.json, evaluations, or training.jsonl here to compare.`;

@@ -944,11 +944,18 @@ function resetWeights() {
   for (const name of state.weights.order) $(`weight-${name}`).value = String(state.weights.values[name]);
 }
 
-/** The weights to play, or null when no slot is asking for them. */
+/**
+ * The weights to play, or null when no slot is asking for them. An emptied box is left out rather than sent as
+ * a zero: a weights file that omits a name keeps the built-in value, and an empty field reads as "unset", not
+ * as "nothing". Number('') is 0, which would quietly play a very different agent.
+ */
 function weightsPayload() {
   if (!state.weights || $('run-weights').hidden) return null;
   const weights = {};
-  for (const name of state.weights.order) weights[name] = Number($(`weight-${name}`).value);
+  for (const name of state.weights.order) {
+    const text = $(`weight-${name}`).value.trim();
+    if (text !== '') weights[name] = Number(text);
+  }
   return weights;
 }
 

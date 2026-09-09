@@ -19,14 +19,19 @@ public sealed class StudioApiTests : IDisposable
 
     public StudioApiTests()
     {
-        var options = new CliOptions { Command = "studio", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") };
-        _api = new StudioApi(
+        _api = Api(new StudioRunner(Options(), Path.Combine(_content.Path, "runs"), TimeProvider.System));
+    }
+
+    private CliOptions Options() =>
+        new() { Command = "studio", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") };
+
+    private StudioApi Api(StudioRunner runner) =>
+        new(
             new ContentStore(_content.Path),
-            new StudioRunner(options, Path.Combine(_content.Path, "runs"), TimeProvider.System),
+            runner,
             new BenchmarkStore(Path.Combine(_content.Path, "benchmarks")),
             RuleSet.Default,
             Path.Combine(_content.Path, "dst"));
-    }
 
     public void Dispose()
     {
@@ -230,6 +235,46 @@ public sealed class StudioApiTests : IDisposable
     public void A_comparison_naming_a_run_that_does_not_exist_is_a_404()
     {
         _api.ComparePage("one", "two", Path.Combine(AppContext.BaseDirectory, "viewer")).Status.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task A_comparison_page_carries_both_runs_under_names_that_say_which_is_which()
+    {
+        var runner = new StudioRunner(Options(), Path.Combine(_content.Path, "runs"), TimeProvider.System);
+        new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
+        var first = await runner.RunAsync(new StudioRunRequest { Mode = StudioRunModes.Evaluation, Matches = 1, Seed = 1 });
+        var second = await runner.RunAsync(new StudioRunRequest { Mode = StudioRunModes.Evaluation, Matches = 1, Seed = 2 });
+        using var api = Api(runner);
+
+        var response = api.ComparePage(first.Id, second.Id, Path.Combine(AppContext.BaseDirectory, "viewer"));
+
+        response.Status.ShouldBe(200);
+        var carried = JsonDocument.Parse(Between(System.Text.Encoding.UTF8.GetString(response.Body), "type=\"application/json\">", "</script>"));
+        carried.RootElement.GetProperty("compare").GetBoolean().ShouldBeTrue("the page must open on the comparison rather than on one side");
+        carried.RootElement.GetProperty("artifacts").EnumerateArray()
+            .Select(artifact => artifact.GetProperty("name").GetString())
+            .ShouldBe([$"{first.Id}/{StudioRunner.EvaluationFile}", $"{second.Id}/{StudioRunner.EvaluationFile}"]);
+    }
+
+    [Fact]
+    public async Task A_match_and_an_evaluation_are_refused_rather_than_drawn_side_by_side()
+    {
+        var runner = new StudioRunner(Options(), Path.Combine(_content.Path, "runs"), TimeProvider.System);
+        new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
+        var match = await runner.RunAsync(new StudioRunRequest { Mode = StudioRunModes.Match, Seed = 1 });
+        var evaluation = await runner.RunAsync(new StudioRunRequest { Mode = StudioRunModes.Evaluation, Matches = 1, Seed = 2 });
+        using var api = Api(runner);
+
+        var response = api.ComparePage(match.Id, evaluation.Id, Path.Combine(AppContext.BaseDirectory, "viewer"));
+
+        response.Status.ShouldBe(400);
+        System.Text.Encoding.UTF8.GetString(response.Body).ShouldContain(StudioRunModes.Evaluation);
+    }
+
+    private static string Between(string text, string start, string end)
+    {
+        var from = text.IndexOf(start, StringComparison.Ordinal) + start.Length;
+        return text[from..text.IndexOf(end, from, StringComparison.Ordinal)];
     }
 
     private async Task<JsonElement> AcceptAsync(string method, string path, string body)

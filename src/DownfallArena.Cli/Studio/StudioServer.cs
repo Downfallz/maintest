@@ -104,9 +104,8 @@ internal sealed class StudioServer : IDisposable
 
         if (path.StartsWith(ComparePrefix, StringComparison.Ordinal))
         {
-            var runs = path[ComparePrefix.Length..].TrimEnd('/').Split('/');
-            return runs.Length == 2
-                ? _api.ComparePage(runs[0], runs[1], _viewerDirectory)
+            return Comparison(path) is var (first, second)
+                ? _api.ComparePage(first, second, _viewerDirectory)
                 : StudioResponse.OfText(404, "text/plain; charset=utf-8", "A comparison is '/compare/<run>/<run>'.");
         }
 
@@ -116,6 +115,19 @@ internal sealed class StudioServer : IDisposable
         }
 
         return _files.Get(path);
+    }
+
+    /// <summary>The two runs a comparison path names, or <c>null</c> when it does not name exactly two.</summary>
+    public static (string First, string Second)? Comparison(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        if (!path.StartsWith(ComparePrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var runs = path[ComparePrefix.Length..].TrimEnd('/').Split('/');
+        return runs.Length == 2 ? (runs[0], runs[1]) : null;
     }
 
     /// <summary>

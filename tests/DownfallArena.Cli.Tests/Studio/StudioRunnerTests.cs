@@ -116,6 +116,18 @@ public sealed class StudioRunnerTests : IDisposable
         runner.Runs().ShouldBeEmpty();
     }
 
+    /// <summary>The list is what an author gets back to a run with; one unreadable record must not take it out.</summary>
+    [Fact]
+    public async Task A_record_that_does_not_parse_is_stepped_over_rather_than_failing_the_list()
+    {
+        var runner = Built();
+        var good = await runner.RunAsync(new StudioRunRequest { Mode = StudioRunModes.Match, Seed = 7 });
+        var broken = await runner.RunAsync(new StudioRunRequest { Mode = StudioRunModes.Match, Seed = 8 });
+        await File.WriteAllTextAsync(Path.Combine(broken.Directory, StudioRunner.RunFile), "{ half writ", TestContext.Current.CancellationToken);
+
+        runner.Runs().ShouldHaveSingleItem().Id.ShouldBe(good.Id);
+    }
+
     [Fact]
     public async Task Weights_from_the_panel_are_written_next_to_the_run_and_played_by_a_heuristic_with_no_file()
     {
@@ -130,7 +142,7 @@ public sealed class StudioRunnerTests : IDisposable
         });
 
         run.Files.ShouldContain(StudioRunner.WeightsFile);
-        File.ReadAllText(Path.Combine(run.Directory, StudioRunner.WeightsFile)).ShouldContain("\"kill\": 9");
+        (await File.ReadAllTextAsync(Path.Combine(run.Directory, StudioRunner.WeightsFile), TestContext.Current.CancellationToken)).ShouldContain("\"kill\": 9");
         run.Player1.ShouldContain(StudioRunner.WeightsFile);
         run.Player2.ShouldBe("Random", "only the slot that asked for the weights gets them");
     }

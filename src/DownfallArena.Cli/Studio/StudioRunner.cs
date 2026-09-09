@@ -64,7 +64,7 @@ internal sealed class StudioRunner
         var directory = Path.Combine(_runsDirectory, id);
         Directory.CreateDirectory(directory);
 
-        var weightsPath = WriteWeights(request.Weights, directory);
+        var weightsPath = await WriteWeightsAsync(request.Weights, directory);
         var player1 = WithWeights(AgentSpec.Parse(request.Player1), weightsPath);
         var player2 = WithWeights(AgentSpec.Parse(request.Player2), weightsPath);
 
@@ -151,7 +151,7 @@ internal sealed class StudioRunner
             }
         }
 
-        return [.. runs.OrderByDescending(run => run.At).ThenBy(run => run.Id, StringComparer.Ordinal)];
+        return [.. runs.OrderByDescending(run => run.At).ThenByDescending(run => run.Id, StringComparer.Ordinal)];
     }
 
     /// <summary>The small artifacts of a run, in the order the viewer should list them.</summary>
@@ -181,7 +181,7 @@ internal sealed class StudioRunner
     /// Writes the panel's weights into the run's own directory, and answers with the path to hand a heuristic
     /// agent. Unknown names are refused here rather than at the agent, where the message would be about JSON.
     /// </summary>
-    private static string? WriteWeights(IReadOnlyDictionary<string, double>? weights, string directory)
+    private static async Task<string?> WriteWeightsAsync(IReadOnlyDictionary<string, double>? weights, string directory)
     {
         if (weights is not { Count: > 0 })
         {
@@ -203,7 +203,7 @@ internal sealed class StudioRunner
         }
 
         var path = Path.Combine(directory, WeightsFile);
-        File.WriteAllText(path, JsonSerializer.Serialize(weights, StudioJson.FileOptions));
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(weights, StudioJson.FileOptions));
         return path;
     }
 

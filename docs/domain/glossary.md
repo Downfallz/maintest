@@ -93,6 +93,10 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Seed pair | One Benchmark seed played twice with the two Player agents swapped; the unit an Evaluation's intervals are computed over. | decided |
 | Benchmark seeds | The fixed seed set every Evaluation uses, so two content versions, two engine versions, or two agents compare on the same Matches. | decided |
 | Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |
+| Content audit | What a built content set holds that no match can use: content no creature can reach, open or cast, and spells no match can tell apart. Findings, not problems: the content is valid. | decided |
+| Content finding | One thing a Content audit found, with a stable code namespaced by what it is about (`Spell.Unreachable`), the id it is about, and what it means for the author. | decided |
+| Spell reach | How far a Spell goes in a content set: the creatures that start with it, and the creatures that could ever come to know it through their Talent tree. | decided |
+| Run record | What the content studio writes beside a run's artifacts (`run.json`): its agents, seed, match count, Content hash and time, so a run can be found again and compared. | decided |
 | Viewer | The static HTML page that renders Match traces, batches, Evaluations, training runs, and comparisons. | decided |
 | Training run | The record of one training of a Policy on the Python side, one line per iteration (loss, evaluation win rate), with its Run stamp. | decided |
 | Policy file | A trained Policy as the engine reads it (`policy.json`): the Run stamp of its data, the Feature schema, one weight row and one bias per action key, a fallback score, and for a value policy a Baseline; the best-scoring candidate wins. | decided |

@@ -1,4 +1,5 @@
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Resources.Talents;
@@ -13,9 +14,9 @@ namespace DownfallArena.Application.Content;
 /// None of these stop a build — the content is valid, it is just content that never comes up or never matters —
 /// so they are findings rather than problems.
 /// <para>
-/// The gate is the domain's own <see cref="TalentPrerequisites.AreSatisfiedBy"/>, the one the evolution rules
-/// run, applied until nothing new is learned. Since what a creature knows only grows, a gate that is shut at
-/// that fixed point is shut for good.
+/// Reachability is <see cref="TalentUnlocks.ReachableSpells"/>, the evolution rules' own gate applied until
+/// nothing new is learned. Since what a creature knows only grows, a gate shut at that fixed point is shut for
+/// good.
 /// </para>
 /// </summary>
 public static class ContentAudit
@@ -37,16 +38,16 @@ public static class ContentAudit
                 starting[spell] = starting.GetValueOrDefault(spell) + 1;
             }
 
-            if (!resources.TryGetTalentTree(creature.TalentTree, out var tree))
-            {
-                continue;
-            }
-
-            var known = Learnable(creature, tree);
+            // GameResources refuses a creature on a tree it does not have, so this always resolves.
+            var tree = resources.GetTalentTree(creature.TalentTree);
+            var known = TalentUnlocks.ReachableSpells(creature.StartingSpells, tree);
 
             // The most energy this creature could ever be holding: what it starts with, plus every round's gain
-            // up to the cap. Nothing else adds energy that every creature gets.
-            var ceiling = creature.BaseStats.Energy.Value + (rules.EnergyPerRound * rules.RoundCap);
+            // up to the cap. An EnergyGain spell it can reach breaks that bound -- it can be cast again and
+            // again -- so a creature that can learn one has no ceiling at all rather than a larger one.
+            var ceiling = Grants(known, resources)
+                ? int.MaxValue
+                : creature.BaseStats.Energy.Value + (rules.EnergyPerRound * rules.RoundCap);
             foreach (var spell in known)
             {
                 reachableBy[spell] = reachableBy.GetValueOrDefault(spell) + 1;
@@ -89,7 +90,7 @@ public static class ContentAudit
             }
 
             var ceiling = energyCeiling[spell.Id];
-            if (spell.Stats.Cost.Value > ceiling)
+            if (ceiling != int.MaxValue && spell.Stats.Cost.Value > ceiling)
             {
                 findings.Add(new ContentFinding("Spell.Uncastable", spell.Id.Value, $"'{spell.Name}' costs {spell.Stats.Cost.Value} energy, and a creature that can learn it holds at most {ceiling} by the round cap."));
             }
@@ -137,7 +138,7 @@ public static class ContentAudit
             .OrderBy(finding => finding.Subject, StringComparer.Ordinal);
 
     private static string Signature(Spell spell) =>
-        $"{spell.Stats.Cost.Value}|{spell.Stats.Initiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{string.Join(";", spell.Effects.Select(effect => effect.ToString()))}";
+        $"{spell.Stats.Cost.Value}|{spell.Stats.Initiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{string.Join(";", spell.Effects.Select(effect => effect.ToString()).Order(StringComparer.Ordinal))}";
 
     /// <summary>A few names and then a count: a group of thirty would otherwise be a paragraph.</summary>
     private static string Names(IEnumerable<Spell> spells)
@@ -146,29 +147,9 @@ public static class ContentAudit
         return names.Count <= 5 ? string.Join(", ", names) : $"{string.Join(", ", names.Take(5))} and {names.Count - 5} more";
     }
 
-    /// <summary>
-    /// Every spell one creature could come to know: its starting spells, then everything the talent gates open
-    /// to that set, until the set stops growing.
-    /// </summary>
-    private static HashSet<SpellId> Learnable(CreatureDefinition creature, TalentTree tree)
-    {
-        var known = new HashSet<SpellId>(creature.StartingSpells);
-        bool grew;
-        do
-        {
-            grew = false;
-            foreach (var node in tree.Nodes.Where(node => node.Prerequisites.AreSatisfiedBy(known)))
-            {
-                foreach (var spell in node.Spells.Where(spell => spell.Prerequisites.AreSatisfiedBy(known)))
-                {
-                    grew |= known.Add(spell.Id);
-                }
-            }
-        }
-        while (grew);
-
-        return known;
-    }
+    /// <summary>Whether any of these spells hands out energy, which is what makes an energy ceiling meaningless.</summary>
+    private static bool Grants(IReadOnlySet<SpellId> spells, IGameResources resources) =>
+        spells.Any(id => resources.GetSpell(id).Effects.OfType<EnergyGain>().Any());
 
     private static SpellReach Row(Spell spell, RuleSet rules, int startingFor, int reachableBy) => new()
     {

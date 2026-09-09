@@ -86,7 +86,7 @@ public sealed class ContentAuditTests
             [Spell(Strike, cost: 0), Spell(Follow, cost: rules.EnergyPerRound * rules.RoundCap), Spell(Lost, cost: (rules.EnergyPerRound * rules.RoundCap) + 1)],
             [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(Follow), Spell(Lost)]))]);
 
-        var report = ContentAudit.Of(resources, RuleSet.Default);
+        var report = ContentAudit.Of(resources, rules);
 
         var finding = report.Findings.ShouldHaveSingleItem();
         finding.Code.ShouldBe("Spell.Uncastable");
@@ -177,6 +177,80 @@ public sealed class ContentAuditTests
 
         ContentAudit.Of(resources, RuleSet.Default).Findings.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void A_creature_that_can_reach_a_spell_granting_energy_has_no_ceiling_to_break()
+    {
+        // EnergyGain can be cast again and again, so no cost is out of reach and the finding would be a lie.
+        var battery = SpellId.Parse("spell:battery:v1");
+        var costly = SpellId.Parse("spell:costly:v1");
+        var resources = GameResources.Create(
+            "granting",
+            [Creature(Fighter, Tree, [Strike], energy: 0)],
+            [
+                Spell(Strike, cost: 0),
+                Domain.Resources.Spell.Create(
+                    battery,
+                    "Battery",
+                    SpellType.Defensive,
+                    CreatureClass.Creature,
+                    new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+                    TargetingSpec.SingleTarget(TargetOrigin.Self),
+                    [EnergyGain.Of(5)]),
+                Spell(costly, cost: 10_000, damage: 2),
+            ],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(battery), Spell(costly)]))]);
+
+        ContentAudit.Of(resources, RuleSet.Default).Findings
+            .Select(finding => finding.Code)
+            .ShouldNotContain("Spell.Uncastable");
+    }
+
+    [Fact]
+    public void The_energy_a_creature_starts_with_counts_towards_what_it_can_afford()
+    {
+        var rules = RuleSet.Default;
+        var affordable = SpellId.Parse("spell:affordable:v1");
+        var resources = GameResources.Create(
+            "starting-energy",
+            [Creature(Fighter, Tree, [Strike], energy: 5)],
+            [Spell(Strike, cost: 0), Spell(affordable, cost: (rules.EnergyPerRound * rules.RoundCap) + 5, damage: 2)],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(affordable)]))]);
+
+        ContentAudit.Of(resources, rules).Findings.ShouldBeEmpty("the five it spawns with is what takes it over the line");
+    }
+
+    [Fact]
+    public void The_reach_table_puts_the_spells_the_most_creatures_can_learn_first()
+    {
+        var report = ContentAudit.Of(TestContent.Resources, RuleSet.Default);
+
+        report.Reach.Select(row => row.ReachableBy).ShouldBeInOrder(SortDirection.Descending);
+    }
+
+    /// <summary>The same effects written in a different order are the same spell to a match.</summary>
+    [Fact]
+    public void Two_spells_whose_effects_differ_only_in_order_are_still_indistinguishable()
+    {
+        var twin = SpellId.Parse("spell:twin:v1");
+        var resources = GameResources.Create(
+            "reordered",
+            [Creature(Fighter, Tree, [Strike], energy: 0)],
+            [Bundle(Strike, Damage.Of(2), Stun.For(1)), Bundle(twin, Stun.For(1), Damage.Of(2))],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))]);
+
+        ContentAudit.Of(resources, RuleSet.Default).Findings.ShouldHaveSingleItem().Code.ShouldBe("Spell.Indistinguishable");
+    }
+
+    private static Spell Bundle(SpellId id, params Effect[] effects) =>
+        Domain.Resources.Spell.Create(
+            id,
+            id.Name,
+            SpellType.Offensive,
+            CreatureClass.Creature,
+            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            TargetingSpec.SingleTarget(TargetOrigin.Enemy),
+            effects);
 
     /// <summary>One creature on one tree, and spells that differ by their damage so none reads as a twin of another.</summary>
     private static GameResources Content(TalentNode root, IReadOnlyList<SpellId> spells) =>

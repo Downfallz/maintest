@@ -81,16 +81,32 @@ internal sealed class StudioApi : IDisposable
 
         try
         {
-            List<(string Name, string Text)> artifacts = [.. _runner.Artifacts(first, first), .. _runner.Artifacts(second, second)];
-            return artifacts.Count < 2
-                ? StudioResponse.OfText(404, "text/plain; charset=utf-8", $"'{first}' and '{second}' do not both have an artifact to compare.")
-                : StudioResponse.OfText(200, StudioResponse.Html, ViewerPage.Render(viewerDirectory, $"{first} vs {second}", artifacts));
+            var left = _runner.Artifacts(first, first);
+            var right = _runner.Artifacts(second, second);
+            if (left.Count == 0 || right.Count == 0)
+            {
+                var empty = left.Count == 0 ? first : second;
+                return StudioResponse.OfText(404, "text/plain; charset=utf-8", $"Run '{empty}' has no artifact to compare.");
+            }
+
+            // A match and an evaluation have nothing to line up: the viewer would refuse the pair and show one
+            // side with no explanation, so the refusal belongs here, where it can name what is wrong.
+            if (!string.Equals(ModeOf(left), ModeOf(right), StringComparison.Ordinal))
+            {
+                return StudioResponse.OfText(400, "text/plain; charset=utf-8", $"'{first}' is a {ModeOf(left)} and '{second}' is a {ModeOf(right)}; there is no delta between them.");
+            }
+
+            return StudioResponse.OfText(200, StudioResponse.Html, ViewerPage.Render(viewerDirectory, $"{first} vs {second}", [.. left, .. right], compare: true));
         }
         catch (Exception exception) when (exception is ArgumentException or DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
         {
             return StudioResponse.OfText(404, "text/plain; charset=utf-8", exception.Message);
         }
     }
+
+    /// <summary>What a run was, read from the artifact it left: a trace is a match, anything else an evaluation.</summary>
+    private static string ModeOf(IReadOnlyList<(string Name, string Text)> artifacts) =>
+        artifacts[0].Name.EndsWith(StudioRunner.TraceFile, StringComparison.Ordinal) ? StudioRunModes.Match : StudioRunModes.Evaluation;
 
     /// <summary>The viewer page of a finished run, so the page opens on what the run did.</summary>
     public StudioResponse RunPage(string runId, string viewerDirectory)
