@@ -7,6 +7,16 @@ namespace DownfallArena.Infrastructure.Tests.Resources;
 
 public sealed class GameSchemaBuilderTests
 {
+    private const string DisabledGuard = """
+        {
+          "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
+          "enabled": false,
+          "initiative": 2, "energyCost": 1, "criticalChance": 0,
+          "targeting": { "origin": "Self", "scope": "SingleTarget" },
+          "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
+        }
+        """;
+
     [Fact]
     public void Valid_content_builds_a_sorted_schema_with_resolved_references_and_a_hash()
     {
@@ -158,6 +168,227 @@ public sealed class GameSchemaBuilderTests
         Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
             .Problems.ShouldContain("Content folder 'TalentTrees' is missing.");
         Should.Throw<DirectoryNotFoundException>(() => GameSchemaBuilder.Build(Path.Combine(content.Path, "elsewhere")));
+    }
+
+    [Fact]
+    public void A_disabled_spell_leaves_the_build_and_every_reference_to_it()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard)
+            .WithFile("Creatures/main.v1.json", """
+                {
+                  "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature",
+                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+                  "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike", "spell:guard"]
+                }
+                """)
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base",
+                  "root": {
+                    "code": "Base", "name": "Base",
+                    "spells": [ { "id": "spell:strike" } ],
+                    "children": [
+                      { "code": "Brawler", "name": "Brawler", "prerequisites": { "allOf": ["spell:strike", "spell:guard"], "anyOf": [] },
+                        "spells": [ { "id": "spell:guard", "prerequisites": { "allOf": ["spell:guard"], "anyOf": [] } } ] }
+                    ]
+                  }
+                }
+                """);
+        var notes = new List<string>();
+
+        var schema = GameSchemaBuilder.Build(content.Path, notes);
+
+        var brawler = schema.TalentTrees.Single().Root!.Children.Single();
+        schema.Spells.Select(spell => spell.Id).ShouldBe(["spell:strike:v1"]);
+        schema.Creatures.Single().StartingSpellIds.ShouldBe(["spell:strike:v1"]);
+        brawler.Spells.ShouldBeEmpty();
+        brawler.Prerequisites!.AllOf.ShouldBe(["spell:strike:v1"]);
+        var note = string.Join("\n", notes);
+        note.ShouldContain("Disabled spell 'spell:guard:v1' is not in the build.");
+        note.ShouldContain("node 'Brawler': dropped disabled spell 'spell:guard:v1'.");
+        note.ShouldContain("creature 'creature:main:v1' starting spells: dropped disabled spell 'spell:guard:v1'.");
+        note.ShouldContain("node 'Brawler' prerequisites: dropped disabled spell 'spell:guard:v1'.");
+    }
+
+    [Fact]
+    public void A_disabled_creature_leaves_the_build()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Creatures/main.v1.json", """
+                {
+                  "id": "creature:main:v1", "name": "Main", "creatureClass": "Creature", "enabled": false,
+                  "baseHealth": 20, "baseEnergy": 0, "baseDefense": 1, "baseInitiative": 5, "baseCriticalChance": 0.05,
+                  "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
+                }
+                """);
+        var notes = new List<string>();
+
+        GameSchemaBuilder.Build(content.Path, notes).Creatures.ShouldBeEmpty();
+
+        notes.ShouldContain("Disabled creature 'creature:main:v1' is not in the build.");
+    }
+
+    [Fact]
+    public void A_creature_whose_talent_tree_is_disabled_is_a_problem()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base", "enabled": false,
+                  "root": { "code": "Base", "name": "Base", "spells": [ { "id": "spell:strike" } ] }
+                }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Problems.ShouldContain(problem => problem.Contains("talent tree 'talent-tree:base:v1' is disabled", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_creature_left_without_a_starting_spell_by_a_disable_says_so()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/strike.v1.json", """
+                {
+                  "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
+                  "enabled": false,
+                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+                  "effects": [ { "kind": "Damage", "amount": 1 } ]
+                }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Problems.ShouldContain(problem => problem.Contains("every starting spell is disabled", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The switch reaches a node's own gate, a spell's gate inside a node, and every depth of the tree, not just
+    /// the spell list of the node it is written next to. Every gate here keeps a spell, so every one is pruned
+    /// rather than refused.
+    /// </summary>
+    [Fact]
+    public void A_disable_reaches_every_prerequisite_at_every_depth()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard)
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base",
+                  "root": {
+                    "code": "Base", "name": "Base",
+                    "spells": [ { "id": "spell:strike" } ],
+                    "children": [
+                      {
+                        "code": "Brawler", "name": "Brawler",
+                        "prerequisites": { "allOf": ["spell:strike", "spell:guard"], "anyOf": [] },
+                        "spells": [ { "id": "spell:strike", "prerequisites": { "allOf": ["spell:strike", "spell:guard"], "anyOf": [] } } ],
+                        "children": [
+                          {
+                            "code": "Deep", "name": "Deep",
+                            "prerequisites": { "allOf": ["spell:strike", "spell:guard"], "anyOf": ["spell:strike", "spell:guard"] },
+                            "spells": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+                """);
+
+        var root = GameSchemaBuilder.Build(content.Path).TalentTrees.Single().Root!;
+
+        var brawler = root.Children.Single();
+        brawler.Prerequisites!.AllOf.ShouldBe(["spell:strike:v1"]);
+        brawler.Spells.Single().Prerequisites!.AllOf.ShouldBe(["spell:strike:v1"]);
+        var deep = brawler.Children.Single();
+        deep.Prerequisites!.AllOf.ShouldBe(["spell:strike:v1"]);
+        deep.Prerequisites.AnyOf.ShouldBe(["spell:strike:v1"]);
+    }
+
+    /// <summary>
+    /// An empty gate is no requirement at all: <c>TalentPrerequisites</c> reads both an empty <c>allOf</c> and an
+    /// empty <c>anyOf</c> as satisfied. Pruning the last spell out of either would unlock what it gates rather
+    /// than close it, so the builder refuses instead of quietly opening a talent branch.
+    /// </summary>
+    [Theory]
+    [InlineData("allOf")]
+    [InlineData("anyOf")]
+    public void Disabling_every_spell_of_a_gate_is_refused_rather_than_opening_the_node(string gate)
+    {
+        var other = gate == "allOf" ? "anyOf" : "allOf";
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard)
+            .WithFile("TalentTrees/base.v1.json", $$"""
+                {
+                  "id": "talent-tree:base:v1", "name": "Base",
+                  "root": {
+                    "code": "Base", "name": "Base",
+                    "spells": [ { "id": "spell:strike" } ],
+                    "children": [
+                      {
+                        "code": "Brawler", "name": "Brawler",
+                        "prerequisites": { "{{gate}}": ["spell:guard"], "{{other}}": [] },
+                        "spells": []
+                      }
+                    ]
+                  }
+                }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Problems.ShouldContain(problem => problem.Contains($"every spell of its '{gate}' is disabled", StringComparison.Ordinal));
+    }
+
+    /// <summary>The gate of a spell inside a node is guarded the same way as the gate of the node itself.</summary>
+    [Fact]
+    public void Disabling_every_spell_of_a_gate_on_a_talent_spell_is_refused_too()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard)
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base",
+                  "root": {
+                    "code": "Base", "name": "Base",
+                    "spells": [ { "id": "spell:strike", "prerequisites": { "allOf": ["spell:guard"], "anyOf": [] } } ]
+                  }
+                }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Problems.ShouldContain(problem => problem.Contains("spell 'spell:strike:v1': every spell of its 'allOf' is disabled", StringComparison.Ordinal));
+    }
+
+    /// <summary>A node with no prerequisites block at all keeps none, rather than gaining an empty one.</summary>
+    [Fact]
+    public void A_node_without_prerequisites_stays_without_them()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard);
+
+        var root = GameSchemaBuilder.Build(content.Path).TalentTrees.Single().Root!;
+
+        root.Prerequisites.ShouldBeNull();
+        root.Spells.Single().Prerequisites.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Saying_an_item_is_enabled_does_not_move_the_content_hash()
+    {
+        using var untouched = new ContentDirectory().WithValidContent();
+        using var explicitly = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/strike.v1.json", """
+                {
+                  "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
+                  "enabled": true,
+                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+                  "effects": [ { "kind": "Damage", "amount": 1 }, { "kind": "Bleed", "amountPerRound": 1, "durationRounds": 2 } ]
+                }
+                """);
+
+        GameSchemaBuilder.Build(explicitly.Path).ContentHash.ShouldBe(GameSchemaBuilder.Build(untouched.Path).ContentHash);
     }
 
     [Fact]

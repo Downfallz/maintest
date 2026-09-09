@@ -6,8 +6,14 @@ var outputDirectory = args.Length > 1 ? args[1] : Path.Combine(dataDirectory, "d
 
 try
 {
-    var schema = GameSchemaBuilder.Build(dataDirectory);
+    var notes = new List<string>();
+    var schema = GameSchemaBuilder.Build(dataDirectory, notes);
     GameSchemaBuilder.Write(schema, outputDirectory);
+
+    foreach (var note in notes)
+    {
+        await Console.Out.WriteLineAsync("note: " + note);
+    }
 
     await Console.Out.WriteLineAsync($"Built {schema.Spells.Count} spells, {schema.Creatures.Count} creatures, {schema.TalentTrees.Count} talent trees from '{dataDirectory}'.");
     await Console.Out.WriteLineAsync($"Content hash {schema.ContentHash} written to '{outputDirectory}'.");

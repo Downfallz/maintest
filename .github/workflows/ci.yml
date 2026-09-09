@@ -81,7 +81,9 @@ jobs:
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
 
-      # The CLI project is the composition root: wiring only, exercised by running the app, not by unit tests.
+      # Coverage is not demanded of the composition root (wiring, exercised by running the app) nor of the two
+      # static pages, which are deliberately framework-free and have no test runner to cover them with (ADR
+      # 0013 decision J, ADR 0015). Sonar still analyses all of them for bugs and code smells.
       - name: Begin SonarCloud analysis
         if: env.SONAR_TOKEN != ''
         run: >
@@ -92,7 +94,7 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.vscoveragexml.reportsPaths="TestResults/*.xml"
           /d:sonar.exclusions="legacy/**,artifacts/**,**/.venv/**"
-          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**"
+          /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,viewer/**"
           /d:sonar.python.version="3.11,3.12,3.13"
           /d:sonar.python.coverage.reportPaths="$RUNNER_TEMP/learning-coverage.xml"
 

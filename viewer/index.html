@@ -872,8 +872,9 @@
     if (embedded) {
       const carried = JSON.parse(embedded.textContent);
       addTexts(carried.artifacts || []);
-      const report = state.artifacts.find(artifact => artifact.kind === 'report');
-      if (report) state.selected = report;
+      // A run page opens on its report; a page carrying only an evaluation or a trace (the studio's runs) opens
+      // on the first artifact it carries, so there is still nothing to pick.
+      state.selected = state.artifacts.find(artifact => artifact.kind === 'report') || state.artifacts[0] || null;
       drop.textContent = `This page carries run ${carried.run || ''}. Drop another run's report.json, evaluations, or training.jsonl here to compare.`;
       render();
     }

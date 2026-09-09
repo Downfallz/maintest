@@ -25,8 +25,9 @@ dotnet run --project src/DownfallArena.Cli -- human                     # you ag
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
-dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>, policy:<policy.json>
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>, policy:<policy.json>, explore:<rate>
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
+dotnet run --project src/DownfallArena.Cli -- studio               # browse, edit and try the game content (studio/README.md)
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights (Python side, docs/learning/training.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # train a policy on a recorded run (or train-value)
 scripts/iterate.sh                                                   # one full turn of the learning loop (docs/learning/explained.md)
@@ -45,6 +46,8 @@ Requires the .NET SDK version in `global.json`. A devcontainer is provided in `.
 | `src/DownfallArena.Cli` | Composition root and console entry point. |
 | `tools/DownfallArena.DataBuilder` | Validates and consolidates the game content. |
 | `data/` | Authored game content: creatures, spells, talent trees. |
+| `studio/` | Content studio: one static page to browse, edit, version and try the content. |
+| `viewer/` | Static viewer for traces, batches, evaluations and training runs. |
 | `tests/` | Shared kernel, domain, application, infrastructure, and architecture tests. |
 | `docs/` | Roadmap, ADRs, architecture notes, domain glossary and rules. |
 | `legacy/` | Frozen prototypes. Read-only. |
