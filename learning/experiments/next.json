@@ -1,6 +1,6 @@
 {
-  "why": "Run ci-2 lost 400 of 400 to Greedy with the tuned regularization and a fit that was finally positive (r2 0.047), so the knobs are not the obstacle. This repeats it unchanged, now that train-value reports fittedActions: how many of the 382 action keys got a regression of their own rather than a mean. Most starved means the answer is more matches; most fitted means the suspect is the shape of the model.",
-  "matches": 200,
+  "why": "Run ci-3 showed only 93 of 382 action keys got a regression of their own; the other 289 kept a mean and score the same in every state. That is a data shortage, not a model shape: exploration multiplied the action keys by five and the dataset stayed at 200 matches. This raises the recording to 1000 matches, which should carry most of the keys past the threshold of 50. Watch fittedActions first, then the win rate against greedy.",
+  "matches": 1000,
   "seed": 1,
   "explore": 0.2,
   "value_alpha": 10,
