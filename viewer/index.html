@@ -701,10 +701,12 @@
       const mirrored = rows.find(row => row.agentA === row.agentB && row.agentA === 'Greedy') || rows.find(row => row.agentA === row.agentB);
       const policies = rows.filter(row => row.agentA.startsWith('Policy') && row.agentB === 'Greedy');
       const best = policies.reduce((top, row) => (top && top.winRateA >= row.winRateA ? top : row), null);
+      const mirroredRate = mirrored ? pct(mirrored.winRateA) : '-';
+      const bestNote = best ? `${best.name}; Greedy vs Greedy is ${mirroredRate}` : 'no policy evaluated';
       return el('div', { class: 'stats' }, [
         stat('Evaluations', rows.length, `${rows.reduce((sum, row) => sum + row.matches, 0)} matches`),
         stat('Player 1 share', mirrored ? pct(mirrored.player1WinShare) : '-', mirrored ? `${mirrored.name}; one half is fair` : 'no mirrored baseline'),
-        stat('Best policy vs Greedy', best ? pct(best.winRateA) : '-', best ? `${best.name}; Greedy vs Greedy is ${mirrored ? pct(mirrored.winRateA) : '-'}` : 'no policy evaluated'),
+        stat('Best policy vs Greedy', best ? pct(best.winRateA) : '-', bestNote),
       ]);
     }
 
