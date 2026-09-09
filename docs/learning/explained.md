@@ -175,6 +175,13 @@ The whole turn also runs on GitHub Actions, in **Actions -> Learning loop**. It 
 workflow" starts one on demand with the same knobs as the script (matches, explore, seed, and the two value
 flags), so you never need a .NET SDK or `uv` on your machine to get numbers.
 
+The third way to ask for one is to commit the question. `learning/experiments/next.json` holds the knobs for
+the next run, plus a `why` line saying what it is meant to answer; a pull request that changes that file runs
+the loop with those settings and prints the `why` above the report. So an experiment is a commit, its
+parameters are in git next to the numbers they produced, and anyone who can push can ask for a run without
+touching the Actions form. A field typed into that form still wins for that one run; a field left empty falls
+back to the file. `learning/experiments/README.md` lists the keys.
+
 What a finished run gives you:
 
 - the **summary of the run** (the page GitHub opens): the policy evaluations and the whole report table, no

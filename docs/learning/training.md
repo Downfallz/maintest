@@ -182,11 +182,13 @@ The script takes every tuning knob as a flag (`--matches`, `--value-alpha`, `--v
 the command line and its `--help` explains each in plain words; `docs/learning/explained.md` has the table.
 
 The same turn runs unattended in `.github/workflows/iterate.yml` (Actions -> "Learning loop"): on a push to
-`main` that touches `src/`, `data/`, `learning/`, `benchmarks/` or the script, weekly, and on demand with the
-knobs as workflow inputs (`explore` defaults to 0.2, `off` disables it). The report table goes in the run
-summary; `report.html`, `report.json`, the evaluations and the two policies are the run's artifact. The
-datasets are not uploaded: the seed reproduces them. A CI runner keeps nothing between runs, so `--against`
-stays a local comparison.
+`main` that touches `src/`, `data/`, `learning/`, `benchmarks/` or the script, on a pull request that changes
+`learning/experiments/`, weekly, and on demand. The knobs come from `learning/experiments/next.json`, so an
+experiment is committed rather than typed; a workflow input, when a dispatch fills one in, wins over the file
+for that run, and `explore` set to `off` skips the exploring dataset. The report table goes in the run
+summary, under the file's `why`; `report.html`, `report.json`, the evaluations and the two policies are the
+run's artifact. The datasets are not uploaded: the seed reproduces them. A CI runner keeps nothing between
+runs, so `--against` stays a local comparison.
 
 `report.json` holds the run's stamp and, per evaluation, the agents, the matches, and the metrics: `winRateA`
 with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when the

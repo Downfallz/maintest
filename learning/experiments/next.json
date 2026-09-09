@@ -1,0 +1,8 @@
+{
+  "why": "ADR 0014 with the regularization that worked on the greedy dataset: run ci-1 explored at 0.2 but fell back to alpha 1.0 and min samples 5, and its fit came out worse than predicting the mean (r2 -0.146). The dataset and the knobs moved together, so this repeats the explored dataset with alpha 10 and min samples 50, the pair that took r2 from 0.216 to 0.372 before.",
+  "matches": 200,
+  "seed": 1,
+  "explore": 0.2,
+  "value_alpha": 10,
+  "value_min_samples": 50
+}
