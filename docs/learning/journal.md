@@ -8,8 +8,10 @@ first.
 
 - **What changed**: nothing; this is the first measurement across two agents on the same engine and content,
   run by the `Evaluate` workflow (engine `d25c67db04d1`, the merge commit of the L5 pull request, content
-  `34c616d3…80d7`, schema `features:v1+31987e1de3a9`, the 200 benchmark seeds stamped as seed set
-  `1761202991`), `Greedy` against `Random`, mirrored.
+  `34c616d3…80d7`, schema `features:v1+31987e1de3a9`, the 200 benchmark seeds, stamped as seed set
+  `733404048`), `Greedy` against `Random`, mirrored. The `Seed` the command prints at start is the session
+  seed of the interactive commands, drawn at random when `--seed` is absent; an evaluation seeds every match
+  from the seed file and never uses it.
 - **Numbers**: 400 matches, Greedy wins 400 (100.0%, interval 100.0% to 100.0%), score 1.000, 24.5 health
   left on average, no draw, every match by elimination in 15.5 rounds on average, none by the round cap.
   Intent entropy 0.20 bits for Greedy against 4.07 for Random; fizzles 4.0% against 1.6%; crits 4.9% against
