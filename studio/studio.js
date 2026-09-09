@@ -67,7 +67,7 @@ const state = { catalogue: null, tab: 'spells', selected: null, draft: null, dir
 // ---------- small helpers ----------
 
 const $ = id => document.getElementById(id);
-const clone = value => JSON.parse(JSON.stringify(value));
+const clone = value => structuredClone(value);
 
 function emptyNode(code, name) {
   return { code, name, prerequisites: { allOf: [], anyOf: [] }, spells: [], children: [] };
@@ -80,7 +80,7 @@ function parseId(id) {
 
 function element(tag, properties = {}, children = []) {
   const node = Object.assign(document.createElement(tag), properties);
-  for (const child of [].concat(children)) {
+  for (const child of [children].flat()) {
     if (child !== null && child !== undefined) node.append(child);
   }
   return node;
@@ -98,12 +98,17 @@ function findDocument(path) {
   return null;
 }
 
+/** Alphabetical, by the reader's collation rather than by UTF-16 code unit. */
+function byName(values) {
+  return values.toSorted((left, right) => left.localeCompare(right));
+}
+
 /** Every way an author may name a spell: its versioned id, and the aliases pointing at it. */
 function spellReferences() {
   const aliases = state.catalogue?.aliases || {};
   const versioned = documentsOf('spells').map(spell => spell.id);
   const named = Object.keys(aliases).filter(alias => versioned.includes(aliases[alias]));
-  return [...new Set([...named.sort(), ...versioned.sort()])];
+  return [...new Set([...byName(named), ...byName(versioned)])];
 }
 
 /** The versioned id a reference means, following the alias map like the data builder does. */
@@ -149,7 +154,7 @@ async function act(what, action) {
 }
 
 function adopt(result) {
-  if (result && result.catalogue) {
+  if (result?.catalogue) {
     state.catalogue = result.catalogue;
     renderHeader();
     renderNav();
@@ -283,7 +288,7 @@ function picker(target, key, options, { onChange = null, allowEmpty = false } = 
   select.addEventListener('change', () => {
     target[key] = select.value;
     markDirty();
-    if (onChange) onChange();
+    onChange?.();
   });
   return select;
 }
@@ -553,7 +558,7 @@ function nodeView(node, parent, redraw) {
 
   card.append(head);
   for (const [what, references] of [['all of', node.prerequisites?.allOf], ['any of', node.prerequisites?.anyOf]]) {
-    if (!references || !references.length) continue;
+    if (!references?.length) continue;
     card.append(
       element('div', { className: 'muted', textContent: `needs ${what}:` }),
       element('div', { className: 'chips' }, references.map(spellLink)),

@@ -18,16 +18,14 @@ public sealed class ContentStore
     /// <summary>Stands in for the document of a file that does not parse, so the studio can still list it.</summary>
     private static readonly JsonElement EmptyObject = JsonDocument.Parse("{}").RootElement.Clone();
 
-    private readonly string _root;
-
     public ContentStore(string dataDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
-        _root = Path.GetFullPath(dataDirectory);
+        Root = Path.GetFullPath(dataDirectory);
     }
 
     /// <summary>The content directory this store reads and writes, as an absolute path.</summary>
-    public string Root => _root;
+    public string Root { get; }
 
     public static string FolderOf(ContentKind kind) => kind switch
     {
@@ -42,9 +40,9 @@ public sealed class ContentStore
     /// </summary>
     public ContentCatalogue Read()
     {
-        if (!Directory.Exists(_root))
+        if (!Directory.Exists(Root))
         {
-            throw new DirectoryNotFoundException($"Content directory '{_root}' does not exist.");
+            throw new DirectoryNotFoundException($"Content directory '{Root}' does not exist.");
         }
 
         var notes = new List<string>();
@@ -52,7 +50,7 @@ public sealed class ContentStore
         IReadOnlyList<string> problems = [];
         try
         {
-            contentHash = GameSchemaBuilder.Build(_root, notes).ContentHash;
+            contentHash = GameSchemaBuilder.Build(Root, notes).ContentHash;
         }
         catch (InvalidGameContentException exception)
         {
@@ -61,7 +59,7 @@ public sealed class ContentStore
 
         return new ContentCatalogue
         {
-            Directory = _root,
+            Directory = Root,
             Creatures = ReadAll<CreatureDefinitionDto>(ContentKind.Creature),
             Spells = ReadAll<SpellDto>(ContentKind.Spell),
             TalentTrees = ReadAll<TalentTreeDto>(ContentKind.TalentTree),
@@ -79,7 +77,7 @@ public sealed class ContentStore
     public (string ContentHash, IReadOnlyList<string> Notes) Build(string outputDirectory)
     {
         var notes = new List<string>();
-        var schema = GameSchemaBuilder.Build(_root, notes);
+        var schema = GameSchemaBuilder.Build(Root, notes);
         GameSchemaBuilder.Write(schema, outputDirectory);
         return (schema.ContentHash, notes);
     }
@@ -106,7 +104,7 @@ public sealed class ContentStore
         var path = Resolve(kind, relativePath);
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException($"'{relativePath}' does not exist under '{_root}'.", relativePath);
+            throw new FileNotFoundException($"'{relativePath}' does not exist under '{Root}'.", relativePath);
         }
 
         File.Delete(path);
@@ -125,7 +123,7 @@ public sealed class ContentStore
         }
 
         var sorted = new SortedDictionary<string, string>(aliases.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), StringComparer.Ordinal);
-        WriteAtomically(Path.Combine(_root, GameSchemaBuilder.AliasesFile), JsonSerializer.Serialize(sorted, IndentedOptions));
+        WriteAtomically(Path.Combine(Root, GameSchemaBuilder.AliasesFile), JsonSerializer.Serialize(sorted, IndentedOptions));
     }
 
     /// <summary>
@@ -146,8 +144,8 @@ public sealed class ContentStore
         }
 
         var folder = FolderOf(kind);
-        var path = Path.GetFullPath(Path.Combine(_root, relativePath));
-        var expectedPrefix = Path.GetFullPath(Path.Combine(_root, folder)) + Path.DirectorySeparatorChar;
+        var path = Path.GetFullPath(Path.Combine(Root, relativePath));
+        var expectedPrefix = Path.GetFullPath(Path.Combine(Root, folder)) + Path.DirectorySeparatorChar;
         if (!path.StartsWith(expectedPrefix, StringComparison.Ordinal))
         {
             throw new InvalidGameContentException($"'{relativePath}' is not under '{folder}/', where {kind} content lives.");
@@ -156,7 +154,7 @@ public sealed class ContentStore
         return path;
     }
 
-    private string Relative(string fullPath) => Path.GetRelativePath(_root, fullPath).Replace(Path.DirectorySeparatorChar, '/');
+    private string Relative(string fullPath) => Path.GetRelativePath(Root, fullPath).Replace(Path.DirectorySeparatorChar, '/');
 
     private static JsonDocument ParseOrThrow(string json, string relativePath)
     {
@@ -182,10 +180,7 @@ public sealed class ContentStore
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
 
-            if (parsed is null)
-            {
-                throw new InvalidGameContentException($"{relativePath}: the document is empty.");
-            }
+            _ = parsed ?? throw new InvalidGameContentException($"{relativePath}: the document is empty.");
         }
         catch (JsonException exception)
         {
@@ -216,7 +211,7 @@ public sealed class ContentStore
 
     private Dictionary<string, string> ReadAliases()
     {
-        var path = Path.Combine(_root, GameSchemaBuilder.AliasesFile);
+        var path = Path.Combine(Root, GameSchemaBuilder.AliasesFile);
         if (!File.Exists(path))
         {
             return new Dictionary<string, string>(StringComparer.Ordinal);
@@ -236,7 +231,7 @@ public sealed class ContentStore
     private List<ContentDocument> ReadAll<TDto>(ContentKind kind)
         where TDto : class
     {
-        var folder = Path.Combine(_root, FolderOf(kind));
+        var folder = Path.Combine(Root, FolderOf(kind));
         var documents = new List<ContentDocument>();
         if (!Directory.Exists(folder))
         {

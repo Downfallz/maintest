@@ -35,7 +35,7 @@ internal sealed class StudioServer : IDisposable
     public async Task RunAsync(CancellationToken cancellationToken)
     {
         _listener.Start();
-        using var stopping = cancellationToken.Register(() => _listener.Stop());
+        using var stopping = cancellationToken.Register(_listener.Stop);
 
         while (!cancellationToken.IsCancellationRequested)
         {

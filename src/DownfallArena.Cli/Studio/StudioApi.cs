@@ -137,7 +137,7 @@ internal sealed class StudioApi : IDisposable
     private static StudioResponse Ok<TPayload>(TPayload payload) => StudioResponse.OfJson(new { ok = true, result = payload }, JsonOptions);
 
     private static StudioResponse Failed(int status, string message, IReadOnlyList<string>? problems = null) =>
-        StudioResponse.OfJson(new { ok = false, message, problems = problems ?? Array.Empty<string>() }, JsonOptions, status);
+        StudioResponse.OfJson(new { ok = false, message, problems = problems ?? [] }, JsonOptions, status);
 
     /// <summary>
     /// <c>ContentKind.Creature</c> is the enum's zero, so a request that omits or misspells <c>kind</c> would
