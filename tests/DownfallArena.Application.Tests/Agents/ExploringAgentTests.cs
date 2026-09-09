@@ -37,7 +37,7 @@ public sealed class ExploringAgentTests
         agent.DecideEvolution(board, evolution).Choice.ShouldBe(Greedy.DecideEvolution(board, evolution).Choice);
     }
 
-    /// <summary>A draw of 0.0 is below any rate, and the random agent then takes the first option it is offered.</summary>
+    /// <summary>A draw of 0.0 is below any rate, and the next draw then lands on the first candidate.</summary>
     [Fact]
     public void Above_its_rate_the_agent_decides_at_random_instead()
     {
@@ -50,6 +50,73 @@ public sealed class ExploringAgentTests
         Greedy.DecideIntent(board, intent).ShouldBe(TestContent.Rend, "which is what greedy would have played");
         agent.DecideTargets(board, targets).ShouldBe([Four], "the first candidate, not the one it could kill");
         Greedy.DecideTargets(board, targets).ShouldBe([Three]);
+    }
+
+    /// <summary>
+    /// Passing stays a candidate while an unlock is available, and greedy never takes it there, so exploration
+    /// is the only thing that can give that action a sample. The random agent unlocks something every time.
+    /// </summary>
+    [Fact]
+    public void Exploration_can_pass_although_an_unlock_is_available()
+    {
+        var board = Board(enemyHealth: 20);
+        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard])]);
+
+        // 0.0 explores, then 1 of the two candidates (the one unlock, then passing) is the second.
+        Agent(1.0, new ScriptedRandom(0, 1)).DecideEvolution(board, options).IsPass.ShouldBeTrue();
+        Agent(1.0, new ScriptedRandom(0, 2)).DecideEvolution(board, options).Choice
+            .ShouldBe(new EvolutionChoice(One, TestContent.Guard), "an even draw lands on the unlock");
+        Greedy.DecideEvolution(board, options).IsPass.ShouldBeFalse("which is why only exploration reaches it");
+        new RandomAgent(new ScriptedRandom(0, 1)).DecideEvolution(board, options).IsPass
+            .ShouldBeFalse("the random agent unlocks whenever it can, so it cannot stand in for this");
+    }
+
+    /// <summary>
+    /// The candidates are every (creature, spell) unlock and then passing, each with the same weight; picking a
+    /// creature first would favour the one with fewer spells.
+    /// </summary>
+    [Theory]
+    [InlineData(0u, 1, "spell:guard:v1")]
+    [InlineData(1u, 2, "spell:slam:v1")]
+    [InlineData(2u, 2, "spell:strike:v1")]
+    [InlineData(3u, null, null)]
+    public void Every_unlock_and_passing_share_the_weight(uint draw, int? creature, string? spell)
+    {
+        var options = new EvolutionOptions(2, [
+            new EvolutionOption(One, [TestContent.Guard]),
+            new EvolutionOption(Two, [TestContent.Slam, TestContent.Strike]),
+        ]);
+
+        var decision = Agent(1.0, new ScriptedRandom(0, draw)).DecideEvolution(Board(enemyHealth: 20), options);
+
+        decision.Choice.ShouldBe(creature is null ? (EvolutionChoice?)null : new EvolutionChoice(CreatureId.From(creature.Value), SpellId.Parse(spell!)));
+    }
+
+    /// <summary>
+    /// Every legal target set of an allowed size is one candidate; drawing a size first would weigh the sets of
+    /// one size against those of another, which is what the random agent does.
+    /// </summary>
+    [Theory]
+    [InlineData(0u, new[] { 3 })]
+    [InlineData(1u, new[] { 4 })]
+    [InlineData(2u, new[] { 3, 4 })]
+    public void Every_target_set_shares_the_weight(uint draw, int[] expected)
+    {
+        var options = new TargetOptions(One, TestContent.Slam, new LegalTargets(1, 2, [Three, Four]));
+
+        var targets = Agent(1.0, new ScriptedRandom(0, draw)).DecideTargets(Board(enemyHealth: 20), options);
+
+        targets.ShouldBe(expected.Select(CreatureId.From).ToList());
+    }
+
+    [Fact]
+    public void An_uncastable_spell_binds_no_target_and_no_castable_spell_is_a_bug()
+    {
+        var agent = Agent(1.0, new ScriptedRandom(0));
+        var board = Board(enemyHealth: 20);
+
+        agent.DecideTargets(board, new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, []))).ShouldBeEmpty();
+        Should.Throw<InvalidOperationException>(() => agent.DecideIntent(board, new IntentOption(One, [])));
     }
 
     [Fact]
@@ -67,9 +134,11 @@ public sealed class ExploringAgentTests
     {
         var random = new ScriptedRandom(0);
 
-        Should.Throw<ArgumentNullException>(() => new ExploringAgent(0.5, null!, Greedy, random));
-        Should.Throw<ArgumentNullException>(() => new ExploringAgent(0.5, Greedy, null!, random));
-        Should.Throw<ArgumentNullException>(() => new ExploringAgent(0.5, Greedy, Greedy, null!));
+        Should.Throw<ArgumentNullException>(() => new ExploringAgent(0.5, null!, random));
+        Should.Throw<ArgumentNullException>(() => new ExploringAgent(0.5, Greedy, null!));
+        Should.Throw<ArgumentNullException>(() => Agent(0.5, new ScriptedRandom(0)).DecideEvolution(Board(enemyHealth: 20), null!));
+        Should.Throw<ArgumentNullException>(() => Agent(0.5, new ScriptedRandom(0)).DecideIntent(Board(enemyHealth: 20), null!));
+        Should.Throw<ArgumentNullException>(() => Agent(0.5, new ScriptedRandom(0)).DecideTargets(Board(enemyHealth: 20), null!));
     }
 
     [Theory]
@@ -106,8 +175,7 @@ public sealed class ExploringAgentTests
         explored.DifferencesFrom(await DigestAsync(AgentSpec.Greedy)).ShouldNotBeEmpty();
     }
 
-    private static ExploringAgent Agent(double rate, IRandomSource source) =>
-        new(rate, Greedy, new RandomAgent(source), source);
+    private static ExploringAgent Agent(double rate, IRandomSource source) => new(rate, Greedy, source);
 
     private static async Task<BenchmarkDigest> DigestAsync(AgentSpec agentA)
     {

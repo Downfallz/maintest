@@ -38,7 +38,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Greedy => new GreedyAgent(resources, rules),
             AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
             AgentKind.Policy => Trained(spec, rules),
-            AgentKind.Explore => new ExploringAgent(Rate(spec), new GreedyAgent(resources, rules), new RandomAgent(random), random),
+            AgentKind.Explore => new ExploringAgent(Rate(spec), new GreedyAgent(resources, rules), random),
             _ => throw new InvalidOperationException($"Agent kind '{spec.Kind}' has no implementation."),
         };
     }
