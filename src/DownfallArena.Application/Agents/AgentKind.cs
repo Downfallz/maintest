@@ -16,4 +16,7 @@ public enum AgentKind
 
     /// <summary>A trained policy read from the <c>policy.json</c> the spec names (docs/learning/training.md).</summary>
     Policy,
+
+    /// <summary>Greedy, but a share of decisions the spec names are taken at random, to record exploration (ADR 0014).</summary>
+    Explore,
 }

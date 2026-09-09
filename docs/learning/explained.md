@@ -19,6 +19,11 @@ one.
 - **Seed**: one whole number that fully decides a match's randomness (who crits, which random agent picks
   what). Same seed, same rules, same content, same agents → the exact same match, replayed identically. This
   is what makes any of the rest possible: without seeds, "the same match" would not mean anything.
+- **Exploring**: `explore:<rate>` plays the greedy move except for that share of decisions, taken at random.
+  It exists for one reason: a bot that always plays its best move never shows what the other moves would have
+  given, and a learner that has to compare moves cannot learn that from games where the comparison never
+  happened. Recording with `--explore 0.2` mixes in enough other moves for the comparison to exist. It is a
+  recording tool, never a baseline, since it is only reproducible for a given seed.
 - **Simulate**: play a batch of matches (`simulate --matches 200 --seed 1`, match *i* uses seed `1 + i`) and
   print a one-line summary (win rates, average rounds). Nothing is written to disk unless you ask.
 - **Record**: `simulate --record <dir>` does the same, and *also* writes every decision and every match's
@@ -314,3 +319,10 @@ dominant spell (entropy well above zero), few matches ending by the round cap, a
 
 No neural network, no reinforcement learning, no GPU. The linear table is enough to prove the loop and to
 measure the content; anything heavier gets its own decision record when the table stops improving.
+
+The first thing the loop actually taught us is in that spirit. Value regression lost every mirrored match
+against greedy three times running, on more data, on more regularization, and on a mixed dataset, while
+behaviour cloning on the same data matched greedy exactly. The cause was not the model or the code but the
+data: greedy never shows an alternative move, so the learner had nothing to compare. That is what
+`--explore` addresses, and it is why the next number worth writing in the journal is an exploring run
+(ADR 0014).
