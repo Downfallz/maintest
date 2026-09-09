@@ -1,7 +1,7 @@
 # 0015. Learn action values against a state baseline
 
 Date: 2026-09-09
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -61,9 +61,13 @@ one named row.
 
 ## Follow-up
 
-- `learning/src/downfall_learning/train_value.py`: fit the baseline, regress the residual, report its own fit.
+Done in the change that accepted this ADR:
+
+- `learning/src/downfall_learning/train_value.py`: the baseline is fitted on every training step, each action
+  key is regressed on `return - V(s)`, and `baselineR2` is reported beside `r2`.
 - `learning/src/downfall_learning/policy.py` and the `policy.json` contract in `docs/learning/artifacts.md`:
-  the baseline row, and reading a file that has none as a zero baseline.
-- `src/DownfallArena.Application/Agents/PolicyAgent.cs` and `PolicyFile`: score the baseline row.
+  the optional `baseline` object, added to every score, with a file that has none read as a zero baseline.
+- `src/DownfallArena.Application/Agents/PolicyBaseline.cs` and `PolicyFile`: the same arithmetic in the
+  engine, and `JsonPolicySource` reads the field when it is there.
 - `docs/learning/training.md` and `docs/learning/explained.md`: what the baseline is, in both registers.
-- `docs/domain/glossary.md`: baseline, advantage.
+- `docs/domain/glossary.md`: Baseline, Advantage.

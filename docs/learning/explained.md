@@ -77,6 +77,10 @@ purpose of catching accidental changes.
 - **Dataset**: what `simulate --record` writes: for every decision of a recorded match, the observation, the
   legal keys, the key taken, and later the **return** of that player in that match (+1 for a win, -1 for a
   loss, a little more or less depending on the health margin). This is the thing a model actually trains on.
+- **Baseline**: how good the position is, before you consider what to play. The learner fits it on every
+  recorded decision at once, then asks each action only "how much better or worse than that?" — because a
+  match's result is credited to all hundred and fifty of its decisions, so on its own it mostly tells you
+  about the position, not about the move (ADR 0015).
 - **Policy**: the trained model. Here a policy is a table: one row of numbers per action key. The score of a
   key is its row multiplied with the observation, plus a bias. Nothing fancier, on purpose: the engine reads
   it back with a loop of multiplications and no machine-learning library.

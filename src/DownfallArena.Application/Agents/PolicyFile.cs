@@ -7,8 +7,9 @@ namespace DownfallArena.Application.Agents;
 /// A trained policy as the engine reads it (<c>policy.json</c>, docs/learning/training.md): one weight row and
 /// one bias per action key, read under one feature schema. The score of a candidate action is its row's dot
 /// product with the observation plus its bias, or <see cref="Fallback"/> when the policy never saw that key.
-/// No ML runtime: a <c>clone</c> policy holds classifier logits, a <c>value</c> policy predicted returns, and
-/// both are read the same way.
+/// A <c>value</c> policy also carries a <see cref="PolicyBaseline"/>, added to every score (ADR 0015); a file
+/// without one scores exactly as before. No ML runtime: a <c>clone</c> policy holds classifier logits, a
+/// <c>value</c> policy predicted returns, and both are read the same way.
 /// </summary>
 public sealed record PolicyFile
 {
@@ -33,6 +34,9 @@ public sealed record PolicyFile
     public required IReadOnlyList<double> Bias { get; init; }
 
     public required double Fallback { get; init; }
+
+    /// <summary>What the position alone is worth, added to every score; absent on a policy trained without one.</summary>
+    public PolicyBaseline? Baseline { get; init; }
 
     /// <summary>Eight hex digits of the file's content, the version a policy agent's spec carries.</summary>
     public required string Fingerprint { get; init; }
@@ -78,23 +82,40 @@ public sealed record PolicyFile
             throw new InvalidDataException("The policy's weights, bias, and fallback must be finite numbers.");
         }
 
+        ValidateBaseline();
+
         return this;
     }
 
-    /// <summary>The score of an action key on an observation: its row against the features, or the fallback.</summary>
+    private void ValidateBaseline()
+    {
+        if (Baseline is null)
+        {
+            return;
+        }
+
+        if (Baseline.Weights.Count != FeatureNames.Count)
+        {
+            throw new InvalidDataException("The policy's baseline must hold one weight per feature.");
+        }
+
+        if (!double.IsFinite(Baseline.Bias) || Baseline.Weights.Any(value => !double.IsFinite(value)))
+        {
+            throw new InvalidDataException("The policy's baseline weights and bias must be finite numbers.");
+        }
+    }
+
+    /// <summary>
+    /// The score of an action key on an observation: the baseline, when there is one, plus its row against
+    /// the features, or plus the fallback when the policy never saw that key.
+    /// </summary>
     public double Score(string key, IReadOnlyList<float> features)
     {
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(features);
 
-        // A copy made with 'with' shares the cached index, so the index is tied to the keys it was built from.
-        if (_index is null || !ReferenceEquals(_indexedKeys, ActionKeys))
-        {
-            _index = ActionKeys.Select((actionKey, index) => (actionKey, index)).ToDictionary(pair => pair.actionKey, pair => pair.index, StringComparer.Ordinal);
-            _indexedKeys = ActionKeys;
-        }
-
-        if (!_index.TryGetValue(key, out var row))
+        var known = Index().TryGetValue(key, out var row);
+        if (!known && Baseline is null)
         {
             return Fallback;
         }
@@ -104,13 +125,31 @@ public sealed record PolicyFile
             throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"The observation has {features.Count} features, the policy {FeatureNames.Count}."), nameof(features));
         }
 
+        var score = Baseline?.Value(features) ?? 0.0;
+        if (!known)
+        {
+            return score + Fallback;
+        }
+
         var weights = Weights[row];
-        var score = Bias[row];
+        score += Bias[row];
         for (var index = 0; index < weights.Count; index++)
         {
             score += weights[index] * features[index];
         }
 
         return score;
+    }
+
+    private Dictionary<string, int> Index()
+    {
+        // A copy made with 'with' shares the cached index, so the index is tied to the keys it was built from.
+        if (_index is null || !ReferenceEquals(_indexedKeys, ActionKeys))
+        {
+            _index = ActionKeys.Select((actionKey, index) => (actionKey, index)).ToDictionary(pair => pair.actionKey, pair => pair.index, StringComparer.Ordinal);
+            _indexedKeys = ActionKeys;
+        }
+
+        return _index;
     }
 }

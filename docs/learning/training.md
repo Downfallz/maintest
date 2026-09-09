@@ -55,7 +55,7 @@ refusal the engine's policy agent will make (L7). `compare-stamps` prints what m
 | --- | --- | --- | --- |
 | `search-weights -o <dir>` | the built engine and `data/dst`, no dataset | `weights.json`, `search.json`, `evaluation.json`, `training.jsonl` | Cross-entropy method over the eight scoring weights. Each candidate is a weights file evaluated by the engine's `evaluate` as `heuristic:<file>` against `--opponent` (default `greedy`) on `--seeds` (default the benchmark seeds), mirrored; the fitness is the mean score. The mean of the elite becomes the next mean, its spread the next spread; the current mean is always in the population, so the best is never lost. |
 | `train-clone <runs> -o <dir>` | a recorded run (`simulate --record`) | `policy.json`, `training.jsonl` | Behaviour cloning: a linear classifier from observation to action key (`SGDClassifier`, log loss), one epoch per iteration, keeping the epoch whose choice among the candidates matches the data best on held-out matches. |
-| `train-value <runs> -o <dir>` | a recorded run, ideally an explored one (below) | `policy.json`, `training.jsonl` | Value regression: one ridge regression per action key from observation to the episode return; the agent then takes the candidate with the highest predicted return. A key seen fewer than `--min-samples` times keeps its mean return; an unseen key gets the mean return of the data. |
+| `train-value <runs> -o <dir>` | a recorded run, ideally an explored one (below) | `policy.json`, `training.jsonl` | Value regression in two parts (ADR 0015): one baseline over the observation alone, fitted on every step, then one ridge regression per action key over what the baseline leaves. A score is the baseline plus the action's row, so it still predicts the return, and the agent takes the candidate that scores best. A key seen fewer than `--min-samples` times keeps its mean, and an unseen key the mean of the data — both on top of the baseline. |
 
 Matches are held out whole (`--validation`, default one in five), so a validation step never comes from a
 match the model saw. Features are standardized for the optimizer and the scaling is folded back into the
@@ -82,6 +82,30 @@ Training on several runs at once (`train-value a b --allow-mixed`) loads each of
 selection into one array, so budget the sum plus one more copy. A machine that runs out is killed by the
 kernel with no Python error and no output file: if a training command ends silently and leaves nothing
 behind, check its exit code for `137` and record fewer matches.
+
+## Why the value learner fits a baseline first
+
+A step's return is the outcome of a whole match of about a hundred and fifty decisions, credited to every
+decision in it. It therefore measures the position the player was in far more than the move they chose. When
+each action key is fitted on the raw return, every row spends its capacity re-learning the position, on its
+own slice of positions, and their intercepts end up calibrated on different worlds — which is exactly what
+makes two of them incomparable at the moment of choosing.
+
+So `train-value` fits one state-value model `V(s)` on every training step, with no split by action, and
+regresses each action key on `return - V(s)`. The baseline sees the whole dataset, so it is the
+best-determined part of the model; what is left for a row is the part its own action is responsible for,
+which is the quantity the policy needs. Both go in `policy.json`: the score of a candidate is the baseline's
+value plus the action's row, so it still reads as a predicted return, and since the baseline is the same
+number for every candidate at a state it never changes which one wins.
+
+`training.jsonl` and the policy's metrics carry `baselineR2` beside `r2`: what the position alone explains,
+against what the position and the action explain together. A `baselineR2` close to `r2` means the action rows
+are adding nothing. `fittedActions` beside `actions` says how many keys got a regression of their own rather
+than a mean.
+
+The runs that led here are in `docs/learning/journal.md`: seven straight losses of 400 matches to `Greedy`,
+across exploration, five times the data, and thresholds from 5 to 50, with the held-out fit moving every time
+and the win rate never.
 
 ## Why the value learner needs an exploring dataset
 

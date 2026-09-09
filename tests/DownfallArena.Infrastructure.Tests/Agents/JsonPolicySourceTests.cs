@@ -40,6 +40,29 @@ public sealed class JsonPolicySourceTests
         source.Load(Path.Combine(directory.Path, "other.json")).Fingerprint.ShouldNotBe(policy.Fingerprint);
         policy.Score("intent:0:spell:a:v1", [0.5f, 1f]).ShouldBe(1.8, 1e-9);
         policy.Score("unknown", [0.5f, 1f]).ShouldBe(-1e9);
+        policy.Baseline.ShouldBeNull("a file written before ADR 0015 carries none");
+    }
+
+    [Fact]
+    public void A_baseline_is_read_when_the_file_carries_one_and_lifts_every_score()
+    {
+        var fallback = "\"fallback\": -1000000000.0,";
+        var withBaseline = Policy.Replace(fallback, fallback + " \"baseline\": { \"weights\": [1.0, 0.0], \"bias\": 0.25 },", StringComparison.Ordinal);
+        using var directory = new ContentDirectory()
+            .WithFile("baseline.json", withBaseline)
+            .WithFile("wide.json", withBaseline.Replace("[1.0, 0.0]", "[1.0]", StringComparison.Ordinal))
+            .WithFile("scalar.json", withBaseline.Replace("{ \"weights\": [1.0, 0.0], \"bias\": 0.25 }", "0.25", StringComparison.Ordinal));
+        var source = new JsonPolicySource();
+
+        var policy = source.Load(Path.Combine(directory.Path, "baseline.json"));
+
+        var baseline = policy.Baseline.ShouldNotBeNull();
+        baseline.Weights.ShouldBe([1.0, 0.0]);
+        baseline.Bias.ShouldBe(0.25);
+        policy.Score("intent:0:spell:a:v1", [0.5f, 1f]).ShouldBe(2.55, 1e-9, "0.5 x 1.0 + 0.25 on top of 1.8");
+        policy.Score("unknown", [0.5f, 1f]).ShouldBe(-1e9 + 0.75, 1e-9);
+        Should.Throw<InvalidDataException>(() => source.Load(Path.Combine(directory.Path, "wide.json"))).Message.ShouldContain("one weight per feature");
+        Should.Throw<InvalidDataException>(() => source.Load(Path.Combine(directory.Path, "scalar.json"))).Message.ShouldContain("baseline");
     }
 
     [Fact]
