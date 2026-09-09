@@ -1,20 +1,24 @@
 {
   "id": "spell:restorative_burst:v1",
   "name": "Restorative Burst",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
+  "spellType": "Defensive",
+  "creatureClass": "Shaman",
+  "initiative": 2,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Ally",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "Heal",
+      "amount": 3
+    },
+    {
+      "kind": "EnergyGain",
+      "amount": 2
     }
   ]
 }

@@ -1,19 +1,19 @@
 {
   "id": "spell:wait:v1",
   "name": "Wait",
-  "spellType": "Offensive",
+  "spellType": "Defensive",
   "creatureClass": "Creature",
   "initiative": 1,
   "energyCost": 0,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Self",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
+      "kind": "EnergyGain",
       "amount": 1
     }
   ]

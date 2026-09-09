@@ -2,10 +2,10 @@
   "id": "spell:hateful_sacrifice:v1",
   "name": "Hateful Sacrifice",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "creatureClass": "Leech",
+  "initiative": 3,
+  "energyCost": 3,
+  "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 10
     }
   ]
 }

@@ -2,19 +2,19 @@
   "id": "spell:tornado:v1",
   "name": "Tornado",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Berserker",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 2,
+  "criticalChance": 0.33,
   "targeting": {
     "origin": "Enemy",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 4
     }
   ]
 }

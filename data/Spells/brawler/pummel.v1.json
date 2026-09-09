@@ -2,10 +2,10 @@
   "id": "spell:pummel:v1",
   "name": "Pummel",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Brawler",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 1,
+  "criticalChance": 0.667,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 2
     }
   ]
 }

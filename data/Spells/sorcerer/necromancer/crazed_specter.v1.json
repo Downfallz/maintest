@@ -2,19 +2,19 @@
   "id": "spell:crazed_specter:v1",
   "name": "Crazed Specter",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Necromancer",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 3,
+  "criticalChance": 0.33,
   "targeting": {
     "origin": "Enemy",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 6
     }
   ]
 }

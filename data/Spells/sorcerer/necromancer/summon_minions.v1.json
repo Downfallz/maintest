@@ -1,20 +1,20 @@
 {
   "id": "spell:summon_minions:v1",
   "name": "Summon Minions",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "spellType": "Defensive",
+  "creatureClass": "Necromancer",
   "initiative": 1,
-  "energyCost": 0,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Self",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "EnergyGain",
+      "amount": 3
     }
   ]
 }

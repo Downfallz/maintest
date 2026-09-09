@@ -2,9 +2,9 @@
   "id": "spell:tranquilizer_dart:v1",
   "name": "Tranquilizer Dart",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
+  "creatureClass": "Trickster",
+  "initiative": 2,
+  "energyCost": 3,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
@@ -14,7 +14,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 3
+    },
+    {
+      "kind": "Stun",
+      "durationRounds": 1
     }
   ]
 }

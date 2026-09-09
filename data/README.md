@@ -3,7 +3,8 @@
 Authoring format for the game resources (ADR 0009). One JSON file per item:
 
 - `Creatures/*.json`: creature definitions.
-- `Spells/**/*.json`: spells, nested by class and specialisation for readability only.
+- `Spells/**/*.json`: spells, nested by class and specialisation for readability only. What each one does,
+  and where its numbers come from, is in `docs/domain/spells.md`.
 - `TalentTrees/*.json`: talent trees.
 - `aliases.json`: unversioned ids (`spell:pummel`) to their current versioned id (`spell:pummel:v1`).
 

@@ -1,20 +1,26 @@
 {
   "id": "spell:thundering_seal:v1",
   "name": "Thundering Seal",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
+  "spellType": "Defensive",
+  "creatureClass": "Mercenary",
+  "initiative": 2,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Ally",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "DefenseBuff",
+      "amount": 2,
+      "permanent": true
+    },
+    {
+      "kind": "DefenseBuff",
+      "amount": 2,
+      "durationRounds": 1
     }
   ]
 }

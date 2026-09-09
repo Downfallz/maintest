@@ -2,10 +2,10 @@
   "id": "spell:crushing_stomp:v1",
   "name": "Crushing Stomp",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Warlord",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 4,
+  "criticalChance": 0.667,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 6
+    },
+    {
+      "kind": "Stun",
+      "durationRounds": 1
     }
   ]
 }

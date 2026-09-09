@@ -2,10 +2,10 @@
   "id": "spell:lightning_bolt:v1",
   "name": "Lightning Bolt",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Sorcerer",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 2,
+  "criticalChance": 0.667,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 3
     }
   ]
 }

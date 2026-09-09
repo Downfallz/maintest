@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Creature",
   "initiative": 1,
-  "energyCost": 0,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
@@ -14,12 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
-    },
-    {
-      "kind": "Bleed",
-      "amountPerRound": 1,
-      "durationRounds": 1
+      "amount": 3
     }
   ]
 }

@@ -1,20 +1,20 @@
 {
   "id": "spell:healing_screech:v1",
   "name": "Healing Screech",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "spellType": "Defensive",
+  "creatureClass": "Shaman",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 2,
+  "criticalChance": 0.5,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Ally",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "Heal",
+      "amount": 4
     }
   ]
 }

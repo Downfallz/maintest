@@ -1,19 +1,19 @@
 {
   "id": "spell:momentum:v1",
   "name": "Momentum",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
+  "spellType": "Defensive",
+  "creatureClass": "Assassin",
+  "initiative": 3,
   "energyCost": 0,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Self",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
+      "kind": "EnergyGain",
       "amount": 1
     }
   ]
