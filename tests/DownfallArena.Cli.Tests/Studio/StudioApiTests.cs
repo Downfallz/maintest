@@ -1,6 +1,9 @@
 using System.Text.Json;
+using DownfallArena.Application.Agents;
 using DownfallArena.Cli;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Domain.Matches;
+using DownfallArena.Infrastructure.Evaluation;
 using DownfallArena.Infrastructure.Resources.Authoring;
 
 namespace DownfallArena.Cli.Tests.Studio;
@@ -20,6 +23,8 @@ public sealed class StudioApiTests : IDisposable
         _api = new StudioApi(
             new ContentStore(_content.Path),
             new StudioRunner(options, Path.Combine(_content.Path, "runs"), TimeProvider.System),
+            new BenchmarkStore(Path.Combine(_content.Path, "benchmarks")),
+            RuleSet.Default,
             Path.Combine(_content.Path, "dst"));
     }
 
@@ -151,6 +156,80 @@ public sealed class StudioApiTests : IDisposable
     {
         _api.RunPage("no-such-run", Path.Combine(AppContext.BaseDirectory, "viewer")).Status.ShouldBe(404);
         _api.RunPage("../../etc", Path.Combine(AppContext.BaseDirectory, "viewer")).Status.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task The_audit_reports_what_no_creature_can_reach_and_what_a_match_cannot_tell_apart()
+    {
+        // A spell nothing teaches and nobody starts with: valid content the builder has no reason to refuse.
+        _content.Write("Spells/lost.v1.json", StudioContent.Guard.Replace("guard:v1", "lost:v1").Replace("\"Guard\"", "\"Lost\""));
+
+        var result = await AcceptAsync("GET", "/api/audit", string.Empty);
+
+        var findings = result.GetProperty("audit").GetProperty("findings").EnumerateArray().ToList();
+        findings.Select(finding => finding.GetProperty("code").GetString()).ShouldContain("Spell.Unreachable");
+        findings.Select(finding => finding.GetProperty("subject").GetString()).ShouldContain("spell:lost:v1");
+    }
+
+    [Fact]
+    public async Task The_audit_says_whether_this_content_has_a_benchmark_digest()
+    {
+        var result = await AcceptAsync("GET", "/api/audit", string.Empty);
+
+        result.GetProperty("benchmark").GetProperty("exists").GetBoolean().ShouldBeFalse("scratch content has never been benchmarked");
+        result.GetProperty("benchmark").GetProperty("path").GetString().ShouldNotBeNull()
+            .ShouldContain(result.GetProperty("audit").GetProperty("contentVersion").GetString()!);
+    }
+
+    [Fact]
+    public async Task The_audit_counts_what_it_looked_at_and_says_which_rules_it_assumed()
+    {
+        var result = (await AcceptAsync("GET", "/api/audit", string.Empty)).GetProperty("audit");
+
+        result.GetProperty("creatures").GetInt32().ShouldBe(1);
+        result.GetProperty("spells").GetInt32().ShouldBe(2);
+        result.GetProperty("roundCap").GetInt32().ShouldBe(RuleSet.Default.RoundCap);
+        result.GetProperty("reach").GetArrayLength().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Content_that_does_not_build_cannot_be_audited_and_says_so()
+    {
+        await _api.HandleAsync("POST", "/api/aliases", """{"aliases":{"spell:strike":"spell:gone:v1"}}""");
+
+        (await _api.HandleAsync("GET", "/api/audit", string.Empty)).Status.ShouldBe(400);
+    }
+
+    /// <summary>The page builds one box per weight from this, so it grows a field when the engine grows a weight.</summary>
+    [Fact]
+    public async Task The_weights_endpoint_hands_the_page_the_engine_s_own_defaults()
+    {
+        var result = await AcceptAsync("GET", "/api/weights", string.Empty);
+
+        result.GetProperty("order").EnumerateArray().Select(name => name.GetString()).ShouldBe(
+            ["damage", "kill", "heal", "stun", "bleed", "buff", "energy", "risk"]);
+        result.GetProperty("values").GetProperty("kill").GetDouble().ShouldBe(ScoringWeights.Default.Kill);
+        result.GetProperty("fingerprint").GetString().ShouldBe(ScoringWeights.Default.Fingerprint);
+    }
+
+    [Fact]
+    public async Task The_run_list_of_a_studio_that_has_played_nothing_is_empty()
+    {
+        (await AcceptAsync("GET", "/api/runs", string.Empty)).GetArrayLength().ShouldBe(0);
+    }
+
+    [Fact]
+    public void A_comparison_of_a_run_with_itself_is_refused_rather_than_drawn_with_no_delta()
+    {
+        var response = _api.ComparePage("a-run", "a-run", Path.Combine(AppContext.BaseDirectory, "viewer"));
+
+        response.Status.ShouldBe(400);
+    }
+
+    [Fact]
+    public void A_comparison_naming_a_run_that_does_not_exist_is_a_404()
+    {
+        _api.ComparePage("one", "two", Path.Combine(AppContext.BaseDirectory, "viewer")).Status.ShouldBe(404);
     }
 
     private async Task<JsonElement> AcceptAsync(string method, string path, string body)

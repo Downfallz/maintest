@@ -27,11 +27,14 @@ namespace DownfallArena.Cli;
 /// </summary>
 internal sealed class GameSession
 {
+    /// <summary>The rule set every command plays, and the one anything reading the content must assume.</summary>
+    public static RuleSet Rules { get; } = RuleSet.Default;
+
     private readonly IServiceProvider _services;
     private readonly CliOptions _options;
     private readonly int _seed;
     private readonly IGameResources _resources;
-    private readonly RuleSet _rules = RuleSet.Default;
+    private readonly RuleSet _rules = Rules;
     private readonly FeatureSchema _schema;
 
     public GameSession(IServiceProvider services, CliOptions options, int seed)

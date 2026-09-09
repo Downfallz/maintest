@@ -1,18 +1,26 @@
 using System.Globalization;
+using System.Text.Json;
+using DownfallArena.Application.Agents;
 using DownfallArena.Domain.Resources;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Studio;
 
 /// <summary>
 /// Plays what the studio's run panel asks for, through the very code path the console commands use: a fresh
 /// composition over the current schema, then <see cref="GameSession"/>. Each run gets its own directory under
-/// <c>runs/studio/</c>, and the viewer page of that directory is what the page opens (ADR 0015).
+/// <c>runs/studio/</c>, and the viewer page of that directory is what the page opens (ADR 0015). Every run
+/// leaves a <see cref="RunFile"/> beside its artifacts, which is what the run list reads back.
 /// </summary>
 internal sealed class StudioRunner
 {
     public const string TraceFile = "match.trace.json";
 
     public const string EvaluationFile = "evaluation.json";
+
+    public const string RunFile = "run.json";
+
+    public const string WeightsFile = "weights.json";
 
     private readonly CliOptions _options;
     private readonly string _runsDirectory;
@@ -51,26 +59,29 @@ internal sealed class StudioRunner
         // The stamp reads well in a directory listing; the suffix keeps two runs of the same second, mode and
         // seed from writing over each other. It has to be random: a version 7 GUID is time-ordered, so its
         // leading characters are a timestamp that two runs of the same second share.
-        var id = string.Create(
-            CultureInfo.InvariantCulture,
-            $"{_time.GetUtcNow():yyyyMMdd-HHmmss}-{request.Mode}-{seed}-{Guid.NewGuid().ToString("N")[..6]}");
+        var at = _time.GetUtcNow();
+        var id = string.Create(CultureInfo.InvariantCulture, $"{at:yyyyMMdd-HHmmss}-{request.Mode}-{seed}-{Guid.NewGuid().ToString("N")[..6]}");
         var directory = Path.Combine(_runsDirectory, id);
         Directory.CreateDirectory(directory);
+
+        var weightsPath = WriteWeights(request.Weights, directory);
+        var player1 = WithWeights(AgentSpec.Parse(request.Player1), weightsPath);
+        var player2 = WithWeights(AgentSpec.Parse(request.Player2), weightsPath);
 
         var options = request.Mode == StudioRunModes.Match
             ? _options with
             {
                 Command = "play",
-                Player1 = request.Agent1,
-                Player2 = request.Agent2,
+                Player1 = player1,
+                Player2 = player2,
                 Trace = Path.Combine(directory, TraceFile),
                 Record = null,
             }
             : _options with
             {
                 Command = "evaluate",
-                Player1 = request.Agent1,
-                Player2 = request.Agent2,
+                Player1 = player1,
+                Player2 = player2,
                 Matches = request.Matches,
                 Seeds = null,
                 Output = Path.Combine(directory, EvaluationFile),
@@ -87,21 +98,70 @@ internal sealed class StudioRunner
             throw new InvalidOperationException($"The run failed with exit code {exitCode}. The console says why.");
         }
 
-        return new StudioRunResult
+        var result = new StudioRunResult
         {
             Id = id,
             Url = $"/runs/{id}",
             Mode = request.Mode,
             Seed = seed,
-            Player1 = request.Agent1.ToString(),
-            Player2 = request.Agent2.ToString(),
+            Player1 = player1.ToString(),
+            Player2 = player2.ToString(),
+            Matches = request.Mode == StudioRunModes.Evaluation ? request.Matches : 1,
+            ContentHash = host.Services.GetRequiredService<IGameResources>().Version,
+            At = at,
             Directory = directory,
-            Files = [.. Directory.EnumerateFiles(directory).Select(file => Path.GetFileName(file)).Order(StringComparer.Ordinal)],
+            Files = [.. Directory.EnumerateFiles(directory).Select(Path.GetFileName).OfType<string>().Order(StringComparer.Ordinal)],
         };
+
+        await File.WriteAllTextAsync(Path.Combine(directory, RunFile), JsonSerializer.Serialize(result, StudioJson.FileOptions));
+        return result;
+    }
+
+    /// <summary>
+    /// Every run this studio has played, newest first. A directory with no <see cref="RunFile"/> is one from
+    /// before this list existed, or one whose run never finished; either way there is nothing to say about it.
+    /// </summary>
+    public IReadOnlyList<StudioRunResult> Runs()
+    {
+        if (!Directory.Exists(_runsDirectory))
+        {
+            return [];
+        }
+
+        List<StudioRunResult> runs = [];
+        foreach (var directory in Directory.EnumerateDirectories(_runsDirectory))
+        {
+            var path = Path.Combine(directory, RunFile);
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            // A half-written run.json is not a reason to refuse the whole list.
+            try
+            {
+                if (JsonSerializer.Deserialize<StudioRunResult>(File.ReadAllText(path), StudioJson.Options) is { } run)
+                {
+                    runs.Add(run);
+                }
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+        }
+
+        return [.. runs.OrderByDescending(run => run.At).ThenBy(run => run.Id, StringComparer.Ordinal)];
     }
 
     /// <summary>The small artifacts of a run, in the order the viewer should list them.</summary>
-    public IReadOnlyList<(string Name, string Text)> Artifacts(string runId)
+    public IReadOnlyList<(string Name, string Text)> Artifacts(string runId) => Artifacts(runId, prefix: null);
+
+    /// <summary>
+    /// The same artifacts under a name of the caller's choosing, so a page can carry two runs at once and tell
+    /// them apart in the picker.
+    /// </summary>
+    public IReadOnlyList<(string Name, string Text)> Artifacts(string runId, string? prefix)
     {
         var directory = ResolveRun(runId);
         List<(string Name, string Text)> artifacts = [];
@@ -110,12 +170,46 @@ internal sealed class StudioRunner
             var path = Path.Combine(directory, name);
             if (File.Exists(path))
             {
-                artifacts.Add((name, File.ReadAllText(path)));
+                artifacts.Add((prefix is null ? name : $"{prefix}/{name}", File.ReadAllText(path)));
             }
         }
 
         return artifacts;
     }
+
+    /// <summary>
+    /// Writes the panel's weights into the run's own directory, and answers with the path to hand a heuristic
+    /// agent. Unknown names are refused here rather than at the agent, where the message would be about JSON.
+    /// </summary>
+    private static string? WriteWeights(IReadOnlyDictionary<string, double>? weights, string directory)
+    {
+        if (weights is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        var known = ScoringWeights.Default.Named.Select(weight => weight.Name).ToHashSet(StringComparer.Ordinal);
+        foreach (var (name, value) in weights)
+        {
+            if (!known.Contains(name))
+            {
+                throw new ArgumentException($"Unknown scoring weight '{name}'. The weights are {string.Join(", ", known.Order(StringComparer.Ordinal))}.", nameof(weights));
+            }
+
+            if (!double.IsFinite(value))
+            {
+                throw new ArgumentException($"The '{name}' weight must be a finite number.", nameof(weights));
+            }
+        }
+
+        var path = Path.Combine(directory, WeightsFile);
+        File.WriteAllText(path, JsonSerializer.Serialize(weights, StudioJson.FileOptions));
+        return path;
+    }
+
+    /// <summary>A heuristic agent that names no file plays the weights this run was given.</summary>
+    private static AgentSpec WithWeights(AgentSpec spec, string? weightsPath) =>
+        spec.Kind == AgentKind.Heuristic && spec.Path is null && weightsPath is not null ? spec with { Path = weightsPath } : spec;
 
     /// <summary>
     /// The directory of a run id, refusing anything that is not one of the names this runner mints. The id comes

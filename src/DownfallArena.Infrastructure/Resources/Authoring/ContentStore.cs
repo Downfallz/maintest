@@ -1,4 +1,6 @@
 using System.Text.Json;
+using DownfallArena.Application.Content;
+using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Resources.Schema;
 
@@ -81,6 +83,14 @@ public sealed class ContentStore
         GameSchemaBuilder.Write(schema, outputDirectory);
         return (schema.ContentHash, notes);
     }
+
+    /// <summary>
+    /// What the audit makes of the content as it is authored right now: content that no creature can reach,
+    /// open or cast (<see cref="ContentAudit"/>). The schema is built in memory rather than read from disk, so
+    /// the findings are about what the author is looking at and not about the last build.
+    /// </summary>
+    public ContentAuditReport Audit(RuleSet rules) =>
+        ContentAudit.Of(GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(Root, notes: null)), rules);
 
     /// <summary>
     /// Writes one document to its file, creating the folders it needs. The JSON must parse into the DTO of its

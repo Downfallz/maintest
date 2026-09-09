@@ -10,6 +10,8 @@ internal sealed class StudioServer : IDisposable
 {
     private const string RunPrefix = "/runs/";
 
+    private const string ComparePrefix = "/compare/";
+
     private readonly HttpListener _listener = new();
     private readonly StudioApi _api;
     private readonly StudioFiles _files;
@@ -98,6 +100,14 @@ internal sealed class StudioServer : IDisposable
             return CrossSite(context.Request) is { } refusal
                 ? refusal
                 : await _api.HandleAsync(method, path, await ReadBodyAsync(context.Request));
+        }
+
+        if (path.StartsWith(ComparePrefix, StringComparison.Ordinal))
+        {
+            var runs = path[ComparePrefix.Length..].TrimEnd('/').Split('/');
+            return runs.Length == 2
+                ? _api.ComparePage(runs[0], runs[1], _viewerDirectory)
+                : StudioResponse.OfText(404, "text/plain; charset=utf-8", "A comparison is '/compare/<run>/<run>'.");
         }
 
         if (path.StartsWith(RunPrefix, StringComparison.Ordinal))
