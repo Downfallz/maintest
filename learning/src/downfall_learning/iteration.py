@@ -135,7 +135,8 @@ def build_report(run: Path) -> Report:
                 f"{'; '.join(differences)}."
             )
         summaries.append(EvaluationSummary.of(file.stem, evaluation))
-    assert stamp is not None
+    if stamp is None:
+        raise ArtifactError(f"'{run}' holds no readable evaluation.")
     return Report(run.name, stamp, tuple(summaries))
 
 

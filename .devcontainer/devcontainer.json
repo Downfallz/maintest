@@ -4,19 +4,24 @@
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" },
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.12", "installTools": false },
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
   },
-  "postCreateCommand": "dotnet restore",
+  "postCreateCommand": "dotnet restore && python3 -m pip install --quiet uv==0.8.17 && uv sync --project learning",
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-dotnettools.csdevkit",
         "editorconfig.editorconfig",
+        "ms-python.python",
+        "charliermarsh.ruff",
         "anthropic.claude-code"
       ],
       "settings": {
         "editor.formatOnSave": true,
-        "files.eol": "\n"
+        "files.eol": "\n",
+        "python.defaultInterpreterPath": "${workspaceFolder}/learning/.venv/bin/python",
+        "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" }
       }
     }
   }
