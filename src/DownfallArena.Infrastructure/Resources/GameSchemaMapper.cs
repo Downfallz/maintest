@@ -105,37 +105,69 @@ public static class GameSchemaMapper
         return Guard(() => TargetingSpec.Multi(origin.Value, dto.MaxTargets), context, problems);
     }
 
+    /// <summary>
+    /// One authored effect. The kinds are grouped by the shape their fields take, not by what they do: the
+    /// taxonomy is closed (ADR 0012) and a new effect joins one of these families rather than adding a shape.
+    /// </summary>
     private static Effect? MapEffect(EffectDto dto, string context, List<string> problems)
     {
         var effectContext = $"{context}, effect '{dto.Kind}'";
-        StackingPolicy? stacking = dto.Stacking is null ? null : ParseEnum<StackingPolicy>(dto.Stacking, "stacking", effectContext, problems);
 
         return dto.Kind.ToUpperInvariant() switch
         {
             "DAMAGE" => Instant(dto.Amount, AmountField, effectContext, problems, Damage.Of),
             "HEAL" => Instant(dto.Amount, AmountField, effectContext, problems, Heal.Of),
             "ENERGYGAIN" => Instant(dto.Amount, AmountField, effectContext, problems, EnergyGain.Of),
-            "BLEED" => Rounds(dto, effectContext, problems) is { } rounds && Require(dto.AmountPerRound, "amountPerRound", effectContext, problems) is { } amount
-                ? Guard<Effect>(() => Bleed.Of(amount, rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
-                : null,
-            "REGENERATION" => Rounds(dto, effectContext, problems) is { } rounds && Require(dto.AmountPerRound, "amountPerRound", effectContext, problems) is { } amount
-                ? Guard<Effect>(() => Regeneration.Of(amount, rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
-                : null,
-            "STUN" => Rounds(dto, effectContext, problems) is { } rounds
-                ? Guard<Effect>(() => Stun.For(rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
-                : null,
-            "DEFENSEBUFF" => Lasting(dto, effectContext, problems) is { } duration && Require(dto.Amount, AmountField, effectContext, problems) is { } amount
-                ? Guard<Effect>(() => DefenseBuff.Of(amount, duration, stacking ?? StackingPolicy.Stack), effectContext, problems)
-                : null,
-            "INITIATIVEDEBUFF" => Lasting(dto, effectContext, problems) is { } duration && Require(dto.Amount, AmountField, effectContext, problems) is { } amount
-                ? Guard<Effect>(() => InitiativeDebuff.Of(amount, duration, stacking ?? StackingPolicy.Stack), effectContext, problems)
-                : null,
+            "BLEED" => PerRound(dto, effectContext, problems, Bleed.Of),
+            "REGENERATION" => PerRound(dto, effectContext, problems, Regeneration.Of),
+            "STUN" => ForRounds(dto, effectContext, problems, Stun.For),
+            "DEFENSEBUFF" => WhileLasting(dto, effectContext, problems, DefenseBuff.Of),
+            "INITIATIVEDEBUFF" => WhileLasting(dto, effectContext, problems, InitiativeDebuff.Of),
             _ => Problem<Effect>(problems, $"{context}: unknown effect kind '{dto.Kind}'. See data/README.md for the supported kinds."),
         };
     }
 
+    /// <summary>Damage, Heal, EnergyGain: an amount, applied once.</summary>
     private static Effect? Instant(int? amount, string field, string context, List<string> problems, Func<int, Effect> create) =>
         Require(amount, field, context, problems) is { } value ? Guard(() => create(value), context, problems) : null;
+
+    /// <summary>Bleed and Regeneration: an amount every round, for a number of rounds.</summary>
+    private static Effect? PerRound(EffectDto dto, string context, List<string> problems, Func<int, int, StackingPolicy, Effect> create)
+    {
+        var stacking = Stacking(dto, context, problems, StackingPolicy.Refresh);
+        if (Rounds(dto, context, problems) is not { } rounds || Require(dto.AmountPerRound, "amountPerRound", context, problems) is not { } amount)
+        {
+            return null;
+        }
+
+        return Guard(() => create(amount, rounds, stacking), context, problems);
+    }
+
+    /// <summary>Stun: a number of rounds and nothing else.</summary>
+    private static Effect? ForRounds(EffectDto dto, string context, List<string> problems, Func<int, StackingPolicy, Effect> create)
+    {
+        var stacking = Stacking(dto, context, problems, StackingPolicy.Refresh);
+        return Rounds(dto, context, problems) is { } rounds ? Guard(() => create(rounds, stacking), context, problems) : null;
+    }
+
+    /// <summary>DefenseBuff and InitiativeDebuff: an amount for a duration, which may be permanent.</summary>
+    private static Effect? WhileLasting(EffectDto dto, string context, List<string> problems, Func<int, Duration, StackingPolicy, Effect> create)
+    {
+        var stacking = Stacking(dto, context, problems, StackingPolicy.Stack);
+        if (Lasting(dto, context, problems) is not { } duration || Require(dto.Amount, AmountField, context, problems) is not { } amount)
+        {
+            return null;
+        }
+
+        return Guard(() => create(amount, duration, stacking), context, problems);
+    }
+
+    /// <summary>
+    /// The stacking policy the content asked for, or the family's own default when it said nothing. A value
+    /// that does not parse is a reported problem and falls back too, so the rest of the effect is still checked.
+    /// </summary>
+    private static StackingPolicy Stacking(EffectDto dto, string context, List<string> problems, StackingPolicy fallback) =>
+        dto.Stacking is null ? fallback : ParseEnum<StackingPolicy>(dto.Stacking, "stacking", context, problems) ?? fallback;
 
     private static int? Rounds(EffectDto dto, string context, List<string> problems)
     {
