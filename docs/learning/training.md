@@ -55,7 +55,7 @@ refusal the engine's policy agent will make (L7). `compare-stamps` prints what m
 | --- | --- | --- | --- |
 | `search-weights -o <dir>` | the built engine and `data/dst`, no dataset | `weights.json`, `search.json`, `evaluation.json`, `training.jsonl` | Cross-entropy method over the eight scoring weights. Each candidate is a weights file evaluated by the engine's `evaluate` as `heuristic:<file>` against `--opponent` (default `greedy`) on `--seeds` (default the benchmark seeds), mirrored; the fitness is the mean score. The mean of the elite becomes the next mean, its spread the next spread; the current mean is always in the population, so the best is never lost. |
 | `train-clone <runs> -o <dir>` | a recorded run (`simulate --record`) | `policy.json`, `training.jsonl` | Behaviour cloning: a linear classifier from observation to action key (`SGDClassifier`, log loss), one epoch per iteration, keeping the epoch whose choice among the candidates matches the data best on held-out matches. |
-| `train-value <runs> -o <dir>` | a recorded run | `policy.json`, `training.jsonl` | Value regression: one ridge regression per action key from observation to the episode return; the agent then takes the candidate with the highest predicted return. A key seen fewer than `--min-samples` times keeps its mean return; an unseen key gets the mean return of the data. |
+| `train-value <runs> -o <dir>` | a recorded run, ideally an explored one (below) | `policy.json`, `training.jsonl` | Value regression: one ridge regression per action key from observation to the episode return; the agent then takes the candidate with the highest predicted return. A key seen fewer than `--min-samples` times keeps its mean return; an unseen key gets the mean return of the data. |
 
 Matches are held out whole (`--validation`, default one in five), so a validation step never comes from a
 match the model saw. Features are standardized for the optimizer and the scaling is folded back into the
@@ -82,6 +82,29 @@ Training on several runs at once (`train-value a b --allow-mixed`) loads each of
 selection into one array, so budget the sum plus one more copy. A machine that runs out is killed by the
 kernel with no Python error and no output file: if a training command ends silently and leaves nothing
 behind, check its exit code for `137` and record fewer matches.
+
+## Why the value learner needs an exploring dataset
+
+`Greedy` plays the same move in the same position, so a dataset of its own games never shows what a different
+move would have given there. Each action key is then fitted on its own slice of states: `heavy_strike` on the
+states where `Greedy` wanted it, `basic_attack` on the leftovers where it was not available. The return
+measured on such a slice says how good those situations were, not how good the action is, and ranking two of
+those rows at one position compares models calibrated on different worlds. Three trainings confirmed it, each
+losing all 400 mirrored matches against `Greedy` while behaviour cloning on the same data reached `Greedy`'s
+own strength (`docs/learning/journal.md`, ADR 0014).
+
+The `explore:<rate>` agent is the fix: it plays `Greedy`'s move except for the given share of decisions, which
+it takes uniformly at random. The states stay the ones a strong policy reaches, and every action key now
+appears in some of them, so the rows become comparable.
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- simulate --p1 explore:0.2 --p2 explore:0.2 --matches 200 --seed 1 --record runs/<id>/dataset-explore
+scripts/iterate.sh --explore 0.2      # the same, inside the loop, keeping a pure dataset for the clone
+```
+
+It draws from the seeded random source, so a recorded run replays exactly, but it never plays a baseline: the
+benchmark digest is defined by agents that draw nothing. Behaviour cloning keeps the pure `Greedy` dataset,
+since imitating a bot that is wrong on purpose part of the time is not what the clone is for.
 
 ## Playing a policy
 
@@ -157,6 +180,13 @@ runs/<id>/
 The script takes every tuning knob as a flag (`--matches`, `--value-alpha`, `--value-min-samples`,
 `--clone-epochs`, `--clone-alpha`, `--validation`), passed through to the learners, so a run is tuned from
 the command line and its `--help` explains each in plain words; `docs/learning/explained.md` has the table.
+
+The same turn runs unattended in `.github/workflows/iterate.yml` (Actions -> "Learning loop"): on a push to
+`main` that touches `src/`, `data/`, `learning/`, `benchmarks/` or the script, weekly, and on demand with the
+knobs as workflow inputs (`explore` defaults to 0.2, `off` disables it). The report table goes in the run
+summary; `report.html`, `report.json`, the evaluations and the two policies are the run's artifact. The
+datasets are not uploaded: the seed reproduces them. A CI runner keeps nothing between runs, so `--against`
+stays a local comparison.
 
 `report.json` holds the run's stamp and, per evaluation, the agents, the matches, and the metrics: `winRateA`
 with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when the

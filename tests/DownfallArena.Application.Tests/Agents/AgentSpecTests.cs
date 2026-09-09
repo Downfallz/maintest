@@ -13,6 +13,7 @@ public sealed class AgentSpecTests
     [InlineData("greedy", AgentKind.Greedy, null)]
     [InlineData("heuristic:learning/weights/greedy.json", AgentKind.Heuristic, "learning/weights/greedy.json")]
     [InlineData("policy:models/value/v1/policy.json", AgentKind.Policy, "models/value/v1/policy.json")]
+    [InlineData("explore:0.1", AgentKind.Explore, "0.1")]
     public void A_spec_is_a_kind_and_an_optional_path(string text, AgentKind kind, string? path)
     {
         AgentSpec.Parse(text).ShouldBe(new AgentSpec(kind, path));

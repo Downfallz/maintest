@@ -8,6 +8,7 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
 | Policy | `policy:<policy.json>` | A trained policy (`docs/learning/training.md`): scores the candidate actions with one weight row per action key and takes the best. Refused when its feature schema is not the current one. |
+| Exploring | `explore:<rate>` | Greedy, except that the given share of decisions is taken uniformly at random (ADR 0014). For recording datasets a value regression can learn from, never for a baseline: it draws from a random source, so it is deterministic for a seed but not for the digest. |
 
 Every command takes `--p1` and `--p2`:
 

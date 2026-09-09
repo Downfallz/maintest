@@ -1,7 +1,7 @@
 # 0014. Record datasets with an exploring agent instead of reaching for reinforcement learning
 
 Date: 2026-09-09
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -61,10 +61,12 @@ runtime in .NET and no new dependency on either side.
 
 ## Follow-up
 
-- `AgentKind`, `AgentFactory` and the new agent in `Application/Agents`, with its tests.
-- `docs/domain/glossary.md` (a term for the exploring agent), `docs/learning/agents.md`,
-  `docs/learning/training.md`, `docs/learning/explained.md`, `AGENTS.md` commands.
-- `scripts/iterate.sh`: an `--explore` flag and its `--help` line; whether the loop records one explored
-  dataset or keeps a pure one for the clone is a question for the change itself.
+Done when this was accepted:
+
+- `AgentKind.Explore`, `ExploringAgent` and the factory's `explore:<rate>` case, with their tests.
+- `docs/domain/glossary.md`, `docs/learning/agents.md`, `docs/learning/training.md`,
+  `docs/learning/explained.md`, `AGENTS.md` commands.
+- `scripts/iterate.sh --explore <rate>`: it records a second, explored dataset and trains the value policy on
+  it, while the clone keeps the pure one, so the clone's numbers stay comparable from run to run.
 - The benchmark baseline stays `Greedy` against `Greedy` (`benchmarks/README.md`, ADR 0013 decision I): an
-  agent that draws from a random source must never define the digest.
+  agent that draws from a random source never defines the digest.

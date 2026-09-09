@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Learning;
 using DownfallArena.Domain.Matches;
@@ -37,12 +38,20 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Greedy => new GreedyAgent(resources, rules),
             AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
             AgentKind.Policy => Trained(spec, rules),
+            AgentKind.Explore => new ExploringAgent(Rate(spec), new GreedyAgent(resources, rules), random),
             _ => throw new InvalidOperationException($"Agent kind '{spec.Kind}' has no implementation."),
         };
     }
 
     private ScoringWeights Weights(AgentSpec spec) =>
         weights.Load(spec.Path ?? throw new ArgumentException("A heuristic agent needs a weights file: 'heuristic:<path>'.", nameof(spec)));
+
+    /// <summary>The exploration rate the spec carries after the colon: <c>explore:0.1</c>.</summary>
+    private static double Rate(AgentSpec spec) =>
+        double.TryParse(spec.Path, NumberStyles.Float, CultureInfo.InvariantCulture, out var rate)
+        && double.IsFinite(rate) && rate > 0 && rate <= 1
+            ? rate
+            : throw new ArgumentException($"An exploring agent needs a rate above 0 and at most 1: 'explore:<rate>', not '{spec}'.", nameof(spec));
 
     private PolicyFile Policy(AgentSpec spec) =>
         policies.Load(spec.Path ?? throw new ArgumentException("A policy agent needs a policy file: 'policy:<path>'.", nameof(spec)));

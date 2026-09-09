@@ -34,7 +34,9 @@ Each item has the same four actions:
 
 **Build** runs the data builder and shows the new content hash, or every problem in the way. **Run a match**
 plays one seeded match or an evaluation over a number of seeds, straight through the engine, and opens the
-result in the viewer: the match step by step, or the win rates with their intervals.
+result in the viewer: the match step by step, or the win rates with their intervals. Both agent boxes take any
+agent spec the engine knows (`docs/learning/agents.md`): `random`, `greedy`, `explore:<rate>`,
+`heuristic:<weights.json>`, `policy:<policy.json>`.
 
 ## What it is made of
 

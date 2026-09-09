@@ -1,10 +1,11 @@
 namespace DownfallArena.Application.Agents;
 
 /// <summary>
-/// Which agent to seat: a kind, for kinds that read a file its path, and once resolved a version that
-/// fingerprints what the file held, so two runs on different weights at the same path stamp differently.
-/// The text form, <c>random</c>, <c>kind:path</c>, or <c>kind:path@version</c>, is what the command line
-/// takes and what run stamps carry.
+/// Which agent to seat: a kind, what the kind needs after the colon (a file for the heuristic and policy
+/// agents, an exploration rate for the exploring one), and once resolved a version that fingerprints what a
+/// file held, so two runs on different weights at the same path stamp differently. The text form,
+/// <c>random</c>, <c>kind:path</c>, or <c>kind:path@version</c>, is what the command line takes and what run
+/// stamps carry.
 /// </summary>
 public sealed record AgentSpec(AgentKind Kind, string? Path = null, string? Version = null)
 {
