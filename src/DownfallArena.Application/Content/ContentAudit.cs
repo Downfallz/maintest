@@ -1,3 +1,4 @@
+using System.Globalization;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Resources;
@@ -32,6 +33,7 @@ public static class ContentAudit
             .. TreeFindings(resources, reached),
             .. SpellFindings(resources, reached),
             .. Indistinguishable(resources),
+            .. FlatSpellStats(resources),
         ];
 
         return new ContentAuditReport
@@ -147,6 +149,39 @@ public static class ContentAudit
         /// <summary>The node codes of each tree that some creature on it can open.</summary>
         public Dictionary<TalentTreeId, HashSet<string>> Opened { get; } = [];
     }
+
+    /// <summary>
+    /// A spell stat every spell gives the same value is not something this content varies, whatever the field
+    /// suggests by being there. A reader looking at one spell cannot see it: the field is present and filled,
+    /// and only the other thirty-five say it never differs.
+    /// </summary>
+    private static IEnumerable<ContentFinding> FlatSpellStats(IGameResources resources)
+    {
+        if (resources.Spells.Count < 2)
+        {
+            yield break;
+        }
+
+        foreach (var (name, of, meaning) in SpellStats)
+        {
+            var values = resources.Spells.Select(of).Distinct().ToList();
+            if (values.Count == 1)
+            {
+                yield return new ContentFinding("Content.FlatSpellStat", name, $"All {resources.Spells.Count} spells have {name} {values[0].ToString(CultureInfo.InvariantCulture)}. {meaning}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The numbers of a spell that a match reads, with what it means for every spell to share one. Effects are
+    /// not here: two spells with the same effects are the <c>Spell.Indistinguishable</c> finding instead.
+    /// </summary>
+    private static IReadOnlyList<(string Name, Func<Spell, double> Of, string Meaning)> SpellStats =>
+    [
+        ("energyCost", spell => spell.Stats.Cost.Value, "Energy never decides which spell a creature can cast."),
+        ("initiative", spell => spell.Stats.Initiative.Value, "The spell a creature declares never changes when it acts."),
+        ("criticalChance", spell => spell.Stats.CriticalChance.Value, "A spell's critical chance is a bonus on the creature's own, so every cast crits at the creature's rate and no spell moves it."),
+    ];
 
     /// <summary>
     /// Spells a match cannot tell apart: the same cost, the same initiative, the same targeting and the same

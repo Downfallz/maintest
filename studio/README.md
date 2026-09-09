@@ -18,7 +18,7 @@ it runs on, not a service.
 | Panel | What you get |
 | --- | --- |
 | Creatures | Base stats, class, talent tree (one click away), starting spells (each one click away). |
-| Spells | Type, class, initiative, energy cost, critical chance, targeting, and the effect list with the fields each effect kind actually takes. Plus **Used by**: every creature and talent node that names the spell, and the aliases pointing at it. |
+| Spells | Type, class, initiative, energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. Plus **Used by**: every creature and talent node that names the spell, and the aliases pointing at it. |
 | Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. |
 | Runs | Every run this studio has played, newest first, with its agents, seed, match count and content hash. Open one, or tick two and compare them. |
 | Audit | What no creature can reach, open or cast; what no match can tell apart; and whether this content has a benchmark digest. Every spell's cost against what it does. |
@@ -73,6 +73,7 @@ same talent gates the evolution rules run, until nothing new is learned — and 
 | `Spell.Uncastable` | It costs more energy than a creature that can learn it could hold by the round cap. |
 | `TalentTree.Unused` | No creature definition is on that tree. |
 | `Spell.Indistinguishable` | Its cost, targeting and effects are the same as another spell's. The engine plays both, but no result can attribute anything to either, so tuning one of them moves nothing the other does not. |
+| `Content.FlatSpellStat` | Every spell gives one of the spell stats the same value, so it is not something this content varies. Looking at a single spell cannot show this: the field is there and filled, and only the other thirty-five say it never differs. |
 
 None of these stop a build: the content is valid, it just never matters. Under the findings is one row per
 spell — cost, damage, bleed over its duration, healing, damage per energy, how many creatures start with it
@@ -82,6 +83,13 @@ The audit line also says whether the current content has a **benchmark digest**.
 after an edit, and that is by design: a digest is filed under the content hash it was measured on
 (`benchmarks/README.md`), so changing a spell leaves this content without one until `benchmark --write` runs.
 Worth knowing rather than assuming the net is still there.
+
+## A field that is a bonus, not a chance
+
+A spell's **critical chance bonus** is added to the creature's own before the roll, not used in place of it
+(`ResolutionRules`), so a spell at `0` still crits at whatever its creature crits at. The field alone reads as
+"never crits", which is why the editor prints the chance it actually gives next to it — with the content as it
+stands, `0` and a creature at 5% means a cast crits at 5%.
 
 ## Reading a tuning change
 
