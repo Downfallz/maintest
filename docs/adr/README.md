@@ -24,3 +24,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0016](0016-value-learning-on-an-advantage-baseline.md) | Learn action values against a state baseline instead of the raw match return | Accepted |
 | [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Accepted |
 | [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |
+| [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |

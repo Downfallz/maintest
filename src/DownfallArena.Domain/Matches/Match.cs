@@ -345,7 +345,7 @@ public sealed class Match : AggregateRoot<MatchId>
         return round.SubPhase switch
         {
             RoundSubPhase.EnergyGain => Automatic(() => UpkeepRules.EnergyGain(creatures, RuleSet)),
-            RoundSubPhase.OngoingEffects => Automatic(() => RaiseDomainEvent(new OngoingEffectsApplied(Id, round.Id, UpkeepRules.OngoingEffects(creatures)))),
+            RoundSubPhase.OngoingEffects => Automatic(() => RaiseOngoingEffects(round, UpkeepRules.OngoingEffects(creatures))),
             RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
@@ -357,6 +357,9 @@ public sealed class Match : AggregateRoot<MatchId>
             _ => throw new InvalidOperationException($"Sub-phase {round.SubPhase} has no driver step."),
         };
     }
+
+    private void RaiseOngoingEffects(Round round, OngoingEffectTicks ticks) =>
+        RaiseDomainEvent(new OngoingEffectsApplied(Id, round.Id, ticks.BleedTicks, ticks.RegenerationTicks));
 
     private static Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>> Expired(IReadOnlyDictionary<CreatureId, IReadOnlyList<Condition>> expired) =>
         expired.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<ConditionSnapshot>)[.. entry.Value.Select(condition => condition.Snapshot())]);

@@ -12,9 +12,14 @@ def test_a_supported_id_passes_and_returns_its_version() -> None:
     assert check_schema("features:v1+31987e1de3a9") == "features:v1"
 
 
+def test_every_published_version_is_readable() -> None:
+    """A run recorded under an older layout stays analysable; only the engine refuses to play its policy."""
+    assert check_schema("features:v2+31987e1de3a9") == "features:v2"
+
+
 def test_an_unknown_version_is_refused() -> None:
-    with pytest.raises(SchemaError, match="features:v2"):
-        check_schema("features:v2+31987e1de3a9")
+    with pytest.raises(SchemaError, match="features:v9"):
+        check_schema("features:v9+31987e1de3a9")
 
 
 def test_a_different_fingerprint_of_the_same_version_is_another_layout() -> None:

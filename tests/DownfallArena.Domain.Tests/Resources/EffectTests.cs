@@ -33,6 +33,21 @@ public sealed class EffectTests
         Should.Throw<ArgumentOutOfRangeException>(() => Stun.For(0));
     }
 
+    /// <summary>ADR 0019: the healing counterpart of a bleed, and the same shape.</summary>
+    [Fact]
+    public void Regeneration_lasts_a_number_of_rounds_and_refreshes_by_default()
+    {
+        var regeneration = Regeneration.Of(2, rounds: 3);
+
+        regeneration.AmountPerRound.ShouldBe(2);
+        regeneration.Duration.ShouldBe(Duration.OfRounds(3));
+        regeneration.Stacking.ShouldBe(StackingPolicy.Refresh);
+        Regeneration.Of(1, 2, StackingPolicy.Stack).Stacking.ShouldBe(StackingPolicy.Stack);
+
+        Should.Throw<ArgumentOutOfRangeException>(() => Regeneration.Of(0, 3));
+        Should.Throw<ArgumentOutOfRangeException>(() => Regeneration.Of(1, 0));
+    }
+
     [Fact]
     public void Buffs_and_debuffs_can_be_permanent_and_stack_by_default()
     {

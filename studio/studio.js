@@ -26,6 +26,7 @@ const EFFECTS = {
   Heal: { amounts: ['amount'] },
   EnergyGain: { amounts: ['amount'] },
   Bleed: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
+  Regeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
   Stun: { amounts: [], rounds: true, stacking: 'Refresh' },
   DefenseBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
@@ -1101,7 +1102,7 @@ function auditFindings(findings) {
 
 function auditReach(reach) {
   const table = element('table');
-  table.append(element('tr', {}, ['Spell', 'Class', 'Cost', 'Damage', 'Bleed', 'Heal', 'Damage/energy', 'Starts on', 'Reachable by']
+  table.append(element('tr', {}, ['Spell', 'Class', 'Cost', 'Damage', 'Bleed', 'Heal', 'Regen', 'Damage/energy', 'Starts on', 'Reachable by']
     .map((text, index) => element('th', { className: index >= 2 ? 'num' : '', textContent: text }))));
   for (const row of reach) {
     table.append(element('tr', {}, [
@@ -1111,6 +1112,7 @@ function auditReach(reach) {
       element('td', { className: 'num', textContent: String(row.damage) }),
       element('td', { className: 'num', textContent: String(row.bleedDamage) }),
       element('td', { className: 'num', textContent: String(row.healing) }),
+      element('td', { className: 'num', textContent: String(row.regenerationHealing) }),
       element('td', { className: 'num', textContent: row.damagePerEnergy.toFixed(1) }),
       element('td', { className: 'num', textContent: String(row.startingFor) }),
       element('td', { className: 'num', textContent: String(row.reachableBy) }),

@@ -14,7 +14,12 @@
   "effects": [
     {
       "kind": "Heal",
-      "amount": 4
+      "amount": 2
+    },
+    {
+      "kind": "Regeneration",
+      "amountPerRound": 2,
+      "durationRounds": 1
     }
   ]
 }

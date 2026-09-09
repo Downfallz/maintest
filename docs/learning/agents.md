@@ -34,6 +34,7 @@ The score of one resolution, with the weights `w`:
 | `w.heal` x effective healing | healing capped at what the target was missing | for an ally, against an enemy |
 | `w.stun` per stun | a Stun on a target still alive after the damage | for an enemy, against an ally |
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
+| `w.heal` x expected regeneration | amount per round x rounds, capped at what the target is still missing after the hit | for an ally, against an enemy |
 | `w.buff` x amount x rounds | a DefenseBuff | a buff for an ally, a debuff for an enemy, and the reverse against |
 | `w.initiative` x amount | an InitiativeDebuff (amount only, no rounds) | a debuff on an enemy counts for, on an ally against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |

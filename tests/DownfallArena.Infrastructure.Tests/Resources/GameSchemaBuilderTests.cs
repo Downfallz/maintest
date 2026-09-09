@@ -404,4 +404,19 @@ public sealed class GameSchemaBuilderTests
         resources.Spells.Count.ShouldBeGreaterThan(30);
         resources.TalentTrees.ShouldHaveSingleItem();
     }
+
+    /// <summary>
+    /// The authored `Regeneration` kind reaches the domain as the effect (ADR 0019). Healing Screech is the
+    /// content that uses it, so this is the mapping and the content in one assertion.
+    /// </summary>
+    [Fact]
+    public void A_regeneration_is_authored_by_its_kind_and_maps_to_the_effect()
+    {
+        var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(Path.Combine(AppContext.BaseDirectory, "data")));
+
+        var screech = resources.GetSpell(SpellId.Parse("spell:healing_screech:v1"));
+
+        screech.Effects.OfType<Regeneration>().ShouldHaveSingleItem()
+            .ShouldBe(Regeneration.Of(2, rounds: 1));
+    }
 }

@@ -108,6 +108,7 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
         effect switch
         {
             Bleed bleed => bleed.AmountPerRound,
+            Regeneration regeneration => regeneration.AmountPerRound,
             Stun => 1f,
             DefenseBuff buff => buff.Amount,
             InitiativeDebuff debuff => debuff.Amount,

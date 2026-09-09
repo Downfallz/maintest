@@ -34,8 +34,8 @@ that took no target at all.
 
 ## What did not survive the translation
 
-The effect taxonomy is closed and every effect applies to the spell's targets. Six legacy ideas have no
-counterpart, so they were dropped or approximated. Each is a rule to decide, not an oversight:
+The effect taxonomy is closed and every effect applies to the spell's targets. Six legacy ideas had no
+counterpart, so they were dropped or approximated; one has since been recovered. Each is a rule to decide, not an oversight:
 
 - **Effects on the caster** (`SelfDirect`, `SelfTemporary`). A spell hits its targets and nothing else.
   Dropped: Protective Slam's +1 defense on itself, Psycho Rush's -2 defense recoil, Parasite Jab's lifesteal,
@@ -50,7 +50,8 @@ counterpart, so they were dropped or approximated. Each is a rule to decide, not
 - **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter.
   Summon Minions is approximated as a resource the other two do use, energy (3 for a cost of 2); the minion
   cost of the other two is dropped.
-- **Healing over time.** Healing Screech healed 2 and then 2 more over a round; folded into a single `Heal 4`.
+- ~~**Healing over time.**~~ Recovered: `Regeneration` was added to the taxonomy (ADR 0019) and Healing
+  Screech is the prototype's `Heal 2` plus `Regeneration 2` for a round again.
 - **Retaliate.** Thundering Seal's damage back on the attacker. Explicitly not carried over until a rule
   defines it (ADR 0012); only its defense half is left.
 
@@ -107,7 +108,7 @@ Durations are in rounds.
 | Summon Minions | Necromancer | Defensive | 1 | 2 | — | Self | EnergyGain 3 |
 | Revenant Guards | Necromancer | Defensive | 1 | 2 | 0.33 | up to 3 allies | DefenseBuff 2 (permanent), DefenseBuff 2 (1r) |
 | Crazed Specter | Necromancer | Offensive | 1 | 3 | 0.33 | up to 3 enemies | Damage 6 |
-| Healing Screech | Shaman | Defensive | 1 | 2 | 0.5 | Ally | Heal 4 |
+| Healing Screech | Shaman | Defensive | 1 | 2 | 0.5 | Ally | Heal 2, Regeneration 2/r for 1r |
 | Toxic Waves | Shaman | Offensive | 2 | 3 | 0.33 | up to 3 enemies | Damage 3, Bleed 2/r for 1r |
 | Restorative Burst | Shaman | Defensive | 2 | 2 | — | Ally | Heal 3, EnergyGain 2 |
 

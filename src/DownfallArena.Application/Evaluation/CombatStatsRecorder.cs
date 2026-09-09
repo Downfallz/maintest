@@ -85,6 +85,7 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             Energy: applied.OfType<EnergyOutcome>().Sum(outcome => outcome.Amount),
             Stuns: Conditions<Stun>(applied),
             Bleeds: Conditions<Bleed>(applied),
+            Regens: Conditions<Regeneration>(applied),
             Buffs: Conditions<DefenseBuff>(applied) + Conditions<InitiativeDebuff>(applied));
     }
 

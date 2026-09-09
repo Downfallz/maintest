@@ -230,6 +230,7 @@ public static class ContentAudit
         Damage = spell.Effects.OfType<Damage>().Sum(effect => effect.Amount),
         BleedDamage = spell.Effects.OfType<Bleed>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         Healing = spell.Effects.OfType<Heal>().Sum(effect => effect.Amount),
+        RegenerationHealing = spell.Effects.OfType<Regeneration>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         MaxTargets = spell.Targeting.MaxTargets,
         StartingFor = startingFor,
         ReachableBy = reachableBy,

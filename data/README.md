@@ -53,6 +53,7 @@ including the content hash.
 | `Heal` | `amount` | instant |
 | `EnergyGain` | `amount` | instant |
 | `Bleed` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
+| `Regeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh`; heals before bleeds tick |
 | `Stun` | `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
 | `DefenseBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 | `InitiativeDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
