@@ -1,8 +1,8 @@
 {
-  "why": "Run ci-3 showed only 93 of 382 action keys got a regression of their own; the other 289 kept a mean and score the same in every state. That is a data shortage, not a model shape: exploration multiplied the action keys by five and the dataset stayed at 200 matches. This raises the recording to 1000 matches, which should carry most of the keys past the threshold of 50. Watch fittedActions first, then the win rate against greedy.",
+  "why": "Run ci-4 fitted 191 of 455 action keys on a thousand matches and still lost 400 of 400 to greedy, with r2 up from 0.047 to 0.190. The threshold of 50 is the last thing still starving rows, so this keeps the thousand matches and drops min samples to 10, leaving alpha 10 to do the regularizing. If most of the 455 rows are fitted and the win rate is still zero, the suspect is the shape of the model rather than the data, and that needs an ADR.",
   "matches": 1000,
   "seed": 1,
   "explore": 0.2,
   "value_alpha": 10,
-  "value_min_samples": 50
+  "value_min_samples": 10
 }
