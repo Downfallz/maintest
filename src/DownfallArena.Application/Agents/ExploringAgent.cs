@@ -18,7 +18,6 @@ namespace DownfallArena.Application.Agents;
 /// </remarks>
 public sealed class ExploringAgent : IPlayerAgent
 {
-    private readonly double _rate;
     private readonly IPlayerAgent _greedy;
     private readonly IPlayerAgent _random;
     private readonly IRandomSource _source;
@@ -30,14 +29,14 @@ public sealed class ExploringAgent : IPlayerAgent
             throw new ArgumentOutOfRangeException(nameof(rate), rate, "An exploration rate is above 0 and at most 1.");
         }
 
-        _rate = rate;
+        Rate = rate;
         _greedy = greedy ?? throw new ArgumentNullException(nameof(greedy));
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _source = source ?? throw new ArgumentNullException(nameof(source));
     }
 
     /// <summary>The share of decisions taken at random rather than greedily.</summary>
-    public double Rate => _rate;
+    public double Rate { get; }
 
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) =>
         Next().DecideEvolution(board, options);
@@ -51,5 +50,5 @@ public sealed class ExploringAgent : IPlayerAgent
         Next().DecideTargets(board, options);
 
     /// <summary>One draw per decision, so the rate is the share of decisions and not of matches or rounds.</summary>
-    private IPlayerAgent Next() => _source.NextDouble() < _rate ? _random : _greedy;
+    private IPlayerAgent Next() => _source.NextDouble() < Rate ? _random : _greedy;
 }
