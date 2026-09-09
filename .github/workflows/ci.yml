@@ -23,8 +23,6 @@ jobs:
   learning:
     name: Lint and test the learning project
     runs-on: ubuntu-latest
-    env:
-      UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/learning-venv
     defaults:
       run:
         working-directory: learning
@@ -34,8 +32,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # The virtual environment lives outside the checkout, so nothing under learning/ is generated.
       - name: Install uv
-        run: pipx install uv==0.8.17
+        run: |
+          pipx install uv==0.8.17
+          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
 
       - name: Install the project from the lock file
         run: uv sync --locked
