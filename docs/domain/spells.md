@@ -122,5 +122,9 @@ hit. The name and the length say a lasting wound, so it is a bleed here.
 - Passive spells: `SpellType.Passive` exists and does nothing. A passive is an always-on modifier the
   creature never spends an activation on.
 - Minions as a second resource, or the Necromancer keeps paying in energy.
+- A spell's initiative currently changes nothing: the Combat timeline is built in Planning, from the speed
+  choices and the Creature's own Initiative, before any Intent exists, so no rule reads a Spell's own
+  initiative (only the content audit does). Either the timeline learns to read it — which means ordering
+  after intents are declared, not before — or the field goes.
 - The permanent stat buffs stack every time they are cast, unbounded, as they did in the prototype. That is
   probably not what anyone wants at a round cap of 30.
