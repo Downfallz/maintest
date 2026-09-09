@@ -261,6 +261,7 @@ public sealed class ContentAuditTests
         var flat = report.Findings.Where(finding => finding.Code == "Content.FlatSpellStat").ToList();
         flat.Select(finding => finding.Subject).ShouldBe(["criticalChance", "initiative"], ignoreOrder: true);
         flat.Single(finding => finding.Subject == "criticalChance").Message.ShouldContain("bonus on the creature's own");
+        flat.Single(finding => finding.Subject == "initiative").Message.ShouldContain("Unlocking any spell");
     }
 
     [Fact]

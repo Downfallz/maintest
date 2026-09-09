@@ -13,8 +13,8 @@ namespace DownfallArena.Application.Content;
 /// creature can ever use, spells no match can tell apart, and a spell stat every spell gives the same value.
 /// A spell nothing teaches, a talent node whose gate never opens, a spell that costs more energy than a whole
 /// match hands out, a talent tree no creature is on, spells whose numbers are all the same, and a number the
-/// engine reads on every cast that this content never varies. None of these stop a build — the content is
-/// valid and the engine plays it — so they are findings rather than problems.
+/// engine reads — at a cast, or at an unlock — that this content never varies. None of these stop a build —
+/// the content is valid and the engine plays it — so they are findings rather than problems.
 /// <para>
 /// Reachability is <see cref="TalentUnlocks.ReachableSpells"/>, the evolution rules' own gate applied until
 /// nothing new is learned. Since what a creature knows only grows, a gate shut at that fixed point is shut for
@@ -180,7 +180,7 @@ public static class ContentAudit
     private static IReadOnlyList<(string Name, Func<Spell, double> Of, string Meaning)> SpellStats =>
     [
         ("energyCost", spell => spell.Stats.Cost.Value, "Energy never decides which spell a creature can cast."),
-        ("initiative", spell => spell.Stats.Initiative.Value, "The spell a creature declares never changes when it acts."),
+        ("initiative", spell => spell.Stats.Initiative.Value, "Unlocking any spell raises a creature's Initiative by the same amount, so which spell it unlocks never changes how soon it acts."),
         ("criticalChance", spell => spell.Stats.CriticalChance.Value, "A spell's critical chance is a bonus on the creature's own, so every cast crits at the creature's rate and no spell moves it."),
     ];
 

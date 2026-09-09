@@ -26,6 +26,17 @@ internal static class Content
             targeting,
             effects.Length == 0 ? [Damage.Of(1)] : effects);
 
+    /// <summary>A spell whose Spell initiative is the point of the test.</summary>
+    public static Spell SpellAtInitiative(string id, int initiative, params Effect[] effects) =>
+        Domain.Resources.Spell.Create(
+            SpellId.Parse(id),
+            "Strike",
+            SpellType.Offensive,
+            CreatureClass.Creature,
+            new SpellStats(Initiative.Of(initiative), Energy.Of(0), CriticalChance.Of(0)),
+            TargetingSpec.SingleTarget(TargetOrigin.Enemy),
+            effects.Length == 0 ? [Damage.Of(1)] : effects);
+
     public static CreatureDefinition Creature(string id = "creature:main:v1", params string[] startingSpells) =>
         CreatureDefinition.Create(
             CreatureDefinitionId.Parse(id),

@@ -42,7 +42,7 @@ public sealed class ResolutionRulesTests
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(spell.Id);
+        knight.UnlockSpell(spell);
         knight.GainEnergy(1);
         Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(1, Duration.OfRounds(1)));
         var creatures = Arena.Snapshots(living);
@@ -67,7 +67,7 @@ public sealed class ResolutionRulesTests
         var spell = Content.Spell("spell:precise:v1", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 0.25, Damage.Of(2));
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
-        Arena.Find(living, Arena.Knight).UnlockSpell(spell.Id);
+        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
         var creatures = Arena.Snapshots(living);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
         var rules = RuleSet.Create(3, 2, 2, 30, 1.5);
@@ -114,7 +114,7 @@ public sealed class ResolutionRulesTests
     {
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(Arena.Guard);
+        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
         knight.GainEnergy(1);
         var creatures = Arena.Snapshots(living);
 
@@ -133,7 +133,7 @@ public sealed class ResolutionRulesTests
     {
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(Arena.Guard);
+        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
         knight.GainEnergy(1);
         var guard = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Guard), [Arena.Knight]);
 
@@ -149,8 +149,8 @@ public sealed class ResolutionRulesTests
     {
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(Arena.Guard);
-        knight.UnlockSpell(Arena.Slam);
+        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
+        knight.UnlockSpell(Arena.SpellOf(Arena.Slam));
         knight.GainEnergy(2);
         Arena.Find(living, Arena.Wraith).TakeDamage(99);
         var creatures = Arena.Snapshots(living);

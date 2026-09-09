@@ -143,8 +143,8 @@ public sealed class CombatExecutionTests
     {
         var creatures = Arena.FourCreatures();
         var knight = Arena.Find(creatures, Arena.Knight);
-        knight.UnlockSpell(Arena.Guard);
-        knight.UnlockSpell(Arena.Slam);
+        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
+        knight.UnlockSpell(Arena.SpellOf(Arena.Slam));
         knight.GainEnergy(2);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Slam), [Arena.Ghoul, Arena.Wraith]);
 

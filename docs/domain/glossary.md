@@ -21,13 +21,14 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 
 | Term | Definition | Status |
 | --- | --- | --- |
-| Creature | A combat unit on a Team, instantiated from a Creature definition, with Health, Energy, Defense, Initiative, Critical chance, known Spells, and active Conditions. | decided |
+| Creature | A combat unit on a Team, instantiated from a Creature definition, with Health, Energy, Defense, Initiative, Critical chance, known Spells, and active Conditions. Its Initiative is the base one raised by the Spell initiative of everything it unlocked and lowered by its initiative debuffs. | decided |
 | Creature definition | Static content describing a kind of Creature (base stats, starting Spells, Talent tree). Loaded from Game resources, never created during play. | decided |
 | Stat | A non-negative value object on a Creature: Health, Energy, Defense, Initiative. Critical chance is a probability in [0, 1]. | decided |
 | Creature stats | The stat block of a Creature: Health, Energy, Defense, Initiative, Critical chance. A Creature definition carries the base block. | decided |
-| Spell stats | The numbers of a Spell: Initiative, energy cost, Critical chance bonus. | decided |
+| Spell stats | The numbers of a Spell: Spell initiative, energy cost, Critical chance bonus. | decided |
 | Critical chance bonus | What a Spell adds to its caster's own Critical chance before the roll, clamped into [0, 1]. A Spell at zero does not mean a cast that never crits: it means the Spell moves nothing. | decided |
-| Spell | An action a Creature can perform in Combat: type, class, initiative, energy cost, Critical chance bonus, targeting spec, and effects. The catalogue is [spells.md](spells.md). | decided |
+| Spell initiative | What a Spell adds to a Creature's Initiative, for the rest of the Match, when that Creature unlocks it (ADR 0017). It is paid once at the unlock, not at each cast, and a Spell the Creature already knows or starts with adds nothing. | decided |
+| Spell | An action a Creature can perform in Combat: type, class, Spell initiative, energy cost, Critical chance bonus, targeting spec, and effects. The catalogue is [spells.md](spells.md). | decided |
 | Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012): instant `Damage`, `Heal`, `EnergyGain`; lasting `Bleed`, `Stun`, `DefenseBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
 | Condition | A lasting Effect attached to a Creature (stun, bleed, defense buff) with a Duration and a Stacking policy. Bleeds deal damage at the start of the round; every Condition counts down at Cleanup, and the first countdown after an application does not count. | decided |
 | Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |
@@ -50,7 +51,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Progression gate | A pure domain service that says whether the current Sub-phase is complete and, if not, what is missing (which Creatures, how many picks). Shared by the engine, the UI, and bots. | decided |
 | Phase driver | The loop inside the Match that runs each automatic step or asks the Progression gate, advances the Sub-phase, and raises an event, until the Round waits on a Player or the Match ends. | decided |
 | Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built. | decided |
-| Evolution | A Planning decision where a Player unlocks a Spell for a Creature from its Talent tree, within the picks allowed by the Rule set. | decided |
+| Evolution | A Planning decision where a Player unlocks a Spell for a Creature from its Talent tree, within the picks allowed by the Rule set. The unlock also raises the Creature's Initiative by the Spell initiative (ADR 0017). | decided |
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
 | Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |

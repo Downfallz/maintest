@@ -1,5 +1,6 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
+using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Resources.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -53,7 +54,7 @@ public sealed class CreatureTests
         creature.Heal(3).ShouldBe(0);
         creature.GainEnergy(3).ShouldBe(0);
         creature.SpendEnergy(Energy.Of(0)).Error.ShouldBe(CreatureErrors.Dead);
-        creature.UnlockSpell(SpellId.Parse("spell:new:v1")).Error.ShouldBe(CreatureErrors.Dead);
+        creature.UnlockSpell(Content.Spell("spell:new:v1")).Error.ShouldBe(CreatureErrors.Dead);
         creature.Health.ShouldBe(Health.Of(0));
         creature.Energy.ShouldBe(Energy.Of(0));
     }
@@ -94,13 +95,62 @@ public sealed class CreatureTests
     public void Unlocking_a_spell_adds_it_once()
     {
         var creature = Spawn();
-        var guard = SpellId.Parse("spell:guard:v1");
+        var guard = Content.Spell("spell:guard:v1");
 
         creature.UnlockSpell(guard).IsSuccess.ShouldBeTrue();
         creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
 
-        creature.KnowsSpell(guard).ShouldBeTrue();
+        creature.KnowsSpell(guard.Id).ShouldBeTrue();
         creature.KnownSpells.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Unlocking_a_spell_raises_the_creature_initiative_by_the_spell_initiative()
+    {
+        var creature = Spawn();
+
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(5));
+
+        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2)).IsSuccess.ShouldBeTrue();
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(7));
+
+        creature.UnlockSpell(Content.SpellAtInitiative("spell:slam:v1", 3)).IsSuccess.ShouldBeTrue();
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(10));
+    }
+
+    [Fact]
+    public void A_refused_unlock_raises_no_initiative()
+    {
+        var creature = Spawn();
+        var guard = Content.SpellAtInitiative("spell:guard:v1", 2);
+
+        creature.UnlockSpell(guard);
+        creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
+
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(7));
+    }
+
+    [Fact]
+    public void A_dead_creature_unlocks_nothing_and_keeps_the_initiative_it_had()
+    {
+        var creature = Spawn();
+        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2));
+        creature.TakeDamage(20);
+
+        creature.UnlockSpell(Content.SpellAtInitiative("spell:slam:v1", 3)).Error.ShouldBe(CreatureErrors.Dead);
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(7));
+    }
+
+    [Fact]
+    public void An_initiative_debuff_lowers_the_raised_initiative_not_the_base_one()
+    {
+        var creature = Spawn();
+        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 3));
+
+        creature.Apply(InitiativeDebuff.Of(2, Duration.OfRounds(1)));
+
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(6));
+        creature.Snapshot().CurrentInitiative.ShouldBe(Initiative.Of(6));
     }
 
     [Fact]

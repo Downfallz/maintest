@@ -17,7 +17,7 @@ public sealed class IntentRulesTests
         var living = Arena.FourCreatures();
         Arena.Find(living, Arena.Archer).TakeDamage(99);
         Arena.Find(living, Arena.Ghoul).Apply(Stun.For(1));
-        Arena.Find(living, Arena.Wraith).UnlockSpell(Arena.Guard);
+        Arena.Find(living, Arena.Wraith).UnlockSpell(Arena.SpellOf(Arena.Guard));
         var creatures = Arena.Snapshots(living);
 
         Validate(PlayerSlot.Player1, Arena.Knight, Arena.Strike, creatures).IsSuccess.ShouldBeTrue();
@@ -34,7 +34,7 @@ public sealed class IntentRulesTests
     {
         var living = Arena.FourCreatures();
         var wraith = Arena.Find(living, Arena.Wraith);
-        wraith.UnlockSpell(Arena.Guard);
+        wraith.UnlockSpell(Arena.SpellOf(Arena.Guard));
         wraith.GainEnergy(1);
 
         Validate(PlayerSlot.Player2, Arena.Wraith, Arena.Guard, Arena.Snapshots(living)).IsSuccess.ShouldBeTrue();

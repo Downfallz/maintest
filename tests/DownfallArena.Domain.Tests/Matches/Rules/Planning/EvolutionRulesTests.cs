@@ -57,14 +57,14 @@ public sealed class EvolutionRulesTests
         fresh.RemainingPicksOf(PlayerSlot.Player2).ShouldBe(2);
 
         round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Guard));
-        living[0].UnlockSpell(Arena.Guard);
+        living[0].UnlockSpell(Arena.SpellOf(Arena.Guard));
         living[1].TakeDamage(99);
 
         var afterOnePick = EvolutionRules.Evaluate(Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default);
         afterOnePick.Player1RemainingPicks.ShouldBe(1);
 
         round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Slam));
-        living[0].UnlockSpell(Arena.Slam);
+        living[0].UnlockSpell(Arena.SpellOf(Arena.Slam));
         round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, Arena.Guard));
         round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Wraith, Arena.Guard));
 
@@ -79,8 +79,8 @@ public sealed class EvolutionRulesTests
         var living = Arena.FourCreatures();
         foreach (var creature in living)
         {
-            creature.UnlockSpell(Arena.Guard);
-            creature.UnlockSpell(Arena.Slam);
+            creature.UnlockSpell(Arena.SpellOf(Arena.Guard));
+            creature.UnlockSpell(Arena.SpellOf(Arena.Slam));
         }
 
         var gate = EvolutionRules.Evaluate(Arena.Snapshots(living), Arena.RoundAt(RoundSubPhase.Evolution), Arena.Resources, RuleSet.Default);

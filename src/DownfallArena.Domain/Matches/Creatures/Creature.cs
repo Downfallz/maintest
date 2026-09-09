@@ -15,6 +15,7 @@ public sealed class Creature : Entity<CreatureId>
 {
     private readonly HashSet<SpellId> _knownSpells;
     private readonly ConditionSet _conditions = new();
+    private int _unlockedInitiative;
 
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
         : base(id)
@@ -52,7 +53,12 @@ public sealed class Creature : Entity<CreatureId>
 
     public Defense TotalDefense => BaseStats.Defense.Plus(_conditions.Sum<DefenseBuff>(buff => buff.Amount));
 
-    public Initiative CurrentInitiative => BaseStats.Initiative.Minus(_conditions.Sum<InitiativeDebuff>(debuff => debuff.Amount));
+    /// <summary>
+    /// The base initiative, raised by the Spell initiative of every spell unlocked in this match and lowered by
+    /// the active initiative debuffs. Starting spells are part of the base block, not of the raise.
+    /// </summary>
+    public Initiative CurrentInitiative =>
+        BaseStats.Initiative.Plus(_unlockedInitiative).Minus(_conditions.Sum<InitiativeDebuff>(debuff => debuff.Amount));
 
     public CriticalChance CriticalChance => BaseStats.CriticalChance;
 
@@ -64,16 +70,26 @@ public sealed class Creature : Entity<CreatureId>
 
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
 
-    internal Result UnlockSpell(SpellId spellId)
+    /// <summary>
+    /// Learns a spell and keeps its Spell initiative for the rest of the match. A refused unlock raises nothing:
+    /// a creature that already knows the spell, or is dead, keeps the initiative it had.
+    /// </summary>
+    internal Result UnlockSpell(Spell spell)
     {
-        ArgumentNullException.ThrowIfNull(spellId);
+        ArgumentNullException.ThrowIfNull(spell);
 
         if (IsDead)
         {
             return Result.Failure(CreatureErrors.Dead);
         }
 
-        return _knownSpells.Add(spellId) ? Result.Success() : Result.Failure(CreatureErrors.SpellAlreadyKnown);
+        if (!_knownSpells.Add(spell.Id))
+        {
+            return Result.Failure(CreatureErrors.SpellAlreadyKnown);
+        }
+
+        _unlockedInitiative += spell.Stats.Initiative.Value;
+        return Result.Success();
     }
 
     /// <summary>

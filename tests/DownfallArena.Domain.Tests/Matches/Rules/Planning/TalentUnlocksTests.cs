@@ -16,11 +16,11 @@ public sealed class TalentUnlocksTests
 
         TalentUnlocks.UnlockableSpells(knight.Snapshot(), tree).ShouldBe([Arena.Guard]);
 
-        knight.UnlockSpell(Arena.Guard);
+        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
 
         TalentUnlocks.UnlockableSpells(knight.Snapshot(), tree).ShouldBe([Arena.Slam]);
 
-        knight.UnlockSpell(Arena.Slam);
+        knight.UnlockSpell(Arena.SpellOf(Arena.Slam));
 
         TalentUnlocks.UnlockableSpells(knight.Snapshot(), tree).ShouldBeEmpty();
     }
@@ -79,7 +79,7 @@ public sealed class TalentUnlocksTests
         {
             foreach (var spell in next)
             {
-                knight.UnlockSpell(spell);
+                knight.UnlockSpell(Arena.SpellOf(spell));
                 stepped.Add(spell);
             }
         }

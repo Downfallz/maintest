@@ -136,7 +136,7 @@ public sealed class Match : AggregateRoot<MatchId>
             return accepted;
         }
 
-        var unlocked = CreatureOf(choice.Creature).UnlockSpell(choice.Spell);
+        var unlocked = CreatureOf(choice.Creature).UnlockSpell(_resources.GetSpell(choice.Spell));
         if (unlocked.IsFailure)
         {
             throw new InvalidOperationException($"Creature {choice.Creature} refused a validated unlock: {unlocked.Error.Message}");

@@ -30,8 +30,8 @@ public sealed class ActionRulesTests
     {
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(Arena.Guard);
-        knight.UnlockSpell(Arena.Slam);
+        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
+        knight.UnlockSpell(Arena.SpellOf(Arena.Slam));
         knight.GainEnergy(2);
         Arena.Find(living, Arena.Wraith).TakeDamage(99);
         var creatures = Arena.Snapshots(living);
