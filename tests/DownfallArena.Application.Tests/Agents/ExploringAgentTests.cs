@@ -106,7 +106,8 @@ public sealed class ExploringAgentTests
 
         var targets = Agent(1.0, new ScriptedRandom(0, draw)).DecideTargets(Board(enemyHealth: 20), options);
 
-        targets.ShouldBe(expected.Select(CreatureId.From).ToList());
+        CreatureId[] wanted = [.. expected.Select(CreatureId.From)];
+        targets.ShouldBe(wanted);
     }
 
     [Fact]

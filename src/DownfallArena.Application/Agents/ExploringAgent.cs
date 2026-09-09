@@ -55,10 +55,15 @@ public sealed class ExploringAgent : IPlayerAgent
         return index == unlocks.Count ? EvolutionDecision.Pass : EvolutionDecision.Unlock(unlocks[index]);
     }
 
-    public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
-        Explores()
-            ? _source.NextInt32(0, 2) == 0 ? Speed.Quick : Speed.Standard
-            : _greedy.DecideSpeed(board, creature);
+    public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
+    {
+        if (!Explores())
+        {
+            return _greedy.DecideSpeed(board, creature);
+        }
+
+        return _source.NextInt32(0, 2) == 0 ? Speed.Quick : Speed.Standard;
+    }
 
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
