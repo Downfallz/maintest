@@ -42,3 +42,15 @@ def test_the_regression_needs_two_samples_per_action(tmp_path: Path) -> None:
 
     with pytest.raises(TrainingError, match="two samples"):
         train_value(dataset, options)
+
+
+def test_the_metrics_count_the_actions_that_got_a_regression_of_their_own(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=20, steps_per_episode=1))])
+
+    fitted = train_value(dataset, ValueOptions(min_samples=2, validation_share=0.0))
+    starved = train_value(dataset, ValueOptions(min_samples=1000, validation_share=0.0))
+
+    assert fitted.metrics["actions"] == len(fitted.action_keys)
+    assert fitted.metrics["fittedActions"] > 0
+    assert starved.metrics["actions"] == len(starved.action_keys)
+    assert starved.metrics["fittedActions"] == 0

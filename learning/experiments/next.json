@@ -1,5 +1,5 @@
 {
-  "why": "ADR 0014 with the regularization that worked on the greedy dataset: run ci-1 explored at 0.2 but fell back to alpha 1.0 and min samples 5, and its fit came out worse than predicting the mean (r2 -0.146). The dataset and the knobs moved together, so this repeats the explored dataset with alpha 10 and min samples 50, the pair that took r2 from 0.216 to 0.372 before.",
+  "why": "Run ci-2 lost 400 of 400 to Greedy with the tuned regularization and a fit that was finally positive (r2 0.047), so the knobs are not the obstacle. This repeats it unchanged, now that train-value reports fittedActions: how many of the 382 action keys got a regression of their own rather than a mean. Most starved means the answer is more matches; most fitted means the suspect is the shape of the model.",
   "matches": 200,
   "seed": 1,
   "explore": 0.2,

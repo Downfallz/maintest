@@ -39,12 +39,14 @@ def train_value(
 
     weights = np.zeros((len(keys), len(dataset.feature_names)))
     bias = np.full(len(keys), fallback)
+    fitted = 0
     for position, key in enumerate(keys):
         rows = split.train[train_actions == key]
         if len(rows) >= options.min_samples:
             model = Ridge(alpha=options.alpha).fit(scaled[rows], dataset.returns[rows])
             row, offset = scaling.fold(np.asarray(model.coef_), np.array([model.intercept_]))
             weights[position], bias[position] = row, float(offset[0])
+            fitted += 1
         else:
             bias[position] = float(dataset.returns[rows].mean())
 
@@ -72,6 +74,11 @@ def train_value(
             "loss": loss,
             "r2": r2,
             "accuracy": accuracy,
+            # How many action keys got a regression of their own; the rest keep a mean and cannot tell two
+            # states apart. Raising min_samples starves rows, so this number says whether a weak fit is the
+            # model failing or most of the actions having no model at all.
+            "fittedActions": float(fitted),
+            "actions": float(len(keys)),
             "trainingSteps": float(len(split.train)),
             "validationSteps": float(len(split.validation)),
         },
