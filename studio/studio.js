@@ -838,9 +838,11 @@ async function run() {
   // after the await is an unsolicited popup and gets blocked. The tab holds a line until there is a page for it.
   const tab = window.open('', '_blank');
   if (tab) {
-    tab.document.write('<title>Playing…</title><p style="font:14px system-ui">Playing the run…</p>');
-    // A document left open keeps the tab from navigating when the run finishes.
-    tab.document.close();
+    tab.document.title = 'Playing…';
+    const waiting = tab.document.createElement('p');
+    waiting.style.font = '14px system-ui';
+    waiting.textContent = 'Playing the run…';
+    tab.document.body.replaceChildren(waiting);
   }
 
   const status = $('run-status');
