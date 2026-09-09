@@ -32,11 +32,21 @@ internal sealed record CliOptions
 
     public bool Write { get; init; }
 
+    /// <summary>Where the studio authors content from, and rebuilds the schema into (ADR 0015).</summary>
+    public string Data { get; init; } = DefaultData;
+
+    /// <summary>The loopback port the studio listens on.</summary>
+    public int Port { get; init; } = DefaultPort;
+
     public const string DefaultSchemaPath = "data/dst/game.schema.json";
 
     public const string DefaultBenchmarks = "benchmarks";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write]";
+    public const string DefaultData = "data";
+
+    public const int DefaultPort = 5099;
+
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N]";
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -60,7 +70,7 @@ internal sealed record CliOptions
             index += 2;
         }
 
-        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--trace", "--p1", "--p2", "--seeds", "--benchmarks"], StringComparer.Ordinal).FirstOrDefault();
+        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port"], StringComparer.Ordinal).FirstOrDefault();
         if (unknown is not null)
         {
             throw new ArgumentException($"Unknown option '{unknown}'.");
@@ -80,6 +90,8 @@ internal sealed record CliOptions
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
             Write = write,
+            Data = values.GetValueOrDefault("--data") ?? DefaultData,
+            Port = values.TryGetValue("--port", out var port) ? int.Parse(port, CultureInfo.InvariantCulture) : DefaultPort,
         };
     }
 }

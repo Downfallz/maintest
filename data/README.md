@@ -17,6 +17,23 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
 The output, `data/dst/game.schema.json` and its SHA-256 in `game.schema.sha256`, is generated and ignored by git.
 Unknown JSON properties are errors, so a typo in a field name is caught at build time.
 
+The content studio edits all of this in a browser (`studio/README.md`):
+
+```bash
+dotnet run --project src/DownfallArena.Cli -- studio
+```
+
+## Turning content off
+
+Any creature, spell or talent tree may carry `"enabled": false` (ADR 0015). A disabled item leaves the
+consolidated schema, and every reference to a disabled **spell** is pruned: from `startingSpellIds`, from the
+`spells` of a talent node, and from `allOf` and `anyOf` prerequisites. A creature whose talent tree is disabled
+is an error, because it cannot be played, and so is a creature left with no starting spell. The builder prints
+one `note:` line per thing it left out.
+
+The flag is authoring-only: it never reaches `game.schema.json`, so writing `"enabled": true` changes nothing,
+including the content hash.
+
 ## Effect kinds
 
 | `kind` | Fields | Notes |

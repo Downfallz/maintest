@@ -18,7 +18,13 @@ public static class GameSchemaBuilder
     public const string TalentTreesFolder = "TalentTrees";
     public const string AliasesFile = "aliases.json";
 
-    public static GameSchema Build(string dataDirectory)
+    public static GameSchema Build(string dataDirectory) => Build(dataDirectory, notes: null);
+
+    /// <summary>
+    /// Builds the schema, adding to <paramref name="notes"/> what the authoring-only <c>enabled</c> switch left
+    /// out (ADR 0015). Notes are not problems: the build succeeds with them.
+    /// </summary>
+    public static GameSchema Build(string dataDirectory, ICollection<string>? notes)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
         if (!Directory.Exists(dataDirectory))
@@ -41,6 +47,9 @@ public static class GameSchemaBuilder
             TalentTrees = [.. trees.Select(tree => Canonical(tree, resolver, problems)).OrderBy(tree => tree.Id, StringComparer.Ordinal)],
             Aliases = new SortedDictionary<string, string>(aliases, StringComparer.Ordinal),
         };
+        ThrowIfAny(problems);
+
+        schema = DisabledContent.Remove(schema, notes, problems);
         ThrowIfAny(problems);
 
         schema = schema with { ContentHash = ComputeHash(schema) };

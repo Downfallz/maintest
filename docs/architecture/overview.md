@@ -45,12 +45,16 @@ invokes one method, persists, and dispatches the events. Ports are interfaces ow
 reproducible simulations, and the game content pipeline (`Resources/`): the schema DTOs, the builder that
 turns `data/` into a validated, hashed `game.schema.json`, and the loader that maps it to `IGameResources`.
 `AddInfrastructure` registers the adapters. `tools/DownfallArena.DataBuilder` is the command-line front of
-the builder (ADR 0009).
+the builder (ADR 0009). `Resources/Authoring/` is the same content seen from the other side: `ContentStore`
+reads, validates and writes the authored files one at a time, for the content studio (ADR 0015).
 
 **Cli** is the composition root. It is the only project that references Infrastructure, and it contains no
 logic beyond wiring and presentation: `play` narrates a bot-versus-bot match from its domain events, `human`
 turns the player's options into numbered prompts, `simulate` runs the Application's `BatchRunner` and writes
 the CSV. The simulation itself (scenario, runner, summary) lives in Application so any host can reuse it.
+`studio` is the same wiring behind a loopback HTTP host: it serves the page in `studio/`, edits content
+through Infrastructure's `ContentStore`, and plays a run through the same `GameSession` the other commands
+use, so the studio can never disagree with the command line about what a run is (ADR 0015).
 
 ## Flow of a command
 

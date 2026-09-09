@@ -220,6 +220,13 @@ dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1040.severity = none
 
 # ---------------------------------------------------------------------------
+# The studio's HTTP host: a request handler answers 500 rather than letting one
+# bad request tear the process down, so it catches Exception on purpose (ADR 0015).
+# ---------------------------------------------------------------------------
+[src/DownfallArena.Cli/Studio/StudioServer.cs]
+dotnet_diagnostic.CA1031.severity = none
+
+# ---------------------------------------------------------------------------
 # Test projects: relax rules that fight readable test names and fixtures
 # ---------------------------------------------------------------------------
 [tests/**.cs]

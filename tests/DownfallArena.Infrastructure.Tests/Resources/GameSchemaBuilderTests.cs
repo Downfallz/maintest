@@ -161,6 +161,63 @@ public sealed class GameSchemaBuilderTests
     }
 
     [Fact]
+    public void A_disabled_spell_leaves_the_build_and_every_reference_to_it()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", """
+                {
+                  "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
+                  "enabled": false,
+                  "initiative": 2, "energyCost": 1, "criticalChance": 0,
+                  "targeting": { "origin": "Self", "scope": "SingleTarget" },
+                  "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
+                }
+                """);
+        var notes = new List<string>();
+
+        var schema = GameSchemaBuilder.Build(content.Path, notes);
+
+        schema.Spells.Select(spell => spell.Id).ShouldBe(["spell:strike:v1"]);
+        schema.TalentTrees.Single().Root!.Children.Single().Spells.ShouldBeEmpty();
+        var note = string.Join("\n", notes);
+        note.ShouldContain("Disabled spell 'spell:guard:v1' is not in the build.");
+        note.ShouldContain("node 'Brawler': dropped disabled spell 'spell:guard:v1'.");
+    }
+
+    [Fact]
+    public void A_creature_whose_talent_tree_is_disabled_is_a_problem()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base", "enabled": false,
+                  "root": { "code": "Base", "name": "Base", "spells": [ { "id": "spell:strike" } ] }
+                }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path))
+            .Problems.ShouldContain(problem => problem.Contains("talent tree 'talent-tree:base:v1' is disabled", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Saying_an_item_is_enabled_does_not_move_the_content_hash()
+    {
+        using var untouched = new ContentDirectory().WithValidContent();
+        using var explicitly = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/strike.v1.json", """
+                {
+                  "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
+                  "enabled": true,
+                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+                  "effects": [ { "kind": "Damage", "amount": 1 }, { "kind": "Bleed", "amountPerRound": 1, "durationRounds": 2 } ]
+                }
+                """);
+
+        GameSchemaBuilder.Build(explicitly.Path).ContentHash.ShouldBe(GameSchemaBuilder.Build(untouched.Path).ContentHash);
+    }
+
+    [Fact]
     public void The_repository_content_builds_and_loads()
     {
         var dataDirectory = Path.Combine(AppContext.BaseDirectory, "data");

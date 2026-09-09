@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Downfall Arena content studio</title>
+  <link rel="stylesheet" href="viewer.css">
+  <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+  <header>
+    <h1>Downfall Arena content studio</h1>
+    <span id="hash" class="hint mono">content not built</span>
+    <button id="build" type="button" class="button">Build</button>
+    <button id="run-panel" type="button" class="button">Run a match</button>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <section id="run" class="run" hidden>
+    <h2>Run</h2>
+    <div class="controls">
+      <label>Mode
+        <select id="run-mode">
+          <option value="match">One match, step by step</option>
+          <option value="evaluation">Evaluation, mirrored seeds</option>
+        </select>
+      </label>
+      <label>Player 1
+        <input id="run-p1" list="agents" value="random">
+      </label>
+      <label>Player 2
+        <input id="run-p2" list="agents" value="random">
+      </label>
+      <datalist id="agents">
+        <option value="random"></option>
+        <option value="greedy"></option>
+        <option value="heuristic:learning/weights.json"></option>
+        <option value="policy:models/clone/v1/policy.json"></option>
+      </datalist>
+      <label>Matches
+        <input id="run-matches" type="number" min="1" max="2000" value="20">
+      </label>
+      <label>Seed
+        <input id="run-seed" type="number" placeholder="random">
+      </label>
+      <button id="run-go" type="button" class="button primary">Play it</button>
+      <span id="run-status" class="hint"></span>
+    </div>
+  </section>
+
+  <main>
+    <nav>
+      <div class="tabs" id="tabs">
+        <button type="button" class="tab" data-tab="creatures">Creatures</button>
+        <button type="button" class="tab selected" data-tab="spells">Spells</button>
+        <button type="button" class="tab" data-tab="talentTrees">Talent trees</button>
+      </div>
+      <input id="search" type="search" placeholder="Filter by name or id" aria-label="Filter content">
+      <ul id="list"></ul>
+      <button id="new" type="button" class="button">New</button>
+    </nav>
+    <section id="detail"><p class="empty">Pick something on the left.</p></section>
+  </main>
+
+  <script src="studio.js"></script>
+</body>
+</html>
