@@ -177,13 +177,13 @@
     const spellName = id => String(id).split(':')[1] || id;
 
     function wilson(successes, total) {
-      if (!total) return { rate: 0, low: 0, high: 0 };
+      if (!total) return { mean: 0, low: 0, high: 0 };
       const z = 1.96;
       const p = successes / total;
       const denominator = 1 + (z * z) / total;
       const centre = p + (z * z) / (2 * total);
       const margin = z * Math.sqrt((p * (1 - p)) / total + (z * z) / (4 * total * total));
-      return { rate: p, low: (centre - margin) / denominator, high: (centre + margin) / denominator };
+      return { mean: p, low: (centre - margin) / denominator, high: (centre + margin) / denominator };
     }
 
     function histogram(values, bins) {
@@ -288,8 +288,10 @@
       return el('div', { class: 'stat' }, [el('div', { class: 'label' }, label), el('div', { class: 'value' }, value), el('div', { class: 'sub' }, sub)]);
     }
 
-    function rateStat(label, rate) {
-      return stat(label, pct(rate.rate), `95% CI ${pct(rate.low)} to ${pct(rate.high)}`);
+    // Takes the shape the engine writes for a ConfidenceInterval: mean, low, high. `wilson` builds the same
+    // shape, so a batch and an evaluation read alike — they did not, and an evaluation's win rate showed a dash.
+    function rateStat(label, interval) {
+      return stat(label, pct(interval.mean), `95% CI ${pct(interval.low)} to ${pct(interval.high)}`);
     }
 
     function batchCharts(summary) {
@@ -914,7 +916,7 @@
       if (artifact.kind === 'run') {
         const summary = summarize(artifact);
         return [
-          ['Matches', summary.matches, 0], ['Player 1 win rate', summary.player1.rate, 3], ['Player 2 win rate', summary.player2.rate, 3], ['Draw rate', summary.draws.rate, 3],
+          ['Matches', summary.matches, 0], ['Player 1 win rate', summary.player1.mean, 3], ['Player 2 win rate', summary.player2.mean, 3], ['Draw rate', summary.draws.mean, 3],
           ['Average rounds', summary.averageRounds, 2], ['P1 remaining health', summary.averageHealth1, 2], ['P2 remaining health', summary.averageHealth2, 2],
           ['Fizzle rate', summary.combat.actions ? summary.combat.fizzles / summary.combat.actions : 0, 3],
         ];
