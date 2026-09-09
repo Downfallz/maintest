@@ -1,8 +1,7 @@
-'use strict';
-
 // The content studio (ADR 0015). One page over the studio API: browse the authored content, edit it in forms
 // that know the schema, cut a new version, turn things off, rebuild, and play what the change does.
-// No framework and no build step, like the viewer it sits next to.
+// No framework and no build step, like the viewer it sits next to. Loaded as a module, so it is strict and
+// scoped to itself, and the first read of the content is awaited at the top level.
 
 // ---------- what the schema allows ----------
 
@@ -88,7 +87,7 @@ function element(tag, properties = {}, children = []) {
 }
 
 function documentsOf(tab) {
-  return (state.catalogue && state.catalogue[tab]) || [];
+  return state.catalogue?.[tab] || [];
 }
 
 function findDocument(path) {
@@ -101,7 +100,7 @@ function findDocument(path) {
 
 /** Every way an author may name a spell: its versioned id, and the aliases pointing at it. */
 function spellReferences() {
-  const aliases = (state.catalogue && state.catalogue.aliases) || {};
+  const aliases = state.catalogue?.aliases || {};
   const versioned = documentsOf('spells').map(spell => spell.id);
   const named = Object.keys(aliases).filter(alias => versioned.includes(aliases[alias]));
   return [...new Set([...named.sort(), ...versioned.sort()])];
@@ -109,7 +108,7 @@ function spellReferences() {
 
 /** The versioned id a reference means, following the alias map like the data builder does. */
 function resolveReference(reference) {
-  const aliases = (state.catalogue && state.catalogue.aliases) || {};
+  const aliases = state.catalogue?.aliases || {};
   return aliases[reference] || reference;
 }
 
@@ -175,7 +174,7 @@ function clearBanner() {
 
 /** Says what a change did, and whether the content still builds after it. */
 function report(message) {
-  const problems = (state.catalogue && state.catalogue.problems) || [];
+  const problems = state.catalogue?.problems || [];
   banner(problems.length ? `${message} The content does not build yet.` : message, problems.length ? 'error' : 'ok', problems);
 }
 
@@ -213,7 +212,7 @@ function renderNav() {
       element('span', { textContent: item.name || item.id }),
       element('span', { className: 'id', textContent: item.id }),
     ]);
-    if (state.selected && state.selected.path === item.path) entry.classList.add('selected');
+    if (state.selected?.path === item.path) entry.classList.add('selected');
     entry.addEventListener('click', () => select(item.path));
     return entry;
   }));
@@ -675,7 +674,7 @@ function usedBy(item) {
     });
   }
 
-  const aliases = Object.entries((state.catalogue && state.catalogue.aliases) || {})
+  const aliases = Object.entries(state.catalogue?.aliases || {})
     .filter(([, target]) => target === item.id)
     .map(([alias]) => alias);
 
@@ -871,4 +870,4 @@ window.addEventListener('beforeunload', event => {
   if (state.dirty) event.preventDefault();
 });
 
-load();
+await load();

@@ -14,8 +14,8 @@ public sealed class StudioFilesTests
 
     [Theory]
     [InlineData("/", "Downfall Arena content studio")]
-    [InlineData("/index.html", "Downfall Arena content studio")]
-    [InlineData("/studio.js", "'use strict'")]
+    [InlineData("/index.html", "<script type=\"module\" src=\"studio.js\">")]
+    [InlineData("/studio.js", "/api/catalogue")]
     [InlineData("/studio.css", ".banner")]
     [InlineData("/viewer.css", "--ink")]
     public void Every_file_the_page_asks_for_is_served(string path, string expected)

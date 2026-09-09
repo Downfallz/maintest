@@ -41,9 +41,10 @@ agent spec the engine knows (`docs/learning/agents.md`): `random`, `greedy`, `ex
 ## What it is made of
 
 `index.html`, `studio.css` and `studio.js`: no framework and no build step, like the viewer next door, whose
-stylesheet it reuses. The JSON API it talks to is `StudioApi` in the Cli; the reading and writing of authored
-files is `ContentStore` in Infrastructure, which validates a document against the same DTOs the data builder
-uses, so "valid content" has one definition. Runs land under `runs/studio/<id>/` (git-ignored).
+stylesheet it reuses. The script is an ES module, so it is strict and keeps its names to itself. The JSON API
+it talks to is `StudioApi` in the Cli; the reading and writing of authored files is `ContentStore` in
+Infrastructure, which validates a document against the same DTOs the data builder uses, so "valid content" has
+one definition. Runs land under `runs/studio/<id>/` (git-ignored).
 
 The field lists in `studio.js` (`SPELL_TYPES`, `CREATURE_CLASSES`, `EFFECTS`, ...) mirror the domain enums and
 the effect taxonomy (ADR 0012). When those change, this page changes with them.
