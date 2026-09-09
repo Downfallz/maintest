@@ -98,6 +98,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Behaviour cloning | Training a Policy to reproduce the actions of a recorded Dataset: a classifier from Observation to action key. | decided |
 | Value regression | Training a Policy to predict the Return of an Episode from an Observation and an action; the agent takes the option with the highest predicted Return. | decided |
 | Policy agent | The Player agent that plays a Policy file: scores the candidate actions of the options with the policy and takes the best; refuses a Policy trained under another Feature schema. | decided |
+| Exploring agent | The Greedy agent with a share of its decisions taken uniformly at random, used to record Datasets in which an action appears in states where Greedy would have chosen another (ADR 0014). | decided |
+| Exploration rate | The share of an Exploring agent's decisions taken at random rather than greedily. | decided |
 | Iteration report | The `report.json` of one turn of the loop: every Evaluation of a run reduced to its balance signals, with the deltas and the Run stamp axis that moved since another run. | decided |
 
 ## Engineering terms

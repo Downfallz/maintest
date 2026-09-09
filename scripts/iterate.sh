@@ -23,6 +23,11 @@ How much data
                          rarer moves get enough examples; the first thing to raise when a policy learns
                          something odd from too few of them.
   --seed <n>             base seed of that dataset (default 1); change it to record different matches
+  --explore <rate>       also record a second dataset where that share of decisions is taken at random
+                         instead of greedily (try 0.2), and train the value policy on it (ADR 0014). Greedy
+                         always plays the same move in the same position, so its own games never show what a
+                         different move would have given; the value policy needs that to compare moves. The
+                         clone keeps learning from the pure dataset, which doubles the recording time.
 
 The value policy (train-value: predicts the return of an action, plays the best predicted)
   --value-alpha <x>      how strongly the fit is pulled toward zero (default 1.0). Higher means more
@@ -48,6 +53,7 @@ run_id="$(date -u +%Y%m%d-%H%M%S)"
 against=""
 open_page=false
 matches=200
+explore=
 seed=1
 value_alpha=1.0
 value_min_samples=5
@@ -60,6 +66,7 @@ while [[ $# -gt 0 ]]; do
     --against) against="$2"; shift 2 ;;
     --open) open_page=true; shift ;;
     --matches) matches="$2"; shift 2 ;;
+    --explore) explore="$2"; shift 2 ;;
     --seed) seed="$2"; shift 2 ;;
     --value-alpha) value_alpha="$2"; shift 2 ;;
     --value-min-samples) value_min_samples="$2"; shift 2 ;;
@@ -76,7 +83,9 @@ cd "$root"
 run="runs/$run_id"
 seeds="benchmarks/benchmark-seeds.json"
 cli=(dotnet run --project src/DownfallArena.Cli --no-build --configuration Release --)
-learning=(uv run --project learning)
+# Called as a module rather than through the console scripts, so an environment that holds only the locked
+# dependencies of the project can run the loop (what CI does: nothing is built from source there).
+learning=(uv run --project learning python -m downfall_learning.cli)
 
 if [[ -e "$run" ]]; then
   echo "Run directory '$run' exists; each iteration gets its own." >&2
@@ -116,8 +125,18 @@ evaluate greedy-vs-random greedy random
 step "4. Record a greedy self-play dataset ($matches matches from seed $seed)"
 "${cli[@]}" simulate --p1 greedy --p2 greedy --matches "$matches" --seed "$seed" --record "$run/dataset" --out "$run/dataset.csv"
 
-step "5. Train the value and clone policies (alpha $value_alpha, min samples $value_min_samples; epochs $clone_epochs, alpha $clone_alpha)"
-"${learning[@]}" train-value "$run/dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --validation "$validation"
+# The value policy trains on the explored dataset when there is one, the clone always on the pure one: a clone
+# of a bot that is wrong on purpose part of the time is not the baseline the report compares run to run.
+value_dataset="$run/dataset"
+if [[ -n "$explore" ]]; then
+  step "4b. Record an exploring self-play dataset (rate $explore)"
+  "${cli[@]}" simulate --p1 "explore:$explore" --p2 "explore:$explore" --matches "$matches" --seed "$seed" \
+    --record "$run/dataset-explore" --out "$run/dataset-explore.csv"
+  value_dataset="$run/dataset-explore"
+fi
+
+step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples; epochs $clone_epochs, alpha $clone_alpha)"
+"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --validation "$validation"
 "${learning[@]}" train-clone "$run/dataset" -o "$run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
 step "6. Evaluate the policies against the baselines"
