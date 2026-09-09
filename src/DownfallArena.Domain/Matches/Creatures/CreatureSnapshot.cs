@@ -26,6 +26,10 @@ public sealed record CreatureSnapshot
 
     public required Defense TotalDefense { get; init; }
 
+    /// <summary>The creature's own initiative before conditions, raised by everything it has unlocked.</summary>
+    public required Initiative BaseInitiative { get; init; }
+
+    /// <summary>The base initiative less the active debuffs: what the timeline orders on.</summary>
     public required Initiative CurrentInitiative { get; init; }
 
     public required CriticalChance CriticalChance { get; init; }

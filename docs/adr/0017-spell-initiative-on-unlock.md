@@ -16,12 +16,15 @@ varies turn order and does not. Either the field earns a meaning or it goes.
 ## Decision
 
 We will pay a Spell's initiative once, when a Creature unlocks the Spell, as a permanent raise to that
-Creature's Initiative for the rest of the Match. The stat is named **Spell initiative**.
-`Creature.UnlockSpell` takes the whole `Spell` rather than its id and accumulates the raise, and
-`CurrentInitiative` becomes the base Initiative plus everything unlocked minus the active initiative debuffs.
-A refused unlock — a Spell already known, or a dead Creature — raises nothing. Starting Spells do not pay: a
-Creature definition's `baseInitiative` is authored knowing its starting kit, so counting the kit again would
-be double payment.
+Creature's **Base initiative** for the rest of the Match. The Spell's stat is named **Spell initiative**. A
+Creature's base starts at its definition's and only grows; `CurrentInitiative`, which the timeline orders on,
+is that base less the active initiative debuffs, so a debuffed Creature still reads a base that says what it
+unlocked. `Creature.UnlockSpell` takes the whole `Spell` rather than its id, and both values sit on the
+snapshot, so projections, traces and the viewer can show the gap. A refused unlock — a Spell already known,
+or a dead Creature — raises nothing. Starting Spells do not pay: a Creature definition's `baseInitiative` is
+authored knowing its starting kit, so counting the kit again would be double payment. The heuristic agents
+gain an `initiative` weight and score an unlock as its combat value plus that weight times the Spell
+initiative, so a pick taken for tempo is priced rather than ignored.
 
 ## Consequences
 
@@ -34,10 +37,15 @@ be double payment.
   balance work on the spell catalogue restarts from the new numbers.
 - Bad: two Creatures that know the same Spells can differ in Initiative, because one started with a Spell the
   other unlocked. That is a real inconsistency, accepted here to avoid the double payment.
-- Bad: the heuristic agents do not see the new lever. `ActionScorer.Estimate` prices an evolution pick by
-  what the spell does in combat, so a pick bought for tempo scores as if it bought nothing, and `Greedy`
-  will under-rate initiative until the scoring weights grow a term for it.
-- Neutral: nothing in the content changes shape. The learning features read `CurrentInitiative` already.
+- Bad: the `initiative` weight is a guess. It is set at 0.5, priced like a defense buff, on no evidence
+  beyond the reasoning that initiative is indirect, and `search-weights` has never seen it. It also moves the
+  weights fingerprint, so every heuristic agent spec is a new version.
+- Neutral: nothing in the content changes shape.
+- Neutral: the observation is unchanged, so the feature schema stays `features:v1`. The base is the current
+  initiative plus the `InitiativeDebuff_amount` feature, which sums the active debuffs — except where those
+  debuffs floor the current one at zero, and the base is no longer recoverable. Publishing a
+  `base_initiative` feature for that corner is a `features:v2`, and it was not worth invalidating the run
+  history for; `docs/learning/features.md` records the decision.
 - Neutral: the raise is unbounded, like the permanent defense buffs. A Creature that unlocks a whole class
   line gains 6 or 7 on a base of 5, which may be too much; that is a numbers question, not a rule question.
 
@@ -58,4 +66,8 @@ be double payment.
 - `docs/domain/spells.md`: the mapping table and the open questions.
 - `src/DownfallArena.Application/Content/ContentAudit.cs`: the flat-stat finding for `initiative` describes
   the unlock, not a cast.
+- `docs/learning/agents.md`, `learning/weights/greedy.json` and `learning/src/downfall_learning/export.py`:
+  the `initiative` weight, its default and its name list.
+- `viewer/index.html` and `studio/studio.js`: the viewer shows "I 4 of 8" when a debuff pulls a Creature off
+  its base, and the studio's spell field is labelled Spell initiative.
 - `benchmarks/`: a new digest for the new outcomes, with an entry in `docs/learning/journal.md`.

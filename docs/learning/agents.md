@@ -46,7 +46,10 @@ Decisions:
   spell is no longer castable.
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
 - **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
-  best target set on the current board); unlock the highest, pass only when nothing can be unlocked.
+  best target set on the current board), plus `w.initiative` x the spell's Spell initiative, the base
+  initiative the unlock buys for the rest of the match (ADR 0017); unlock the highest, pass only when nothing
+  can be unlocked. This is the one decision the `initiative` weight touches: it is not part of a resolution,
+  so it is absent from the table above.
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.
@@ -68,8 +71,9 @@ damage spread elsewhere.
 | buff | 0.5 | Half a point per point of defense per round. Defense is indirect: it may prevent damage that was never going to come. |
 | energy | 0.2 | Keeping a point of energy for the next round is worth a fifth of a damage. Enough to break a tie towards the cheaper spell, not enough to make the bot hoard. |
 | risk | 2.0 | A wasted action (a fizzle, or the share of targets that vanished before the spell resolved) costs two damage. Roughly one average hit thrown away. |
+| initiative | 0.5 | Half a point per point of base initiative an unlock buys. Initiative only reorders the timeline, so it is priced like defense: real, indirect, and worth less than the hit it may let you land first. A first guess, and the weight `search-weights` has the least evidence about. |
 
-To feel out what one of them does, the content studio's run panel can play a heuristic agent from eight boxes
+To feel out what one of them does, the content studio's run panel can play a heuristic agent from nine boxes
 instead of a file: it writes what you set as `weights.json` next to the run, so the result keeps the weights it
 was played with, and two such runs compare side by side (`studio/README.md`). That is a way to look, not a way
 to tune — tuning is `search-weights` below.

@@ -112,10 +112,11 @@ public sealed class MatchTests
         var match = Table.Started();
         var ghoul = CreatureId.From(3);
 
-        Table.CreatureNumber(match, 3).CurrentInitiative.ShouldBe(Initiative.Of(5));
+        Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(5));
 
         match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(ghoul, Arena.Guard)).IsSuccess.ShouldBeTrue();
 
+        Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(6));
         Table.CreatureNumber(match, 3).CurrentInitiative.ShouldBe(Initiative.Of(6));
 
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();

@@ -105,16 +105,24 @@ public sealed class CreatureTests
     }
 
     [Fact]
-    public void Unlocking_a_spell_raises_the_creature_initiative_by_the_spell_initiative()
+    public void A_spawned_creature_takes_its_base_initiative_from_its_definition()
     {
         var creature = Spawn();
 
+        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
         creature.CurrentInitiative.ShouldBe(Initiative.Of(5));
+    }
+
+    [Fact]
+    public void Unlocking_a_spell_raises_the_base_initiative_by_the_spell_initiative()
+    {
+        var creature = Spawn();
 
         creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2)).IsSuccess.ShouldBeTrue();
-        creature.CurrentInitiative.ShouldBe(Initiative.Of(7));
+        creature.BaseInitiative.ShouldBe(Initiative.Of(7));
 
         creature.UnlockSpell(Content.SpellAtInitiative("spell:slam:v1", 3)).IsSuccess.ShouldBeTrue();
+        creature.BaseInitiative.ShouldBe(Initiative.Of(10));
         creature.CurrentInitiative.ShouldBe(Initiative.Of(10));
     }
 
@@ -127,30 +135,50 @@ public sealed class CreatureTests
         creature.UnlockSpell(guard);
         creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
 
-        creature.CurrentInitiative.ShouldBe(Initiative.Of(7));
+        creature.BaseInitiative.ShouldBe(Initiative.Of(7));
     }
 
     [Fact]
-    public void A_dead_creature_unlocks_nothing_and_keeps_the_initiative_it_had()
+    public void A_dead_creature_unlocks_nothing_and_keeps_the_base_initiative_it_had()
     {
         var creature = Spawn();
         creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2));
         creature.TakeDamage(20);
 
         creature.UnlockSpell(Content.SpellAtInitiative("spell:slam:v1", 3)).Error.ShouldBe(CreatureErrors.Dead);
-        creature.CurrentInitiative.ShouldBe(Initiative.Of(7));
+        creature.BaseInitiative.ShouldBe(Initiative.Of(7));
     }
 
     [Fact]
-    public void An_initiative_debuff_lowers_the_raised_initiative_not_the_base_one()
+    public void An_initiative_debuff_lowers_the_current_initiative_and_leaves_the_base_alone()
     {
         var creature = Spawn();
         creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 3));
 
         creature.Apply(InitiativeDebuff.Of(2, Duration.OfRounds(1)));
 
+        creature.BaseInitiative.ShouldBe(Initiative.Of(8));
         creature.CurrentInitiative.ShouldBe(Initiative.Of(6));
-        creature.Snapshot().CurrentInitiative.ShouldBe(Initiative.Of(6));
+
+        var snapshot = creature.Snapshot();
+        snapshot.BaseInitiative.ShouldBe(Initiative.Of(8));
+        snapshot.CurrentInitiative.ShouldBe(Initiative.Of(6));
+    }
+
+    /// <summary>
+    /// Initiative floors at zero, so a creature debuffed past its base reads 0 current on a base that still
+    /// says what it unlocked. That is the one case where the base cannot be read back from the current one.
+    /// </summary>
+    [Fact]
+    public void Debuffs_past_the_base_floor_the_current_initiative_at_zero()
+    {
+        var creature = Spawn();
+
+        creature.Apply(InitiativeDebuff.Of(4, Duration.OfRounds(1)));
+        creature.Apply(InitiativeDebuff.Of(4, Duration.OfRounds(1)));
+
+        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(0));
     }
 
     [Fact]

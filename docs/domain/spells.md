@@ -128,8 +128,9 @@ hit. The name and the length say a lasting wound, so it is a bleed here.
   `baseInitiative` is authored knowing the starting kit, so counting it twice would be double payment
   (ADR 0017). The cost is that two Creatures knowing the same Spells can differ in Initiative depending on how
   they got them.
-- The heuristic agents price an evolution pick by what the Spell does in combat, not by the Initiative it
-  buys, so they under-rate a pick taken for tempo (ADR 0017).
+- What a point of Initiative is worth. The heuristic agents now price an unlock as its combat value plus
+  `w.initiative` times the Spell initiative, but that weight is set at 0.5 on reasoning alone (ADR 0017);
+  `search-weights` has never tuned it.
 - Whether the numbers are right for their new job. They were the prototype's per-cast speeds and are now
   one-off unlock rewards, so nothing about them was chosen for this: 1 to 3 across the catalogue, and a
   Creature that unlocks everything on one line gains 6 or 7 on a base of 5.

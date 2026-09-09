@@ -99,6 +99,33 @@ public sealed class ActionScorerTests
         Scorer.Estimate(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6), 1e-9);
     }
 
+    /// <summary>
+    /// Every test spell has a Spell initiative of 1 and the built-in initiative weight is 0.5, so unlocking
+    /// is worth half a point more than casting (ADR 0017).
+    /// </summary>
+    [Fact]
+    public void Unlocking_a_spell_is_worth_its_combat_value_plus_the_initiative_it_buys()
+    {
+        var board = Board(enemyHealth: 20);
+
+        foreach (var spell in new[] { TestContent.Slam, TestContent.Guard, TestContent.Strike })
+        {
+            Scorer.UnlockValue(board[0], spell, board)
+                .ShouldBe(Scorer.Estimate(board[0], spell, board) + 0.5, 1e-9);
+        }
+    }
+
+    /// <summary>A spell worth nothing in combat is still worth the initiative, which is what lets a pick buy tempo.</summary>
+    [Fact]
+    public void An_initiative_weight_of_zero_prices_an_unlock_at_its_combat_value_alone()
+    {
+        var board = Board(enemyHealth: 20);
+        var indifferent = new ActionScorer(TestContent.Resources, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Initiative = 0 });
+
+        indifferent.UnlockValue(board[0], TestContent.Strike, board)
+            .ShouldBe(indifferent.Estimate(board[0], TestContent.Strike, board), 1e-9);
+    }
+
     [Fact]
     public void Invalid_inputs_are_rejected()
     {
@@ -108,6 +135,7 @@ public sealed class ActionScorerTests
         Should.Throw<ArgumentNullException>(() => Scorer.Expected(Strike(One, Three), null!));
         Should.Throw<ArgumentNullException>(() => Scorer.Best(null!, TestContent.Strike, board));
         Should.Throw<ArgumentNullException>(() => Scorer.Estimate(board[0], null!, board));
+        Should.Throw<ArgumentNullException>(() => Scorer.UnlockValue(board[0], null!, board));
         Should.Throw<ArgumentNullException>(() => Scorer.Score(null!, board));
         Should.Throw<ArgumentNullException>(() => Scorer.Kills(Strike(One, Three), null!));
         Scorer.Weights.ShouldBe(ScoringWeights.Default);

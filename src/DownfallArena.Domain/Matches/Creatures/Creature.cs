@@ -15,7 +15,6 @@ public sealed class Creature : Entity<CreatureId>
 {
     private readonly HashSet<SpellId> _knownSpells;
     private readonly ConditionSet _conditions = new();
-    private int _unlockedInitiative;
 
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
         : base(id)
@@ -24,6 +23,7 @@ public sealed class Creature : Entity<CreatureId>
         Definition = definition;
         Health = definition.BaseStats.Health;
         Energy = definition.BaseStats.Energy;
+        BaseInitiative = definition.BaseStats.Initiative;
         _knownSpells = [.. definition.StartingSpells];
     }
 
@@ -54,11 +54,14 @@ public sealed class Creature : Entity<CreatureId>
     public Defense TotalDefense => BaseStats.Defense.Plus(_conditions.Sum<DefenseBuff>(buff => buff.Amount));
 
     /// <summary>
-    /// The base initiative, raised by the Spell initiative of every spell unlocked in this match and lowered by
-    /// the active initiative debuffs. Starting spells are part of the base block, not of the raise.
+    /// The creature's own initiative, before any condition: the definition's, raised for good by the Spell
+    /// initiative of every spell it has unlocked in this match (ADR 0017). Starting spells are part of the
+    /// definition's block and do not raise it.
     /// </summary>
-    public Initiative CurrentInitiative =>
-        BaseStats.Initiative.Plus(_unlockedInitiative).Minus(_conditions.Sum<InitiativeDebuff>(debuff => debuff.Amount));
+    public Initiative BaseInitiative { get; private set; }
+
+    /// <summary>The base initiative less the active initiative debuffs, which is what orders the timeline.</summary>
+    public Initiative CurrentInitiative => BaseInitiative.Minus(_conditions.Sum<InitiativeDebuff>(debuff => debuff.Amount));
 
     public CriticalChance CriticalChance => BaseStats.CriticalChance;
 
@@ -71,8 +74,8 @@ public sealed class Creature : Entity<CreatureId>
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
 
     /// <summary>
-    /// Learns a spell and keeps its Spell initiative for the rest of the match. A refused unlock raises nothing:
-    /// a creature that already knows the spell, or is dead, keeps the initiative it had.
+    /// Learns a spell and raises the base initiative by its Spell initiative, for the rest of the match. A
+    /// refused unlock raises nothing: a creature that already knows the spell, or is dead, keeps its base.
     /// </summary>
     internal Result UnlockSpell(Spell spell)
     {
@@ -88,7 +91,7 @@ public sealed class Creature : Entity<CreatureId>
             return Result.Failure(CreatureErrors.SpellAlreadyKnown);
         }
 
-        _unlockedInitiative += spell.Stats.Initiative.Value;
+        BaseInitiative = BaseInitiative.Plus(spell.Stats.Initiative.Value);
         return Result.Success();
     }
 
@@ -187,6 +190,7 @@ public sealed class Creature : Entity<CreatureId>
         MaxHealth = MaxHealth,
         Energy = Energy,
         TotalDefense = TotalDefense,
+        BaseInitiative = BaseInitiative,
         CurrentInitiative = CurrentInitiative,
         CriticalChance = CriticalChance,
         IsStunned = IsStunned,

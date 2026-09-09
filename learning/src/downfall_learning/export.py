@@ -11,7 +11,7 @@ import pandas as pd
 
 from downfall_learning.artifacts import Dataset
 
-WEIGHT_NAMES = ("damage", "kill", "heal", "stun", "bleed", "buff", "energy", "risk")
+WEIGHT_NAMES = ("damage", "kill", "heal", "stun", "bleed", "buff", "energy", "risk", "initiative")
 DEFAULT_WEIGHTS: Mapping[str, float] = {
     "damage": 1.0,
     "kill": 5.0,
@@ -21,6 +21,7 @@ DEFAULT_WEIGHTS: Mapping[str, float] = {
     "buff": 0.5,
     "energy": 0.2,
     "risk": 2.0,
+    "initiative": 0.5,
 }
 
 
