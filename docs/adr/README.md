@@ -19,3 +19,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0011](0011-win-condition-and-round-cap.md) | Win condition: last team standing, with a round cap | Accepted |
 | [0012](0012-effect-taxonomy.md) | A closed taxonomy of spell effects | Accepted |
 | [0013](0013-learning-stack.md) | Learning stack: Python trains, the engine records and hosts policies, a static viewer | Accepted |
+| [0014](0014-exploration-in-recorded-datasets.md) | Record datasets with an exploring agent instead of reaching for reinforcement learning | Proposed |
