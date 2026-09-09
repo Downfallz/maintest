@@ -114,17 +114,33 @@ internal static class DisabledContent
             return null;
         }
 
-        var anyOf = Keep(prerequisites.AnyOf, disabledSpells, notes, $"{context} prerequisites");
-        if (prerequisites.AnyOf.Count > 0 && anyOf.Count == 0)
-        {
-            problems.Add($"{context}: every spell of its 'anyOf' is disabled. An empty 'anyOf' is no requirement at all, so pruning it would unlock the node instead of closing it. Disable what it gates, or leave one of those spells enabled.");
-        }
-
         return prerequisites with
         {
-            AllOf = Keep(prerequisites.AllOf, disabledSpells, notes, $"{context} prerequisites"),
-            AnyOf = anyOf,
+            AllOf = Gate(prerequisites.AllOf, "allOf", disabledSpells, notes, problems, context),
+            AnyOf = Gate(prerequisites.AnyOf, "anyOf", disabledSpells, notes, problems, context),
         };
+    }
+
+    /// <summary>
+    /// One prerequisite list with its disabled spells pruned. A list that was not empty and comes back empty is
+    /// a problem, not a pruning: <c>TalentPrerequisites</c> reads both an empty <c>allOf</c> and an empty
+    /// <c>anyOf</c> as "no requirement", so emptying either one would unlock what it gates rather than close it.
+    /// </summary>
+    private static List<string> Gate(
+        IReadOnlyList<string> spellIds,
+        string which,
+        HashSet<string> disabledSpells,
+        ICollection<string>? notes,
+        ICollection<string> problems,
+        string context)
+    {
+        var kept = Keep(spellIds, disabledSpells, notes, $"{context} prerequisites");
+        if (spellIds.Count > 0 && kept.Count == 0)
+        {
+            problems.Add($"{context}: every spell of its '{which}' is disabled. An empty '{which}' is no requirement at all, so pruning it would unlock the node instead of closing it. Disable what it gates, or leave one of those spells enabled.");
+        }
+
+        return kept;
     }
 
     private static List<string> Keep(IReadOnlyList<string> spellIds, HashSet<string> disabledSpells, ICollection<string>? notes, string context) =>

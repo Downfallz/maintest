@@ -404,9 +404,9 @@ function spellEditor() {
     ['Energy cost', numberBox(draft, 'energyCost', { min: 0 })],
     ['Critical chance', numberBox(draft, 'criticalChance', { step: 0.01, min: 0 })],
     ['Target origin', picker(draft.targeting, 'origin', TARGET_ORIGINS)],
-    ['Target scope', picker(draft.targeting, 'scope', TARGET_SCOPES, { onChange: renderDetail })],
+    ['Target scope', picker(draft.targeting, 'scope', TARGET_SCOPES, { onChange: normalizeTargeting })],
     ['Max targets', draft.targeting.scope === 'Multi'
-      ? numberBox(draft.targeting, 'maxTargets', { min: 1 })
+      ? numberBox(draft.targeting, 'maxTargets', { min: 2 })
       : element('span', { className: 'muted', textContent: 'single target' })],
   ]));
 
@@ -426,6 +426,18 @@ function spellEditor() {
   redraw();
   effects.append(list);
   return element('div', {}, [card, effects]);
+}
+
+/** A single target takes no count; a multi target takes at least two, which is what the engine will accept. */
+function normalizeTargeting() {
+  const targeting = state.draft.targeting;
+  if (targeting.scope === 'Multi') {
+    if (typeof targeting.maxTargets !== 'number' || targeting.maxTargets < 2) targeting.maxTargets = 2;
+  } else {
+    delete targeting.maxTargets;
+  }
+
+  renderDetail();
 }
 
 function effectRow(effect, index, redraw) {
@@ -747,6 +759,7 @@ async function saveAsNextVersion() {
       kind: TABS[state.tab].kind,
       path: nextPath,
       document: { ...payload(), id: nextId },
+      create: true,
     });
     const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${parsed.name}`]: nextId };
     return { ...saved, ...(await call('/api/aliases', { aliases })) };
@@ -794,7 +807,7 @@ async function create() {
   const content = { ...template, id, name: name.trim() };
 
   const result = await act(`Creating ${id}`, async () => {
-    const saved = await call('/api/documents', { kind: TABS[state.tab].kind, path, document: content });
+    const saved = await call('/api/documents', { kind: TABS[state.tab].kind, path, document: content, create: true });
     const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id };
     return { ...saved, ...(await call('/api/aliases', { aliases })) };
   });
@@ -821,16 +834,29 @@ async function run() {
     seed: $('run-seed').value === '' ? null : Number($('run-seed').value),
   };
 
-  $('run-status').textContent = 'playing...';
+  // Opened here, on the click itself: a run outlasts the browser's user-activation window, so a window.open
+  // after the await is an unsolicited popup and gets blocked. The tab holds a line until there is a page for it.
+  const tab = window.open('', '_blank');
+  if (tab) {
+    tab.document.write('<title>Playing…</title><p style="font:14px system-ui">Playing the run…</p>');
+    // A document left open keeps the tab from navigating when the run finishes.
+    tab.document.close();
+  }
+
+  const status = $('run-status');
+  status.replaceChildren('playing...');
   const result = await act('Playing', () => call('/api/runs', request));
   if (!result) {
-    $('run-status').textContent = '';
+    status.replaceChildren();
+    if (tab) tab.close();
     return;
   }
 
-  $('run-status').textContent = `${result.id} (seed ${result.seed})`;
   clearBanner();
-  window.open(result.url, '_blank', 'noopener');
+  // The link is the reliable way in: a browser that refused the tab still leaves the author one click away.
+  const link = element('a', { href: result.url, target: '_blank', rel: 'noopener', textContent: `${result.id} (seed ${result.seed})` });
+  status.replaceChildren(link);
+  if (tab) tab.location.replace(result.url);
 }
 
 // ---------- wiring ----------

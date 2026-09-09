@@ -85,14 +85,24 @@ public sealed class ContentStore
     /// <summary>
     /// Writes one document to its file, creating the folders it needs. The JSON must parse into the DTO of its
     /// kind with no unknown members; what lands on disk is that same JSON, indented.
+    /// <para>
+    /// With <paramref name="overwrite"/> false the write is refused when the file is already there. Cutting a new
+    /// version and creating an item both name a file the author believes is new, and silently replacing the one
+    /// that is there would lose content the alias then stops pointing at.
+    /// </para>
     /// </summary>
-    public string Save(ContentKind kind, string relativePath, string json)
+    public string Save(ContentKind kind, string relativePath, string json, bool overwrite = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
         var path = Resolve(kind, relativePath);
 
         using var document = ParseOrThrow(json, relativePath);
         ValidateAgainstDto(kind, json, relativePath);
+
+        if (!overwrite && File.Exists(path))
+        {
+            throw new InvalidGameContentException($"'{relativePath}' already exists. Open it to change it, or pick another name.");
+        }
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         WriteAtomically(path, JsonSerializer.Serialize(document.RootElement, IndentedOptions));

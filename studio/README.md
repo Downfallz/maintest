@@ -26,7 +26,8 @@ Each item has the same four actions:
 - **Save** writes the document back to its own file, and reports what the data builder makes of the whole
   content afterwards.
 - **Save as next version** writes `:v2` next to `:v1` (`pummel.v1.json` → `pummel.v2.json`) and repoints the
-  unversioned alias at it, so everything referring to `spell:pummel` follows.
+  unversioned alias at it, so everything referring to `spell:pummel` follows. It refuses if that version is
+  already there rather than replacing it; open that one and **Save** to change it.
 - **Disable** / **Enable** flips `"enabled": false`. A disabled item leaves the build and every reference to
   it is pruned; the content stays on disk. Three cases are refused instead of pruned, because they would
   change a rule rather than remove content — `data/README.md` lists them.

@@ -28,9 +28,9 @@ Authored items gain one optional field, `"enabled": false`, which excludes an it
 schema. References to a disabled spell are pruned (from starting spells, talent nodes and prerequisites)
 rather than reported, because a disabled spell is content that does not exist for the engine. Pruning stops
 where removing a reference would change a rule instead of removing content: a creature whose talent tree is
-disabled, a creature left with no starting spell, and a talent node whose every `anyOf` spell is disabled are
-errors. The last one matters most — an empty `anyOf` means "no requirement", so pruning it would silently
-unlock the branch it was gating rather than close it. The flag is authoring-only: the builder clears it on
+disabled, a creature left with no starting spell, and a prerequisite gate whose every spell is disabled are
+errors. The last one matters most — an empty `allOf` and an empty `anyOf` both mean "no requirement", so
+pruning either to nothing would silently unlock the branch it was gating rather than close it. The flag is authoring-only: the builder clears it on
 the way into `game.schema.json`, so content where nothing is disabled hashes exactly as it did before.
 
 Binding to the loopback address keeps the studio off the network but not out of the browser: any page the
@@ -42,6 +42,8 @@ refuses any request whose `Sec-Fetch-Site` says it came from elsewhere.
 
 - Good: tuning content is a form and a button, the talent tree is visible as a tree, and the feedback loop
   (edit, build, run, look) is one page. Versioning a spell no longer means editing the alias map by hand.
+- Good: a write the page calls new is refused when the file is there, so cutting a version twice cannot replace
+  the version it cut the first time.
 - Good: the studio reuses the builder for validation and the viewer for results, so there is one definition of
   "valid content" and one definition of "what a run looks like".
 - Bad: one more host in the Cli, and a static page whose fields must follow the DTOs when they change.

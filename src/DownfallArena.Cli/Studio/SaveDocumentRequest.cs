@@ -12,4 +12,10 @@ internal sealed record SaveDocumentRequest
     public string Path { get; init; } = string.Empty;
 
     public JsonElement Document { get; init; }
+
+    /// <summary>
+    /// True when the page believes the file is new — cutting a version, or creating an item. The write is then
+    /// refused if something is already there, rather than replacing it.
+    /// </summary>
+    public bool Create { get; init; }
 }

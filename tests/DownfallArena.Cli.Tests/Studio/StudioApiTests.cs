@@ -84,6 +84,31 @@ public sealed class StudioApiTests : IDisposable
         Payload(response).GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("'kind' is required");
     }
 
+    /// <summary>The page sets `create` when it cuts a version or makes an item, so the host guards the file.</summary>
+    [Fact]
+    public async Task A_document_the_page_calls_new_does_not_replace_one_that_is_there()
+    {
+        var body = """
+            {
+              "kind": "Spell",
+              "path": "Spells/brawler/guard.v1.json",
+              "create": true,
+              "document": {
+                "id": "spell:guard:v1", "name": "Replaced", "spellType": "Defensive", "creatureClass": "Brawler",
+                "initiative": 2, "energyCost": 1, "criticalChance": 0,
+                "targeting": { "origin": "Self", "scope": "SingleTarget" },
+                "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
+              }
+            }
+            """;
+
+        var response = await _api.HandleAsync("POST", "/api/documents", body);
+
+        response.Status.ShouldBe(400);
+        Payload(response).GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("already exists");
+        File.ReadAllText(Path.Combine(_content.Path, "Spells", "brawler", "guard.v1.json")).ShouldContain("\"name\": \"Guard\"");
+    }
+
     [Fact]
     public async Task A_document_written_outside_the_folder_of_its_kind_is_refused()
     {

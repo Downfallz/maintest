@@ -130,6 +130,34 @@ public sealed class ContentStoreTests
         catalogue.Notes.ShouldContain("Disabled spell 'spell:guard:v1' is not in the build.");
     }
 
+    /// <summary>
+    /// Cutting a version and creating an item both name a file the author believes is new. Replacing what is
+    /// there would lose content, and the alias the same action repoints would stop naming it.
+    /// </summary>
+    [Fact]
+    public void A_write_that_claims_to_be_new_refuses_to_replace_what_is_there()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var store = new ContentStore(content.Path);
+        var path = Path.Combine(content.Path, "Spells", "brawler", "guard.v1.json");
+        var before = File.ReadAllText(path);
+
+        Should.Throw<InvalidGameContentException>(() => store.Save(ContentKind.Spell, "Spells/brawler/guard.v1.json", Guard, overwrite: false))
+            .Message.ShouldContain("already exists");
+
+        File.ReadAllText(path).ShouldBe(before);
+    }
+
+    [Fact]
+    public void A_write_that_claims_to_be_new_still_writes_a_file_that_is_not_there()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+
+        new ContentStore(content.Path)
+            .Save(ContentKind.Spell, "Spells/brawler/guard.v2.json", Guard.Replace("spell:guard:v1", "spell:guard:v2", StringComparison.Ordinal), overwrite: false)
+            .ShouldBe("Spells/brawler/guard.v2.json");
+    }
+
     [Fact]
     public void A_write_that_fails_leaves_no_temporary_file_behind()
     {

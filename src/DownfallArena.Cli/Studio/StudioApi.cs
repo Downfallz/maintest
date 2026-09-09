@@ -90,7 +90,7 @@ internal sealed class StudioApi : IDisposable
             throw new InvalidGameContentException("A document must be a JSON object.");
         }
 
-        var saved = _store.Save(KindOf(request.Kind), request.Path, request.Document.GetRawText());
+        var saved = _store.Save(KindOf(request.Kind), request.Path, request.Document.GetRawText(), overwrite: !request.Create);
         return Ok(new { saved, catalogue = _store.Read() });
     }
 
