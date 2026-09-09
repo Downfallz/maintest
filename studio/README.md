@@ -89,6 +89,21 @@ The evaluation opens on **Spells against outcomes**: per spell, the share of the
 went on to win. A spell both sides always have sits at one half and says nothing — that is the anchor, and the
 three starting spells land exactly there. Above it means the winning side was the one holding that spell.
 
+Sides alone is a blunt instrument, and deliberately so: one declaration is enough to count a side, so pushing a
+spell's cost through the roof leaves its sides untouched while nobody can afford to cast it any more. The
+columns beside it are the ones that move — **Cast** is what landed, **Resolve** the share of declarations that
+landed rather than fizzling, and then the damage, healing, stuns, bleeds and buffs those casts actually did.
+**Won-cast** is the same correlation weighed by use instead of by side; read it against the figure the page
+prints under the table, not against one half, because a winning side survives longer and so casts more of
+everything.
+
+A bleed is counted where it is applied, not where it hurts: its damage lands between rounds, and a condition
+does not remember the spell that put it there.
+
+Running **one match** gives the same numbers as a box score: the most valuable creature, damage dealt per
+creature, a row per creature with what it did and took, and a row per spell per side. That is the quickest
+read on a content change — one seed, one match, the whole picture.
+
 `random` against `random` is the right run for this, not a weakness: random play takes the agent's skill out,
 so what is left is the content. The page says as much, since the win rates of a self-play run are arithmetic.
 

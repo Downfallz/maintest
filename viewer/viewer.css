@@ -145,3 +145,13 @@ tr.thin td { opacity: 0.5; }
 .reading { color: var(--muted); }
 .reading dt { font-weight: 600; color: var(--ink); margin-top: 6px; }
 .reading dd { margin: 0 0 4px; }
+
+/* The box score of one match: a scoreboard, so the numbers line up and the side is never colour alone. */
+.card.wide .scroll { overflow-x: auto; }
+.card.wide table { min-width: 100%; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.dot.player1 { background: var(--player1); }
+.dot.player2 { background: var(--player2); }
+tr.dead td:first-child { text-decoration: line-through; opacity: 0.65; }
+.mvp .hero { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 10px; }
+.mvp .hero .name { font-size: 20px; font-weight: 600; }
