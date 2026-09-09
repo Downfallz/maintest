@@ -162,7 +162,7 @@ function adopt(result) {
 function banner(message, kind = 'info', problems = []) {
   const node = $('banner');
   node.hidden = false;
-  node.className = `banner ${kind === 'error' ? 'error' : kind === 'ok' ? 'ok' : ''}`;
+  node.className = kind === 'error' || kind === 'ok' ? `banner ${kind}` : 'banner';
   node.replaceChildren(element('div', { textContent: message }));
   if (problems.length) {
     node.append(element('ul', {}, problems.map(problem => element('li', { textContent: problem }))));

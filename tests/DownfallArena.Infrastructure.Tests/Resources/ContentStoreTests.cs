@@ -161,6 +161,88 @@ public sealed class ContentStoreTests
     }
 
     [Fact]
+    public void A_content_directory_that_is_not_there_says_so()
+    {
+        Should.Throw<DirectoryNotFoundException>(() => new ContentStore(Path.Combine(AppContext.BaseDirectory, "nowhere")).Read())
+            .Message.ShouldContain("does not exist");
+    }
+
+    [Fact]
+    public void Content_folders_that_are_not_there_read_as_empty_rather_than_throwing()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        Directory.Delete(Path.Combine(content.Path, GameSchemaBuilder.SpellsFolder), recursive: true);
+
+        var catalogue = new ContentStore(content.Path).Read();
+
+        catalogue.Spells.ShouldBeEmpty();
+        catalogue.Creatures.ShouldHaveSingleItem();
+        catalogue.Problems.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public void An_alias_map_that_does_not_parse_reads_as_no_aliases()
+    {
+        using var content = new ContentDirectory().WithValidContent().WithFile(GameSchemaBuilder.AliasesFile, "{ not json");
+
+        new ContentStore(content.Path).Read().Aliases.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Content_without_an_alias_map_reads_as_no_aliases()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        File.Delete(Path.Combine(content.Path, GameSchemaBuilder.AliasesFile));
+
+        new ContentStore(content.Path).Read().Aliases.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void An_empty_alias_or_target_is_refused_so_the_map_stays_resolvable()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var store = new ContentStore(content.Path);
+        var before = File.ReadAllText(Path.Combine(content.Path, GameSchemaBuilder.AliasesFile));
+
+        Should.Throw<InvalidGameContentException>(() => store.SaveAliases(new Dictionary<string, string>(StringComparer.Ordinal) { ["spell:strike"] = " " }));
+        Should.Throw<InvalidGameContentException>(() => store.SaveAliases(new Dictionary<string, string>(StringComparer.Ordinal) { [" "] = "spell:strike:v1" }));
+
+        File.ReadAllText(Path.Combine(content.Path, GameSchemaBuilder.AliasesFile)).ShouldBe(before);
+    }
+
+    [Fact]
+    public void An_empty_document_is_refused_rather_than_written_as_nothing()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+
+        Should.Throw<InvalidGameContentException>(() => new ContentStore(content.Path).Save(ContentKind.Spell, "Spells/empty.v1.json", "null"))
+            .Message.ShouldContain("empty");
+    }
+
+    [Theory]
+    [InlineData(ContentKind.Creature, "Creatures/other.v1.json")]
+    [InlineData(ContentKind.TalentTree, "TalentTrees/other.v1.json")]
+    public void Every_kind_is_written_into_its_own_folder(ContentKind kind, string path)
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var document = kind == ContentKind.Creature
+            ? """
+                {
+                  "id": "creature:other:v1", "name": "Other", "creatureClass": "Creature",
+                  "baseHealth": 10, "baseEnergy": 0, "baseDefense": 0, "baseInitiative": 3, "baseCriticalChance": 0,
+                  "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
+                }
+                """
+            : """
+                { "id": "talent-tree:other:v1", "name": "Other", "root": { "code": "Other", "name": "Other" } }
+                """;
+
+        new ContentStore(content.Path).Save(kind, path, document).ShouldBe(path);
+
+        File.Exists(Path.Combine(content.Path, path.Replace('/', Path.DirectorySeparatorChar))).ShouldBeTrue();
+    }
+
+    [Fact]
     public void Building_writes_the_consolidated_schema_where_it_is_told()
     {
         using var content = new ContentDirectory().WithValidContent();

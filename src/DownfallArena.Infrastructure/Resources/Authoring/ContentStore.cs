@@ -47,24 +47,29 @@ public sealed class ContentStore
             throw new DirectoryNotFoundException($"Content directory '{_root}' does not exist.");
         }
 
-        var catalogue = new ContentCatalogue
+        var notes = new List<string>();
+        string? contentHash = null;
+        IReadOnlyList<string> problems = [];
+        try
+        {
+            contentHash = GameSchemaBuilder.Build(_root, notes).ContentHash;
+        }
+        catch (InvalidGameContentException exception)
+        {
+            problems = exception.Problems;
+        }
+
+        return new ContentCatalogue
         {
             Directory = _root,
             Creatures = ReadAll<CreatureDefinitionDto>(ContentKind.Creature),
             Spells = ReadAll<SpellDto>(ContentKind.Spell),
             TalentTrees = ReadAll<TalentTreeDto>(ContentKind.TalentTree),
             Aliases = ReadAliases(),
+            ContentHash = contentHash,
+            Problems = problems,
+            Notes = notes,
         };
-
-        var notes = new List<string>();
-        try
-        {
-            return catalogue with { ContentHash = GameSchemaBuilder.Build(_root, notes).ContentHash, Notes = notes };
-        }
-        catch (InvalidGameContentException exception)
-        {
-            return catalogue with { Problems = [.. exception.Problems], Notes = notes };
-        }
     }
 
     /// <summary>

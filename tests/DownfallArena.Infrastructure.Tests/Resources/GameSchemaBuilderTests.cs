@@ -288,6 +288,62 @@ public sealed class GameSchemaBuilderTests
             .Problems.ShouldContain(problem => problem.Contains("every starting spell is disabled", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// The switch reaches a node's own gate, a spell's gate inside a node, and every depth of the tree, not just
+    /// the spell list of the node it is written next to.
+    /// </summary>
+    [Fact]
+    public void A_disable_reaches_every_prerequisite_at_every_depth()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard)
+            .WithFile("TalentTrees/base.v1.json", """
+                {
+                  "id": "talent-tree:base:v1", "name": "Base",
+                  "root": {
+                    "code": "Base", "name": "Base",
+                    "spells": [ { "id": "spell:strike" } ],
+                    "children": [
+                      {
+                        "code": "Brawler", "name": "Brawler",
+                        "prerequisites": { "allOf": ["spell:strike", "spell:guard"], "anyOf": [] },
+                        "spells": [ { "id": "spell:strike", "prerequisites": { "allOf": ["spell:guard"], "anyOf": [] } } ],
+                        "children": [
+                          {
+                            "code": "Deep", "name": "Deep",
+                            "prerequisites": { "allOf": ["spell:guard"], "anyOf": ["spell:strike"] },
+                            "spells": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+                """);
+
+        var root = GameSchemaBuilder.Build(content.Path).TalentTrees.Single().Root!;
+
+        var brawler = root.Children.Single();
+        brawler.Prerequisites!.AllOf.ShouldBe(["spell:strike:v1"]);
+        brawler.Spells.Single().Prerequisites!.AllOf.ShouldBeEmpty();
+        var deep = brawler.Children.Single();
+        deep.Prerequisites!.AllOf.ShouldBeEmpty();
+        deep.Prerequisites.AnyOf.ShouldBe(["spell:strike:v1"]);
+    }
+
+    /// <summary>A node with no prerequisites block at all keeps none, rather than gaining an empty one.</summary>
+    [Fact]
+    public void A_node_without_prerequisites_stays_without_them()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", DisabledGuard);
+
+        var root = GameSchemaBuilder.Build(content.Path).TalentTrees.Single().Root!;
+
+        root.Prerequisites.ShouldBeNull();
+        root.Spells.Single().Prerequisites.ShouldBeNull();
+    }
+
     [Fact]
     public void Saying_an_item_is_enabled_does_not_move_the_content_hash()
     {

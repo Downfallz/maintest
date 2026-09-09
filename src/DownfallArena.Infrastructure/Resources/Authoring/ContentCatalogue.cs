@@ -3,8 +3,12 @@ namespace DownfallArena.Infrastructure.Resources.Authoring;
 /// <summary>
 /// Everything authored under one content directory, plus what the data builder makes of it: the content hash
 /// when it builds, the problems when it does not, and the notes about what the <c>enabled</c> switch left out.
+/// <para>
+/// A class rather than a record: it is read once and serialised, never copied or compared, so value equality
+/// would only be weight nothing exercises.
+/// </para>
 /// </summary>
-public sealed record ContentCatalogue
+public sealed class ContentCatalogue
 {
     public required string Directory { get; init; }
 

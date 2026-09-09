@@ -148,25 +148,4 @@ internal sealed class StudioApi : IDisposable
 
     private static IReadOnlyList<string> Problems(Exception exception) =>
         exception is InvalidGameContentException invalid ? invalid.Problems : [];
-
-    private sealed record SaveDocumentRequest
-    {
-        public ContentKind? Kind { get; init; }
-
-        public string Path { get; init; } = string.Empty;
-
-        public JsonElement Document { get; init; }
-    }
-
-    private sealed record DeleteDocumentRequest
-    {
-        public ContentKind? Kind { get; init; }
-
-        public string Path { get; init; } = string.Empty;
-    }
-
-    private sealed record SaveAliasesRequest
-    {
-        public IReadOnlyDictionary<string, string> Aliases { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
-    }
 }
