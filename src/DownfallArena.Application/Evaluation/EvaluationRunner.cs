@@ -25,6 +25,14 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
         var pairs = scenario.Seeds.Select((seed, index) => new SeedPair(seed, first.Results[index], second.Results[index])).ToList();
         var all = first.Results.Concat(second.Results).ToList();
 
+        // In self-play the second batch is a replay of the first, so its sides are the same sides again.
+        // Counting them would double the sample the spell table's confidence rests on without adding a
+        // single independent observation.
+        var selfPlay = string.Equals(scenario.AgentA.ToString(), scenario.AgentB.ToString(), StringComparison.Ordinal);
+        List<(IReadOnlyList<MatchResult> Results, IntentCounter Counter)> counted = selfPlay
+            ? [(first.Results, aFirst)]
+            : [(first.Results, aFirst), (second.Results, bFirst)];
+
         return new EvaluationResult
         {
             Stamp = stamp,
@@ -34,8 +42,60 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
             Draws = all.Count(result => result.Outcome.IsDraw),
             AverageRounds = all.Average(result => result.Rounds),
             RoundCapShare = (double)all.Count(result => result.Outcome.Reason == MatchEndReason.RoundCap) / all.Count,
+            SelfPlay = selfPlay,
+            SpellOutcomes = SpellOutcomes(counted),
             Pairs = pairs,
         };
+    }
+
+    /// <summary>
+    /// Every spell against the outcomes of the sides that declared it. This is the content signal rather than
+    /// the agent one: it says which spells the winning side was holding, which is what tuning a number moves.
+    /// Each batch brings its own results and the counter that watched them, so a batch that adds no
+    /// independent sides is simply not passed in.
+    /// </summary>
+    private static List<SpellOutcome> SpellOutcomes(IReadOnlyList<(IReadOnlyList<MatchResult> Results, IntentCounter Counter)> counted)
+    {
+        var outcomes = counted
+            .SelectMany(batch => batch.Results)
+            .ToDictionary(result => result.MatchId, result => result.Outcome);
+        var tally = new Dictionary<string, (int Intents, int Sides, int Wins, int Losses, int Draws)>(StringComparer.Ordinal);
+
+        foreach (var (match, slot, usage) in counted.SelectMany(batch => batch.Counter.Sides()))
+        {
+            if (!outcomes.TryGetValue(match, out var outcome))
+            {
+                continue;
+            }
+
+            foreach (var (spell, intents) in usage)
+            {
+                var current = tally.GetValueOrDefault(spell);
+                tally[spell] = (
+                    current.Intents + intents,
+                    current.Sides + 1,
+                    current.Wins + (!outcome.IsDraw && outcome.Winner == slot ? 1 : 0),
+                    current.Losses + (!outcome.IsDraw && outcome.Winner != slot ? 1 : 0),
+                    current.Draws + (outcome.IsDraw ? 1 : 0));
+            }
+        }
+
+        return
+        [
+            .. tally
+                .Select(entry => new SpellOutcome
+                {
+                    Spell = entry.Key,
+                    Intents = entry.Value.Intents,
+                    Sides = entry.Value.Sides,
+                    Wins = entry.Value.Wins,
+                    Losses = entry.Value.Losses,
+                    Draws = entry.Value.Draws,
+                })
+                .OrderByDescending(outcome => outcome.Score)
+                .ThenByDescending(outcome => outcome.Sides)
+                .ThenBy(outcome => outcome.Spell, StringComparer.Ordinal),
+        ];
     }
 
     private static SimulationScenario Batch(EvaluationScenario scenario, AgentSpec player1, AgentSpec player2) => new()

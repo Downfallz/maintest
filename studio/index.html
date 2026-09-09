@@ -27,18 +27,13 @@
         </select>
       </label>
       <label>Player 1
-        <input id="run-p1" list="agents" value="random">
+        <select id="run-p1"></select>
+        <input id="run-p1-path" class="agent-path" hidden aria-label="Player 1 agent spec">
       </label>
       <label>Player 2
-        <input id="run-p2" list="agents" value="random">
+        <select id="run-p2"></select>
+        <input id="run-p2-path" class="agent-path" hidden aria-label="Player 2 agent spec">
       </label>
-      <datalist id="agents">
-        <option value="random"></option>
-        <option value="greedy"></option>
-        <option value="explore:0.1"></option>
-        <option value="heuristic:learning/weights.json"></option>
-        <option value="policy:models/clone/v1/policy.json"></option>
-      </datalist>
       <label>Matches
         <input id="run-matches" type="number" min="1" max="2000" value="20">
       </label>

@@ -828,8 +828,8 @@ async function build() {
 async function run() {
   const request = {
     mode: $('run-mode').value,
-    player1: $('run-p1').value.trim() || 'random',
-    player2: $('run-p2').value.trim() || 'random',
+    player1: agentSpec('p1'),
+    player2: agentSpec('p2'),
     matches: Number($('run-matches').value) || 20,
     seed: $('run-seed').value === '' ? null : Number($('run-seed').value),
   };
@@ -883,6 +883,37 @@ for (const tab of document.querySelectorAll('.tab')) {
   });
 }
 
+// The agents the engine can seat (docs/learning/agents.md). The two that read a file keep a box for its path,
+// so picking one does not mean remembering the spec syntax.
+const AGENTS = [
+  { value: 'random', label: 'Random — picks uniformly' },
+  { value: 'greedy', label: 'Greedy — one-step lookahead, deterministic' },
+  { value: 'explore:0.2', label: 'Explore 20% — greedy, one action in five at random' },
+  { value: 'heuristic:', label: 'Heuristic — greedy with weights from a file', path: 'learning/weights/greedy.json' },
+  { value: 'policy:', label: 'Policy — a trained policy from a file', path: 'models/clone/v1/policy.json' },
+];
+
+/** Fills one agent picker, and shows the path box only for the kinds that read a file. */
+function fillAgentPicker(slot) {
+  const select = $(`run-${slot}`);
+  const path = $(`run-${slot}-path`);
+  select.replaceChildren(...AGENTS.map(agent => element('option', { value: agent.value, textContent: agent.label })));
+  const sync = () => {
+    const agent = AGENTS.find(candidate => candidate.value === select.value);
+    path.hidden = !agent?.path;
+    if (agent?.path && !path.value) path.value = agent.path;
+  };
+
+  select.addEventListener('change', sync);
+  sync();
+}
+
+/** The agent spec the run panel is asking for: the kind, plus the file path when the kind reads one. */
+function agentSpec(slot) {
+  const value = $(`run-${slot}`).value;
+  return value.endsWith(':') ? value + $(`run-${slot}-path`).value.trim() : value;
+}
+
 /** How many seeds only means something for an evaluation; one match is one match. */
 function syncRunMode() {
   const evaluation = $('run-mode').value === 'evaluation';
@@ -892,6 +923,8 @@ function syncRunMode() {
 
 $('run-mode').addEventListener('change', syncRunMode);
 syncRunMode();
+fillAgentPicker('p1');
+fillAgentPicker('p2');
 
 $('search').addEventListener('input', renderNav);
 $('new').addEventListener('click', create);

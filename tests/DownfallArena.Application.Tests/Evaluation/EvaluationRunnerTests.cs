@@ -82,6 +82,94 @@ public sealed class EvaluationRunnerTests
         await Should.ThrowAsync<ArgumentOutOfRangeException>(() => runner.RunAsync(Scenario([]), Stamp, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// A spell every side declares sits at one half by construction: it is on the winning side and the losing
+    /// side of every match. That is the reading the table rests on — one half means no signal.
+    /// </summary>
+    [Fact]
+    public async Task A_spell_every_side_declares_scores_one_half()
+    {
+        var evaluation = await EvaluateAsync([1, 2, 3, 4], withCombat: true);
+
+        var everywhere = evaluation.SpellOutcomes.Where(outcome => outcome.Sides == SidesOf(evaluation)).ToList();
+
+        everywhere.ShouldNotBeEmpty("a starting spell is declared by every side");
+        everywhere.ShouldAllBe(outcome => outcome.Score == 0.5);
+    }
+
+    /// <summary>
+    /// In self-play the mirrored pass replays the same matches, so counting both would double every side
+    /// without adding one independent observation — and the sample is what the table's confidence rests on.
+    /// </summary>
+    [Fact]
+    public async Task Self_play_counts_the_replayed_matches_once()
+    {
+        int[] seeds = [1, 2, 3, 4];
+
+        var evaluation = await EvaluateAsync(seeds, withCombat: true);
+
+        evaluation.SelfPlay.ShouldBeTrue();
+        evaluation.Matches.ShouldBe(seeds.Length * 2, "both batches are played");
+        var everywhere = evaluation.SpellOutcomes.Where(outcome => outcome.Score == 0.5 && outcome.Sides == SidesOf(evaluation)).ToList();
+        everywhere.ShouldNotBeEmpty();
+        everywhere.ShouldAllBe(outcome => outcome.Sides == seeds.Length * 2, "one side per player of each seed, not of each replay");
+        evaluation.SpellOutcomes.ShouldAllBe(outcome => outcome.Sides <= seeds.Length * 2);
+    }
+
+    /// <summary>The most sides a spell can be declared by: one per player of each independent match.</summary>
+    private static int SidesOf(EvaluationResult evaluation) =>
+        evaluation.SelfPlay ? evaluation.Matches : evaluation.Matches * 2;
+
+    [Fact]
+    public async Task Every_spell_outcome_accounts_for_each_side_that_declared_it()
+    {
+        var evaluation = await EvaluateAsync([5, 6, 7], withCombat: true);
+
+        evaluation.SpellOutcomes.ShouldNotBeEmpty();
+        foreach (var outcome in evaluation.SpellOutcomes)
+        {
+            outcome.Sides.ShouldBe(outcome.Wins + outcome.Losses + outcome.Draws);
+            outcome.Sides.ShouldBeGreaterThan(0);
+            outcome.Intents.ShouldBeGreaterThanOrEqualTo(outcome.Sides, "a side that declared it cast it at least once");
+            outcome.Score.ShouldBeInRange(0, 1);
+            outcome.IntentsPerSide.ShouldBe((double)outcome.Intents / outcome.Sides, 1e-9);
+        }
+
+        evaluation.SpellOutcomes.Select(outcome => outcome.Score).ShouldBeInOrder(SortDirection.Descending);
+    }
+
+    /// <summary>
+    /// The agent reports count every match played; the spell table counts every match that is evidence. In
+    /// self-play those differ by exactly the replayed batch, which is the whole point of dropping it.
+    /// </summary>
+    [Fact]
+    public async Task The_spell_table_counts_the_intents_of_the_matches_it_treats_as_evidence()
+    {
+        var evaluation = await EvaluateAsync([8, 9], withCombat: true);
+
+        var fromReports = evaluation.AgentA.SpellUsage.Values.Sum() + evaluation.AgentB.SpellUsage.Values.Sum();
+        var fromTable = evaluation.SpellOutcomes.Sum(outcome => outcome.Intents);
+
+        evaluation.SelfPlay.ShouldBeTrue();
+        fromTable.ShouldBe(fromReports / 2, "self-play replays each match once more, and the table counts it once");
+        (fromReports % 2).ShouldBe(0, "the replay declares exactly what the first pass declared");
+    }
+
+    /// <summary>
+    /// Two agents of the same spec are seeded alike, so the mirrored pass replays the same matches. The result
+    /// says so, because the even split that follows is arithmetic rather than a measurement.
+    /// </summary>
+    [Fact]
+    public async Task An_evaluation_of_an_agent_against_itself_is_flagged_as_self_play()
+    {
+        var evaluation = await EvaluateAsync([1, 2, 3], withCombat: true);
+
+        evaluation.SelfPlay.ShouldBeTrue();
+        evaluation.AgentA.WinRate.Mean.ShouldBe(0.5, 1e-9);
+        evaluation.AgentB.WinRate.Mean.ShouldBe(0.5, 1e-9);
+        evaluation.AgentA.SpellUsage.ShouldBe(evaluation.AgentB.SpellUsage);
+    }
+
     private static async Task<EvaluationResult> EvaluateAsync(IReadOnlyList<int> seeds, bool withCombat)
     {
         var store = new MatchStore();

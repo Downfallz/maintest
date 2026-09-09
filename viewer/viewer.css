@@ -119,3 +119,29 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .outcome { font-weight: 600; }
 .outcome.player1 { color: var(--player1); }
 .outcome.player2 { color: var(--player2); }
+
+/* Spells against outcomes: a bar diverging from the "no signal" half, blue above it and amber below. Green
+   and red would read as the obvious pair but fail colour-vision separation (deutan delta E 5.0); these two
+   are the page's own accent and warn, and pass. The share is printed beside every bar, so the colour is
+   never what carries the reading. */
+.share { display: flex; align-items: center; gap: 8px; }
+.share .track { position: relative; flex: 1; min-width: 120px; height: 12px; background: #e5e7eb; border-radius: 3px; }
+.share .track::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); opacity: 0.55; }
+.share .fill { position: absolute; top: 0; bottom: 0; background: var(--accent); }
+.share .fill.above { left: 50%; border-radius: 0 3px 3px 0; }
+.share .fill.below { right: 50%; border-radius: 3px 0 0 3px; background: var(--warn); }
+.share .value { min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+tr.thin td { opacity: 0.5; }
+
+.legend { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.legend .key { display: inline-flex; align-items: center; gap: 5px; }
+.legend .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend .swatch.above { background: var(--accent); }
+.legend .swatch.below { background: var(--warn); }
+
+.note { border-left: 3px solid var(--warn); background: #fffbeb; padding: 10px 12px; border-radius: 0 6px 6px 0; margin-bottom: 16px; }
+.note h3 { margin: 0 0 4px; font-size: 13px; }
+.note p { margin: 0; }
+.reading { color: var(--muted); }
+.reading dt { font-weight: 600; color: var(--ink); margin-top: 6px; }
+.reading dd { margin: 0 0 4px; }
