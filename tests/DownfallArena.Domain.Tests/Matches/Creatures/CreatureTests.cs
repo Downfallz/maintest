@@ -126,6 +126,23 @@ public sealed class CreatureTests
         creature.CurrentInitiative.ShouldBe(Initiative.Of(10));
     }
 
+    /// <summary>
+    /// ADR 0017: a definition's baseInitiative is authored knowing its starting kit, so the kit does not pay
+    /// again. Only an unlock taken during the match raises the base.
+    /// </summary>
+    [Fact]
+    public void A_spell_the_creature_starts_with_raises_no_initiative()
+    {
+        var guard = Content.SpellAtInitiative("spell:guard:v1", 2);
+        var creature = Creature.Spawn(CreatureId.From(1), PlayerSlot.Player1, Content.Creature("creature:main:v1", "spell:guard:v1"));
+
+        creature.KnowsSpell(guard.Id).ShouldBeTrue();
+        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
+
+        creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
+        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
+    }
+
     [Fact]
     public void A_refused_unlock_raises_no_initiative()
     {

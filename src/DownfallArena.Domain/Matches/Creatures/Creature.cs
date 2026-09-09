@@ -33,7 +33,11 @@ public sealed class Creature : Entity<CreatureId>
 
     public string Name => Definition.Name;
 
-    public CreatureStats BaseStats => Definition.BaseStats;
+    /// <summary>
+    /// The definition's block. Private: its Initiative is the value this creature spawned with, not the one it
+    /// carries — that is <see cref="BaseInitiative"/> — and the rest reaches callers through the named values.
+    /// </summary>
+    private CreatureStats BaseStats => Definition.BaseStats;
 
     public Health Health { get; private set; }
 

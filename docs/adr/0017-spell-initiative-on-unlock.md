@@ -70,4 +70,10 @@ initiative, so a pick taken for tempo is priced rather than ignored.
   the `initiative` weight, its default and its name list.
 - `viewer/index.html` and `studio/studio.js`: the viewer shows "I 4 of 8" when a debuff pulls a Creature off
   its base, and the studio's spell field is labelled Spell initiative.
+- Not renamed: the glossary calls the Spell's stat *Spell initiative*, and the code leaves it
+  `SpellStats.Initiative`. The type already carries the qualifier — the same class holds `CriticalChance` for
+  the glossary's *Critical chance bonus* — so `SpellStats.SpellInitiative` would stutter and would have to be
+  matched by a `SpellCriticalChanceBonus` to stay consistent. The Creature's side is where the ambiguity was,
+  and there the names are explicit: `BaseInitiative` and `CurrentInitiative`, with the definition's block now
+  private.
 - `benchmarks/`: a new digest for the new outcomes, with an entry in `docs/learning/journal.md`.
