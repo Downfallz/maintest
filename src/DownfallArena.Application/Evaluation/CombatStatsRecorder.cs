@@ -12,6 +12,10 @@ namespace DownfallArena.Application.Evaluation;
 /// Counts, per match and per player, the actions that resolved, the ones that fizzled, and the critical hits,
 /// from the combat events; and the same per spell, with what each spell's casts added up to. Registered as a
 /// listener wherever an evaluation reports fizzle and crit rates or what a spell did.
+/// <para>
+/// The effect totals are what the board took. The counts around them -- resolved, fizzled, critical -- are
+/// what the roll said, so a critical a target's defense absorbs entirely is a critical that dealt nothing.
+/// </para>
 /// </summary>
 public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventListener<CombatActionResolved>
 {
@@ -57,7 +61,7 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
         }
 
         var spell = resolution.Action.Spell.Value;
-        spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(Effects(resolution, domainEvent.Applied));
+        spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(Effects(resolution, domainEvent.AppliedOutcomes));
     }
 
     /// <summary>

@@ -220,9 +220,13 @@ public sealed class EvaluationRunnerTests
         evaluation.SpellOutcomes.ShouldAllBe(outcome => outcome.Sides > 0, "the sides are counted without it");
     }
 
-    /// <summary>Damage is what landed on a creature, so it can never exceed what the whole match took.</summary>
+    /// <summary>
+    /// That the credited damage is the damage that landed is pinned where it is decided, in
+    /// <see cref="CombatStatsRecorderTests"/>; a run where nothing overkills totals the same either way. What
+    /// is worth checking here is that the per-cast figure is the total divided by the casts it came from.
+    /// </summary>
     [Fact]
-    public async Task The_damage_a_spell_is_credited_with_is_damage_that_landed()
+    public async Task Damage_per_cast_is_the_damage_over_the_casts_it_came_from()
     {
         var evaluation = await EvaluateAsync([5, 6, 7], withCombat: true);
 

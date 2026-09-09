@@ -95,6 +95,22 @@ public sealed class CombatExecutionTests
         applied.ShouldBeEmpty("a dead creature takes no damage, no healing, no energy and no condition");
     }
 
+    /// <summary>The third way an outcome can change nothing, and the only one that needs a live target.</summary>
+    [Fact]
+    public void A_condition_the_stacking_policy_refuses_is_left_out_of_what_was_applied()
+    {
+        var creatures = Arena.FourCreatures();
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Wraith]);
+        var stun = new ConditionOutcome(Arena.Wraith, Stun.For(1, StackingPolicy.Ignore));
+        var resolution = CombatResolution.Resolved(action, [Arena.Wraith], [], false, Energy.Of(0), [stun]);
+
+        CombatExecution.Apply(resolution, creatures).ShouldHaveSingleItem();
+        var again = CombatExecution.Apply(resolution, creatures);
+
+        Arena.Find(creatures, Arena.Wraith).IsAlive.ShouldBeTrue("the target is refusing the condition, not dead");
+        again.ShouldBeEmpty("the stun is already there and this one ignores rather than stacks");
+    }
+
     [Fact]
     public void What_lands_in_full_comes_back_unchanged()
     {

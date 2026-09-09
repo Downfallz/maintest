@@ -671,7 +671,7 @@
      * back to the computed outcomes, which is what it knew.
      */
     function landed(entry) {
-      return entry.applied || entry.resolution.outcomes || [];
+      return entry.appliedOutcomes || entry.resolution.outcomes || [];
     }
 
     function creditResolution(rows, spells, actor, entry) {

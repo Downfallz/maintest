@@ -275,7 +275,7 @@ public sealed class Match : AggregateRoot<MatchId>
         RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied));
         Drive();
 
-        return Result.Success(new CombatStep(round.Id, resolution, round.IsFinalized, State == MatchState.Ended));
+        return Result.Success(new CombatStep(round.Id, resolution, applied, round.IsFinalized, State == MatchState.Ended));
     }
 
     private Round ActiveRound =>
