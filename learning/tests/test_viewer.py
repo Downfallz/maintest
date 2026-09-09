@@ -87,6 +87,16 @@ def test_the_page_is_written_next_to_the_report(tmp_path: Path) -> None:
     assert path.stat().st_size > 10_000
 
 
+def test_the_page_is_refused_when_the_run_directory_is_not_one(tmp_path: Path) -> None:
+    file_not_directory = tmp_path / "premier.txt"
+    file_not_directory.write_text("not a run")
+
+    with pytest.raises(NotADirectoryError, match="not a directory"):
+        write_run_page(file_not_directory)
+    with pytest.raises(NotADirectoryError, match="not a directory"):
+        write_run_page(tmp_path / "nowhere")
+
+
 def test_a_missing_or_foreign_viewer_is_refused(tmp_path: Path) -> None:
     run = a_run_with_everything(tmp_path)
     foreign = tmp_path / "viewer"

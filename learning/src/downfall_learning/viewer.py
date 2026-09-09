@@ -71,6 +71,20 @@ def render_run_page(run: Path, viewer: Path | None = None) -> str:
 
 
 def write_run_page(run: Path, viewer: Path | None = None) -> Path:
-    path = Path(run) / RUN_PAGE
-    path.write_text(render_run_page(run, viewer), encoding="utf-8")
+    """Writes the page as ``<run>/report.html``, refusing a run directory that does not exist.
+
+    The name is this module's own constant and the directory has to exist already (the report was just read
+    from it), so the written path is always one file inside a directory the operator named on their own
+    command line; the containment check states that rather than trusting it.
+    """
+    directory = Path(run).resolve()
+    if not directory.is_dir():
+        raise NotADirectoryError(f"'{run}' is not a directory to write {RUN_PAGE} into.")
+    path = (directory / RUN_PAGE).resolve()
+    if path.parent != directory:
+        raise ValueError(f"'{path}' would fall outside '{directory}'.")
+    page = render_run_page(directory, viewer)
+    # A local developer tool writing a fixed file name into the run directory the operator named; the path
+    # is resolved and checked to stay inside it above, so the taint the analyzer sees carries no risk.
+    path.write_text(page, encoding="utf-8")  # NOSONAR
     return path
