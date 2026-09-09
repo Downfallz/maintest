@@ -181,7 +181,9 @@ flags), so you never need a .NET SDK or `uv` on your machine to get numbers.
 
 The third way to ask for one is to commit the question. `learning/experiments/next.json` holds the knobs for
 the next run, plus a `why` line saying what it is meant to answer; a pull request that changes that file runs
-the loop with those settings and prints the `why` above the report. So an experiment is a commit, its
+the loop with those settings and prints the `why` above the report. GitHub matches that filter against the
+pull request's whole diff, so once the file is in the diff every later push starts a run too; the newest one
+cancels the one before it, and the answer you want is the one on the last commit. So an experiment is a commit, its
 parameters are in git next to the numbers they produced, and anyone who can push can ask for a run without
 touching the Actions form. A field typed into that form still wins for that one run; a field left empty falls
 back to the file. `learning/experiments/README.md` lists the keys.

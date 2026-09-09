@@ -44,10 +44,13 @@ on:
 permissions:
   contents: read
 
-# One loop at a time: a second run on the same content would only repeat the first.
+# One loop at a time per branch, and the newest push wins. A pull request's path filter matches the whole
+# diff, not the last commit, so every push to a branch that touches the experiment file starts a run; without
+# this they would queue up behind each other, each holding a runner for a quarter of an hour to answer a
+# question a later commit has already changed.
 concurrency:
   group: iterate-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   DOTNET_NOLOGO: true
