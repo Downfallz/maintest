@@ -38,7 +38,7 @@ on:
 permissions:
   contents: read
 
-# One loop at a time: a second run would only repeat the first, and each holds a runner for a long while.
+# One loop at a time: a second run on the same content would only repeat the first.
 concurrency:
   group: iterate-${{ github.ref }}
   cancel-in-progress: false
@@ -93,14 +93,18 @@ jobs:
           if [[ "$EXPLORE" != "off" ]]; then
             arguments+=(--explore "$EXPLORE")
           fi
-          scripts/iterate.sh "${arguments[@]}" 2>&1 | tee iterate.log
+          # The log stays out of the checkout: an untracked file there would make the build stamp the engine
+          # version as dirty, and that stamp is what tells two runs apart.
+          scripts/iterate.sh "${arguments[@]}" 2>&1 | tee "$RUNNER_TEMP/iterate.log"
 
-      - name: Put the report in the run summary
+      - name: Put the report in the run summary and the log in the run
         if: always()
         run: |
-          excerpt="$(sed -n '/^== 6\./,$p' iterate.log 2>/dev/null || true)"
+          mkdir -p "runs/$RUN_ID"
+          cp "$RUNNER_TEMP/iterate.log" "runs/$RUN_ID/iterate.log" 2>/dev/null || true
+          excerpt="$(sed -n '/^== 6\./,$p' "$RUNNER_TEMP/iterate.log" 2>/dev/null || true)"
           if [[ -z "$excerpt" ]]; then
-            excerpt="$(tail -n 60 iterate.log 2>/dev/null || echo 'The loop wrote nothing.')"
+            excerpt="$(tail -n 60 "$RUNNER_TEMP/iterate.log" 2>/dev/null || echo 'The loop wrote nothing.')"
           fi
           {
             echo "## Learning loop \`$RUN_ID\`"
@@ -119,7 +123,7 @@ jobs:
         with:
           name: run-${{ github.run_number }}
           path: |
-            iterate.log
+            runs/ci-${{ github.run_number }}/iterate.log
             runs/ci-${{ github.run_number }}/report.html
             runs/ci-${{ github.run_number }}/report.json
             runs/ci-${{ github.run_number }}/evaluations
