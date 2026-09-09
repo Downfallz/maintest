@@ -170,6 +170,70 @@ public sealed class EvaluationRunnerTests
         evaluation.AgentA.SpellUsage.ShouldBe(evaluation.AgentB.SpellUsage);
     }
 
+    [Fact]
+    public async Task What_a_spell_did_is_counted_beside_how_often_it_was_chosen()
+    {
+        var evaluation = await EvaluateAsync([5, 6, 7], withCombat: true);
+
+        foreach (var outcome in evaluation.SpellOutcomes)
+        {
+            (outcome.Resolved + outcome.Fizzled).ShouldBeLessThanOrEqualTo(
+                outcome.Intents,
+                "a declaration can go unresolved when the creature dies before acting, never the other way round");
+            outcome.ResolvedWhenWon.ShouldBeLessThanOrEqualTo(outcome.Resolved);
+            outcome.ResolveRate.ShouldBeInRange(0, 1);
+            outcome.CastShareWhenWon.ShouldBeInRange(0, 1);
+        }
+
+        evaluation.SpellOutcomes.Sum(outcome => outcome.Resolved).ShouldBeGreaterThan(0, "the run resolved something");
+        evaluation.SpellOutcomes.Sum(outcome => outcome.Damage).ShouldBeGreaterThan(0, "and something landed");
+
+        // The test content's Slam stuns, Rend bleeds and Guard buffs, so a run that casts them proves each
+        // condition kind reaches its own column rather than all of them landing in one.
+        var conditions = evaluation.SpellOutcomes.Sum(outcome => outcome.Stuns + outcome.Bleeds + outcome.Buffs);
+        conditions.ShouldBeGreaterThan(0, "the content's conditions are counted, not dropped");
+    }
+
+    /// <summary>
+    /// The table's totals are the combat recorder's totals for the matches it treats as evidence, which is what
+    /// makes "what this spell did" the same quantity the fizzle rate is computed from.
+    /// </summary>
+    [Fact]
+    public async Task The_casts_the_table_counts_are_the_casts_the_agent_reports()
+    {
+        var evaluation = await EvaluateAsync([5, 6, 7], withCombat: true);
+
+        var fromTable = evaluation.SpellOutcomes.Sum(outcome => outcome.Resolved + outcome.Fizzled);
+        var fromReports = evaluation.AgentA.Actions + evaluation.AgentB.Actions;
+
+        evaluation.SelfPlay.ShouldBeTrue();
+        fromTable.ShouldBe(fromReports / 2, "self-play replays each match once more, and the table counts it once");
+    }
+
+    [Fact]
+    public async Task An_evaluation_without_a_combat_recorder_reports_no_effects_rather_than_wrong_ones()
+    {
+        var evaluation = await EvaluateAsync([5, 6], withCombat: false);
+
+        evaluation.SpellOutcomes.ShouldNotBeEmpty();
+        evaluation.SpellOutcomes.ShouldAllBe(outcome => outcome.Resolved == 0 && outcome.Damage == 0);
+        evaluation.SpellOutcomes.ShouldAllBe(outcome => outcome.Sides > 0, "the sides are counted without it");
+    }
+
+    /// <summary>Damage is what landed on a creature, so it can never exceed what the whole match took.</summary>
+    [Fact]
+    public async Task The_damage_a_spell_is_credited_with_is_damage_that_landed()
+    {
+        var evaluation = await EvaluateAsync([5, 6, 7], withCombat: true);
+
+        foreach (var outcome in evaluation.SpellOutcomes.Where(outcome => outcome.Resolved > 0))
+        {
+            outcome.DamagePerCast.ShouldBe((double)outcome.Damage / outcome.Resolved, 1e-9);
+        }
+
+        evaluation.SpellOutcomes.ShouldAllBe(outcome => outcome.Damage >= 0 && outcome.Healing >= 0);
+    }
+
     private static async Task<EvaluationResult> EvaluateAsync(IReadOnlyList<int> seeds, bool withCombat)
     {
         var store = new MatchStore();

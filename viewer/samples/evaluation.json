@@ -81,8 +81,20 @@
       "wins": 6,
       "losses": 2,
       "draws": 0,
+      "resolved": 7,
+      "fizzled": 1,
+      "criticals": 1,
+      "damage": 7,
+      "healing": 0,
+      "stuns": 0,
+      "bleeds": 7,
+      "buffs": 0,
+      "resolvedWhenWon": 5,
       "score": 0.75,
-      "intentsPerSide": 1.0
+      "intentsPerSide": 1.0,
+      "resolveRate": 0.875,
+      "damagePerCast": 1.0,
+      "castShareWhenWon": 0.7143
     },
     {
       "spell": "spell:slam:v1",
@@ -91,8 +103,20 @@
       "wins": 4,
       "losses": 3,
       "draws": 0,
+      "resolved": 5,
+      "fizzled": 2,
+      "criticals": 0,
+      "damage": 18,
+      "healing": 0,
+      "stuns": 5,
+      "bleeds": 0,
+      "buffs": 0,
+      "resolvedWhenWon": 3,
       "score": 0.5714,
-      "intentsPerSide": 1.0
+      "intentsPerSide": 1.0,
+      "resolveRate": 0.7143,
+      "damagePerCast": 3.6,
+      "castShareWhenWon": 0.6
     },
     {
       "spell": "spell:guard:v1",
@@ -101,8 +125,20 @@
       "wins": 6,
       "losses": 5,
       "draws": 0,
+      "resolved": 12,
+      "fizzled": 1,
+      "criticals": 0,
+      "damage": 0,
+      "healing": 0,
+      "stuns": 0,
+      "bleeds": 0,
+      "buffs": 12,
+      "resolvedWhenWon": 7,
       "score": 0.5455,
-      "intentsPerSide": 1.1818
+      "intentsPerSide": 1.1818,
+      "resolveRate": 0.9231,
+      "damagePerCast": 0.0,
+      "castShareWhenWon": 0.5833
     },
     {
       "spell": "spell:strike:v1",
@@ -111,8 +147,20 @@
       "wins": 6,
       "losses": 6,
       "draws": 0,
+      "resolved": 18,
+      "fizzled": 1,
+      "criticals": 2,
+      "damage": 57,
+      "healing": 0,
+      "stuns": 0,
+      "bleeds": 0,
+      "buffs": 0,
+      "resolvedWhenWon": 9,
       "score": 0.5,
-      "intentsPerSide": 1.5833
+      "intentsPerSide": 1.5833,
+      "resolveRate": 0.9474,
+      "damagePerCast": 3.1667,
+      "castShareWhenWon": 0.5
     }
   ],
   "pairs": [

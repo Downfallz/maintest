@@ -43,23 +43,25 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
             AverageRounds = all.Average(result => result.Rounds),
             RoundCapShare = (double)all.Count(result => result.Outcome.Reason == MatchEndReason.RoundCap) / all.Count,
             SelfPlay = selfPlay,
-            SpellOutcomes = SpellOutcomes(counted),
+            SpellOutcomes = SpellOutcomes(counted, combat),
             Pairs = pairs,
         };
     }
 
     /// <summary>
-    /// Every spell against the outcomes of the sides that declared it. This is the content signal rather than
-    /// the agent one: it says which spells the winning side was holding, which is what tuning a number moves.
-    /// Each batch brings its own results and the counter that watched them, so a batch that adds no
-    /// independent sides is simply not passed in.
+    /// Every spell against the outcomes of the sides that declared it, and what its casts did. This is the
+    /// content signal rather than the agent one: it says which spells the winning side was holding and leaning
+    /// on, which is what tuning a number moves. Each batch brings its own results and the counter that watched
+    /// them, so a batch that adds no independent sides is simply not passed in.
     /// </summary>
-    private static List<SpellOutcome> SpellOutcomes(IReadOnlyList<(IReadOnlyList<MatchResult> Results, IntentCounter Counter)> counted)
+    private static List<SpellOutcome> SpellOutcomes(
+        IReadOnlyList<(IReadOnlyList<MatchResult> Results, IntentCounter Counter)> counted,
+        CombatStatsRecorder? combat)
     {
         var outcomes = counted
             .SelectMany(batch => batch.Results)
             .ToDictionary(result => result.MatchId, result => result.Outcome);
-        var tally = new Dictionary<string, (int Intents, int Sides, int Wins, int Losses, int Draws)>(StringComparer.Ordinal);
+        var tally = new Dictionary<string, Tally>(StringComparer.Ordinal);
 
         foreach (var (match, slot, usage) in counted.SelectMany(batch => batch.Counter.Sides()))
         {
@@ -68,15 +70,21 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
                 continue;
             }
 
+            var won = !outcome.IsDraw && outcome.Winner == slot;
+            var effects = combat?.SpellsOf(match, slot);
             foreach (var (spell, intents) in usage)
             {
-                var current = tally.GetValueOrDefault(spell);
-                tally[spell] = (
-                    current.Intents + intents,
-                    current.Sides + 1,
-                    current.Wins + (!outcome.IsDraw && outcome.Winner == slot ? 1 : 0),
-                    current.Losses + (!outcome.IsDraw && outcome.Winner != slot ? 1 : 0),
-                    current.Draws + (outcome.IsDraw ? 1 : 0));
+                var current = tally.GetValueOrDefault(spell) ?? new Tally();
+                current.Intents += intents;
+                current.Sides++;
+                current.Wins += won ? 1 : 0;
+                current.Losses += !outcome.IsDraw && outcome.Winner != slot ? 1 : 0;
+                current.Draws += outcome.IsDraw ? 1 : 0;
+
+                var cast = effects?.GetValueOrDefault(spell) ?? SpellEffects.None;
+                current.Effects = current.Effects.Plus(cast);
+                current.ResolvedWhenWon += won ? cast.Resolved : 0;
+                tally[spell] = current;
             }
         }
 
@@ -91,11 +99,38 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
                     Wins = entry.Value.Wins,
                     Losses = entry.Value.Losses,
                     Draws = entry.Value.Draws,
+                    Resolved = entry.Value.Effects.Resolved,
+                    Fizzled = entry.Value.Effects.Fizzled,
+                    Criticals = entry.Value.Effects.Criticals,
+                    Damage = entry.Value.Effects.Damage,
+                    Healing = entry.Value.Effects.Healing,
+                    Stuns = entry.Value.Effects.Stuns,
+                    Bleeds = entry.Value.Effects.Bleeds,
+                    Buffs = entry.Value.Effects.Buffs,
+                    ResolvedWhenWon = entry.Value.ResolvedWhenWon,
                 })
                 .OrderByDescending(outcome => outcome.Score)
                 .ThenByDescending(outcome => outcome.Sides)
                 .ThenBy(outcome => outcome.Spell, StringComparer.Ordinal),
         ];
+    }
+
+    /// <summary>One spell's running totals while the sides are walked.</summary>
+    private sealed class Tally
+    {
+        public int Intents { get; set; }
+
+        public int Sides { get; set; }
+
+        public int Wins { get; set; }
+
+        public int Losses { get; set; }
+
+        public int Draws { get; set; }
+
+        public int ResolvedWhenWon { get; set; }
+
+        public SpellEffects Effects { get; set; } = SpellEffects.None;
     }
 
     private static SimulationScenario Batch(EvaluationScenario scenario, AgentSpec player1, AgentSpec player2) => new()
