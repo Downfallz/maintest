@@ -9,13 +9,22 @@ from dataclasses import replace
 from pathlib import Path
 
 from downfall_learning.artifacts import Dataset, build_dataset, load_evaluation, load_manifest, load_runs
+from downfall_learning.evaluate_policy import evaluate_policy
 from downfall_learning.export import DEFAULT_WEIGHTS, export_wide_csv, read_weights
+from downfall_learning.iteration import (
+    build_report,
+    compare_reports,
+    format_report,
+    load_report,
+    write_report,
+)
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.report import TRAINING_FILE, TrainingLog
 from downfall_learning.search_weights import CliEvaluator, EngineCommand, SearchOptions, search_weights
 from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
 from downfall_learning.train_value import ValueOptions, train_value
+from downfall_learning.viewer import RUN_PAGE, write_run_page
 
 RUNS_HELP = "one or more run directories recorded by 'simulate --record'"
 OUTPUT_HELP = "the directory the model is written to"
@@ -81,6 +90,33 @@ def build_parser() -> argparse.ArgumentParser:
     )
     search.set_defaults(handler=_search_weights)
 
+    evaluate = commands.add_parser(
+        "evaluate-policy", help="play a trained policy against a baseline with the engine"
+    )
+    evaluate.add_argument("model", type=Path, help="the model directory holding policy.json")
+    evaluate.add_argument("--opponent", default="greedy", help="agent B of the evaluation (default greedy)")
+    evaluate.add_argument("--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file")
+    evaluate.add_argument(
+        "--repo", type=Path, default=Path.cwd(), help="the engine repository root (default: cwd)"
+    )
+    evaluate.add_argument("--engine", nargs="+", default=None, help="the engine command prefix")
+    evaluate.add_argument(
+        "--output", type=Path, help="where to write the evaluation (default: in the model directory)"
+    )
+    evaluate.add_argument("--no-log", action="store_true", help="leave the model's training.jsonl untouched")
+    evaluate.set_defaults(handler=_evaluate_policy)
+
+    report = commands.add_parser("report", help="the report of a run directory, and what moved since another")
+    report.add_argument("run", type=Path, help="a run directory holding evaluations/*.json")
+    report.add_argument("--against", type=Path, help="the run directory to compare with")
+    report.add_argument(
+        "--no-html", action="store_true", help=f"do not write {RUN_PAGE}, the viewer page carrying the run"
+    )
+    report.add_argument(
+        "--viewer", type=Path, help="the viewer directory (default: viewer/ at the repository root)"
+    )
+    report.set_defaults(handler=_report)
+
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
     csv.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
     csv.add_argument("-o", "--output", type=Path, required=True, help="the CSV file to write")
@@ -125,14 +161,11 @@ def _train_value(arguments: argparse.Namespace) -> int:
 
 
 def _search_weights(arguments: argparse.Namespace) -> int:
-    engine = EngineCommand(root=arguments.repo, opponent=arguments.opponent, seeds=arguments.seeds)
-    if arguments.engine:
-        engine = replace(engine, command=tuple(arguments.engine))
     initial = read_weights(arguments.initial) if arguments.initial else DEFAULT_WEIGHTS
     options = SearchOptions(
         arguments.iterations, arguments.population, arguments.elite, arguments.sigma, arguments.seed
     )
-    evaluator = CliEvaluator(engine, arguments.output / "work")
+    evaluator = CliEvaluator(_engine(arguments), arguments.output / "work")
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
     result = search_weights(evaluator, options, initial, log)
     result.write(arguments.output)
@@ -141,6 +174,33 @@ def _search_weights(arguments: argparse.Namespace) -> int:
         f"(initial {result.initial.score.mean:.4f}), win rate {result.best.score.win_rate:.4f}, "
         f"written to '{arguments.output / 'weights.json'}'."
     )
+    return 0
+
+
+def _engine(arguments: argparse.Namespace) -> EngineCommand:
+    engine = EngineCommand(root=arguments.repo, opponent=arguments.opponent, seeds=arguments.seeds)
+    return replace(engine, command=tuple(arguments.engine)) if arguments.engine else engine
+
+
+def _evaluate_policy(arguments: argparse.Namespace) -> int:
+    evaluator = CliEvaluator(_engine(arguments), arguments.model / "work")
+    score = evaluate_policy(arguments.model, evaluator, arguments.output, update_log=not arguments.no_log)
+    print(
+        f"Policy of '{arguments.model}' against {arguments.opponent}: win rate {score.win_rate:.4f} "
+        f"({score.win_rate_low:.4f} to {score.win_rate_high:.4f}), "
+        f"score {score.mean:.4f} on {score.matches} matches."
+    )
+    return 0
+
+
+def _report(arguments: argparse.Namespace) -> int:
+    report = build_report(arguments.run)
+    write_report(report, arguments.run)
+    comparison = compare_reports(report, load_report(arguments.against)) if arguments.against else None
+    print(format_report(report, comparison))
+    if not arguments.no_html:
+        page = write_run_page(arguments.run, arguments.viewer)
+        print(f"\nOpen '{page}' in a browser: the viewer with this run already loaded.")
     return 0
 
 
@@ -198,6 +258,14 @@ def search_weights_command() -> int:
 
 def export_csv_command() -> int:
     return _run("export-csv")
+
+
+def evaluate_policy_command() -> int:
+    return _run("evaluate-policy")
+
+
+def report_command() -> int:
+    return _run("report")
 
 
 def compare_stamps_command() -> int:

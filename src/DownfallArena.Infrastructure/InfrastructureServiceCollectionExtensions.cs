@@ -25,6 +25,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.TryAddSingleton<IMatchRepository, InMemoryMatchRepository>();
         services.TryAddSingleton<IRandomSourceFactory, SeededRandomSourceFactory>();
         services.TryAddSingleton<IScoringWeightsSource, JsonScoringWeightsSource>();
+        services.TryAddSingleton<IPolicySource, JsonPolicySource>();
         services.TryAddSingleton<IRandomSource>(_ => new SeededRandomSource(randomSeed ?? Random.Shared.Next()));
 
         return services;

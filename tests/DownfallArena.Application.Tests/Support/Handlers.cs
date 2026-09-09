@@ -28,20 +28,23 @@ internal static class Handlers
                 new GetBoardStateForPlayerHandler(workflow),
                 new GetPlayerOptionsHandler(workflow, TestContent.Resources)));
 
-    /// <summary>The agent registry over the test content; the heuristic weights come from a substitute that returns the defaults.</summary>
-    public static AgentFactory Agents()
+    /// <summary>
+    /// The agent registry over the test content; the heuristic weights come from a substitute that returns the
+    /// defaults, the policies from the substitute a test hands in.
+    /// </summary>
+    public static AgentFactory Agents(IPolicySource? policies = null)
     {
         var weights = Substitute.For<IScoringWeightsSource>();
         weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
-        return new AgentFactory(TestContent.Resources, weights);
+        return new AgentFactory(TestContent.Resources, weights, policies ?? Substitute.For<IPolicySource>());
     }
 
-    public static BatchRunner Runner(MatchWorkflow workflow, IRandomSourceFactory random) =>
+    public static BatchRunner Runner(MatchWorkflow workflow, IRandomSourceFactory random, IPolicySource? policies = null) =>
         new(
             new CreateMatchHandler(workflow, TestContent.Resources, random),
             new JoinMatchHandler(workflow),
             new GetBoardStateForPlayerHandler(workflow),
             Driver(workflow),
             random,
-            Agents());
+            Agents(policies));
 }

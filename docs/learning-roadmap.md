@@ -210,27 +210,48 @@ The terms below are the authoritative entries of the "Learning" section of
   reaches the rule and the regression recovers the return; the viewer samples as loading fixtures; a fake
   engine command for the search; the `training.jsonl` and `policy.json` contracts; the command line.
 
-### Phase L7. Iteration workflow
+### Phase L7. Iteration workflow (done, `docs/learning/training.md`, `docs/learning/explained.md`)
 
-- `scripts/iterate.sh` (and the same as a documented sequence): rebuild content, check the benchmark digest,
-  baseline random versus random on the benchmark seeds, greedy versus random, record a dataset with greedy
-  self-play, train, evaluate the policy against greedy and random, write `runs/<run-id>/report.json` and
-  compare it with the previous run (`--against <run-id>`).
+- `PolicyAgent` (`policy:<file>`) in Application: builds the observation, lists the candidate actions in
+  dataset order, scores each key with the policy's row or its fallback, takes the best (first on a tie), the
+  same choice `Policy.choose` makes in Python. `IPolicySource` port, `JsonPolicySource` in Infrastructure,
+  `AgentKind.Policy`; the factory refuses a policy whose feature schema id is not the current one and stamps
+  the spec `Policy:<path>@<fingerprint>` of the file's bytes. The CLI reports a missing, malformed, or foreign
+  agent file as one line and exit code 1, and an evaluation on a seed file prints the identity of its seed
+  set rather than the session seed.
+- `evaluate-policy` (Python): plays a model against a baseline with the engine and fills `winRate` on the
+  kept iteration of its `training.jsonl`. `report`: `runs/<run-id>/report.json` from every evaluation of the
+  run, and with `--against <run-id>` the deltas and the stamp axis that moved.
+- `scripts/iterate.sh`: rebuild content, check the benchmark digest, the baselines (random versus random,
+  greedy versus greedy, greedy versus random) on the benchmark seeds, record a greedy self-play dataset,
+  train the value and clone policies, evaluate them against greedy and random, replay the previous run's
+  policy on this content when its schema still applies, write the report and compare.
 - `docs/learning/journal.md`: one entry per change, content or engine, with both stamps, what changed, the
   numbers, and the decision (keep, tune, revert). This is where balance and engine knowledge accumulates.
-- Balance signals the report always shows: Player1 versus Player2 win rate on mirrored play (near 50%),
+- Balance signals the report always shows: Player1 versus Player2 win share on mirrored play (near 50%),
   average rounds (a band we choose), spell usage entropy (no dominant spell), share of matches ending by
   round cap (low), fizzle rate.
+- Tests: the policy agent's choices on hand-made boards (best key, a feature moving the choice, unseen keys
+  at the fallback, ties, targets, speed, evolution), the factory's refusal of another schema, the file
+  contract and the JSON source, a policy playing a match to its end and replaying identically; on the
+  Python side the evaluation into the log with a fake engine, the report and its comparison.
 
 ## The loop, once L7 is done
 
 ```bash
+scripts/iterate.sh --run 2026-09-10 --against 2026-09-09        # everything below, into runs/2026-09-10/
+```
+
+which runs, step by step:
+
+```bash
 dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst            # 1. content -> hash
 dotnet run --project src/DownfallArena.Cli -- benchmark                           # 2. engine unchanged? digest check
-dotnet run --project src/DownfallArena.Cli -- simulate --p1 random --p2 random    # 3. balance baseline
-dotnet run --project src/DownfallArena.Cli -- simulate --p1 greedy --p2 greedy --record runs/   # 4. data + traces
-uv run --project learning train-value runs/<run-id> -o models/value/v3            # 5. train (+ training.jsonl)
-dotnet run --project src/DownfallArena.Cli -- simulate --p1 policy:models/value/v3 --p2 greedy --against runs/<previous>  # 6. evaluate + compare
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 random --p2 random --seeds benchmarks/benchmark-seeds.json   # 3. balance baselines (and greedy vs greedy, greedy vs random)
+dotnet run --project src/DownfallArena.Cli -- simulate --p1 greedy --p2 greedy --record runs/<id>/dataset   # 4. data + traces
+uv run --project learning train-value runs/<id>/dataset -o runs/<id>/value       # 5. train (+ training.jsonl), and train-clone
+uv run --project learning evaluate-policy runs/<id>/value --opponent greedy       # 6. evaluate (win rate into training.jsonl)
+uv run --project learning report runs/<id> --against runs/<previous>              # 7. report.json + deltas + the axis that moved
 ```
 
 Then one journal entry, and any artifact dropped on the viewer. Changing a spell means running the lines

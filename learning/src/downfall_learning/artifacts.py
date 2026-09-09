@@ -7,8 +7,10 @@ run stamps unless asked, since a dataset built from two engines or two contents 
 from __future__ import annotations
 
 import json
+import sys
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -68,26 +70,38 @@ class Step:
     sub_phase: str
     kind: str
     schema_id: str
-    features: tuple[float, ...]
+    features: np.ndarray
     candidates: tuple[str, ...]
     action: str
-    code: Mapping[str, int]
+    # The kind of an action code is its name, the rest are numbers (docs/learning/artifacts.md).
+    code: Mapping[str, Any]
 
     @classmethod
-    def from_json(cls, data: Mapping[str, Any]) -> Step:
+    def from_json(cls, data: Mapping[str, Any], features: np.ndarray) -> Step:
+        """Fills ``features`` in place and keeps it as the step's own view on the run's array.
+
+        The observation is never held as Python floats: at the width of a published schema, a tuple of
+        floats costs several kilobytes per step where a row of the array costs a few hundred bytes, and the
+        loop's own datasets reach hundreds of thousands of steps. Every string that repeats across steps
+        (the ids, the action keys) is interned for the same reason.
+        """
         try:
             observation = data["observation"]
+            values = observation["features"]
+            if len(values) != features.shape[0]:
+                raise ArtifactError(f"A step has {len(values)} features, not {features.shape[0]}.")
+            features[:] = values
             step = cls(
-                match_id=str(data["matchId"]),
-                slot=str(data["slot"]),
+                match_id=sys.intern(str(data["matchId"])),
+                slot=sys.intern(str(data["slot"])),
                 round=int(data["round"]),
-                sub_phase=str(data["subPhase"]),
-                kind=str(data["kind"]),
-                schema_id=str(observation["schemaId"]),
-                features=tuple(float(value) for value in observation["features"]),
-                candidates=tuple(str(key) for key in data["candidates"]),
-                action=str(data["action"]),
-                code=dict(data["code"]),
+                sub_phase=sys.intern(str(data["subPhase"])),
+                kind=sys.intern(str(data["kind"])),
+                schema_id=sys.intern(str(observation["schemaId"])),
+                features=features,
+                candidates=tuple(sys.intern(str(key)) for key in data["candidates"]),
+                action=sys.intern(str(data["action"])),
+                code={sys.intern(str(name)): value for name, value in data["code"].items()},
             )
         except KeyError as error:
             raise ArtifactError(f"A step needs the field {error}.") from None
@@ -131,12 +145,17 @@ class Episode:
 
 @dataclass(frozen=True)
 class Run:
-    """One recorded run directory: its manifest, every step, every episode."""
+    """One recorded run directory: its manifest, every step, every episode, and their observations.
+
+    ``observations`` holds one row per step, and each step's ``features`` is a view on its own row, so a run
+    costs one array rather than one tuple of Python floats per step.
+    """
 
     directory: Path
     manifest: Manifest
     steps: tuple[Step, ...]
     episodes: tuple[Episode, ...]
+    observations: np.ndarray
 
     @property
     def stamp(self) -> RunStamp:
@@ -239,25 +258,40 @@ def load_evaluation(path: Path) -> Evaluation:
     return Evaluation.from_json(read_json(path))
 
 
+def count_json_lines(path: Path) -> int:
+    """Counts the lines of a JSON-lines file without parsing it, to size an array exactly."""
+    with path.open("rb") as file:
+        return sum(1 for line in file if line.strip())
+
+
 def load_run(directory: Path) -> Run:
-    """Reads a run directory and checks that every step was observed under the manifest's schema."""
+    """Reads a run directory into one observation array, every step checked against the manifest's schema.
+
+    The steps are streamed into an array sized by counting the file's lines first, rather than collected and
+    converted afterwards: the intermediate Python floats are what made a large run cost gigabytes.
+    """
     directory = Path(directory)
     manifest_path = directory / MANIFEST_FILE
     if not manifest_path.is_file():
         raise ArtifactError(f"'{directory}' has no {MANIFEST_FILE}.")
     manifest = load_manifest(manifest_path)
     check_schema(manifest.schema_id)
-    steps = tuple(Step.from_json(line) for line in read_json_lines(directory / STEPS_FILE))
-    episodes = tuple(Episode.from_json(line) for line in read_json_lines(directory / EPISODES_FILE))
-    width = len(manifest.feature_names)
-    for step in steps:
+    steps_path = directory / STEPS_FILE
+    # The manifest of an interrupted run still says zero steps, so the file itself decides the size.
+    observations = np.empty((count_json_lines(steps_path), len(manifest.feature_names)), dtype=float)
+    steps: list[Step] = []
+    for index, line in enumerate(read_json_lines(steps_path)):
+        try:
+            step = Step.from_json(line, observations[index])
+        except ArtifactError as error:
+            raise ArtifactError(f"Step {index + 1} of '{directory}': {error}") from None
         if step.schema_id != manifest.schema_id:
             raise ArtifactError(
                 f"A step of '{directory}' was observed under '{step.schema_id}', not the run's."
             )
-        if len(step.features) != width:
-            raise ArtifactError(f"A step of '{directory}' has {len(step.features)} features, not {width}.")
-    return Run(directory, manifest, steps, episodes)
+        steps.append(step)
+    episodes = tuple(Episode.from_json(line) for line in read_json_lines(directory / EPISODES_FILE))
+    return Run(directory, manifest, tuple(steps), episodes, observations)
 
 
 def load_runs(directories: Iterable[Path], *, allow_mixed: bool = False) -> list[Run]:
@@ -313,42 +347,54 @@ class Dataset:
         )
 
 
+@dataclass(frozen=True)
+class _Selection:
+    """The steps one run contributes to a dataset: its rows, and the columns joined from its episodes."""
+
+    observations: np.ndarray
+    actions: list[str]
+    candidates: list[tuple[str, ...]]
+    returns: list[float]
+    match_ids: list[str]
+    kinds: list[str]
+
+
+def _select(run: Run, wanted: set[str] | None) -> _Selection:
+    """The steps of ``run`` whose kind is wanted, with the return of each one's episode joined in."""
+    episode_returns = run.returns()
+    rows = [index for index, step in enumerate(run.steps) if wanted is None or step.kind in wanted]
+    steps = [run.steps[index] for index in rows]
+    orphan = next((step for step in steps if (step.match_id, step.slot) not in episode_returns), None)
+    if orphan is not None:
+        raise ArtifactError(f"Match {orphan.match_id} has steps for {orphan.slot} but no episode.")
+    return _Selection(
+        # Keeping every step of a run shares its array; a filtered run pays one copy.
+        observations=run.observations if len(rows) == len(run.steps) else run.observations[rows],
+        actions=[step.action for step in steps],
+        candidates=[step.candidates for step in steps],
+        returns=[episode_returns[(step.match_id, step.slot)] for step in steps],
+        match_ids=[step.match_id for step in steps],
+        kinds=[step.kind for step in steps],
+    )
+
+
 def build_dataset(runs: Sequence[Run], kinds: Iterable[str] | None = None) -> Dataset:
     """Joins the steps of the runs with the returns of their episodes; ``kinds`` keeps only those kinds."""
     if not runs:
         raise ArtifactError("No run given.")
-    wanted = None if kinds is None else set(kinds)
-    observations: list[tuple[float, ...]] = []
-    actions: list[str] = []
-    candidates: list[tuple[str, ...]] = []
-    returns: list[float] = []
-    match_ids: list[str] = []
-    step_kinds: list[str] = []
-    for run in runs:
-        run_returns = run.returns()
-        for step in run.steps:
-            if wanted is not None and step.kind not in wanted:
-                continue
-            key = (step.match_id, step.slot)
-            if key not in run_returns:
-                raise ArtifactError(f"Match {step.match_id} has steps for {step.slot} but no episode.")
-            observations.append(step.features)
-            actions.append(step.action)
-            candidates.append(step.candidates)
-            returns.append(run_returns[key])
-            match_ids.append(step.match_id)
-            step_kinds.append(step.kind)
-    if not actions:
+    selections = [_select(run, None if kinds is None else set(kinds)) for run in runs]
+    if not any(selection.actions for selection in selections):
         raise ArtifactError("The runs hold no step of the wanted kinds.")
+    blocks = [selection.observations for selection in selections]
     first = runs[0]
     return Dataset(
         stamp=first.stamp,
         schema_id=first.manifest.schema_id,
         feature_names=first.manifest.feature_names,
-        observations=np.asarray(observations, dtype=float),
-        actions=tuple(actions),
-        candidates=tuple(candidates),
-        returns=np.asarray(returns, dtype=float),
-        match_ids=tuple(match_ids),
-        kinds=tuple(step_kinds),
+        observations=blocks[0] if len(blocks) == 1 else np.concatenate(blocks),
+        actions=tuple(chain.from_iterable(selection.actions for selection in selections)),
+        candidates=tuple(chain.from_iterable(selection.candidates for selection in selections)),
+        returns=np.asarray([value for selection in selections for value in selection.returns], dtype=float),
+        match_ids=tuple(chain.from_iterable(selection.match_ids for selection in selections)),
+        kinds=tuple(chain.from_iterable(selection.kinds for selection in selections)),
     )

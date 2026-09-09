@@ -13,4 +13,7 @@ public enum AgentKind
 
     /// <summary>One-step lookahead with weights read from the file the spec names.</summary>
     Heuristic,
+
+    /// <summary>A trained policy read from the <c>policy.json</c> the spec names (docs/learning/training.md).</summary>
+    Policy,
 }

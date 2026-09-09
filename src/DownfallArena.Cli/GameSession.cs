@@ -66,8 +66,40 @@ internal sealed class GameSession
         }
     }
 
-    public void PrintStamp() =>
-        Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}. Seed {_seed}.");
+    /// <summary>
+    /// The stamp of this run. The session seed only matters to the commands that draw from it; an evaluation on
+    /// a seed file and the benchmark print the identity of their seed set instead, with their own line.
+    /// </summary>
+    public void PrintStamp()
+    {
+        var seed = UsesSessionSeed ? $" Seed {_seed}." : string.Empty;
+        Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}.{seed}");
+    }
+
+    private bool UsesSessionSeed => _options.Command is not "benchmark" && (_options.Command is not "evaluate" || _options.Seeds is null);
+
+    /// <summary>Runs the command the options name; a command's exit code is the process's.</summary>
+    public async Task<int> RunAsync()
+    {
+        switch (_options.Command)
+        {
+            case "play":
+                await PlayAsync(Agent(_options.Player1, 1), Agent(_options.Player2, 2), _options.Player1.ToString(), _options.Player2.ToString());
+                return 0;
+            case "human":
+                await PlayAsync(new ConsoleAgent(Console.In, Console.Out), Agent(_options.Player2, 2), "Human", _options.Player2.ToString());
+                return 0;
+            case "simulate":
+                return await SimulateAsync();
+            case "evaluate":
+                return await EvaluateAsync();
+            case "benchmark":
+                return await BenchmarkAsync();
+            default:
+                await Console.Error.WriteLineAsync($"Unknown command '{_options.Command}'. {CliOptions.Usage}");
+                return 2;
+        }
+    }
 
     public IPlayerAgent Agent(AgentSpec spec, int slot) =>
         _services.GetRequiredService<IAgentFactory>().Create(spec, _rules, _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((_seed * 31) + slot)));
@@ -135,7 +167,8 @@ internal sealed class GameSession
     {
         var explicitSeeds = _options.Seeds is { } file ? BenchmarkStore.LoadSeeds(file) : null;
         IReadOnlyList<int> seeds = explicitSeeds ?? [.. Enumerable.Range(0, _options.Matches).Select(index => unchecked(_seed + index))];
-        Console.WriteLine($"Evaluating {_options.Player1} against {_options.Player2} on {seeds.Count} seeds, mirrored...");
+        var seedSet = explicitSeeds is null ? $"seeds {_seed} to {unchecked(_seed + seeds.Count - 1)}" : $"seed set {SeedSets.IdentityOf(seeds)} from '{_options.Seeds}'";
+        Console.WriteLine($"Evaluating {_options.Player1} against {_options.Player2} on {seeds.Count} seeds, mirrored ({seedSet})...");
         var evaluation = await EvaluateAsync(_options.Player1, _options.Player2, seeds, explicitSeeds is null ? _seed : SeedSets.IdentityOf(seeds));
         EvaluationConsole.Print(evaluation, Console.Out);
 
@@ -154,7 +187,7 @@ internal sealed class GameSession
     {
         var store = new BenchmarkStore(_options.Benchmarks);
         var seeds = store.LoadSeeds();
-        Console.WriteLine($"Benchmark: {AgentSpec.Greedy} against {AgentSpec.Greedy} on {seeds.Count} seeds, mirrored, content {_resources.Version}...");
+        Console.WriteLine($"Benchmark: {AgentSpec.Greedy} against {AgentSpec.Greedy} on {seeds.Count} seeds, mirrored (seed set {SeedSets.IdentityOf(seeds)}), content {_resources.Version}...");
         var evaluation = await EvaluateAsync(AgentSpec.Greedy, AgentSpec.Greedy, seeds, SeedSets.IdentityOf(seeds));
         EvaluationConsole.Print(evaluation, Console.Out);
         var digest = BenchmarkDigest.Of(evaluation);

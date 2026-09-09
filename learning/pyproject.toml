@@ -17,6 +17,8 @@ train-clone = "downfall_learning.cli:train_clone_command"
 train-value = "downfall_learning.cli:train_value_command"
 search-weights = "downfall_learning.cli:search_weights_command"
 export-csv = "downfall_learning.cli:export_csv_command"
+evaluate-policy = "downfall_learning.cli:evaluate_policy_command"
+report = "downfall_learning.cli:report_command"
 compare-stamps = "downfall_learning.cli:compare_stamps_command"
 
 [dependency-groups]
