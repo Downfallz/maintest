@@ -57,11 +57,15 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
         }
 
         var spell = resolution.Action.Spell.Value;
-        spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(Effects(resolution));
+        spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(Effects(resolution, domainEvent.Applied));
     }
 
-    /// <summary>One resolution as a tally: what it was, and what its outcomes did.</summary>
-    private static SpellEffects Effects(CombatResolution resolution)
+    /// <summary>
+    /// One resolution as a tally: what it was, and what its outcomes actually did. The applied outcomes, not
+    /// the computed ones: a hit that overkills, a heal on a creature already full and a condition its stacking
+    /// policy refuses all resolve, and all of them would otherwise be counted at the size they aimed for.
+    /// </summary>
+    private static SpellEffects Effects(CombatResolution resolution, IReadOnlyList<EffectOutcome> applied)
     {
         if (resolution.Fizzled)
         {
@@ -72,14 +76,15 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             Resolved: 1,
             Fizzled: 0,
             Criticals: resolution.IsCritical ? 1 : 0,
-            Damage: resolution.Outcomes.OfType<DamageOutcome>().Sum(outcome => outcome.Amount),
-            Healing: resolution.Outcomes.OfType<HealOutcome>().Sum(outcome => outcome.Amount),
-            Stuns: Conditions<Stun>(resolution),
-            Bleeds: Conditions<Bleed>(resolution),
-            Buffs: Conditions<DefenseBuff>(resolution) + Conditions<InitiativeDebuff>(resolution));
+            Damage: applied.OfType<DamageOutcome>().Sum(outcome => outcome.Amount),
+            Healing: applied.OfType<HealOutcome>().Sum(outcome => outcome.Amount),
+            Energy: applied.OfType<EnergyOutcome>().Sum(outcome => outcome.Amount),
+            Stuns: Conditions<Stun>(applied),
+            Bleeds: Conditions<Bleed>(applied),
+            Buffs: Conditions<DefenseBuff>(applied) + Conditions<InitiativeDebuff>(applied));
     }
 
-    private static int Conditions<TEffect>(CombatResolution resolution)
+    private static int Conditions<TEffect>(IReadOnlyList<EffectOutcome> applied)
         where TEffect : LastingEffect =>
-        resolution.Outcomes.OfType<ConditionOutcome>().Count(outcome => outcome.Effect is TEffect);
+        applied.OfType<ConditionOutcome>().Count(outcome => outcome.Effect is TEffect);
 }

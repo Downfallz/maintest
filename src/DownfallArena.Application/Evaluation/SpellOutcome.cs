@@ -34,10 +34,16 @@ public sealed record SpellOutcome
 
     public int Criticals { get; init; }
 
-    /// <summary>Damage its casts dealt on the spot. A bleed's damage lands at upkeep and is not counted here.</summary>
+    /// <summary>
+    /// Damage its casts actually dealt on the spot: what the target lost, not what the spell aimed for, so a
+    /// hit that overkills counts the health it removed. A bleed's damage lands at upkeep and is not here.
+    /// </summary>
     public int Damage { get; init; }
 
     public int Healing { get; init; }
+
+    /// <summary>Energy its casts handed back, which a spell that restores energy is otherwise silent about.</summary>
+    public int Energy { get; init; }
 
     public int Stuns { get; init; }
 

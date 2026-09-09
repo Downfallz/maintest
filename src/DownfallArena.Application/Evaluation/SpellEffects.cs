@@ -9,7 +9,8 @@ namespace DownfallArena.Application.Evaluation;
 /// far more often, casts less, and does less. The sides that declared it do not budge.
 /// </para>
 /// <para>
-/// <see cref="Damage"/> is the damage a cast dealt on the spot. A bleed's damage lands later, at upkeep, and a
+/// Every total is what the board took rather than what the rules computed, so a hit that overkills counts the
+/// health it actually removed. <see cref="Damage"/> is the damage a cast dealt on the spot. A bleed's damage lands later, at upkeep, and a
 /// condition does not remember the spell that applied it, so it is counted here as an application rather than
 /// as damage.
 /// </para>
@@ -20,11 +21,12 @@ public sealed record SpellEffects(
     int Criticals,
     int Damage,
     int Healing,
+    int Energy,
     int Stuns,
     int Bleeds,
     int Buffs)
 {
-    public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0);
+    public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     /// <summary>Declarations that reached resolution, whether they landed or fizzled.</summary>
     public int Casts => Resolved + Fizzled;
@@ -41,6 +43,7 @@ public sealed record SpellEffects(
             Criticals + other.Criticals,
             Damage + other.Damage,
             Healing + other.Healing,
+            Energy + other.Energy,
             Stuns + other.Stuns,
             Bleeds + other.Bleeds,
             Buffs + other.Buffs);
