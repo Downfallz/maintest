@@ -4,6 +4,144 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-09. `ci-9`: the baseline works, and it says the content has no decision in it
+
+- **What changed**: ADR 0016 implemented. Same run as `ci-5` otherwise — the thousand-match explored dataset,
+  alpha 10, min samples 10 — so the two-part fit is the only difference. Engine `1cc41a7797e3`.
+- **The fit improved**: loss 0.8050 to **0.7705**, r² 0.1876 to **0.2225**. 293 fitted actions of 455, the same
+  as `ci-5`, as expected. Against `Greedy`: 0 of 400, the eighth time. Against `Random`: 83.2%.
+- **The number that ends the investigation**: **`baselineR2` 0.2815 against `r2` 0.2225.** The position alone
+  explains more of the held-out return than the position and the action together. The action rows do not
+  merely add nothing; they add variance, and the prediction is better without them.
+- **Why, and it is not the learner**: a creature starts with three spells, and they are
+  `basic_attack` (1 damage), `wait` (1 damage, effects identical to `basic_attack` to the character) and
+  `heavy_strike` (1 damage plus Bleed 1 for one round). All three cost 0 energy, all three have initiative 1,
+  all three target one enemy. `heavy_strike` therefore strictly dominates: same cost, same speed, same
+  targeting, strictly more damage. `wait` and `basic_attack` are one spell under two names. There is no
+  trade-off on any axis, and `baseEnergy` is 0, so the resource axis is inert too.
+- **Which explains every earlier number**: `Greedy`'s spell entropy of 0.23 is not a defect, it is correct
+  play; exploration's deviations are uniformly worse by an amount the position already carries; and an action
+  that carries no information cannot be fitted, however the data is recorded or the model is shaped. The
+  metric added to diagnose the model diagnosed the content instead.
+- **Decision**: stop here on value regression. It is not broken, it is asking a question this content does not
+  pose, and the temporal-difference target considered next in ADR 0016 is dropped with it: better credit
+  assignment for a decision that does not exist would refine an instrument aimed at nothing. Behaviour cloning
+  stays the loop's working learner. The loop's own balance signals — spell entropy, player 1 share, draw rate,
+  round cap share — are the instrument for the content work that comes next, and `Greedy`'s entropy rising
+  above 0.23 is the sign that the content finally offers a choice.
+
+## 2026-09-09. `ci-5`: filling the empty rows changes nothing, so the shape is the answer
+
+- **What changed**: `--value-min-samples` 50 to 10 on the same thousand-match explored dataset, alpha still
+  10, so the regularization does the work the threshold was doing. Engine `a621693e9d91`.
+- **The rows filled up**: **293 fitted actions of 455**, against 191. A hundred and two keys that were
+  constants now have a regression of their own.
+- **Nothing else moved**: r² 0.1895 to **0.1876**, loss 0.8031 to 0.8050, accuracy 0.2941 to 0.2947. The
+  held-out fit is flat to three digits, and against `Random` the policy got worse, 88.8% to 82.0%. Against
+  `Greedy`: 0 of 400, the seventh time.
+- **What that closes**: the data axis. Exploration was necessary and not sufficient (`ci-1` to `ci-3`); five
+  times the matches tripled the fit and moved nothing (`ci-4`); giving two thirds of the actions a model
+  instead of two fifths moved nothing either. The rows that had no model were not the bottleneck, so no
+  amount of recording is going to be.
+- **What is left**: the shape. Each action key is a regression of its own, fitted on the raw match return of
+  the steps where it was taken, and then compared with the others at one state. A step's return is the
+  outcome of a match of about a hundred and fifty decisions: it measures the position far more than the move,
+  and each row's intercept is calibrated on its own slice of positions. That is the same sentence as the very
+  first diagnosis in this journal, and the data has now ruled out every explanation except it.
+- **Decision**: ADR 0016, since accepted: fit one state-value model on every step and regress each action on the
+  residual instead of the return. The baseline is the best-determined part of the model and subtracting it
+  leaves each row only the part of the outcome its own action is responsible for.
+
+## 2026-09-09. `ci-4`, a thousand matches: the fit triples, the win rate does not move
+
+- **What changed**: `--matches` 200 to 1000, everything else as in `ci-3` (explored at 0.2 from seed 1,
+  alpha 10, min samples 50). Engine `007057d2103b`, content `34c616d3…80d7`. Fifteen minutes on a runner.
+- **The data**: 313,297 steps over 2,000 episodes, and **455 action keys** where 200 matches found 382.
+- **The fit**: **191 fitted actions of 455** (42%, against 24% before), loss 0.9607 to 0.8031, r² 0.047 to
+  **0.190**, accuracy 0.304 to 0.294.
+- **The win rate**: 0.0% against `Greedy`, 0 of 400, the sixth time. 88.8% against `Random`, down from 94.8%,
+  and a spell entropy of 2.58 against 2.70.
+- **The part that matters for what to do next**: the number of action keys grows with the data. Five times
+  the matches found seventy-three new keys, so the share of rows that clear the threshold climbs slowly
+  instead of converging. More matches is not a trajectory that ends anywhere.
+- **Also**: the clone, trained on the pure 1000-match dataset, came out at 35.5% against `Greedy` (interval
+  32.3% to 38.7%) where the 200-match clone reached 38.0%, with its best epoch at 20 instead of 3. Recorded
+  as a fact, not read as a regression: it is one run and the intervals nearly touch.
+- **Decision**: one more cheap run before blaming the shape of the model. On this dataset, drop
+  `--value-min-samples` to 10 and keep alpha 10, so the regularization does the work the threshold was
+  doing. If that fits most of the 455 rows and the win rate is still zero, the threshold is no longer an
+  excuse and the suspect is the shape itself: one independent regression per action key, compared with each
+  other at a single state, with nothing tying them together. That would be an ADR.
+
+## 2026-09-09. `ci-3`: three quarters of the actions have no model at all
+
+- **What changed**: nothing but the diagnostic. `ci-3` repeats `ci-2` exactly — same explored dataset, same
+  alpha 10 and min samples 50 — and returns the same numbers to the digit: loss 0.9607, r² 0.04694, accuracy
+  0.3044, 0 of 400 against `Greedy`, 94.75% against `Random`. The loop is deterministic and `fittedActions`
+  costs nothing.
+- **The number**: **93 fitted actions out of 382**. Two hundred and eighty-nine keys kept the mean of their
+  few examples instead of a regression, and a row that is a constant scores the same in every state. So for
+  three quarters of the legal moves the policy cannot tell one position from another; it simply prefers
+  whichever constant is largest. That is what the spell entropy of 2.70 is made of.
+- **What it means, read with `ci-1`**: this is a squeeze, not a mystery. At a threshold of 5 nearly every row
+  gets a regression, on far too few examples, and the fit comes out worse than the mean. At 50 the fit turns
+  positive and three quarters of the rows lose their model. 62,358 steps over 382 keys is about 163 per key
+  on average, skewed enough that only 93 clear fifty in the training split. Exploration multiplied the action
+  keys by five and the dataset did not follow.
+- **Decision**: raise `--matches` to 1000 before concluding anything about the shape of the model. The
+  question "is one independent regression per action the wrong shape" cannot be answered on a dataset where
+  most of those regressions were never fitted.
+
+## 2026-09-09. The tuned exploring run (`ci-2`): the fit moved, the win rate did not
+
+- **What changed**: the same explored dataset as `ci-1` (`explore:0.2`, 200 matches from seed 1, content
+  `34c616d3…80d7`), trained with `--value-alpha 10 --value-min-samples 50` instead of the defaults. It was
+  asked for by committing `learning/experiments/next.json`, and the loop ran on the pull request that
+  carried it. Engine `454dc1a937e6`, clean: the stamp defect of `ci-1` is gone.
+- **The fit moved**: r² -0.146 to **0.047**, loss 1.155 to 0.961, accuracy 0.293 to 0.304. Against `Random`
+  the policy went from 82.2% to **94.8%** and its spell entropy fell from 3.40 to 2.70. The regularization
+  did produce a measurably better policy.
+- **The number that matters did not**: 0.0% against `Greedy`, 0 of 400, for the fifth time.
+- **What that settles**: the knobs were the confound in `ci-1`, and they are not the obstacle. Two runs now
+  bracket them — worse than the mean at alpha 1 and min samples 5, positive at alpha 10 and min samples 50 —
+  and the win rate against `Greedy` is exactly zero in both. Exploration at this rate, on a dataset this
+  size, does not make value regression competitive with the bot that produced the data. ADR 0014 was
+  necessary, since the counterfactuals now exist, and it is not sufficient.
+- **The one thing still unmeasured**: with 382 action keys and a threshold of 50, an unknown share of the
+  rows kept a mean instead of a model, and a row without a model cannot tell two states apart. `train-value`
+  now reports `fittedActions` beside `actions`, so the next run says it outright.
+- **Decision**: read that number first. If most rows are starved, the answer is more matches. If most are
+  fitted, the remaining suspect is the shape itself — one independent regression per action key, ranked
+  against each other at a single state — and the next thing to try is a single model over the state and the
+  action together, which needs its own ADR.
+
+## 2026-09-09. First exploring run (`ci-1`), still 0 of 400, and two things moved at once
+
+- **What changed**: the value policy trained on a dataset recorded with `explore:0.2` instead of pure
+  `Greedy` self-play (ADR 0014), on the same content `34c616d3…80d7`. This is also the first run of the
+  `Learning loop` workflow, on the merge commit of pull request #24, so the whole turn played on the CI
+  runners in three minutes with nobody at a keyboard. Its stamp reads `2988cd742f9c-dirty` because the
+  workflow wrote its log inside the checkout before the build stamped the version; the tree was otherwise
+  that commit exactly. Fixed in the same change as this entry, so the next stamp is clean.
+- **The two datasets**, 200 matches each from seed 1: pure `Greedy`, 63,706 steps over 75 distinct action
+  keys; explored, 62,358 steps over **382** action keys.
+- **Value policy**, at the defaults (alpha 1.0, min samples 5): loss 1.155, **r² -0.146**, accuracy 0.293 on
+  12,320 held-out steps. 0.0% against `Greedy`, 0 of 400 for the fourth time, and 82.2% against `Random`.
+  Its spell entropy against `Greedy` is 3.40, next to `Random`'s 4.25 and nowhere near `Greedy`'s 0.20: the
+  policy scatters instead of choosing.
+- **Clone policy**, still trained on the pure dataset and therefore still the control: 98.6% accuracy, 38.0%
+  against `Greedy` (score 0.475), 100% against `Random`. Unchanged, as it should be.
+- **What this settles and what it does not**: exploration did deliver what ADR 0014 asked of it. Seventy-five
+  action keys became 382, so the actions `Greedy` never plays now carry samples of their own. But the same
+  62,000 steps are spread over five times as many independent regressions, and this run used the defaults
+  rather than the `--value-alpha 10 --value-min-samples 50` that had taken r² from 0.216 to 0.372 on the
+  greedy dataset. The dataset and the knobs moved together, so a fit that is now worse than predicting the
+  mean does not by itself refute the ADR.
+- **Decision**: repeat the run with those two knobs on the explored dataset, which is one dispatch of the
+  workflow. If the win rate is still zero once the fit is no longer worse than the mean, the remaining
+  suspect is the shape of the model itself, one independent row per action, and the next thing to try is a
+  single model over the state and the action together.
+
 ## 2026-09-09. Two tuning attempts and a mixed dataset, all still 0 of 400
 
 - **What changed**: nothing in the engine or the content; three trainings of the value policy on the same

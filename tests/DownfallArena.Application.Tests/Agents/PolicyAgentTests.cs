@@ -128,6 +128,33 @@ public sealed class PolicyAgentTests
     }
 
     [Fact]
+    public void The_baseline_lifts_every_score_by_the_same_amount_and_leaves_the_choice_alone()
+    {
+        var policy = Policy((RendIntent, 2.0), (StrikeIntent, 1.0));
+        var weights = new double[Schema.Length];
+        weights[0] = 4.0;
+        var lifted = policy with { Baseline = new PolicyBaseline { Weights = weights, Bias = 0.5 } };
+        var features = new float[Schema.Length];
+        features[0] = 0.25f;
+        var option = new IntentOption(Two, [TestContent.Rend, TestContent.Strike]);
+
+        lifted.Score(RendIntent, features).ShouldBe(policy.Score(RendIntent, features) + 1.5, 1e-9, "4 x 0.25 + 0.5");
+        lifted.Score(StrikeIntent, features).ShouldBe(policy.Score(StrikeIntent, features) + 1.5, 1e-9);
+        lifted.Score("never-seen", features).ShouldBe(policy.Fallback + 1.5, 1e-9, "an unseen key rides on the position too");
+        Agent(lifted).DecideIntent(Board(enemyHealth: 20), option).ShouldBe(Agent(policy).DecideIntent(Board(enemyHealth: 20), option));
+    }
+
+    [Fact]
+    public void A_baseline_of_another_width_or_an_infinite_one_is_refused()
+    {
+        var policy = Policy((RendIntent, 1.0));
+
+        Should.Throw<InvalidDataException>(() => (policy with { Baseline = new PolicyBaseline { Weights = new double[Schema.Length - 1], Bias = 0.0 } }).Validated()).Message.ShouldContain("one weight per feature");
+        Should.Throw<InvalidDataException>(() => (policy with { Baseline = new PolicyBaseline { Weights = new double[Schema.Length], Bias = double.NaN } }).Validated()).Message.ShouldContain("baseline");
+        (policy with { Baseline = new PolicyBaseline { Weights = new double[Schema.Length], Bias = 0.0 } }).Validated().Baseline.ShouldNotBeNull();
+    }
+
+    [Fact]
     public void Invalid_inputs_are_rejected()
     {
         var agent = Agent(Policy());

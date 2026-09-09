@@ -77,6 +77,10 @@ purpose of catching accidental changes.
 - **Dataset**: what `simulate --record` writes: for every decision of a recorded match, the observation, the
   legal keys, the key taken, and later the **return** of that player in that match (+1 for a win, -1 for a
   loss, a little more or less depending on the health margin). This is the thing a model actually trains on.
+- **Baseline**: how good the position is, before you consider what to play. The learner fits it on every
+  recorded decision at once, then asks each action only "how much better or worse than that?" — because a
+  match's result is credited to all hundred and fifty of its decisions, so on its own it mostly tells you
+  about the position, not about the move (ADR 0016).
 - **Policy**: the trained model. Here a policy is a table: one row of numbers per action key. The score of a
   key is its row multiplied with the observation, plus a bias. Nothing fancier, on purpose: the engine reads
   it back with a loop of multiplications and no machine-learning library.
@@ -174,6 +178,15 @@ The whole turn also runs on GitHub Actions, in **Actions -> Learning loop**. It 
 `data/`, `learning/`, `benchmarks/` or the script change on `main`, and once a week on Monday morning; "Run
 workflow" starts one on demand with the same knobs as the script (matches, explore, seed, and the two value
 flags), so you never need a .NET SDK or `uv` on your machine to get numbers.
+
+The third way to ask for one is to commit the question. `learning/experiments/next.json` holds the knobs for
+the next run, plus a `why` line saying what it is meant to answer; a pull request that changes that file runs
+the loop with those settings and prints the `why` above the report. GitHub matches that filter against the
+pull request's whole diff, so once the file is in the diff every later push starts a run too; the newest one
+cancels the one before it, and the answer you want is the one on the last commit. So an experiment is a commit, its
+parameters are in git next to the numbers they produced, and anyone who can push can ask for a run without
+touching the Actions form. A field typed into that form still wins for that one run; a field left empty falls
+back to the file. `learning/experiments/README.md` lists the keys.
 
 What a finished run gives you:
 

@@ -1,0 +1,8 @@
+{
+  "why": "Value regression is parked (journal, ci-9): the three starting spells cost the same, share an initiative and a targeting, and one of them strictly dominates, so there is no decision for a learner to find. The loop keeps running for its balance signals, so exploration is off: no second dataset, half the time, and the report still carries spell entropy, player 1 share, draws and round cap. Watch greedy's spell entropy, 0.23 today: it rises when the content finally offers a choice.",
+  "matches": 200,
+  "seed": 1,
+  "explore": "off",
+  "value_alpha": 10,
+  "value_min_samples": 10
+}

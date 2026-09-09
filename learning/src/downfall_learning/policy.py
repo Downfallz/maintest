@@ -2,6 +2,10 @@
 
 A policy holds one weight row and one bias per action key. The score of a candidate action is the dot
 product of its row with the observation plus its bias; a candidate the policy never saw scores ``fallback``.
+A ``value`` policy also carries a baseline, one row over the features shared by every action at a state
+(ADR 0016): its value is added to every score, so a score stays a predicted return while each action row
+carries only the part its own action is responsible for. A file without a baseline reads as a zero baseline,
+and since the baseline is the same for every candidate it never changes which one wins.
 The agent, here or in the engine's ``PolicyAgent``, picks the best-scoring candidate, the first on a tie.
 ``clone`` policies hold classifier logits, ``value`` policies predicted returns; both are read the same way.
 """
@@ -26,6 +30,32 @@ UNSEEN_ACTION_SCORE = -1.0e9
 
 
 @dataclass(frozen=True, eq=False)
+class Baseline:
+    """The part of the return the position explains, shared by every action at a state (ADR 0016)."""
+
+    weights: np.ndarray
+    bias: float
+
+    @classmethod
+    def zero(cls, features: int) -> Baseline:
+        """The baseline of a policy that has none: it adds nothing to any score."""
+        return cls(np.zeros(features), 0.0)
+
+    def value(self, observation: np.ndarray) -> float:
+        return float(self.weights @ observation + self.bias)
+
+    def values(self, observations: np.ndarray) -> np.ndarray:
+        return observations @ self.weights + self.bias
+
+    def to_json(self) -> dict[str, Any]:
+        return {"weights": self.weights.tolist(), "bias": self.bias}
+
+    @classmethod
+    def from_json(cls, data: Mapping[str, Any]) -> Baseline:
+        return cls(np.asarray(data["weights"], dtype=float), float(data["bias"]))
+
+
+@dataclass(frozen=True, eq=False)
 class LinearScorer:
     """One weight row and one bias per action key; unseen keys score ``fallback``."""
 
@@ -33,6 +63,7 @@ class LinearScorer:
     weights: np.ndarray
     bias: np.ndarray
     fallback: float
+    baseline: Baseline | None = None
 
     @cached_property
     def key_index(self) -> dict[str, int]:
@@ -46,6 +77,9 @@ class LinearScorer:
         if rows:
             positions, indexes = zip(*rows, strict=True)
             scores[list(positions)] = self.weights[list(indexes)] @ observation + self.bias[list(indexes)]
+        # The same number for every candidate, so it never changes the winner; it makes a score a return.
+        if self.baseline is not None:
+            scores += self.baseline.value(observation)
         return scores
 
     def choose(self, observation: np.ndarray, candidates: Sequence[str]) -> str:
@@ -65,6 +99,7 @@ class Policy:
     bias: np.ndarray
     fallback: float
     trained_at: str
+    baseline: Baseline | None = None
     metrics: Mapping[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -80,6 +115,17 @@ class Policy:
             raise ValueError(f"Bias is {self.bias.shape}, expected one value per action key.")
         if not (np.all(np.isfinite(self.weights)) and np.all(np.isfinite(self.bias))):
             raise ValueError("Weights and bias must be finite.")
+        self._check_baseline()
+
+    def _check_baseline(self) -> None:
+        if self.baseline is None:
+            return
+        if self.baseline.weights.shape != (len(self.feature_names),):
+            width = len(self.feature_names)
+            shape = self.baseline.weights.shape
+            raise ValueError(f"The baseline holds {shape} weights, expected ({width},).")
+        if not (np.all(np.isfinite(self.baseline.weights)) and np.isfinite(self.baseline.bias)):
+            raise ValueError("The baseline's weights and bias must be finite.")
 
     @property
     def schema_version(self) -> str:
@@ -87,7 +133,7 @@ class Policy:
 
     @property
     def scorer(self) -> LinearScorer:
-        return LinearScorer(self.action_keys, self.weights, self.bias, self.fallback)
+        return LinearScorer(self.action_keys, self.weights, self.bias, self.fallback, self.baseline)
 
     def scores(self, observation: Sequence[float], candidates: Sequence[str]) -> np.ndarray:
         vector = np.asarray(observation, dtype=float)
@@ -100,7 +146,7 @@ class Policy:
         return candidates[int(np.argmax(self.scores(observation, candidates)))]
 
     def to_json(self) -> dict[str, Any]:
-        return {
+        data: dict[str, Any] = {
             "kind": self.kind,
             "stamp": self.stamp.to_json(),
             "schemaId": self.schema_id,
@@ -113,6 +159,9 @@ class Policy:
             "trainedAt": self.trained_at,
             "metrics": dict(self.metrics),
         }
+        if self.baseline is not None:
+            data["baseline"] = self.baseline.to_json()
+        return data
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> Policy:
@@ -127,6 +176,7 @@ class Policy:
                 bias=np.asarray(data["bias"], dtype=float),
                 fallback=float(data["fallback"]),
                 trained_at=str(data["trainedAt"]),
+                baseline=Baseline.from_json(data["baseline"]) if data.get("baseline") else None,
                 metrics={str(key): float(value) for key, value in data.get("metrics", {}).items()},
             )
         except KeyError as error:
