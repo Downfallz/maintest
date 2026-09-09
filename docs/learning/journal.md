@@ -4,6 +4,44 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-09. The spells stop being placeholders: matches get four times shorter, player 1 takes 81.5%
+
+- **What changed**: content only. The 36 spells were placeholders — every one of them `Damage 1`, cost 0,
+  initiative 1, one enemy — and now carry the prototype's numbers, read from
+  `legacy/DownfallArena/DA.GameResources` and documented spell by spell in `docs/domain/spells.md`. Costs 0 to
+  4, initiatives 1 to 3, Critical chance bonuses 0 to 0.667, 27 single-target against 9 multi, 23 aimed at
+  enemies against 9 at allies and 4 at the caster, all seven effect kinds in use instead of one, and the real
+  Creature class on each. Nothing in the engine or the agents moved.
+- **Digest**: `benchmarks/a63d952bbb54d31f74b66244018cd9aa015b1cc4c3ef5e74cc8da66df3b93153.json`, played by
+  `Greedy` against `Greedy` on the 200 benchmark seeds, mirrored, under the default rule set. Engine
+  `dc6e40ffb2a2`. It does not supersede `34c616d3...` so much as leave it behind: different content, so the
+  two are comparable as a whole and not term by term.
+- **Numbers**: 400 matches, player 1 wins **326**, player 2 wins **74**, **no draw at all**, every match by
+  elimination. The placeholder content gave 218 / 96 / **86 draws**. Matches now last **5 to 8 rounds, 5.7 on
+  average** (170 at five, 172 at six, 52 at seven, 6 at eight) against 19 to 23 and 22.0 before; the round cap
+  of 30 is as far out of reach as it ever was. The winner ends with **24.2 health of 60 on average**, spread 1
+  to 40, against 3.4 and a spread of 1 to 12. All 400 entries differ from the old digest, and 204 of them keep
+  the same winner.
+- **What drives the shortening**: the starting kit is `wait`, `basic_attack` and `heavy_strike`, and
+  `heavy_strike` went from 1 damage to 3. Three times the damage per activation against unchanged health is
+  the whole of the four-fold drop in length, and the rest follows from it: a match decided in five rounds
+  leaves no room to trade back, so the loser is eliminated wholesale rather than ground down to a draw, and
+  the winner keeps two thirds of a creature's health that the twenty-round grind used to consume.
+- **The first-mover edge got worse, not better**: 54.5% of the wins to player 1 became **81.5%**. Reading it
+  with the length: the damage race is now short enough that acting first is close to deciding it. This is the
+  number a rule change should move (initiative, pick order, the energy curve), and it now has room to move in.
+- **What the digest does not say**: it holds outcomes only — no spell entropy, fizzle rate, critical rate or
+  score, which come from the `benchmark` console output. Entropy is the one worth reading against the
+  `ci-9` entry below, which closed the value-learning investigation on the finding that the content posed no
+  decision. The catalogue now spreads across cost, initiative and effect, but the **starting** three still may
+  not: at two energy a round, `heavy_strike` at cost 2 for 3 damage remains affordable every round and beats
+  `basic_attack` at cost 1 for 1, so the trade-off `ci-9` looked for may only appear once evolution unlocks
+  the rest of a class. `Greedy`'s entropy above 0.23 is still the sign to watch.
+- **Not settled**: none of these numbers is a balance pass. They are the prototype's, and
+  `docs/domain/spells.md` lists the six legacy mechanics that have no counterpart in the effect taxonomy
+  (ADR 0012) and were dropped or approximated — among them the caster-side costs that made
+  `hateful_sacrifice` and `parasite_jab` a choice rather than a nuke.
+
 ## 2026-09-09. `ci-9`: the baseline works, and it says the content has no decision in it
 
 - **What changed**: ADR 0016 implemented. Same run as `ci-5` otherwise — the thousand-match explored dataset,
