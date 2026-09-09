@@ -27,7 +27,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Creature stats | The stat block of a Creature: Health, Energy, Defense, Initiative, Critical chance. A Creature definition carries the base block. | decided |
 | Spell stats | The numbers of a Spell: Initiative, energy cost, Critical chance bonus. | decided |
 | Critical chance bonus | What a Spell adds to its caster's own Critical chance before the roll, clamped into [0, 1]. A Spell at zero does not mean a cast that never crits: it means the Spell moves nothing. | decided |
-| Spell | An action a Creature can perform in Combat: type, class, initiative, energy cost, Critical chance bonus, targeting spec, and effects. | decided |
+| Spell | An action a Creature can perform in Combat: type, class, initiative, energy cost, Critical chance bonus, targeting spec, and effects. The catalogue is [spells.md](spells.md). | decided |
 | Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012): instant `Damage`, `Heal`, `EnergyGain`; lasting `Bleed`, `Stun`, `DefenseBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
 | Condition | A lasting Effect attached to a Creature (stun, bleed, defense buff) with a Duration and a Stacking policy. Bleeds deal damage at the start of the round; every Condition counts down at Cleanup, and the first countdown after an application does not count. | decided |
 | Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |

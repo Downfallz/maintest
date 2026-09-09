@@ -1,20 +1,20 @@
 {
   "id": "spell:rejuvenate:v1",
   "name": "Rejuvenate",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "spellType": "Defensive",
+  "creatureClass": "Sorcerer",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 1,
+  "criticalChance": 0.17,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Ally",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "Heal",
+      "amount": 3
     }
   ]
 }

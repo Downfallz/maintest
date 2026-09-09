@@ -2,10 +2,10 @@
   "id": "spell:psycho_rush:v1",
   "name": "Psycho Rush",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Berserker",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 3,
+  "criticalChance": 0.33,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 9
     }
   ]
 }

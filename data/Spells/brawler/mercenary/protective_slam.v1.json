@@ -2,10 +2,10 @@
   "id": "spell:protective_slam:v1",
   "name": "Protective Slam",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Mercenary",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 2,
+  "criticalChance": 0.333,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 3
     }
   ]
 }

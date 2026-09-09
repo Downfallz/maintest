@@ -2,19 +2,24 @@
   "id": "spell:toxic_waves:v1",
   "name": "Toxic Waves",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "creatureClass": "Shaman",
+  "initiative": 2,
+  "energyCost": 3,
+  "criticalChance": 0.33,
   "targeting": {
     "origin": "Enemy",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 3
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 2,
+      "durationRounds": 1
     }
   ]
 }

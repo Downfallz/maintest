@@ -2,9 +2,9 @@
   "id": "spell:soul_devourer:v1",
   "name": "Soul Devourer",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
+  "creatureClass": "Leech",
+  "initiative": 2,
+  "energyCost": 3,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 3
     }
   ]
 }

@@ -1,20 +1,26 @@
 {
   "id": "spell:guard:v1",
   "name": "Guard",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "spellType": "Defensive",
+  "creatureClass": "Brawler",
   "initiative": 1,
-  "energyCost": 0,
+  "energyCost": 1,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Enemy",
+    "origin": "Ally",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "DefenseBuff",
+      "amount": 1,
+      "permanent": true
+    },
+    {
+      "kind": "DefenseBuff",
+      "amount": 1,
+      "durationRounds": 2
     }
   ]
 }

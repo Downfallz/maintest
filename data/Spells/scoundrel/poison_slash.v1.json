@@ -2,9 +2,9 @@
   "id": "spell:poison_slash:v1",
   "name": "Poison Slash",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Scoundrel",
   "initiative": 1,
-  "energyCost": 0,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
@@ -14,7 +14,12 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 2
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 1,
+      "durationRounds": 1
     }
   ]
 }

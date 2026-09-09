@@ -1,20 +1,26 @@
 {
   "id": "spell:revenant_guards:v1",
   "name": "Revenant Guards",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "spellType": "Defensive",
+  "creatureClass": "Necromancer",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 2,
+  "criticalChance": 0.33,
   "targeting": {
-    "origin": "Enemy",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "origin": "Ally",
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "DefenseBuff",
+      "amount": 2,
+      "permanent": true
+    },
+    {
+      "kind": "DefenseBuff",
+      "amount": 2,
+      "durationRounds": 1
     }
   ]
 }

@@ -2,10 +2,10 @@
   "id": "spell:parasite_jab:v1",
   "name": "Parasite Jab",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Leech",
   "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "energyCost": 2,
+  "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 2
     }
   ]
 }

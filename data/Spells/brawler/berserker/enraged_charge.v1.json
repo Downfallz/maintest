@@ -2,9 +2,9 @@
   "id": "spell:enraged_charge:v1",
   "name": "Enraged Charge",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
+  "creatureClass": "Berserker",
   "initiative": 1,
-  "energyCost": 0,
+  "energyCost": 3,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
@@ -14,7 +14,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 4
+    },
+    {
+      "kind": "Damage",
+      "amount": 3
     }
   ]
 }

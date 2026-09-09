@@ -2,9 +2,9 @@
   "id": "spell:throwing_star:v1",
   "name": "Throwing Star",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
+  "creatureClass": "Scoundrel",
+  "initiative": 2,
+  "energyCost": 1,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 2
     }
   ]
 }

@@ -2,10 +2,10 @@
   "id": "spell:mortal_wound:v1",
   "name": "Mortal Wound",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
-  "criticalChance": 0,
+  "creatureClass": "Assassin",
+  "initiative": 2,
+  "energyCost": 3,
+  "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,7 +14,12 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 1
+      "amount": 4
+    },
+    {
+      "kind": "Bleed",
+      "amountPerRound": 4,
+      "durationRounds": 2
     }
   ]
 }

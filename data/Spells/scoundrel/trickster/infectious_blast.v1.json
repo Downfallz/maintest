@@ -2,19 +2,20 @@
   "id": "spell:infectious_blast:v1",
   "name": "Infectious Blast",
   "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
+  "creatureClass": "Trickster",
+  "initiative": 2,
+  "energyCost": 1,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
-      "kind": "Damage",
-      "amount": 1
+      "kind": "InitiativeDebuff",
+      "amount": 2,
+      "durationRounds": 2
     }
   ]
 }

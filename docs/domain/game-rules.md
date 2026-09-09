@@ -1,7 +1,8 @@
 # Game rules
 
 This document states what the engine does today and what is decided for next. Ideas belong under
-"Open questions". Vocabulary is defined in [glossary.md](glossary.md).
+"Open questions". Vocabulary is defined in [glossary.md](glossary.md). The spells themselves are
+listed in [spells.md](spells.md).
 
 ## Implemented
 
@@ -109,6 +110,8 @@ replays identically. Time comes from `TimeProvider`, randomness from `IRandomSou
 ## Open questions
 
 - Board: slot-based teams only, or positions with range and adjacency.
+- Effects on the caster (lifesteal, recoil, self-buffs), stat debuffs beyond initiative, and passive
+  spells: three gaps the inherited spells fall into ([spells.md](spells.md)).
 - Team composition between Matches: fixed roster, drafting, or swapping.
 - Sudden death after the round cap instead of a health tiebreak.
 - How much of the ML/simulation work (`legacy/DownfallArena/DA.Game.Tests/ml.md`) shapes the event model.

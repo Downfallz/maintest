@@ -1,19 +1,19 @@
 {
   "id": "spell:death_squad:v1",
   "name": "Death Squad",
-  "spellType": "Offensive",
-  "creatureClass": "Creature",
-  "initiative": 1,
-  "energyCost": 0,
+  "spellType": "Defensive",
+  "creatureClass": "Assassin",
+  "initiative": 3,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Enemy",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "origin": "Ally",
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
-      "kind": "Damage",
+      "kind": "EnergyGain",
       "amount": 1
     }
   ]
