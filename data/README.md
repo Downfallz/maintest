@@ -35,8 +35,9 @@ removing content:
 
 - a creature whose talent tree is disabled, since it cannot be played;
 - a creature left with no starting spell, since it needs at least one;
-- a talent node whose **every** `anyOf` spell is disabled, since an empty `anyOf` is no requirement at all —
-  pruning it would unlock the branch it gates instead of closing it.
+- a prerequisite gate — `allOf` or `anyOf`, on a node or on one of its spells — whose **every** spell is
+  disabled, since an empty gate is no requirement at all: pruning it would unlock what it gates instead of
+  closing it. A gate that keeps at least one spell is pruned normally.
 
 In each case, disable what depends on the item too, or leave one of those spells enabled.
 
