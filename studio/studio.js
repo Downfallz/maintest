@@ -443,7 +443,7 @@ function effectiveCrit(draft) {
   const rates = [...new Set(bases.map(base => percent(Math.min(1, base + bonus))))];
   const own = bases.length === 1
     ? `a creature's own ${percent(bases[0])}`
-    : `each creature's own, ${percent(bases[0])} to ${percent(bases[bases.length - 1])}`;
+    : `each creature's own, ${percent(bases[0])} to ${percent(bases.at(-1))}`;
   return element('span', { className: 'muted', textContent: `added to ${own}, so a cast crits at ${rates.join(' or ')}` });
 }
 
