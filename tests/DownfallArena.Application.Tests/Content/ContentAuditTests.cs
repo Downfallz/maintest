@@ -23,7 +23,7 @@ public sealed class ContentAuditTests
     {
         var report = ContentAudit.Of(TestContent.Resources, RuleSet.Default);
 
-        report.Findings.ShouldBeEmpty();
+        ItemFindings(report).ShouldBeEmpty();
         report.ContentVersion.ShouldBe(TestContent.Resources.Version);
         report.Spells.ShouldBe(4);
         report.RoundCap.ShouldBe(RuleSet.Default.RoundCap);
@@ -36,7 +36,7 @@ public sealed class ContentAuditTests
 
         var report = ContentAudit.Of(resources, RuleSet.Default);
 
-        var finding = report.Findings.ShouldHaveSingleItem();
+        var finding = ItemFindings(report).ShouldHaveSingleItem();
         finding.Code.ShouldBe("Spell.Unreachable");
         finding.Subject.ShouldBe(Lost.Value);
     }
@@ -52,7 +52,7 @@ public sealed class ContentAuditTests
 
         var report = ContentAudit.Of(resources, RuleSet.Default);
 
-        report.Findings.Select(finding => (finding.Code, finding.Subject)).ShouldBe(
+        ItemFindings(report).Select(finding => (finding.Code, finding.Subject)).ShouldBe(
             [("Spell.Unreachable", Follow.Value), ("Spell.Unreachable", Lost.Value), ("TalentNode.Unreachable", $"{Tree.Value}/locked")],
             ignoreOrder: true);
     }
@@ -71,7 +71,7 @@ public sealed class ContentAuditTests
 
         var report = ContentAudit.Of(resources, RuleSet.Default);
 
-        var finding = report.Findings.ShouldHaveSingleItem();
+        var finding = ItemFindings(report).ShouldHaveSingleItem();
         finding.Code.ShouldBe("TalentTree.Unused");
         finding.Subject.ShouldBe(Other.Value);
     }
@@ -88,7 +88,7 @@ public sealed class ContentAuditTests
 
         var report = ContentAudit.Of(resources, rules);
 
-        var finding = report.Findings.ShouldHaveSingleItem();
+        var finding = ItemFindings(report).ShouldHaveSingleItem();
         finding.Code.ShouldBe("Spell.Uncastable");
         finding.Subject.ShouldBe(Lost.Value);
         finding.Message.ShouldContain("60");
@@ -159,7 +159,7 @@ public sealed class ContentAuditTests
 
         var report = ContentAudit.Of(resources, RuleSet.Default);
 
-        var finding = report.Findings.ShouldHaveSingleItem();
+        var finding = ItemFindings(report).ShouldHaveSingleItem();
         finding.Code.ShouldBe("Spell.Indistinguishable");
         finding.Subject.ShouldBe(Strike.Value);
         finding.Message.ShouldContain("twin");
@@ -175,7 +175,7 @@ public sealed class ContentAuditTests
             [Spell(Strike, cost: 0), Spell(twin, cost: 1)],
             [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))]);
 
-        ContentAudit.Of(resources, RuleSet.Default).Findings.ShouldBeEmpty();
+        ItemFindings(ContentAudit.Of(resources, RuleSet.Default)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public sealed class ContentAuditTests
             [Spell(Strike, cost: 0), Spell(affordable, cost: (rules.EnergyPerRound * rules.RoundCap) + 5, damage: 2)],
             [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(affordable)]))]);
 
-        ContentAudit.Of(resources, rules).Findings.ShouldBeEmpty("the five it spawns with is what takes it over the line");
+        ItemFindings(ContentAudit.Of(resources, rules)).ShouldBeEmpty("the five it spawns with is what takes it over the line");
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public sealed class ContentAuditTests
             [Bundle(Strike, Damage.Of(2), Stun.For(1)), Bundle(twin, Stun.For(1), Damage.Of(2))],
             [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))]);
 
-        ContentAudit.Of(resources, RuleSet.Default).Findings.ShouldHaveSingleItem().Code.ShouldBe("Spell.Indistinguishable");
+        ItemFindings(ContentAudit.Of(resources, RuleSet.Default)).ShouldHaveSingleItem().Code.ShouldBe("Spell.Indistinguishable");
     }
 
     private static Spell Bundle(SpellId id, params Effect[] effects) =>
@@ -251,6 +251,42 @@ public sealed class ContentAuditTests
             new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
             TargetingSpec.SingleTarget(TargetOrigin.Enemy),
             effects);
+
+    [Fact]
+    public void A_spell_stat_every_spell_gives_the_same_value_is_reported_as_one_this_content_does_not_vary()
+    {
+        // Every test spell here shares an initiative and a critical chance, and differs only by its damage.
+        var report = ContentAudit.Of(TestContent.Resources, RuleSet.Default);
+
+        var flat = report.Findings.Where(finding => finding.Code == "Content.FlatSpellStat").ToList();
+        flat.Select(finding => finding.Subject).ShouldBe(["criticalChance", "initiative"], ignoreOrder: true);
+        flat.Single(finding => finding.Subject == "criticalChance").Message.ShouldContain("bonus on the creature's own");
+    }
+
+    [Fact]
+    public void A_stat_the_content_does_vary_is_not_reported()
+    {
+        // The test content prices its spells at 0, 1 and 2, so energy is a lever it uses.
+        ContentAudit.Of(TestContent.Resources, RuleSet.Default).Findings
+            .ShouldNotContain(finding => finding.Code == "Content.FlatSpellStat" && finding.Subject == "energyCost");
+    }
+
+    /// <summary>One spell cannot fail to vary anything, so there is nothing to say about the set.</summary>
+    [Fact]
+    public void Content_with_a_single_spell_is_not_told_that_its_stats_never_differ()
+    {
+        var resources = GameResources.Create(
+            "one-spell",
+            [Creature(Fighter, Tree, [Strike], energy: 0)],
+            [Spell(Strike, cost: 0)],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike)]))]);
+
+        ContentAudit.Of(resources, RuleSet.Default).Findings.ShouldNotContain(finding => finding.Code == "Content.FlatSpellStat");
+    }
+
+    /// <summary>Findings about one item, apart from the ones about the content as a whole.</summary>
+    private static IReadOnlyList<ContentFinding> ItemFindings(ContentAuditReport report) =>
+        [.. report.Findings.Where(finding => !finding.Code.StartsWith("Content.", StringComparison.Ordinal))];
 
     /// <summary>One creature on one tree, and spells that differ by their damage so none reads as a twin of another.</summary>
     private static GameResources Content(TalentNode root, IReadOnlyList<SpellId> spells) =>

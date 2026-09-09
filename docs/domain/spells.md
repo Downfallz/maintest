@@ -23,7 +23,7 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Temporary` + `Stats.Defense`, `Length` | raise it for a few rounds | `DefenseBuff` with `durationRounds` |
 | `EffectType.Direct` + `Stats.Stun` | stun the targets | `Stun` |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
-| `SpellType`, `CharacterClass`, `Initiative`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 |
+| `SpellType`, `CharacterClass`, `Initiative`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
 | `NbTargets` | 1, or 2 and 3 for the sweeps | `targeting.scope` and `maxTargets` |
 | `Level` | depth in the talent tree | nothing: the tree in `data/TalentTrees` already says it |
 
@@ -67,7 +67,8 @@ That reads as a typo in the prototype; it is `Offensive` here.
 
 ## The spells
 
-Critical chance adds to the caster's own. Durations are in rounds.
+The crit column is the Critical chance bonus, what the spell adds to its caster's own. Durations are
+in rounds.
 
 | Spell | Class | Type | Initiative | Energy | Crit | Targets | Effects |
 | --- | --- | --- | --- | --- | --- | --- | --- |
