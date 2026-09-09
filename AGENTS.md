@@ -28,7 +28,8 @@ tools/
 data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
 benchmarks/                    The fixed benchmark seeds and one outcome digest per content hash, verified in CI. See benchmarks/README.md.
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
-learning/                      Learning side: heuristic weights now, the Python training project later (docs/learning-roadmap.md).
+learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md.
+models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
@@ -60,11 +61,15 @@ dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
 dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
+uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)   # the Python side
+uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
+uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 ```
 
-Run build, tests, and format check before declaring any task done. CI runs exactly these, then sends the
-build and the coverage report to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The
-Sonar quality gate covers C#, shell scripts, and workflows, and must pass on every pull request.
+Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
+ruff check, ruff format check, and pytest. CI runs exactly these, then sends the build and the coverage
+reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
+quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 
 ## Architecture rules (enforced by tests/DownfallArena.Architecture.Tests)
 
@@ -95,6 +100,8 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 ## Coding conventions
 
 - .NET 10, C# latest, nullable enabled, warnings are errors, `AnalysisLevel=latest-recommended`.
+- Python 3.11+ under `learning/`, dependencies pinned by `uv.lock`, `ruff` for lint and format (line length
+  110), type hints everywhere, pytest tests named as behaviour like the C# ones. No ML runtime in .NET.
 - Formatting is defined by `.editorconfig` and enforced by `dotnet format`. Do not argue with it.
 - File-scoped namespaces, one public type per file, folder structure mirrors namespaces.
 - NuGet versions live only in `Directory.Packages.props` (Central Package Management).

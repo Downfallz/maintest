@@ -162,7 +162,7 @@
       return node;
     }
 
-    const pct = value => `${(value * 100).toFixed(1)}%`;
+    const pct = value => (typeof value === 'number' && !Number.isNaN(value) ? `${(value * 100).toFixed(1)}%` : '-');
     const fixed = (value, digits = 1) => Number(value).toFixed(digits);
     const shortId = id => String(id).slice(0, 8);
     const spellName = id => String(id).split(':')[1] || id;
@@ -537,23 +537,41 @@
 
     // ---------- training ----------
 
+    const TRAINING_FIELDS = new Set(['iteration', 'loss', 'winRate', 'winRateLow', 'winRateHigh', 'matches', 'best', 'stamp']);
+
+    function hasWinRate(row) {
+      return typeof row.winRate === 'number';
+    }
+
+    // A learner without an evaluation (behaviour cloning, value regression before L7) writes rows without a win
+    // rate: the best iteration is then the one with the lowest loss.
     function bestIteration(rows) {
       const flagged = rows.find(row => row.best);
       if (flagged) return flagged;
+      const evaluated = rows.filter(hasWinRate);
+      const pool = evaluated.length ? evaluated : rows;
+      const better = evaluated.length ? (a, b) => a.winRate > b.winRate : (a, b) => a.loss < b.loss;
       let best = null;
-      for (const row of rows) {
-        if (!best || row.winRate > best.winRate) best = row;
+      for (const row of pool) {
+        if (!best || better(row, best)) best = row;
       }
       return best;
     }
 
+    function extraFields(row) {
+      return Object.entries(row)
+        .filter(([key, value]) => !TRAINING_FIELDS.has(key) && typeof value === 'number')
+        .map(([key, value]) => `${key} ${fixed(value, 4)}`)
+        .join(', ');
+    }
+
     function trainingTable(rows, best) {
       const table = el('table');
-      table.append(el('tr', {}, ['Iteration', 'Loss', 'Win rate', 'Interval', 'Matches'].map(text => el('th', {}, text))));
+      table.append(el('tr', {}, ['Iteration', 'Loss', 'Win rate', 'Interval', 'Matches', 'Other'].map(text => el('th', {}, text))));
       for (const row of rows) {
         const interval = row.winRateLow === undefined ? '-' : `${pct(row.winRateLow)} to ${pct(row.winRateHigh)}`;
         table.append(el('tr', { class: row === best ? 'delta-up' : '' }, [
-          el('td', { class: 'num' }, row.iteration), el('td', { class: 'num' }, fixed(row.loss, 4)), el('td', { class: 'num' }, pct(row.winRate)), el('td', {}, interval), el('td', { class: 'num' }, row.matches ?? '-'),
+          el('td', { class: 'num' }, row.iteration), el('td', { class: 'num' }, fixed(row.loss, 4)), el('td', { class: 'num' }, pct(row.winRate)), el('td', {}, interval), el('td', { class: 'num' }, row.matches ?? '-'), el('td', {}, extraFields(row)),
         ]));
       }
       return table;
@@ -563,10 +581,12 @@
       const rows = [...artifact.rows].sort((a, b) => a.iteration - b.iteration);
       const best = bestIteration(rows);
       const lossCanvas = el('canvas');
-      const winCanvas = el('canvas');
+      const evaluated = rows.some(hasWinRate);
+      const winCanvas = evaluated ? el('canvas') : el('p', { class: 'muted' }, 'No evaluation win rate in this run: the learner was not evaluated against the engine.');
       const pointRadius = rows.map(row => (row === best ? 6 : 2));
       requestAnimationFrame(() => {
         chart(lossCanvas, { type: 'line', data: { labels: rows.map(row => row.iteration), datasets: [{ label: 'loss', data: rows.map(row => row.loss), borderColor: '#dc2626', pointRadius }] } });
+        if (!evaluated) return;
         chart(winCanvas, { type: 'line', data: { labels: rows.map(row => row.iteration), datasets: [
           { label: 'win rate', data: rows.map(row => row.winRate), borderColor: '#2563eb', pointRadius },
           { label: 'low', data: rows.map(row => row.winRateLow ?? null), borderColor: 'rgba(37,99,235,0.2)', pointRadius: 0 },
@@ -580,7 +600,7 @@
           stampList(rows[0] ? rows[0].stamp : null),
         ]),
         el('div', { class: 'stats' }, [
-          stat('Best iteration', best ? best.iteration : '-', best ? `win rate ${pct(best.winRate)}` : ''),
+          stat('Best iteration', best ? best.iteration : '-', best ? (hasWinRate(best) ? `win rate ${pct(best.winRate)}` : `loss ${fixed(best.loss, 4)}`) : ''),
           stat('Final loss', rows.length ? fixed(rows[rows.length - 1].loss, 4) : '-'),
           stat('Final win rate', rows.length ? pct(rows[rows.length - 1].winRate) : '-'),
         ]),

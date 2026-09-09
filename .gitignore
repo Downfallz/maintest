@@ -68,3 +68,11 @@ data/dst/
 # Learning artifacts (docs/learning/artifacts.md)
 runs/
 *.trace.json
+
+# Python (learning/, managed with uv)
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml

@@ -181,25 +181,34 @@ The terms below are the authoritative entries of the "Learning" section of
   versus Random on the benchmark seeds is the first evaluation number in the journal; the `Evaluate` workflow
   (`workflow_dispatch`) runs an evaluation on the CI runners and keeps `evaluation.json` as an artifact.
 
-### Phase L6. Learning loop (Python, `learning/`)
+### Phase L6. Learning loop (Python, `learning/`) (done, `docs/learning/training.md`)
 
-- A `uv` project: `learning/pyproject.toml`, `ruff`, `pytest`, a CI job that runs them. Modules:
-  `artifacts.py` (load manifests, steps, episodes, evaluations; refuse to mix run stamps unless asked),
-  `features.py` (checks the schema version against the recorded one), `train_value.py`, `train_clone.py`,
-  `search_weights.py`, `export.py`, and `report.py` (writes `training.jsonl` for the viewer).
+- A `uv` project: `learning/pyproject.toml` and `uv.lock`, `ruff`, `pytest`, a CI job that runs them and
+  feeds the Python coverage to the Sonar analysis. Modules: `artifacts.py` (manifests, steps, episodes,
+  evaluations; refuses to mix run stamps unless asked, and two schema ids always), `features.py` (the
+  schema versions this side reads), `policy.py`, `report.py` (`training.jsonl`), `export.py` (weights files,
+  the wide CSV projection), `train_clone.py`, `train_value.py`, `search_weights.py`, `cli.py`.
 - Three learners, in order of cost:
-  1. **Weight search** for `HeuristicAgent`: cross-entropy method or a simple evolution strategy over the
-     weights, evaluated by running the .NET CLI on the benchmark seeds. No dataset needed.
-  2. **Behaviour cloning**: a classifier from observation to action key on greedy or self-play datasets.
-  3. **Value regression**: predict the episode return from (observation, action); the agent picks the
-     option with the highest predicted return. This is the legacy `RewardTrainer` idea on real features.
+  1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the eight weights,
+     each candidate evaluated by the engine's `evaluate` as `heuristic:<file>` against an opponent on the
+     benchmark seeds, the mean score as fitness. No dataset needed.
+  2. **Behaviour cloning** (`train-clone`): a linear classifier from observation to action key on a
+     recorded run, one epoch per iteration, the best epoch kept by its accuracy on held-out matches.
+  3. **Value regression** (`train-value`): one ridge regression per action key from observation to the
+     episode return; the agent takes the option with the highest predicted return. This is the legacy
+     `RewardTrainer` idea on real features.
   Reinforcement learning proper (PPO self-play) is a later phase, only if the value agent plateaus.
-- Exchange format: `policy.json` (run stamp of the training data, feature schema version, action keys,
-  weight matrix or decision table). `PolicyAgent` in Application loads it, refuses a schema version it does
-  not know, and scores options with a dot product; no ML runtime. ONNX and `Microsoft.ML.OnnxRuntime` get an
-  ADR when a model needs it.
+- Exchange format: `policy.json` (run stamp of the training data, feature schema id and version, action
+  keys, one weight row and one bias per key, a fallback score). Both kinds are read the same way: the
+  best-scoring candidate by dot product, no ML runtime. `PolicyAgent` in Application, which loads it and
+  refuses a schema version it does not know, lands in L7 with the loop that evaluates policies. ONNX and
+  `Microsoft.ML.OnnxRuntime` get an ADR when a model needs it.
 - Model files: small JSON committed under `models/<name>/<version>/` with their evaluation; datasets are
-  git-ignored and regenerated from seeds.
+  git-ignored and regenerated from seeds. The viewer reads a `training.jsonl` without win rates (a learner
+  not yet evaluated) and marks the best iteration by loss.
+- Tests: synthetic runs whose intents follow a rule and whose returns follow the health margin, so cloning
+  reaches the rule and the regression recovers the return; the viewer samples as loading fixtures; a fake
+  engine command for the search; the `training.jsonl` and `policy.json` contracts; the command line.
 
 ### Phase L7. Iteration workflow
 
