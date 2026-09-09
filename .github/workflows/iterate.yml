@@ -1,0 +1,123 @@
+name: Learning loop
+
+# One turn of scripts/iterate.sh on the CI runners, so a report exists without a local .NET SDK, a local uv, or
+# anyone at a keyboard (learning phase L7, docs/learning/explained.md). It runs when the engine, the content or
+# the learning project changes on main, once a week, and on demand. The numbers land in the run summary; the
+# report page, the evaluations and the trained policies are kept as an artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      matches:
+        description: "Matches recorded in the dataset (200 is the default of the script)"
+        default: "200"
+      explore:
+        description: "Share of decisions taken at random in the value dataset, or 'off' (ADR 0014)"
+        default: "0.2"
+      seed:
+        description: "Base seed of the recorded dataset"
+        default: "1"
+      value_alpha:
+        description: "How strongly the value fit is pulled toward zero"
+        default: "1.0"
+      value_min_samples:
+        description: "Examples an action needs before it gets its own fit"
+        default: "5"
+  schedule:
+    # Monday morning UTC: one report on whatever landed during the week, even a week with no engine change.
+    - cron: "0 6 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "data/**"
+      - "learning/**"
+      - "benchmarks/**"
+      - "scripts/iterate.sh"
+      - ".github/workflows/iterate.yml"
+
+permissions:
+  contents: read
+
+# One loop at a time: a second run would only repeat the first, and each holds a runner for a long while.
+concurrency:
+  group: iterate-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  RUN_ID: ci-${{ github.run_number }}
+
+jobs:
+  iterate:
+    name: One turn of the learning loop
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      # The loop calls the console scripts of the learning project (train-value, report, evaluate-policy), so
+      # the project itself is installed here, unlike the test job of ci.yml which imports it from src/.
+      - name: Install uv and the learning project
+        run: |
+          pipx install uv==0.8.17
+          uv sync --project learning --locked
+
+      # Inputs reach the shell through the environment, never through the script text. They are empty on a
+      # schedule or a push, where the defaults of the script are what we want anyway.
+      - name: Run one turn of the loop
+        env:
+          MATCHES: ${{ inputs.matches || '200' }}
+          EXPLORE: ${{ inputs.explore || '0.2' }}
+          SEED: ${{ inputs.seed || '1' }}
+          VALUE_ALPHA: ${{ inputs.value_alpha || '1.0' }}
+          VALUE_MIN_SAMPLES: ${{ inputs.value_min_samples || '5' }}
+        run: |
+          arguments=(--run "$RUN_ID" --matches "$MATCHES" --seed "$SEED"
+            --value-alpha "$VALUE_ALPHA" --value-min-samples "$VALUE_MIN_SAMPLES")
+          if [[ "$EXPLORE" != "off" ]]; then
+            arguments+=(--explore "$EXPLORE")
+          fi
+          scripts/iterate.sh "${arguments[@]}" 2>&1 | tee iterate.log
+
+      - name: Put the report in the run summary
+        if: always()
+        run: |
+          excerpt="$(sed -n '/^== 6\./,$p' iterate.log 2>/dev/null || true)"
+          if [[ -z "$excerpt" ]]; then
+            excerpt="$(tail -n 60 iterate.log 2>/dev/null || echo 'The loop wrote nothing.')"
+          fi
+          {
+            echo "## Learning loop \`$RUN_ID\`"
+            echo
+            echo '```'
+            echo "$excerpt"
+            echo '```'
+            echo
+            echo "The report page and the trained policies are in the artifact of this run."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The datasets are deliberately left out: they are hundreds of megabytes and the seed reproduces them.
+      - name: Upload the run
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: run-${{ github.run_number }}
+          path: |
+            iterate.log
+            runs/ci-${{ github.run_number }}/report.html
+            runs/ci-${{ github.run_number }}/report.json
+            runs/ci-${{ github.run_number }}/evaluations
+            runs/ci-${{ github.run_number }}/value
+            runs/ci-${{ github.run_number }}/clone
+          if-no-files-found: warn
+          retention-days: 30

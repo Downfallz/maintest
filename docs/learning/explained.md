@@ -168,6 +168,24 @@ training curves already inside it. Open that one file in a browser and it starts
 drag, nothing to pick. Drop another run's `report.json` on it to get the deltas side by side. (`--open` asks
 the script to launch the browser itself; that works on a desktop, not inside a container.)
 
+### Getting a report without running anything locally
+
+The whole turn also runs on GitHub Actions, in **Actions -> Learning loop**. It starts by itself when `src/`,
+`data/`, `learning/`, `benchmarks/` or the script change on `main`, and once a week on Monday morning; "Run
+workflow" starts one on demand with the same knobs as the script (matches, explore, seed, and the two value
+flags), so you never need a .NET SDK or `uv` on your machine to get numbers.
+
+What a finished run gives you:
+
+- the **summary of the run** (the page GitHub opens): the policy evaluations and the whole report table, no
+  download;
+- the **artifact** `run-<number>`: `report.html` (open it, it is the viewer with the run inside),
+  `report.json`, the evaluations, and the two trained policies.
+
+The recorded datasets are not in the artifact on purpose: they are hundreds of megabytes and the seed
+reproduces them exactly. The runner starts empty every time, so a CI run has no previous run to compare
+against; the deltas are still a local `--against`, or a comparison of two `report.json` in the viewer.
+
 ### The knobs
 
 Everything you may want to change lives on `scripts/iterate.sh`, as a flag with a default; nothing needs
@@ -177,6 +195,7 @@ editing in a file, and `scripts/iterate.sh --help` repeats this list. In plain w
 | --- | --- | --- | --- |
 | `--matches` | 200 | how many greedy self-play matches are recorded as the dataset | first thing to raise when a policy learns something odd from too few examples of a rare move |
 | `--seed` | 1 | which matches get recorded (the base seed) | to record different matches with the same size |
+| `--explore` | none | also records a second dataset where that share of decisions is taken at random, and trains the value policy on it (ADR 0014) | whenever you train a value policy; greedy's own games never show what another move would have given. Doubles the recording time |
 | `--value-alpha` | 1.0 | how strongly the value model's fit is pulled toward "no effect". A model with 383 numbers per action and few examples can fit noise; a higher pull makes it more cautious | raise (10, 100) when the value policy trusts a handful of examples too much (a huge weight on one action) |
 | `--value-min-samples` | 5 | how many examples an action needs before it gets its own fit; below that it keeps the dataset's average return | raise (50) so a rare move cannot be scored on almost nothing |
 | `--clone-epochs` | 20 | how many passes the clone makes over the dataset; the best pass on held-out matches is kept | raise if the accuracy is still climbing at the last pass |
