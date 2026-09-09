@@ -50,7 +50,8 @@ step() {
 
 evaluate() {
   # evaluate <name> <agent A> <agent B>: one mirrored evaluation on the benchmark seeds into the run.
-  "${cli[@]}" evaluate --p1 "$2" --p2 "$3" --seeds "$seeds" --out "$run/evaluations/$1.json"
+  local name="$1" agent_a="$2" agent_b="$3"
+  "${cli[@]}" evaluate --p1 "$agent_a" --p2 "$agent_b" --seeds "$seeds" --out "$run/evaluations/$name.json"
 }
 
 step "1. Build the engine and the content"

@@ -143,12 +143,13 @@ public sealed class PolicyAgentTests
     [Fact]
     public async Task A_policy_plays_a_match_to_its_end_and_replays_identically()
     {
+        var rules = MatchStore.TwoOnTwo(roundCap: 8);
+        var schema = FeatureSchema.Build(TestContent.Resources, rules);
         var source = Substitute.For<IPolicySource>();
-        source.Load(Arg.Any<string>()).Returns(Policy());
+        source.Load(Arg.Any<string>()).Returns(Policy(schema));
         var store = new MatchStore();
         var runner = new EvaluationRunner(Handlers.Runner(store.Workflow, new TestRandomFactory(), source));
-        var rules = MatchStore.TwoOnTwo(roundCap: 8);
-        var stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, rules, FeatureSchema.Build(TestContent.Resources, rules), "Policy:p.json@0123abcd", "Random", 1);
+        var stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, rules, schema, "Policy:p.json@0123abcd", "Random", 1);
         var scenario = new EvaluationScenario { RuleSet = rules, Roster = MatchStore.Roster(rules), AgentA = AgentSpec.Parse("policy:p.json"), AgentB = AgentSpec.Random, Seeds = [3, 4] };
 
         var first = BenchmarkDigest.Of(await runner.RunAsync(scenario, stamp, TestContext.Current.CancellationToken));
@@ -162,14 +163,17 @@ public sealed class PolicyAgentTests
         new(policy.Validated(), new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema));
 
     /// <summary>A policy under the test schema: the given keys with their bias, every weight zero, no fallback score.</summary>
-    private static PolicyFile Policy(params (string Key, double Bias)[] keys) => new()
+    private static PolicyFile Policy(params (string Key, double Bias)[] keys) => Policy(Schema, keys);
+
+    /// <summary>The same under another schema, for a match played under other rules (a round cap changes the id).</summary>
+    private static PolicyFile Policy(FeatureSchema schema, params (string Key, double Bias)[] keys) => new()
     {
         Kind = "clone",
-        SchemaId = Schema.Id,
-        SchemaVersion = Schema.Version,
-        FeatureNames = Schema.FeatureNames,
+        SchemaId = schema.Id,
+        SchemaVersion = schema.Version,
+        FeatureNames = schema.FeatureNames,
         ActionKeys = [.. keys.Select(key => key.Key)],
-        Weights = Rows(Schema.Length, keys.Length),
+        Weights = Rows(schema.Length, keys.Length),
         Bias = [.. keys.Select(key => key.Bias)],
         Fallback = -1e9,
         Fingerprint = "0123abcd",

@@ -42,22 +42,23 @@ public sealed class JsonPolicySource : IPolicySource
     private static TValue Required<TValue>(TValue? value, string name, string path) =>
         value ?? throw new InvalidDataException($"'{path}' lacks the policy field '{name}'.");
 
+    /// <summary>The fields the engine reads, set by the deserializer; every one optional so a missing one is named.</summary>
     private sealed class PolicyDocument
     {
-        public string? Kind { get; init; }
+        public string? Kind { get; set; }
 
-        public string? SchemaId { get; init; }
+        public string? SchemaId { get; set; }
 
-        public string? SchemaVersion { get; init; }
+        public string? SchemaVersion { get; set; }
 
-        public string[]? FeatureNames { get; init; }
+        public string[]? FeatureNames { get; set; }
 
-        public string[]? ActionKeys { get; init; }
+        public string[]? ActionKeys { get; set; }
 
-        public double[][]? Weights { get; init; }
+        public double[][]? Weights { get; set; }
 
-        public double[]? Bias { get; init; }
+        public double[]? Bias { get; set; }
 
-        public double? Fallback { get; init; }
+        public double? Fallback { get; set; }
     }
 }

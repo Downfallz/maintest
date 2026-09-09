@@ -110,7 +110,16 @@ class TrainingLog:
         if not self._rows:
             raise ValueError("No iteration to record an evaluation on.")
         target = self.best() or self._rows[-1]
-        updated = replace(target, win_rate=win_rate, win_rate_low=low, win_rate_high=high, matches=matches)
+        updated = TrainingRow(
+            iteration=target.iteration,
+            loss=target.loss,
+            win_rate=win_rate,
+            win_rate_low=low,
+            win_rate_high=high,
+            matches=matches,
+            best=target.best,
+            extra=target.extra,
+        )
         self._rows = [updated if row.iteration == target.iteration else row for row in self._rows]
         self._write()
         return updated
