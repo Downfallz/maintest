@@ -183,7 +183,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Stun => sign * weights.Stun,
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             DefenseBuff buff => -sign * weights.Buff * buff.Amount * rounds,
-            InitiativeDebuff debuff => sign * weights.Buff * debuff.Amount,
+            InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
             _ => 0,
         };
     }

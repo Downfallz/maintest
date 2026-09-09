@@ -100,30 +100,45 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// Every test spell has a Spell initiative of 1 and the built-in initiative weight is 0.5, so unlocking
-    /// is worth half a point more than casting (ADR 0017).
+    /// An unlock is worth what the spell does plus the initiative it buys (ADR 0017). In this catalogue Guard
+    /// is a Spell initiative of 6 and the others 1, and the built-in initiative weight is 0.5.
     /// </summary>
     [Fact]
     public void Unlocking_a_spell_is_worth_its_combat_value_plus_the_initiative_it_buys()
     {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
 
-        foreach (var spell in new[] { TestContent.Slam, TestContent.Guard, TestContent.Strike })
-        {
-            Scorer.UnlockValue(board[0], spell, board)
-                .ShouldBe(Scorer.Estimate(board[0], spell, board) + 0.5, 1e-9);
-        }
+        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe(1 + 3, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + 0.5, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + 0.5, 1e-9);
     }
 
-    /// <summary>A spell worth nothing in combat is still worth the initiative, which is what lets a pick buy tempo.</summary>
+    /// <summary>
+    /// Guard is worth 1 in combat against Strike's 3.15 and still wins the pick once the initiative it buys is
+    /// priced. This is what it means for a pick to buy tempo, and it is the whole point of the weight.
+    /// </summary>
+    [Fact]
+    public void A_spell_worth_less_in_combat_can_still_be_the_better_unlock()
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20);
+
+        scorer.Estimate(board[0], TestContent.Guard, board)
+            .ShouldBeLessThan(scorer.Estimate(board[0], TestContent.Strike, board));
+        scorer.UnlockValue(board[0], TestContent.Guard, board)
+            .ShouldBeGreaterThan(scorer.UnlockValue(board[0], TestContent.Strike, board));
+    }
+
+    /// <summary>At a weight of zero an unlock is worth exactly what it does in combat, and tempo buys nothing.</summary>
     [Fact]
     public void An_initiative_weight_of_zero_prices_an_unlock_at_its_combat_value_alone()
     {
         var board = Board(enemyHealth: 20);
-        var indifferent = new ActionScorer(TestContent.Resources, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Initiative = 0 });
+        var indifferent = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Initiative = 0 });
 
-        indifferent.UnlockValue(board[0], TestContent.Strike, board)
-            .ShouldBe(indifferent.Estimate(board[0], TestContent.Strike, board), 1e-9);
+        indifferent.UnlockValue(board[0], TestContent.Guard, board)
+            .ShouldBe(indifferent.Estimate(board[0], TestContent.Guard, board), 1e-9);
     }
 
     [Fact]

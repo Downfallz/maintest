@@ -24,7 +24,7 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Direct` + `Stats.Stun` | stun the targets | `Stun` |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
 | `SpellType`, `CharacterClass`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
-| `Initiative` | the prototype never read it | Spell initiative: what the Creature gains, once, on unlocking it (ADR 0017) |
+| `Initiative` | summed over a character's unlocked spells to *be* its initiative | Spell initiative: what the Creature's base gains, once, on unlocking it (ADR 0017) |
 | `NbTargets` | 1, or 2 and 3 for the sweeps | `targeting.scope` and `maxTargets` |
 | `Level` | depth in the talent tree | nothing: the tree in `data/TalentTrees` already says it |
 

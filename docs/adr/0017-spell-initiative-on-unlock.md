@@ -6,12 +6,16 @@ Status: Accepted
 
 ## Context
 
-A `Spell` has carried an `Initiative` since the game resources were modelled, and nothing has ever read it.
-The Combat timeline is built in Planning, from the Speed choices and the Creature's own Initiative, before any
-Intent exists (ADR 0010) — so a Spell's initiative cannot order a round it is declared into, and the field
-has been inert data the content audit reports on and no rule uses. Instantiating the 36 prototype spells put
-real numbers in it, 1 to 3, which made the gap visible rather than theoretical: the catalogue looks as if it
-varies turn order and does not. Either the field earns a meaning or it goes.
+A `Spell` has carried an `Initiative` since the game resources were modelled, and no rule in this engine has
+ever read it. The prototype did, and read it as the rule this ADR proposes: `CharacterTalentStatsHandler`
+computed `stats.Initiative = unlockedSpells.Sum(x => x.Initiative)` and `Character.Initiative` was that sum
+plus a `BonusInitiative` the conditions moved — a character had no initiative of its own at all, only what its
+unlocked spells gave it. The clean slate kept the field on `Spell`, gave Creature definitions a
+`baseInitiative`, and wired the Combat timeline to the Creature's own initiative, built in Planning before any
+Intent exists (ADR 0010). The Spell's half was never reconnected, so the field has been inert data the content
+audit reports on and no rule uses. Instantiating the 36 prototype spells put real numbers in it, 1 to 3, which
+made the gap visible rather than theoretical: the catalogue looks as if it varies turn order and does not.
+Either the field earns a meaning or it goes.
 
 ## Decision
 
@@ -37,6 +41,9 @@ initiative, so a pick taken for tempo is priced rather than ignored.
   balance work on the spell catalogue restarts from the new numbers.
 - Bad: two Creatures that know the same Spells can differ in Initiative, because one started with a Spell the
   other unlocked. That is a real inconsistency, accepted here to avoid the double payment.
+- Good: one price for one point of initiative. The `InitiativeDebuff` a spell puts on an enemy moved from
+  `w.buff` to `w.initiative` with it, so the agents cannot value taking a point off an enemy differently from
+  buying one, which they would have the first time `search-weights` ran.
 - Bad: the `initiative` weight is a guess. It is set at 0.5, priced like a defense buff, on no evidence
   beyond the reasoning that initiative is indirect, and `search-weights` has never seen it. It also moves the
   weights fingerprint, so every heuristic agent spec is a new version.
@@ -54,9 +61,12 @@ initiative, so a pick taken for tempo is priced rather than ignored.
 - Order the Combat timeline by the declared Spell's initiative: the honest reading of the prototype's field,
   but the timeline is built before Intents are declared and Intents are hidden until revealed, so it would
   mean rebuilding both the round's phase order (ADR 0010) and the hidden-intent rule.
-- Count every known Spell, starting kit included: consistent between two Creatures that know the same Spells,
-  but it double-pays the base stat block and shifts every creature identically at spawn, which changes no
-  relative order and only inflates the number.
+- Count every known Spell, starting kit included: this is what the prototype did, and it was coherent there
+  because a character had no base of its own — the sum *was* its initiative. Here a Creature definition
+  carries a `baseInitiative` authored knowing the kit, so summing the kit again double-pays it, and it shifts
+  every creature identically at spawn, which changes no relative order and only inflates the number. The
+  alternative worth revisiting is the prototype's whole shape: drop `baseInitiative` and let the unlocked
+  spells be the initiative. That is a content redesign, not a rule change, and it is out of scope here.
 - Delete `SpellStats.Initiative`: the smallest change, and it throws away a lever the game wants.
 
 ## Follow-up
@@ -76,4 +86,6 @@ initiative, so a pick taken for tempo is priced rather than ignored.
   matched by a `SpellCriticalChanceBonus` to stay consistent. The Creature's side is where the ambiguity was,
   and there the names are explicit: `BaseInitiative` and `CurrentInitiative`, with the definition's block now
   private.
-- `benchmarks/`: a new digest for the new outcomes, with an entry in `docs/learning/journal.md`.
+- `benchmarks/`: a new digest for the new outcomes, with an entry in `docs/learning/journal.md`. That entry
+  must supersede the bullet of 2026-09-09 that reads "`spell.Stats.Initiative` is dead data": true of the
+  engine when it was written, false from this change on.

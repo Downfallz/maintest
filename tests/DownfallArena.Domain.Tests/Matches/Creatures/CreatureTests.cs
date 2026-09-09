@@ -184,17 +184,19 @@ public sealed class CreatureTests
 
     /// <summary>
     /// Initiative floors at zero, so a creature debuffed past its base reads 0 current on a base that still
-    /// says what it unlocked. That is the one case where the base cannot be read back from the current one.
+    /// says what it unlocked. That is the one case where the base cannot be read back from the current one,
+    /// which is why the raise is recorded rather than derived (ADR 0017).
     /// </summary>
     [Fact]
     public void Debuffs_past_the_base_floor_the_current_initiative_at_zero()
     {
         var creature = Spawn();
+        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 3));
 
-        creature.Apply(InitiativeDebuff.Of(4, Duration.OfRounds(1)));
-        creature.Apply(InitiativeDebuff.Of(4, Duration.OfRounds(1)));
+        creature.Apply(InitiativeDebuff.Of(5, Duration.OfRounds(1)));
+        creature.Apply(InitiativeDebuff.Of(5, Duration.OfRounds(1)));
 
-        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
+        creature.BaseInitiative.ShouldBe(Initiative.Of(8));
         creature.CurrentInitiative.ShouldBe(Initiative.Of(0));
     }
 
