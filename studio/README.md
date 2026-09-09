@@ -35,9 +35,23 @@ Each item has the same four actions:
 
 **Build** runs the data builder and shows the new content hash, or every problem in the way. **Run a match**
 plays one seeded match or an evaluation over a number of seeds, straight through the engine, and opens the
-result in the viewer: the match step by step, or the win rates with their intervals. Both agent boxes take any
-agent spec the engine knows (`docs/learning/agents.md`): `random`, `greedy`, `explore:<rate>`,
-`heuristic:<weights.json>`, `policy:<policy.json>`.
+result in the viewer: the match with what each side added up to and then step by step, or the win rates with
+their intervals. Each side is picked from the agents the engine can seat (`docs/learning/agents.md`); the two
+that read a file ask for its path.
+
+## Reading a tuning change
+
+The evaluation opens on **Spells against outcomes**: per spell, the share of the sides that declared it and
+went on to win. A spell both sides always have sits at one half and says nothing — that is the anchor, and the
+three starting spells land exactly there. Above it means the winning side was the one holding that spell.
+
+`random` against `random` is the right run for this, not a weakness: random play takes the agent's skill out,
+so what is left is the content. The page says as much, since the win rates of a self-play run are arithmetic.
+
+One thing the number cannot separate: a spell behind a talent gate is reached by evolving, and a side that is
+winning survives to evolve more, so part of a high share is that survivorship. What it does measure honestly
+is the **change** between two runs on the same seeds after you tune something — the confound is the same on
+both sides of that comparison. Cut a `:v2` with the new number, build, run the same seeds, and compare.
 
 ## What it is made of
 

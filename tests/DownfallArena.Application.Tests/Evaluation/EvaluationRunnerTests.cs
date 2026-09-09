@@ -82,6 +82,65 @@ public sealed class EvaluationRunnerTests
         await Should.ThrowAsync<ArgumentOutOfRangeException>(() => runner.RunAsync(Scenario([]), Stamp, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// A spell every side declares sits at one half by construction: it is on the winning side and the losing
+    /// side of every match. That is the reading the table rests on — one half means no signal.
+    /// </summary>
+    [Fact]
+    public async Task A_spell_every_side_declares_scores_one_half()
+    {
+        var evaluation = await EvaluateAsync([1, 2, 3, 4], withCombat: true);
+
+        var everywhere = evaluation.SpellOutcomes.Where(outcome => outcome.Sides == evaluation.Matches * 2).ToList();
+
+        everywhere.ShouldNotBeEmpty("a starting spell is declared by every side");
+        everywhere.ShouldAllBe(outcome => outcome.Score == 0.5);
+    }
+
+    [Fact]
+    public async Task Every_spell_outcome_accounts_for_each_side_that_declared_it()
+    {
+        var evaluation = await EvaluateAsync([5, 6, 7], withCombat: true);
+
+        evaluation.SpellOutcomes.ShouldNotBeEmpty();
+        foreach (var outcome in evaluation.SpellOutcomes)
+        {
+            outcome.Sides.ShouldBe(outcome.Wins + outcome.Losses + outcome.Draws);
+            outcome.Sides.ShouldBeGreaterThan(0);
+            outcome.Intents.ShouldBeGreaterThanOrEqualTo(outcome.Sides, "a side that declared it cast it at least once");
+            outcome.Score.ShouldBeInRange(0, 1);
+            outcome.IntentsPerSide.ShouldBe((double)outcome.Intents / outcome.Sides, 1e-9);
+        }
+
+        evaluation.SpellOutcomes.Select(outcome => outcome.Score).ShouldBeInOrder(SortDirection.Descending);
+    }
+
+    /// <summary>The intents of the two agent reports and the spell table count the same declarations.</summary>
+    [Fact]
+    public async Task The_spell_table_counts_the_same_intents_as_the_agent_reports()
+    {
+        var evaluation = await EvaluateAsync([8, 9], withCombat: true);
+
+        var fromReports = evaluation.AgentA.SpellUsage.Values.Sum() + evaluation.AgentB.SpellUsage.Values.Sum();
+
+        evaluation.SpellOutcomes.Sum(outcome => outcome.Intents).ShouldBe(fromReports);
+    }
+
+    /// <summary>
+    /// Two agents of the same spec are seeded alike, so the mirrored pass replays the same matches. The result
+    /// says so, because the even split that follows is arithmetic rather than a measurement.
+    /// </summary>
+    [Fact]
+    public async Task An_evaluation_of_an_agent_against_itself_is_flagged_as_self_play()
+    {
+        var evaluation = await EvaluateAsync([1, 2, 3], withCombat: true);
+
+        evaluation.SelfPlay.ShouldBeTrue();
+        evaluation.AgentA.WinRate.Mean.ShouldBe(0.5, 1e-9);
+        evaluation.AgentB.WinRate.Mean.ShouldBe(0.5, 1e-9);
+        evaluation.AgentA.SpellUsage.ShouldBe(evaluation.AgentB.SpellUsage);
+    }
+
     private static async Task<EvaluationResult> EvaluateAsync(IReadOnlyList<int> seeds, bool withCombat)
     {
         var store = new MatchStore();

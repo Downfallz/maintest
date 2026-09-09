@@ -514,6 +514,90 @@
       return `Draw by ${outcome.reason}`;
     }
 
+    // What one match added up to, read off the same events the timeline steps through, so the two can never
+    // disagree. Running a single match is the quickest way to see a content change; this is what it did.
+    // Which side each creature is on. Over every entry, not the first one: player 2 has not joined at the
+    // first event, and a summon adds creatures mid-match. A creature never changes side.
+    function ownersOf(trace) {
+      const owner = {};
+      for (const entry of trace.entries) {
+        for (const creature of entry.player1?.allies || []) owner[creature.id] = PLAYER1;
+        for (const creature of entry.player1?.enemies || []) owner[creature.id] = PLAYER2;
+      }
+
+      return owner;
+    }
+
+    // An outcome carrying no amount (a condition applied) is a count, not a zero.
+    function addOutcome(effects, outcome) {
+      const kind = String(outcome.kind).replace(/Outcome$/, '');
+      const total = effects[kind] || { times: 0, amount: 0, counted: false };
+      total.times += 1;
+      if (typeof outcome.amount === 'number') {
+        total.amount += outcome.amount;
+        total.counted = true;
+      }
+
+      effects[kind] = total;
+    }
+
+    function addResolution(side, resolution) {
+      side.actions += 1;
+      if (resolution.fizzled) side.fizzles += 1;
+      if (resolution.isCritical) side.crits += 1;
+      side.energy += resolution.energySpent || 0;
+      for (const outcome of resolution.outcomes || []) addOutcome(side.effects, outcome);
+    }
+
+    function matchSummary(trace) {
+      const owner = ownersOf(trace);
+      const blank = () => ({ intents: {}, actions: 0, fizzles: 0, crits: 0, energy: 0, effects: {} });
+      const sides = { [PLAYER1]: blank(), [PLAYER2]: blank() };
+      for (const { event } of trace.entries) {
+        if (event.kind === 'IntentSubmitted' && sides[event.slot]) {
+          const intents = sides[event.slot].intents;
+          const spell = spellName(event.intent.spell);
+          intents[spell] = (intents[spell] || 0) + 1;
+        } else if (event.kind === RESOLVED && sides[owner[event.resolution.action.actor]]) {
+          addResolution(sides[owner[event.resolution.action.actor]], event.resolution);
+        }
+      }
+
+      return sides;
+    }
+
+    function outcomeFor(slot, outcome) {
+      if (!outcome) return '';
+      if (outcome.isDraw) return ' · drew';
+      return outcome.winner === slot ? ' · won' : ' · lost';
+    }
+
+    function matchSideCard(label, slot, side, outcome) {
+      const intents = Object.entries(side.intents).sort((a, b) => b[1] - a[1]).map(([spell, count]) => `${spell} ${count}`).join(', ') || 'none';
+      const effects = Object.entries(side.effects)
+        .sort((a, b) => b[1].times - a[1].times)
+        .map(([kind, total]) => (total.counted ? `${kind} ${total.amount}` : `${kind} ×${total.times}`))
+        .join(', ') || 'none';
+      return el('div', { class: 'card' }, [
+        el('h3', {}, [el('span', { class: `outcome ${slot.toLowerCase()}` }, label), el('span', { class: 'muted' }, outcomeFor(slot, outcome))]),
+        el('div', { class: 'stats' }, [
+          stat('Actions', side.actions, `${side.fizzles} fizzled`),
+          stat('Crits', side.actions ? pct(side.crits / side.actions) : '-', `${side.crits} of ${side.actions}`),
+          stat('Energy spent', side.energy, 'over the match'),
+        ]),
+        el('p', {}, `Intents: ${intents}`),
+        el('p', {}, `Totals: ${effects}`),
+      ]);
+    }
+
+    function matchSummaryCards(trace) {
+      const sides = matchSummary(trace);
+      return el('div', { class: 'charts' }, [
+        matchSideCard('Player 1', PLAYER1, sides[PLAYER1], trace.outcome),
+        matchSideCard('Player 2', PLAYER2, sides[PLAYER2], trace.outcome),
+      ]);
+    }
+
     function renderTrace(artifact) {
       const trace = artifact.trace;
       const entry = trace.entries[artifact.cursor];
@@ -528,6 +612,7 @@
           el('div', { class: 'title' }, [el('h2', {}, `Match ${shortId(trace.matchId)}`), el('span', { class: 'muted' }, `seed ${trace.seed ?? '-'}`), el('span', { class: `outcome ${(outcome && outcome.winner ? outcome.winner : '').toLowerCase()}` }, outcomeText)]),
           stampList(trace.stamp),
         ]),
+        matchSummaryCards(trace),
         traceControls(artifact),
         el('div', { class: 'trace' }, [
           eventList(artifact, names),
@@ -654,6 +739,79 @@
       return el('div', { class: 'card' }, [el('h3', {}, `Seed pairs${pairs.length > 200 ? ' (first 200)' : ''}`), table]);
     }
 
+    // ---------- spells against outcomes ----------
+
+    // Below this many sides a share is noise: three sides can read 100%.
+    const ENOUGH_SIDES = 8;
+
+    // A bar from the half, which is where a spell both sides declare must sit. The share is printed next to
+    // it, so the colour is a second reading of the number and never the only one.
+    function shareBar(score) {
+      const away = Math.abs(score - 0.5) * 2;
+      const fill = el('div', { class: `fill ${score >= 0.5 ? 'above' : 'below'}` });
+      fill.style.width = `${(away * 50).toFixed(2)}%`;
+      return el('div', { class: 'share' }, [
+        el('div', { class: 'track' }, [fill]),
+        el('span', { class: 'value' }, pct(score)),
+      ]);
+    }
+
+    function spellOutcomeTable(outcomes) {
+      const table = el('table');
+      table.append(el('tr', {}, ['Spell', 'Won by the side that used it', 'Sides', 'Won', 'Lost', 'Drawn', 'Casts/side']
+        .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
+      for (const outcome of outcomes) {
+        const thin = outcome.sides < ENOUGH_SIDES;
+        table.append(el('tr', { class: thin ? 'thin' : '' }, [
+          el('td', {}, [el('span', {}, spellName(outcome.spell)), thin ? el('span', { class: 'muted' }, ' · too few') : '']),
+          el('td', {}, [shareBar(outcome.score)]),
+          el('td', { class: 'num' }, outcome.sides),
+          el('td', { class: 'num' }, outcome.wins),
+          el('td', { class: 'num' }, outcome.losses),
+          el('td', { class: 'num' }, outcome.draws),
+          el('td', { class: 'num' }, fixed(outcome.intentsPerSide, 1)),
+        ]));
+      }
+
+      return el('div', { class: 'card' }, [
+        el('h3', {}, 'Spells against outcomes'),
+        el('div', { class: 'legend' }, [
+          el('span', { class: 'key' }, [el('span', { class: 'swatch above' }), 'more often on the winning side']),
+          el('span', { class: 'key' }, [el('span', { class: 'swatch below' }), 'more often on the losing side']),
+          el('span', {}, `the centre line is one half: a spell both sides declare sits there and says nothing. Rows under ${ENOUGH_SIDES} sides are dimmed.`),
+        ]),
+        table,
+      ]);
+    }
+
+    // What each number is, in the order someone new to the page would ask.
+    function howToRead(evaluation) {
+      const entries = [
+        ['Sides', 'One match seen from one player. Every match contributes two, so a spell can score at most twice the match count.'],
+        ['Won by the side that used it', 'Of the sides that declared this spell at least once, the share that won, a draw counting one half. One half is no signal.'],
+        ['Casts/side', 'How often a side that had the spell actually declared it. A high share on 1.0 cast per side is a spell that was merely present.'],
+        ['Score', 'Per seed pair, 1 for a win, one half for a draw, 0 for a loss. Mirroring is what makes it comparable between the two agents.'],
+        ['Spell entropy', 'How evenly an agent spread its intents across spells, in bits. 0 means it always declared the same spell; log2(n) means it used n spells equally. It measures variety, not strength.'],
+        ['Fizzles', 'Actions that resolved to nothing, as a share of the actions that resolved: the target was already dead, or the caster was stunned.'],
+      ];
+      const list = el('dl', { class: 'reading' });
+      for (const [term, meaning] of entries) {
+        list.append(el('dt', {}, term), el('dd', {}, meaning));
+      }
+
+      const caveat = 'A spell behind a talent gate is reached by evolving, and a side that is winning survives to evolve more. Part of a high share is that survivorship rather than the spell. The number to trust is the change between two runs on the same seeds after you tune something: the confound is the same on both sides of that comparison and cancels.';
+      list.append(el('dt', {}, 'What this cannot tell you'), el('dd', {}, caveat));
+      return el('details', { class: 'card' }, [el('summary', {}, 'How to read these numbers'), list]);
+    }
+
+    function selfPlayNote(evaluation) {
+      if (!evaluation.selfPlay) return null;
+      return el('div', { class: 'note' }, [
+        el('h3', {}, `Both agents are ${evaluation.agentA.agent}`),
+        el('p', {}, 'An agent is seeded from the match seed and the player slot, never from which agent it is, so the mirrored pass replays the same matches. Each agent card below is therefore the total of both players, and the even split is arithmetic rather than a result — which is why the interval has no width. Use two different agents to compare agents. The spell table is unaffected: it is about the content, and random play is the cleaner way to read it.'),
+      ]);
+    }
+
     function renderEvaluation(artifact) {
       const evaluation = artifact.evaluation;
       const view = el('div');
@@ -668,8 +826,12 @@
           stat('Round cap', pct(evaluation.roundCapShare), 'of matches'),
         ]),
         el('div', { class: 'charts' }, [agentCard(evaluation.agentA), agentCard(evaluation.agentB)]),
-        pairsTable(evaluation.pairs),
       );
+
+      const note = selfPlayNote(evaluation);
+      if (note) view.insertBefore(note, view.children[1]);
+      if ((evaluation.spellOutcomes || []).length) view.append(spellOutcomeTable(evaluation.spellOutcomes));
+      view.append(howToRead(evaluation), pairsTable(evaluation.pairs));
       return view;
     }
 

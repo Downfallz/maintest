@@ -72,6 +72,49 @@
   "draws": 0,
   "averageRounds": 5.0,
   "roundCapShare": 1.0,
+  "selfPlay": true,
+  "spellOutcomes": [
+    {
+      "spell": "spell:rend:v1",
+      "intents": 8,
+      "sides": 8,
+      "wins": 6,
+      "losses": 2,
+      "draws": 0,
+      "score": 0.75,
+      "intentsPerSide": 1.0
+    },
+    {
+      "spell": "spell:slam:v1",
+      "intents": 7,
+      "sides": 7,
+      "wins": 4,
+      "losses": 3,
+      "draws": 0,
+      "score": 0.5714,
+      "intentsPerSide": 1.0
+    },
+    {
+      "spell": "spell:guard:v1",
+      "intents": 13,
+      "sides": 11,
+      "wins": 6,
+      "losses": 5,
+      "draws": 0,
+      "score": 0.5455,
+      "intentsPerSide": 1.1818
+    },
+    {
+      "spell": "spell:strike:v1",
+      "intents": 19,
+      "sides": 12,
+      "wins": 6,
+      "losses": 6,
+      "draws": 0,
+      "score": 0.5,
+      "intentsPerSide": 1.5833
+    }
+  ],
   "pairs": [
     {
       "seed": 1,

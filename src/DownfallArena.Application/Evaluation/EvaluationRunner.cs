@@ -34,8 +34,56 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
             Draws = all.Count(result => result.Outcome.IsDraw),
             AverageRounds = all.Average(result => result.Rounds),
             RoundCapShare = (double)all.Count(result => result.Outcome.Reason == MatchEndReason.RoundCap) / all.Count,
+            SelfPlay = string.Equals(scenario.AgentA.ToString(), scenario.AgentB.ToString(), StringComparison.Ordinal),
+            SpellOutcomes = SpellOutcomes(all, aFirst, bFirst),
             Pairs = pairs,
         };
+    }
+
+    /// <summary>
+    /// Every spell against the outcomes of the sides that declared it. This is the content signal rather than
+    /// the agent one: it says which spells the winning side was holding, which is what tuning a number moves.
+    /// </summary>
+    private static List<SpellOutcome> SpellOutcomes(IReadOnlyList<MatchResult> results, params IntentCounter[] counters)
+    {
+        var outcomes = results.ToDictionary(result => result.MatchId, result => result.Outcome);
+        var tally = new Dictionary<string, (int Intents, int Sides, int Wins, int Losses, int Draws)>(StringComparer.Ordinal);
+
+        foreach (var (match, slot, usage) in counters.SelectMany(counter => counter.Sides()))
+        {
+            if (!outcomes.TryGetValue(match, out var outcome))
+            {
+                continue;
+            }
+
+            foreach (var (spell, intents) in usage)
+            {
+                var current = tally.GetValueOrDefault(spell);
+                tally[spell] = (
+                    current.Intents + intents,
+                    current.Sides + 1,
+                    current.Wins + (!outcome.IsDraw && outcome.Winner == slot ? 1 : 0),
+                    current.Losses + (!outcome.IsDraw && outcome.Winner != slot ? 1 : 0),
+                    current.Draws + (outcome.IsDraw ? 1 : 0));
+            }
+        }
+
+        return
+        [
+            .. tally
+                .Select(entry => new SpellOutcome
+                {
+                    Spell = entry.Key,
+                    Intents = entry.Value.Intents,
+                    Sides = entry.Value.Sides,
+                    Wins = entry.Value.Wins,
+                    Losses = entry.Value.Losses,
+                    Draws = entry.Value.Draws,
+                })
+                .OrderByDescending(outcome => outcome.Score)
+                .ThenByDescending(outcome => outcome.Sides)
+                .ThenBy(outcome => outcome.Spell, StringComparer.Ordinal),
+        ];
     }
 
     private static SimulationScenario Batch(EvaluationScenario scenario, AgentSpec player1, AgentSpec player2) => new()
