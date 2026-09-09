@@ -27,7 +27,7 @@ internal static class TestContent
     /// The same content with Guard at a Spell initiative of 6 against everything else's 1, enough that the
     /// initiative it buys outweighs Strike's damage under the built-in weights. Every spell in
     /// <see cref="Resources"/> shares one initiative, which is what the flat-stat audit finding needs; a test
-    /// about the initiative an unlock buys (ADR 0017) needs two that differ, and one catalogue cannot be both.
+    /// about the initiative an unlock buys (ADR 0018) needs two that differ, and one catalogue cannot be both.
     /// </summary>
     public static GameResources GuardIsFaster { get; } = Build(guardInitiative: 6);
 

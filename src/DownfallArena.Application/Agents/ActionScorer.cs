@@ -87,8 +87,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// What unlocking a spell is worth: what the spell would do in combat, plus the base initiative it buys for
-    /// the rest of the match (ADR 0017). Without the second half a pick taken for tempo scores as if it bought
-    /// nothing.
+    /// the rest of the match (ADR 0017), priced by the initiative weight (ADR 0018). Without the second half a
+    /// pick taken for tempo scores as if it bought nothing.
     /// </summary>
     public double UnlockValue(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures)
     {
@@ -96,7 +96,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         ArgumentNullException.ThrowIfNull(spellId);
         ArgumentNullException.ThrowIfNull(creatures);
 
-        return Estimate(actor, spellId, creatures) + (weights.Initiative * resources.GetSpell(spellId).Stats.Initiative.Value);
+        return Estimate(actor, spellId, creatures) + (weights.Initiative * resources.GetSpell(spellId).Stats.SpellInitiative.Value);
     }
 
     /// <summary>The score of one resolution: what it does to enemies counts for, what it does to allies against.</summary>

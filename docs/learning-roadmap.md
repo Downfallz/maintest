@@ -171,7 +171,8 @@ The terms below are the authoritative entries of the "Learning" section of
   `energy`, `risk`, `initiative`). Intent: the castable spell whose best target set scores best. Targets: the
   best set for the declared spell at reveal time. Speed: Quick when a kill is on the table, Standard
   otherwise. Evolution: the unlockable spell worth the most as if known and affordable, plus the base
-  initiative the unlock buys (ADR 0017); pass only when nothing is unlockable.
+  initiative the unlock buys (ADR 0017), priced by the initiative weight (ADR 0018); pass only when nothing
+  is unlockable.
 - `GreedyAgent`: the heuristic agent with the built-in weights (`learning/weights/greedy.json` holds the same
   values as a file). `AgentKind` has `Random`, `Greedy`, `Heuristic`; the weights file comes through the
   `IScoringWeightsSource` port (`JsonScoringWeightsSource` in Infrastructure).

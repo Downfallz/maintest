@@ -100,8 +100,8 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// An unlock is worth what the spell does plus the initiative it buys (ADR 0017). In this catalogue Guard
-    /// is a Spell initiative of 6 and the others 1, and the built-in initiative weight is 0.5.
+    /// An unlock is worth what the spell does plus the initiative it buys (ADR 0017), priced by the initiative
+    /// weight (ADR 0018). Here Guard is a Spell initiative of 6 and the others 1, and the weight is 0.5.
     /// </summary>
     [Fact]
     public void Unlocking_a_spell_is_worth_its_combat_value_plus_the_initiative_it_buys()

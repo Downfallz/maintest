@@ -74,7 +74,7 @@ public sealed class HeuristicAgentTests
     }
 
     /// <summary>
-    /// The reordering the initiative weight exists for (ADR 0017): in this catalogue Guard is worth 1 in
+    /// The reordering the initiative weight exists for (ADR 0018): in this catalogue Guard is worth 1 in
     /// combat against Strike's 3.15, and wins the pick anyway because unlocking it buys 6 initiative. At a
     /// weight of zero the same board picks Strike, so it is the price and not the ordering that decides.
     /// </summary>

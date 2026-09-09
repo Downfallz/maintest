@@ -48,8 +48,8 @@ Decisions:
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
 - **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
   best target set on the current board), plus `w.initiative` x the spell's Spell initiative, the base
-  initiative the unlock buys for the rest of the match (ADR 0017); unlock the highest, pass only when nothing
-  can be unlocked.
+  initiative the unlock buys for the rest of the match (ADR 0017, priced by ADR 0018); unlock the highest,
+  pass only when nothing can be unlocked.
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.

@@ -95,7 +95,7 @@ public sealed class Creature : Entity<CreatureId>
             return Result.Failure(CreatureErrors.SpellAlreadyKnown);
         }
 
-        BaseInitiative = BaseInitiative.Plus(spell.Stats.Initiative.Value);
+        BaseInitiative = BaseInitiative.Plus(spell.Stats.SpellInitiative.Value);
         return Result.Success();
     }
 
