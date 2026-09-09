@@ -134,10 +134,14 @@ def test_a_baseline_round_trips_and_lifts_every_score_by_the_same_amount(tmp_pat
 
 
 def test_a_baseline_of_the_wrong_width_is_refused() -> None:
+    narrow = Baseline(np.array([1.0, 2.0]), 0.0)
+
     with pytest.raises(ValueError, match="baseline holds"):
-        a_policy(baseline=Baseline(np.array([1.0, 2.0]), 0.0))
+        a_policy(baseline=narrow)
 
 
 def test_a_baseline_that_is_not_finite_is_refused() -> None:
+    infinite = Baseline(np.full(6, np.inf), 0.0)
+
     with pytest.raises(ValueError, match="must be finite"):
-        a_policy(baseline=Baseline(np.full(6, np.inf), 0.0))
+        a_policy(baseline=infinite)
