@@ -12,53 +12,55 @@ namespace DownfallArena.Infrastructure.Agents;
 /// </summary>
 public sealed class JsonPolicySource : IPolicySource
 {
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
+    private static readonly JsonDocumentOptions DocumentOptions = new()
     {
-        ReadCommentHandling = JsonCommentHandling.Skip,
+        CommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
     };
+
+    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     public PolicyFile Load(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         var bytes = File.ReadAllBytes(path);
-        var document = JsonSerializer.Deserialize<PolicyDocument>(bytes, Options)
-            ?? throw new InvalidDataException($"'{path}' does not hold a policy.");
+        using var document = JsonDocument.Parse(bytes, DocumentOptions);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidDataException($"'{path}' does not hold a policy.");
+        }
+
         return new PolicyFile
         {
-            Kind = Required(document.Kind, "kind", path),
-            SchemaId = Required(document.SchemaId, "schemaId", path),
-            SchemaVersion = Required(document.SchemaVersion, "schemaVersion", path),
-            FeatureNames = Required(document.FeatureNames, "featureNames", path),
-            ActionKeys = Required(document.ActionKeys, "actionKeys", path),
-            Weights = Required(document.Weights, "weights", path),
-            Bias = Required(document.Bias, "bias", path),
-            Fallback = document.Fallback ?? throw new InvalidDataException($"'{path}' lacks the policy field 'fallback'."),
+            Kind = Field<string>(root, "kind", path),
+            SchemaId = Field<string>(root, "schemaId", path),
+            SchemaVersion = Field<string>(root, "schemaVersion", path),
+            FeatureNames = Field<string[]>(root, "featureNames", path),
+            ActionKeys = Field<string[]>(root, "actionKeys", path),
+            Weights = Field<double[][]>(root, "weights", path),
+            Bias = Field<double[]>(root, "bias", path),
+            Fallback = Number(root, "fallback", path),
             Fingerprint = Convert.ToHexStringLower(SHA256.HashData(bytes))[..8],
         }.Validated();
     }
 
-    private static TValue Required<TValue>(TValue? value, string name, string path) =>
-        value ?? throw new InvalidDataException($"'{path}' lacks the policy field '{name}'.");
+    private static JsonElement Element(JsonElement root, string name, string path) =>
+        root.TryGetProperty(name, out var element) && element.ValueKind != JsonValueKind.Null
+            ? element
+            : throw new InvalidDataException($"'{path}' lacks the policy field '{name}'.");
 
-    /// <summary>The fields the engine reads, set by the deserializer; every one optional so a missing one is named.</summary>
-    private sealed class PolicyDocument
+    private static TValue Field<TValue>(JsonElement root, string name, string path)
+        where TValue : class =>
+        Element(root, name, path).Deserialize<TValue>(Options)
+            ?? throw new InvalidDataException($"'{path}' lacks the policy field '{name}'.");
+
+    private static double Number(JsonElement root, string name, string path)
     {
-        public string? Kind { get; set; }
-
-        public string? SchemaId { get; set; }
-
-        public string? SchemaVersion { get; set; }
-
-        public string[]? FeatureNames { get; set; }
-
-        public string[]? ActionKeys { get; set; }
-
-        public double[][]? Weights { get; set; }
-
-        public double[]? Bias { get; set; }
-
-        public double? Fallback { get; set; }
+        var element = Element(root, name, path);
+        return element.ValueKind == JsonValueKind.Number
+            ? element.GetDouble()
+            : throw new InvalidDataException($"'{path}': the policy field '{name}' must be a number.");
     }
 }
