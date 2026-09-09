@@ -5,16 +5,23 @@ Status: Proposed
 
 ## Context
 
-Value regression (ADR 0013, phase L6) trained on `Greedy` self-play has now lost every one of 400 mirrored
-matches against `Greedy`, twice, while beating `Random`. Between the two runs the dataset grew fivefold, the
-ridge penalty went from 1 to 10 and the per-action sample floor from 5 to 50: the held-out fit improved
-clearly (r² 0.216 to 0.372) and the win rate did not move by a thousandth. That combination rules out
-variance. `Greedy` is deterministic, so in its self-play the action is nearly a function of the state and each
-action key's row is fitted only on the states where `Greedy` chose it; the model never sees a counterfactual.
-At play time every row is asked to score the same state, far outside its own support, and the ranking is
-decided by extrapolation. Behaviour cloning reaches 98.5% accuracy on that same data, which places the fault
-in the training target rather than in the features, the encoding, or the pipeline. The learning roadmap
-defers reinforcement learning until the simple learners plateau, and they now have.
+Value regression (ADR 0013, phase L6) has now lost every one of 400 mirrored matches against `Greedy`, with
+no draw, in three different settings: `Greedy` self-play on 200 matches, the same fivefold larger with ten
+times the ridge penalty and ten times the per-action sample floor, and the union of a `Greedy` self-play and
+a `Random` self-play dataset. The held-out fit improved clearly along the way (r² 0.216 to 0.372) and the win
+rate never moved by a thousandth. Behaviour cloning, trained on the same data and played through the same
+agent, reaches 98.5% accuracy and 38.0% against `Greedy`, which is `Greedy`'s own level: the encoding, the
+policy format, and the agent are sound, and the fault is in what value regression is asked to learn.
+
+The reason is that each action key gets its own regression, fitted only on the steps where that action was
+taken, and a deterministic policy makes those subsets disjoint state distributions. `heavy_strike` is fitted
+on the states where `Greedy` wanted it, `basic_attack` on the leftovers where it was unavailable. The
+observed return then measures how good those situations were, not how good the action is, and comparing two
+such rows at one state compares two models calibrated on different worlds. Adding `Random` self-play does not
+repair it: it covers many actions, but in states no strong policy visits and with returns that a single
+action barely moves, so it adds noise rather than counterfactuals. What is missing is not data volume or
+regularization but the same state distribution behind every row. The learning roadmap defers reinforcement
+learning until the simple learners plateau, and two cheap attempts have now established that they have.
 
 ## Decision
 
@@ -35,15 +42,16 @@ runtime in .NET and no new dependency on either side.
   longer purely `Greedy`, so a clone trained on it imitates a policy that is wrong on purpose part of the
   time. Its argmax should still recover `Greedy`'s choice in most states, but its accuracy figure stops
   meaning what it meant.
-- Neutral: this defers PPO self-play once more rather than settling it. If exploration does not lift the value
-  agent above `Random`-level play against `Greedy`, the simple path really is exhausted and reinforcement
-  learning gets its own ADR with the dependency it needs.
+- Neutral: this defers PPO self-play once more rather than settling it. Exploration equalizes the state
+  distribution behind every action row, which is the defect named above, but it leaves the rows independent
+  of each other; if it is not enough, the next step is a single model over state and action together, and
+  after that reinforcement learning gets its own ADR with the dependency it needs.
 
 ## Alternatives considered
 
-- Train on the union of datasets from different agent pairs (`--allow-mixed`, no code at all): being measured
-  now. Broad coverage, but `Random`'s states are far from those a strong policy visits, so it may buy
-  coverage in the wrong places. A useful check, not a fix.
+- Train on the union of datasets from different agent pairs (`--allow-mixed`, no code at all): measured, and
+  it changed nothing, still 0 of 400. It buys coverage in states no strong policy reaches, with returns that
+  a single action barely moves. This is the second cheap attempt the decision above rests on.
 - Go straight to PPO self-play: a training loop with the engine inside it and a heavyweight dependency, for a
   problem whose cheap explanation has not yet been tested.
 - Label every candidate with the greedy scorer instead of exploring: the model would learn `Greedy`'s own
