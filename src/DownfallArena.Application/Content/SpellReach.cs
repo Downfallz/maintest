@@ -28,6 +28,12 @@ public sealed record SpellReach
 
     public required int Healing { get; init; }
 
+    /// <summary>
+    /// Healing over time on one target, over the rounds the condition lasts or the round cap when it outlasts
+    /// the match, the mirror of <see cref="BleedDamage"/>.
+    /// </summary>
+    public required int RegenerationHealing { get; init; }
+
     /// <summary>Targets the spell takes, or <c>null</c> when it takes every legal target.</summary>
     public int? MaxTargets { get; init; }
 

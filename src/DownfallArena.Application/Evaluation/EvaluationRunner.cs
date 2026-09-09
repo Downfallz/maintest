@@ -107,6 +107,7 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
                     Energy = entry.Value.Effects.Energy,
                     Stuns = entry.Value.Effects.Stuns,
                     Bleeds = entry.Value.Effects.Bleeds,
+                    Regens = entry.Value.Effects.Regens,
                     Buffs = entry.Value.Effects.Buffs,
                     ResolvedWhenWon = entry.Value.ResolvedWhenWon,
                 })

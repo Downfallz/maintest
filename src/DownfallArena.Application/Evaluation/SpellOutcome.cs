@@ -50,6 +50,9 @@ public sealed record SpellOutcome
     /// <summary>Bleeds applied, not the damage they go on to deal.</summary>
     public int Bleeds { get; init; }
 
+    /// <summary>Regenerations applied, not the healing they go on to give.</summary>
+    public int Regens { get; init; }
+
     /// <summary>Defense buffs and initiative debuffs applied.</summary>
     public int Buffs { get; init; }
 

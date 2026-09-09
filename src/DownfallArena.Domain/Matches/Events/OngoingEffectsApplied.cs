@@ -5,6 +5,6 @@ using DownfallArena.SharedKernel.Primitives;
 namespace DownfallArena.Domain.Matches.Events;
 
 /// <summary>
-/// The bleed ticks of the start of the round were dealt.
+/// The start of the round was applied: the regenerations healed, then the bleeds dealt their damage.
 /// </summary>
-public sealed record OngoingEffectsApplied(MatchId MatchId, RoundId RoundId, IReadOnlyList<BleedTick> BleedTicks) : IMatchEvent;
+public sealed record OngoingEffectsApplied(MatchId MatchId, RoundId RoundId, IReadOnlyList<BleedTick> BleedTicks, IReadOnlyList<RegenerationTick> RegenerationTicks) : IMatchEvent;

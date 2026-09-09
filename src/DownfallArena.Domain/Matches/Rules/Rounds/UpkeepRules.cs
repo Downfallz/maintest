@@ -21,23 +21,41 @@ public static class UpkeepRules
         }
     }
 
-    /// <summary>OngoingEffects sub-phase: bleeds deal their damage, which ignores defense.</summary>
-    public static IReadOnlyList<BleedTick> OngoingEffects(IReadOnlyList<Creature> creatures)
+    /// <summary>
+    /// OngoingEffects sub-phase: regenerations heal, then bleeds deal their damage, which ignores defense.
+    /// Healing goes first on purpose (ADR 0019), so a regeneration can carry a creature through a bleed that
+    /// would otherwise have killed it; the other order would make the two never meet.
+    /// </summary>
+    public static OngoingEffectTicks OngoingEffects(IReadOnlyList<Creature> creatures)
     {
         ArgumentNullException.ThrowIfNull(creatures);
 
-        var ticks = new List<BleedTick>();
+        var healed = new List<RegenerationTick>();
+        var bled = new List<BleedTick>();
         foreach (var creature in creatures.Where(creature => creature.IsAlive))
         {
-            var bleeding = creature.Conditions.Select(condition => condition.Effect).OfType<Bleed>().Sum(bleed => bleed.AmountPerRound);
-            if (bleeding > 0)
+            var regenerating = Total<Regeneration>(creature, regeneration => regeneration.AmountPerRound);
+            if (regenerating > 0)
             {
-                ticks.Add(new BleedTick(creature.Id, creature.TakeDamage(bleeding)));
+                healed.Add(new RegenerationTick(creature.Id, creature.Heal(regenerating)));
             }
         }
 
-        return ticks;
+        foreach (var creature in creatures.Where(creature => creature.IsAlive))
+        {
+            var bleeding = Total<Bleed>(creature, bleed => bleed.AmountPerRound);
+            if (bleeding > 0)
+            {
+                bled.Add(new BleedTick(creature.Id, creature.TakeDamage(bleeding)));
+            }
+        }
+
+        return new OngoingEffectTicks(bled, healed);
     }
+
+    private static int Total<TEffect>(Creature creature, Func<TEffect, int> amount)
+        where TEffect : LastingEffect =>
+        creature.Conditions.Select(condition => condition.Effect).OfType<TEffect>().Sum(amount);
 
     /// <summary>Cleanup sub-phase: every condition counts one round down; the expired ones are returned per creature.</summary>
     public static IReadOnlyDictionary<CreatureId, IReadOnlyList<Condition>> Cleanup(IReadOnlyList<Creature> creatures)

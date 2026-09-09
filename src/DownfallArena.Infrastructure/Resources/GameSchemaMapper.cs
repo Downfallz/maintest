@@ -118,6 +118,9 @@ public static class GameSchemaMapper
             "BLEED" => Rounds(dto, effectContext, problems) is { } rounds && Require(dto.AmountPerRound, "amountPerRound", effectContext, problems) is { } amount
                 ? Guard<Effect>(() => Bleed.Of(amount, rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
                 : null,
+            "REGENERATION" => Rounds(dto, effectContext, problems) is { } rounds && Require(dto.AmountPerRound, "amountPerRound", effectContext, problems) is { } amount
+                ? Guard<Effect>(() => Regeneration.Of(amount, rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
+                : null,
             "STUN" => Rounds(dto, effectContext, problems) is { } rounds
                 ? Guard<Effect>(() => Stun.For(rounds, stacking ?? StackingPolicy.Refresh), effectContext, problems)
                 : null,

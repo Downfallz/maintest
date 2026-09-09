@@ -26,6 +26,7 @@ const EFFECTS = {
   Heal: { amounts: ['amount'] },
   EnergyGain: { amounts: ['amount'] },
   Bleed: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
+  Regeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
   Stun: { amounts: [], rounds: true, stacking: 'Refresh' },
   DefenseBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },

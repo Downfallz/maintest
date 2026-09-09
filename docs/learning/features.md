@@ -27,13 +27,33 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
   the creature now carries a base and a current one, and the block holds only `initiative`, the current. The
   base is `initiative + InitiativeDebuff_amount`, and that amount feature sums every active debuff, so it is
   recoverable — except where the debuffs floor the current initiative at zero, which loses the difference.
-  Publishing a `base_initiative` feature for that corner would be `features:v2`, and invalidating every run
-  in `docs/learning/journal.md` is a bigger price than the corner is worth. Revisit if a policy is ever
-  trained on content where a creature is routinely debuffed past zero.
+  Publishing a `base_initiative` feature for that corner would need a new version of its own, and the corner
+  was not worth one. It stayed out of `features:v2` for the same reason. Revisit if a policy is ever trained
+  on content where a creature is routinely debuffed past zero.
 
 ## Versions
 
-### features:v1 (published, phase L1)
+### features:v2 (published, ADR 0019)
+
+`features:v1` with one more condition pair. Adding `Regeneration` to the closed taxonomy adds a kind to every
+creature block, so a creature block becomes `C = 6 + 2 x 5 + S + N` and the condition pairs run in the order
+`Bleed`, `Regeneration`, `Stun`, `DefenseBuff`, `InitiativeDebuff`:
+
+| Offset in block | Name | Value |
+| --- | --- | --- |
+| +6, +7 | `Bleed_amount`, `Bleed_remaining` | as in v1 |
+| +8, +9 | `Regeneration_amount`, `Regeneration_remaining` | `amount` is the healing per round, summed over the creature's regenerations |
+| +10, +11 | `Stun_amount`, `Stun_remaining` | |
+| +12, +13 | `DefenseBuff_amount`, `DefenseBuff_remaining` | |
+| +14, +15 | `InitiativeDebuff_amount`, `InitiativeDebuff_remaining` | |
+| +16 to +16+S-1 | `knows_<spell id>` | as in v1 |
+| +16+S to +16+S+N-1 | `node_<tree id>/<node code>` | as in v1 |
+
+Everything else — the global block, the board slot rule, the naming, the fingerprint — is v1 unchanged. No
+run recorded under v1 is comparable to one under v2 without re-recording, since the vectors differ in length
+and in what sits at every index from +8 on.
+
+### features:v1 (superseded by v2, phase L1)
 
 Built by `FeatureSchema.Build(resources, ruleSet)` and filled by `ObservationBuilder` (Application,
 `Learning/`). Let `T` be the rule set's team size, `S` the number of spells in the content, `N` the number of
