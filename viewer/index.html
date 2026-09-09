@@ -31,6 +31,12 @@
 
     const PLAYER1 = 'Player1';
     const PLAYER2 = 'Player2';
+
+    // The colours viewer.css gives the two players, so a chart and the page around it name a side alike.
+    const PLAYER1_COLOUR = '#2563eb';
+    const PLAYER2_COLOUR = '#dc2626';
+    const ACCENT = '#2563eb';
+    const WARN = '#d97706';
     const RESOLVED = 'CombatActionResolved';
     const state = { artifacts: [], selected: null, charts: [] };
 
@@ -543,12 +549,13 @@
       effects[kind] = total;
     }
 
-    function addResolution(side, resolution) {
+    function addResolution(side, entry) {
+      const resolution = entry.resolution;
       side.actions += 1;
       if (resolution.fizzled) side.fizzles += 1;
       if (resolution.isCritical) side.crits += 1;
       side.energy += resolution.energySpent || 0;
-      for (const outcome of resolution.outcomes || []) addOutcome(side.effects, outcome);
+      for (const outcome of landed(entry)) addOutcome(side.effects, outcome);
     }
 
     function matchSummary(trace) {
@@ -561,7 +568,7 @@
           const spell = spellName(event.intent.spell);
           intents[spell] = (intents[spell] || 0) + 1;
         } else if (event.kind === RESOLVED && sides[owner[event.resolution.action.actor]]) {
-          addResolution(sides[owner[event.resolution.action.actor]], event.resolution);
+          addResolution(sides[owner[event.resolution.action.actor]], event);
         } else if (event.kind === 'OngoingEffectsApplied') {
           // A bleed tick names the creature taking the damage, not the one that applied the bleed, so this
           // is what a side suffered between rounds. It cannot be credited to whoever dealt it.
@@ -573,6 +580,163 @@
       }
 
       return sides;
+    }
+
+    // ---------- the box score of one match ----------
+
+    // Health comes from the board snapshot each entry carries rather than from re-adding the damage: the
+    // engine has already applied defense, criticals and everything else, and a second arithmetic here would
+    // be a second opinion that can drift from it.
+    function creatureRows(trace, owner) {
+      const rows = new Map();
+      for (const entry of trace.entries) {
+        for (const creature of [...(entry.player1?.allies || []), ...(entry.player1?.enemies || [])]) {
+          const row = rows.get(creature.id) || {
+            id: creature.id, name: `${creature.name} #${creature.id}`, owner: owner[creature.id], maxHealth: creature.maxHealth,
+            health: creature.health, damageDealt: 0, damageTaken: 0, bleedTaken: 0, healingDone: 0, healingTaken: 0,
+            kills: 0, casts: 0, fizzles: 0, crits: 0, energy: 0, conditions: 0, spells: {},
+          };
+          row.health = creature.health;
+          rows.set(creature.id, row);
+        }
+      }
+
+      return rows;
+    }
+
+    function creditOutcome(rows, actor, outcome) {
+      const target = rows.get(outcome.target);
+      if (!target) return;
+      if (outcome.kind === 'DamageOutcome') {
+        target.damageTaken += outcome.amount || 0;
+        if (actor) actor.damageDealt += outcome.amount || 0;
+      } else if (outcome.kind === 'HealOutcome') {
+        target.healingTaken += outcome.amount || 0;
+        if (actor) actor.healingDone += outcome.amount || 0;
+      } else if (outcome.kind === 'ConditionOutcome') {
+        if (actor) actor.conditions += 1;
+      }
+    }
+
+    /**
+     * One match as a scoreboard: what each creature did and took, what each spell did, and who was killed by
+     * whom. A kill is credited when the engine's own health for a creature reaches zero during a resolution.
+     */
+    function boxScore(trace) {
+      const owner = ownersOf(trace);
+      const rows = creatureRows(trace, owner);
+      const spells = new Map();
+      const alive = new Map([...rows.keys()].map(id => [id, true]));
+
+      let bledOut = 0;
+      for (const { event, player1 } of trace.entries) {
+        let resolved = null;
+        if (event.kind === 'IntentSubmitted') {
+          countIntent(rows.get(event.intent?.actor), event.intent.spell);
+        } else if (event.kind === RESOLVED) {
+          resolved = event;
+          creditResolution(rows, spells, rows.get(event.resolution.action.actor), event);
+        } else if (event.kind === 'OngoingEffectsApplied') {
+          // A tick names the creature bleeding, never the one that made it bleed, so this damage belongs to
+          // the victim's row and to nobody else's.
+          for (const tick of event.bleedTicks || []) {
+            const row = rows.get(tick.creature);
+            if (row) row.bleedTaken += tick.damage || 0;
+          }
+        }
+
+        bledOut += creditKills(rows, alive, resolved, player1);
+      }
+
+      return { creatures: [...rows.values()], spells: [...spells.values()], bledOut };
+    }
+
+    function countIntent(row, spell) {
+      if (!row) return;
+      const name = spellName(spell);
+      row.spells[name] = (row.spells[name] || 0) + 1;
+    }
+
+    /** The tally of one spell for one side, made when that side first casts it. */
+    function spellTally(spells, spell, side) {
+      const key = `${spell}\u0000${side}`;
+      const tally = spells.get(key) || { spell, side, casts: 0, fizzles: 0, crits: 0, damage: 0, healing: 0, energy: 0, stuns: 0, bleeds: 0, buffs: 0 };
+      spells.set(key, tally);
+      return tally;
+    }
+
+    /**
+     * What the board took, not what the action aimed for: damage is capped by the health left, healing by the
+     * health missing, and a condition can be refused. A trace recorded before the engine reported that falls
+     * back to the computed outcomes, which is what it knew.
+     */
+    function landed(entry) {
+      return entry.appliedOutcomes || entry.resolution.outcomes || [];
+    }
+
+    function creditResolution(rows, spells, actor, entry) {
+      const resolution = entry.resolution;
+      const tally = spellTally(spells, spellName(resolution.action.spell), actor ? actor.owner : null);
+      if (resolution.fizzled) {
+        tally.fizzles += 1;
+        if (actor) actor.fizzles += 1;
+        return;
+      }
+
+      tally.casts += 1;
+      if (resolution.isCritical) tally.crits += 1;
+      if (actor) {
+        actor.casts += 1;
+        actor.energy += resolution.energySpent || 0;
+        if (resolution.isCritical) actor.crits += 1;
+      }
+
+      for (const outcome of landed(entry)) {
+        creditOutcome(rows, actor, outcome);
+        if (outcome.kind === 'DamageOutcome') tally.damage += outcome.amount || 0;
+        else if (outcome.kind === 'HealOutcome') tally.healing += outcome.amount || 0;
+        else if (outcome.kind === 'EnergyOutcome') tally.energy += outcome.amount || 0;
+        else if (outcome.kind === 'ConditionOutcome') tally[conditionSlot(outcome)] += 1;
+      }
+    }
+
+    // The effect taxonomy is closed (ADR 0012); anything that is not a stun or a bleed is a buff or a debuff.
+    function conditionSlot(outcome) {
+      const kind = String(outcome.effect?.kind || '');
+      if (kind === 'Stun') return 'stuns';
+      if (kind === 'Bleed') return 'bleeds';
+      return 'buffs';
+    }
+
+    /**
+     * Every creature the engine now reports at zero health that was standing before. A death is credited to an
+     * actor only when that actor's resolution damaged the creature that died: a creature whose own action is
+     * merely the entry where its bleed finished it was killed by nobody, and crediting the entry's actor would
+     * hand the kill to the victim. Those deaths are returned as a count instead, so the numbers still add up.
+     */
+    function creditKills(rows, alive, entry, board) {
+      let unattributed = 0;
+      const struck = new Set((entry ? landed(entry) : []).filter(outcome => outcome.kind === 'DamageOutcome').map(outcome => outcome.target));
+      const actor = entry ? rows.get(entry.resolution.action.actor) : null;
+      for (const creature of [...(board?.allies || []), ...(board?.enemies || [])]) {
+        if (creature.health > 0 || alive.get(creature.id) === false) continue;
+        alive.set(creature.id, false);
+        if (actor && struck.has(creature.id) && actor.id !== creature.id) actor.kills += 1;
+        else unattributed += 1;
+      }
+
+      return unattributed;
+    }
+
+    /**
+     * The creature that carried the match: what it did for its side, damage and healing together, with kills
+     * as the tie-break. Stated rather than weighed, so the number under it is the whole of it.
+     */
+    function mostValuable(creatures) {
+      const ranked = creatures
+        .map(row => ({ row, contribution: row.damageDealt + row.healingDone }))
+        .sort((one, other) => other.contribution - one.contribution || other.row.kills - one.row.kills);
+      return ranked.length && ranked[0].contribution > 0 ? ranked[0] : null;
     }
 
     function outcomeFor(slot, outcome) {
@@ -600,12 +764,132 @@
       ]);
     }
 
+    function slotLabel(slot) {
+      return slot === PLAYER1 ? 'Player 1' : 'Player 2';
+    }
+
+    function mvpCard(best, outcome) {
+      if (!best) return null;
+      const row = best.row;
+      const won = outcome && !outcome.isDraw && outcome.winner === row.owner;
+      return el('div', { class: 'card mvp' }, [
+        el('div', { class: 'title' }, [el('h3', {}, 'Most valuable'), el('span', { class: 'muted' }, 'damage dealt plus healing done, kills breaking the tie')]),
+        el('div', { class: 'hero' }, [
+          el('span', { class: `dot ${row.owner.toLowerCase()}` }),
+          el('span', { class: 'name' }, row.name),
+          el('span', { class: 'muted' }, `${slotLabel(row.owner)}${won ? ', on the winning side' : ''}`),
+        ]),
+        el('div', { class: 'stats' }, [
+          stat('Contribution', best.contribution, `${row.damageDealt} damage, ${row.healingDone} healing`),
+          stat('Kills', row.kills, `${row.casts} cast(s) landed`),
+          stat('Health left', `${row.health}/${row.maxHealth}`, row.health > 0 ? 'survived' : 'died'),
+        ]),
+      ]);
+    }
+
+    // One row per creature: what it did, what it took, and what it was still holding at the end.
+    function creatureTable(creatures, bledOut) {
+      const table = el('table');
+      table.append(el('tr', {}, ['Creature', 'Side', 'Damage dealt', 'Damage taken', 'Healing', 'Kills', 'Cast', 'Fizzled', 'Crits', 'Conditions', 'Energy', 'Health']
+        .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
+      for (const row of [...creatures].sort((one, other) => other.damageDealt - one.damageDealt || other.kills - one.kills)) {
+        table.append(el('tr', { class: row.health > 0 ? '' : 'dead' }, [
+          el('td', {}, [el('span', { class: `dot ${row.owner.toLowerCase()}` }), el('span', {}, row.name), el('span', { class: 'muted' }, ` · ${topSpell(row)}`)]),
+          el('td', {}, slotLabel(row.owner)),
+          el('td', { class: 'num' }, row.damageDealt),
+          el('td', { class: 'num' }, row.bleedTaken ? [el('span', {}, row.damageTaken + row.bleedTaken), el('span', { class: 'muted' }, ` (${row.bleedTaken} bled)`)] : row.damageTaken),
+          el('td', { class: 'num' }, row.healingDone),
+          el('td', { class: 'num' }, row.kills),
+          el('td', { class: 'num' }, row.casts),
+          el('td', { class: 'num' }, row.fizzles),
+          el('td', { class: 'num' }, row.crits),
+          el('td', { class: 'num' }, row.conditions),
+          el('td', { class: 'num' }, row.energy),
+          el('td', { class: 'num' }, `${row.health}/${row.maxHealth}`),
+        ]));
+      }
+
+      const bled = bledOut ? `; ${bledOut} bled out between rounds, which is a death no creature is credited with` : '';
+      return el('div', { class: 'card wide' }, [
+        el('div', { class: 'title' }, [el('h3', {}, 'Every creature'), el('span', { class: 'muted' }, `a struck-through row died; the spell after a name is the one it declared most${bled}`)]),
+        el('div', { class: 'scroll' }, [table]),
+      ]);
+    }
+
+    function topSpell(row) {
+      const ranked = Object.entries(row.spells).sort((one, other) => other[1] - one[1] || one[0].localeCompare(other[0]));
+      return ranked.length ? `${ranked[0][0]} ×${ranked[0][1]}` : 'declared nothing';
+    }
+
+    // Damage is the one quantity every creature in a match can be put on the same axis for, so it is the one
+    // worth a picture; the rest of the numbers are in the table above it.
+    function creatureDamageChart(creatures) {
+      const rows = [...creatures].filter(row => row.damageDealt > 0).sort((one, other) => other.damageDealt - one.damageDealt);
+      if (rows.length < 2) return null;
+      const canvas = el('canvas');
+      const card = el('div', { class: 'card' }, [el('h3', {}, 'Damage dealt, by creature'), canvas]);
+      chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: rows.map(row => row.name),
+          datasets: [{ label: 'damage', data: rows.map(row => row.damageDealt), backgroundColor: rows.map(row => (row.owner === PLAYER1 ? PLAYER1_COLOUR : PLAYER2_COLOUR)), borderRadius: 4 }],
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: item => `${rows[item.dataIndex].damageDealt} damage · ${slotLabel(rows[item.dataIndex].owner)}` } },
+          },
+          scales: { x: { beginAtZero: true } },
+        },
+      });
+      return card;
+    }
+
+    function matchSpellTable(spells) {
+      const rows = [...spells].sort((one, other) => other.damage - one.damage || other.casts - one.casts || one.spell.localeCompare(other.spell));
+      if (!rows.length) return null;
+      const table = el('table');
+      table.append(el('tr', {}, ['Spell', 'Side', 'Cast', 'Fizzled', 'Resolve', 'Damage', 'Heal', 'Energy', 'Stun', 'Bleed', 'Buff', 'Crits']
+        .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
+      for (const row of rows) {
+        const declared = row.casts + row.fizzles;
+        table.append(el('tr', {}, [
+          el('td', {}, row.spell),
+          el('td', {}, [el('span', { class: `dot ${String(row.side).toLowerCase()}` }), el('span', {}, slotLabel(row.side))]),
+          el('td', { class: 'num' }, row.casts),
+          el('td', { class: 'num' }, row.fizzles),
+          el('td', { class: 'num' }, declared ? pct(row.casts / declared) : '-'),
+          el('td', { class: 'num' }, row.damage),
+          el('td', { class: 'num' }, row.healing),
+          el('td', { class: 'num' }, row.energy),
+          el('td', { class: 'num' }, row.stuns),
+          el('td', { class: 'num' }, row.bleeds),
+          el('td', { class: 'num' }, row.buffs),
+          el('td', { class: 'num' }, row.crits),
+        ]));
+      }
+
+      return el('div', { class: 'card wide' }, [
+        el('div', { class: 'title' }, [el('h3', {}, 'Every spell'), el('span', { class: 'muted' }, 'per side; a bleed counts applications, its damage lands between rounds')]),
+        el('div', { class: 'scroll' }, [table]),
+      ]);
+    }
+
     function matchSummaryCards(trace) {
       const sides = matchSummary(trace);
-      return el('div', { class: 'charts' }, [
-        matchSideCard('Player 1', PLAYER1, sides[PLAYER1], trace.outcome),
-        matchSideCard('Player 2', PLAYER2, sides[PLAYER2], trace.outcome),
-      ]);
+      const box = boxScore(trace);
+      const parts = [
+        el('div', { class: 'charts' }, [
+          matchSideCard('Player 1', PLAYER1, sides[PLAYER1], trace.outcome),
+          matchSideCard('Player 2', PLAYER2, sides[PLAYER2], trace.outcome),
+        ]),
+        mvpCard(mostValuable(box.creatures), trace.outcome),
+        creatureDamageChart(box.creatures),
+        creatureTable(box.creatures, box.bledOut),
+        matchSpellTable(box.spells),
+      ];
+      return el('div', {}, parts.filter(Boolean));
     }
 
     function renderTrace(artifact) {
@@ -768,7 +1052,7 @@
 
     function spellOutcomeTable(outcomes) {
       const table = el('table');
-      table.append(el('tr', {}, ['Spell', 'Won by the side that used it', 'Sides', 'Won', 'Lost', 'Drawn', 'Casts/side']
+      table.append(el('tr', {}, ['Spell', 'Won by the side that used it', 'Sides', 'Cast', 'Resolve', 'Won-cast', 'Damage', 'Heal', 'Energy', 'Stun', 'Bleed', 'Buff', 'Casts/side']
         .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
       for (const outcome of outcomes) {
         const thin = outcome.sides < ENOUGH_SIDES;
@@ -776,22 +1060,87 @@
           el('td', {}, [el('span', {}, spellName(outcome.spell)), thin ? el('span', { class: 'muted' }, ' · too few') : '']),
           el('td', {}, [shareBar(outcome.score)]),
           el('td', { class: 'num' }, outcome.sides),
-          el('td', { class: 'num' }, outcome.wins),
-          el('td', { class: 'num' }, outcome.losses),
-          el('td', { class: 'num' }, outcome.draws),
+          el('td', { class: 'num' }, outcome.resolved ?? '-'),
+          el('td', { class: 'num' }, has(outcome.resolveRate) ? pct(outcome.resolveRate) : '-'),
+          el('td', { class: 'num' }, has(outcome.castShareWhenWon) ? pct(outcome.castShareWhenWon) : '-'),
+          el('td', { class: 'num' }, outcome.damage ?? '-'),
+          el('td', { class: 'num' }, outcome.healing ?? '-'),
+          el('td', { class: 'num' }, outcome.energy ?? '-'),
+          el('td', { class: 'num' }, outcome.stuns ?? '-'),
+          el('td', { class: 'num' }, outcome.bleeds ?? '-'),
+          el('td', { class: 'num' }, outcome.buffs ?? '-'),
           el('td', { class: 'num' }, fixed(outcome.intentsPerSide, 1)),
         ]));
       }
 
-      return el('div', { class: 'card' }, [
+      return el('div', { class: 'card wide' }, [
         el('h3', {}, 'Spells against outcomes'),
         el('div', { class: 'legend' }, [
           el('span', { class: 'key' }, [el('span', { class: 'swatch above' }), 'more often on the winning side']),
           el('span', { class: 'key' }, [el('span', { class: 'swatch below' }), 'more often on the losing side']),
           el('span', {}, `the centre line is one half: a spell both sides declare sits there and says nothing. Rows under ${ENOUGH_SIDES} sides are dimmed.`),
         ]),
-        table,
+        el('p', { class: 'muted' }, 'Sides counts a spell that was declared once the same as one leaned on all match, so it barely moves when a number is tuned. Cast is what landed, and Resolve the share of declarations that landed rather than fizzling — that is what a cost change moves. A bleed counts applications: its damage lands between rounds, where no spell owns it.'),
+        winnerCastNote(outcomes),
+        el('div', { class: 'scroll' }, [table]),
       ]);
+    }
+
+    // An evaluation written before these numbers existed carries no such field; a dash says "not recorded"
+    // rather than dressing an absence as a zero.
+    function has(value) {
+      return typeof value === 'number';
+    }
+
+    /**
+     * Won-cast has to be read against where the average spell sits, not against one half: a winning side
+     * survives longer and therefore acts more, so every spell's winner share is pulled up together. Without
+     * this line a spell sitting exactly on the baseline reads as a winner.
+     */
+    function winnerCastNote(outcomes) {
+      const landed = outcomes.reduce((total, outcome) => total + (outcome.resolved || 0), 0);
+      const byWinners = outcomes.reduce((total, outcome) => total + (outcome.resolvedWhenWon || 0), 0);
+      if (!landed) return null;
+      return el('p', { class: 'muted' }, `Won-cast reads against ${pct(byWinners / landed)}, not one half: that is the share of every landed cast of this run made by a side that won. Above it, winners leaned on the spell more than they leaned on the average one.`);
+    }
+
+    // Two questions the table answers row by row and a picture answers at a glance: which spells did the
+    // damage, and which ones were declared but could not be paid for.
+    function spellCharts(outcomes) {
+      const ranked = outcomes.filter(outcome => has(outcome.resolved)).slice(0, 12);
+      if (ranked.length < 2) return null;
+
+      const byDamage = [...ranked].filter(outcome => outcome.damage > 0).sort((one, other) => other.damage - one.damage);
+      const byCasts = [...ranked].filter(outcome => outcome.resolved + outcome.fizzled > 0).sort((one, other) => (other.resolved + other.fizzled) - (one.resolved + one.fizzled));
+      const cards = [];
+
+      if (byDamage.length >= 2) {
+        const canvas = el('canvas');
+        cards.push(el('div', { class: 'card' }, [el('h3', {}, 'Damage dealt, by spell'), canvas]));
+        chart(canvas, {
+          type: 'bar',
+          data: { labels: byDamage.map(outcome => spellName(outcome.spell)), datasets: [{ label: 'damage', data: byDamage.map(outcome => outcome.damage), backgroundColor: ACCENT, borderRadius: 4 }] },
+          options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
+        });
+      }
+
+      if (byCasts.length >= 2) {
+        const canvas = el('canvas');
+        cards.push(el('div', { class: 'card' }, [el('h3', {}, 'Declarations that landed, and that fizzled'), canvas]));
+        chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: byCasts.map(outcome => spellName(outcome.spell)),
+            datasets: [
+              { label: 'landed', data: byCasts.map(outcome => outcome.resolved), backgroundColor: ACCENT, borderRadius: 4 },
+              { label: 'fizzled', data: byCasts.map(outcome => outcome.fizzled), backgroundColor: WARN, borderRadius: 4 },
+            ],
+          },
+          options: { indexAxis: 'y', scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } } },
+        });
+      }
+
+      return cards.length ? el('div', { class: 'charts' }, cards) : null;
     }
 
     // What each number is, in the order someone new to the page would ask.
@@ -840,7 +1189,11 @@
 
       const note = selfPlayNote(evaluation);
       if (note) view.insertBefore(note, view.children[1]);
-      if ((evaluation.spellOutcomes || []).length) view.append(spellOutcomeTable(evaluation.spellOutcomes));
+      if ((evaluation.spellOutcomes || []).length) {
+        view.append(spellOutcomeTable(evaluation.spellOutcomes));
+        const charts = spellCharts(evaluation.spellOutcomes);
+        if (charts) view.append(charts);
+      }
       view.append(howToRead(evaluation), pairsTable(evaluation.pairs));
       return view;
     }
@@ -987,14 +1340,23 @@
       const totals = new Map();
       for (const outcome of outcomes || []) {
         const name = spellName(outcome.spell);
-        const row = totals.get(name) || { name, versions: new Set(), sides: 0, wins: 0, draws: 0 };
+        const row = totals.get(name) || { name, versions: new Set(), sides: 0, wins: 0, draws: 0, resolved: 0, fizzled: 0, damage: 0, healing: 0, conditions: 0 };
         row.versions.add(String(outcome.spell).split(':')[2] || '?');
         row.sides += outcome.sides;
         row.wins += outcome.wins;
         row.draws += outcome.draws;
+        row.resolved += outcome.resolved || 0;
+        row.fizzled += outcome.fizzled || 0;
+        row.damage += outcome.damage || 0;
+        row.healing += outcome.healing || 0;
+        row.conditions += (outcome.stuns || 0) + (outcome.bleeds || 0) + (outcome.buffs || 0);
         totals.set(name, row);
       }
-      for (const row of totals.values()) row.score = row.sides ? (row.wins + row.draws / 2) / row.sides : 0;
+      for (const row of totals.values()) {
+        row.score = row.sides ? (row.wins + row.draws / 2) / row.sides : 0;
+        row.resolveRate = row.resolved + row.fizzled ? row.resolved / (row.resolved + row.fizzled) : 0;
+      }
+
       return totals;
     }
 
@@ -1008,6 +1370,19 @@
       if (!after) return el('td', { class: 'num delta-down' }, 'gone');
       const delta = after.score - before.score;
       return el('td', { class: `num ${deltaClassOf(delta)}` }, `${delta > 0 ? '+' : ''}${pct(delta)}`);
+    }
+
+    // A count on both sides reads as "before -> after"; on one side only, as the value it has there.
+    function countDelta(row, of) {
+      if (!row.before || !row.after) return el('td', { class: 'num muted' }, fixed(of(row.before || row.after), 0));
+      const delta = of(row.after) - of(row.before);
+      return el('td', { class: `num ${deltaClassOf(delta)}` }, `${fixed(of(row.before), 0)} → ${fixed(of(row.after), 0)}`);
+    }
+
+    function rateDelta(row, of) {
+      if (!row.before || !row.after) return el('td', { class: 'num muted' }, pct(of(row.before || row.after)));
+      const delta = of(row.after) - of(row.before);
+      return el('td', { class: `num ${deltaClassOf(delta)}` }, `${pct(of(row.before))} → ${pct(of(row.after))}`);
     }
 
     function spellDeltaRows(left, right) {
@@ -1032,7 +1407,7 @@
       if (!rows.length) return null;
 
       const table = el('table');
-      table.append(el('tr', {}, ['Spell', 'Versions', 'Before', 'After', 'Delta', 'Sides']
+      table.append(el('tr', {}, ['Spell', 'Versions', 'Won before', 'Won after', 'Delta', 'Cast', 'Resolve', 'Damage', 'Sides']
         .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
       for (const row of rows) {
         const sides = Math.min(row.before ? row.before.sides : 0, row.after ? row.after.sides : 0);
@@ -1043,14 +1418,18 @@
           el('td', { class: 'num' }, row.before ? pct(row.before.score) : '-'),
           el('td', { class: 'num' }, row.after ? pct(row.after.score) : '-'),
           deltaCell(row.before, row.after),
+          countDelta(row, side => side.resolved),
+          rateDelta(row, side => side.resolveRate),
+          countDelta(row, side => side.damage),
           el('td', { class: 'num' }, sides),
         ]));
       }
 
-      return el('div', { class: 'card' }, [
+      return el('div', { class: 'card wide' }, [
         el('h3', {}, 'What the change did, spell by spell'),
         el('p', { class: 'muted' }, 'The share of the sides that declared a spell and went on to win, before and after. This delta is the honest reading of these shares: run the same seeds with the same agents on both sides and the survivorship of a talent-gated spell is the same on both, so it cancels. A spell cut as a new version lines up with the one it replaced, since the rows are keyed by name.'),
-        table,
+        el('p', { class: 'muted' }, 'Cast, Resolve and Damage are the columns a cost change moves. Raise a cost and the same sides still declare the spell — one declaration is enough to be counted — but fewer of those declarations can be paid for, so Resolve drops and the damage with it.'),
+        el('div', { class: 'scroll' }, [table]),
       ]);
     }
 

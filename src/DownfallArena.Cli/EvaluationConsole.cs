@@ -65,7 +65,7 @@ internal static class EvaluationConsole
         }
 
         writer.WriteLine($"Spells by the outcome of the sides that declared them ({EnoughSides} sides or more; one half is no signal):");
-        writer.WriteLine($"{"Spell",-32} {"Share",7} {"Sides",6} {"Won",5} {"Lost",5} {"Drawn",6} {"Casts/side",11}");
+        writer.WriteLine($"{"Spell",-32} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"Heal",6} {"Stun",5} {"Bleed",6} {"Buff",5}");
         foreach (var outcome in ranked)
         {
             writer.WriteLine(string.Join(
@@ -73,10 +73,24 @@ internal static class EvaluationConsole
                 outcome.Spell.PadRight(32),
                 Percent(outcome.Score).PadLeft(7),
                 outcome.Sides.ToString(CultureInfo.InvariantCulture).PadLeft(6),
-                outcome.Wins.ToString(CultureInfo.InvariantCulture).PadLeft(5),
-                outcome.Losses.ToString(CultureInfo.InvariantCulture).PadLeft(5),
-                outcome.Draws.ToString(CultureInfo.InvariantCulture).PadLeft(6),
-                outcome.IntentsPerSide.ToString("F1", CultureInfo.InvariantCulture).PadLeft(11)));
+                outcome.Resolved.ToString(CultureInfo.InvariantCulture).PadLeft(6),
+                Percent(outcome.ResolveRate).PadLeft(8),
+                Percent(outcome.CastShareWhenWon).PadLeft(9),
+                outcome.Damage.ToString(CultureInfo.InvariantCulture).PadLeft(7),
+                outcome.Healing.ToString(CultureInfo.InvariantCulture).PadLeft(6),
+                outcome.Stuns.ToString(CultureInfo.InvariantCulture).PadLeft(5),
+                outcome.Bleeds.ToString(CultureInfo.InvariantCulture).PadLeft(6),
+                outcome.Buffs.ToString(CultureInfo.InvariantCulture).PadLeft(5)));
+        }
+
+        var landed = evaluation.SpellOutcomes.Sum(outcome => outcome.Resolved);
+        var landedByWinners = evaluation.SpellOutcomes.Sum(outcome => outcome.ResolvedWhenWon);
+        writer.WriteLine("Cast is what landed; Resolve the share of declarations that landed rather than fizzling, which is what a cost change moves. Bleed counts applications: its damage lands at upkeep, where no spell owns it.");
+        if (landed > 0)
+        {
+            // Winners survive longer and so act more: every spell's winner share sits above one half, and the
+            // column says nothing until it is read against where the average spell sits.
+            writer.WriteLine($"Won-cast reads against {Percent((double)landedByWinners / landed)}, not one half: that is the share of all landed casts made by a side that won.");
         }
 
         var quiet = evaluation.SpellOutcomes.Count - ranked.Count;

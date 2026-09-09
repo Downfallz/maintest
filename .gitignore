@@ -79,3 +79,6 @@ coverage.xml
 
 # The content studio writes a document through a temporary file next to it.
 *.json.tmp
+
+# The default --out of `evaluate`, run from the repository root.
+evaluation.json

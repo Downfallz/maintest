@@ -66,7 +66,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Fizzle | A Combat action that resolves with no effect and at no cost because its actor cannot act any more, its targeting failed globally, or no target remains; a per-target failure only removes that target. | decided |
 | Targeting report | Every targeting failure of a Combat action at once: global ones (count, duplicates, self-only) and per-target ones (unknown, dead, wrong origin). | decided |
 | Legal targets | The Creatures a Spell may target right now, with the minimum and maximum count. | decided |
-| Outcome | One computed consequence of a Resolution on one target (damage after crit and Defense, heal, energy, a Condition to attach), applied by the execution step. | decided |
+| Outcome | One computed consequence of a Resolution on one target (damage after crit and Defense, heal, energy, a Condition to attach), before the execution step applies it. | decided |
+| Applied outcome | What an Outcome actually did to a Creature: damage capped by the Health left, healing by the Health missing, nothing at all on a dead Creature, and no Condition the Stacking policy refused. An Outcome that changed nothing is not one. | decided |
 | Perspective | The read-only, actor-relative view of a Match (allies, enemies, phase, choices, timeline) handed to rules and projections instead of the aggregate. | decided |
 | Snapshot | An immutable copy of a Creature's state (or of a Condition) used by Perspectives and projections. | decided |
 | Player slot | The seat a Player occupies in a Match (`Player1`, `Player2`). Creatures and choices are attributed to a slot. | decided |

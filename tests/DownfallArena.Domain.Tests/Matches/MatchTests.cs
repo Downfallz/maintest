@@ -203,6 +203,35 @@ public sealed class MatchTests
         match.DomainEvents.OfType<MatchEnded>().ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// The event and the step are how anything outside the aggregate learns what a spell did, so what they
+    /// carry has to be what the board took. Publishing the resolution's own outcomes instead would leave every
+    /// other test in this suite green.
+    /// </summary>
+    [Fact]
+    public void Resolving_publishes_what_the_board_took_beside_what_the_action_aimed_for()
+    {
+        var match = Table.Started();
+        Table.PassEvolution(match);
+        Table.ChooseStandard(match);
+        Table.DeclareStrikes(match);
+        Table.HitFirstLivingEnemy(match);
+
+        // Strike deals three; leave the first target with one health so the hit has more to give than it can.
+        var target = Table.CreatureNumber(match, 3);
+        while (target.Health.Value > 1)
+        {
+            target.TakeDamage(1);
+        }
+
+        var step = match.ResolveNextAction();
+
+        var applied = step.Value.AppliedOutcomes.OfType<DamageOutcome>().Single(outcome => outcome.Target == target.Id);
+        applied.Amount.ShouldBe(1, "it had one health to lose, whatever the spell aimed for");
+        step.Value.Resolution.Outcomes.OfType<DamageOutcome>().Single().Amount.ShouldBe(3, "what it aimed for is unchanged");
+        match.DomainEvents.OfType<CombatActionResolved>().Last().AppliedOutcomes.ShouldBe(step.Value.AppliedOutcomes);
+    }
+
     [Fact]
     public void Null_arguments_are_rejected()
     {

@@ -270,12 +270,12 @@ public sealed class Match : AggregateRoot<MatchId>
         var round = ActiveRound;
         var action = round.NextActionToResolve();
         var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, RuleSet, _random);
-        CombatExecution.Apply(resolution, Creatures);
+        var applied = CombatExecution.Apply(resolution, Creatures);
         round.MarkActionResolved();
-        RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution));
+        RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied));
         Drive();
 
-        return Result.Success(new CombatStep(round.Id, resolution, round.IsFinalized, State == MatchState.Ended));
+        return Result.Success(new CombatStep(round.Id, resolution, applied, round.IsFinalized, State == MatchState.Ended));
     }
 
     private Round ActiveRound =>

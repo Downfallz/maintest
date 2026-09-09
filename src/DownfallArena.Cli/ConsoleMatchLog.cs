@@ -47,7 +47,11 @@ internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
         }
 
         var crit = resolution.IsCritical ? " CRITICAL" : string.Empty;
-        var outcomes = string.Join(", ", resolution.Outcomes.Select(outcome => outcome.ToString()));
+        // What the board took, not what the action aimed for: a hit of seven on a creature with two health
+        // left would otherwise be logged as seven, next to the creature dying with five unaccounted for.
+        var outcomes = resolved.AppliedOutcomes.Count == 0
+            ? "nothing"
+            : string.Join(", ", resolved.AppliedOutcomes.Select(outcome => outcome.ToString()));
         return $"  Creature {resolution.Action.Actor}: {resolution.Action.Spell.Value}{crit} -> {outcomes}";
     }
 }
