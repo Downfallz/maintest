@@ -265,12 +265,13 @@ function textBox(target, key, { placeholder = '' } = {}) {
   return input;
 }
 
-function numberBox(target, key, { step = 1, min = null } = {}) {
+function numberBox(target, key, { step = 1, min = null, onChange = null } = {}) {
   const input = element('input', { type: 'number', step, value: target[key] ?? 0 });
   if (min !== null) input.min = min;
   input.addEventListener('input', () => {
     target[key] = input.value === '' ? null : Number(input.value);
     markDirty();
+    onChange?.();
   });
   return input;
 }
@@ -402,10 +403,7 @@ function spellEditor() {
     ['Class', picker(draft, 'creatureClass', CREATURE_CLASSES)],
     ['Initiative', numberBox(draft, 'initiative')],
     ['Energy cost', numberBox(draft, 'energyCost', { min: 0 })],
-    ['Critical chance bonus', element('div', { className: 'inline' }, [
-      numberBox(draft, 'criticalChance', { step: 0.01, min: 0 }),
-      effectiveCrit(draft),
-    ])],
+    ['Critical chance bonus', critField(draft)],
     ['Target origin', picker(draft.targeting, 'origin', TARGET_ORIGINS)],
     ['Target scope', picker(draft.targeting, 'scope', TARGET_SCOPES, { onChange: normalizeTargeting })],
     ['Max targets', draft.targeting.scope === 'Multi'
@@ -432,6 +430,21 @@ function spellEditor() {
 }
 
 /** A single target takes no count; a multi target takes at least two, which is what the engine will accept. */
+/** The bonus and, beside it, what it comes to — rewritten as it is typed, or it would report the old value. */
+function critField(draft) {
+  let rate = effectiveCrit(draft);
+  const redraw = () => {
+    const next = effectiveCrit(draft);
+    rate.replaceWith(next);
+    rate = next;
+  };
+
+  return element('div', { className: 'inline' }, [
+    numberBox(draft, 'criticalChance', { step: 0.01, min: 0, onChange: redraw }),
+    rate,
+  ]);
+}
+
 /**
  * What a cast of this spell actually crits at. A spell's critical chance is a bonus added to the creature's
  * own (`ResolutionRules`), so the field alone reads as "never crits" when the creature behind it does.

@@ -9,11 +9,12 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Application.Content;
 
 /// <summary>
-/// Reads a built content set the way a match would and reports what no creature can ever use, and what no match
-/// can tell apart: a spell nothing teaches, a talent node whose gate never opens, a spell that costs more energy
-/// than a whole match hands out, a talent tree no creature is on, and spells whose numbers are all the same.
-/// None of these stop a build — the content is valid, it is just content that never comes up or never matters —
-/// so they are findings rather than problems.
+/// Reads a built content set the way a match would and reports what reading one item cannot show: content no
+/// creature can ever use, spells no match can tell apart, and a spell stat every spell gives the same value.
+/// A spell nothing teaches, a talent node whose gate never opens, a spell that costs more energy than a whole
+/// match hands out, a talent tree no creature is on, spells whose numbers are all the same, and a number the
+/// engine reads on every cast that this content never varies. None of these stop a build — the content is
+/// valid and the engine plays it — so they are findings rather than problems.
 /// <para>
 /// Reachability is <see cref="TalentUnlocks.ReachableSpells"/>, the evolution rules' own gate applied until
 /// nothing new is learned. Since what a creature knows only grows, a gate shut at that fixed point is shut for

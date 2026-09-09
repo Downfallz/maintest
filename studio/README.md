@@ -21,7 +21,7 @@ it runs on, not a service.
 | Spells | Type, class, initiative, energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. Plus **Used by**: every creature and talent node that names the spell, and the aliases pointing at it. |
 | Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. |
 | Runs | Every run this studio has played, newest first, with its agents, seed, match count and content hash. Open one, or tick two and compare them. |
-| Audit | What no creature can reach, open or cast; what no match can tell apart; and whether this content has a benchmark digest. Every spell's cost against what it does. |
+| Audit | What no creature can reach, open or cast; what no match can tell apart; what no spell varies; and whether this content has a benchmark digest. Every spell's cost against what it does. |
 
 Each item has the same four actions:
 
@@ -64,7 +64,8 @@ with the new number, build, run the same seed and the same agents, compare.
 ## The audit
 
 **Audit** reads the content the way a match would — every spell a creature could come to know, following the
-same talent gates the evolution rules run, until nothing new is learned — and reports what never comes up:
+same talent gates the evolution rules run, until nothing new is learned — and reports what reading one item
+cannot show you: what never comes up, and what never differs.
 
 | Finding | What it means |
 | --- | --- |
@@ -75,7 +76,9 @@ same talent gates the evolution rules run, until nothing new is learned — and 
 | `Spell.Indistinguishable` | Its cost, targeting and effects are the same as another spell's. The engine plays both, but no result can attribute anything to either, so tuning one of them moves nothing the other does not. |
 | `Content.FlatSpellStat` | Every spell gives one of the spell stats the same value, so it is not something this content varies. Looking at a single spell cannot show this: the field is there and filled, and only the other thirty-five say it never differs. |
 
-None of these stop a build: the content is valid, it just never matters. Under the findings is one row per
+None of these stop a build: the content is valid and the engine plays it. The first four are content that
+never comes up; the last is a number the engine reads on every cast and that this content never varies, so
+nothing you tune there can move a result. Under the findings is one row per
 spell — cost, damage, bleed over its duration, healing, damage per energy, how many creatures start with it
 and how many can ever learn it — which is the table to sort a rebalancing by.
 
