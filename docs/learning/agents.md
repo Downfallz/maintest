@@ -79,9 +79,12 @@ is the single source; `learning/weights/greedy.json` holds the same eight number
 
 To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
 candidate set against a fixed opponent on the benchmark seeds and keeps what wins, and leave the result next
-to `greedy.json` under its own name. Changing `greedy.json` itself changes nothing for `greedy` (which reads
-the built-in values); changing `ScoringWeights.Default` changes the benchmark baseline, so the digest moves
-and CI asks for a new one.
+to `greedy.json` under its own name. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
+does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
+only moves when the new values actually change a decision: scaling all eight by the same positive factor
+leaves every ranking, and the digest, untouched. A change that does move an outcome fails the benchmark check
+until `benchmark --write` regenerates the digest.
 
 A heuristic agent is stamped as `Heuristic:<path>@<fingerprint>`, the fingerprint being eight hex digits of the
 weights the file held when the run started, so two runs on different weights at the same path never share a
