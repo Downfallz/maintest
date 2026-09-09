@@ -10,6 +10,7 @@ import json
 import sys
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -346,45 +347,54 @@ class Dataset:
         )
 
 
+@dataclass(frozen=True)
+class _Selection:
+    """The steps one run contributes to a dataset: its rows, and the columns joined from its episodes."""
+
+    observations: np.ndarray
+    actions: list[str]
+    candidates: list[tuple[str, ...]]
+    returns: list[float]
+    match_ids: list[str]
+    kinds: list[str]
+
+
+def _select(run: Run, wanted: set[str] | None) -> _Selection:
+    """The steps of ``run`` whose kind is wanted, with the return of each one's episode joined in."""
+    episode_returns = run.returns()
+    rows = [index for index, step in enumerate(run.steps) if wanted is None or step.kind in wanted]
+    steps = [run.steps[index] for index in rows]
+    orphan = next((step for step in steps if (step.match_id, step.slot) not in episode_returns), None)
+    if orphan is not None:
+        raise ArtifactError(f"Match {orphan.match_id} has steps for {orphan.slot} but no episode.")
+    return _Selection(
+        # Keeping every step of a run shares its array; a filtered run pays one copy.
+        observations=run.observations if len(rows) == len(run.steps) else run.observations[rows],
+        actions=[step.action for step in steps],
+        candidates=[step.candidates for step in steps],
+        returns=[episode_returns[(step.match_id, step.slot)] for step in steps],
+        match_ids=[step.match_id for step in steps],
+        kinds=[step.kind for step in steps],
+    )
+
+
 def build_dataset(runs: Sequence[Run], kinds: Iterable[str] | None = None) -> Dataset:
     """Joins the steps of the runs with the returns of their episodes; ``kinds`` keeps only those kinds."""
     if not runs:
         raise ArtifactError("No run given.")
-    wanted = None if kinds is None else set(kinds)
-    blocks: list[np.ndarray] = []
-    actions: list[str] = []
-    candidates: list[tuple[str, ...]] = []
-    returns: list[float] = []
-    match_ids: list[str] = []
-    step_kinds: list[str] = []
-    for run in runs:
-        run_returns = run.returns()
-        rows: list[int] = []
-        for index, step in enumerate(run.steps):
-            if wanted is not None and step.kind not in wanted:
-                continue
-            key = (step.match_id, step.slot)
-            if key not in run_returns:
-                raise ArtifactError(f"Match {step.match_id} has steps for {step.slot} but no episode.")
-            rows.append(index)
-            actions.append(step.action)
-            candidates.append(step.candidates)
-            returns.append(run_returns[key])
-            match_ids.append(step.match_id)
-            step_kinds.append(step.kind)
-        # Keeping every step of a run shares its array; a filtered run or several runs pay one copy.
-        blocks.append(run.observations if len(rows) == len(run.steps) else run.observations[rows])
-    if not actions:
+    selections = [_select(run, None if kinds is None else set(kinds)) for run in runs]
+    if not any(selection.actions for selection in selections):
         raise ArtifactError("The runs hold no step of the wanted kinds.")
+    blocks = [selection.observations for selection in selections]
     first = runs[0]
     return Dataset(
         stamp=first.stamp,
         schema_id=first.manifest.schema_id,
         feature_names=first.manifest.feature_names,
         observations=blocks[0] if len(blocks) == 1 else np.concatenate(blocks),
-        actions=tuple(actions),
-        candidates=tuple(candidates),
-        returns=np.asarray(returns, dtype=float),
-        match_ids=tuple(match_ids),
-        kinds=tuple(step_kinds),
+        actions=tuple(chain.from_iterable(selection.actions for selection in selections)),
+        candidates=tuple(chain.from_iterable(selection.candidates for selection in selections)),
+        returns=np.asarray([value for selection in selections for value in selection.returns], dtype=float),
+        match_ids=tuple(chain.from_iterable(selection.match_ids for selection in selections)),
+        kinds=tuple(chain.from_iterable(selection.kinds for selection in selections)),
     )
