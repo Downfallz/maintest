@@ -122,7 +122,10 @@ everything under `runs/<id>/`:
 6. With `--against`, replay the previous run's value policy on this content into
    `previous-value-vs-greedy.json`; when its feature schema no longer applies, say so and go on.
 7. `report`: read every `evaluations/*.json`, refuse to mix engines or contents, write `report.json`, print
-   the table, and with `--against` the deltas and the stamp axis that moved.
+   the table, and with `--against` the deltas and the stamp axis that moved. It also writes `report.html`
+   (unless `--no-html`): the viewer page with the stylesheet inlined and the run's `report.json`,
+   evaluations, and `training.jsonl` files embedded as one JSON block the page reads at start, so the file
+   opens on the report with nothing to drag in. `--viewer <dir>` points at another copy of the viewer.
 
 ```
 runs/<id>/
@@ -130,7 +133,12 @@ runs/<id>/
   dataset/, dataset.csv   the recorded run and its summary
   value/, clone/          policy.json, training.jsonl, evaluation-vs-*.json
   report.json             the summary below
+  report.html             the viewer, carrying this run: open it and it starts on the report
 ```
+
+The script takes every tuning knob as a flag (`--matches`, `--value-alpha`, `--value-min-samples`,
+`--clone-epochs`, `--clone-alpha`, `--validation`), passed through to the learners, so a run is tuned from
+the command line and its `--help` explains each in plain words; `docs/learning/explained.md` has the table.
 
 `report.json` holds the run's stamp and, per evaluation, the agents, the matches, and the metrics: `winRateA`
 with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when the

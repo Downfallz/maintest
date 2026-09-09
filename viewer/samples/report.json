@@ -1,0 +1,37 @@
+{
+  "run": "sample",
+  "stamp": {
+    "engineVersion": "9ed6894a1c2b",
+    "contentHash": "a3f9c2e17b4d8e60f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4",
+    "ruleSet": {
+      "teamSize": 2,
+      "energyPerRound": 2,
+      "evolutionPicksPerRound": 2,
+      "roundCap": 5,
+      "criticalMultiplier": 2.0
+    },
+    "featureSchema": "features:v1+924e1b806bac",
+    "player1Agent": "Random",
+    "player2Agent": "Random",
+    "baseSeed": 1
+  },
+  "evaluations": {
+    "random-vs-random": {
+      "agentA": "Random",
+      "agentB": "Random",
+      "matches": 6,
+      "winRateA": 0.5,
+      "winRateLowA": 0.0,
+      "winRateHighA": 1.0,
+      "scoreA": 0.5,
+      "player1WinShare": 0.6666666666666666,
+      "drawRate": 0.0,
+      "averageRounds": 5.0,
+      "roundCapShare": 1.0,
+      "spellEntropyA": 1.8850606911315617,
+      "spellEntropyB": 1.8282150971906175,
+      "fizzleRateA": 0.0425531914893617,
+      "fizzleRateB": 0.0
+    }
+  }
+}

@@ -24,6 +24,7 @@ from downfall_learning.search_weights import CliEvaluator, EngineCommand, Search
 from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
 from downfall_learning.train_value import ValueOptions, train_value
+from downfall_learning.viewer import RUN_PAGE, write_run_page
 
 RUNS_HELP = "one or more run directories recorded by 'simulate --record'"
 OUTPUT_HELP = "the directory the model is written to"
@@ -108,6 +109,12 @@ def build_parser() -> argparse.ArgumentParser:
     report = commands.add_parser("report", help="the report of a run directory, and what moved since another")
     report.add_argument("run", type=Path, help="a run directory holding evaluations/*.json")
     report.add_argument("--against", type=Path, help="the run directory to compare with")
+    report.add_argument(
+        "--no-html", action="store_true", help=f"do not write {RUN_PAGE}, the viewer page carrying the run"
+    )
+    report.add_argument(
+        "--viewer", type=Path, help="the viewer directory (default: viewer/ at the repository root)"
+    )
     report.set_defaults(handler=_report)
 
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
@@ -191,6 +198,9 @@ def _report(arguments: argparse.Namespace) -> int:
     write_report(report, arguments.run)
     comparison = compare_reports(report, load_report(arguments.against)) if arguments.against else None
     print(format_report(report, comparison))
+    if not arguments.no_html:
+        page = write_run_page(arguments.run, arguments.viewer)
+        print(f"\nOpen '{page}' in a browser: the viewer with this run already loaded.")
     return 0
 
 

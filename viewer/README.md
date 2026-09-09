@@ -13,6 +13,7 @@ What it renders, by what you drop:
 | A trace (`traces/<match>.json` or the file of `play --trace`) | **Match**: round by round, every event with both teams after it: health bars, energy, defense, initiative, conditions as chips, known spells, intents, the timeline with revealed and resolved actions, outcomes, fizzles, and crits. Step with the buttons or the arrow keys, jump to a round. |
 | `evaluation.json` (from `evaluate` or `benchmark`) | **Evaluation**: both agents with win rates and paired intervals, scores, remaining health, spell entropy, fizzle and crit rates, and every seed pair. |
 | `training.jsonl` (written by the Python side, L6) | **Training run**: loss and evaluation win rate per iteration, best iteration marked. |
+| `report.json` (written by `report`, L7) | **Iteration report**: every evaluation of a run in one table with the balance signals, a bar chart of win rates and player 1 shares, and the stamp; compare two reports for the deltas, matched by evaluation name. |
 | Two artifacts of the same kind, through the Compare selects | **Comparison**: the metrics side by side with deltas, and the run stamp diff (what moved: content, engine, rules, schema, agents, seeds). |
 
 Traces dropped alongside their run also feed the batch view (fizzle and crit rates) and appear on their own.
@@ -21,7 +22,7 @@ Traces dropped alongside their run also feed the batch view (fizzle and crit rat
 
 `samples/` holds one small run recorded from a simplified engine so the page can be tried without building
 anything: `random-vs-random/` (six matches of a two-on-two rule set capped at five rounds, with one full
-trace), `simulation.csv`, `evaluation.json`, and a `training.jsonl`. Their shape is checked against a real recorded run by
+trace), `simulation.csv`, `evaluation.json`, a `training.jsonl`, and a `report.json`. Their shape is checked against a real recorded run by
 `ViewerSamplesTests` (Infrastructure tests), so the viewer never drifts from what the engine writes. To
 look at real data instead:
 
@@ -31,3 +32,11 @@ dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.
 ```
 
 then drop `runs/random-vs-random` or `match.trace.json` on the page.
+
+## Run pages
+
+`scripts/iterate.sh` (and `uv run --project learning report <run>`) writes `runs/<id>/report.html`: this
+page with `viewer.css` inlined and the run's `report.json`, evaluations, and `training.jsonl` files embedded
+in a `<script type="application/json" id="embedded-artifacts">` block. The page reads that block at start,
+lists the artifacts, and opens on the report, so nothing has to be dragged in; dropping more files still
+works, for a comparison with another run. The block is produced by `learning/src/downfall_learning/viewer.py`.

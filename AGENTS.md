@@ -66,7 +66,7 @@ uv sync --project learning && uv run --project learning ruff check learning && (
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log
-scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/, with report.json
+scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/; --help lists every tuning flag
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its

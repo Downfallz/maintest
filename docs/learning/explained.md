@@ -156,6 +156,37 @@ it as one script that does "a day's worth of manual typing" for you and leaves a
 
 Then one entry in [journal.md](journal.md): what changed, the numbers, the decision (keep, tune, revert).
 
+### Seeing the results without uploading anything
+
+The last step also writes `runs/<id>/report.html`: the viewer page with this run's report, evaluations, and
+training curves already inside it. Open that one file in a browser and it starts on the report; nothing to
+drag, nothing to pick. Drop another run's `report.json` on it to get the deltas side by side. (`--open` asks
+the script to launch the browser itself; that works on a desktop, not inside a container.)
+
+### The knobs
+
+Everything you may want to change lives on `scripts/iterate.sh`, as a flag with a default; nothing needs
+editing in a file, and `scripts/iterate.sh --help` repeats this list. In plain words:
+
+| Flag | Default | What it does | When to touch it |
+| --- | --- | --- | --- |
+| `--matches` | 200 | how many greedy self-play matches are recorded as the dataset | first thing to raise when a policy learns something odd from too few examples of a rare move |
+| `--seed` | 1 | which matches get recorded (the base seed) | to record different matches with the same size |
+| `--value-alpha` | 1.0 | how strongly the value model's fit is pulled toward "no effect". A model with 383 numbers per action and few examples can fit noise; a higher pull makes it more cautious | raise (10, 100) when the value policy trusts a handful of examples too much (a huge weight on one action) |
+| `--value-min-samples` | 5 | how many examples an action needs before it gets its own fit; below that it keeps the dataset's average return | raise (50) so a rare move cannot be scored on almost nothing |
+| `--clone-epochs` | 20 | how many passes the clone makes over the dataset; the best pass on held-out matches is kept | raise if the accuracy is still climbing at the last pass |
+| `--clone-alpha` | 0.0001 | the same pull toward "no effect", for the clone's classifier | rarely; raise if the clone is worse on held-out matches than on the ones it saw |
+| `--validation` | 0.2 | the share of matches held out to check the models on matches they never saw | leave it; lower only when the dataset is tiny |
+| `--against` | none | the previous run to compare with; its value policy is replayed on this content | every run after the first |
+
+"Alpha" is the usual name for the pull toward zero (regularization) in these models; the two learners have
+their own because they are different models. `--min-samples` only exists for the value learner because it
+fits one small model per action.
+
+The first real run (journal, 2026-09-09) is the worked example: the value policy lost every match to greedy
+because one rare action got its own fit on almost no data. The fix is those flags, not code:
+`scripts/iterate.sh --run second --against premier --matches 1000 --value-min-samples 50 --value-alpha 10`.
+
 ## How to read a report
 
 - **Player 1 share far from 50% with identical agents**: the rules favour the first mover; a rules question,

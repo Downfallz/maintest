@@ -14,7 +14,7 @@
     <label class="button">Open files<input id="files" type="file" multiple hidden></label>
     <label class="button">Open a run directory<input id="directory" type="file" webkitdirectory hidden></label>
   </header>
-  <div id="drop" class="drop">Drop a run directory, <code>manifest.json</code>, <code>steps.jsonl</code>, <code>episodes.jsonl</code>, a trace, <code>simulation.csv</code>, <code>evaluation.json</code>, or <code>training.jsonl</code> here.</div>
+  <div id="drop" class="drop">Drop a run directory, <code>manifest.json</code>, <code>steps.jsonl</code>, <code>episodes.jsonl</code>, a trace, <code>simulation.csv</code>, <code>evaluation.json</code>, <code>training.jsonl</code>, or a run's <code>report.json</code> here.</div>
   <main>
     <nav>
       <h2>Artifacts</h2>
@@ -58,6 +58,7 @@
     }
 
     function classifyDocument(doc) {
+      if (doc.run && doc.stamp && doc.evaluations && !Array.isArray(doc.evaluations)) return { type: 'report', data: doc };
       if (Array.isArray(doc.entries) && doc.matchId) return { type: 'trace', data: doc };
       if (doc.featureNames && doc.stamp) return { type: 'manifest', data: doc };
       if (Array.isArray(doc.pairs) && doc.agentA) return { type: 'evaluation', data: doc };
@@ -102,21 +103,29 @@
           break;
         case 'training': state.artifacts.push({ kind: 'training', name, rows: classified.data }); break;
         case 'evaluation': state.artifacts.push({ kind: 'evaluation', name, evaluation: classified.data }); break;
+        case 'report': state.artifacts.push({ kind: 'report', name: classified.data.run || name, report: classified.data }); break;
         default: console.warn(`Ignored ${name}: not a known artifact.`);
       }
     }
 
-    async function addFiles(entries) {
-      for (const { file, path } of entries) {
+    // Texts already read: what a drop gives after reading the files, and what an embedded run page carries.
+    function addTexts(entries) {
+      for (const { path, name, text } of entries) {
         try {
-          addClassified(path, file.name, classify(file.name, await file.text()));
+          addClassified(path, name, classify(name, text));
         } catch (error) {
-          console.warn(`Ignored ${file.name}: ${error.message}`);
+          console.warn(`Ignored ${name}: ${error.message}`);
         }
       }
       state.artifacts = state.artifacts.filter(artifact => artifact.kind !== 'run' || artifact.manifest || artifact.episodes.length || artifact.csv.length || artifact.steps.length);
       if (!state.selected && state.artifacts.length) state.selected = state.artifacts[0];
       render();
+    }
+
+    async function addFiles(entries) {
+      const texts = [];
+      for (const { file, path } of entries) texts.push({ path, name: file.name, text: await file.text() });
+      addTexts(texts);
     }
 
     function readEntry(entry, prefix) {
@@ -664,9 +673,72 @@
       return view;
     }
 
+    // ---------- iteration reports ----------
+
+    const REPORT_COLUMNS = [
+      ['Evaluation', row => row.name, ''],
+      ['A', row => row.agentA, 'mono'], ['B', row => row.agentB, 'mono'],
+      ['Win A', row => pct(row.winRateA), 'num'], ['Interval', row => `${pct(row.winRateLowA)} to ${pct(row.winRateHighA)}`, ''],
+      ['Score A', row => fixed(row.scoreA, 3), 'num'], ['P1 share', row => pct(row.player1WinShare), 'num'], ['Draws', row => pct(row.drawRate), 'num'],
+      ['Rounds', row => fixed(row.averageRounds, 1), 'num'], ['Cap', row => pct(row.roundCapShare), 'num'],
+      ['Entropy A/B', row => `${fixed(row.spellEntropyA, 2)}/${fixed(row.spellEntropyB, 2)}`, 'num'], ['Fizzle A/B', row => `${pct(row.fizzleRateA)}/${pct(row.fizzleRateB)}`, 'num'],
+    ];
+
+    function reportRows(report) {
+      return Object.entries(report.evaluations).map(([name, entry]) => ({ name, ...entry })).sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function reportTable(rows) {
+      const table = el('table');
+      table.append(el('tr', {}, REPORT_COLUMNS.map(([label, , cls]) => el('th', { class: cls }, label))));
+      for (const row of rows) table.append(el('tr', {}, REPORT_COLUMNS.map(([, value, cls]) => el('td', { class: cls }, value(row)))));
+      return table;
+    }
+
+    // What to read first: the mirrored baseline says whether the rules favour player 1, the gap between the
+    // best policy and greedy says whether the training gained anything.
+    function reportStats(rows) {
+      const mirrored = rows.find(row => row.agentA === row.agentB && row.agentA === 'Greedy') || rows.find(row => row.agentA === row.agentB);
+      const policies = rows.filter(row => row.agentA.startsWith('Policy') && row.agentB === 'Greedy');
+      const best = policies.reduce((top, row) => (top && top.winRateA >= row.winRateA ? top : row), null);
+      return el('div', { class: 'stats' }, [
+        stat('Evaluations', rows.length, `${rows.reduce((sum, row) => sum + row.matches, 0)} matches`),
+        stat('Player 1 share', mirrored ? pct(mirrored.player1WinShare) : '-', mirrored ? `${mirrored.name}; one half is fair` : 'no mirrored baseline'),
+        stat('Best policy vs Greedy', best ? pct(best.winRateA) : '-', best ? `${best.name}; Greedy vs Greedy is ${mirrored ? pct(mirrored.winRateA) : '-'}` : 'no policy evaluated'),
+      ]);
+    }
+
+    function renderReport(artifact) {
+      const rows = reportRows(artifact.report);
+      const canvas = el('canvas');
+      requestAnimationFrame(() => {
+        chart(canvas, { type: 'bar', data: { labels: rows.map(row => row.name), datasets: [
+          { label: 'win rate of A', data: rows.map(row => row.winRateA), backgroundColor: '#2563eb' },
+          { label: 'player 1 share', data: rows.map(row => row.player1WinShare), backgroundColor: 'rgba(37,99,235,0.3)' },
+        ] }, options: { scales: { y: { min: 0, max: 1 } } } });
+      });
+      const view = el('div');
+      view.append(
+        el('div', { class: 'card' }, [
+          el('div', { class: 'title' }, [el('h2', {}, `Run ${artifact.report.run}`), el('span', { class: 'muted' }, 'one turn of the loop; compare two reports for the deltas')]),
+          stampList(artifact.report.stamp),
+        ]),
+        reportStats(rows),
+        el('div', { class: 'card' }, [el('h3', {}, 'Win rate of A and player 1 share, per evaluation'), canvas]),
+        el('div', { class: 'card' }, [el('h3', {}, 'Evaluations'), reportTable(rows)]),
+      );
+      return view;
+    }
+
     // ---------- comparison ----------
 
     function metricsOf(artifact) {
+      if (artifact.kind === 'report') {
+        return reportRows(artifact.report).flatMap(row => [
+          [`${row.name}: win rate of A`, row.winRateA, 3], [`${row.name}: score of A`, row.scoreA, 3], [`${row.name}: player 1 share`, row.player1WinShare, 3],
+          [`${row.name}: draw rate`, row.drawRate, 3], [`${row.name}: average rounds`, row.averageRounds, 2], [`${row.name}: round cap share`, row.roundCapShare, 3],
+        ]);
+      }
       if (artifact.kind === 'run') {
         const summary = summarize(artifact);
         return [
@@ -697,6 +769,7 @@
       if (artifact.kind === 'run') return artifact.manifest ? artifact.manifest.stamp : null;
       if (artifact.kind === 'training') return artifact.rows[0] ? artifact.rows[0].stamp : null;
       if (artifact.kind === 'evaluation') return artifact.evaluation.stamp;
+      if (artifact.kind === 'report') return artifact.report.stamp;
       return artifact.trace.stamp;
     }
 
@@ -711,13 +784,16 @@
       const table = el('table');
       table.append(el('tr', {}, [el('th', {}, 'Metric'), el('th', { class: 'num' }, a.name), el('th', { class: 'num' }, b.name), el('th', { class: 'num' }, 'Delta')]));
       const left = metricsOf(a);
-      const right = metricsOf(b);
-      left.forEach(([label, value, digits], index) => {
-        const other = right[index][1];
+      const right = new Map(metricsOf(b).map(([label, value]) => [label, value]));
+      for (const [label, value, digits] of left) {
+        if (!right.has(label)) {
+          table.append(el('tr', {}, [el('td', {}, label), el('td', { class: 'num' }, fixed(value, digits)), el('td', { class: 'num' }, '-'), el('td', { class: 'num' }, 'only on the left')]));
+          continue;
+        }
+        const other = right.get(label);
         const delta = other - value;
-        const deltaClass = deltaClassOf(delta);
-        table.append(el('tr', {}, [el('td', {}, label), el('td', { class: 'num' }, fixed(value, digits)), el('td', { class: 'num' }, fixed(other, digits)), el('td', { class: `num ${deltaClass}` }, `${delta > 0 ? '+' : ''}${fixed(delta, digits)}`)]));
-      });
+        table.append(el('tr', {}, [el('td', {}, label), el('td', { class: 'num' }, fixed(value, digits)), el('td', { class: 'num' }, fixed(other, digits)), el('td', { class: `num ${deltaClassOf(delta)}` }, `${delta > 0 ? '+' : ''}${fixed(delta, digits)}`)]));
+      }
       const axes = changed.size ? `Changed: ${[...changed].join(', ')}` : 'Same run stamp on both sides (or no stamp).';
       return el('div', {}, [
         el('div', { class: 'card' }, [el('div', { class: 'title' }, [el('h2', {}, `${a.name} vs ${b.name}`), el('span', { class: 'muted' }, axes)]),
@@ -749,6 +825,7 @@
       else if (selected.kind === 'run') view.replaceChildren(renderRun(selected));
       else if (selected.kind === 'trace') view.replaceChildren(renderTrace(selected));
       else if (selected.kind === 'evaluation') view.replaceChildren(renderEvaluation(selected));
+      else if (selected.kind === 'report') view.replaceChildren(renderReport(selected));
       else view.replaceChildren(renderTraining(selected));
     }
 
@@ -786,6 +863,18 @@
       if (event.key === 'ArrowRight') moveTo(selected, selected.cursor + 1);
       if (event.key === 'ArrowLeft') moveTo(selected, selected.cursor - 1);
     });
+
+    // A run page (runs/<id>/report.html, written by the Python side) carries its artifacts in the document,
+    // so it opens on the report with nothing to pick; dropping more files still works, for a comparison.
+    const embedded = document.getElementById('embedded-artifacts');
+    if (embedded) {
+      const carried = JSON.parse(embedded.textContent);
+      addTexts(carried.artifacts || []);
+      const report = state.artifacts.find(artifact => artifact.kind === 'report');
+      if (report) state.selected = report;
+      drop.textContent = `This page carries run ${carried.run || ''}. Drop another run's report.json, evaluations, or training.jsonl here to compare.`;
+      render();
+    }
   </script>
 </body>
 </html>
