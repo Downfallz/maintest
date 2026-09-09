@@ -25,8 +25,9 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Creature definition | Static content describing a kind of Creature (base stats, starting Spells, Talent tree). Loaded from Game resources, never created during play. | decided |
 | Stat | A non-negative value object on a Creature: Health, Energy, Defense, Initiative. Critical chance is a probability in [0, 1]. | decided |
 | Creature stats | The stat block of a Creature: Health, Energy, Defense, Initiative, Critical chance. A Creature definition carries the base block. | decided |
-| Spell stats | The numbers of a Spell: Initiative, energy cost, Critical chance. | decided |
-| Spell | An action a Creature can perform in Combat: type, class, initiative, energy cost, critical chance, targeting spec, and effects. | decided |
+| Spell stats | The numbers of a Spell: Initiative, energy cost, Critical chance bonus. | decided |
+| Critical chance bonus | What a Spell adds to its caster's own Critical chance before the roll, clamped into [0, 1]. A Spell at zero does not mean a cast that never crits: it means the Spell moves nothing. | decided |
+| Spell | An action a Creature can perform in Combat: type, class, initiative, energy cost, Critical chance bonus, targeting spec, and effects. | decided |
 | Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012): instant `Damage`, `Heal`, `EnergyGain`; lasting `Bleed`, `Stun`, `DefenseBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
 | Condition | A lasting Effect attached to a Creature (stun, bleed, defense buff) with a Duration and a Stacking policy. Bleeds deal damage at the start of the round; every Condition counts down at Cleanup, and the first countdown after an application does not count. | decided |
 | Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |
@@ -94,7 +95,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Seed pair | One Benchmark seed played twice with the two Player agents swapped; the unit an Evaluation's intervals are computed over. | decided |
 | Benchmark seeds | The fixed seed set every Evaluation uses, so two content versions, two engine versions, or two agents compare on the same Matches. | decided |
 | Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |
-| Content audit | What a built content set holds that no match can use: content no creature can reach, open or cast, and spells no match can tell apart. Findings, not problems: the content is valid. | decided |
+| Content audit | What a built content set says about itself that reading one item cannot: content no Creature can reach, open or cast, Spells no match can tell apart, and a Spell stat every Spell gives the same value. Findings, not problems: the content is valid and the engine plays it. | decided |
 | Content finding | One thing a Content audit found, with a stable code namespaced by what it is about (`Spell.Unreachable`), the id it is about, and what it means for the author. | decided |
 | Spell reach | How far a Spell goes in a content set: the creatures that start with it, and the creatures that could ever come to know it through their Talent tree. | decided |
 | Run record | What the content studio writes beside a run's artifacts (`run.json`): its agents, seed, match count, Content hash and time, so a run can be found again and compared. | decided |

@@ -265,12 +265,13 @@ function textBox(target, key, { placeholder = '' } = {}) {
   return input;
 }
 
-function numberBox(target, key, { step = 1, min = null } = {}) {
+function numberBox(target, key, { step = 1, min = null, onChange = null } = {}) {
   const input = element('input', { type: 'number', step, value: target[key] ?? 0 });
   if (min !== null) input.min = min;
   input.addEventListener('input', () => {
     target[key] = input.value === '' ? null : Number(input.value);
     markDirty();
+    onChange?.();
   });
   return input;
 }
@@ -402,7 +403,7 @@ function spellEditor() {
     ['Class', picker(draft, 'creatureClass', CREATURE_CLASSES)],
     ['Initiative', numberBox(draft, 'initiative')],
     ['Energy cost', numberBox(draft, 'energyCost', { min: 0 })],
-    ['Critical chance', numberBox(draft, 'criticalChance', { step: 0.01, min: 0 })],
+    ['Critical chance bonus', critField(draft)],
     ['Target origin', picker(draft.targeting, 'origin', TARGET_ORIGINS)],
     ['Target scope', picker(draft.targeting, 'scope', TARGET_SCOPES, { onChange: normalizeTargeting })],
     ['Max targets', draft.targeting.scope === 'Multi'
@@ -429,6 +430,38 @@ function spellEditor() {
 }
 
 /** A single target takes no count; a multi target takes at least two, which is what the engine will accept. */
+/** The bonus and, beside it, what it comes to — rewritten as it is typed, or it would report the old value. */
+function critField(draft) {
+  let rate = effectiveCrit(draft);
+  const redraw = () => {
+    const next = effectiveCrit(draft);
+    rate.replaceWith(next);
+    rate = next;
+  };
+
+  return element('div', { className: 'inline' }, [
+    numberBox(draft, 'criticalChance', { step: 0.01, min: 0, onChange: redraw }),
+    rate,
+  ]);
+}
+
+/**
+ * What a cast of this spell actually crits at. A spell's critical chance is a bonus added to the creature's
+ * own (`ResolutionRules`), so the field alone reads as "never crits" when the creature behind it does.
+ */
+function effectiveCrit(draft) {
+  const bases = [...new Set(documentsOf('creatures').map(creature => Number(creature.document.baseCriticalChance) || 0))].sort((a, b) => a - b);
+  const bonus = Number(draft.criticalChance) || 0;
+  if (!bases.length) return element('span', { className: 'muted', textContent: 'added to the creature\u2019s own chance' });
+  const rates = [...new Set(bases.map(base => percent(Math.min(1, base + bonus))))];
+  const own = bases.length === 1
+    ? `a creature's own ${percent(bases[0])}`
+    : `each creature's own, ${percent(bases[0])} to ${percent(bases.at(-1))}`;
+  return element('span', { className: 'muted', textContent: `added to ${own}, so a cast crits at ${rates.join(' or ')}` });
+}
+
+const percent = value => `${(value * 100).toFixed(1)} %`;
+
 function normalizeTargeting() {
   const targeting = state.draft.targeting;
   if (targeting.scope === 'Multi') {
@@ -511,7 +544,10 @@ function creatureEditor() {
     ['Energy', numberBox(draft, 'baseEnergy', { min: 0 })],
     ['Defense', numberBox(draft, 'baseDefense', { min: 0 })],
     ['Initiative', numberBox(draft, 'baseInitiative', { min: 0 })],
-    ['Critical chance', numberBox(draft, 'baseCriticalChance', { step: 0.01, min: 0 })],
+    ['Critical chance', element('div', { className: 'inline' }, [
+      numberBox(draft, 'baseCriticalChance', { step: 0.01, min: 0 }),
+      element('span', { className: 'muted', textContent: 'its own; a spell adds a bonus to it' }),
+    ])],
     ['Talent tree', treeRow],
   ]));
 
