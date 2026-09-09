@@ -55,7 +55,7 @@ jobs:
         run: dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- evaluate --p1 "$AGENT_A" --p2 "$AGENT_B" --seeds "$SEEDS" --out evaluation.json
 
       - name: Upload the evaluation
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: evaluation
           path: evaluation.json
