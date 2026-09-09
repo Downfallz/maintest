@@ -46,7 +46,7 @@ class Scaling:
     def fit(cls, observations: np.ndarray) -> Scaling:
         mean = observations.mean(axis=0)
         scale = observations.std(axis=0)
-        scale[scale == 0.0] = 1.0
+        scale[np.isclose(scale, 0.0)] = 1.0
         return cls(mean, scale)
 
     def apply(self, observations: np.ndarray) -> np.ndarray:

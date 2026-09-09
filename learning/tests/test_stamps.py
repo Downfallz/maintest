@@ -12,8 +12,10 @@ def test_a_stamp_round_trips_through_json() -> None:
 
 
 def test_a_stamp_needs_every_field() -> None:
+    without_seed = {key: value for key, value in stamp_json().items() if key != "baseSeed"}
+
     with pytest.raises(ValueError, match="baseSeed"):
-        RunStamp.from_json({key: value for key, value in stamp_json().items() if key != "baseSeed"})
+        RunStamp.from_json(without_seed)
 
 
 def test_identical_stamps_differ_nowhere() -> None:

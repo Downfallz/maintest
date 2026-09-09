@@ -38,6 +38,7 @@ def test_a_rare_action_keeps_its_mean_return_and_an_unseen_one_the_fallback(tmp_
 
 def test_the_regression_needs_two_samples_per_action(tmp_path: Path) -> None:
     dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=4))])
+    options = ValueOptions(min_samples=1)
 
     with pytest.raises(TrainingError, match="two samples"):
-        train_value(dataset, ValueOptions(min_samples=1))
+        train_value(dataset, options)

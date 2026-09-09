@@ -132,9 +132,10 @@ def test_the_dataset_can_keep_only_some_kinds(tmp_path: Path) -> None:
 def test_a_step_without_an_episode_is_refused(tmp_path: Path) -> None:
     directory = write_run(tmp_path / "run", matches=1)
     (directory / "episodes.jsonl").write_text("")
+    runs = [load_run(directory)]
 
     with pytest.raises(ArtifactError, match="no episode"):
-        build_dataset([load_run(directory)])
+        build_dataset(runs)
 
 
 def test_a_subset_keeps_rows_aligned(tmp_path: Path) -> None:

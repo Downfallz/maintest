@@ -73,11 +73,18 @@ def test_the_result_writes_the_weights_the_summary_and_the_evaluation(tmp_path: 
     )
 
 
-def test_the_search_refuses_degenerate_options() -> None:
-    with pytest.raises(ValueError, match="at least two candidates"):
-        search_weights(BowlEvaluator(), SearchOptions(population=1))
-    with pytest.raises(ValueError, match="elite share"):
-        search_weights(BowlEvaluator(), SearchOptions(elite_share=0.0))
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        (SearchOptions(population=1), "at least two candidates"),
+        (SearchOptions(elite_share=0.0), "elite share"),
+    ],
+)
+def test_the_search_refuses_degenerate_options(options: SearchOptions, message: str) -> None:
+    evaluator = BowlEvaluator()
+
+    with pytest.raises(ValueError, match=message):
+        search_weights(evaluator, options)
 
 
 def test_the_cli_evaluator_runs_the_engine_and_reads_its_evaluation(

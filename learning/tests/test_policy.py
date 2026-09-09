@@ -94,10 +94,15 @@ def test_a_malformed_policy_is_refused(overrides: dict, message: str) -> None:
 
 
 def test_an_observation_of_the_wrong_width_is_refused() -> None:
+    policy = a_policy()
+
     with pytest.raises(SchemaError, match="features"):
-        a_policy().scores([1.0, 2.0], ["a"])
+        policy.scores([1.0, 2.0], ["a"])
 
 
 def test_the_scorer_refuses_to_choose_among_nothing() -> None:
+    scorer = LinearScorer(("a",), np.zeros((1, 2)), np.zeros(1), 0.0)
+    observation = np.zeros(2)
+
     with pytest.raises(ValueError, match="No candidate"):
-        LinearScorer(("a",), np.zeros((1, 2)), np.zeros(1), 0.0).choose(np.zeros(2), [])
+        scorer.choose(observation, [])

@@ -558,6 +558,11 @@
       return best;
     }
 
+    function bestSummary(best) {
+      if (!best) return '';
+      return hasWinRate(best) ? `win rate ${pct(best.winRate)}` : `loss ${fixed(best.loss, 4)}`;
+    }
+
     function extraFields(row) {
       return Object.entries(row)
         .filter(([key, value]) => !TRAINING_FIELDS.has(key) && typeof value === 'number')
@@ -600,7 +605,7 @@
           stampList(rows[0] ? rows[0].stamp : null),
         ]),
         el('div', { class: 'stats' }, [
-          stat('Best iteration', best ? best.iteration : '-', best ? (hasWinRate(best) ? `win rate ${pct(best.winRate)}` : `loss ${fixed(best.loss, 4)}`) : ''),
+          stat('Best iteration', best ? best.iteration : '-', bestSummary(best)),
           stat('Final loss', rows.length ? fixed(rows[rows.length - 1].loss, 4) : '-'),
           stat('Final win rate', rows.length ? pct(rows[rows.length - 1].winRate) : '-'),
         ]),

@@ -87,7 +87,10 @@ def build_parser() -> argparse.ArgumentParser:
     csv.add_argument("--allow-mixed", action="store_true")
     csv.set_defaults(handler=_export_csv)
 
-    stamps = commands.add_parser("compare-stamps", help="what differs between the stamps of two artifacts")
+    stamps = commands.add_parser(
+        "compare-stamps",
+        help="what differs between the stamps of two artifacts (exit code 1 when something does)",
+    )
     stamps.add_argument("before", type=Path, help="a manifest.json, evaluation.json, or policy.json")
     stamps.add_argument("after", type=Path, help="the artifact to compare with")
     stamps.set_defaults(handler=_compare_stamps)
@@ -157,6 +160,7 @@ def _stamp_of(path: Path) -> RunStamp:
 
 
 def _compare_stamps(arguments: argparse.Namespace) -> int:
+    """Prints what moved and exits with 1 when something did, so a script can branch on it like diff."""
     before, after = _stamp_of(arguments.before), _stamp_of(arguments.after)
     differences = after.differences_from(before)
     if not differences:
@@ -164,7 +168,7 @@ def _compare_stamps(arguments: argparse.Namespace) -> int:
         return 0
     for difference in differences:
         print(difference)
-    return 0
+    return 1
 
 
 def main(argv: Sequence[str] | None = None) -> int:

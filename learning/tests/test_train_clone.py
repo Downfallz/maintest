@@ -50,13 +50,15 @@ def test_cloning_needs_two_actions(tmp_path: Path) -> None:
         train_clone(dataset)
 
 
-def test_cloning_needs_an_epoch_and_a_sane_split(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [(CloneOptions(epochs=0), "epoch"), (CloneOptions(validation_share=1.0), "validation share")],
+)
+def test_cloning_needs_an_epoch_and_a_sane_split(tmp_path: Path, options: CloneOptions, message: str) -> None:
     dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=4))])
 
-    with pytest.raises(TrainingError, match="epoch"):
-        train_clone(dataset, CloneOptions(epochs=0))
-    with pytest.raises(TrainingError, match="validation share"):
-        train_clone(dataset, CloneOptions(validation_share=1.0))
+    with pytest.raises(TrainingError, match=message):
+        train_clone(dataset, options)
 
 
 def test_without_a_validation_share_the_training_steps_are_scored(tmp_path: Path) -> None:

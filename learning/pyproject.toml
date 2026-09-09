@@ -46,6 +46,8 @@ ignore = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# src/ on the path, so the tests run against the sources without the project installed (what CI does).
+pythonpath = ["src"]
 addopts = "-q"
 
 [tool.coverage.run]

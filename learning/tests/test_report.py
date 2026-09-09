@@ -45,9 +45,10 @@ def test_optional_fields_stay_out_when_unknown(tmp_path: Path) -> None:
 def test_iterations_must_increase() -> None:
     log = TrainingLog(RunStamp.from_json(stamp_json()))
     log.append(TrainingRow(2, 0.5))
+    repeated = TrainingRow(2, 0.4)
 
     with pytest.raises(ValueError, match="does not follow"):
-        log.append(TrainingRow(2, 0.4))
+        log.append(repeated)
 
 
 def test_marking_an_unknown_iteration_is_refused() -> None:

@@ -79,7 +79,7 @@ def test_compare_stamps_names_what_moved(tmp_path: Path, capsys: pytest.CaptureF
     before = write_run(tmp_path / "a", matches=1)
     after = write_run(tmp_path / "b", matches=1, stamp=stamp_json(contentHash="d" * 64, baseSeed=7))
 
-    assert cli.main(["compare-stamps", str(before / "manifest.json"), str(after / "manifest.json")]) == 0
+    assert cli.main(["compare-stamps", str(before / "manifest.json"), str(after / "manifest.json")]) == 1
     lines = capsys.readouterr().out.splitlines()
     assert lines[0].startswith("content: ")
     assert lines[1].startswith("seed: ")
@@ -96,7 +96,7 @@ def test_compare_stamps_reads_policies_and_evaluations(tmp_path: Path, capsys: p
         json.dumps(evaluation_json(0.5, 0.5, stamp=stamp_json(engineVersion="fedcba654321")))
     )
 
-    assert cli.main(["compare-stamps", str(tmp_path / "model" / "policy.json"), str(evaluation)]) == 0
+    assert cli.main(["compare-stamps", str(tmp_path / "model" / "policy.json"), str(evaluation)]) == 1
     assert capsys.readouterr().out.splitlines()[-1].startswith("engine: ")
 
 
