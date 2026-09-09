@@ -31,12 +31,31 @@ internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
             TimelineBuilt timeline => "Timeline: " + string.Join(", ", timeline.Timeline.Slots.Select(slot => $"{slot.Creature} ({slot.Speed})")),
             ActionRevealed revealed => $"Creature {revealed.Action.Actor} reveals {revealed.Action.Spell.Value} on [{string.Join(", ", revealed.Action.Targets)}].",
             CombatActionResolved resolved => Describe(resolved),
-            OngoingEffectsApplied bleeds when bleeds.BleedTicks.Count > 0 => "Bleeds: " + string.Join(", ", bleeds.BleedTicks.Select(tick => $"creature {tick.Creature} takes {tick.Damage}")),
+            OngoingEffectsApplied ongoing => Describe(ongoing),
             MatchEnded ended => ended.Outcome.IsDraw
                 ? $"Match ended in a draw after round {ended.RoundId.Number} ({ended.Outcome.Reason})."
                 : $"Match ended: {ended.Outcome.Winner} wins after round {ended.RoundId.Number} ({ended.Outcome.Reason}).",
             _ => null,
         };
+
+    /// <summary>
+    /// The start of the round, healing first and then the bleeds (ADR 0019), or nothing when neither ticked.
+    /// </summary>
+    private static string? Describe(OngoingEffectsApplied ongoing)
+    {
+        var parts = new List<string>();
+        if (ongoing.RegenerationTicks.Count > 0)
+        {
+            parts.Add("Regenerations: " + string.Join(", ", ongoing.RegenerationTicks.Select(tick => $"creature {tick.Creature} heals {tick.Healed}")));
+        }
+
+        if (ongoing.BleedTicks.Count > 0)
+        {
+            parts.Add("Bleeds: " + string.Join(", ", ongoing.BleedTicks.Select(tick => $"creature {tick.Creature} takes {tick.Damage}")));
+        }
+
+        return parts.Count == 0 ? null : string.Join(". ", parts);
+    }
 
     private static string Describe(CombatActionResolved resolved)
     {

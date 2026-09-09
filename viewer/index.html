@@ -388,8 +388,12 @@
       RoundStarted: (event) => `Round ${event.roundId}`,
       SubPhaseEntered: (event) => event.subPhase,
       OngoingEffectsApplied: (event, names) => {
-        const ticks = event.bleedTicks.map(tick => `${names[tick.creature]} takes ${tick.damage}`).join(', ');
-        return ticks ? `Bleeds: ${ticks}` : 'No ongoing effects';
+        // Healing first, then the bleeds (ADR 0019). A trace recorded before regenerations existed has no
+        // regenerationTicks, and reads as bleeds only.
+        const healed = (event.regenerationTicks || []).map(tick => `${names[tick.creature]} heals ${tick.healed}`).join(', ');
+        const bled = (event.bleedTicks || []).map(tick => `${names[tick.creature]} takes ${tick.damage}`).join(', ');
+        const parts = [healed && `Regenerations: ${healed}`, bled && `Bleeds: ${bled}`].filter(Boolean);
+        return parts.length ? parts.join('. ') : 'No ongoing effects';
       },
       EvolutionChoiceSubmitted: (event, names) => `${event.slot}: ${names[event.choice.creature]} unlocks ${spellName(event.choice.spell)}`,
       EvolutionPassed: (event) => `${event.slot} passes`,

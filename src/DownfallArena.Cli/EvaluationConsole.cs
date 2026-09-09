@@ -65,7 +65,7 @@ internal static class EvaluationConsole
         }
 
         writer.WriteLine($"Spells by the outcome of the sides that declared them ({EnoughSides} sides or more; one half is no signal):");
-        writer.WriteLine($"{"Spell",-32} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"Heal",6} {"Stun",5} {"Bleed",6} {"Buff",5}");
+        writer.WriteLine($"{"Spell",-32} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"Heal",6} {"Stun",5} {"Bleed",6} {"Regen",6} {"Buff",5}");
         foreach (var outcome in ranked)
         {
             writer.WriteLine(string.Join(
@@ -80,6 +80,7 @@ internal static class EvaluationConsole
                 outcome.Healing.ToString(CultureInfo.InvariantCulture).PadLeft(6),
                 outcome.Stuns.ToString(CultureInfo.InvariantCulture).PadLeft(5),
                 outcome.Bleeds.ToString(CultureInfo.InvariantCulture).PadLeft(6),
+                outcome.Regens.ToString(CultureInfo.InvariantCulture).PadLeft(6),
                 outcome.Buffs.ToString(CultureInfo.InvariantCulture).PadLeft(5)));
         }
 

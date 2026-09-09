@@ -37,6 +37,26 @@ public sealed class EvaluationConsoleTests
         printed.ShouldContain("Won-cast reads against 60.0 %, not one half");
     }
 
+    /// <summary>
+    /// Every lasting effect the recorder counts has a column, or a spell that only applies that effect reads
+    /// as doing nothing. Regeneration was added to the taxonomy by ADR 0019 and the table with it.
+    /// </summary>
+    [Fact]
+    public void The_spell_table_has_a_column_for_every_lasting_effect_the_recorder_counts()
+    {
+        var printed = Print(Outcome("spell:healing_screech:v1", sides: 10, wins: 5, resolved: 8, fizzled: 0, damage: 0, resolvedWhenWon: 4)
+            with
+        { Healing = 16, Regens = 8 });
+
+        printed.ShouldContain("Stun");
+        printed.ShouldContain("Bleed");
+        printed.ShouldContain("Regen");
+        printed.ShouldContain("Buff");
+        // The eight regenerations it applied, next to the 16 healing its instant half gave.
+        printed.ShouldContain("16");
+        printed.ShouldContain("8");
+    }
+
     [Fact]
     public void A_run_too_short_to_rank_any_spell_says_so_rather_than_printing_nothing()
     {
