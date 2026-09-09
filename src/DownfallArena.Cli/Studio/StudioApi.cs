@@ -76,7 +76,7 @@ internal sealed class StudioApi : IDisposable
     {
         if (string.Equals(first, second, StringComparison.Ordinal))
         {
-            return StudioResponse.OfText(400, "text/plain; charset=utf-8", "A run compared with itself has no delta. Pick two runs.");
+            return StudioResponse.OfPlainText(400, "A run compared with itself has no delta. Pick two runs.");
         }
 
         try
@@ -86,21 +86,21 @@ internal sealed class StudioApi : IDisposable
             if (left.Count == 0 || right.Count == 0)
             {
                 var empty = left.Count == 0 ? first : second;
-                return StudioResponse.OfText(404, "text/plain; charset=utf-8", $"Run '{empty}' has no artifact to compare.");
+                return StudioResponse.OfPlainText(404, $"Run '{empty}' has no artifact to compare.");
             }
 
             // A match and an evaluation have nothing to line up: the viewer would refuse the pair and show one
             // side with no explanation, so the refusal belongs here, where it can name what is wrong.
             if (!string.Equals(ModeOf(left), ModeOf(right), StringComparison.Ordinal))
             {
-                return StudioResponse.OfText(400, "text/plain; charset=utf-8", $"'{first}' is a {ModeOf(left)} and '{second}' is a {ModeOf(right)}; there is no delta between them.");
+                return StudioResponse.OfPlainText(400, $"'{first}' is a {ModeOf(left)} and '{second}' is a {ModeOf(right)}; there is no delta between them.");
             }
 
             return StudioResponse.OfText(200, StudioResponse.Html, ViewerPage.Render(viewerDirectory, $"{first} vs {second}", [.. left, .. right], compare: true));
         }
         catch (Exception exception) when (exception is ArgumentException or DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
         {
-            return StudioResponse.OfText(404, "text/plain; charset=utf-8", exception.Message);
+            return StudioResponse.OfPlainText(404, exception.Message);
         }
     }
 
@@ -115,12 +115,12 @@ internal sealed class StudioApi : IDisposable
         {
             var artifacts = _runner.Artifacts(runId);
             return artifacts.Count == 0
-                ? StudioResponse.OfText(404, "text/plain; charset=utf-8", $"Run '{runId}' has no artifact to show.")
+                ? StudioResponse.OfPlainText(404, $"Run '{runId}' has no artifact to show.")
                 : StudioResponse.OfText(200, StudioResponse.Html, ViewerPage.Render(viewerDirectory, runId, artifacts));
         }
         catch (Exception exception) when (exception is ArgumentException or DirectoryNotFoundException or FileNotFoundException or InvalidDataException)
         {
-            return StudioResponse.OfText(404, "text/plain; charset=utf-8", exception.Message);
+            return StudioResponse.OfPlainText(404, exception.Message);
         }
     }
 

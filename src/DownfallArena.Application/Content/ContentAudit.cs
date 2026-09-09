@@ -26,77 +26,13 @@ public static class ContentAudit
         ArgumentNullException.ThrowIfNull(resources);
         ArgumentNullException.ThrowIfNull(rules);
 
-        var starting = new Dictionary<SpellId, int>();
-        var reachableBy = new Dictionary<SpellId, int>();
-        var energyCeiling = new Dictionary<SpellId, int>();
-        var openedNodes = new Dictionary<TalentTreeId, HashSet<string>>();
-
-        foreach (var creature in resources.Creatures)
-        {
-            foreach (var spell in creature.StartingSpells.Distinct())
-            {
-                starting[spell] = starting.GetValueOrDefault(spell) + 1;
-            }
-
-            // GameResources refuses a creature on a tree it does not have, so this always resolves.
-            var tree = resources.GetTalentTree(creature.TalentTree);
-            var known = TalentUnlocks.ReachableSpells(creature.StartingSpells, tree);
-
-            // The most energy this creature could ever be holding: what it starts with, plus every round's gain
-            // up to the cap. An EnergyGain spell it can reach breaks that bound -- it can be cast again and
-            // again -- so a creature that can learn one has no ceiling at all rather than a larger one.
-            var ceiling = Grants(known, resources)
-                ? int.MaxValue
-                : creature.BaseStats.Energy.Value + (rules.EnergyPerRound * rules.RoundCap);
-            foreach (var spell in known)
-            {
-                reachableBy[spell] = reachableBy.GetValueOrDefault(spell) + 1;
-                energyCeiling[spell] = Math.Max(energyCeiling.GetValueOrDefault(spell), ceiling);
-            }
-
-            if (!openedNodes.TryGetValue(tree.Id, out var opened))
-            {
-                opened = new HashSet<string>(StringComparer.Ordinal);
-                openedNodes[tree.Id] = opened;
-            }
-
-            foreach (var node in tree.Nodes.Where(node => node.Prerequisites.AreSatisfiedBy(known)))
-            {
-                opened.Add(node.Code);
-            }
-        }
-
-        var findings = new List<ContentFinding>();
-        foreach (var tree in resources.TalentTrees)
-        {
-            if (!openedNodes.TryGetValue(tree.Id, out var opened))
-            {
-                findings.Add(new ContentFinding("TalentTree.Unused", tree.Id.Value, $"No creature definition is on '{tree.Name}', so none of its {tree.Nodes.Count()} node(s) is ever offered."));
-                continue;
-            }
-
-            foreach (var node in tree.Nodes.Where(node => !opened.Contains(node.Code)))
-            {
-                findings.Add(new ContentFinding("TalentNode.Unreachable", $"{tree.Id.Value}/{node.Code}", $"No creature on '{tree.Name}' can satisfy the prerequisites of '{node.Name}', so its {node.Spells.Count} spell(s) are never offered."));
-            }
-        }
-
-        foreach (var spell in resources.Spells)
-        {
-            if (!reachableBy.ContainsKey(spell.Id))
-            {
-                findings.Add(new ContentFinding("Spell.Unreachable", spell.Id.Value, $"'{spell.Name}' is no creature's starting spell and no reachable talent node teaches it."));
-                continue;
-            }
-
-            var ceiling = energyCeiling[spell.Id];
-            if (ceiling != int.MaxValue && spell.Stats.Cost.Value > ceiling)
-            {
-                findings.Add(new ContentFinding("Spell.Uncastable", spell.Id.Value, $"'{spell.Name}' costs {spell.Stats.Cost.Value} energy, and a creature that can learn it holds at most {ceiling} by the round cap."));
-            }
-        }
-
-        findings.AddRange(Indistinguishable(resources));
+        var reached = Reached(resources, rules);
+        List<ContentFinding> findings =
+        [
+            .. TreeFindings(resources, reached),
+            .. SpellFindings(resources, reached),
+            .. Indistinguishable(resources),
+        ];
 
         return new ContentAuditReport
         {
@@ -110,11 +46,106 @@ public static class ContentAudit
             Reach =
             [
                 .. resources.Spells
-                    .Select(spell => Row(spell, rules, starting.GetValueOrDefault(spell.Id), reachableBy.GetValueOrDefault(spell.Id)))
+                    .Select(spell => Row(spell, rules, reached.Starting.GetValueOrDefault(spell.Id), reached.By.GetValueOrDefault(spell.Id)))
                     .OrderByDescending(row => row.ReachableBy)
                     .ThenBy(row => row.Spell, StringComparer.Ordinal),
             ],
         };
+    }
+
+    /// <summary>
+    /// What every creature puts within reach: how many start with each spell, how many can come to know it, the
+    /// most energy any of them could be holding when they do, and which nodes of each tree ever open.
+    /// </summary>
+    private static Reach Reached(IGameResources resources, RuleSet rules)
+    {
+        var reached = new Reach();
+        foreach (var creature in resources.Creatures)
+        {
+            foreach (var spell in creature.StartingSpells.Distinct())
+            {
+                reached.Starting[spell] = reached.Starting.GetValueOrDefault(spell) + 1;
+            }
+
+            // GameResources refuses a creature on a tree it does not have, so this always resolves.
+            var tree = resources.GetTalentTree(creature.TalentTree);
+            var known = TalentUnlocks.ReachableSpells(creature.StartingSpells, tree);
+            var ceiling = Ceiling(creature, known, resources, rules);
+            foreach (var spell in known)
+            {
+                reached.By[spell] = reached.By.GetValueOrDefault(spell) + 1;
+                reached.MostEnergy[spell] = Math.Max(reached.MostEnergy.GetValueOrDefault(spell), ceiling);
+            }
+
+            if (!reached.Opened.TryGetValue(tree.Id, out var opened))
+            {
+                opened = new HashSet<string>(StringComparer.Ordinal);
+                reached.Opened[tree.Id] = opened;
+            }
+
+            opened.UnionWith(tree.Nodes.Where(node => node.Prerequisites.AreSatisfiedBy(known)).Select(node => node.Code));
+        }
+
+        return reached;
+    }
+
+    /// <summary>
+    /// The most energy this creature could ever be holding: what it starts with, plus every round's gain up to
+    /// the cap. An EnergyGain spell it can reach breaks that bound -- it can be cast again and again -- so a
+    /// creature that can learn one has no ceiling at all rather than a larger one.
+    /// </summary>
+    private static int Ceiling(CreatureDefinition creature, IReadOnlySet<SpellId> known, IGameResources resources, RuleSet rules) =>
+        Grants(known, resources) ? int.MaxValue : creature.BaseStats.Energy.Value + (rules.EnergyPerRound * rules.RoundCap);
+
+    private static IEnumerable<ContentFinding> TreeFindings(IGameResources resources, Reach reached)
+    {
+        foreach (var tree in resources.TalentTrees)
+        {
+            if (!reached.Opened.TryGetValue(tree.Id, out var opened))
+            {
+                yield return new ContentFinding("TalentTree.Unused", tree.Id.Value, $"No creature definition is on '{tree.Name}', so none of its {tree.Nodes.Count()} node(s) is ever offered.");
+                continue;
+            }
+
+            foreach (var node in tree.Nodes.Where(node => !opened.Contains(node.Code)))
+            {
+                yield return new ContentFinding("TalentNode.Unreachable", $"{tree.Id.Value}/{node.Code}", $"No creature on '{tree.Name}' can satisfy the prerequisites of '{node.Name}', so its {node.Spells.Count} spell(s) are never offered.");
+            }
+        }
+    }
+
+    private static IEnumerable<ContentFinding> SpellFindings(IGameResources resources, Reach reached)
+    {
+        foreach (var spell in resources.Spells)
+        {
+            if (!reached.By.ContainsKey(spell.Id))
+            {
+                yield return new ContentFinding("Spell.Unreachable", spell.Id.Value, $"'{spell.Name}' is no creature's starting spell and no reachable talent node teaches it.");
+                continue;
+            }
+
+            var ceiling = reached.MostEnergy[spell.Id];
+            if (ceiling != int.MaxValue && spell.Stats.Cost.Value > ceiling)
+            {
+                yield return new ContentFinding("Spell.Uncastable", spell.Id.Value, $"'{spell.Name}' costs {spell.Stats.Cost.Value} energy, and a creature that can learn it holds at most {ceiling} by the round cap.");
+            }
+        }
+    }
+
+    /// <summary>The tallies one pass over the creatures builds, which every finding then reads.</summary>
+    private sealed class Reach
+    {
+        /// <summary>Creature definitions that know each spell from the first round.</summary>
+        public Dictionary<SpellId, int> Starting { get; } = [];
+
+        /// <summary>Creature definitions that can ever know each spell.</summary>
+        public Dictionary<SpellId, int> By { get; } = [];
+
+        /// <summary>The most energy any creature that can reach each spell could hold.</summary>
+        public Dictionary<SpellId, int> MostEnergy { get; } = [];
+
+        /// <summary>The node codes of each tree that some creature on it can open.</summary>
+        public Dictionary<TalentTreeId, HashSet<string>> Opened { get; } = [];
     }
 
     /// <summary>
@@ -137,6 +168,7 @@ public static class ContentAudit
                 $"'{group[0].Name}' and {group.Count - 1} other spell(s) have the same cost, targeting and effects ({Names(group.Skip(1))}), so nothing in a match tells them apart."))
             .OrderBy(finding => finding.Subject, StringComparer.Ordinal);
 
+    /// <summary>Effects are compared as a set, since the same effects in another order are the same spell.</summary>
     private static string Signature(Spell spell) =>
         $"{spell.Stats.Cost.Value}|{spell.Stats.Initiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{string.Join(";", spell.Effects.Select(effect => effect.ToString()).Order(StringComparer.Ordinal))}";
 

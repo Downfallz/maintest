@@ -70,7 +70,7 @@ internal sealed class StudioServer : IDisposable
         }
         catch (Exception exception)
         {
-            response = StudioResponse.OfText(500, "text/plain; charset=utf-8", exception.Message);
+            response = StudioResponse.OfPlainText(500, exception.Message);
         }
 
         try
@@ -106,7 +106,7 @@ internal sealed class StudioServer : IDisposable
         {
             return Comparison(path) is var (first, second)
                 ? _api.ComparePage(first, second, _viewerDirectory)
-                : StudioResponse.OfText(404, "text/plain; charset=utf-8", "A comparison is '/compare/<run>/<run>'.");
+                : StudioResponse.OfPlainText(404, "A comparison is '/compare/<run>/<run>'.");
         }
 
         if (path.StartsWith(RunPrefix, StringComparison.Ordinal))
@@ -143,13 +143,13 @@ internal sealed class StudioServer : IDisposable
         var site = request.Headers["Sec-Fetch-Site"];
         if (site is not null && !string.Equals(site, "same-origin", StringComparison.Ordinal) && !string.Equals(site, "none", StringComparison.Ordinal))
         {
-            return StudioResponse.OfText(403, "text/plain; charset=utf-8", $"The studio answers its own page only; this request came from {site}.");
+            return StudioResponse.OfPlainText(403, $"The studio answers its own page only; this request came from {site}.");
         }
 
         if (!string.Equals(request.HttpMethod, "GET", StringComparison.Ordinal)
             && request.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) != true)
         {
-            return StudioResponse.OfText(415, "text/plain; charset=utf-8", "The studio takes 'Content-Type: application/json' on a write.");
+            return StudioResponse.OfPlainText(415, "The studio takes 'Content-Type: application/json' on a write.");
         }
 
         return null;
