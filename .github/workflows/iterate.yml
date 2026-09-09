@@ -65,12 +65,19 @@ jobs:
         with:
           global-json-file: global.json
 
-      # The loop calls the console scripts of the learning project (train-value, report, evaluate-policy), so
-      # the project itself is installed here, unlike the test job of ci.yml which imports it from src/.
+      # Nothing is ever built from a source distribution: the dependencies come from the locked wheels, and the
+      # learning project, which the loop needs installed because it calls its console scripts (train-value,
+      # report, evaluate-policy), goes in as a wheel built here from its own declarative backend. UV_NO_SYNC
+      # then keeps `uv run` inside the script from rebuilding the environment it was handed.
       - name: Install uv and the learning project
         run: |
           pipx install uv==0.8.17
-          uv sync --project learning --locked
+          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
+          echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
+          uv sync --project learning --locked --no-build --no-install-project
+          uv build --project learning --wheel --out-dir "$RUNNER_TEMP/wheel"
+          uv pip install --python "$UV_PROJECT_ENVIRONMENT" --no-build --no-deps "$RUNNER_TEMP"/wheel/*.whl
 
       # Inputs reach the shell through the environment, never through the script text. They are empty on a
       # schedule or a push, where the defaults of the script are what we want anyway.
