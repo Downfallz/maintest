@@ -13,24 +13,84 @@ between them. That is the whole loop: play, learn, play again, compare, write it
 
 ## The words
 
-- **Agent**: a bot that decides for one player. `random` picks anything legal. `greedy` looks one move ahead
-  with a fixed scoring (a kill is worth 5 damage, a stun 3, and so on). `heuristic:<file>` is greedy with the
-  scoring read from a file, so it can be tuned. `policy:<file>` follows a trained model.
+Start here: what a "match" needs to be reproducible, and the four things you can ask the engine to do with
+one.
+
+- **Seed**: one whole number that fully decides a match's randomness (who crits, which random agent picks
+  what). Same seed, same rules, same content, same agents → the exact same match, replayed identically. This
+  is what makes any of the rest possible: without seeds, "the same match" would not mean anything.
+- **Simulate**: play a batch of matches (`simulate --matches 200 --seed 1`, match *i* uses seed `1 + i`) and
+  print a one-line summary (win rates, average rounds). Nothing is written to disk unless you ask.
+- **Record**: `simulate --record <dir>` does the same, and *also* writes every decision and every match's
+  outcome to files under `<dir>` (a **dataset**: `manifest.json`, `steps.jsonl`, `episodes.jsonl`). This is
+  the "notes" the Python side trains on. You only need to record when you plan to train something; a plain
+  balance check does not need a dataset.
+- **Evaluate**: play two named agents against each other and report win rates with confidence intervals
+  (`evaluate --p1 greedy --p2 random`). Every seed is played *twice*, once with each agent as player 1
+  ("mirrored"), which cancels out any first-move advantage from the comparison. Give it `--seeds <file>` to
+  use a fixed list of seeds instead of `--matches`/`--seed`.
+- **Benchmark seeds**: one fixed list of 200 seed numbers, committed in the repo
+  (`benchmarks/benchmark-seeds.json`), so that "the same 200 matches" means the same thing on every machine,
+  every day, forever. They are just an input file to `evaluate` — see below for who plays them.
+- **Digest**: the recorded *outcome* of the 200 benchmark seeds (who won each one, how many rounds, and so
+  on) played by the two baseline bots (`greedy` against `greedy`), for one specific content hash. One digest
+  file per content hash, committed in the repo (`benchmarks/<content-hash>.json`). This is the engine's
+  fingerprint on that content: two bots with no randomness in their decisions should replay it identically
+  forever, unless the engine's rules or that content changed.
+- **Benchmark (the command)**: `benchmark` re-plays the 200 seeds with the two baseline bots on the content
+  you have right now, and compares the result to the committed digest for that content hash. Same result →
+  print "verified" and exit 0. No digest exists yet for this content hash → print the digest it just computed
+  and exit 1 ("this is new, go commit it on purpose"). A different result than the committed digest → exit 1
+  and list what changed (someone changed engine behaviour, or content, without meaning to). This is the
+  **engine-change detector**: it is not there to test your changes, it is there to catch a change you did
+  *not* intend.
+
+### The chicken and the egg: where does the first digest come from?
+
+There is no digest until someone commits one — nothing computes it for you automatically, and `benchmark`
+without a digest to compare to is *expected* to fail the first time. That is not a bug, it is the mechanism:
+
+1. You run `benchmark` (or it runs in CI). No file exists yet for this content hash, so it prints the digest
+   it just computed to your screen and exits with an error.
+2. You look at the printed numbers once, to make sure they are sane (not all games ending in round 1, no
+   crash), then run `benchmark --write`, which saves exactly that digest to
+   `benchmarks/<content-hash>.json`.
+3. You commit that file, with a line in `docs/learning/journal.md` saying why (new content, first run,
+   whatever it is).
+4. From now on, `benchmark` compares against *that* file. If the content hash never changes again, the digest
+   never needs to change again either — it is a "nothing moved" tripwire, checked on every pull request.
+
+So the egg (the digest) always comes from a chicken (a `benchmark --write` a human ran on purpose, once, and
+committed). Nothing lays it by itself; that is the whole point — an *automatic* digest would defeat the
+purpose of catching accidental changes.
+
 - **Observation**: the board turned into a list of numbers (who is alive, how much health, what spells are
   known, ...), always in the same order. A model only ever sees these numbers. The order is the **feature
   schema**, and it has a version so a model is never fed numbers laid out differently from what it learned on.
 - **Action key**: a short text for one possible decision, such as `intent:1:spell:rend:v1` (creature in slot 1
   declares Rend) or `speed:0:Quick`. A model scores keys; the best-scoring legal one is played.
-- **Dataset**: the notes of a batch of matches: for every decision, the observation, the legal keys, the key
-  taken, and later the **return** of that player in that match (+1 for a win, -1 for a loss, a little more or
-  less depending on the health margin).
+- **Dataset**: what `simulate --record` writes: for every decision of a recorded match, the observation, the
+  legal keys, the key taken, and later the **return** of that player in that match (+1 for a win, -1 for a
+  loss, a little more or less depending on the health margin). This is the thing a model actually trains on.
 - **Policy**: the trained model. Here a policy is a table: one row of numbers per action key. The score of a
   key is its row multiplied with the observation, plus a bias. Nothing fancier, on purpose: the engine reads
   it back with a loop of multiplications and no machine-learning library.
-- **Benchmark seeds**: 200 fixed random seeds. Every evaluation plays these same 200 matches twice (each agent
-  gets to be player 1 once), so results are comparable from one day to the next.
 - **Run stamp**: the label on every result: engine version, content hash, rule set, feature schema, both
   agents, and the seed set. If two stamps differ on more than one axis, the comparison is not meaningful.
+
+### How the four commands relate
+
+|  | Plays matches? | Writes a dataset (steps/episodes)? | Compares two named agents? | Checks against a committed answer? |
+| --- | --- | --- | --- | --- |
+| `simulate` | yes | only with `--record` | no (one agent spec per side, no ranking) | no |
+| `evaluate` | yes | no | yes, with confidence intervals | no |
+| `benchmark` | yes (the 200 fixed seeds) | no | no (always greedy vs greedy) | yes, against the committed digest |
+| `evaluate-policy` (Python) | asks the engine to `evaluate` for it | no | yes (a trained policy vs a baseline) | no, but it saves the win rate |
+
+`benchmark` is really just `evaluate --p1 greedy --p2 greedy --seeds benchmarks/benchmark-seeds.json`, plus
+the save/compare step against a committed file. Everything else in the loop (`search-weights`,
+`evaluate-policy`, `scripts/iterate.sh`) is built out of `simulate`, `evaluate`, and `benchmark`, called with
+different agents.
 
 ## Phase L6: learning from the notes
 
@@ -60,25 +120,39 @@ guessing the average). **winRate** is the real test, added in L7: what the model
 
 ## Phase L7: the loop
 
+`scripts/iterate.sh` is nothing new by itself — it just runs the four commands from the section above, in
+order, with specific agents, and saves everything so the numbers can be compared to the next run. Think of
+it as one script that does "a day's worth of manual typing" for you and leaves a paper trail.
+
 `scripts/iterate.sh` runs one full turn of the loop and leaves everything under `runs/<run-id>/`:
 
-1. Build the engine and the content, and check the **benchmark digest**: the engine replays the 200 seeds
-   with greedy against greedy and compares every outcome with the committed record. Any difference means the
-   engine or the content changed behaviour, on purpose or not, and the loop says so before measuring anything.
-2. Play the **baselines**: random against random (is the game balanced between player 1 and player 2?),
-   greedy against greedy (same question for a strong deterministic bot), greedy against random (how big is
-   the gap a learned bot must beat).
-3. **Record** a dataset of greedy playing itself.
-4. **Train** the value and clone policies on it.
-5. **Evaluate** each policy against greedy and against random, on the benchmark seeds. The win rate goes into
-   the model's `training.jsonl`, so the viewer shows it next to the learning curve.
-6. If a previous run is named (`--against`), **replay its policy** on today's engine and content, so the
-   comparison has a row where only the engine or the content moved, never the training. When the content
-   change altered the observation layout, the old policy cannot run and the report says so.
-7. Write **`report.json`** and print the table: per evaluation, the win rate with its uncertainty, the
-   player 1 share, draws, rounds, the share of matches ending by the round cap, the spell entropy (how many
-   different spells were cast: low means one dominant spell) and the fizzle rate. With `--against`, a second
-   table of deltas and the stamp axis that moved.
+1. **Build** the engine and the content (`dotnet build`, the data builder). This is the "make sure what I'm
+   about to measure actually reflects my latest edits" step.
+2. **Check the digest** (`benchmark`): did I accidentally change engine or content behaviour? If this fails
+   because there is genuinely no digest yet for new content, see "the chicken and the egg" above — run
+   `benchmark --write` once and re-run the loop.
+3. Play the **baselines** (three `evaluate` calls, all on the fixed benchmark seeds so they are comparable
+   run after run):
+   - `random` vs `random` — is the game balanced between player 1 and player 2 with no skill involved at all?
+   - `greedy` vs `greedy` — same question, but with a strong deterministic bot, which is a harder test of the
+     rules than two random bots.
+   - `greedy` vs `random` — how big is the skill gap a trained bot needs to beat to be worth anything?
+4. **Record** a dataset (`simulate --record`) of `greedy` playing itself. This produces the notes ("what did a
+   decent bot do, and how did each match turn out") that step 5 trains on.
+5. **Train** (Python `train-value` and `train-clone`) two policies from that dataset.
+6. **Evaluate** each trained policy (Python `evaluate-policy`, which itself calls the engine's `evaluate`)
+   against `greedy` and against `random`, on the benchmark seeds. The win rate is saved into the policy's own
+   `training.jsonl`, so the viewer can plot it next to the training curve.
+7. If a previous run is named (`--against <run-id>`), **replay that older run's policy** on today's engine
+   and content (again, just `evaluate-policy` on an old model directory). This gives one row in the report
+   where *only* the engine or the content changed — never the training — because it is the exact same trained
+   numbers, just asked to play again. When the content change added or removed a spell (a new feature schema,
+   see the worked cases below), the old policy literally cannot run on the new layout, and the report says so
+   instead of a bogus number.
+8. Write **`report.json`** (Python `report`) and print the table: per evaluation, the win rate with its
+   uncertainty, the player 1 share, draws, rounds, the share of matches ending by the round cap, the spell
+   entropy (how many different spells were cast: low means one dominant spell) and the fizzle rate. With
+   `--against`, a second table of deltas and the stamp axis that moved.
 
 Then one entry in [journal.md](journal.md): what changed, the numbers, the decision (keep, tune, revert).
 
