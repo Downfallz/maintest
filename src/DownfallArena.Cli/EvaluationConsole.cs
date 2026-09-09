@@ -36,7 +36,7 @@ internal static class EvaluationConsole
         writer.WriteLine($"Matches {evaluation.Matches}, draws {evaluation.Draws} ({Percent(evaluation.DrawRate)}), rounds {evaluation.AverageRounds.ToString("F1", CultureInfo.InvariantCulture)} on average, {Percent(evaluation.RoundCapShare)} ended by the round cap.");
         if (evaluation.SelfPlay)
         {
-            writer.WriteLine($"Both agents are {evaluation.AgentA.Agent}: an agent is seeded from the match seed and the slot, so the mirrored pass replays the same matches. Each side above is the total of both players and the even split is arithmetic, not a result. The spell table below is still meaningful: it is about the content.");
+            writer.WriteLine($"Both agents are {evaluation.AgentA.Agent}: an agent is seeded from the match seed and the slot, so the mirrored pass replays the same matches. Each side above is the total of both players and the even split is arithmetic, not a result. The spell table below is still meaningful — it is about the content — and counts the replay once, so its sides are independent.");
         }
 
         writer.WriteLine($"Spells of {evaluation.AgentA.Agent}: {Usage(evaluation.AgentA)}");
@@ -50,13 +50,20 @@ internal static class EvaluationConsole
     /// </summary>
     private static void PrintSpellOutcomes(EvaluationResult evaluation, TextWriter writer)
     {
-        var ranked = evaluation.SpellOutcomes.Where(outcome => outcome.Sides >= EnoughSides).ToList();
-        if (ranked.Count == 0)
+        if (evaluation.SpellOutcomes.Count == 0)
         {
             return;
         }
 
+        var ranked = evaluation.SpellOutcomes.Where(outcome => outcome.Sides >= EnoughSides).ToList();
         writer.WriteLine();
+        if (ranked.Count == 0)
+        {
+            // Saying nothing here would read as the table not existing, when the run was simply too short.
+            writer.WriteLine($"No spell was declared by {EnoughSides} sides or more, so none of the {evaluation.SpellOutcomes.Count} spell(s) seen is worth ranking. Play more seeds.");
+            return;
+        }
+
         writer.WriteLine($"Spells by the outcome of the sides that declared them ({EnoughSides} sides or more; one half is no signal):");
         writer.WriteLine($"{"Spell",-32} {"Share",7} {"Sides",6} {"Won",5} {"Lost",5} {"Drawn",6} {"Casts/side",11}");
         foreach (var outcome in ranked)

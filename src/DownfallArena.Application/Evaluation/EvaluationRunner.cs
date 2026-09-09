@@ -25,6 +25,14 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
         var pairs = scenario.Seeds.Select((seed, index) => new SeedPair(seed, first.Results[index], second.Results[index])).ToList();
         var all = first.Results.Concat(second.Results).ToList();
 
+        // In self-play the second batch is a replay of the first, so its sides are the same sides again.
+        // Counting them would double the sample the spell table's confidence rests on without adding a
+        // single independent observation.
+        var selfPlay = string.Equals(scenario.AgentA.ToString(), scenario.AgentB.ToString(), StringComparison.Ordinal);
+        List<(IReadOnlyList<MatchResult> Results, IntentCounter Counter)> counted = selfPlay
+            ? [(first.Results, aFirst)]
+            : [(first.Results, aFirst), (second.Results, bFirst)];
+
         return new EvaluationResult
         {
             Stamp = stamp,
@@ -34,8 +42,8 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
             Draws = all.Count(result => result.Outcome.IsDraw),
             AverageRounds = all.Average(result => result.Rounds),
             RoundCapShare = (double)all.Count(result => result.Outcome.Reason == MatchEndReason.RoundCap) / all.Count,
-            SelfPlay = string.Equals(scenario.AgentA.ToString(), scenario.AgentB.ToString(), StringComparison.Ordinal),
-            SpellOutcomes = SpellOutcomes(all, aFirst, bFirst),
+            SelfPlay = selfPlay,
+            SpellOutcomes = SpellOutcomes(counted),
             Pairs = pairs,
         };
     }
@@ -43,13 +51,17 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
     /// <summary>
     /// Every spell against the outcomes of the sides that declared it. This is the content signal rather than
     /// the agent one: it says which spells the winning side was holding, which is what tuning a number moves.
+    /// Each batch brings its own results and the counter that watched them, so a batch that adds no
+    /// independent sides is simply not passed in.
     /// </summary>
-    private static List<SpellOutcome> SpellOutcomes(IReadOnlyList<MatchResult> results, params IntentCounter[] counters)
+    private static List<SpellOutcome> SpellOutcomes(IReadOnlyList<(IReadOnlyList<MatchResult> Results, IntentCounter Counter)> counted)
     {
-        var outcomes = results.ToDictionary(result => result.MatchId, result => result.Outcome);
+        var outcomes = counted
+            .SelectMany(batch => batch.Results)
+            .ToDictionary(result => result.MatchId, result => result.Outcome);
         var tally = new Dictionary<string, (int Intents, int Sides, int Wins, int Losses, int Draws)>(StringComparer.Ordinal);
 
-        foreach (var (match, slot, usage) in counters.SelectMany(counter => counter.Sides()))
+        foreach (var (match, slot, usage) in counted.SelectMany(batch => batch.Counter.Sides()))
         {
             if (!outcomes.TryGetValue(match, out var outcome))
             {

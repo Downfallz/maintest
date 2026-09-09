@@ -27,7 +27,8 @@ public sealed record EvaluationResult
     /// True when both agents are the same spec. The mirrored pass then replays the same matches — an agent is
     /// seeded from the match seed and the slot, not from which agent it is — so each side reports the totals of
     /// both players and the split is one half by construction, not by measurement. The spell outcomes still
-    /// mean something: they are about the content, not about who played it.
+    /// mean something, because they are about the content rather than about who played it, and they count the
+    /// replayed batch only once: its sides are the same sides again, not new evidence.
     /// </summary>
     public bool SelfPlay { get; init; }
 

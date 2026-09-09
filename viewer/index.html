@@ -551,7 +551,7 @@
 
     function matchSummary(trace) {
       const owner = ownersOf(trace);
-      const blank = () => ({ intents: {}, actions: 0, fizzles: 0, crits: 0, energy: 0, effects: {} });
+      const blank = () => ({ intents: {}, actions: 0, fizzles: 0, crits: 0, energy: 0, effects: {}, bleedTaken: 0 });
       const sides = { [PLAYER1]: blank(), [PLAYER2]: blank() };
       for (const { event } of trace.entries) {
         if (event.kind === 'IntentSubmitted' && sides[event.slot]) {
@@ -560,6 +560,13 @@
           intents[spell] = (intents[spell] || 0) + 1;
         } else if (event.kind === RESOLVED && sides[owner[event.resolution.action.actor]]) {
           addResolution(sides[owner[event.resolution.action.actor]], event.resolution);
+        } else if (event.kind === 'OngoingEffectsApplied') {
+          // A bleed tick names the creature taking the damage, not the one that applied the bleed, so this
+          // is what a side suffered between rounds. It cannot be credited to whoever dealt it.
+          for (const tick of event.bleedTicks || []) {
+            const side = sides[owner[tick.creature]];
+            if (side) side.bleedTaken += tick.damage || 0;
+          }
         }
       }
 
@@ -586,7 +593,8 @@
           stat('Energy spent', side.energy, 'over the match'),
         ]),
         el('p', {}, `Intents: ${intents}`),
-        el('p', {}, `Totals: ${effects}`),
+        el('p', {}, `From resolved actions: ${effects}`),
+        el('p', {}, `Bleed taken between rounds: ${side.bleedTaken}`),
       ]);
     }
 
@@ -808,7 +816,7 @@
       if (!evaluation.selfPlay) return null;
       return el('div', { class: 'note' }, [
         el('h3', {}, `Both agents are ${evaluation.agentA.agent}`),
-        el('p', {}, 'An agent is seeded from the match seed and the player slot, never from which agent it is, so the mirrored pass replays the same matches. Each agent card below is therefore the total of both players, and the even split is arithmetic rather than a result — which is why the interval has no width. Use two different agents to compare agents. The spell table is unaffected: it is about the content, and random play is the cleaner way to read it.'),
+        el('p', {}, 'An agent is seeded from the match seed and the player slot, never from which agent it is, so the mirrored pass replays the same matches. Each agent card below is therefore the total of both players, and the even split is arithmetic rather than a result — which is why the interval has no width. Use two different agents to compare agents. The spell table is about the content rather than the agent, so it still reads: it counts the replayed matches once, and its sides are independent.'),
       ]);
     }
 
