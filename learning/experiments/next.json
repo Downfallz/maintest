@@ -1,8 +1,8 @@
 {
-  "why": "ADR 0016 accepted and implemented: train-value now fits one state-value baseline on every step and regresses each action key on what it leaves, instead of on the raw match return. This repeats ci-5 exactly, same thousand-match explored dataset, same alpha 10 and min samples 10, so the baseline is the only thing that changed. Watch baselineR2 against r2 first: if they are close the action rows are still adding nothing, and then look at the win rate against greedy, zero seven runs in a row.",
-  "matches": 1000,
+  "why": "Value regression is parked (journal, ci-9): the three starting spells cost the same, share an initiative and a targeting, and one of them strictly dominates, so there is no decision for a learner to find. The loop keeps running for its balance signals, so exploration is off: no second dataset, half the time, and the report still carries spell entropy, player 1 share, draws and round cap. Watch greedy's spell entropy, 0.23 today: it rises when the content finally offers a choice.",
+  "matches": 200,
   "seed": 1,
-  "explore": 0.2,
+  "explore": "off",
   "value_alpha": 10,
   "value_min_samples": 10
 }
