@@ -845,6 +845,16 @@ for (const tab of document.querySelectorAll('.tab')) {
   });
 }
 
+/** How many seeds only means something for an evaluation; one match is one match. */
+function syncRunMode() {
+  const evaluation = $('run-mode').value === 'evaluation';
+  $('run-matches').disabled = !evaluation;
+  $('run-go').textContent = evaluation ? 'Evaluate' : 'Play it';
+}
+
+$('run-mode').addEventListener('change', syncRunMode);
+syncRunMode();
+
 $('search').addEventListener('input', renderNav);
 $('new').addEventListener('click', create);
 $('build').addEventListener('click', build);
