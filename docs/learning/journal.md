@@ -4,6 +4,40 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-09. First full turn of the loop (`scripts/iterate.sh`), run "premier"
+
+- **What changed**: nothing in the engine or the content on purpose; this is the first end-to-end run of the
+  L7 loop, on content `34c616d3…80d7` (the digest already committed), engine `d3f1fe3284bc-dirty` (the L7
+  pull request's head at the time, `#23`, with local uncommitted state, so read this as a smoke test of the
+  loop rather than a citable baseline; a clean re-run on the merged engine is the number to keep). 200
+  matches of `Greedy` self-play recorded (`simulate --record`, base seed 1), a `train-value` and a
+  `train-clone` policy trained on them, both evaluated against `Greedy` and `Random` on the 200 benchmark
+  seeds, mirrored (seed set `733404048`).
+- **Baselines** (match the committed digest and the L5/L6 journal entries, as expected since content and
+  agents did not change): `Greedy` vs `Greedy` 39.25% each, 54.5% player 1 share, 21.5% draws, 22.0 rounds;
+  `Greedy` vs `Random` and `Random` vs `Random` unchanged from before.
+- **Clone policy**: 38.0% against `Greedy` (interval 34.7% to 41.3%, score 0.475) — statistically the same as
+  `Greedy` playing itself (39.25%, interval 36.4% to 42.1%). This is the ceiling behaviour cloning is supposed
+  to reach (`docs/learning/explained.md`: "the clone can never be better than what it copies") and it reached
+  it: on 200 matches of `Greedy` self-play, the clone reproduced `Greedy`'s own strength almost exactly. 100%
+  against `Random`.
+- **Value policy — a red flag, not yet a conclusion**: 0.0% against `Greedy` (0 wins, 0 draws, 400 matches),
+  but 99.5% against `Random`. A policy that loses every single mirrored match to a deterministic opponent
+  while still beating a uniform one plays coherently (its fizzle rate is 0.08%, far below every other agent's
+  4-5%, so it is not fizzling its way to a loss) but consistently picks the wrong action once the opponent
+  fights back. The likely cause: `train-value` gives a rare action key (most `targets:...` keys, since target
+  combinations are numerous) its own sample mean as a score once it has been seen at all — one lucky win on
+  200 matches can give a bad move a high score with no dataset large enough yet to average it out. Two ways
+  to check: raise `--min-samples` on `train-value` (fewer, better-supported action keys, more falling back to
+  the global mean) or record a bigger dataset before retraining; a trace of one losing match would also show
+  whether the policy repeats one specific bad move.
+- **Why it matters**: the loop runs end to end, produces a report, and the two learners already diverge in an
+  interesting way — cloning is a safe, boring reproduction of `Greedy`, value regression is more ambitious
+  and currently exploitable. Neither policy is committed under `models/` yet: only `report.json` was shared
+  here, not the trained files, and a citable number needs a clean (non-dirty) engine commit. Next: re-run on
+  merged `main` with a larger dataset and a higher `--min-samples`, then commit whichever policy is worth
+  keeping with its evaluation.
+
 ## 2026-09-08. Greedy against Random, the first measured gap
 
 - **What changed**: nothing; this is the first measurement across two agents on the same engine and content,
