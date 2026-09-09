@@ -44,6 +44,38 @@ def test_the_viewer_sample_evaluation_loads() -> None:
     assert evaluation.agent_a.spell_usage["spell:strike:v1"] == 19
 
 
+def test_every_step_is_a_view_on_the_run_s_one_observation_array(tmp_path: Path) -> None:
+    run = load_run(write_run(tmp_path / "run", matches=3, steps_per_episode=2))
+
+    assert run.observations.shape == (len(run.steps), len(run.manifest.feature_names))
+    assert all(step.features.base is run.observations for step in run.steps)
+    assert np.array_equal(run.steps[4].features, run.observations[4])
+
+
+def test_the_file_decides_the_size_when_an_interrupted_manifest_says_zero(tmp_path: Path) -> None:
+    directory = write_run(tmp_path / "run", matches=2)
+    manifest = json.loads((directory / "manifest.json").read_text())
+    lines = len((directory / "steps.jsonl").read_text().splitlines())
+    manifest["steps"] = 0
+    (directory / "manifest.json").write_text(json.dumps(manifest))
+
+    run = load_run(directory)
+
+    assert len(run.steps) == lines
+    assert run.observations.shape[0] == lines
+
+
+def test_a_step_of_the_wrong_width_names_its_position(tmp_path: Path) -> None:
+    directory = write_run(tmp_path / "run", matches=1)
+    lines = (directory / "steps.jsonl").read_text().splitlines()
+    first = json.loads(lines[0])
+    first["observation"]["features"] = first["observation"]["features"][:-1]
+    (directory / "steps.jsonl").write_text("\n".join([json.dumps(first), *lines[1:]]) + "\n")
+
+    with pytest.raises(ArtifactError, match="Step 1 of"):
+        load_run(directory)
+
+
 def test_a_directory_without_a_manifest_is_refused(tmp_path: Path) -> None:
     with pytest.raises(ArtifactError, match=r"manifest\.json"):
         load_run(tmp_path)

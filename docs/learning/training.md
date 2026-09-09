@@ -65,6 +65,24 @@ weights, so a policy file stays a plain dot product. `export-csv` writes the wid
 The weight search is the slow one: one engine run per candidate, a few seconds each on 400 matches, so ten
 iterations of sixteen take around ten minutes. A smaller seed file (`--seeds`) makes it faster and noisier.
 
+## How big a dataset fits
+
+A run is loaded into one array of one row per step, and every step keeps a view on its row rather than its
+own numbers. At the width of `features:v1` for a team of three (383 features) that array is about 3 MB per
+thousand steps, and the loader's own overhead adds roughly half a kilobyte per step; measured peak resident
+memory, which includes what the JSON parsing leaves behind, is closer to 9 MB per thousand steps. A recorded
+match is a few hundred steps, so:
+
+| Dataset | Steps | Peak while loading |
+| --- | --- | --- |
+| 200 matches | ~50,000 | ~0.5 GB |
+| 1000 matches | ~320,000 | ~3 GB |
+
+Training on several runs at once (`train-value a b --allow-mixed`) loads each of them and then copies the
+selection into one array, so budget the sum plus one more copy. A machine that runs out is killed by the
+kernel with no Python error and no output file: if a training command ends silently and leaves nothing
+behind, check its exit code for `137` and record fewer matches.
+
 ## Playing a policy
 
 `policy:<file>` seats a `PolicyAgent` in the engine: every decision builds the observation of the board,
