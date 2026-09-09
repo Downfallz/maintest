@@ -92,6 +92,119 @@ Then one entry in [journal.md](journal.md): what changed, the numbers, the decis
 - **A policy below random**: the training is broken, or the data was too small; check `r2` and `accuracy`.
 - **A policy above greedy**: a real gain; the first target of the loop.
 
+## Worked cases: what to do when you change something
+
+Every case below follows the same shape: make the change, rebuild the content, let the engine-change detector
+say whether behaviour moved, run one turn of the loop against the previous run, read the deltas on the one
+axis that moved, write the journal entry. What differs is which files move and whether the models survive.
+
+Two facts drive everything:
+
+- **The content hash** is the SHA-256 of the consolidated content. Any edit under `data/`, however small,
+  gives a new hash, so a new benchmark digest file (`benchmark --write`) and a journal entry are always part
+  of a content change. The old digest stays in git: it is the record of the old content.
+- **The feature schema id** (`features:v1+<fingerprint>`) hashes the feature names, which include one bit
+  per spell id and per talent node, and the round cap. A numeric edit (a cost, a damage amount, a duration)
+  keeps the id, so trained policies still run and the comparison can include them. Adding or removing a
+  spell or a node changes the id, so policies trained before cannot run on the new content and must be
+  retrained; only the baselines compare across that change.
+
+### I want to change a spell's casting cost (or damage, duration, initiative)
+
+The cheapest change: numbers only, same schema, every model still runs.
+
+1. Edit the number in `data/Spells/<class>/<spell>.v1.json` (`energyCost`, an effect's `amount`, ...).
+2. `scripts/iterate.sh --run cost-heavy-strike-1 --against <previous-run>`. The benchmark step fails: the
+   digest of the new content hash does not exist yet. That is expected. Run
+   `dotnet run --project src/DownfallArena.Cli -- benchmark --write` once, read the printed table (this is
+   your first number: Greedy against Greedy on the new content), then run the iteration again.
+3. In the report, read `greedy-vs-greedy`, `greedy-vs-random` and `previous-value-vs-greedy` first: same
+   agents on both sides, only the content moved, so their deltas are the effect of the cost change. Did the
+   spell's share of intents change (`spellEntropy`)? Did rounds get longer or shorter? Did the player 1 share
+   move? The retrained policy row says whether a bot can still exploit what is left.
+4. Journal entry: the two content hashes, the deltas, the decision (keep, tune more, revert). Commit the new
+   digest, the content, the journal, and the model you keep.
+
+### I want to add a spell
+
+A new spell id adds a feature bit, so the schema id changes: the baselines compare, the old models do not.
+
+1. Write `data/Spells/<class>/<name>.v1.json` (copy `heavy_strike.v1.json`: id `spell:<name>:v1`, type,
+   class, initiative, cost, crit chance, targeting, effects among the kinds of `data/README.md`). Add the
+   alias `"spell:<name>": "spell:<name>:v1"` to `data/aliases.json`. Make it reachable: as a starting spell of
+   a creature (`startingSpellIds`) or as a node spell in `data/TalentTrees/talent_tree.v1.json` with its
+   prerequisites, otherwise no creature ever knows it and nothing changes.
+2. `dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst` tells you about a typo, an unknown
+   effect kind, or a broken reference before anything runs.
+3. `benchmark --write` for the new content hash, then `scripts/iterate.sh --run add-<name>-1 --against
+   <previous-run>`. The script tries to replay the previous policy, the engine refuses it (schema id
+   changed), and the report says so: only the baselines compare, plus the freshly trained policies flagged as
+   retrained.
+4. Read: does the spell get cast at all (`spellUsage` in the evaluation files, entropy in the report)? A spell
+   greedy never picks is either weak or scores badly under the lookahead; check `docs/learning/agents.md` for
+   what the scorer values. Does `player1WinShare` move? A spell that rewards going first widens it.
+5. Journal entry, commit content, alias, tree, digest, journal, and `docs/learning/features.md` stays as it
+   is: the version is unchanged, the fingerprint did what it is for.
+
+### I want to add a creature (or a creature class)
+
+A creature definition is `data/Creatures/<name>.v1.json` (stats, class, talent tree, starting spells). A new
+class also needs a value in `CreatureClass` in the domain and its spells declare it in `creatureClass`.
+
+Today the CLI seats the **first** creature of the content for every slot of both teams (`GameSession.Roster`),
+so a second creature file changes the content hash and nothing else. Until a roster option exists
+(`--roster` on the CLI and the scenario), test a new creature by making it the one the CLI picks, or by
+editing the existing definition. Adding a creature changes no feature bit; a new talent node does.
+
+When the roster option lands, the loop is the same as for a spell: new hash, `benchmark --write`, iterate,
+read the mirrored rows first.
+
+### I want to add a condition to the engine, and a spell that applies it
+
+The most expensive change, on purpose (ADR 0012: effects are a closed set, so nothing half-implemented can
+ship). A new condition kind is a new observation layout: **a new feature schema version**, and every model
+trained before is retired.
+
+1. Domain: a sealed record under `Domain/Resources/Effects` with a validated factory (`Bleed.cs` is the
+   model), and the rules that apply and tick it (`Rules/Combat`, `Rules/Rounds`; `BleedTick` and
+   `UpkeepRules` show the pattern). Tests in `Domain.Tests` for every rule it touches.
+2. Content: the `kind` string in `Infrastructure/Resources/GameSchemaMapper`, a row in `data/README.md`, and
+   the spell that applies it under `data/Spells/`.
+3. Learning encodings: `FeatureSchema.ConditionKinds` and `ObservationBuilder` (the two features per kind),
+   and the version bump to `features:v2` with its section in `docs/learning/features.md`, since rule 2 there
+   says a new kind is a new version. `FeatureSchemaTests` fails until the kind is listed, which is the
+   reminder.
+4. Agents: what the lookahead thinks the condition is worth, in `ActionScorer` and a `ScoringWeights` weight
+   if none fits (then `learning/weights/greedy.json`, `JsonScoringWeightsSource`, `docs/learning/agents.md`).
+5. Python: `SUPPORTED_VERSIONS` in `features.py` gains `features:v2`; nothing else reads feature names by
+   position. The viewer shows conditions as chips by kind and needs nothing.
+6. `benchmark --write`, then `scripts/iterate.sh` without `--against`: nothing before this change compares,
+   the engine, the content, and the schema all moved. This run is the new baseline; the journal entry says
+   so and names the schema version.
+
+### The typical balancing workflow, end to end
+
+1. **Start from a green run.** `scripts/iterate.sh --run base` on the current `main`: the digest verifies,
+   the report exists, the journal has the numbers. Every later run is read against it.
+2. **Change one thing.** One spell, one number, one rule. Two changes in one run cannot be told apart.
+3. **Rebuild and regenerate the digest** (`benchmark --write`) and look at its table before anything else:
+   Greedy against Greedy on the benchmark seeds is the quickest balance read (player 1 share, rounds,
+   round cap share, the spells cast).
+4. **Iterate against the base**: `scripts/iterate.sh --run <change> --against base`.
+5. **Read the report in this order**: the stamp axis that moved (it should be exactly one); the mirrored
+   rows (`random-vs-random`, `greedy-vs-greedy`) for balance; `greedy-vs-random` for the size of the skill
+   gap; the replayed previous policy, when it could run, for what the change did to a fixed bot; the
+   retrained policies last, knowing their delta mixes the change and the training.
+6. **Decide and record**: keep, tune more, or revert, written in `docs/learning/journal.md` with both
+   content hashes (and engine versions when the engine moved), the deltas, and the reason. Commit the
+   content, the digest, the journal, and a kept model under `models/`.
+7. **Drop the artifacts on the viewer** when a number surprises you: a trace explains a single match, the
+   batch view shows the distributions behind an average.
+
+What "balanced" means here is a choice, not a formula. The signals the report always shows are the ones the
+roadmap named: player 1 share near one half on mirrored play, average rounds inside a band you pick, no
+dominant spell (entropy well above zero), few matches ending by the round cap, a fizzle rate that stays low.
+
 ## What is deliberately not here yet
 
 No neural network, no reinforcement learning, no GPU. The linear table is enough to prove the loop and to
