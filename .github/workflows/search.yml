@@ -83,7 +83,8 @@ jobs:
           SEED: ${{ inputs.seed }}
         run: |
           mkdir -p "$OUT"
-          uv run --project learning search-weights -o "$OUT" \
+          uv run --project learning --locked --no-sync --no-build \
+            python -m downfall_learning.cli search-weights -o "$OUT" \
             --opponent "$OPPONENT" --seeds "$SEEDS" \
             --iterations "$ITERATIONS" --population "$POPULATION" --seed "$SEED" \
             2>&1 | tee "$OUT/search.log"

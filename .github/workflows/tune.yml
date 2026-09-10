@@ -26,10 +26,10 @@ on:
         type: boolean
         default: true
 
-# Only what opening the pull request needs.
+# Pushing the proposal branch, and nothing else. The pull request is opened by a person from the link in the
+# run summary, which is what makes the repository's own checks run on it -- see the comment on that step.
 permissions:
   contents: write
-  pull-requests: write
 
 # One tuning pass at a time: two of them would each measure a catalogue the other is about to change.
 concurrency:
@@ -85,7 +85,7 @@ jobs:
       # The knobs against the content they describe, before an hour of searching is spent on a file that
       # addresses something that is not there.
       - name: Check the balance knobs
-        run: uv run --project learning check-knobs
+        run: uv run --project learning --locked --no-sync --no-build python -m downfall_learning.cli check-knobs
 
       # Inputs reach the shell through the environment, never through the script text. --apply writes the
       # winning numbers into data/ itself; without it the proposal stays in the run directory.
@@ -103,7 +103,8 @@ jobs:
             arguments+=(--apply)
           fi
           mkdir -p "$OUT"
-          uv run --project learning tune-content "${arguments[@]}" 2>&1 | tee "$OUT/tune.log"
+          uv run --project learning --locked --no-sync --no-build \
+            python -m downfall_learning.cli tune-content "${arguments[@]}" 2>&1 | tee "$OUT/tune.log"
 
       - name: Put the proposal in the run summary
         if: always()
@@ -124,37 +125,56 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Nothing moved: no branch, no pull request, and the summary above already says so.
-      - name: Did the search change the content
-        id: moved
+      # Two separate questions, and reading one for the other is how a report-only run gets called a failed
+      # search: `improved` is whether the search beat the content it started from, which it reports whether or
+      # not it was asked to apply anything; the working tree only changes when it was.
+      - name: What the search found
+        id: found
         run: |
-          if git diff --quiet -- data/; then
-            echo "moved=false" >> "$GITHUB_OUTPUT"
+          improved="$(jq -r '.improved // false' "$OUT/tune.json" 2>/dev/null || echo false)"
+          echo "improved=$improved" >> "$GITHUB_OUTPUT"
+          if [[ "$improved" != "true" ]]; then
             echo "The search found nothing better than the content it started from."
+          elif git diff --quiet -- data/; then
+            echo "The search found a better catalogue and was asked not to apply it. The proposal is in the artifact."
           else
-            echo "moved=true" >> "$GITHUB_OUTPUT"
             git diff --stat -- data/
           fi
 
+          if [[ "$improved" == "true" ]] && ! git diff --quiet -- data/; then
+            echo "applied=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rebuild the content and regenerate the benchmark digest
-        if: steps.moved.outputs.moved == 'true'
+        if: steps.found.outputs.applied == 'true'
         run: |
           dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
           dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark --write
           dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
 
-      # A pull request opened with GITHUB_TOKEN does not start the pull_request workflows, so this job runs the
-      # gate itself and the body says it did. Without this the proposal would arrive with no checks at all.
-      - name: Run the gate the pull request will not run
-        if: steps.moved.outputs.moved == 'true'
+      # The gate a contributor runs before pushing, and the one ci.yml runs: the .NET build, tests and format
+      # check, and the learning project's lint, format check and tests. A proposal that breaks any of them
+      # never becomes a branch.
+      - name: Run the gate
+        if: steps.found.outputs.applied == 'true'
         run: |
           dotnet build --no-restore --configuration Release
           dotnet test --no-build --configuration Release
           dotnet format --verify-no-changes
+          uv run --project learning --locked --no-sync --no-build python -m ruff check learning
+          uv run --project learning --locked --no-sync --no-build python -m ruff format --check learning
+          uv run --project learning --locked --no-sync --no-build python -m pytest learning/tests -q
 
-      - name: Open the pull request
+      # The branch is pushed; the pull request is not opened here, and that is the point. A pull request opened
+      # with GITHUB_TOKEN does not start the `pull_request` workflows, so it would arrive with no CI at all and
+      # no SonarCloud quality gate -- which AGENTS.md requires on every pull request. Opening it from the link
+      # below takes one tap and runs the repository's real checks. The branch holds one commit, so GitHub fills
+      # the pull request in from its message: the proposal is already written for you.
+      - name: Push the proposal and link the pull request
+        if: steps.found.outputs.applied == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           SERVER: ${{ github.server_url }}
           RUN_ID: ${{ github.run_id }}
@@ -171,22 +191,12 @@ jobs:
           git switch -c "$BRANCH"
           git add data/ benchmarks/
 
-          # Written to a file: a -m here would carry this file's YAML indentation into the message.
+          # Written to a file: a -m here would carry this file's YAML indentation into the message. The body is
+          # markdown because GitHub offers it as the pull request description.
           {
             echo "Tune the catalogue (run $RUN_NUMBER, seed $SEED)"
             echo
-            echo "tune-content on the CI runners. The moves and the metrics behind them are"
-            echo "in the pull request body and in the run summary of the workflow run."
-            echo
-            echo "Content hash $hash, benchmark digest regenerated and verified."
-          } > "$RUNNER_TEMP/message.txt"
-          git commit -F "$RUNNER_TEMP/message.txt"
-          git push origin "$BRANCH"
-
-          {
-            echo "## What"
-            echo
-            echo "One tuning pass proposed by [workflow run $RUN_NUMBER]($SERVER/$REPOSITORY/actions/runs/$RUN_ID)"
+            echo "One tuning pass from [workflow run $RUN_NUMBER]($SERVER/$REPOSITORY/actions/runs/$RUN_ID)"
             echo "(ADR 0021), seed \`$SEED\`, $ITERATIONS rounds of $NEIGHBOURS, at most $MAX_CHANGES knobs moved."
             echo "Content hash \`$hash\`, benchmark digest regenerated and verified."
             echo
@@ -194,31 +204,35 @@ jobs:
             cat "$OUT/tune.log"
             echo '```'
             echo
-            echo "## Checklist"
+            echo "Before merging:"
             echo
-            echo "- [x] \`dotnet build\`, \`dotnet test\` and \`dotnet format --verify-no-changes\` pass — run by the"
-            echo "      workflow before this branch was pushed, because a pull request opened with \`GITHUB_TOKEN\`"
-            echo "      does not start the \`pull_request\` workflows and would otherwise arrive with no checks"
-            echo "- [ ] **A journal entry.** This proposal carries numbers, not a reason. \`docs/learning/journal.md\`"
-            echo "      wants what moved and *why it is worth it*, which a search cannot write. The output above is"
-            echo "      what an entry needs; add one to this branch before merging (ADR 0013)."
-            echo "- [ ] The moves still match what each spell is for — \`intent\` in \`data/balance/knobs.json\`"
+            echo "- **A journal entry.** This proposal carries numbers, not a reason. docs/learning/journal.md"
+            echo "  wants what moved and why it is worth it, which a search cannot write. The output above is"
+            echo "  what an entry needs (ADR 0013)."
+            echo "- **The moves still match what each spell is for** -- \`intent\` in data/balance/knobs.json."
             echo
-            echo "## Notes for the reviewer"
-            echo
-            echo "- **The search is deterministic.** The same seed on the same content returns the same moves, so"
-            echo "  this proposal reproduces locally with \`uv run --project learning tune-content -o runs/x"
-            echo "  --seed $SEED --iterations $ITERATIONS --neighbours $NEIGHBOURS --max-changes $MAX_CHANGES\`."
-            echo "- **A tuning pass is measured against one agent.** Changing how the agents score an action makes"
-            echo "  every proposal from before that change stale, this one included."
-            echo "- Closing this pull request costs nothing: the content on \`$BASE\` is untouched until it merges."
-          } > "$RUNNER_TEMP/body.md"
+            echo "The search is deterministic: the same seed on the same content returns the same moves, so this"
+            echo "reproduces locally with \`tune-content --seed $SEED --iterations $ITERATIONS"
+            echo "--neighbours $NEIGHBOURS --max-changes $MAX_CHANGES\`. A tuning pass is measured against one"
+            echo "agent, so changing how the agents score an action makes it stale."
+          } > "$RUNNER_TEMP/message.txt"
+          git commit -F "$RUNNER_TEMP/message.txt"
+          git push origin "$BRANCH"
 
-          gh pr create \
-            --title "Tune the catalogue (run $RUN_NUMBER, seed $SEED)" \
-            --body-file "$RUNNER_TEMP/body.md" \
-            --base "$BASE" \
-            --head "$BRANCH"
+          {
+            echo
+            echo "### The proposal is on \`$BRANCH\`"
+            echo
+            echo "**[Open it as a pull request]($SERVER/$REPOSITORY/compare/$BASE...$BRANCH?expand=1)** — one tap,"
+            echo "and the description is already filled in from the commit."
+            echo
+            echo "It is not opened here on purpose: a pull request opened by a workflow does not start the"
+            echo "repository's own checks, so it would arrive with no CI and no SonarCloud quality gate."
+            echo "Opened by a person, it gets both."
+            echo
+            echo "The build, the tests, the format check, ruff and pytest all passed on this branch before it was"
+            echo "pushed."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the proposal
         if: always()
