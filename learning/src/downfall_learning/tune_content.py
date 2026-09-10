@@ -268,10 +268,9 @@ def _tier_metrics(
 ) -> dict[str, float]:
     """The three readings of "are the spells of one tier a choice", each on its worst tier.
 
-    A tier nobody cast is not read here: that is what ``spellsNeverCast`` is for. Damage per cast is
-    compared only between spells of the tier that deal damage, because a heal and an attack have no common
-    unit, and the win share only between spells enough sides declared for the number to mean anything —
-    ``ENOUGH_SIDES`` is the engine's own threshold for printing a spell in its table.
+    A tier nobody cast is not read here: that is what ``spellsNeverCast`` is for. Each reading drops a tier
+    it cannot speak about rather than guessing a number, and a reading no tier could produce is left out
+    entirely, which the objective reports as missing rather than counting as zero.
     """
     grouped: dict[int, list[Mapping[str, object]]] = {}
     for outcome in outcomes:
@@ -280,30 +279,43 @@ def _tier_metrics(
         if tier is not None:
             grouped.setdefault(tier, []).append(outcome)
 
-    usage, damage, wins = [], [], []
-    for members in grouped.values():
-        landed = [int(member.get("resolved", 0)) for member in members]
-        if sum(landed) > 0:
-            usage.append(max(landed) / sum(landed))
-        rates = [
-            float(member["damagePerCast"])
-            for member in members
-            if int(member.get("resolved", 0)) >= ENOUGH_SIDES and float(member.get("damage", 0)) > 0
-        ]
-        if len(rates) > 1 and min(rates) > 0:
-            damage.append(max(rates) / min(rates))
-        scores = [float(member["score"]) for member in members if int(member.get("sides", 0)) >= ENOUGH_SIDES]
-        if len(scores) > 1:
-            wins.append(max(scores) - min(scores))
-
+    readings = {
+        "tierUsageShare": _usage_share,
+        "tierDamageSpread": _damage_spread,
+        "tierWinSpread": _win_spread,
+    }
     measured = {}
-    if usage:
-        measured["tierUsageShare"] = max(usage)
-    if damage:
-        measured["tierDamageSpread"] = max(damage)
-    if wins:
-        measured["tierWinSpread"] = max(wins)
+    for name, read in readings.items():
+        worst = [value for value in (read(members) for members in grouped.values()) if value is not None]
+        if worst:
+            measured[name] = max(worst)
     return measured
+
+
+def _usage_share(members: Sequence[Mapping[str, object]]) -> float | None:
+    """The share of a tier's landed casts its most-cast spell takes. None when the tier was never cast."""
+    landed = [int(member.get("resolved", 0)) for member in members]
+    return max(landed) / sum(landed) if sum(landed) > 0 else None
+
+
+def _damage_spread(members: Sequence[Mapping[str, object]]) -> float | None:
+    """How many times harder the best damaging spell of a tier hits per landed cast than the worst.
+
+    Only spells that deal damage are compared, because a heal and an attack have no common unit, and only
+    those with enough landed casts for the rate to mean anything.
+    """
+    rates = [
+        float(member["damagePerCast"])
+        for member in members
+        if int(member.get("resolved", 0)) >= ENOUGH_SIDES and float(member.get("damage", 0)) > 0
+    ]
+    return max(rates) / min(rates) if len(rates) > 1 and min(rates) > 0 else None
+
+
+def _win_spread(members: Sequence[Mapping[str, object]]) -> float | None:
+    """The gap between the best and worst win share of a tier, over the spells enough sides declared."""
+    scores = [float(member["score"]) for member in members if int(member.get("sides", 0)) >= ENOUGH_SIDES]
+    return max(scores) - min(scores) if len(scores) > 1 else None
 
 
 @dataclass(frozen=True)
