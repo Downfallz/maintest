@@ -27,3 +27,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |
 | [0020](0020-energy-regeneration-and-the-price-of-energy.md) | Energy regeneration, and the price of energy | Accepted |
 | [0021](0021-tune-the-catalogue-with-a-declared-search-space.md) | Tune the catalogue with a declared search space, not with a model | Accepted |
+| [0022](0022-price-a-defensive-effect-by-the-damage-it-prevents.md) | Price a defensive effect by the damage it prevents | Proposed |

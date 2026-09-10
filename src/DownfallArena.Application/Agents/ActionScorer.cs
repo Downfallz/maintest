@@ -6,6 +6,7 @@ using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
+using DamageEffect = DownfallArena.Domain.Resources.Effects.Damage;
 
 namespace DownfallArena.Application.Agents;
 
@@ -122,9 +123,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         {
             score += outcome switch
             {
-                HealOutcome heal => HealScore(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
+                HealOutcome heal => HealScore(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target], creatures),
                 EnergyOutcome energy => EnergyScore(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
-                ConditionOutcome condition => ConditionScore(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target]),
+                ConditionOutcome condition => ConditionScore(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target], creatures),
                 _ => 0,
             };
         }
@@ -168,10 +169,21 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// Healing counts only what was missing; on an enemy it counts against. A target the same action kills is
-    /// healed for nothing, so it scores nothing -- the rule the condition path already applies.
+    /// healed for nothing, so it scores nothing -- the rule the condition path already applies. What the
+    /// healing lifts out of reach of this round's threat is worth the kill it denies (ADR 0022).
     /// </summary>
-    private double HealScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
-        remainingHealth == 0 ? 0 : -Sign(actor, target) * weights.Heal * Math.Min(amount, target.MaxHealth.Value - target.Health.Value);
+    private double HealScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        if (remainingHealth == 0)
+        {
+            return 0;
+        }
+
+        var restored = Math.Min(amount, target.MaxHealth.Value - target.Health.Value);
+        var threat = ThreatOn(target, creatures, extraDefense: 0).Damage;
+        var denied = threat >= remainingHealth && threat < remainingHealth + restored ? weights.Kill : 0;
+        return -Sign(actor, target) * ((weights.Heal * restored) + denied);
+    }
 
     /// <summary>
     /// Energy given counts at the same price as energy kept, and counts against when it lands on an enemy.
@@ -181,7 +193,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private double EnergyScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
         remainingHealth == 0 ? 0 : -Sign(actor, target) * weights.Energy * amount;
 
-    private double ConditionScore(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth)
+    private double ConditionScore(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth, IReadOnlyList<CreatureSnapshot> creatures)
     {
         if (remainingHealth == 0)
         {
@@ -196,9 +208,82 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
             EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
-            DefenseBuff buff => -sign * weights.Buff * buff.Amount * rounds,
+            DefenseBuff buff => -sign * DefenseScore(target, creatures, buff.Amount, rounds, remainingHealth),
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
             _ => 0,
         };
     }
+
+    /// <summary>
+    /// What a defense buff is worth: the damage it takes off the hits the creature is expected to face while
+    /// it lasts, plus the kill it denies when it turns a lethal round into a survivable one (ADR 0022).
+    /// Defense subtracts from every incoming hit, so the value rises with the attackers a creature faces and
+    /// falls with the allies they have to spread over.
+    /// </summary>
+    private double DefenseScore(CreatureSnapshot target, IReadOnlyList<CreatureSnapshot> creatures, int amount, int rounds, int remainingHealth)
+    {
+        var threat = ThreatOn(target, creatures, extraDefense: 0);
+        if (threat.Attackers == 0)
+        {
+            return 0;
+        }
+
+        var allies = creatures.Count(creature => creature.Owner == target.Owner && creature.IsAlive);
+        var prevented = amount * rounds * threat.Attackers / (double)Math.Max(1, allies);
+        var denied = threat.Damage >= remainingHealth && ThreatOn(target, creatures, amount).Damage < remainingHealth
+            ? weights.Kill
+            : 0;
+        return (weights.Buff * prevented) + denied;
+    }
+
+    /// <summary>
+    /// The damage the living, unstunned enemies of a creature could deal it in one round: each contributes
+    /// the best of the damaging spells it knows and can afford, weighted between its critical and its plain
+    /// roll, after the defense the creature would have (ADR 0022). Read from the spells' own numbers rather
+    /// than from a nested resolution, and computed only for an outcome that needs it, so scoring an attack
+    /// costs exactly what it cost before.
+    /// </summary>
+    private Threat ThreatOn(CreatureSnapshot target, IReadOnlyList<CreatureSnapshot> creatures, int extraDefense)
+    {
+        var defense = target.TotalDefense.Value + extraDefense;
+        var total = 0.0;
+        var attackers = 0;
+        foreach (var enemy in creatures)
+        {
+            if (enemy.Owner == target.Owner || enemy.IsDead || enemy.IsStunned)
+            {
+                continue;
+            }
+
+            var best = 0.0;
+            foreach (var spellId in enemy.KnownSpells)
+            {
+                var spell = resources.GetSpell(spellId);
+                if (spell.Stats.Cost.Value > enemy.Energy.Value)
+                {
+                    continue;
+                }
+
+                var chance = enemy.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
+                var expected = spell.Effects.OfType<DamageEffect>()
+                    .Sum(damage => (chance * Landed(damage.Amount, rules.CriticalMultiplier, defense)) + ((1 - chance) * Landed(damage.Amount, 1.0, defense)));
+                best = Math.Max(best, expected);
+            }
+
+            total += best;
+            if (best > 0)
+            {
+                attackers++;
+            }
+        }
+
+        return new Threat(total, attackers);
+    }
+
+    /// <summary>One hit as the resolution rules land it: the floored product, less the defense, never below zero.</summary>
+    private static double Landed(int amount, double multiplier, int defense) =>
+        Math.Max(0, Math.Floor(amount * multiplier) - defense);
+
+    /// <summary>What a creature faces in one round: the damage, and how many enemies can actually take some of it off.</summary>
+    private readonly record struct Threat(double Damage, int Attackers);
 }

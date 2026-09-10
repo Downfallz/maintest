@@ -25,6 +25,11 @@ critical roll and once with a forced miss, and weighs the two scores by the acto
 spell. So the expected damage includes the critical contribution, and a spell that fizzles (not known, not
 affordable, no legal target) scores as a wasted action.
 
+A defensive term is priced by the damage it prevents, which needs a reading of the **threat** on a creature:
+what the living, unstunned enemies could deal it in one round with the damaging spells they know and can
+afford, after its defense (ADR 0022). It is read from the spells' own numbers, and only for an outcome that
+needs it, so an attack costs what it always did.
+
 The score of one resolution, with the weights `w`:
 
 | Term | Counts | Sign |
@@ -32,10 +37,11 @@ The score of one resolution, with the weights `w`:
 | `w.damage` x effective damage | damage capped at the target's health, per target | for an enemy, against an ally |
 | `w.kill` per kill | a target whose health the damage reaches | for an enemy, against an ally |
 | `w.heal` x effective healing | healing capped at what the target was missing | for an ally, against an enemy |
+| `w.kill` per denied kill | a heal or a defense buff that takes its target from dying to this round's threat to surviving it (ADR 0022) | for an ally, against an enemy |
 | `w.stun` per stun | a Stun on a target still alive after the damage | for an enemy, against an ally |
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
 | `w.heal` x expected regeneration | amount per round x rounds, capped at what the target is still missing after the hit | for an ally, against an enemy |
-| `w.buff` x amount x rounds | a DefenseBuff | a buff for an ally, a debuff for an enemy, and the reverse against |
+| `w.buff` x damage prevented | a DefenseBuff: amount x rounds x the hits the target is expected to face, its attackers spread over its living allies (ADR 0022) | a buff for an ally, a debuff for an enemy, and the reverse against |
 | `w.initiative` x amount | an InitiativeDebuff (amount only, no rounds) | a debuff on an enemy counts for, on an ally against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
 | `-w.risk` | a fizzle, or the share of targets dropped at resolution | always |
@@ -66,10 +72,10 @@ damage spread elsewhere.
 | --- | --- | --- |
 | damage | 1.0 | The unit. One point per point of damage that actually lands (damage past a target's health is not counted). |
 | kill | 5.0 | Finishing a creature is worth five damage on top of the hit. It buys the bot the enemy's whole future turn, so it is the strongest pull in the table. |
-| heal | 0.8 | Healing an ally is worth a little less than hurting an enemy: it only counts what the target was missing, and it does not shorten the match. |
+| heal | 0.8 | Healing an ally is worth a little less than hurting an enemy: it only counts what the target was missing, and it does not shorten the match. A heal that saves a life is worth `kill` on top, because denying a kill and scoring one are the same thing seen from two sides. |
 | stun | 3.0 | Taking a round away from a creature is worth three damage. Between a kill (all its rounds) and a plain hit (none). |
 | bleed | 0.8 | Damage over time is discounted against damage now: the target may die first, and the bot only counts the health it could still reach. |
-| buff | 0.5 | Half a point per point of defense per round. Defense is indirect: it may prevent damage that was never going to come. |
+| buff | 0.5 | Half a point per point of damage the buff actually takes off the hits the creature is expected to face. Defense subtracts from every incoming hit, so the same buff is worth more to the last creature standing than to a full team. |
 | energy | 0.2 | Keeping a point of energy for the next round is worth a fifth of a damage. Enough to break a tie towards the cheaper spell, not enough to make the bot hoard. |
 | risk | 2.0 | A wasted action (a fizzle, or the share of targets that vanished before the spell resolved) costs two damage. Roughly one average hit thrown away. |
 | initiative | 0.5 | Half a point per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. Initiative only reorders the timeline, so it is priced like defense: real, indirect, and worth less than the hit it may let you land first. A first guess, and the weight `search-weights` has the least evidence about. |
