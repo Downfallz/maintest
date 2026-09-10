@@ -305,6 +305,43 @@ public sealed class ActionScorerTests
             .ShouldBe(0.8 * 3, 1e-9);
     }
 
+    /// <summary>
+    /// A point of defense is not a point prevented. Against a 3-damage spell on a creature already at 3
+    /// defense the plain hit is fully absorbed, so another point only reaches the critical branch and is worth
+    /// the critical chance times what it takes off there -- 0.05 of 2, twice over, not a whole point per
+    /// attacker. Priced per point of buff, repeated Guards would be paid for damage they never prevent.
+    /// </summary>
+    [Fact]
+    public void A_defense_buff_is_worth_what_it_takes_off_the_threat_not_a_point_per_point()
+    {
+        var board = Board(enemyHealth: 20);
+        board[0] = board[0] with { TotalDefense = Defense.Of(3) };
+        var action = Strike(One, Three);
+        var buff = new ConditionOutcome(One, DefenseBuff.Of(1, Duration.OfRounds(1)));
+
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), board)
+            .ShouldBe(0.5 * 2 * (0.05 * (3 - 2)), 1e-9);
+    }
+
+    /// <summary>
+    /// A cast can deny one death per target, and Guard carries two defense effects. Read per outcome, either
+    /// each of them would claim the kill the other already denied, or -- when survival needs both -- neither
+    /// would claim it. Here one point alone takes the round below lethal, and the kill is still paid once.
+    /// </summary>
+    [Fact]
+    public void Two_defense_effects_on_one_target_deny_one_kill_between_them()
+    {
+        var board = Board(enemyHealth: 20);
+        board[0] = board[0] with { Health = Health.Of(5) };
+        var action = Strike(One, Three);
+        var buff = new ConditionOutcome(One, DefenseBuff.Of(1, Duration.OfRounds(1)));
+
+        // 6.3 coming and 5 health: lethal. Stacked, the two points take it to 2.3, and each point is priced on
+        // top of the other rather than both from the bare board.
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff, buff]), board)
+            .ShouldBe((0.5 * (6.3 - 2.3)) + 5, 1e-9);
+    }
+
     [Fact]
     public void Invalid_inputs_are_rejected()
     {

@@ -4,13 +4,12 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-10. Defence gets a price, the game turns into a war of attrition, and the tuner ends it
+## 2026-09-10. Defence gets a price: the catalogue plays seven spells instead of four, and stalls
 
-- **What changed**: two things, in this order, and the entry keeps them apart because the second only exists
-  because of the first. ADR 0022 prices a defensive effect by the damage it prevents, which moves `Greedy`;
-  then `tune-content` re-tunes the catalogue against the agent that results. Engine `1ecef55`, content
-  `c0ec6984` before and **`0a170f58`** after, digest regenerated.
-- **The scorer alone**, played greedy against greedy on the benchmark seeds with the content untouched:
+- **What changed**: ADR 0022 prices a defensive effect by the damage it prevents. No content moved in this
+  entry; the digest for content `c0ec6984` is regenerated because the engine changed under it. Engine at the
+  commit this entry lands with.
+- **What it does**, greedy against greedy on the benchmark seeds:
 
   | | Before | After |
   | --- | --- | --- |
@@ -22,44 +21,26 @@ first.
   | Average rounds | 8.1 | **18.1** |
   | Round-cap share | 0.000 | **0.385** |
 
-  The defensive half of the catalogue came alive on the first try. It also broke the game: two bots that both
+  The defensive half of the catalogue came alive on the first try, and it broke the game: two bots that both
   value survival heal faster than they hurt, and nearly two matches in five ran out of rounds. That is the
-  honest result of pricing defence correctly in content authored for agents that ignored it.
-- **The re-tune**, `tune-content --seed 0` against the new scorer, 72 candidates, 146 evaluations,
-  **score 193.80 to 38.38**. Seven moves, applied:
+  honest result of pricing defence correctly in content authored for agents that ignored it. The measurements
+  above are the first cut of the scorer; two review findings then changed its arithmetic, so treat them as the
+  shape of the effect rather than as numbers to compare against later runs.
+- **Two bugs caught in review, both real, both in the direction of overvaluing defence**:
+  - Prevention was priced at a point per point of buff. Defense comes off a hit before the floor at zero, so
+    a point past a hit's plain damage only reaches its critical branch: against a 3-damage spell at 3
+    defense, a fourth point is worth 0.05, not 1. It is now read as the difference between the unbuffed and
+    the buffed threat.
+  - The denied kill was priced per outcome, and `guard` carries two defense buffs. When one point alone
+    crossed the survival threshold the cast was paid `kill` twice; when survival needed both points it was
+    paid none. The whole defensive reading now happens once per target, with a target's healing and all of
+    its buffs read together, and the buffs priced on top of each other rather than each from the bare board.
 
-  | Spell | Knob | From | To |
-  | --- | --- | --- | --- |
-  | `lightning_bolt` | damage | 3 | 4 |
-  | `throwing_star` | energy cost | 1 | 2 |
-  | `throwing_star` | Spell initiative | 2 | 3 |
-  | `wait` | energy gained | 1 | 2 |
-  | `poison_slash` | energy cost | 2 | 3 |
-  | `pummel` | Spell initiative | 1 | 2 |
-  | `guard` | buff duration | 2 | 3 |
-
-- **What it bought**: `averageRounds` 18.1 to **8.9** and the round-cap share 0.385 to **0.070**, both back
-  inside or beside their bands, and `spellsNeverCast` **5 to 2** — inside its band for the first time. The
-  catalogue is no longer a game of two attacks. Note the direction of the moves: the tuner did not weaken
-  defence to end the stalemate, it made the attack that ends matches hit harder and made the cheap harassment
-  cost more.
-- **What it cost**: `spellUsageShare` 0.465 to 0.627 and entropy 2.02 to 1.71, both worse than the untuned
-  new scorer. The round-cap penalty dwarfed everything else, so the search spent its budget ending matches
-  and let concentration rise to do it. `player1WinShare` sits at 0.620 and remains the target nothing has
-  moved. The two spells nobody casts are now `poison_slash` and `throwing_star`, not the defensive pair.
-- **A correction to the entry two below this one.** That entry recorded a five-move proposal scoring
-  119.40 to 34.73 and did not record the flags it ran with. `tune-content --seed 0` on identical inputs —
-  verified identical: the knobs file, `data/` and `learning/` are unchanged since that commit — produces a
-  different three-move proposal scoring 42.01. The search itself is **deterministic**: run twice with the
-  same seed it returns the same moves, which is what I checked before writing this. So the earlier run used
-  flags the entry failed to name, and its numbers cannot be reproduced or compared. ADR 0013 asks every entry
-  to name what it ran so two results differ on one axis at a time; that entry did not, and this one does. The
-  proposal was moot regardless: it describes an agent that ADR 0022 replaced.
-- **What is still open**: `player1WinShare` at 0.620 — going first is worth twelve points and no content move
-  has touched it. `tierUsageShare` 0.729 and `tierDamageSpread` 3.10 are the two largest remaining penalties.
-  And the threat reading is an estimate that assumes every enemy attacks and nobody heals, which is now
-  wrong in the game it produced: the next thing worth measuring is whether a threat reading that expects a
-  heal changes any of this.
+  Both ship with a test that fails without the fix. Both were found by review, not by the suite, which is
+  worth saying plainly: the six tests written with the feature all passed on the buggy code, because the test
+  board has zero defense and one buff per cast — the two cases where the bugs are invisible.
+- **What is next**: re-tune the catalogue against this scorer. The proposal that first accompanied this change
+  was searched against the arithmetic the two findings corrected and has been discarded rather than kept.
 
 ## 2026-09-10. `search-weights` on the nine-spell content: the weights are not what keeps defence off the board
 

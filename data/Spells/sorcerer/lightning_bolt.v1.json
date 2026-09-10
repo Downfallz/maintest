@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 4
+      "amount": 3
     }
   ]
 }

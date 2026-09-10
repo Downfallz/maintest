@@ -21,18 +21,23 @@ We will price a defensive outcome by the damage it prevents, and price a prevent
 already costs. `ActionScorer` gains a threat reading: the damage the living, unstunned enemies of a creature
 could deal it in one round, each contributing the best of the damaging spells it knows and can afford,
 crit-weighted and after the target's `TotalDefense`, computed from spell stats rather than from a nested
-resolution. A `DefenseBuff` is then worth `buff × amount × expected hits over its duration`, where the
-expected hits per round are the attackers that can hurt the target divided by its living allies, so the value
-rises as a team is focused down rather than staying flat. On top of that, any defensive outcome that takes its
-target from dying to this round's threat to surviving it adds `kill` — the same weight the scorer already pays
-for taking a life, with the same sign rule, so denying a kill and scoring one are priced as one thing. The
-threat reading is computed only for an outcome that needs it, so an attack's score costs exactly what it costs
-today.
+resolution. What a cast defends is then priced once per creature it touches, never per outcome: its defense
+buffs are worth `buff ×` the damage they take off that threat, each priced on top of the ones that outlast it
+and weighted by the rounds it lasts, spread over the target's living allies because the attackers have to
+choose between them; and the cast adds `kill` when what it does to that creature turns a lethal round into a
+survivable one — the same weight the scorer already pays for taking a life, with the same sign rule, so
+denying a kill and scoring one are priced as one thing. Both halves are read from the threat difference and
+per target rather than per point and per outcome, because neither is additive: a point of defense past a
+hit's damage prevents nothing more of it, and a cast can deny only one death per target. The threat reading is
+computed only for an outcome that needs it, so an attack's score costs exactly what it costs today.
 
 ## Consequences
 
 - Good: the agents get a reason to defend that exists in the game. A `guard` that drops an incoming 3 to 1 on
   a creature at 2 health now outscores the attack it competes with, and only then.
+- Good: the price cannot be inflated by splitting an effect. A spell carrying two defense buffs is worth what
+  the two are worth together, not twice what one is worth, and a buff on a creature whose defense already
+  absorbs the hit is worth only the critical branch it still reaches.
 - Good: the price of a life is one number. `weights.Kill` values taking one and denying one, so a search
   cannot drift the two apart the way `buff` and `initiative` drifted before [0018](0018-price-initiative-in-the-agent-weights.md).
 - Good: `search-weights` gains a dial that does something. `buff` and `heal` multiply a quantity that varies

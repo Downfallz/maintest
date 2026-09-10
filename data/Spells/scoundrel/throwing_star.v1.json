@@ -3,8 +3,8 @@
   "name": "Throwing Star",
   "spellType": "Offensive",
   "creatureClass": "Scoundrel",
-  "initiative": 3,
-  "energyCost": 2,
+  "initiative": 2,
+  "energyCost": 1,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
