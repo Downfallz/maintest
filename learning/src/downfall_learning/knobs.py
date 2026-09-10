@@ -1,0 +1,438 @@
+"""The balance knobs: what a tuning pass may change about each spell (``data/balance/README.md``).
+
+The file says three things the optimizer cannot work out on its own: which numbers of a spell may move and
+between which bounds, what the spell is for in words, and what "balanced" means as a score over the metrics
+an evaluation already reports. Everything here reads the authored content in ``data/``; nothing writes it.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Iterator, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+
+KNOBS_FILE = Path("data/balance/knobs.json")
+ALIASES_FILE = "aliases.json"
+SPELLS_FOLDER = "Spells"
+SUPPORTED_VERSIONS = frozenset({"knobs:v1"})
+
+#: Decimals a moved value is rounded to, so a step of 0.05 off 0.667 stays readable in the file it lands in.
+PRECISION = 3
+
+#: Magnitude fields an effect may carry, in the order they are compared.
+MAGNITUDES = ("amount", "amountPerRound", "durationRounds")
+
+
+class KnobsError(ValueError):
+    """A knobs file that cannot be read, or a pointer that does not address anything."""
+
+
+@dataclass(frozen=True)
+class Knob:
+    """One number of one spell, and how far it may travel."""
+
+    spell: str
+    path: str
+    minimum: float
+    maximum: float
+    step: float
+
+    @property
+    def key(self) -> str:
+        """``spell:pummel/criticalChance``: unique across the catalogue, stable across versions."""
+        return f"{self.spell}{self.path}"
+
+    def clamp(self, value: float) -> float:
+        return round(min(self.maximum, max(self.minimum, value)), PRECISION)
+
+    def moved(self, value: float, steps: int) -> float:
+        """``value`` moved by ``steps`` of this knob, clamped to its bounds.
+
+        Moves are relative to the value the content carries rather than to a grid, so a critical chance
+        authored at 0.667 stays reachable from itself.
+        """
+        return self.clamp(value + steps * self.step)
+
+
+@dataclass(frozen=True)
+class SpellKnobs:
+    """The knobs of one spell, with the intent the numbers serve."""
+
+    alias: str
+    name: str
+    creature_class: str
+    intent: str
+    keep: tuple[str, ...]
+    note: str | None
+    knobs: tuple[Knob, ...]
+
+
+@dataclass(frozen=True)
+class Target:
+    """One band a metric should stay inside, and what it costs to be outside it."""
+
+    metric: str
+    on: str
+    scale: float
+    weight: float
+    minimum: float | None = None
+    maximum: float | None = None
+    aggregate: str | None = None
+
+    def excess(self, value: float) -> float:
+        """How far ``value`` falls outside the band, zero when it is inside."""
+        if self.minimum is not None and value < self.minimum:
+            return self.minimum - value
+        if self.maximum is not None and value > self.maximum:
+            return value - self.maximum
+        return 0.0
+
+    def penalty(self, value: float) -> float:
+        return self.weight * (self.excess(value) / self.scale) ** 2
+
+
+@dataclass(frozen=True)
+class Objective:
+    """What balanced means: the evaluations to play, and the bands their metrics should land in."""
+
+    seeds: str
+    evaluations: Mapping[str, Mapping[str, str]]
+    targets: tuple[Target, ...]
+
+    def breakdown(self, metrics: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
+        """The penalty of every target whose metric the measurements carry, by metric name.
+
+        ``metrics`` is keyed by evaluation name, then by metric name, the way ``report.json`` reports them.
+        A target whose evaluation or metric is missing is left out rather than counted as zero: a metric
+        nobody measured is not a metric on target.
+        """
+        scores: dict[str, float] = {}
+        for target in self.targets:
+            measured = metrics.get(target.on, {})
+            if target.metric in measured:
+                scores[target.metric] = target.penalty(measured[target.metric])
+        return scores
+
+    def score(self, metrics: Mapping[str, Mapping[str, float]]) -> float:
+        """The total penalty. Zero is on target; lower is better."""
+        return sum(self.breakdown(metrics).values())
+
+    def missing(self, metrics: Mapping[str, Mapping[str, float]]) -> list[str]:
+        """Targets the measurements say nothing about."""
+        return [
+            f"{target.on}.{target.metric}"
+            for target in self.targets
+            if target.metric not in metrics.get(target.on, {})
+        ]
+
+
+@dataclass(frozen=True)
+class Knobs:
+    """A parsed ``knobs.json``."""
+
+    version: str
+    objective: Objective
+    constraints: Mapping[str, Mapping[str, object]]
+    spells: Mapping[str, SpellKnobs]
+
+    def __iter__(self) -> Iterator[Knob]:
+        for spell in self.spells.values():
+            yield from spell.knobs
+
+    def __len__(self) -> int:
+        return sum(len(spell.knobs) for spell in self.spells.values())
+
+    def enabled(self, constraint: str) -> bool:
+        return bool(self.constraints.get(constraint, {}).get("enabled", False))
+
+
+@dataclass(frozen=True)
+class Content:
+    """The authored spells, by unversioned alias, as the data builder would read them."""
+
+    spells: Mapping[str, dict]
+    files: Mapping[str, Path]
+
+    def __len__(self) -> int:
+        return len(self.spells)
+
+
+def load_knobs(path: Path = KNOBS_FILE) -> Knobs:
+    """Reads and shapes the knobs file. Raises :class:`KnobsError` on a version it does not know."""
+    document = _read_json(path)
+    version = str(document.get("version", ""))
+    if version not in SUPPORTED_VERSIONS:
+        known = ", ".join(sorted(SUPPORTED_VERSIONS))
+        raise KnobsError(f"Knobs version '{version}' is not supported; known versions: {known}.")
+    return Knobs(
+        version=version,
+        objective=_objective(document.get("objective", {})),
+        constraints=document.get("constraints", {}),
+        spells={alias: _spell_knobs(alias, body) for alias, body in document.get("spells", {}).items()},
+    )
+
+
+def load_content(data_directory: Path) -> Content:
+    """Every enabled spell of ``data/``, keyed by the unversioned alias that points at it."""
+    aliases = _read_json(data_directory / ALIASES_FILE)
+    documents: dict[str, dict] = {}
+    files: dict[str, Path] = {}
+    for file in sorted((data_directory / SPELLS_FOLDER).rglob("*.json")):
+        document = _read_json(file)
+        if document.get("enabled", True):
+            documents[str(document["id"])] = document
+            files[str(document["id"])] = file
+
+    spells: dict[str, dict] = {}
+    paths: dict[str, Path] = {}
+    for alias, identifier in aliases.items():
+        if identifier in documents:
+            spells[alias] = documents[identifier]
+            paths[alias] = files[identifier]
+    return Content(spells=spells, files=paths)
+
+
+def read_value(document: Mapping[str, object], pointer: str) -> float:
+    """The number a JSON pointer addresses in a spell document."""
+    node: object = document
+    for token in _tokens(pointer):
+        if isinstance(node, Mapping) and token in node:
+            node = node[token]
+        elif isinstance(node, list) and token.isdigit() and int(token) < len(node):
+            node = node[int(token)]
+        else:
+            raise KnobsError(f"'{pointer}' addresses nothing in this spell.")
+    if not isinstance(node, (int, float)) or isinstance(node, bool):
+        raise KnobsError(f"'{pointer}' addresses {node!r}, which is not a number.")
+    return float(node)
+
+
+def with_value(document: Mapping[str, object], pointer: str, value: float) -> dict:
+    """A copy of the document with the number at ``pointer`` replaced. The original is left alone."""
+    copy = json.loads(json.dumps(document))
+    tokens = _tokens(pointer)
+    node: object = copy
+    for token in tokens[:-1]:
+        node = node[int(token)] if isinstance(node, list) else node[token]
+    last = tokens[-1]
+    written = value if isinstance(value, float) and value != int(value) else int(value)
+    if isinstance(node, list):
+        node[int(last)] = written
+    else:
+        node[last] = written
+    return copy
+
+
+def validate(knobs: Knobs, content: Content) -> list[str]:
+    """Everything that makes the knobs file and the content disagree, worst first.
+
+    An empty list means every enabled spell is covered, every pointer addresses a number, and every number
+    the content carries today sits inside its own bounds.
+    """
+    problems: list[str] = []
+    for alias in sorted(set(content.spells) - set(knobs.spells)):
+        problems.append(f"{alias}: enabled content with no entry in the knobs file.")
+    for alias in sorted(set(knobs.spells) - set(content.spells)):
+        problems.append(f"{alias}: a knobs entry for a spell no alias resolves to.")
+
+    for alias, spell in sorted(knobs.spells.items()):
+        document = content.spells.get(alias)
+        if document is None:
+            continue
+        if not spell.intent.strip():
+            problems.append(f"{alias}: no intent, so nothing says what its numbers are for.")
+        seen: set[str] = set()
+        for knob in spell.knobs:
+            if knob.path in seen:
+                problems.append(f"{knob.key}: the same pointer is listed twice.")
+            seen.add(knob.path)
+            if knob.minimum > knob.maximum:
+                problems.append(f"{knob.key}: bounds are the wrong way round.")
+            if knob.step <= 0:
+                problems.append(f"{knob.key}: a step of {knob.step} moves nothing.")
+            try:
+                value = read_value(document, knob.path)
+            except KnobsError as error:
+                problems.append(f"{knob.key}: {error}")
+                continue
+            if not knob.minimum <= value <= knob.maximum:
+                problems.append(
+                    f"{knob.key}: the content carries {value}, outside [{knob.minimum}, {knob.maximum}]."
+                )
+    return problems
+
+
+def findings(content: Content, knobs: Knobs) -> list[str]:
+    """Content the constraints call out: a dominated spell, or two spells nothing can tell apart.
+
+    These are findings about the content as authored, not errors: the engine plays it either way. The
+    optimizer refuses a *candidate* that adds one.
+    """
+    reports: list[str] = []
+    if knobs.enabled("noIndistinguishableSpells"):
+        reports.extend(indistinguishable(content))
+    if knobs.enabled("noNewStrictDominance"):
+        reports.extend(f"{better} is strictly better than {worse}." for better, worse in dominance(content))
+    return reports
+
+
+def dominance(content: Content) -> list[tuple[str, str]]:
+    """Every ordered pair where the first spell is strictly better than the second.
+
+    A pair is not by itself a defect: a spell three nodes down the talent tree outclassing a starting spell
+    is what progression means. It is a defect when both are offered at once, which is why the constraint is
+    that a candidate adds none rather than that the catalogue has none.
+    """
+    pairs = []
+    for alias, document in sorted(content.spells.items()):
+        for other, candidate in sorted(content.spells.items()):
+            if other != alias and dominates(candidate, document):
+                pairs.append((other, alias))
+    return pairs
+
+
+def new_dominance(before: Content, after: Content) -> list[tuple[str, str]]:
+    """The dominance pairs a candidate adds to the catalogue. Empty is the constraint being met."""
+    existing = set(dominance(before))
+    return [pair for pair in dominance(after) if pair not in existing]
+
+
+def new_indistinguishable(before: Content, after: Content) -> list[str]:
+    """The pairs a candidate makes indistinguishable that were not already. Empty is the constraint met."""
+    known = set(indistinguishable(before))
+    return [report for report in indistinguishable(after) if report not in known]
+
+
+def indistinguishable(content: Content) -> list[str]:
+    """Spells no match can tell apart. Same signature as the engine's ``ContentAudit.Indistinguishable``."""
+    seen: dict[str, str] = {}
+    reports: list[str] = []
+    for alias, document in sorted(content.spells.items()):
+        signature = json.dumps(
+            [
+                document.get("energyCost", 0),
+                document.get("initiative", 0),
+                document.get("criticalChance", 0) or 0,
+                document.get("targeting", {}),
+                _effects(document),
+            ],
+            sort_keys=True,
+        )
+        if signature in seen:
+            reports.append(
+                f"{alias} and {seen[signature]} are one spell under two names: the same cost, "
+                "Spell initiative, critical chance, targeting and effects."
+            )
+        else:
+            seen[signature] = alias
+    return reports
+
+
+def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool:
+    """Whether ``better`` is at least as good as ``worse`` everywhere and better somewhere.
+
+    Same targeting origin and at least as many targets, cost no higher, Spell initiative and critical chance
+    no lower, every effect of ``worse`` matched by one at least as large.
+    """
+    left, right = better.get("targeting", {}), worse.get("targeting", {})
+    if not isinstance(left, Mapping) or not isinstance(right, Mapping):
+        return False
+    if left.get("origin") != right.get("origin"):
+        return False
+
+    comparisons = [
+        (int(left.get("maxTargets", 1)), int(right.get("maxTargets", 1))),
+        (-int(better.get("energyCost", 0)), -int(worse.get("energyCost", 0))),
+        (int(better.get("initiative", 0)), int(worse.get("initiative", 0))),
+        (float(better.get("criticalChance", 0) or 0), float(worse.get("criticalChance", 0) or 0)),
+    ]
+    ours, theirs = _effects(better), _effects(worse)
+    for group, magnitudes in theirs.items():
+        if group not in ours:
+            return False
+        comparisons.extend(zip(ours[group], magnitudes, strict=True))
+    strictly_better = len(ours) > len(theirs)
+    for mine, yours in comparisons:
+        if mine < yours:
+            return False
+        strictly_better = strictly_better or mine > yours
+    return strictly_better
+
+
+def _effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:
+    """The effects of a spell as magnitudes by group, summed when a spell carries a group twice."""
+    grouped: dict[str, tuple[float, ...]] = {}
+    effects = document.get("effects", [])
+    for effect in effects if isinstance(effects, Sequence) else []:
+        if not isinstance(effect, Mapping):
+            continue
+        group = f"{effect.get('kind')}{':permanent' if effect.get('permanent') else ''}"
+        magnitudes = tuple(float(effect.get(field, 0) or 0) for field in MAGNITUDES)
+        previous = grouped.get(group)
+        grouped[group] = (
+            magnitudes
+            if previous is None
+            else tuple(a + b for a, b in zip(previous, magnitudes, strict=True))
+        )
+    return grouped
+
+
+def _objective(body: Mapping[str, object]) -> Objective:
+    targets = body.get("targets", [])
+    return Objective(
+        seeds=str(body.get("seeds", "")),
+        evaluations=body.get("evaluations", {}),
+        targets=tuple(
+            Target(
+                metric=str(target["metric"]),
+                on=str(target["on"]),
+                scale=float(target["scale"]),
+                weight=float(target["weight"]),
+                minimum=_optional(target.get("min")),
+                maximum=_optional(target.get("max")),
+                aggregate=target.get("aggregate"),
+            )
+            for target in targets
+        ),
+    )
+
+
+def _spell_knobs(alias: str, body: Mapping[str, object]) -> SpellKnobs:
+    return SpellKnobs(
+        alias=alias,
+        name=str(body.get("name", alias)),
+        creature_class=str(body.get("class", "")),
+        intent=str(body.get("intent", "")),
+        keep=tuple(str(item) for item in body.get("keep", [])),
+        note=body.get("note"),
+        knobs=tuple(
+            Knob(
+                spell=alias,
+                path=str(knob["path"]),
+                minimum=float(knob["min"]),
+                maximum=float(knob["max"]),
+                step=float(knob["step"]),
+            )
+            for knob in body.get("knobs", [])
+        ),
+    )
+
+
+def _optional(value: object) -> float | None:
+    return None if value is None else float(value)
+
+
+def _tokens(pointer: str) -> list[str]:
+    if not pointer.startswith("/"):
+        raise KnobsError(f"'{pointer}' is not a JSON pointer: it does not start with '/'.")
+    return pointer.lstrip("/").split("/")
+
+
+def _read_json(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as error:
+        raise KnobsError(f"'{path}' does not exist.") from error
+    except json.JSONDecodeError as error:
+        raise KnobsError(f"'{path}' is not valid JSON: {error}.") from error

@@ -20,6 +20,8 @@ export-csv = "downfall_learning.cli:export_csv_command"
 evaluate-policy = "downfall_learning.cli:evaluate_policy_command"
 report = "downfall_learning.cli:report_command"
 compare-stamps = "downfall_learning.cli:compare_stamps_command"
+check-knobs = "downfall_learning.cli:check_knobs_command"
+tune-content = "downfall_learning.cli:tune_content_command"
 
 [dependency-groups]
 dev = [

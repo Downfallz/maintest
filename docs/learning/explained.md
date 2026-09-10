@@ -267,6 +267,12 @@ The cheapest change: numbers only, same schema, every model still runs.
 4. Journal entry: the two content hashes, the deltas, the decision (keep, tune more, revert). Commit the new
    digest, the content, the journal, and the model you keep.
 
+If you do not know which number to move, `tune-content` searches for one: it moves only what
+`data/balance/knobs.json` allows, scores every candidate on the objective written there, and proposes the
+moves it found (ADR 0021). Read them against each spell's `intent` before applying, then follow the four
+steps above with what you kept — the tuner does not rebuild the digest and does not write your journal
+entry.
+
 ### I want to add a spell
 
 A new spell id adds a feature bit, so the schema id changes: the baselines compare, the old models do not.
@@ -287,6 +293,8 @@ A new spell id adds a feature bit, so the schema id changes: the baselines compa
    what the scorer values. Does `player1WinShare` move? A spell that rewards going first widens it.
 5. Journal entry, commit content, alias, tree, digest, journal, and `docs/learning/features.md` stays as it
    is: the version is unchanged, the fingerprint did what it is for.
+6. Add its entry to `data/balance/knobs.json`: what it is for, what may move, between which bounds.
+   `check-knobs` fails until it is there, which is the reminder (`data/balance/README.md`).
 
 ### I want to add a creature (or a creature class)
 
@@ -358,6 +366,11 @@ trained before is retired.
 What "balanced" means here is a choice, not a formula. The signals the report always shows are the ones the
 roadmap named: player 1 share near one half on mirrored play, average rounds inside a band you pick, no
 dominant spell (entropy well above zero), few matches ending by the round cap, a fizzle rate that stays low.
+
+That choice is now written down rather than reasoned about each time: the `objective` block of
+`data/balance/knobs.json` gives every one of those signals a band, a scale and a weight, and the score it
+adds up to is what `tune-content` searches against (ADR 0021). Changing what balanced means is editing that
+block, with a reason, like any other content change.
 
 ## What is deliberately not here yet
 

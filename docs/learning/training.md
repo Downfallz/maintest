@@ -49,6 +49,26 @@ episode; `kinds` keeps only some decisions (`Intent`, `Targets`, ...).
 refusal the engine's policy agent will make (L7). `compare-stamps` prints what moved between two artifacts
 (manifests, evaluations, policies) on the axes of ADR 0013: content, engine, rules, schema, agents, seed.
 
+## Tuning the content
+
+`search-weights` tunes the agent; `tune-content` tunes the game. The space it searches is declared in
+`data/balance/knobs.json`: per spell, the numbers a pass may move and their bounds, what the spell is for in
+words, and the objective as bands over the metrics `report.json` already publishes (ADR 0021).
+
+| Command | Needs | Writes | How |
+| --- | --- | --- | --- |
+| `check-knobs` | the knobs file and `data/` | nothing | Fails when a spell has no entry, a pointer addresses nothing, or the authored value sits outside its own bounds. Lists the dominated and indistinguishable spells the catalogue already carries. |
+| `tune-content` | the same, plus a built engine | `tune.json` and the changed spell files under `content/` | Hill climbs: play the content, then play neighbours of the best, one knob at a time. A candidate that breaks a constraint is redrawn before the engine sees it. `--apply` writes the winning numbers into `data/`. |
+
+The score is `sum(weight * (excess / scale) ** 2)` over the objective's targets, zero being on target. Seven
+of the nine targets are `report.json` metrics under their own names, so a tuning run and a normal run are
+read the same way; `spellUsageShare` and `spellsNeverCast` are the two the tuner derives from
+`spellOutcomes`, because they need the catalogue as well as the evaluation.
+
+A candidate costs one content build plus one evaluation per objective entry, about twenty seconds on the
+benchmark seeds, so the default budget is near ten minutes. What comes out is a proposal: read the moves
+against each spell's intent, rebuild, regenerate the digest, and write the journal entry.
+
 ## Three learners
 
 | Command | Needs | Writes | How |

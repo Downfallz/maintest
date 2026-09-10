@@ -26,7 +26,8 @@ src/
                                benchmark) and the content studio's HTTP host (ADR 0015).
 tools/
   DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
-data/                          Authored game content (creatures, spells, talent trees, aliases). See data/README.md.
+data/                          Authored game content (creatures, spells, talent trees, aliases), and the balance knobs
+                               a tuning pass may move (data/balance, ADR 0021). See data/README.md.
 benchmarks/                    The fixed benchmark seeds and one outcome digest per content hash, verified in CI. See benchmarks/README.md.
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
@@ -67,6 +68,8 @@ dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the 
 dotnet run --project src/DownfallArena.Cli -- studio               # the content studio on http://127.0.0.1:5099 (studio/README.md)
 uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)   # the Python side
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
+uv run --project learning check-knobs                                # the balance knobs against the content they describe (data/balance/README.md)
+uv run --project learning tune-content -o runs/tune-1                # search those knobs for a better catalogue (ADR 0021); --apply writes it
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log
 scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/; --help lists every tuning flag

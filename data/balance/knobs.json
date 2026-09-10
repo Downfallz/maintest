@@ -1,0 +1,664 @@
+{
+  "version": "knobs:v1",
+  "about": "What a balance pass is allowed to change about each spell, and what each spell is for. Read data/balance/README.md before editing. This file is authoring metadata: the data builder never reads it, so it does not touch the content hash.",
+  "objective": {
+    "seeds": "benchmarks/benchmark-seeds.json",
+    "evaluations": {
+      "mirror": {
+        "p1": "greedy",
+        "p2": "greedy",
+        "reads": "Both sides play the content equally well, so everything left is the content."
+      },
+      "skill": {
+        "p1": "greedy",
+        "p2": "random",
+        "reads": "Playing well still beats playing at random. A change that closes this gap has removed the decisions instead of balancing them."
+      }
+    },
+    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare and spellsNeverCast are the two the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all.",
+    "targets": [
+      {
+        "metric": "player1WinShare",
+        "on": "mirror",
+        "min": 0.45,
+        "max": 0.55,
+        "scale": 0.05,
+        "weight": 3,
+        "why": "Identical agents, so anything away from one half is the content favouring a slot. 64.0% at the last measured run, down from 81.5% when spell initiative got priced."
+      },
+      {
+        "metric": "drawRate",
+        "on": "mirror",
+        "max": 0.05,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "A draw is the round cap arriving before either team can finish the other."
+      },
+      {
+        "metric": "averageRounds",
+        "on": "mirror",
+        "min": 8,
+        "max": 16,
+        "scale": 3,
+        "weight": 2,
+        "why": "Long enough that a bad round can be traded back, short enough that the cap of 30 stays out of reach. 5.8 at the last measured run: the catalogue currently kills faster than it lets anyone react."
+      },
+      {
+        "metric": "roundCapShare",
+        "on": "mirror",
+        "max": 0.05,
+        "scale": 0.05,
+        "weight": 2,
+        "why": "Matches that run out of rounds mean neither side can convert, usually stacked permanent defense."
+      },
+      {
+        "metric": "fizzleRateA",
+        "on": "mirror",
+        "max": 0.15,
+        "scale": 0.05,
+        "weight": 1,
+        "why": "Agent A's share of declarations that fizzled. Both agents are the same in a mirrored run, so A is the content's own rate. Mostly targets dying before the action resolves, so it falls on its own as matches lengthen. 21.4% at the last measured run."
+      },
+      {
+        "metric": "spellEntropyA",
+        "on": "mirror",
+        "min": 2.5,
+        "scale": 0.5,
+        "weight": 1,
+        "why": "Bits over agent A's declared spells. 2.21 at the last measured run over ten distinct spells, of a possible 5.17 over thirty-six."
+      },
+      {
+        "metric": "spellUsageShare",
+        "on": "mirror",
+        "max": 0.25,
+        "scale": 0.1,
+        "weight": 2,
+        "why": "The largest share of landed casts any single spell takes: 0.458 at the last measured run, heavy_strike. The scale is wider than the band it guards on purpose — at 0.05 this one target scored more than every other put together, and a search would have chased it alone. Derived from spellOutcomes, which is why the tuner computes it rather than report.json."
+      },
+      {
+        "metric": "spellsNeverCast",
+        "on": "mirror",
+        "max": 12,
+        "scale": 4,
+        "weight": 1,
+        "why": "Spells in the catalogue that no declaration ever landed. Needs the catalogue as well as the evaluation, so the tuner computes it. Some spells are out of reach in a short match by construction; a dozen is the slack that allows for."
+      },
+      {
+        "metric": "winRateA",
+        "on": "skill",
+        "min": 0.65,
+        "scale": 0.1,
+        "weight": 2,
+        "why": "The skill gap. Content that a random agent can hold has stopped asking anything."
+      }
+    ]
+  },
+  "constraints": {
+    "noNewStrictDominance": {
+      "enabled": true,
+      "what": "A candidate may not add a pair where one spell is strictly better than another: same targeting origin, at least as many targets, cost no higher, Spell initiative no lower, critical chance no lower, every effect at least as large, and strictly better on one of them.",
+      "why": "A spell three nodes down the tree outclassing a starting spell is what progression means, so the pairs the catalogue already has are not defects to remove. Adding one is: it takes a decision out of a hand that had it. Journal entry ci-9 spent a whole learning investigation discovering the starting kit was shaped that way."
+    },
+    "noIndistinguishableSpells": {
+      "enabled": true,
+      "what": "No two spells may carry the same cost, Spell initiative, critical chance, targeting and effects. The same signature the engine's Spell.Indistinguishable audit compares.",
+      "why": "The engine plays both, but no result can attribute anything to either, so tuning one moves nothing the other does not."
+    },
+    "startingKitOffersAChoice": {
+      "enabled": true,
+      "spells": [
+        "spell:wait",
+        "spell:basic_attack",
+        "spell:heavy_strike"
+      ],
+      "what": "None of the three spells every creature starts with may be strictly better than another. Implied by noNewStrictDominance, named separately because this is the one hand every match is dealt.",
+      "why": "Journal entry ci-9: heavy_strike was strictly better than basic_attack, and no learner could find a decision that was not there."
+    }
+  },
+  "spells": {
+    "spell:wait": {
+      "name": "Wait",
+      "class": "Creature",
+      "intent": "The floor of the game: spend the activation on nothing and come back one energy richer. It is what a creature does when everything it knows is too expensive, so it must stay free and it must stay worse than acting.",
+      "keep": [
+        "Free to cast",
+        "Never worth more than an attack the creature can already afford"
+      ],
+      "note": "Spell initiative is not a knob here: a starting spell does not grant it (ADR 0017), and this is one of the three the creature already knows.",
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:basic_attack": {
+      "name": "Basic Attack",
+      "class": "Creature",
+      "intent": "The reliable jab of the starting kit: cheap, certain, no critical. Every other attack in the catalogue is priced against its damage per energy, so moving it moves everything.",
+      "keep": [
+        "The cheapest damaging spell a creature knows on round one",
+        "No critical chance: it is the predictable one"
+      ],
+      "note": "Spell initiative is not a knob here: a starting spell does not grant it (ADR 0017).",
+      "knobs": [
+        { "path": "/energyCost", "min": 0, "max": 2, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:heavy_strike": {
+      "name": "Heavy Strike",
+      "class": "Creature",
+      "intent": "The starting kit's commitment: pay more of the round for the bigger opening hit. The decision it exists to pose is spend now or bank for later, so it has to cost what it wins.",
+      "keep": [
+        "Strictly dearer and stronger than Basic Attack, never both cheaper and better",
+        "The reason a first round has a choice in it"
+      ],
+      "note": "Spell initiative is not a knob here: a starting spell does not grant it (ADR 0017).",
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 }
+      ]
+    },
+    "spell:pummel": {
+      "name": "Pummel",
+      "class": "Brawler",
+      "intent": "The Brawler's cheap swing: one energy for a hit that crits two times in three. It buys tempo rather than a big number, and the critical chance is the whole reason to take it over Basic Attack.",
+      "keep": [
+        "At most one energy dearer than Basic Attack",
+        "Its critical chance stays its defining stat"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:guard": {
+      "name": "Guard",
+      "class": "Brawler",
+      "intent": "The Brawler's investment: a point of defense on an ally for good, plus a point while the pressure is on. Cheap, repeatable and permanent, which makes it the likeliest single cause of a match no one can finish.",
+      "keep": [
+        "Half of it is permanent and stacks on every cast",
+        "Cheaper than any healing spell: it prevents, it does not repair"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:protective_slam": {
+      "name": "Protective Slam",
+      "class": "Mercenary",
+      "intent": "The Mercenary's opener, and today only half of itself: the point of defense it gave its caster has no counterpart in the taxonomy. Until it does, it is a plain hit with a third of a critical and it should not be tuned into a good attack.",
+      "keep": [
+        "Reads as a trade, not a nuke",
+        "Waiting on a caster-side effect: keep the numbers modest"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:chain_slash": {
+      "name": "Chain Slash",
+      "class": "Mercenary",
+      "intent": "The Mercenary's payoff: the most damage any single cast puts on the board, split over two enemies. It is the reason to walk that line to the end, so it should stay expensive and stay late.",
+      "keep": [
+        "Hits at most two: it is a cleave, not a storm",
+        "The largest cast in the catalogue"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:thundering_seal": {
+      "name": "Thundering Seal",
+      "class": "Mercenary",
+      "intent": "Guard grown up: two permanent points of defense on an ally and two more for the round. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation.",
+      "keep": [
+        "Stronger and dearer than Guard",
+        "The permanent half stacks on every cast"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:full_plate": {
+      "name": "Full Plate",
+      "class": "Warlord",
+      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is a free self-targeted permanent point of defense that can be cast every single round, and free plus permanent is the dangerous combination in this catalogue.",
+      "keep": [
+        "One point at a time: it stacks by being cast again, not by being bigger",
+        "Cheap enough to cast in the rounds that decide the match, or it is not armour"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 0, "max": 1, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ],
+      "note": "Its cost is a knob even though the spell is free today: putting a price on a permanent, repeatable buff is the lever this catalogue most obviously lacks, and it costs nothing to let the search try it."
+    },
+    "spell:restorative_gush": {
+      "name": "Restorative Gush",
+      "class": "Warlord",
+      "intent": "The big single-target heal: more health back than most single hits take away. It decides on its own whether a war of attrition is winnable, which is why the average match length moves with it.",
+      "keep": [
+        "Heals more in one cast than anything else",
+        "Single target: the team heals belong to the Trickster and the Shaman"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:crushing_stomp": {
+      "name": "Crushing Stomp",
+      "class": "Warlord",
+      "intent": "The Warlord's hammer and the costliest spell in the game: heavy damage and a round of the target doing nothing. Losing an activation is the harshest thing that can happen to a creature, so the price is the point of the spell.",
+      "keep": [
+        "The most expensive cast in the catalogue",
+        "Damage and stun together, or it is just an expensive hit"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:enraged_charge": {
+      "name": "Enraged Charge",
+      "class": "Berserker",
+      "intent": "Two swings in one cast and no critical chance at all: the reliable version of the Berserker's gamble. It is the spell that says this class can also just hit twice.",
+      "keep": [
+        "Two damage effects: it reads as a flurry",
+        "No critical chance: it is the dependable half of the line"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/1/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:tornado": {
+      "name": "Tornado",
+      "class": "Berserker",
+      "intent": "The cheapest sweep in the game: against a full team it is the best damage per energy anywhere. Its cost is the first place to look when matches end too quickly.",
+      "keep": [
+        "The cheapest spell that reaches three enemies",
+        "Its efficiency comes from breadth, not from the size of the hit"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:psycho_rush": {
+      "name": "Psycho Rush",
+      "class": "Berserker",
+      "intent": "The Berserker's all-in: close to half a creature in a single cast. The two points of defense it used to cost its caster are not in the taxonomy, so it is a nuke with no downside and its price is doing all the work.",
+      "keep": [
+        "The line's gamble: big, single target, expensive",
+        "Priced as if the recoil existed, because one day it will"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:poison_slash": {
+      "name": "Poison Slash",
+      "class": "Scoundrel",
+      "intent": "The Scoundrel's signature: a small hit that keeps hurting. It is the cheapest way into bleed and the spell that teaches a player what a lasting effect is.",
+      "keep": [
+        "The bleed is the point, the damage is the garnish",
+        "The entry-level bleed: weaker than Mortal Wound on every axis"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:throwing_star": {
+      "name": "Throwing Star",
+      "class": "Scoundrel",
+      "intent": "One energy for a small hit, and two points of Base initiative when it is unlocked: the Scoundrel buys speed by learning to throw. Its Spell initiative is worth more to the class than its damage.",
+      "keep": [
+        "One energy: it is the cheap attack the class is priced around",
+        "Unlocking it is a tempo decision, not a damage one"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:parasite_jab": {
+      "name": "Parasite Jab",
+      "class": "Leech",
+      "intent": "Half of itself: the lifesteal that made it a Leech spell has no counterpart in the taxonomy, so what is left is an expensive small hit with a coin-flip critical. Do not tune it into a good attack, it is waiting for a rule.",
+      "keep": [
+        "Placeholder until caster-side effects exist",
+        "Its critical chance is the only thing it has left"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0.4, "max": 0.7, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:hateful_sacrifice": {
+      "name": "Hateful Sacrifice",
+      "class": "Leech",
+      "intent": "The largest single hit in the game, and it was meant to cost the caster four health. Without that self-damage the energy price is the only thing paying for it.",
+      "keep": [
+        "The heaviest single-target hit",
+        "Its price stands in for the missing self-damage"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 7, "max": 11, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:soul_devourer": {
+      "name": "Soul Devourer",
+      "class": "Leech",
+      "intent": "The worst rate in the catalogue, because the energy it used to drain from the target was dropped. It exists as a node on the Leech line rather than as a spell anyone should want, and fixing the price comes before making it hit harder.",
+      "keep": [
+        "Waiting on an energy-drain effect",
+        "Cheaper before it is stronger"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:momentum": {
+      "name": "Momentum",
+      "class": "Assassin",
+      "intent": "Wait with a Spell initiative of three: the Assassin passes the round and comes out permanently faster for having learned how. The energy is incidental, the unlock reward is the spell.",
+      "keep": [
+        "Free, like Wait",
+        "Its Spell initiative is what it is for"
+      ],
+      "knobs": [
+        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/initiative", "min": 2, "max": 4, "step": 1 }
+      ]
+    },
+    "spell:death_squad": {
+      "name": "Death Squad",
+      "class": "Assassin",
+      "intent": "Energy spent to give the whole team energy: a small net gain and a tempo swing for three creatures at once. It stands in for the initiative and critical buff the taxonomy cannot express, so read it as haste rather than as a battery.",
+      "keep": [
+        "Costs more than any one ally receives",
+        "Team-wide, or it is Momentum with extra steps"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/initiative", "min": 2, "max": 4, "step": 1 }
+      ]
+    },
+    "spell:mortal_wound": {
+      "name": "Mortal Wound",
+      "class": "Assassin",
+      "intent": "The bleed that actually kills: a hit now and a heavier wound over the rounds that follow. It is the reason to fear the Assassin and the likeliest single cause of a match that runs away from the loser.",
+      "keep": [
+        "More damage over time than up front",
+        "The catalogue's heaviest bleed"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:noxious_cure": {
+      "name": "Noxious Cure",
+      "class": "Trickster",
+      "intent": "The most healing per energy in the game, because the defense it used to strip from the allies it healed was dropped. It is a pure team heal until that debuff has a home, so keep the numbers honest about that.",
+      "keep": [
+        "Team-wide heal",
+        "Currently missing its downside"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.4, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:tranquilizer_dart": {
+      "name": "Tranquilizer Dart",
+      "class": "Trickster",
+      "intent": "The cheap stun: a modest hit and a stolen activation for less than Crushing Stomp asks. The Trickster buys the tempo the Warlord pays full price for, and pays for it in damage.",
+      "keep": [
+        "Cheaper than Crushing Stomp and weaker for it",
+        "The stun is the spell"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:infectious_blast": {
+      "name": "Infectious Blast",
+      "class": "Trickster",
+      "intent": "The only spell that neither damages nor heals: one energy to slow the whole enemy team. It was a defense shred and is approximated with the one debuff the taxonomy has, which makes it the game's only pure tempo play.",
+      "keep": [
+        "No damage: it is control or it is nothing",
+        "The cheapest thing that touches all three enemies"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:lightning_bolt": {
+      "name": "Lightning Bolt",
+      "class": "Sorcerer",
+      "intent": "The Sorcerer's bread and butter: a modest hit that crits two times in three. It is the caster's mirror of Pummel and the spell every Sorcerer branch gets compared against.",
+      "keep": [
+        "Its critical chance is what makes it a Sorcerer spell",
+        "The class's baseline attack: everything deeper in the tree must beat it"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:rejuvenate": {
+      "name": "Rejuvenate",
+      "class": "Sorcerer",
+      "intent": "The cheapest healing in the game and the reason a Sorcerer team can outlast a Brawler team. Its price sets the whole healing line: every other heal has to justify costing more than this one.",
+      "keep": [
+        "The cheapest heal",
+        "Single target"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:meteor": {
+      "name": "Meteor",
+      "class": "Wizard",
+      "intent": "The Wizard's sweep, and half of a balance question: Tornado hits the same three enemies for the same damage one energy cheaper with a worse critical. These two are priced against each other or one of them is dead content.",
+      "keep": [
+        "Reaches three enemies",
+        "Its relation to Tornado is the decision, not its absolute numbers"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 5, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:engulfing_flames": {
+      "name": "Engulfing Flames",
+      "class": "Wizard",
+      "intent": "Psycho Rush in a robe: as written today it carries the same cost, the same damage, the same critical chance and the same targeting. Two spells that identical cannot both be interesting, and no evaluation can attribute anything to either.",
+      "keep": [
+        "Must stop being a copy of Psycho Rush",
+        "The Wizard's single-target answer to its own sweep"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:ice_spear": {
+      "name": "Ice Spear",
+      "class": "Wizard",
+      "intent": "Damage that also slows: a hit now and initiative off the target for a round. It is the Wizard's answer to going second and the only offensive spell that touches the timeline.",
+      "keep": [
+        "Damage and slow in one cast",
+        "A rate spell, not a nuke: it wins the next round, not this one"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:summon_minions": {
+      "name": "Summon Minions",
+      "class": "Necromancer",
+      "intent": "The minions became energy: the only spell that pays for itself. It decides how long the Necromancer's expensive line takes to come online, so its net gain is the class's whole tempo curve.",
+      "keep": [
+        "Gives back more than it costs, or it has no reason to exist",
+        "Self only"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:revenant_guards": {
+      "name": "Revenant Guards",
+      "class": "Necromancer",
+      "intent": "Thundering Seal for the whole team at the same price: permanent defense on three allies at once. Cast every round it makes a team unkillable, which makes it the clearest thing in this catalogue that needs a rule rather than a number.",
+      "keep": [
+        "Team-wide and permanent: the strongest defensive cast in the game",
+        "Priced above the single-target version or it simply replaces it"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.4, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:crazed_specter": {
+      "name": "Crazed Specter",
+      "class": "Necromancer",
+      "intent": "The heaviest sweep in the game: against a whole team it is the single biggest swing anywhere. The minion it used to cost is gone, so the energy price is all that stands between it and matches ending in three rounds.",
+      "keep": [
+        "The heaviest sweep",
+        "Its price stands in for the missing minion cost"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
+        { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:healing_screech": {
+      "name": "Healing Screech",
+      "class": "Shaman",
+      "intent": "The one heal that arrives in two pieces: some now and some next round, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019).",
+      "keep": [
+        "Half of it is lasting",
+        "The anticipation heal, not the emergency one"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
+        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+      ]
+    },
+    "spell:restorative_burst": {
+      "name": "Restorative Burst",
+      "class": "Shaman",
+      "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only way a creature other than the caster gains energy on demand.",
+      "keep": [
+        "Gives back at least the energy it costs",
+        "Single target"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    },
+    "spell:toxic_waves": {
+      "name": "Toxic Waves",
+      "class": "Shaman",
+      "intent": "Bleed on a whole team: a hit now and a wound on every enemy for the rounds after. It is what makes a Shaman team win the rounds it did not act in.",
+      "keep": [
+        "Team-wide bleed",
+        "Costs more than Tornado because it keeps working"
+      ],
+      "knobs": [
+        { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
+        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+      ]
+    }
+  }
+}

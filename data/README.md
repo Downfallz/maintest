@@ -24,6 +24,12 @@ The content studio edits all of this in a browser (`studio/README.md`):
 dotnet run --project src/DownfallArena.Cli -- studio
 ```
 
+## Tuning it
+
+`balance/knobs.json` says which numbers of each spell a balance pass may move, what each spell is for, and
+what balanced means as a score (ADR 0021). It is authoring metadata: the builder does not read it, so it
+never reaches `game.schema.json` and never moves the content hash. See `balance/README.md`.
+
 ## Turning content off
 
 Any creature, spell or talent tree may carry `"enabled": false` (ADR 0015). A disabled item leaves the

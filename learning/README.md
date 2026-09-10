@@ -1,8 +1,9 @@
 # Learning
 
 The Python side of Downfall Arena (learning phase L6, ADR 0013): the engine records datasets and evaluations
-as JSON, this project reads them, searches the heuristic agent's weights, trains the first policies, and
-writes back what the engine and the viewer read. The full description is in `docs/learning/training.md`.
+as JSON, this project reads them, searches the heuristic agent's weights, tunes the game content itself
+(ADR 0021), trains the first policies, and writes back what the engine and the viewer read. The full
+description is in `docs/learning/training.md`.
 
 ```bash
 uv sync --project learning                                   # once; installs the project and its dev tools
@@ -16,7 +17,11 @@ uv run --project learning export-csv runs/greedy -o runs/greedy/steps.csv
 uv run --project learning compare-stamps runs/before/manifest.json runs/after/manifest.json
 uv run --project learning evaluate-policy models/value/v1 --opponent greedy    # needs the built CLI; win rate into training.jsonl
 uv run --project learning report runs/<id> --against runs/<previous>           # report.json of an iteration and what moved
+uv run --project learning check-knobs                                         # the balance knobs against data/
+uv run --project learning tune-content -o runs/tune-1                         # search them; --apply writes the winner into data/
 ```
 
 `weights/` holds the scoring weights files the `heuristic:<file>` agent reads; `greedy.json` is the built-in
-set. Datasets (`runs/`) are outputs and git-ignored; models are committed under `models/`.
+set. The content tuner's search space and objective live with the content, in `data/balance/knobs.json`
+(`data/balance/README.md`). Datasets (`runs/`) are outputs and git-ignored; models are committed under
+`models/`.
