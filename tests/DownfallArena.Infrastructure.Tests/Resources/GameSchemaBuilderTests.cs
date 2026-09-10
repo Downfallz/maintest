@@ -391,6 +391,12 @@ public sealed class GameSchemaBuilderTests
         GameSchemaBuilder.Build(explicitly.Path).ContentHash.ShouldBe(GameSchemaBuilder.Build(untouched.Path).ContentHash);
     }
 
+    /// <summary>
+    /// The repository's own content builds, loads, and hangs together: every creature's talent tree and every
+    /// one of its starting spells is in the build with it. Sizes are not asserted, because content may be
+    /// turned off (ADR 0015) and the catalogue is a choice, not an invariant; what must hold is that nothing
+    /// a creature needs was left out of the build.
+    /// </summary>
     [Fact]
     public void The_repository_content_builds_and_loads()
     {
@@ -401,22 +407,40 @@ public sealed class GameSchemaBuilderTests
 
         resources.Version.ShouldBe(schema.ContentHash);
         resources.Creatures.ShouldNotBeEmpty();
-        resources.Spells.Count.ShouldBeGreaterThan(30);
+        resources.Spells.ShouldNotBeEmpty();
         resources.TalentTrees.ShouldHaveSingleItem();
+        foreach (var creature in resources.Creatures)
+        {
+            resources.TryGetTalentTree(creature.TalentTree, out _).ShouldBeTrue($"{creature.Id} needs its talent tree.");
+            creature.StartingSpells.ShouldNotBeEmpty();
+            foreach (var spellId in creature.StartingSpells)
+            {
+                resources.TryGetSpell(spellId, out _).ShouldBeTrue($"{creature.Id} starts with {spellId}.");
+            }
+        }
     }
 
     /// <summary>
-    /// The authored `Regeneration` kind reaches the domain as the effect (ADR 0019). Healing Screech is the
-    /// content that uses it, so this is the mapping and the content in one assertion.
+    /// The authored `Regeneration` kind reaches the domain as the effect (ADR 0019). Healing Screech was the
+    /// repository content that used it, and it is turned off while the catalogue is cut down to the three
+    /// core classes, so the content is authored here — the same shape the EnergyRegeneration test below uses.
     /// </summary>
     [Fact]
     public void A_regeneration_is_authored_by_its_kind_and_maps_to_the_effect()
     {
-        var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(Path.Combine(AppContext.BaseDirectory, "data")));
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/brawler/guard.v1.json", """
+                {
+                  "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
+                  "initiative": 2, "energyCost": 1, "criticalChance": 0,
+                  "targeting": { "origin": "Ally", "scope": "SingleTarget" },
+                  "effects": [ { "kind": "Heal", "amount": 2 }, { "kind": "Regeneration", "amountPerRound": 2, "durationRounds": 1 } ]
+                }
+                """);
 
-        var screech = resources.GetSpell(SpellId.Parse("spell:healing_screech:v1"));
+        var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path));
 
-        screech.Effects.OfType<Regeneration>().ShouldHaveSingleItem()
+        resources.GetSpell(SpellId.Parse("spell:guard:v1")).Effects.OfType<Regeneration>().ShouldHaveSingleItem()
             .ShouldBe(Regeneration.Of(2, rounds: 1));
     }
 
