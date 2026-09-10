@@ -1,0 +1,218 @@
+name: Tune the catalogue
+
+# One tuning pass on the CI runners, proposed as a pull request: the numbers a search moved, the metrics it
+# moved them for, and a regenerated benchmark digest, without a local .NET SDK, a local uv, or anyone at a
+# keyboard (ADR 0021). Ask for a run from a phone; read the diff when it lands.
+#
+# The parameters of a run stay in git, the way learning/experiments/next.json holds the loop's: what a
+# dispatch does not type in comes from the defaults below, and the pull request records what it ran with.
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Search seed (the same seed on the same content returns the same moves)"
+        default: "0"
+      iterations:
+        description: "Rounds of neighbours after the opening sweep"
+        default: "8"
+      neighbours:
+        description: "Candidates played per round"
+        default: "4"
+      max_changes:
+        description: "Knobs one proposal may move at once"
+        default: "12"
+      apply:
+        description: "Open a pull request with the winning numbers, or only report them"
+        type: boolean
+        default: true
+
+# Only what opening the pull request needs.
+permissions:
+  contents: write
+  pull-requests: write
+
+# One tuning pass at a time: two of them would each measure a catalogue the other is about to change.
+concurrency:
+  group: tune
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  BRANCH: tune/${{ github.run_number }}
+  # Under runs/, which .gitignore covers: inside the workspace for the artifact, invisible to git.
+  OUT: runs/tune-${{ github.run_number }}
+
+jobs:
+  tune:
+    name: Search the balance knobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      # The same install as iterate.yml: locked wheels only, the project called as a module from src/, and the
+      # virtual environment outside the checkout so nothing untracked lands in it.
+      - name: Install uv and the dependencies of the learning project
+        run: |
+          pipx install uv==0.8.17
+          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
+          echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+          echo "PYTHONPATH=$GITHUB_WORKSPACE/learning/src" >> "$GITHUB_ENV"
+          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
+          uv sync --project learning --locked --no-build --no-install-project
+
+      - name: Build
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      - name: Build game content
+        run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+
+      # The knobs against the content they describe, before an hour of searching is spent on a file that
+      # addresses something that is not there.
+      - name: Check the balance knobs
+        run: uv run --project learning check-knobs
+
+      # Inputs reach the shell through the environment, never through the script text. --apply writes the
+      # winning numbers into data/ itself; without it the proposal stays in the run directory.
+      - name: Tune
+        env:
+          SEED: ${{ inputs.seed }}
+          ITERATIONS: ${{ inputs.iterations }}
+          NEIGHBOURS: ${{ inputs.neighbours }}
+          MAX_CHANGES: ${{ inputs.max_changes }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          arguments=(-o "$OUT" --seed "$SEED" --iterations "$ITERATIONS"
+            --neighbours "$NEIGHBOURS" --max-changes "$MAX_CHANGES")
+          if [[ "$APPLY" == "true" ]]; then
+            arguments+=(--apply)
+          fi
+          mkdir -p "$OUT"
+          uv run --project learning tune-content "${arguments[@]}" 2>&1 | tee "$OUT/tune.log"
+
+      - name: Put the proposal in the run summary
+        if: always()
+        run: |
+          {
+            echo "## Tuning pass \`${{ github.run_number }}\`"
+            echo
+            echo "Seed ${{ inputs.seed }}, ${{ inputs.iterations }} rounds of ${{ inputs.neighbours }}, at most ${{ inputs.max_changes }} knobs moved."
+            echo
+            echo '```'
+            cat "$OUT/tune.log" 2>/dev/null || echo 'The search wrote nothing.'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Nothing moved: no branch, no pull request, and the summary above already says so.
+      - name: Did the search change the content
+        id: moved
+        run: |
+          if git diff --quiet -- data/; then
+            echo "moved=false" >> "$GITHUB_OUTPUT"
+            echo "The search found nothing better than the content it started from."
+          else
+            echo "moved=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- data/
+          fi
+
+      - name: Rebuild the content and regenerate the benchmark digest
+        if: steps.moved.outputs.moved == 'true'
+        run: |
+          dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+          dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark --write
+          dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
+
+      # A pull request opened with GITHUB_TOKEN does not start the pull_request workflows, so this job runs the
+      # gate itself and the body says it did. Without this the proposal would arrive with no checks at all.
+      - name: Run the gate the pull request will not run
+        if: steps.moved.outputs.moved == 'true'
+        run: |
+          dotnet build --no-restore --configuration Release
+          dotnet test --no-build --configuration Release
+          dotnet format --verify-no-changes
+
+      - name: Open the pull request
+        if: steps.moved.outputs.moved == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+        run: |
+          hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add data/ benchmarks/
+
+          # Written to a file: a -m here would carry this file's YAML indentation into the message.
+          {
+            echo "Tune the catalogue (run ${{ github.run_number }}, seed ${{ inputs.seed }})"
+            echo
+            echo "tune-content on the CI runners. The moves and the metrics behind them are"
+            echo "in the pull request body and in the run summary of the workflow run."
+            echo
+            echo "Content hash $hash, benchmark digest regenerated and verified."
+          } > "$RUNNER_TEMP/message.txt"
+          git commit -F "$RUNNER_TEMP/message.txt"
+          git push "https://x-access-token:$GH_TOKEN@${SERVER#https://}/$REPOSITORY" "$BRANCH"
+
+          {
+            echo "## What"
+            echo
+            echo "One tuning pass proposed by [workflow run ${{ github.run_number }}]($SERVER/$REPOSITORY/actions/runs/${{ github.run_id }})"
+            echo "(ADR 0021), seed \`${{ inputs.seed }}\`, ${{ inputs.iterations }} rounds of ${{ inputs.neighbours }},"
+            echo "at most ${{ inputs.max_changes }} knobs moved. Content hash \`$hash\`, benchmark digest regenerated and verified."
+            echo
+            echo '```'
+            cat "$OUT/tune.log"
+            echo '```'
+            echo
+            echo "## Checklist"
+            echo
+            echo "- [x] \`dotnet build\`, \`dotnet test\` and \`dotnet format --verify-no-changes\` pass — run by the"
+            echo "      workflow before this branch was pushed, because a pull request opened with \`GITHUB_TOKEN\`"
+            echo "      does not start the \`pull_request\` workflows and would otherwise arrive with no checks"
+            echo "- [ ] **A journal entry.** This proposal carries numbers, not a reason. \`docs/learning/journal.md\`"
+            echo "      wants what moved and *why it is worth it*, which a search cannot write. The table above is"
+            echo "      what an entry needs; add one to this branch before merging (ADR 0013)."
+            echo "- [ ] The moves still match what each spell is for — \`intent\` in \`data/balance/knobs.json\`"
+            echo
+            echo "## Notes for the reviewer"
+            echo
+            echo "- **The search is deterministic.** The same seed on the same content returns the same moves, so"
+            echo "  this proposal can be reproduced locally with \`uv run --project learning tune-content -o runs/x"
+            echo "  --seed ${{ inputs.seed }} --iterations ${{ inputs.iterations }} --neighbours ${{ inputs.neighbours }} --max-changes ${{ inputs.max_changes }}\`."
+            echo "- **A tuning pass is measured against one agent.** Changing how the agents score an action makes"
+            echo "  every proposal from before that change stale, this one included."
+            echo "- Closing this pull request costs nothing: the content on \`main\` is untouched until it merges."
+          } > "$RUNNER_TEMP/body.md"
+
+          gh pr create \
+            --title "Tune the catalogue (run ${{ github.run_number }}, seed ${{ inputs.seed }})" \
+            --body-file "$RUNNER_TEMP/body.md" \
+            --base "${{ github.ref_name }}" \
+            --head "$BRANCH"
+
+      - name: Upload the proposal
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tune-${{ github.run_number }}
+          path: |
+            runs/tune-${{ github.run_number }}/tune.log
+            runs/tune-${{ github.run_number }}/tune.json
+            runs/tune-${{ github.run_number }}/content
+          if-no-files-found: warn
+          retention-days: 30

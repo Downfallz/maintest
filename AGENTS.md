@@ -70,6 +70,7 @@ uv sync --project learning && uv run --project learning ruff check learning && (
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
 uv run --project learning check-knobs                                # the balance knobs against the content they describe (data/balance/README.md)
 uv run --project learning tune-content -o runs/tune-1                # search those knobs for a better catalogue (ADR 0021); --apply writes it
+# the same two searches run on GitHub Actions: "Tune the catalogue" opens a pull request, "Search the agent weights" reports (docs/learning/training.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log
 scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/; --help lists every tuning flag

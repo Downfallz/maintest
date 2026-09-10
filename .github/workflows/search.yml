@@ -1,0 +1,140 @@
+name: Search the agent weights
+
+# One cross-entropy search of the heuristic agent's eight scoring weights on the CI runners, reported and not
+# applied (docs/learning/training.md). Ask for a run from a phone; read the table in the run summary.
+#
+# It reports rather than commits on purpose. The weights of `Greedy` are the benchmark baseline every learned
+# agent is measured against, so moving them invalidates every comparison in the journal; that is a decision to
+# take deliberately, not a file a workflow rewrites. The journal entry of 2026-09-10 is the worked example:
+# the search found a better agent and the entry decided against adopting it.
+on:
+  workflow_dispatch:
+    inputs:
+      opponent:
+        description: "Agent B of every evaluation"
+        default: greedy
+      seeds:
+        description: "Seed file of every evaluation"
+        default: benchmarks/benchmark-seeds.json
+      iterations:
+        description: "Rounds of the search"
+        default: "10"
+      population:
+        description: "Candidates played per round"
+        default: "16"
+      seed:
+        description: "Search seed"
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: search-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  # Under runs/, which .gitignore covers: inside the workspace for the artifact, invisible to git.
+  OUT: runs/search-${{ github.run_number }}
+
+jobs:
+  search:
+    name: Search the scoring weights
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Install uv and the dependencies of the learning project
+        run: |
+          pipx install uv==0.8.17
+          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
+          echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+          echo "PYTHONPATH=$GITHUB_WORKSPACE/learning/src" >> "$GITHUB_ENV"
+          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
+          uv sync --project learning --locked --no-build --no-install-project
+
+      - name: Build
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      - name: Build game content
+        run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+
+      # Inputs reach the shell through the environment, never through the script text.
+      - name: Search
+        env:
+          OPPONENT: ${{ inputs.opponent }}
+          SEEDS: ${{ inputs.seeds }}
+          ITERATIONS: ${{ inputs.iterations }}
+          POPULATION: ${{ inputs.population }}
+          SEED: ${{ inputs.seed }}
+        run: |
+          mkdir -p "$OUT"
+          uv run --project learning search-weights -o "$OUT" \
+            --opponent "$OPPONENT" --seeds "$SEEDS" \
+            --iterations "$ITERATIONS" --population "$POPULATION" --seed "$SEED" \
+            2>&1 | tee "$OUT/search.log"
+
+      # Only ratios matter -- scaling every weight scales every score -- so the table reads each weight against
+      # damage. A weight whose ratio did not move is one the search had no use for.
+      - name: Put the weights in the run summary
+        if: always()
+        run: |
+          {
+            echo "## Weight search \`${{ github.run_number }}\`"
+            echo
+            echo "Against \`${{ inputs.opponent }}\` on \`${{ inputs.seeds }}\`, ${{ inputs.iterations }} rounds of ${{ inputs.population }}, seed \`${{ inputs.seed }}\`."
+            echo
+            echo '```'
+            cat "$OUT/search.log" 2>/dev/null || echo 'The search wrote nothing.'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          found="$OUT/weights.json"
+          if [[ -f "$found" ]]; then
+            {
+              echo
+              echo "### The weights it found, as ratios to \`damage\`"
+              echo
+              echo "| Weight | Baseline | Found | Change |"
+              echo "| --- | --- | --- | --- |"
+              jq -rs '
+                (.[0]) as $new | (.[1]) as $old
+                | ($new.damage) as $dn | ($old.damage) as $do
+                | ($old | keys_unsorted[]) as $key
+                | [$key, ($old[$key] / $do), ($new[$key] / $dn)]
+                | "| `\(.[0])` | \(.[1] * 1000 | round / 1000) | \(.[2] * 1000 | round / 1000) | \(((.[2] / (if .[1] == 0 then 1 else .[1] end) - 1) * 1000 | round / 10))% |"
+              ' "$found" learning/weights/greedy.json
+              echo
+              echo "Reported, not applied: \`learning/weights/greedy.json\` is the benchmark baseline, and moving it"
+              echo "makes every comparison in \`docs/learning/journal.md\` incomparable. Adopting these is a commit"
+              echo "with a journal entry that says why, not a workflow's side effect."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload the search
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: search-${{ github.run_number }}
+          path: |
+            runs/search-${{ github.run_number }}/search.log
+            runs/search-${{ github.run_number }}/weights.json
+            runs/search-${{ github.run_number }}/search.json
+            runs/search-${{ github.run_number }}/evaluation.json
+            runs/search-${{ github.run_number }}/training.jsonl
+          if-no-files-found: warn
+          retention-days: 30
