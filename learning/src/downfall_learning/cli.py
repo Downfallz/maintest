@@ -35,6 +35,7 @@ from downfall_learning.tune_content import (
 from downfall_learning.viewer import RUN_PAGE, write_run_page
 
 RUNS_HELP = "one or more run directories recorded by 'simulate --record'"
+REPO_HELP = "the engine repository root (default: cwd)"
 OUTPUT_HELP = "the directory the model is written to"
 
 
@@ -65,9 +66,7 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
     search.add_argument(
         "--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file of every evaluation"
     )
-    search.add_argument(
-        "--repo", type=Path, default=Path.cwd(), help="the engine repository root (default: cwd)"
-    )
+    search.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     search.add_argument("--iterations", type=int, default=10)
     search.add_argument("--population", type=int, default=16)
     search.add_argument(
@@ -97,9 +96,7 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
         "--max-changes", type=int, default=12, help="knobs one proposal may move at once (default 12)"
     )
     tune.add_argument("--seed", type=int, default=0)
-    tune.add_argument(
-        "--repo", type=Path, default=Path.cwd(), help="the engine repository root (default: cwd)"
-    )
+    tune.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     tune.add_argument(
         "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
     )
@@ -147,9 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("model", type=Path, help="the model directory holding policy.json")
     evaluate.add_argument("--opponent", default="greedy", help="agent B of the evaluation (default greedy)")
     evaluate.add_argument("--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file")
-    evaluate.add_argument(
-        "--repo", type=Path, default=Path.cwd(), help="the engine repository root (default: cwd)"
-    )
+    evaluate.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     evaluate.add_argument("--engine", nargs="+", default=None, help="the engine command prefix")
     evaluate.add_argument(
         "--output", type=Path, help="where to write the evaluation (default: in the model directory)"

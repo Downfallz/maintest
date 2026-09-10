@@ -346,29 +346,37 @@ def propose(
     all_knobs = list(knobs)
     if not all_knobs:
         return None
-    by_key = {move.knob.key: move for move in current}
     here = _values(current)
     for _ in range(ATTEMPTS):
         knob = all_knobs[int(rng.integers(len(all_knobs)))]
-        if knob.spell not in base.spells:
+        moves = _nudged(knob, current, base, int(rng.choice([-1, 1])))
+        if moves is None or _values(moves) == here:
             continue
-        steps = int(by_key[knob.key].steps if knob.key in by_key else 0) + int(rng.choice([-1, 1]))
-        before = read_value(base.spells[knob.spell], knob.path)
-        after = knob.moved(before, steps)
-        # A knob pinned at a bound would otherwise keep counting steps it cannot take, and every one of
-        # them would read as a new candidate and cost an evaluation of a catalogue already played.
-        steps = round((after - before) / knob.step) if knob.step else 0
-        moves = tuple(move for move in current if move.knob.key != knob.key)
-        if after != before:
-            moves = (*moves, Move(knob=knob, steps=steps, before=before, after=after))
         if len({move.knob.key for move in moves}) > options.max_changes:
-            continue
-        if _values(moves) == here:
             continue
         if violations(base, apply_moves(base.spells, moves), knobs):
             continue
         return moves
     return None
+
+
+def _nudged(knob: Knob, current: Sequence[Move], base: Content, direction: int) -> tuple[Move, ...] | None:
+    """``current`` with ``knob`` moved one step, or ``None`` when the knob is on a spell the build lacks.
+
+    The step count is recomputed from the value the knob actually reaches, so a knob pinned at a bound
+    stops counting steps it cannot take: otherwise every one of them would read as a new candidate and
+    cost an evaluation of a catalogue already played.
+    """
+    if knob.spell not in base.spells:
+        return None
+    taken = {move.knob.key: move.steps for move in current}
+    before = read_value(base.spells[knob.spell], knob.path)
+    after = knob.moved(before, taken.get(knob.key, 0) + direction)
+    moves = tuple(move for move in current if move.knob.key != knob.key)
+    if after == before:
+        return moves
+    steps = round((after - before) / knob.step) if knob.step else 0
+    return (*moves, Move(knob=knob, steps=steps, before=before, after=after))
 
 
 def _values(moves: Sequence[Move]) -> dict[str, float]:

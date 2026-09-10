@@ -470,9 +470,10 @@ def test_an_engine_that_fails_says_which_step_failed(tmp_path: Path) -> None:
         builder=(sys.executable, "-c", "raise SystemExit(2)"),
     )
     evaluator = EngineContentEvaluator(host, Objective(seeds="s", evaluations={}, targets=()), content)
+    spells = content.spells
 
     with pytest.raises(EvaluationError, match="The data builder exited with 2"):
-        evaluator.evaluate(content.spells)
+        evaluator.evaluate(spells)
 
 
 def test_a_search_with_no_room_left_gives_up_rather_than_proposing_nothing(tmp_path: Path) -> None:
@@ -519,6 +520,9 @@ def test_a_search_that_never_finds_a_neighbour_still_reports_the_content_it_play
 
 def test_a_budget_that_plays_nothing_is_refused(tmp_path: Path) -> None:
     knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    evaluator = FakeEvaluator()
+    options = TuneOptions(iterations=0)
 
     with pytest.raises(ValueError, match="at least one iteration"):
-        tune_content(FakeEvaluator(), knobs, catalogue(tmp_path), TuneOptions(iterations=0))
+        tune_content(evaluator, knobs, content, options)
