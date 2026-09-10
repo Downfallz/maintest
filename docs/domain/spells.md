@@ -3,7 +3,7 @@
 The 36 spells of `data/Spells`, carried over from the legacy prototype. Vocabulary is defined in
 [glossary.md](glossary.md); the effect taxonomy they are written in is
 [ADR 0012](../adr/0012-effect-taxonomy.md), extended by [ADR 0019](../adr/0019-regeneration-the-healing-counterpart-of-bleed.md)
-and [ADR 0020](../adr/0020-attunement-and-the-price-of-energy.md); the authoring format is `data/README.md`.
+and [ADR 0020](../adr/0020-energy-regeneration-and-the-price-of-energy.md); the authoring format is `data/README.md`.
 
 Status: **inherited**. The numbers below are the prototype's, not a balance pass. They exist so the engine,
 the agents, and the learning loop run on content with some variety instead of 36 copies of the same
@@ -59,7 +59,7 @@ counterpart, so they were dropped or approximated; one has since been recovered.
 Two more places where the model forced a hand:
 
 - **Spells with no effect.** Legacy Wait and Momentum did literally nothing. A spell needs at least one
-  effect here, so both are `EnergyGain 1` on the caster: pass the round and gather. `Attunement`, energy over
+  effect here, so both are `EnergyGain 1` on the caster: pass the round and gather. `EnergyRegeneration`, energy over
   time, now exists (ADR 0020) and no spell uses it: Momentum and Summon Minions are the candidates when
   re-pricing them is decided on its own, rather than folded into the change that added the kind.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive

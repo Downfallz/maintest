@@ -83,39 +83,61 @@ public sealed class UpkeepRulesTests
     }
 
     /// <summary>
-    /// ADR 0020: the energy counterpart of a regeneration. Energy has no cap, so every point of an attunement
-    /// lands, round after round, for as long as the condition lasts.
+    /// Energy is given before the bleeds bite, and each step skips the dead, so a creature its own bleed kills
+    /// this round still gained its energy and still reports the tick. That is the one thing the position of
+    /// energy in the order decides, and ADR 0020 chose it deliberately -- nothing about health depends on it.
     /// </summary>
     [Fact]
-    public void Attunements_give_their_summed_energy_at_the_start_of_each_of_their_rounds()
+    public void A_creature_its_bleed_kills_this_round_still_gained_its_energy_regeneration()
     {
         var creatures = Arena.FourCreatures();
         var knight = Arena.Find(creatures, Arena.Knight);
-        knight.Apply(Attunement.Of(2, rounds: 2));
-        knight.Apply(Attunement.Of(3, rounds: 2, StackingPolicy.Stack));
+        var energyBefore = knight.Energy.Value;
+        knight.TakeDamage(knight.Health.Value - 2);
+        knight.Apply(Bleed.Of(3, rounds: 2));
+        knight.Apply(EnergyRegeneration.Of(2, rounds: 2));
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        knight.IsAlive.ShouldBeFalse("the bleed was lethal");
+        ticks.EnergyRegenerationTicks.ShouldBe([new EnergyRegenerationTick(Arena.Knight, 2)]);
+        knight.Energy.ShouldBe(Energy.Of(energyBefore + 2), "it was still standing when the energy was given");
+    }
+
+    /// <summary>
+    /// ADR 0020: the energy counterpart of a regeneration. Energy has no cap, so every point of an energyRegeneration
+    /// lands, round after round, for as long as the condition lasts.
+    /// </summary>
+    [Fact]
+    public void EnergyRegenerations_give_their_summed_energy_at_the_start_of_each_of_their_rounds()
+    {
+        var creatures = Arena.FourCreatures();
+        var knight = Arena.Find(creatures, Arena.Knight);
+        knight.Apply(EnergyRegeneration.Of(2, rounds: 2));
+        knight.Apply(EnergyRegeneration.Of(3, rounds: 2, StackingPolicy.Stack));
         var wraith = Arena.Find(creatures, Arena.Wraith);
-        wraith.Apply(Attunement.Of(1, rounds: 2));
+        wraith.Apply(EnergyRegeneration.Of(1, rounds: 2));
 
         var first = UpkeepRules.OngoingEffects(creatures);
         UpkeepRules.Cleanup(creatures);
         var second = UpkeepRules.OngoingEffects(creatures);
 
-        first.AttunementTicks.ShouldBe([new AttunementTick(Arena.Knight, 5), new AttunementTick(Arena.Wraith, 1)]);
-        second.AttunementTicks.ShouldBe([new AttunementTick(Arena.Knight, 5), new AttunementTick(Arena.Wraith, 1)]);
+        first.EnergyRegenerationTicks.ShouldBe([new EnergyRegenerationTick(Arena.Knight, 5), new EnergyRegenerationTick(Arena.Wraith, 1)]);
+        second.EnergyRegenerationTicks.ShouldBe([new EnergyRegenerationTick(Arena.Knight, 5), new EnergyRegenerationTick(Arena.Wraith, 1)]);
         knight.Energy.ShouldBe(Energy.Of(10));
         wraith.Energy.ShouldBe(Energy.Of(2));
     }
 
     /// <summary>
-    /// An attunement is a condition like any other: the cleanup of the round it was applied in does not count,
-    /// the next one expires a one-round attunement, and the energy stops with it.
+    /// An energyRegeneration is a condition like any other: the cleanup of the round it was applied in does not count,
+    /// the next one expires a one-round energyRegeneration, and the energy stops with it.
     /// </summary>
     [Fact]
-    public void An_attunement_counts_down_and_expires_and_the_energy_stops()
+    public void An_energyRegeneration_counts_down_and_expires_and_the_energy_stops()
     {
         var creatures = Arena.FourCreatures();
         var knight = Arena.Find(creatures, Arena.Knight);
-        knight.Apply(Attunement.Of(2, rounds: 1));
+        knight.Apply(EnergyRegeneration.Of(2, rounds: 1));
 
         UpkeepRules.OngoingEffects(creatures);
         UpkeepRules.Cleanup(creatures);
@@ -123,23 +145,23 @@ public sealed class UpkeepRulesTests
         UpkeepRules.Cleanup(creatures);
         var after = UpkeepRules.OngoingEffects(creatures);
 
-        last.AttunementTicks.ShouldBe([new AttunementTick(Arena.Knight, 2)]);
-        after.AttunementTicks.ShouldBeEmpty();
+        last.EnergyRegenerationTicks.ShouldBe([new EnergyRegenerationTick(Arena.Knight, 2)]);
+        after.EnergyRegenerationTicks.ShouldBeEmpty();
         knight.Conditions.ShouldBeEmpty();
         knight.Energy.ShouldBe(Energy.Of(4));
     }
 
     [Fact]
-    public void A_dead_creature_gains_no_energy_from_its_attunement()
+    public void A_dead_creature_gains_no_energy_from_its_energyRegeneration()
     {
         var creatures = Arena.FourCreatures();
         var archer = Arena.Find(creatures, Arena.Archer);
-        archer.Apply(Attunement.Of(4, rounds: 2));
+        archer.Apply(EnergyRegeneration.Of(4, rounds: 2));
         archer.TakeDamage(99);
 
         var ticks = UpkeepRules.OngoingEffects(creatures);
 
-        ticks.AttunementTicks.ShouldBeEmpty();
+        ticks.EnergyRegenerationTicks.ShouldBeEmpty();
         archer.Energy.ShouldBe(Energy.Of(0));
     }
 

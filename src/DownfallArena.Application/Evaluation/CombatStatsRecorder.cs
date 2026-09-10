@@ -86,7 +86,7 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             Stuns: Conditions<Stun>(applied),
             Bleeds: Conditions<Bleed>(applied),
             Regens: Conditions<Regeneration>(applied),
-            Attunements: Conditions<Attunement>(applied),
+            EnergyRegenerations: Conditions<EnergyRegeneration>(applied),
             DefenseBuffs: Conditions<DefenseBuff>(applied),
             InitiativeDebuffs: Conditions<InitiativeDebuff>(applied));
     }

@@ -40,13 +40,13 @@ public sealed class ConsoleMatchLogTests
     }
 
     /// <summary>
-    /// An attunement moves no health, so a round where one ticks alone would print nothing at all unless the
+    /// An energyRegeneration moves no health, so a round where one ticks alone would print nothing at all unless the
     /// log knows about it -- and the energy it gave is the whole reason the next round looks different.
     /// </summary>
     [Fact]
-    public async Task A_round_where_only_an_attunement_ticked_still_narrates_the_energy_it_gave()
+    public async Task A_round_where_only_an_energyRegeneration_ticked_still_narrates_the_energy_it_gave()
     {
-        var printed = await LogAsync(Ongoing(bleeds: [], regenerations: [], attunements: [new AttunementTick(One, 2)]));
+        var printed = await LogAsync(Ongoing(bleeds: [], regenerations: [], energyRegenerations: [new EnergyRegenerationTick(One, 2)]));
 
         printed.ShouldContain("creature 1 gains 2 energy");
     }
@@ -54,8 +54,8 @@ public sealed class ConsoleMatchLogTests
     private static OngoingEffectsApplied Ongoing(
         IReadOnlyList<BleedTick> bleeds,
         IReadOnlyList<RegenerationTick> regenerations,
-        IReadOnlyList<AttunementTick>? attunements = null) =>
-        new(MatchId.New(), RoundId.First, bleeds, regenerations, attunements ?? []);
+        IReadOnlyList<EnergyRegenerationTick>? energyRegenerations = null) =>
+        new(MatchId.New(), RoundId.First, energyRegenerations ?? [], regenerations, bleeds);
 
     private static async Task<string> LogAsync(OngoingEffectsApplied applied)
     {

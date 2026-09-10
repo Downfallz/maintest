@@ -46,7 +46,7 @@ public sealed class EvaluationConsoleTests
     [Fact]
     public void The_spell_table_has_a_column_for_every_lasting_effect_the_recorder_counts()
     {
-        string[] columns = ["Stun", "Bleed", "Regen", "Attune", "Def", "Init"];
+        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def", "Init"];
         var kinds = typeof(LastingEffect).Assembly.GetTypes()
             .Count(type => type.IsSubclassOf(typeof(LastingEffect)) && !type.IsAbstract);
 
@@ -74,7 +74,7 @@ public sealed class EvaluationConsoleTests
     {
         var printed = Print(Outcome("spell:summon_minions:v1", sides: 10, wins: 5, resolved: 9, fizzled: 0, damage: 0, resolvedWhenWon: 5)
             with
-        { Energy = 27, Attunements = 3 });
+        { Energy = 27, EnergyRegenerations = 3 });
 
         printed.ShouldContain("Energy");
         printed.ShouldContain("27");

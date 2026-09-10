@@ -21,7 +21,7 @@ public sealed class FeatureSchema
     public const int MaxTeamSize = BoardSlots.MaxTeamSize;
 
     /// <summary>The condition kinds of the closed effect taxonomy (ADR 0012), in feature order.</summary>
-    public static IReadOnlyList<string> ConditionKinds { get; } = ["Bleed", "Regeneration", "Attunement", "Stun", "DefenseBuff", "InitiativeDebuff"];
+    public static IReadOnlyList<string> ConditionKinds { get; } = ["Bleed", "Regeneration", "EnergyRegeneration", "Stun", "DefenseBuff", "InitiativeDebuff"];
 
     public static IReadOnlyList<string> GlobalFeatures { get; } =
         ["round_fraction", "phase", "sub_phase", "reveal_progress", "revealed_enemy_actions"];

@@ -35,9 +35,9 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 
 ### features:v3 (published, ADR 0020)
 
-`features:v2` with one more condition pair. Adding `Attunement` to the closed taxonomy adds a kind to every
+`features:v2` with one more condition pair. Adding `EnergyRegeneration` to the closed taxonomy adds a kind to every
 creature block, so a creature block becomes `C = 6 + 2 x 6 + S + N` and the condition pairs run in the order
-`Bleed`, `Regeneration`, `Attunement`, `Stun`, `DefenseBuff`, `InitiativeDebuff` — the new kind sits beside
+`Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`, `InitiativeDebuff` — the new kind sits beside
 `Regeneration` so the three over-time effects stay together rather than at the end where it would read as an
 afterthought:
 
@@ -45,7 +45,7 @@ afterthought:
 | --- | --- | --- |
 | +6, +7 | `Bleed_amount`, `Bleed_remaining` | as in v2 |
 | +8, +9 | `Regeneration_amount`, `Regeneration_remaining` | as in v2 |
-| +10, +11 | `Attunement_amount`, `Attunement_remaining` | `amount` is the energy per round, summed over the creature's attunements |
+| +10, +11 | `EnergyRegeneration_amount`, `EnergyRegeneration_remaining` | `amount` is the energy per round, summed over the creature's energy regenerations |
 | +12, +13 | `Stun_amount`, `Stun_remaining` | |
 | +14, +15 | `DefenseBuff_amount`, `DefenseBuff_remaining` | |
 | +16, +17 | `InitiativeDebuff_amount`, `InitiativeDebuff_remaining` | |

@@ -48,14 +48,20 @@ public sealed class EffectTests
         Should.Throw<ArgumentOutOfRangeException>(() => Regeneration.Of(1, 0));
     }
 
-    /// <summary>ADR 0020: the energy counterpart of a bleed, so it asks for a real amount like the others.</summary>
+    /// <summary>ADR 0020: the energy counterpart of a regeneration, and the same shape as one.</summary>
     [Fact]
-    public void Attunement_refuses_an_amount_below_one()
+    public void Energy_regeneration_lasts_a_number_of_rounds_and_refreshes_by_default()
     {
-        Attunement.Of(1, rounds: 2).AmountPerRound.ShouldBe(1);
+        var energyRegeneration = EnergyRegeneration.Of(2, rounds: 3);
 
-        Should.Throw<ArgumentOutOfRangeException>(() => Attunement.Of(0, 3));
-        Should.Throw<ArgumentOutOfRangeException>(() => Attunement.Of(-1, 3));
+        energyRegeneration.AmountPerRound.ShouldBe(2);
+        energyRegeneration.Duration.ShouldBe(Duration.OfRounds(3));
+        energyRegeneration.Stacking.ShouldBe(StackingPolicy.Refresh);
+        EnergyRegeneration.Of(1, 2, StackingPolicy.Stack).Stacking.ShouldBe(StackingPolicy.Stack);
+
+        Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(0, 3));
+        Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(-1, 3));
+        Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(1, 0));
     }
 
     [Fact]

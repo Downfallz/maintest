@@ -359,7 +359,7 @@ public sealed class Match : AggregateRoot<MatchId>
     }
 
     private void RaiseOngoingEffects(Round round, OngoingEffectTicks ticks) =>
-        RaiseDomainEvent(new OngoingEffectsApplied(Id, round.Id, ticks.BleedTicks, ticks.RegenerationTicks, ticks.AttunementTicks));
+        RaiseDomainEvent(new OngoingEffectsApplied(Id, round.Id, ticks.EnergyRegenerationTicks, ticks.RegenerationTicks, ticks.BleedTicks));
 
     private static Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>> Expired(IReadOnlyDictionary<CreatureId, IReadOnlyList<Condition>> expired) =>
         expired.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<ConditionSnapshot>)[.. entry.Value.Select(condition => condition.Snapshot())]);

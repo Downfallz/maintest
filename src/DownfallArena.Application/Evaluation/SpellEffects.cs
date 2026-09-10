@@ -25,7 +25,7 @@ public sealed record SpellEffects(
     int Stuns,
     int Bleeds,
     int Regens,
-    int Attunements,
+    int EnergyRegenerations,
     int DefenseBuffs,
     int InitiativeDebuffs)
 {
@@ -50,7 +50,7 @@ public sealed record SpellEffects(
             Stuns + other.Stuns,
             Bleeds + other.Bleeds,
             Regens + other.Regens,
-            Attunements + other.Attunements,
+            EnergyRegenerations + other.EnergyRegenerations,
             DefenseBuffs + other.DefenseBuffs,
             InitiativeDebuffs + other.InitiativeDebuffs);
     }

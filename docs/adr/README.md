@@ -25,4 +25,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Accepted |
 | [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |
 | [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |
-| [0020](0020-attunement-and-the-price-of-energy.md) | Attunement, and the price of energy | Accepted |
+| [0020](0020-energy-regeneration-and-the-price-of-energy.md) | Energy regeneration, and the price of energy | Accepted |

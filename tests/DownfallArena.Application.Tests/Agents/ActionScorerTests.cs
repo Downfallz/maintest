@@ -91,16 +91,16 @@ public sealed class ActionScorerTests
     }
 
     [Fact]
-    public void An_attunement_is_priced_at_the_energy_weight_over_the_rounds_it_lasts()
+    public void An_energyRegeneration_is_priced_at_the_energy_weight_over_the_rounds_it_lasts()
     {
         var board = Board(enemyHealth: 20);
         var ally = Boards.Creature(2, PlayerSlot.Player1);
         var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
         var action = Strike(One, Three);
 
-        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, Attunement.Of(2, rounds: 3))]), creatures).ShouldBe(0.2 * 2 * 3, 1e-9);
-        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, Attunement.Of(2, rounds: 1))]), creatures).ShouldBe(0.2 * 2, 1e-9);
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new ConditionOutcome(Three, Attunement.Of(2, rounds: 3))]), creatures).ShouldBe(-0.2 * 2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(0.2 * 2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 1))]), creatures).ShouldBe(0.2 * 2, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new ConditionOutcome(Three, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(-0.2 * 2 * 3, 1e-9);
     }
 
     [Fact]

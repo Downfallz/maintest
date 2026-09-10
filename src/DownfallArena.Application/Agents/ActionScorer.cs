@@ -191,7 +191,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Stun => sign * weights.Stun,
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
-            Attunement attunement => -sign * weights.Energy * attunement.AmountPerRound * rounds,
+            EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
             DefenseBuff buff => -sign * weights.Buff * buff.Amount * rounds,
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
             _ => 0,

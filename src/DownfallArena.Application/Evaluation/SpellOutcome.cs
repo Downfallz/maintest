@@ -53,8 +53,8 @@ public sealed record SpellOutcome
     /// <summary>Regenerations applied, not the healing they go on to give.</summary>
     public int Regens { get; init; }
 
-    /// <summary>Attunements applied, not the energy they go on to give.</summary>
-    public int Attunements { get; init; }
+    /// <summary>EnergyRegenerations applied, not the energy they go on to give.</summary>
+    public int EnergyRegenerations { get; init; }
 
     /// <summary>Defense buffs applied. Kept apart from the initiative debuffs: the two move different stats.</summary>
     public int DefenseBuffs { get; init; }

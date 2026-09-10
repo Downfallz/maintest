@@ -56,7 +56,7 @@ public sealed class FeatureSchemaTests
         Schema.IndexOf("own0_Bleed_amount").ShouldBe(11);
         Schema.IndexOf("own0_Bleed_remaining").ShouldBe(12);
         Schema.IndexOf("own0_Regeneration_amount").ShouldBe(13);
-        Schema.IndexOf("own0_Attunement_amount").ShouldBe(15);
+        Schema.IndexOf("own0_EnergyRegeneration_amount").ShouldBe(15);
         Schema.IndexOf("own0_InitiativeDebuff_remaining").ShouldBe(22);
         Schema.IndexOf("own0_knows_spell:guard:v1").ShouldBe(23);
         Schema.IndexOf("own0_knows_spell:strike:v1").ShouldBe(26);
@@ -104,7 +104,7 @@ public sealed class FeatureSchemaTests
             .Order(StringComparer.Ordinal);
 
         FeatureSchema.ConditionKinds.Order(StringComparer.Ordinal).ShouldBe(domainKinds);
-        FeatureSchema.ConditionKinds.ShouldBe(["Bleed", "Regeneration", "Attunement", "Stun", "DefenseBuff", "InitiativeDebuff"]);
+        FeatureSchema.ConditionKinds.ShouldBe(["Bleed", "Regeneration", "EnergyRegeneration", "Stun", "DefenseBuff", "InitiativeDebuff"]);
         FeatureSchema.ConditionKindIndex("Stun").ShouldBe(3);
         FeatureSchema.ConditionKindIndex("Poison").ShouldBe(-1);
     }

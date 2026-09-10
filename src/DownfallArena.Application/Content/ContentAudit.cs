@@ -218,10 +218,10 @@ public static class ContentAudit
 
     /// <summary>
     /// Whether any of these spells hands out energy, which is what makes an energy ceiling meaningless. An
-    /// attunement counts: it hands out energy every round it lasts, and can be re-applied.
+    /// energyRegeneration counts: it hands out energy every round it lasts, and can be re-applied.
     /// </summary>
     private static bool Grants(IReadOnlySet<SpellId> spells, IGameResources resources) =>
-        spells.Any(id => resources.GetSpell(id).Effects.Any(effect => effect is EnergyGain or Attunement));
+        spells.Any(id => resources.GetSpell(id).Effects.Any(effect => effect is EnergyGain or EnergyRegeneration));
 
     private static SpellReach Row(Spell spell, RuleSet rules, int startingFor, int reachableBy) => new()
     {
@@ -235,7 +235,7 @@ public static class ContentAudit
         Healing = spell.Effects.OfType<Heal>().Sum(effect => effect.Amount),
         RegenerationHealing = spell.Effects.OfType<Regeneration>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         Energy = spell.Effects.OfType<EnergyGain>().Sum(effect => effect.Amount),
-        AttunementEnergy = spell.Effects.OfType<Attunement>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
+        EnergyRegenerationEnergy = spell.Effects.OfType<EnergyRegeneration>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         MaxTargets = spell.Targeting.MaxTargets,
         StartingFor = startingFor,
         ReachableBy = reachableBy,

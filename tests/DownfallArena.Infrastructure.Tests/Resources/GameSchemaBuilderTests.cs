@@ -421,11 +421,11 @@ public sealed class GameSchemaBuilderTests
     }
 
     /// <summary>
-    /// ADR 0020: the authored `Attunement` kind reaches the domain as the effect, in the same per-round family
+    /// ADR 0020: the authored `EnergyRegeneration` kind reaches the domain as the effect, in the same per-round family
     /// as Bleed and Regeneration. No repository content uses it yet, so the content is authored here.
     /// </summary>
     [Fact]
-    public void An_attunement_is_authored_by_its_kind_and_maps_to_the_effect()
+    public void An_energy_regeneration_is_authored_by_its_kind_and_maps_to_the_effect()
     {
         using var content = new ContentDirectory().WithValidContent()
             .WithFile("Spells/brawler/guard.v1.json", """
@@ -433,12 +433,12 @@ public sealed class GameSchemaBuilderTests
                   "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
                   "initiative": 2, "energyCost": 1, "criticalChance": 0,
                   "targeting": { "origin": "Self", "scope": "SingleTarget" },
-                  "effects": [ { "kind": "Attunement", "amountPerRound": 2, "durationRounds": 3 } ]
+                  "effects": [ { "kind": "EnergyRegeneration", "amountPerRound": 2, "durationRounds": 3 } ]
                 }
                 """);
 
         var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path));
 
-        resources.GetSpell(SpellId.Parse("spell:guard:v1")).Effects.ShouldBe([Attunement.Of(2, rounds: 3)]);
+        resources.GetSpell(SpellId.Parse("spell:guard:v1")).Effects.ShouldBe([EnergyRegeneration.Of(2, rounds: 3)]);
     }
 }
