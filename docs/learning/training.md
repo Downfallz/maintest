@@ -242,6 +242,32 @@ summary, under the file's `why`; `report.html`, `report.json`, the evaluations a
 run's artifact. The datasets are not uploaded: the seed reproduces them. A CI runner keeps nothing between
 runs, so `--against` stays a local comparison.
 
+Two more turns of the same crank run on the runners and nowhere else in particular, so asking for one needs
+no local SDK and no machine left on:
+
+| Workflow | Dispatch inputs | What comes back |
+| --- | --- | --- |
+| **Tune the catalogue** (`tune.yml`) | search seed, rounds, neighbours, knobs per proposal, and whether to apply | The proposal in the run summary, and, when it moved something, a **branch** carrying the changed spell files and a regenerated benchmark digest, with a link that opens it as a pull request. |
+| **Search the agent weights** (`search.yml`) | opponent, seed file, rounds, population, search seed | The weights in the run summary, as ratios to `damage`, beside the baseline's. Nothing is committed. |
+
+The asymmetry is deliberate. A tuning pass proposes content, and content is reviewed as a diff, so it arrives
+on a branch that costs nothing to delete. A weight search proposes an *agent*, and `Greedy`'s weights are the
+baseline every learned agent is measured against, so adopting them makes every comparison in the journal
+incomparable — that is a commit with an entry that says why, not a workflow's side effect. The 2026-09-10
+entry is the worked example: the search found a better agent and the entry decided against taking it.
+
+**The tuning workflow pushes the branch and stops there, on purpose.** A pull request opened by a workflow
+does not start the `pull_request` workflows, so it would arrive with no CI and no SonarCloud quality gate —
+which this file's own rule requires on every pull request. The run summary carries the link that opens the
+branch as a pull request instead: one tap, the repository's real checks run, and because the branch holds a
+single commit GitHub fills the description in from its message, which the workflow wrote for that purpose.
+
+Before it pushes anything the job runs the gate a contributor runs — the .NET build, tests and format check,
+and the learning project's ruff, format check and pytest — so a proposal that breaks any of them never becomes
+a branch. Both jobs call the learning project as a module (`python -m downfall_learning.cli`), the way
+`scripts/iterate.sh` does: the runners install the locked dependencies without installing the project itself,
+so its console scripts are not on the path there.
+
 `report.json` holds the run's stamp and, per evaluation, the agents, the matches, and the metrics: `winRateA`
 with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when the
 agents are identical), `drawRate`, `averageRounds`, `roundCapShare`, `spellEntropyA`/`B`, `fizzleRateA`/`B`.

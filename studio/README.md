@@ -11,7 +11,13 @@ dotnet run --project src/DownfallArena.Cli -- studio --port 5100 --data data
 Run it from the repository root: the host serves `studio/` and `viewer/` from there, reads the content
 directory `--data` names (`data` by default), and rebuilds into the folder of `--schema`
 (`data/dst` by default). It listens on the loopback address only — this is an authoring tool for the machine
-it runs on, not a service.
+it runs on, not a service (ADR 0015).
+
+[ADR 0023](../docs/adr/0023-a-hosted-studio-with-github-as-its-backend.md) decides a second **hosted** mode
+for authoring away from that machine: the same page served from GitHub Pages, reading the content from the
+public repository with no credential, writing it back as a commit and a pull request through the GitHub API,
+and dispatching the workflows for what needs the engine. Not built yet; the ADR says what it will and will
+not be able to do, and what accepting a token in `localStorage` costs.
 
 ## What the page does
 

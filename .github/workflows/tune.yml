@@ -1,0 +1,247 @@
+name: Tune the catalogue
+
+# One tuning pass on the CI runners, proposed as a pull request: the numbers a search moved, the metrics it
+# moved them for, and a regenerated benchmark digest, without a local .NET SDK, a local uv, or anyone at a
+# keyboard (ADR 0021). Ask for a run from a phone; read the diff when it lands.
+#
+# The parameters of a run stay in git, the way learning/experiments/next.json holds the loop's: what a
+# dispatch does not type in comes from the defaults below, and the pull request records what it ran with.
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Search seed (the same seed on the same content returns the same moves)"
+        default: "0"
+      iterations:
+        description: "Rounds of neighbours after the opening sweep"
+        default: "8"
+      neighbours:
+        description: "Candidates played per round"
+        default: "4"
+      max_changes:
+        description: "Knobs one proposal may move at once"
+        default: "12"
+      apply:
+        description: "Open a pull request with the winning numbers, or only report them"
+        type: boolean
+        default: true
+
+# Pushing the proposal branch, and nothing else. The pull request is opened by a person from the link in the
+# run summary, which is what makes the repository's own checks run on it -- see the comment on that step.
+permissions:
+  contents: write
+
+# One tuning pass at a time: two of them would each measure a catalogue the other is about to change.
+concurrency:
+  group: tune
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  BRANCH: tune/${{ github.run_number }}
+  # Under runs/, which .gitignore covers: inside the workspace for the artifact, invisible to git.
+  OUT: runs/tune-${{ github.run_number }}
+
+jobs:
+  tune:
+    name: Search the balance knobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      # Unlike the other workflows, this one pushes a branch, so it keeps the credentials the checkout sets up
+      # and lets git use them. The alternative is a token inside a remote URL, which puts it in the process
+      # list and in every error message git prints.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      # The same install as iterate.yml: locked wheels only, the project called as a module from src/, and the
+      # virtual environment outside the checkout so nothing untracked lands in it.
+      - name: Install uv and the dependencies of the learning project
+        run: |
+          pipx install uv==0.8.17
+          echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/learning-venv" >> "$GITHUB_ENV"
+          echo "UV_NO_SYNC=1" >> "$GITHUB_ENV"
+          echo "PYTHONPATH=$GITHUB_WORKSPACE/learning/src" >> "$GITHUB_ENV"
+          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/learning-venv"
+          uv sync --project learning --locked --no-build --no-install-project
+
+      - name: Build
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      - name: Build game content
+        run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+
+      # The knobs against the content they describe, before an hour of searching is spent on a file that
+      # addresses something that is not there.
+      - name: Check the balance knobs
+        run: uv run --project learning --locked --no-sync --no-build python -m downfall_learning.cli check-knobs
+
+      # Inputs reach the shell through the environment, never through the script text. --apply writes the
+      # winning numbers into data/ itself; without it the proposal stays in the run directory.
+      - name: Tune
+        env:
+          SEED: ${{ inputs.seed }}
+          ITERATIONS: ${{ inputs.iterations }}
+          NEIGHBOURS: ${{ inputs.neighbours }}
+          MAX_CHANGES: ${{ inputs.max_changes }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          arguments=(-o "$OUT" --seed "$SEED" --iterations "$ITERATIONS"
+            --neighbours "$NEIGHBOURS" --max-changes "$MAX_CHANGES")
+          if [[ "$APPLY" == "true" ]]; then
+            arguments+=(--apply)
+          fi
+          mkdir -p "$OUT"
+          uv run --project learning --locked --no-sync --no-build \
+            python -m downfall_learning.cli tune-content "${arguments[@]}" 2>&1 | tee "$OUT/tune.log"
+
+      - name: Put the proposal in the run summary
+        if: always()
+        env:
+          SEED: ${{ inputs.seed }}
+          ITERATIONS: ${{ inputs.iterations }}
+          NEIGHBOURS: ${{ inputs.neighbours }}
+          MAX_CHANGES: ${{ inputs.max_changes }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          {
+            echo "## Tuning pass \`$RUN_NUMBER\`"
+            echo
+            echo "Seed $SEED, $ITERATIONS rounds of $NEIGHBOURS, at most $MAX_CHANGES knobs moved."
+            echo
+            echo '```'
+            cat "$OUT/tune.log" 2>/dev/null || echo 'The search wrote nothing.'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Two separate questions, and reading one for the other is how a report-only run gets called a failed
+      # search: `improved` is whether the search beat the content it started from, which it reports whether or
+      # not it was asked to apply anything; the working tree only changes when it was.
+      - name: What the search found
+        id: found
+        run: |
+          improved="$(jq -r '.improved // false' "$OUT/tune.json" 2>/dev/null || echo false)"
+          echo "improved=$improved" >> "$GITHUB_OUTPUT"
+          if [[ "$improved" != "true" ]]; then
+            echo "The search found nothing better than the content it started from."
+          elif git diff --quiet -- data/; then
+            echo "The search found a better catalogue and was asked not to apply it. The proposal is in the artifact."
+          else
+            git diff --stat -- data/
+          fi
+
+          if [[ "$improved" == "true" ]] && ! git diff --quiet -- data/; then
+            echo "applied=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rebuild the content and regenerate the benchmark digest
+        if: steps.found.outputs.applied == 'true'
+        run: |
+          dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+          dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark --write
+          dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- benchmark
+
+      # The gate a contributor runs before pushing, and the one ci.yml runs: the .NET build, tests and format
+      # check, and the learning project's lint, format check and tests. A proposal that breaks any of them
+      # never becomes a branch.
+      - name: Run the gate
+        if: steps.found.outputs.applied == 'true'
+        run: |
+          dotnet build --no-restore --configuration Release
+          dotnet test --no-build --configuration Release
+          dotnet format --verify-no-changes
+          uv run --project learning --locked --no-sync --no-build python -m ruff check learning
+          uv run --project learning --locked --no-sync --no-build python -m ruff format --check learning
+          uv run --project learning --locked --no-sync --no-build python -m pytest learning/tests -q
+
+      # The branch is pushed; the pull request is not opened here, and that is the point. A pull request opened
+      # with GITHUB_TOKEN does not start the `pull_request` workflows, so it would arrive with no CI at all and
+      # no SonarCloud quality gate -- which AGENTS.md requires on every pull request. Opening it from the link
+      # below takes one tap and runs the repository's real checks. The branch holds one commit, so GitHub fills
+      # the pull request in from its message: the proposal is already written for you.
+      - name: Push the proposal and link the pull request
+        if: steps.found.outputs.applied == 'true'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          BASE: ${{ github.ref_name }}
+          SEED: ${{ inputs.seed }}
+          ITERATIONS: ${{ inputs.iterations }}
+          NEIGHBOURS: ${{ inputs.neighbours }}
+          MAX_CHANGES: ${{ inputs.max_changes }}
+        run: |
+          hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add data/ benchmarks/
+
+          # Written to a file: a -m here would carry this file's YAML indentation into the message. The body is
+          # markdown because GitHub offers it as the pull request description.
+          {
+            echo "Tune the catalogue (run $RUN_NUMBER, seed $SEED)"
+            echo
+            echo "One tuning pass from [workflow run $RUN_NUMBER]($SERVER/$REPOSITORY/actions/runs/$RUN_ID)"
+            echo "(ADR 0021), seed \`$SEED\`, $ITERATIONS rounds of $NEIGHBOURS, at most $MAX_CHANGES knobs moved."
+            echo "Content hash \`$hash\`, benchmark digest regenerated and verified."
+            echo
+            echo '```'
+            cat "$OUT/tune.log"
+            echo '```'
+            echo
+            echo "Before merging:"
+            echo
+            echo "- **A journal entry.** This proposal carries numbers, not a reason. docs/learning/journal.md"
+            echo "  wants what moved and why it is worth it, which a search cannot write. The output above is"
+            echo "  what an entry needs (ADR 0013)."
+            echo "- **The moves still match what each spell is for** -- \`intent\` in data/balance/knobs.json."
+            echo
+            echo "The search is deterministic: the same seed on the same content returns the same moves, so this"
+            echo "reproduces locally with \`tune-content --seed $SEED --iterations $ITERATIONS"
+            echo "--neighbours $NEIGHBOURS --max-changes $MAX_CHANGES\`. A tuning pass is measured against one"
+            echo "agent, so changing how the agents score an action makes it stale."
+          } > "$RUNNER_TEMP/message.txt"
+          git commit -F "$RUNNER_TEMP/message.txt"
+          git push origin "$BRANCH"
+
+          {
+            echo
+            echo "### The proposal is on \`$BRANCH\`"
+            echo
+            echo "**[Open it as a pull request]($SERVER/$REPOSITORY/compare/$BASE...$BRANCH?expand=1)** — one tap,"
+            echo "and the description is already filled in from the commit."
+            echo
+            echo "It is not opened here on purpose: a pull request opened by a workflow does not start the"
+            echo "repository's own checks, so it would arrive with no CI and no SonarCloud quality gate."
+            echo "Opened by a person, it gets both."
+            echo
+            echo "The build, the tests, the format check, ruff and pytest all passed on this branch before it was"
+            echo "pushed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the proposal
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tune-${{ github.run_number }}
+          path: |
+            runs/tune-${{ github.run_number }}/tune.log
+            runs/tune-${{ github.run_number }}/tune.json
+            runs/tune-${{ github.run_number }}/content
+          if-no-files-found: warn
+          retention-days: 30
