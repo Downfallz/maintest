@@ -21,11 +21,13 @@ from downfall_learning.knobs import (
     load_knobs,
     new_dominance,
     read_value,
+    twins,
     validate,
     with_value,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+DAMAGE_POINTER = "/effects/0/amount"
 
 ATTACK = {
     "id": "spell:attack:v1",
@@ -232,7 +234,7 @@ def test_two_spells_a_match_cannot_tell_apart_are_reported(tmp_path: Path) -> No
     reports = findings(content(**{"spell:attack": ATTACK, "spell:twin": spell(id="spell:twin:v1")}), knobs)
 
     assert reports == [
-        "spell:twin and spell:attack are one spell under two names: the same cost, "
+        "spell:attack and spell:twin are one spell under two names: the same cost, "
         "Spell initiative, critical chance, targeting and effects."
     ]
 
@@ -290,3 +292,122 @@ def test_the_repository_knobs_cover_the_repository_content() -> None:
 
     assert validate(knobs, spells) == []
     assert len(spells) == len(knobs.spells)
+
+
+def test_a_spell_with_no_intent_is_a_spell_nobody_decided_the_point_of(tmp_path: Path) -> None:
+    document = knobs_json()
+    document["spells"]["spell:attack"]["intent"] = "   "
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert "no intent" in validate(knobs, content(**{"spell:attack": ATTACK}))[0]
+
+
+def test_bounds_the_wrong_way_round_are_reported(tmp_path: Path) -> None:
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"][0] = {"path": DAMAGE_POINTER, "min": 5, "max": 1, "step": 1}
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert any(
+        "wrong way round" in problem for problem in validate(knobs, content(**{"spell:attack": ATTACK}))
+    )
+
+
+def test_a_step_that_moves_nothing_is_reported(tmp_path: Path) -> None:
+    document = knobs_json()
+    document["spells"]["spell:attack"]["knobs"][0]["step"] = 0
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert any("moves nothing" in problem for problem in validate(knobs, content(**{"spell:attack": ATTACK})))
+
+
+def test_a_target_reading_an_evaluation_nobody_plays_is_reported(tmp_path: Path) -> None:
+    """The score would quietly be short a term, and only a ten-minute search would have said so."""
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {"mirror": {}},
+            "targets": [{"metric": "drawRate", "on": "skill", "max": 0.05, "scale": 0.05, "weight": 1}],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}))
+
+    assert problems == [
+        "objective: target 'skill.drawRate' reads an evaluation the objective does not declare."
+    ]
+
+
+def test_a_starting_kit_naming_a_spell_that_does_not_exist_is_reported(tmp_path: Path) -> None:
+    document = knobs_json(
+        constraints={"startingKitOffersAChoice": {"enabled": True, "spells": ["spell:ghost"]}}
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}))
+
+    assert problems == ["startingKitOffersAChoice: 'spell:ghost' is not a spell any alias resolves to."]
+
+
+def test_a_pointer_without_a_leading_slash_is_not_a_pointer() -> None:
+    with pytest.raises(KnobsError, match="not a JSON pointer"):
+        read_value(ATTACK, "energyCost")
+
+
+def test_a_knobs_file_that_is_not_there_says_so(tmp_path: Path) -> None:
+    with pytest.raises(KnobsError, match="does not exist"):
+        load_knobs(tmp_path / "absent.json")
+
+
+def test_a_knobs_file_that_is_not_json_says_so(tmp_path: Path) -> None:
+    path = tmp_path / "knobs.json"
+    path.write_text("{ not json", encoding="utf-8")
+
+    with pytest.raises(KnobsError, match="not valid JSON"):
+        load_knobs(path)
+
+
+def test_writing_through_a_pointer_that_addresses_nothing_is_refused() -> None:
+    """It has to fail the way reading does, or the CLI prints a traceback instead of one line."""
+    with pytest.raises(KnobsError, match="addresses nothing"):
+        with_value(ATTACK, "/effects/5/amount", 3)
+
+
+def test_two_targets_on_the_same_metric_of_two_evaluations_both_count() -> None:
+    objective = Objective(
+        seeds="seeds.json",
+        evaluations={"mirror": {}, "skill": {}},
+        targets=(
+            Target(metric="drawRate", on="mirror", maximum=0.05, scale=0.05, weight=1),
+            Target(metric="drawRate", on="skill", maximum=0.05, scale=0.05, weight=1),
+        ),
+    )
+    metrics = {"mirror": {"drawRate": 0.15}, "skill": {"drawRate": 0.15}}
+
+    assert sorted(objective.breakdown(metrics)) == ["mirror.drawRate", "skill.drawRate"]
+    assert objective.score(metrics) == pytest.approx(8.0)
+
+
+def test_a_critical_chance_a_match_never_reads_does_not_order_two_spells() -> None:
+    """The multiplier applies to damage only, so on a heal it is a number no result can attribute."""
+    heal = {
+        "id": "spell:heal:v1",
+        "initiative": 1,
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {"origin": "Ally", "scope": "SingleTarget", "maxTargets": 1},
+        "effects": [{"kind": "Heal", "amount": 3}],
+    }
+    plain = json.loads(json.dumps(heal))
+    plain["criticalChance"] = 0.0
+
+    assert not dominates(heal, plain)
+    assert not dominates(plain, heal)
+
+
+def test_two_hits_of_three_are_not_one_hit_of_six() -> None:
+    """The engine compares whole effects, so summing them here would refuse a candidate over nothing."""
+    twice = spell(effects=[{"kind": "Damage", "amount": 3}, {"kind": "Damage", "amount": 3}])
+    once = spell(effects=[{"kind": "Damage", "amount": 6}])
+
+    assert twins(content(**{"spell:twice": twice, "spell:once": once})) == []

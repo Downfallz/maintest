@@ -320,7 +320,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     if missing:
         print(f"Not measured, so not scored: {', '.join(missing)}.")
     if arguments.apply and result.improved:
-        written = result.apply(arguments.data)
+        written = result.apply()
         print(f"Applied to {len(written)} spell file(s). Rebuild the content and regenerate the digest.")
     elif arguments.apply:
         print("Nothing improved, so nothing was applied.")

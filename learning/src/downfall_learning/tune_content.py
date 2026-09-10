@@ -96,6 +96,12 @@ class Candidate:
 
 
 class ContentEvaluator(Protocol):
+    """Plays a whole catalogue and reports its metrics by evaluation name.
+
+    ``spells`` is every spell, not the changed ones: an implementation that writes files must be able to
+    put back a spell an earlier candidate moved, and it can only do that if it is handed all of them.
+    """
+
     def evaluate(self, spells: Mapping[str, dict]) -> Mapping[str, Mapping[str, float]]: ...
 
 
@@ -123,15 +129,15 @@ class TuneResult:
 
     @property
     def inert(self) -> tuple[Candidate, ...]:
-        """Candidates that scored exactly what the content already scores.
+        """Candidates that changed no metric at all.
 
-        A move that changes no metric is a move on a spell no side casts, which is worth reading: it says
-        where the catalogue is dead far more precisely than the ``spellsNeverCast`` total does.
+        Compared on the metrics, not on the score: every candidate inside every band scores zero, and a
+        search that is succeeding would otherwise report its own success as dead content. A move that
+        changes no metric is a move on a spell no side casts, which says where the catalogue is dead far
+        more precisely than the ``spellsNeverCast`` total does.
         """
         return tuple(
-            candidate
-            for candidate in self.candidates
-            if math.isclose(candidate.score, self.initial.score, rel_tol=1e-9, abs_tol=1e-9)
+            candidate for candidate in self.candidates if _same(candidate.metrics, self.initial.metrics)
         )
 
     def write(self, directory: Path, data_directory: Path) -> Path:
@@ -156,14 +162,25 @@ class TuneResult:
             target.write_text(json.dumps(self.spells[alias], indent=2) + "\n", encoding="utf-8")
         return directory
 
-    def apply(self, data_directory: Path) -> list[Path]:
-        """Writes the winning numbers into the content itself. Returns the files it touched."""
+    def apply(self) -> list[Path]:
+        """Writes the winning numbers into the spell files they were read from. Returns what it touched."""
         written = []
         for alias in sorted({move.knob.spell for move in self.best.moves}):
             path = Path(self.files[alias])
             path.write_text(json.dumps(self.spells[alias], indent=2) + "\n", encoding="utf-8")
             written.append(path)
         return written
+
+
+def _same(left: Mapping[str, Mapping[str, float]], right: Mapping[str, Mapping[str, float]]) -> bool:
+    """Whether two sets of measurements are the same number for the same metric of the same evaluation."""
+    if set(left) != set(right):
+        return False
+    return all(
+        set(left[name]) == set(right[name])
+        and all(math.isclose(left[name][m], right[name][m], rel_tol=1e-9, abs_tol=1e-9) for m in left[name])
+        for name in left
+    )
 
 
 def apply_moves(spells: Mapping[str, dict], moves: Sequence[Move]) -> dict[str, dict]:
@@ -250,7 +267,10 @@ class EngineContentEvaluator:
         self._builder = tuple(host.builder)
         self._candidate = self._workdir / "data"
         self._workdir.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(self._data, self._candidate, dirs_exist_ok=True)
+        # A fresh copy, not an overlay: a run into a directory an earlier run used would otherwise keep
+        # building a spell that has since been deleted from the content.
+        shutil.rmtree(self._candidate, ignore_errors=True)
+        shutil.copytree(self._data, self._candidate)
         shutil.rmtree(self._candidate / "dst", ignore_errors=True)
         self.calls = 0
 
@@ -327,6 +347,7 @@ def propose(
     if not all_knobs:
         return None
     by_key = {move.knob.key: move for move in current}
+    here = _values(current)
     for _ in range(ATTEMPTS):
         knob = all_knobs[int(rng.integers(len(all_knobs)))]
         if knob.spell not in base.spells:
@@ -334,18 +355,25 @@ def propose(
         steps = int(by_key[knob.key].steps if knob.key in by_key else 0) + int(rng.choice([-1, 1]))
         before = read_value(base.spells[knob.spell], knob.path)
         after = knob.moved(before, steps)
-        if after == before and steps != 0:
-            continue
+        # A knob pinned at a bound would otherwise keep counting steps it cannot take, and every one of
+        # them would read as a new candidate and cost an evaluation of a catalogue already played.
+        steps = round((after - before) / knob.step) if knob.step else 0
         moves = tuple(move for move in current if move.knob.key != knob.key)
         if after != before:
             moves = (*moves, Move(knob=knob, steps=steps, before=before, after=after))
         if len({move.knob.key for move in moves}) > options.max_changes:
             continue
+        if _values(moves) == here:
+            continue
         if violations(base, apply_moves(base.spells, moves), knobs):
             continue
-        if moves != tuple(current):
-            return moves
+        return moves
     return None
+
+
+def _values(moves: Sequence[Move]) -> dict[str, float]:
+    """The catalogue a set of moves produces, as the numbers it changes. Two sets equal here play alike."""
+    return {move.knob.key: move.after for move in moves}
 
 
 def tune_content(
@@ -436,7 +464,7 @@ def format_result(result: TuneResult, objective: Objective) -> str:
         after = result.best.metrics.get(target.on, {}).get(target.metric)
         low = "" if target.minimum is None else f"{target.minimum:g}"
         high = "" if target.maximum is None else f"{target.maximum:g}"
-        penalty = result.best.breakdown.get(target.metric, 0.0)
+        penalty = result.best.breakdown.get(target.key, 0.0)
         lines.append(
             f"| {target.on}.{target.metric} | {_number(before)} | {_number(after)} "
             f"| {low}..{high} | {penalty:.2f} |"

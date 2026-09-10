@@ -89,7 +89,7 @@ Hard rules. A candidate that breaks one is not scored at all.
 | Constraint | What it refuses |
 | --- | --- |
 | `noNewStrictDominance` | A new pair where one spell is better than another on every axis and worse on none. |
-| `noIndistinguishableSpells` | Two spells with the same cost, Spell initiative, critical chance, targeting and effects. Same signature as the engine's `Spell.Indistinguishable` audit. |
+| `noIndistinguishableSpells` | Two spells with the same cost, Spell initiative, critical chance, targeting and effects. Effects are compared whole and as a multiset, the way the engine's `Spell.Indistinguishable` audit compares them; the engine reads the built schema and stays the authority. |
 | `startingKitOffersAChoice` | Any of the three spells every creature starts with being strictly better than another. |
 
 Dominance is scoped to pairs a candidate **adds**. A spell three nodes down the talent tree outclassing a
@@ -127,8 +127,16 @@ change (`docs/learning/explained.md`).
 
 ## Keeping it honest
 
-`check-knobs` fails when a spell has no entry, when an entry names a spell no alias resolves to, when a
-pointer addresses nothing or something that is not a number, when bounds are the wrong way round, and when
-the value the content carries today falls outside its own bounds. `learning/tests/test_knobs.py` runs the
-same check against this repository, so adding, retuning or cutting a spell without saying what it is for
-fails the build.
+`check-knobs` fails when:
+
+- a spell has no entry, or an entry names a spell no alias resolves to;
+- an entry has no `intent`, so nothing says what its numbers are for;
+- a pointer addresses nothing, or something that is not a number, or the same one is listed twice;
+- bounds are the wrong way round, or a step of zero moves nothing;
+- the value the content carries today falls outside its own bounds;
+- a target reads an evaluation the objective does not declare, which would silently drop a term from
+  every score;
+- `startingKitOffersAChoice` names a spell nothing resolves to, which would silently check nothing.
+
+`learning/tests/test_knobs.py` runs the same check against this repository, so adding, retuning or cutting
+a spell without saying what it is for fails the build.

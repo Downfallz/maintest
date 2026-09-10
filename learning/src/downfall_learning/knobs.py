@@ -8,7 +8,7 @@ an evaluation already reports. Everything here reads the authored content in ``d
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,6 +22,9 @@ PRECISION = 3
 
 #: Magnitude fields an effect may carry, in the order they are compared.
 MAGNITUDES = ("amount", "amountPerRound", "durationRounds")
+
+#: The one effect kind the critical multiplier applies to (``ResolutionRules``).
+DAMAGE = "Damage"
 
 
 class KnobsError(ValueError):
@@ -78,7 +81,11 @@ class Target:
     weight: float
     minimum: float | None = None
     maximum: float | None = None
-    aggregate: str | None = None
+
+    @property
+    def key(self) -> str:
+        """``mirror.drawRate``: two targets may read the same metric from two evaluations."""
+        return f"{self.on}.{self.metric}"
 
     def excess(self, value: float) -> float:
         """How far ``value`` falls outside the band, zero when it is inside."""
@@ -101,7 +108,7 @@ class Objective:
     targets: tuple[Target, ...]
 
     def breakdown(self, metrics: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
-        """The penalty of every target whose metric the measurements carry, by metric name.
+        """The penalty of every target whose metric the measurements carry, by ``evaluation.metric``.
 
         ``metrics`` is keyed by evaluation name, then by metric name, the way ``report.json`` reports them.
         A target whose evaluation or metric is missing is left out rather than counted as zero: a metric
@@ -111,7 +118,7 @@ class Objective:
         for target in self.targets:
             measured = metrics.get(target.on, {})
             if target.metric in measured:
-                scores[target.metric] = target.penalty(measured[target.metric])
+                scores[target.key] = target.penalty(measured[target.metric])
         return scores
 
     def score(self, metrics: Mapping[str, Mapping[str, float]]) -> float:
@@ -120,11 +127,7 @@ class Objective:
 
     def missing(self, metrics: Mapping[str, Mapping[str, float]]) -> list[str]:
         """Targets the measurements say nothing about."""
-        return [
-            f"{target.on}.{target.metric}"
-            for target in self.targets
-            if target.metric not in metrics.get(target.on, {})
-        ]
+        return [target.key for target in self.targets if target.metric not in metrics.get(target.on, {})]
 
 
 @dataclass(frozen=True)
@@ -197,12 +200,7 @@ def read_value(document: Mapping[str, object], pointer: str) -> float:
     """The number a JSON pointer addresses in a spell document."""
     node: object = document
     for token in _tokens(pointer):
-        if isinstance(node, Mapping) and token in node:
-            node = node[token]
-        elif isinstance(node, list) and token.isdigit() and int(token) < len(node):
-            node = node[int(token)]
-        else:
-            raise KnobsError(f"'{pointer}' addresses nothing in this spell.")
+        node = _child(node, token, pointer)
     if not isinstance(node, (int, float)) or isinstance(node, bool):
         raise KnobsError(f"'{pointer}' addresses {node!r}, which is not a number.")
     return float(node)
@@ -214,8 +212,9 @@ def with_value(document: Mapping[str, object], pointer: str, value: float) -> di
     tokens = _tokens(pointer)
     node: object = copy
     for token in tokens[:-1]:
-        node = node[int(token)] if isinstance(node, list) else node[token]
+        node = _child(node, token, pointer)
     last = tokens[-1]
+    _child(node, last, pointer)
     written = value if isinstance(value, float) and value != int(value) else int(value)
     if isinstance(node, list):
         node[int(last)] = written
@@ -260,7 +259,30 @@ def validate(knobs: Knobs, content: Content) -> list[str]:
                 problems.append(
                     f"{knob.key}: the content carries {value}, outside [{knob.minimum}, {knob.maximum}]."
                 )
+
+    problems.extend(_objective_problems(knobs))
+    problems.extend(_constraint_problems(knobs, content))
     return problems
+
+
+def _objective_problems(knobs: Knobs) -> list[str]:
+    """A target reading an evaluation nobody plays is a term silently missing from every score."""
+    declared = set(knobs.objective.evaluations)
+    return [
+        f"objective: target '{target.key}' reads an evaluation the objective does not declare."
+        for target in knobs.objective.targets
+        if target.on not in declared
+    ]
+
+
+def _constraint_problems(knobs: Knobs, content: Content) -> list[str]:
+    """A constraint naming a spell nothing resolves to is a constraint that quietly checks nothing."""
+    kit = knobs.constraints.get("startingKitOffersAChoice", {}).get("spells", [])
+    return [
+        f"startingKitOffersAChoice: '{alias}' is not a spell any alias resolves to."
+        for alias in kit
+        if str(alias) not in content.spells
+    ]
 
 
 def findings(content: Content, knobs: Knobs) -> list[str]:
@@ -299,41 +321,73 @@ def new_dominance(before: Content, after: Content) -> list[tuple[str, str]]:
 
 
 def new_indistinguishable(before: Content, after: Content) -> list[str]:
-    """The pairs a candidate makes indistinguishable that were not already. Empty is the constraint met."""
-    known = set(indistinguishable(before))
-    return [report for report in indistinguishable(after) if report not in known]
+    """The pairs a candidate makes indistinguishable that were not already. Empty is the constraint met.
+
+    Pairs are compared, not the sentences they render as: which alias of a group is named first depends on
+    the whole catalogue, so two renderings can differ for a collision that has not moved.
+    """
+    known = set(twins(before))
+    return [_twin_report(pair) for pair in twins(after) if pair not in known]
 
 
 def indistinguishable(content: Content) -> list[str]:
-    """Spells no match can tell apart. Same signature as the engine's ``ContentAudit.Indistinguishable``."""
+    """Spells no match can tell apart, rendered. :func:`twins` is the same thing as pairs."""
+    return [_twin_report(pair) for pair in twins(content)]
+
+
+def twins(content: Content) -> list[frozenset[str]]:
+    """Pairs of spells nothing in a match distinguishes: same cost, Spell initiative, critical chance,
+    targeting and effects.
+
+    The effects are compared whole and as a multiset, the way the engine's ``ContentAudit`` compares them:
+    two damage effects of three are not one of six, and a stacking policy is part of the effect. The engine
+    reads the built schema and is the authority; this reads the authored files, so a default left out of
+    the JSON and the same default written down read as two effects here and as one there.
+    """
     seen: dict[str, str] = {}
-    reports: list[str] = []
+    pairs: list[frozenset[str]] = []
     for alias, document in sorted(content.spells.items()):
-        signature = json.dumps(
-            [
-                document.get("energyCost", 0),
-                document.get("initiative", 0),
-                document.get("criticalChance", 0) or 0,
-                document.get("targeting", {}),
-                _effects(document),
-            ],
-            sort_keys=True,
-        )
+        signature = _signature(document)
         if signature in seen:
-            reports.append(
-                f"{alias} and {seen[signature]} are one spell under two names: the same cost, "
-                "Spell initiative, critical chance, targeting and effects."
-            )
+            pairs.append(frozenset({alias, seen[signature]}))
         else:
             seen[signature] = alias
-    return reports
+    return pairs
+
+
+def _signature(document: Mapping[str, object]) -> str:
+    effects = document.get("effects", [])
+    return json.dumps(
+        [
+            document.get("energyCost", 0),
+            document.get("initiative", 0),
+            document.get("criticalChance", 0) or 0,
+            document.get("targeting", {}),
+            sorted(
+                (json.dumps(effect, sort_keys=True) for effect in effects if isinstance(effect, Mapping)),
+            ),
+        ],
+        sort_keys=True,
+    )
+
+
+def _twin_report(pair: frozenset[str]) -> str:
+    first, second = sorted(pair)
+    return (
+        f"{first} and {second} are one spell under two names: the same cost, Spell initiative, "
+        "critical chance, targeting and effects."
+    )
 
 
 def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool:
     """Whether ``better`` is at least as good as ``worse`` everywhere and better somewhere.
 
-    Same targeting origin and at least as many targets, cost no higher, Spell initiative and critical chance
-    no lower, every effect of ``worse`` matched by one at least as large.
+    Same targeting origin and at least as many targets, cost no higher, Spell initiative no lower, every
+    effect of ``worse`` matched by one at least as large, and an extra effect that carries something.
+
+    Critical chance is compared only between two spells that both deal damage: the multiplier applies to
+    `Damage` and to nothing else, so on a heal or a buff it is a number no match reads and comparing it
+    would refuse a candidate over nothing.
     """
     left, right = better.get("targeting", {}), worse.get("targeting", {})
     if not isinstance(left, Mapping) or not isinstance(right, Mapping):
@@ -341,18 +395,22 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
     if left.get("origin") != right.get("origin"):
         return False
 
+    ours, theirs = _effects(better), _effects(worse)
     comparisons = [
         (int(left.get("maxTargets", 1)), int(right.get("maxTargets", 1))),
         (-int(better.get("energyCost", 0)), -int(worse.get("energyCost", 0))),
         (int(better.get("initiative", 0)), int(worse.get("initiative", 0))),
-        (float(better.get("criticalChance", 0) or 0), float(worse.get("criticalChance", 0) or 0)),
     ]
-    ours, theirs = _effects(better), _effects(worse)
+    if DAMAGE in ours and DAMAGE in theirs:
+        comparisons.append(
+            (float(better.get("criticalChance", 0) or 0), float(worse.get("criticalChance", 0) or 0))
+        )
     for group, magnitudes in theirs.items():
         if group not in ours:
             return False
         comparisons.extend(zip(ours[group], magnitudes, strict=True))
-    strictly_better = len(ours) > len(theirs)
+    extra = [group for group in ours if group not in theirs]
+    strictly_better = any(any(magnitude > 0 for magnitude in ours[group]) for group in extra)
     for mine, yours in comparisons:
         if mine < yours:
             return False
@@ -364,7 +422,7 @@ def _effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:
     """The effects of a spell as magnitudes by group, summed when a spell carries a group twice."""
     grouped: dict[str, tuple[float, ...]] = {}
     effects = document.get("effects", [])
-    for effect in effects if isinstance(effects, Sequence) else []:
+    for effect in effects if isinstance(effects, list) else []:
         if not isinstance(effect, Mapping):
             continue
         group = f"{effect.get('kind')}{':permanent' if effect.get('permanent') else ''}"
@@ -391,7 +449,6 @@ def _objective(body: Mapping[str, object]) -> Objective:
                 weight=float(target["weight"]),
                 minimum=_optional(target.get("min")),
                 maximum=_optional(target.get("max")),
-                aggregate=target.get("aggregate"),
             )
             for target in targets
         ),
@@ -405,7 +462,7 @@ def _spell_knobs(alias: str, body: Mapping[str, object]) -> SpellKnobs:
         creature_class=str(body.get("class", "")),
         intent=str(body.get("intent", "")),
         keep=tuple(str(item) for item in body.get("keep", [])),
-        note=body.get("note"),
+        note=None if body.get("note") is None else str(body.get("note")),
         knobs=tuple(
             Knob(
                 spell=alias,
@@ -421,6 +478,15 @@ def _spell_knobs(alias: str, body: Mapping[str, object]) -> SpellKnobs:
 
 def _optional(value: object) -> float | None:
     return None if value is None else float(value)
+
+
+def _child(node: object, token: str, pointer: str) -> object:
+    """One step of a JSON pointer, refusing what it cannot address with the message the CLI prints."""
+    if isinstance(node, Mapping) and token in node:
+        return node[token]
+    if isinstance(node, list) and token.isdigit() and int(token) < len(node):
+        return node[int(token)]
+    raise KnobsError(f"'{pointer}' addresses nothing in this spell.")
 
 
 def _tokens(pointer: str) -> list[str]:
