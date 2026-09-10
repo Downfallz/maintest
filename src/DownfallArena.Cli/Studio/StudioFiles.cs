@@ -20,6 +20,7 @@ internal sealed class StudioFiles
             ["/index.html"] = index,
             ["/studio.css"] = (Path.Combine(studioDirectory, "studio.css"), "text/css; charset=utf-8"),
             ["/studio.js"] = (Path.Combine(studioDirectory, "studio.js"), "text/javascript; charset=utf-8"),
+            ["/backend.js"] = (Path.Combine(studioDirectory, "backend.js"), "text/javascript; charset=utf-8"),
             ["/viewer.css"] = (Path.Combine(viewerDirectory, "viewer.css"), "text/css; charset=utf-8"),
         };
     }

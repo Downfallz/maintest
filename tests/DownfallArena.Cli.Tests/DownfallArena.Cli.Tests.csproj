@@ -14,6 +14,7 @@
     <Content Include="..\..\studio\index.html" Link="studio\index.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\studio\studio.css" Link="studio\studio.css" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\studio\studio.js" Link="studio\studio.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\studio\backend.js" Link="studio\backend.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

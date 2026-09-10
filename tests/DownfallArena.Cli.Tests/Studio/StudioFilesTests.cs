@@ -4,7 +4,9 @@ namespace DownfallArena.Cli.Tests.Studio;
 
 /// <summary>
 /// The static routes are a fixed table, not a path lookup, so no request can name a file the studio does not
-/// ship. These run against the real <c>studio/</c> and <c>viewer/</c> files copied next to the tests.
+/// ship. These run against the real <c>studio/</c> and <c>viewer/</c> files copied next to the tests, which is
+/// what makes them catch a module the page imports and the table does not serve: the page is a blank screen
+/// then, and nothing else would say so.
 /// </summary>
 public sealed class StudioFilesTests
 {
@@ -15,7 +17,8 @@ public sealed class StudioFilesTests
     [Theory]
     [InlineData("/", "Downfall Arena content studio")]
     [InlineData("/index.html", "<script type=\"module\" src=\"studio.js\">")]
-    [InlineData("/studio.js", "/api/catalogue")]
+    [InlineData("/studio.js", "import { localBackend } from './backend.js';")]
+    [InlineData("/backend.js", "/api/catalogue")]
     [InlineData("/studio.css", ".banner")]
     [InlineData("/viewer.css", "--ink")]
     public void Every_file_the_page_asks_for_is_served(string path, string expected)

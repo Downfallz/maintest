@@ -132,9 +132,16 @@ in the **Runs** panel.
 
 ## What it is made of
 
-`index.html`, `studio.css` and `studio.js`: no framework and no build step, like the viewer next door, whose
-stylesheet it reuses. The script is an ES module, so it is strict and keeps its names to itself. The JSON API
-it talks to is `StudioApi` in the Cli; the reading and writing of authored files is `ContentStore` in
+`index.html`, `studio.css`, `studio.js` and `backend.js`: no framework and no build step, like the viewer next
+door, whose stylesheet it reuses. The scripts are ES modules, so they are strict and keep their names to
+themselves.
+
+`backend.js` is where the content comes from, and it is the only file that knows a transport (ADR 0023).
+`studio.js` asks it for the catalogue, hands it a **change** -- the documents to write, the paths to remove and
+the alias map to leave behind, as one unit rather than a request per file -- and asks it to build, play or
+audit. The local backend spends a request on each part of a change, in the order that keeps the content
+buildable in between; the hosted one is meant to make the whole change a single commit. The JSON API the local
+backend talks to is `StudioApi` in the Cli; the reading and writing of authored files is `ContentStore` in
 Infrastructure, which validates a document against the same DTOs the data builder uses, so "valid content" has
 one definition. Runs land under `runs/studio/<id>/` (git-ignored).
 
