@@ -1,7 +1,15 @@
-// The content studio (ADR 0015). One page over the studio API: browse the authored content, edit it in forms
-// that know the schema, cut a new version, turn things off, rebuild, and play what the change does.
+// The content studio (ADR 0015). One page over the authored content: browse it, edit it in forms that know
+// the schema, cut a new version, turn things off, rebuild, and play what the change does.
 // No framework and no build step, like the viewer it sits next to. Loaded as a module, so it is strict and
 // scoped to itself, and the first read of the content is awaited at the top level.
+//
+// Where the content lives is `backend.js`'s business, not this file's (ADR 0023): the page asks for the
+// catalogue, hands over a change, and asks for a build, a run or an audit. Swapping the local host for a
+// hosted backend is swapping the line below.
+
+import { localBackend } from './backend.js';
+
+const backend = localBackend();
 
 // ---------- what the schema allows ----------
 
@@ -124,20 +132,7 @@ function spellNamed(reference) {
   return documentsOf('spells').find(spell => spell.id === target) || null;
 }
 
-// ---------- talking to the studio ----------
-
-async function call(path, body) {
-  const response = await fetch(path, body === undefined
-    ? { headers: { accept: 'application/json' } }
-    : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-  const payload = await response.json().catch(() => ({ ok: false, message: `${response.status} ${response.statusText}` }));
-  if (!payload.ok) {
-    const error = new Error(payload.message || 'The studio refused that.');
-    error.problems = payload.problems || [];
-    throw error;
-  }
-  return payload.result;
-}
+// ---------- talking to the backend ----------
 
 /** Runs one action at a time, showing in the banner what it did or what it refused. */
 async function act(what, action) {
@@ -769,10 +764,9 @@ function payload() {
 
 async function save() {
   const item = state.selected;
-  const result = await act('Saving', () => call('/api/documents', {
+  const result = await act('Saving', () => backend.change({
     kind: TABS[state.tab].kind,
-    path: item.path,
-    document: payload(),
+    write: [{ path: item.path, document: payload() }],
   }));
 
   if (!result) return;
@@ -796,14 +790,12 @@ async function saveAsNextVersion() {
     : path.replace(/\.json$/, `.v${parsed.version + 1}.json`);
 
   const result = await act(`Cutting ${nextId}`, async () => {
-    const saved = await call('/api/documents', {
-      kind: TABS[state.tab].kind,
-      path: nextPath,
-      document: { ...payload(), id: nextId },
-      create: true,
-    });
     const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${parsed.name}`]: nextId };
-    return { ...saved, ...(await call('/api/aliases', { aliases })) };
+    return backend.change({
+      kind: TABS[state.tab].kind,
+      write: [{ path: nextPath, document: { ...payload(), id: nextId }, create: true }],
+      aliases,
+    });
   });
 
   if (!result) return;
@@ -822,10 +814,9 @@ async function setEnabled(enabled) {
 async function remove(item) {
   if (!window.confirm(`Delete ${item.path}? The file goes away; git still has it.`)) return;
   const result = await act('Deleting', async () => {
-    const deleted = await call('/api/documents/delete', { kind: TABS[state.tab].kind, path: item.path });
     // An alias left pointing at a deleted item stops the content from building, so it goes with the file.
     const aliases = Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id));
-    return { ...deleted, ...(await call('/api/aliases', { aliases })) };
+    return backend.change({ kind: TABS[state.tab].kind, remove: [item.path], aliases });
   });
 
   if (!result) return;
@@ -848,9 +839,12 @@ async function create() {
   const content = { ...template, id, name: name.trim() };
 
   const result = await act(`Creating ${id}`, async () => {
-    const saved = await call('/api/documents', { kind: TABS[state.tab].kind, path, document: content, create: true });
     const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id };
-    return { ...saved, ...(await call('/api/aliases', { aliases })) };
+    return backend.change({
+      kind: TABS[state.tab].kind,
+      write: [{ path, document: content, create: true }],
+      aliases,
+    });
   });
 
   if (!result) return;
@@ -860,7 +854,7 @@ async function create() {
 }
 
 async function build() {
-  const result = await act('Building', () => call('/api/build', {}));
+  const result = await act('Building', () => backend.build());
   if (!result) return;
   adopt(result);
   banner(`Content ${result.contentHash} written to ${result.output}.`, 'ok', result.notes);
@@ -889,7 +883,7 @@ async function run() {
 
   const status = $('run-status');
   status.replaceChildren('playing...');
-  const result = await act('Playing', () => call('/api/runs', request));
+  const result = await act('Playing', () => backend.play(request));
   if (!result) {
     status.replaceChildren();
     if (tab) tab.close();
@@ -908,7 +902,7 @@ async function run() {
 // ---------- wiring ----------
 
 async function load() {
-  const catalogue = await act('Reading the content', () => call('/api/catalogue'));
+  const catalogue = await act('Reading the content', () => backend.read());
   if (!catalogue) return;
   state.catalogue = catalogue;
   renderHeader();
@@ -971,7 +965,7 @@ function agentSpec(slot) {
 /** One box per weight the engine has, filled from the engine's own defaults rather than from a copy here. */
 async function loadWeights() {
   if (state.weights) return;
-  const weights = await act('Reading the weights', () => call('/api/weights'));
+  const weights = await act('Reading the weights', () => backend.weights());
   if (!weights) return;
   state.weights = weights;
   $('run-weights-fields').replaceChildren(...weights.order.map(name => element('label', { textContent: name }, [
@@ -1003,7 +997,7 @@ function weightsPayload() {
 // ---------- the run list ----------
 
 async function loadRuns() {
-  const runs = await act('Reading the runs', () => call('/api/runs'));
+  const runs = await act('Reading the runs', () => backend.runs());
   if (!runs) return;
   state.runs = runs;
   renderRuns();
@@ -1066,7 +1060,7 @@ const runAt = id => state.runs.find(run => run.id === id)?.at || '';
 // ---------- the content audit ----------
 
 async function loadAudit() {
-  const result = await act('Auditing the content', () => call('/api/audit'));
+  const result = await act('Auditing the content', () => backend.audit());
   if (!result) return;
   state.audit = result;
   renderAudit();
