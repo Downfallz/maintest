@@ -50,10 +50,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
+      # Unlike the other workflows, this one pushes a branch, so it keeps the credentials the checkout sets up
+      # and lets git use them. The alternative is a token inside a remote URL, which puts it in the process
+      # list and in every error message git prints.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up .NET (version from global.json)
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -104,11 +107,17 @@ jobs:
 
       - name: Put the proposal in the run summary
         if: always()
+        env:
+          SEED: ${{ inputs.seed }}
+          ITERATIONS: ${{ inputs.iterations }}
+          NEIGHBOURS: ${{ inputs.neighbours }}
+          MAX_CHANGES: ${{ inputs.max_changes }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           {
-            echo "## Tuning pass \`${{ github.run_number }}\`"
+            echo "## Tuning pass \`$RUN_NUMBER\`"
             echo
-            echo "Seed ${{ inputs.seed }}, ${{ inputs.iterations }} rounds of ${{ inputs.neighbours }}, at most ${{ inputs.max_changes }} knobs moved."
+            echo "Seed $SEED, $ITERATIONS rounds of $NEIGHBOURS, at most $MAX_CHANGES knobs moved."
             echo
             echo '```'
             cat "$OUT/tune.log" 2>/dev/null || echo 'The search wrote nothing.'
@@ -144,11 +153,17 @@ jobs:
           dotnet format --verify-no-changes
 
       - name: Open the pull request
-        if: steps.moved.outputs.moved == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           SERVER: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          BASE: ${{ github.ref_name }}
+          SEED: ${{ inputs.seed }}
+          ITERATIONS: ${{ inputs.iterations }}
+          NEIGHBOURS: ${{ inputs.neighbours }}
+          MAX_CHANGES: ${{ inputs.max_changes }}
         run: |
           hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
           git config user.name "github-actions[bot]"
@@ -158,7 +173,7 @@ jobs:
 
           # Written to a file: a -m here would carry this file's YAML indentation into the message.
           {
-            echo "Tune the catalogue (run ${{ github.run_number }}, seed ${{ inputs.seed }})"
+            echo "Tune the catalogue (run $RUN_NUMBER, seed $SEED)"
             echo
             echo "tune-content on the CI runners. The moves and the metrics behind them are"
             echo "in the pull request body and in the run summary of the workflow run."
@@ -166,14 +181,14 @@ jobs:
             echo "Content hash $hash, benchmark digest regenerated and verified."
           } > "$RUNNER_TEMP/message.txt"
           git commit -F "$RUNNER_TEMP/message.txt"
-          git push "https://x-access-token:$GH_TOKEN@${SERVER#https://}/$REPOSITORY" "$BRANCH"
+          git push origin "$BRANCH"
 
           {
             echo "## What"
             echo
-            echo "One tuning pass proposed by [workflow run ${{ github.run_number }}]($SERVER/$REPOSITORY/actions/runs/${{ github.run_id }})"
-            echo "(ADR 0021), seed \`${{ inputs.seed }}\`, ${{ inputs.iterations }} rounds of ${{ inputs.neighbours }},"
-            echo "at most ${{ inputs.max_changes }} knobs moved. Content hash \`$hash\`, benchmark digest regenerated and verified."
+            echo "One tuning pass proposed by [workflow run $RUN_NUMBER]($SERVER/$REPOSITORY/actions/runs/$RUN_ID)"
+            echo "(ADR 0021), seed \`$SEED\`, $ITERATIONS rounds of $NEIGHBOURS, at most $MAX_CHANGES knobs moved."
+            echo "Content hash \`$hash\`, benchmark digest regenerated and verified."
             echo
             echo '```'
             cat "$OUT/tune.log"
@@ -185,24 +200,24 @@ jobs:
             echo "      workflow before this branch was pushed, because a pull request opened with \`GITHUB_TOKEN\`"
             echo "      does not start the \`pull_request\` workflows and would otherwise arrive with no checks"
             echo "- [ ] **A journal entry.** This proposal carries numbers, not a reason. \`docs/learning/journal.md\`"
-            echo "      wants what moved and *why it is worth it*, which a search cannot write. The table above is"
+            echo "      wants what moved and *why it is worth it*, which a search cannot write. The output above is"
             echo "      what an entry needs; add one to this branch before merging (ADR 0013)."
             echo "- [ ] The moves still match what each spell is for — \`intent\` in \`data/balance/knobs.json\`"
             echo
             echo "## Notes for the reviewer"
             echo
             echo "- **The search is deterministic.** The same seed on the same content returns the same moves, so"
-            echo "  this proposal can be reproduced locally with \`uv run --project learning tune-content -o runs/x"
-            echo "  --seed ${{ inputs.seed }} --iterations ${{ inputs.iterations }} --neighbours ${{ inputs.neighbours }} --max-changes ${{ inputs.max_changes }}\`."
+            echo "  this proposal reproduces locally with \`uv run --project learning tune-content -o runs/x"
+            echo "  --seed $SEED --iterations $ITERATIONS --neighbours $NEIGHBOURS --max-changes $MAX_CHANGES\`."
             echo "- **A tuning pass is measured against one agent.** Changing how the agents score an action makes"
             echo "  every proposal from before that change stale, this one included."
-            echo "- Closing this pull request costs nothing: the content on \`main\` is untouched until it merges."
+            echo "- Closing this pull request costs nothing: the content on \`$BASE\` is untouched until it merges."
           } > "$RUNNER_TEMP/body.md"
 
           gh pr create \
-            --title "Tune the catalogue (run ${{ github.run_number }}, seed ${{ inputs.seed }})" \
+            --title "Tune the catalogue (run $RUN_NUMBER, seed $SEED)" \
             --body-file "$RUNNER_TEMP/body.md" \
-            --base "${{ github.ref_name }}" \
+            --base "$BASE" \
             --head "$BRANCH"
 
       - name: Upload the proposal

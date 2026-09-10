@@ -92,11 +92,18 @@ jobs:
       # damage. A weight whose ratio did not move is one the search had no use for.
       - name: Put the weights in the run summary
         if: always()
+        env:
+          OPPONENT: ${{ inputs.opponent }}
+          SEEDS: ${{ inputs.seeds }}
+          ITERATIONS: ${{ inputs.iterations }}
+          POPULATION: ${{ inputs.population }}
+          SEED: ${{ inputs.seed }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           {
-            echo "## Weight search \`${{ github.run_number }}\`"
+            echo "## Weight search \`$RUN_NUMBER\`"
             echo
-            echo "Against \`${{ inputs.opponent }}\` on \`${{ inputs.seeds }}\`, ${{ inputs.iterations }} rounds of ${{ inputs.population }}, seed \`${{ inputs.seed }}\`."
+            echo "Against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`."
             echo
             echo '```'
             cat "$OUT/search.log" 2>/dev/null || echo 'The search wrote nothing.'
