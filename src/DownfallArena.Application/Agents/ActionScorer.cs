@@ -6,6 +6,7 @@ using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
+using DamageEffect = DownfallArena.Domain.Resources.Effects.Damage;
 
 namespace DownfallArena.Application.Agents;
 
@@ -129,6 +130,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             };
         }
 
+        score += DefensiveScore(actor, resolution, creatures, remaining);
+
         score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);  // what the actor keeps; what a spell hands out is priced per outcome above
         if (resolution.Action.Targets.Count > 0)
         {
@@ -168,7 +171,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// Healing counts only what was missing; on an enemy it counts against. A target the same action kills is
-    /// healed for nothing, so it scores nothing -- the rule the condition path already applies.
+    /// healed for nothing, so it scores nothing -- the rule the condition path already applies. What the
+    /// healing saves from dying is priced once per target in <see cref="SurvivalScore"/>, not here.
     /// </summary>
     private double HealScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
         remainingHealth == 0 ? 0 : -Sign(actor, target) * weights.Heal * Math.Min(amount, target.MaxHealth.Value - target.Health.Value);
@@ -196,9 +200,116 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
             EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
-            DefenseBuff buff => -sign * weights.Buff * buff.Amount * rounds,
+            DefenseBuff => 0,  // priced per target, with the rest of what the cast defends: see DefensiveScore
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
             _ => 0,
         };
     }
+
+    /// <summary>
+    /// What a cast is worth for what it defends, priced once per creature it touches (ADR 0022): the damage
+    /// its defense buffs actually take off the threat over the rounds they last, plus the kill it denies when
+    /// what it does turns a lethal round into a survivable one.
+    /// <para>
+    /// Both halves are read per target rather than per outcome because a cast can carry several defensive
+    /// effects on one creature -- Guard carries two -- and neither half is additive over them. A point of
+    /// defense past a hit's damage prevents nothing more of it, so buffs have to be priced on top of each
+    /// other rather than each from the bare board; and a cast can deny one death per target, so scored per
+    /// outcome the kill would be paid twice, or, when survival needs the effects together, not at all.
+    /// </para>
+    /// </summary>
+    private double DefensiveScore(CreatureSnapshot actor, CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, Dictionary<CreatureId, int> remaining)
+    {
+        var score = 0.0;
+        foreach (var targetId in resolution.Outcomes
+            .Where(outcome => outcome is HealOutcome or ConditionOutcome { Effect: DefenseBuff })
+            .Select(outcome => outcome.Target)
+            .Distinct())
+        {
+            var health = remaining[targetId];
+            if (health == 0)
+            {
+                continue;
+            }
+
+            var target = Target(targetId, creatures);
+            var allies = creatures.Count(creature => creature.Owner == target.Owner && creature.IsAlive);
+            var bare = ThreatOn(target, creatures, extraDefense: 0);
+            var sign = Sign(actor, target);
+            var stacked = 0;
+            var prevented = 0.0;
+
+            // Longest first, so each buff is priced on top of the ones that outlast it.
+            foreach (var buff in Buffs(resolution, targetId).OrderByDescending(buff => buff.Duration.Rounds ?? PermanentConditionRounds))
+            {
+                var before = ThreatOn(target, creatures, stacked);
+                stacked += buff.Amount;
+                prevented += (before - ThreatOn(target, creatures, stacked)) * (buff.Duration.Rounds ?? PermanentConditionRounds);
+            }
+
+            score -= sign * weights.Buff * prevented / Math.Max(1, allies);
+            if (bare >= health && ThreatOn(target, creatures, stacked) < health + Restored(resolution, target, targetId))
+            {
+                score -= sign * weights.Kill;
+            }
+        }
+
+        return score;
+    }
+
+    /// <summary>The defense buffs one resolution puts on one creature.</summary>
+    private static IEnumerable<DefenseBuff> Buffs(CombatResolution resolution, CreatureId targetId) =>
+        resolution.Outcomes.OfType<ConditionOutcome>()
+            .Where(condition => condition.Target == targetId)
+            .Select(condition => condition.Effect)
+            .OfType<DefenseBuff>();
+
+    /// <summary>The health one resolution's healing actually puts back on one creature, what it was missing being the cap.</summary>
+    private static int Restored(CombatResolution resolution, CreatureSnapshot target, CreatureId targetId) =>
+        Math.Min(
+            resolution.Outcomes.OfType<HealOutcome>().Where(heal => heal.Target == targetId).Sum(heal => heal.Amount),
+            target.MaxHealth.Value - target.Health.Value);
+
+    /// <summary>
+    /// The damage the living, unstunned enemies of a creature could deal it in one round: each contributes
+    /// the best of the damaging spells it knows and can afford, weighted between its critical and its plain
+    /// roll, after the defense the creature would have (ADR 0022). Read from the spells' own numbers rather
+    /// than from a nested resolution, and computed only for an outcome that needs it, so scoring an attack
+    /// costs exactly what it cost before.
+    /// </summary>
+    private double ThreatOn(CreatureSnapshot target, IReadOnlyList<CreatureSnapshot> creatures, int extraDefense)
+    {
+        var defense = target.TotalDefense.Value + extraDefense;
+        var total = 0.0;
+        foreach (var enemy in creatures)
+        {
+            if (enemy.Owner == target.Owner || enemy.IsDead || enemy.IsStunned)
+            {
+                continue;
+            }
+
+            var best = 0.0;
+            foreach (var spellId in enemy.KnownSpells)
+            {
+                var spell = resources.GetSpell(spellId);
+                if (spell.Stats.Cost.Value > enemy.Energy.Value)
+                {
+                    continue;
+                }
+
+                var chance = enemy.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
+                var expected = spell.Effects.OfType<DamageEffect>()
+                    .Sum(damage => (chance * Landed(damage.Amount, rules.CriticalMultiplier, defense)) + ((1 - chance) * Landed(damage.Amount, 1.0, defense)));
+                best = Math.Max(best, expected);
+            }
+
+            total += best;
+        }
+
+        return total;
+    }
+
+    /// <summary>One hit as the resolution rules land it: the floored product, less the defense, never below zero.</summary>
+    private static double Landed(int amount, double multiplier, int defense) =>
+        Math.Max(0, Math.Floor(amount * multiplier) - defense);
 }

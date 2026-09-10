@@ -14,6 +14,7 @@ public sealed class ActionScorerTests
 {
     private static readonly ActionScorer Scorer = new(TestContent.Resources, MatchStore.TwoOnTwo(), ScoringWeights.Default);
     private static readonly CreatureId One = CreatureId.From(1);
+    private static readonly CreatureId Two = CreatureId.From(2);
     private static readonly CreatureId Three = CreatureId.From(3);
     private static readonly CreatureId Four = CreatureId.From(4);
 
@@ -158,7 +159,9 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20);
 
         Scorer.Estimate(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14), 1e-9);
-        Scorer.Estimate(board[0], TestContent.Guard, board).ShouldBe(1, 1e-9);
+        // Guard is 2 defense for a round, and the actor faces two attackers with no ally to spread them over:
+        // two hits of it prevented, priced at the buff weight (ADR 0022).
+        Scorer.Estimate(board[0], TestContent.Guard, board).ShouldBe(0.5 * 2 * 2, 1e-9);
         Scorer.Estimate(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6), 1e-9);
     }
 
@@ -172,13 +175,13 @@ public sealed class ActionScorerTests
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
 
-        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe(1 + 3, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe(2 + 3, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + 0.5, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + 0.5, 1e-9);
     }
 
     /// <summary>
-    /// Guard is worth 1 in combat against Strike's 3.15 and still wins the pick once the initiative it buys is
+    /// Guard is worth 2 in combat against Strike's 3.15 and still wins the pick once the initiative it buys is
     /// priced. This is what it means for a pick to buy tempo, and it is the whole point of the weight.
     /// </summary>
     [Fact]
@@ -204,6 +207,141 @@ public sealed class ActionScorerTests
             .ShouldBe(indifferent.Estimate(board[0], TestContent.Guard, board), 1e-9);
     }
 
+    /// <summary>
+    /// ADR 0022: a heal that lifts its target out of reach of the round's threat denies a kill, and a denied
+    /// kill is worth what taking one is worth. Two enemies threaten 3.15 each, so an ally at 5 dies this round
+    /// and an ally at 15 does not.
+    /// </summary>
+    [Fact]
+    public void A_heal_that_takes_an_ally_out_of_reach_of_the_round_is_worth_the_kill_it_denies()
+    {
+        var action = Strike(One, Three);
+
+        var dying = WithAlly(Health.Of(5));
+        Scorer.Score(CombatResolution.Resolved(action, [Two], [], false, Energy.Of(0), [new HealOutcome(Two, 3)]), dying)
+            .ShouldBe((0.8 * 3) + 5, 1e-9);
+
+        var safe = WithAlly(Health.Of(15));
+        Scorer.Score(CombatResolution.Resolved(action, [Two], [], false, Energy.Of(0), [new HealOutcome(Two, 3)]), safe)
+            .ShouldBe(0.8 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// A heal that leaves its target inside the round's threat denies nothing: 5 health and 3 restored is
+    /// still under the 6.3 coming. The term is for the heal that saves a life, not for every heal on a hurt
+    /// creature.
+    /// </summary>
+    [Fact]
+    public void A_heal_that_does_not_reach_past_the_threat_is_worth_only_the_healing()
+    {
+        var action = Strike(One, Three);
+        var dying = WithAlly(Health.Of(3));
+
+        Scorer.Score(CombatResolution.Resolved(action, [Two], [], false, Energy.Of(0), [new HealOutcome(Two, 3)]), dying)
+            .ShouldBe(0.8 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// ADR 0022: defense comes off every incoming hit, so a buff is worth the hits the creature is expected to
+    /// face while it lasts. Two attackers spread over two living allies is one hit a round; over one ally it
+    /// is two, and the same buff is worth twice as much.
+    /// </summary>
+    [Fact]
+    public void A_defense_buff_is_worth_more_to_a_team_the_attackers_have_fewer_targets_to_spread_over()
+    {
+        var action = Strike(One, Three);
+        var buff = new ConditionOutcome(One, DefenseBuff.Of(1, Duration.OfRounds(2)));
+
+        var pair = WithAlly(Health.Of(20));
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), pair)
+            .ShouldBe(0.5 * 1 * 2 * (2 / 2.0), 1e-9);
+
+        var alone = WithAlly(Health.Of(0));
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), alone)
+            .ShouldBe(0.5 * 1 * 2 * (2 / 1.0), 1e-9);
+    }
+
+    /// <summary>
+    /// The same term that makes a heal worth a kill makes a buff worth one: 2 defense turns two hits of 3.15
+    /// into two of 1.15, which a creature at 6 survives and would not otherwise.
+    /// </summary>
+    [Fact]
+    public void A_defense_buff_that_survives_a_lethal_round_is_worth_the_kill_it_denies()
+    {
+        var board = Board(enemyHealth: 20);
+        board[0] = board[0] with { Health = Health.Of(6) };
+        var action = Strike(One, Three);
+        var buff = new ConditionOutcome(One, DefenseBuff.Of(2, Duration.OfRounds(1)));
+
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), board)
+            .ShouldBe((0.5 * 2 * 1 * 2) + 5, 1e-9);
+    }
+
+    /// <summary>Nothing can hit the creature, so nothing is prevented and the buff is worth nothing.</summary>
+    [Fact]
+    public void A_defense_buff_is_worth_nothing_when_no_living_enemy_can_reach_the_target()
+    {
+        var board = Board(enemyHealth: 20);
+        board[1] = board[1] with { Health = Health.Of(0) };
+        board[2] = board[2] with { Health = Health.Of(0) };
+        var action = Strike(One, Three);
+
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [new ConditionOutcome(One, DefenseBuff.Of(2, Duration.OfRounds(1)))]), board)
+            .ShouldBe(0, 1e-9);
+    }
+
+    /// <summary>
+    /// ADR 0022 leaves regeneration out of the survival term on purpose: it ticks at the end of a round, so it
+    /// cannot save a creature from the threat of that round. The same ally a heal of 3 is worth a kill on gets
+    /// only the healing here.
+    /// </summary>
+    [Fact]
+    public void A_regeneration_on_a_dying_ally_is_worth_its_healing_and_no_kill()
+    {
+        var action = Strike(One, Three);
+        var dying = WithAlly(Health.Of(5));
+
+        Scorer.Score(CombatResolution.Resolved(action, [Two], [], false, Energy.Of(0), [new ConditionOutcome(Two, Regeneration.Of(3, rounds: 1))]), dying)
+            .ShouldBe(0.8 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// A point of defense is not a point prevented. Against a 3-damage spell on a creature already at 3
+    /// defense the plain hit is fully absorbed, so another point only reaches the critical branch and is worth
+    /// the critical chance times what it takes off there -- 0.05 of 2, twice over, not a whole point per
+    /// attacker. Priced per point of buff, repeated Guards would be paid for damage they never prevent.
+    /// </summary>
+    [Fact]
+    public void A_defense_buff_is_worth_what_it_takes_off_the_threat_not_a_point_per_point()
+    {
+        var board = Board(enemyHealth: 20);
+        board[0] = board[0] with { TotalDefense = Defense.Of(3) };
+        var action = Strike(One, Three);
+        var buff = new ConditionOutcome(One, DefenseBuff.Of(1, Duration.OfRounds(1)));
+
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), board)
+            .ShouldBe(0.5 * 2 * (0.05 * (3 - 2)), 1e-9);
+    }
+
+    /// <summary>
+    /// A cast can deny one death per target, and Guard carries two defense effects. Read per outcome, either
+    /// each of them would claim the kill the other already denied, or -- when survival needs both -- neither
+    /// would claim it. Here one point alone takes the round below lethal, and the kill is still paid once.
+    /// </summary>
+    [Fact]
+    public void Two_defense_effects_on_one_target_deny_one_kill_between_them()
+    {
+        var board = Board(enemyHealth: 20);
+        board[0] = board[0] with { Health = Health.Of(5) };
+        var action = Strike(One, Three);
+        var buff = new ConditionOutcome(One, DefenseBuff.Of(1, Duration.OfRounds(1)));
+
+        // 6.3 coming and 5 health: lethal. Stacked, the two points take it to 2.3, and each point is priced on
+        // top of the other rather than both from the bare board.
+        Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff, buff]), board)
+            .ShouldBe((0.5 * (6.3 - 2.3)) + 5, 1e-9);
+    }
+
     [Fact]
     public void Invalid_inputs_are_rejected()
     {
@@ -222,6 +360,14 @@ public sealed class ActionScorerTests
     private static CombatAction Strike(CreatureId actor, CreatureId target) => Action(actor, TestContent.Strike, target);
 
     private static CombatAction Action(CreatureId actor, SpellId spell, CreatureId target) => CombatAction.Bind(new CombatIntent(actor, spell), [target]);
+
+    /// <summary>The same board with an ally of creature 1 at the given health, dead at zero.</summary>
+    private static List<CreatureSnapshot> WithAlly(Health health)
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with { Health = health };
+        return [board[0], ally, board[1], board[2]];
+    }
 
     /// <summary>Creature 1 (player 1) facing creatures 3 and 4 (player 2), both at the given health.</summary>
     private static List<CreatureSnapshot> Board(int enemyHealth, int actorEnergy = 0, IReadOnlyList<SpellId>? actorSpells = null)
