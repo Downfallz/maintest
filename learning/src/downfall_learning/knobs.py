@@ -8,7 +8,7 @@ an evaluation already reports. Everything here reads the authored content in ``d
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -17,6 +17,7 @@ ALIASES_FILE = "aliases.json"
 SPELLS_FOLDER = "Spells"
 CREATURES_FOLDER = "Creatures"
 TALENT_TREES_FOLDER = "TalentTrees"
+JSON_FILES = "*.json"
 SUPPORTED_VERSIONS = frozenset({"knobs:v1"})
 
 #: Decimals a moved value is rounded to, so a step of 0.05 off 0.667 stays readable in the file it lands in.
@@ -217,7 +218,7 @@ def load_content(data_directory: Path) -> Content:
     documents: dict[str, dict] = {}
     files: dict[str, Path] = {}
     turned_off: set[str] = set()
-    for file in sorted((data_directory / SPELLS_FOLDER).rglob("*.json")):
+    for file in sorted((data_directory / SPELLS_FOLDER).rglob(JSON_FILES)):
         document = _read_json(file)
         identifier = str(document["id"])
         files[identifier] = file
@@ -256,24 +257,24 @@ def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
         if alias is not None:
             depths[alias] = min(depth, depths.get(alias, depth))
 
-    for file in sorted((data_directory / CREATURES_FOLDER).rglob("*.json")):
+    for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
         creature = _read_json(file)
         if creature.get("enabled", True):
             for reference in creature.get("startingSpellIds", []):
                 note(str(reference), 0)
 
-    for file in sorted((data_directory / TALENT_TREES_FOLDER).rglob("*.json")):
+    for file in sorted((data_directory / TALENT_TREES_FOLDER).rglob(JSON_FILES)):
         tree = _read_json(file)
         if tree.get("enabled", True) and isinstance(tree.get("root"), Mapping):
             _walk(tree["root"], 0, note)
     return depths
 
 
-def _walk(node: Mapping[str, object], depth: int, note: object) -> None:
+def _walk(node: Mapping[str, object], depth: int, note: Callable[[str, int], None]) -> None:
     spells = node.get("spells", [])
     for spell in spells if isinstance(spells, list) else []:
         if isinstance(spell, Mapping) and "id" in spell:
-            note(str(spell["id"]), depth)  # type: ignore[operator]
+            note(str(spell["id"]), depth)
     children = node.get("children", [])
     for child in children if isinstance(children, list) else []:
         if isinstance(child, Mapping):

@@ -436,7 +436,7 @@ def tune_content(
     history: list[Candidate] = []
     favour: set[str] = set()
     if options.sweep:
-        swept = _sweep(evaluator, knobs, content, first)
+        swept = _sweep(evaluator, knobs, content)
         history.extend(swept)
         favour = {
             move.knob.key
@@ -467,7 +467,7 @@ def tune_content(
     )
 
 
-def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content, first: Candidate) -> list[Candidate]:
+def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[Candidate]:
     """Play every legal single-step move of every playable knob, once, before the random phase starts.
 
     This is the difference between unlikely and impossible. A uniform draw over 29 knobs with a budget of 40
