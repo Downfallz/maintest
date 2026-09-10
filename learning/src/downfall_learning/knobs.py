@@ -155,13 +155,23 @@ class Knobs:
 
 @dataclass(frozen=True)
 class Content:
-    """The authored spells, by unversioned alias, as the data builder would read them."""
+    """The authored spells, by unversioned alias, as the data builder would read them.
+
+    ``spells`` holds what the build carries. ``disabled`` names the aliases whose spell is on disk with
+    ``"enabled": false`` (ADR 0015): it left the build, so nothing tunes it, but its knobs entry is still
+    the right place for what it was for, and taking that entry out with it would lose the intent.
+    """
 
     spells: Mapping[str, dict]
     files: Mapping[str, Path]
+    disabled: frozenset[str] = frozenset()
 
     def __len__(self) -> int:
         return len(self.spells)
+
+    def knows(self, alias: str) -> bool:
+        """Whether an alias names a spell that is on disk, built or not."""
+        return alias in self.spells or alias in self.disabled
 
 
 def load_knobs(path: Path = KNOBS_FILE) -> Knobs:
@@ -184,19 +194,26 @@ def load_content(data_directory: Path) -> Content:
     aliases = _read_json(data_directory / ALIASES_FILE)
     documents: dict[str, dict] = {}
     files: dict[str, Path] = {}
+    turned_off: set[str] = set()
     for file in sorted((data_directory / SPELLS_FOLDER).rglob("*.json")):
         document = _read_json(file)
+        identifier = str(document["id"])
+        files[identifier] = file
         if document.get("enabled", True):
-            documents[str(document["id"])] = document
-            files[str(document["id"])] = file
+            documents[identifier] = document
+        else:
+            turned_off.add(identifier)
 
     spells: dict[str, dict] = {}
     paths: dict[str, Path] = {}
+    off: set[str] = set()
     for alias, identifier in aliases.items():
         if identifier in documents:
             spells[alias] = documents[identifier]
             paths[alias] = files[identifier]
-    return Content(spells=spells, files=paths)
+        elif identifier in turned_off:
+            off.add(alias)
+    return Content(spells=spells, files=paths, disabled=frozenset(off))
 
 
 def read_value(document: Mapping[str, object], pointer: str) -> float:
@@ -236,7 +253,8 @@ def validate(knobs: Knobs, content: Content) -> list[str]:
     for alias in sorted(set(content.spells) - set(knobs.spells)):
         problems.append(f"{alias}: enabled content with no entry in the knobs file.")
     for alias in sorted(set(knobs.spells) - set(content.spells)):
-        problems.append(f"{alias}: a knobs entry for a spell no alias resolves to.")
+        if not content.knows(alias):
+            problems.append(f"{alias}: a knobs entry for a spell no alias resolves to.")
 
     for alias, spell in sorted(knobs.spells.items()):
         document = content.spells.get(alias)
@@ -244,29 +262,7 @@ def validate(knobs: Knobs, content: Content) -> list[str]:
             continue
         if not spell.intent.strip():
             problems.append(f"{alias}: no intent, so nothing says what its numbers are for.")
-        seen: set[str] = set()
-        for knob in spell.knobs:
-            if knob.path in seen:
-                problems.append(f"{knob.key}: the same pointer is listed twice.")
-            seen.add(knob.path)
-            if knob.minimum > knob.maximum:
-                problems.append(f"{knob.key}: bounds are the wrong way round.")
-            if knob.step <= 0:
-                problems.append(f"{knob.key}: a step of {knob.step} moves nothing.")
-            try:
-                value = read_value(document, knob.path)
-            except KnobsError as error:
-                problems.append(f"{knob.key}: {error}")
-                continue
-            if not knob.minimum <= value <= knob.maximum:
-                problems.append(
-                    f"{knob.key}: the content carries {value}, outside [{knob.minimum}, {knob.maximum}]."
-                )
-            if _inert_critical(knob, document):
-                problems.append(
-                    f"{knob.key}: the critical multiplier applies to damage only, and this spell deals "
-                    "none, so this knob cannot move anything."
-                )
+        problems.extend(_knob_problems(spell, document))
 
     problems.extend(_objective_problems(knobs))
     problems.extend(_constraint_problems(knobs, content))
@@ -276,6 +272,35 @@ def validate(knobs: Knobs, content: Content) -> list[str]:
 def _inert_critical(knob: Knob, document: Mapping[str, object]) -> bool:
     """A critical chance on a spell with no damage: the multiplier reaches ``Damage`` and nothing else."""
     return knob.path == CRITICAL_CHANCE and DAMAGE not in _effects(document)
+
+
+def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[str]:
+    """Everything wrong with one spell's knobs, read against the spell the content carries."""
+    problems: list[str] = []
+    seen: set[str] = set()
+    for knob in spell.knobs:
+        if knob.path in seen:
+            problems.append(f"{knob.key}: the same pointer is listed twice.")
+        seen.add(knob.path)
+        if knob.minimum > knob.maximum:
+            problems.append(f"{knob.key}: bounds are the wrong way round.")
+        if knob.step <= 0:
+            problems.append(f"{knob.key}: a step of {knob.step} moves nothing.")
+        try:
+            value = read_value(document, knob.path)
+        except KnobsError as error:
+            problems.append(f"{knob.key}: {error}")
+            continue
+        if not knob.minimum <= value <= knob.maximum:
+            problems.append(
+                f"{knob.key}: the content carries {value}, outside [{knob.minimum}, {knob.maximum}]."
+            )
+        if _inert_critical(knob, document):
+            problems.append(
+                f"{knob.key}: the critical multiplier applies to damage only, and this spell deals "
+                "none, so this knob cannot move anything."
+            )
+    return problems
 
 
 def _objective_problems(knobs: Knobs) -> list[str]:
@@ -294,7 +319,7 @@ def _constraint_problems(knobs: Knobs, content: Content) -> list[str]:
     return [
         f"startingKitOffersAChoice: '{alias}' is not a spell any alias resolves to."
         for alias in kit
-        if str(alias) not in content.spells
+        if not content.knows(str(alias))
     ]
 
 

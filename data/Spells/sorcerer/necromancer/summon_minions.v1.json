@@ -16,5 +16,6 @@
       "kind": "EnergyGain",
       "amount": 3
     }
-  ]
+  ],
+  "enabled": false
 }

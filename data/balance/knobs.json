@@ -78,10 +78,10 @@
       {
         "metric": "spellsNeverCast",
         "on": "mirror",
-        "max": 12,
-        "scale": 4,
+        "max": 2,
+        "scale": 2,
         "weight": 1,
-        "why": "Spells in the catalogue that no declaration ever landed. Needs the catalogue as well as the evaluation, so the tuner computes it. Some spells are out of reach in a short match by construction; a dozen is the slack that allows for."
+        "why": "Spells in the catalogue that no declaration ever landed. Needs the catalogue as well as the evaluation, so the tuner computes it. The band is read against what the build carries, not against what is on disk: on the nine-spell core content two spells failing to come up is slack, twelve would be the whole game."
       },
       {
         "metric": "winRateA",

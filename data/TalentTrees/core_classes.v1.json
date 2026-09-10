@@ -1,0 +1,124 @@
+{
+  "id": "talent-tree:core_classes:v1",
+  "name": "Core Classes Talent Tree",
+  "root": {
+    "code": "BaseCreature",
+    "name": "Base Creature",
+    "prerequisites": {
+      "allOf": [],
+      "anyOf": []
+    },
+    "spells": [
+      {
+        "id": "spell:basic_attack",
+        "prerequisites": {
+          "allOf": [],
+          "anyOf": []
+        }
+      },
+      {
+        "id": "spell:heavy_strike",
+        "prerequisites": {
+          "allOf": [],
+          "anyOf": []
+        }
+      },
+      {
+        "id": "spell:wait",
+        "prerequisites": {
+          "allOf": [],
+          "anyOf": []
+        }
+      }
+    ],
+    "children": [
+      {
+        "code": "Brawler",
+        "name": "Brawler",
+        "prerequisites": {
+          "allOf": [
+            "spell:basic_attack",
+            "spell:heavy_strike",
+            "spell:wait"
+          ],
+          "anyOf": []
+        },
+        "spells": [
+          {
+            "id": "spell:pummel",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          },
+          {
+            "id": "spell:guard",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          }
+        ],
+        "children": []
+      },
+      {
+        "code": "Scoundrel",
+        "name": "Scoundrel",
+        "prerequisites": {
+          "allOf": [
+            "spell:basic_attack",
+            "spell:heavy_strike",
+            "spell:wait"
+          ],
+          "anyOf": []
+        },
+        "spells": [
+          {
+            "id": "spell:poison_slash",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          },
+          {
+            "id": "spell:throwing_star",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          }
+        ],
+        "children": []
+      },
+      {
+        "code": "Sorcerer",
+        "name": "Sorcerer",
+        "prerequisites": {
+          "allOf": [
+            "spell:basic_attack",
+            "spell:heavy_strike",
+            "spell:wait"
+          ],
+          "anyOf": []
+        },
+        "spells": [
+          {
+            "id": "spell:lightning_bolt",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          },
+          {
+            "id": "spell:rejuvenate",
+            "prerequisites": {
+              "allOf": [],
+              "anyOf": []
+            }
+          }
+        ],
+        "children": []
+      }
+    ]
+  }
+}

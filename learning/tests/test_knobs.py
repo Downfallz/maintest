@@ -286,12 +286,23 @@ def test_a_target_nobody_measured_is_named_rather_than_scored_as_zero() -> None:
 
 
 def test_the_repository_knobs_cover_the_repository_content() -> None:
-    """The one test that fails when a spell is added, retuned or cut without saying what it is for."""
+    """The one test that fails when a spell is added, retuned or cut without saying what it is for.
+
+    Coverage is of the authored catalogue, not of the build: a spell turned off keeps its entry, so that
+    turning it back on does not also mean rediscovering what it was for.
+    """
     knobs = load_knobs(REPO_ROOT / KNOBS_FILE)
     spells = load_content(REPO_ROOT / "data")
 
     assert validate(knobs, spells) == []
-    assert len(spells) == len(knobs.spells)
+    assert set(knobs.spells) == set(spells.spells) | spells.disabled
+
+
+def test_an_entry_for_a_spell_that_is_turned_off_keeps_its_intent(tmp_path: Path) -> None:
+    """Disabling content is an authoring act; losing what the spell was for with it would be a cost."""
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json()))
+
+    assert validate(knobs, Content(spells={}, files={}, disabled=frozenset({"spell:attack"}))) == []
 
 
 def test_a_spell_with_no_intent_is_a_spell_nobody_decided_the_point_of(tmp_path: Path) -> None:

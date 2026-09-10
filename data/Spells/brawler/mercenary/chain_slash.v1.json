@@ -16,5 +16,6 @@
       "kind": "Damage",
       "amount": 5
     }
-  ]
+  ],
+  "enabled": false
 }

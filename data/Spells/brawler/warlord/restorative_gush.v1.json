@@ -16,5 +16,6 @@
       "kind": "Heal",
       "amount": 6
     }
-  ]
+  ],
+  "enabled": false
 }
