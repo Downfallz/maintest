@@ -670,3 +670,44 @@ def test_a_tier_nobody_cast_is_left_to_the_never_cast_count() -> None:
 
     assert metrics["tierUsageShare"] == pytest.approx(1.0)
     assert metrics["spellsNeverCast"] == 2
+
+
+def test_an_attack_the_defence_absorbs_widens_the_spread_rather_than_leaving_it() -> None:
+    """Reading "is this a damaging spell" from the result would reward making one useless.
+
+    Lower an attack until every hit lands on armour and it deals zero. If that dropped it from the
+    comparison, the tier would look *more* even than before and the tuner would be paid to break spells.
+    """
+    content = two_tiers()
+    even = evaluation_json(0.5, 0.5)
+    even["spellOutcomes"] = [
+        outcome("spell:starter:v1", 100, 100, 200),
+        outcome("spell:filler:v1", 100, 100, 100),
+        outcome("spell:unlocked:v1", 100, 100, 100),
+    ]
+    absorbed = evaluation_json(0.5, 0.5)
+    absorbed["spellOutcomes"] = [
+        outcome("spell:starter:v1", 100, 100, 200),
+        outcome("spell:filler:v1", 100, 100, 0),
+        outcome("spell:unlocked:v1", 100, 100, 100),
+    ]
+
+    before = metrics_of(Evaluation.from_json(even), "mirror", content)["tierDamageSpread"]
+    after = metrics_of(Evaluation.from_json(absorbed), "mirror", content)["tierDamageSpread"]
+
+    assert before == pytest.approx(2.0)
+    assert after > before
+
+
+def test_a_heal_is_still_left_out_of_the_damage_spread() -> None:
+    """It has no Damage effect at all, which is a different thing from an attack that landed nothing."""
+    content = two_tiers()
+    content.spells["spell:filler"]["effects"] = [{"kind": "Heal", "amount": 3}]
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [
+        outcome("spell:starter:v1", 100, 100, 200),
+        outcome("spell:filler:v1", 100, 100, 0),
+        outcome("spell:unlocked:v1", 100, 100, 100),
+    ]
+
+    assert "tierDamageSpread" not in metrics_of(Evaluation.from_json(raw), "mirror", content)

@@ -88,8 +88,10 @@ catalogue-wide reading hides a monopolised tier: on the nine-spell core content 
 starting kit is not a choice at all.
 
 Each skips what it cannot read rather than guessing: a tier nobody cast (that is `spellsNeverCast`), a spell
-that deals no damage (a heal and an attack share no unit), and a spell too few sides declared for its own
-number to be anything but noise.
+with no `Damage` effect at all (a heal and an attack share no unit), and a spell too few sides declared for
+its own number to be anything but noise. Whether a spell is a damaging one is read from the content, never
+from what its casts landed: otherwise lowering an attack until its hits are all absorbed would drop it out
+of the comparison and *improve* the reading, paying the search to break spells.
 
 What "balanced" means is a choice, not a formula, and this block is where that choice is written down. Move
 a band and say why in `docs/learning/journal.md`, the same as any other change that moves a number. Two

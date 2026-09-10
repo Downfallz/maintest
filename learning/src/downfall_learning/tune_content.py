@@ -18,6 +18,7 @@ import shutil
 import subprocess
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Protocol
 
@@ -30,6 +31,7 @@ from downfall_learning.knobs import (
     Knob,
     Knobs,
     Objective,
+    deals_damage,
     dominates,
     new_dominance,
     new_indistinguishable,
@@ -58,6 +60,14 @@ FAVOUR = 4.0
 #: Landed casts, or sides that declared a spell, below which its own numbers are noise. The engine's own
 #: threshold for listing a spell in its table (``EvaluationConsole``).
 ENOUGH_SIDES = 8
+
+#: The smallest damage per landed cast the tier spread will divide by. An attack whose hits are entirely
+#: absorbed deals zero, and the ratio it belongs in has no value there; this floors it instead.
+MIN_DAMAGE_PER_CAST = 0.5
+
+#: The largest tier damage spread reported. Past it the reading has said what it has to say — one spell of
+#: this tier hits nothing like the others — and a bigger number would only drown every other target.
+MOST_LOPSIDED = 5.0
 
 
 @dataclass(frozen=True)
@@ -259,12 +269,16 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
     measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
-    measured.update(_tier_metrics(outcomes, by_alias, content.tiers))
+    damaging = {identifier for identifier, alias in by_alias.items() if deals_damage(content.spells[alias])}
+    measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
     return measured
 
 
 def _tier_metrics(
-    outcomes: Sequence[Mapping[str, object]], by_alias: Mapping[str, str], tiers: Mapping[str, int]
+    outcomes: Sequence[Mapping[str, object]],
+    by_alias: Mapping[str, str],
+    tiers: Mapping[str, int],
+    damaging: Collection[str],
 ) -> dict[str, float]:
     """The three readings of "are the spells of one tier a choice", each on its worst tier.
 
@@ -281,7 +295,7 @@ def _tier_metrics(
 
     readings = {
         "tierUsageShare": _usage_share,
-        "tierDamageSpread": _damage_spread,
+        "tierDamageSpread": partial(_damage_spread, damaging=damaging),
         "tierWinSpread": _win_spread,
     }
     measured = {}
@@ -298,18 +312,26 @@ def _usage_share(members: Sequence[Mapping[str, object]]) -> float | None:
     return max(landed) / sum(landed) if sum(landed) > 0 else None
 
 
-def _damage_spread(members: Sequence[Mapping[str, object]]) -> float | None:
+def _damage_spread(members: Sequence[Mapping[str, object]], damaging: Collection[str]) -> float | None:
     """How many times harder the best damaging spell of a tier hits per landed cast than the worst.
 
-    Only spells that deal damage are compared, because a heal and an attack have no common unit, and only
-    those with enough landed casts for the rate to mean anything.
+    Which spells count is read from the content — does the spell carry a `Damage` effect — and never from
+    what its casts happened to do. Reading it from the result would let a candidate that lowers an attack
+    until every hit is absorbed drop that attack out of the comparison and *improve* this number, which is
+    the opposite of what it is for. A spell whose hits all land on armour keeps its zero and the ratio is
+    floored at :data:`MIN_DAMAGE_PER_CAST` and capped at :data:`MOST_LOPSIDED`.
+
+    A heal has no `Damage` effect and is not compared: it shares no unit with an attack. Only spells with
+    enough landed casts for their own rate to mean anything are read at all.
     """
     rates = [
         float(member["damagePerCast"])
         for member in members
-        if int(member.get("resolved", 0)) >= ENOUGH_SIDES and float(member.get("damage", 0)) > 0
+        if str(member["spell"]) in damaging and int(member.get("resolved", 0)) >= ENOUGH_SIDES
     ]
-    return max(rates) / min(rates) if len(rates) > 1 and min(rates) > 0 else None
+    if len(rates) < 2:
+        return None
+    return min(max(rates) / max(min(rates), MIN_DAMAGE_PER_CAST), MOST_LOPSIDED)
 
 
 def _win_spread(members: Sequence[Mapping[str, object]]) -> float | None:

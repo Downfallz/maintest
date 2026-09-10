@@ -67,8 +67,9 @@ way. Five the tuner derives from `spellOutcomes`, because they need the catalogu
 offered at one depth of the talent tree, which is the set a player chooses between. `tierUsageShare` asks
 whether one of them owns the tier, `tierDamageSpread` whether they hit comparably hard per landed cast, and
 `tierWinSpread` whether they win comparably often. Each reports its worst tier, and each skips what it
-cannot read: a tier nobody cast, a spell that deals no damage, a spell too few sides declared for its own
-number to mean anything.
+cannot read: a tier nobody cast, a spell with no `Damage` effect, a spell too few sides declared for its
+own number to mean anything. Damaging is read from the content, so an attack whose hits are absorbed widens
+the spread rather than leaving it.
 
 `docs/learning/explained.md` says what a band, a scale and a weight are in plain words, and how to point the
 objective at a match length or at your own agent.

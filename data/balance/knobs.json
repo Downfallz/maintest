@@ -97,7 +97,7 @@
         "max": 2.0,
         "scale": 0.5,
         "weight": 1,
-        "why": "How many times harder the best damaging spell of a tier hits per landed cast than the worst, worst tier. Only spells that deal damage are compared, and only those with enough landed casts for the number to mean anything: a heal and an attack have no common unit. 2.41 on the core content."
+        "why": "How many times harder the best damaging spell of a tier hits per landed cast than the worst, worst tier. Which spells count is read from the content — does the spell carry a Damage effect — never from what its casts landed, so lowering an attack until its hits are all absorbed widens this reading instead of dropping the spell out of it. A heal is not compared: it shares no unit with an attack. The ratio is floored at half a point of damage per cast and capped at 5. 2.41 on the core content."
       },
       {
         "metric": "tierWinSpread",

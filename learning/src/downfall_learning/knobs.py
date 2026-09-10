@@ -525,6 +525,11 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
     return strictly_better
 
 
+def deals_damage(document: Mapping[str, object]) -> bool:
+    """Whether the spell as authored carries a `Damage` effect, whatever its casts happen to land."""
+    return DAMAGE in _effects(document)
+
+
 def _effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:
     """The effects of a spell as magnitudes by group, summed when a spell carries a group twice."""
     grouped: dict[str, tuple[float, ...]] = {}
