@@ -4,12 +4,12 @@
 // scoped to itself, and the first read of the content is awaited at the top level.
 //
 // Where the content lives is `backend.js`'s business, not this file's (ADR 0023): the page asks for the
-// catalogue, hands over a change, and asks for a build, a run or an audit. Swapping the local host for a
-// hosted backend is swapping the line below.
+// catalogue, hands over a change, and asks for a build, a run or an audit. The same page is served by the
+// local host and from GitHub Pages, and which backend answers is decided by where it was loaded from.
 
-import { localBackend } from './backend.js';
+import { backendForThisPage } from './backend.js';
 
-const backend = localBackend();
+const backend = backendForThisPage();
 
 // ---------- what the schema allows ----------
 

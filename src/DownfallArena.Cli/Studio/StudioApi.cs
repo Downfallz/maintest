@@ -43,8 +43,8 @@ internal sealed class StudioApi : IDisposable
         {
             return (method, path) switch
             {
-                ("GET", "/api/catalogue") => Ok(_store.Read()),
-                ("GET", "/api/audit") => Audit(),
+                ("GET", "/api/catalogue") => Ok(Catalogue()),
+                ("GET", "/api/audit") => Ok(AuditReport()),
                 ("GET", "/api/runs") => Ok(_runner.Runs()),
                 ("GET", "/api/weights") => Ok(Weights()),
                 ("POST", "/api/documents") => SaveDocument(body),
@@ -177,21 +177,30 @@ internal sealed class StudioApi : IDisposable
     /// usually no right after an edit — which is worth saying rather than leaving the author to assume the net
     /// is still there.
     /// </summary>
-    private StudioResponse Audit()
+    /// <summary>
+    /// What the catalogue route answers. Public because the export writes the same thing to a file for the
+    /// hosted studio to read (ADR 0023): one definition, so a published snapshot cannot drift from the route.
+    /// </summary>
+    public ContentCatalogue Catalogue() => _store.Read();
+
+    /// <summary>What the audit route answers, and what the export publishes.</summary>
+    public object AuditReport()
     {
         var report = _store.Audit(_rules);
         var digest = _benchmarks.DigestPath(report.ContentVersion);
-        return Ok(new
+        return new
         {
             audit = report,
             benchmark = new { path = digest, exists = File.Exists(digest) },
-        });
+        };
     }
 
     /// <summary>
     /// The built-in scoring weights, so the run panel's sliders start from the engine's values and grow a field
     /// when the engine grows a weight, rather than from a copy of the numbers in the page.
     /// </summary>
+    public static object DefaultWeights() => Weights();
+
     private static object Weights()
     {
         var weights = ScoringWeights.Default;

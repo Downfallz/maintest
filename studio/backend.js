@@ -75,3 +75,50 @@ export function localBackend() {
     audit: () => call('/api/audit'),
   };
 }
+
+/** One published file next to the page. Relative, so it does not care what path the site is served under. */
+async function published(name) {
+  const response = await fetch(`data/${name}`, { headers: { accept: 'application/json' } });
+  if (!response.ok) {
+    throw refusal(`Could not read data/${name} (${response.status}). The site publishes it on every push to main;`
+      + ' a fresh deployment may still be running.');
+  }
+
+  return response.json();
+}
+
+/** What a hosted studio cannot do until it can write: say so where the user tried, not where the page loaded. */
+function readOnly(what) {
+  return refusal(`${what} needs the engine, and this studio is the published page (ADR 0023). Run`
+    + " `dotnet run --project src/DownfallArena.Cli -- studio` for the version that can, or use the workflows"
+    + ' under Actions.');
+}
+
+/**
+ * The published page (ADR 0023): the content as `studio --export` wrote it, served as static files next to the
+ * page. It reads what the engine knew when the site was last built and cannot change anything yet -- writing
+ * is the next step of the ADR, and every operation that needs the engine refuses rather than pretending.
+ */
+export function hostedBackend() {
+  return {
+    read: () => published('catalogue.json'),
+    audit: () => published('audit.json'),
+    weights: () => published('weights.json'),
+
+    // Not a refusal: a published page has played no runs of its own, and an empty list is what that is.
+    runs: async () => [],
+
+    change: async () => { throw readOnly('Saving'); },
+    build: async () => { throw readOnly('Building'); },
+    play: async () => { throw readOnly('Playing a match'); },
+  };
+}
+
+/**
+ * The backend for where this page is being served from. The local host binds the loopback address and nothing
+ * else (ADR 0015), so "not loopback" is exactly "not the local studio".
+ */
+export function backendForThisPage() {
+  const local = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(globalThis.location?.hostname);
+  return local ? localBackend() : hostedBackend();
+}

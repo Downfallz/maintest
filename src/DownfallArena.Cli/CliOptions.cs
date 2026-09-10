@@ -38,6 +38,12 @@ internal sealed record CliOptions
     /// <summary>The loopback port the studio listens on.</summary>
     public int Port { get; init; } = DefaultPort;
 
+    /// <summary>
+    /// Where <c>studio --export</c> writes what the read-only routes answer, for a studio served without this
+    /// host behind it (ADR 0023). Null serves the page instead.
+    /// </summary>
+    public string? Export { get; init; }
+
     public const string DefaultSchemaPath = "data/dst/game.schema.json";
 
     public const string DefaultBenchmarks = "benchmarks";
@@ -46,7 +52,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir]";
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -70,7 +76,7 @@ internal sealed record CliOptions
             index += 2;
         }
 
-        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port"], StringComparer.Ordinal).FirstOrDefault();
+        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export"], StringComparer.Ordinal).FirstOrDefault();
         if (unknown is not null)
         {
             throw new ArgumentException($"Unknown option '{unknown}'.");
@@ -92,6 +98,7 @@ internal sealed record CliOptions
             Write = write,
             Data = values.GetValueOrDefault("--data") ?? DefaultData,
             Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
+            Export = values.GetValueOrDefault("--export"),
         };
     }
 
