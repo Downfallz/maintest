@@ -96,6 +96,12 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
         "--max-changes", type=int, default=12, help="knobs one proposal may move at once (default 12)"
     )
     tune.add_argument("--seed", type=int, default=0)
+    tune.add_argument(
+        "--no-sweep",
+        dest="sweep",
+        action="store_false",
+        help="skip the opening pass that plays every knob once, and start from random neighbours",
+    )
     tune.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     tune.add_argument(
         "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
@@ -307,6 +313,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         neighbours=arguments.neighbours,
         max_changes=arguments.max_changes,
         seed=arguments.seed,
+        sweep=arguments.sweep,
     )
     result = tune_content(evaluator, knobs, content, options)
     result.write(arguments.output, arguments.data)

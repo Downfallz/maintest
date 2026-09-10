@@ -466,3 +466,49 @@ def test_a_critical_chance_on_a_spell_that_deals_damage_is_a_knob_like_any_other
     knobs = load_knobs(write_knobs(tmp_path, document))
 
     assert validate(knobs, content(**{"spell:attack": ATTACK})) == []
+
+
+def tiered(**tiers: int) -> Content:
+    """Two spells with the same numbers as ATTACK, at the tiers the test names."""
+    spells = {alias: spell(id=f"{alias}:v1") for alias in tiers}
+    return Content(spells=spells, files=dict.fromkeys(tiers, Path("x.json")), tiers=dict(tiers))
+
+
+def test_a_deeper_spell_outclassing_a_shallower_one_is_progression(tmp_path: Path) -> None:
+    """That is what a talent tree is for: the pick and its prerequisites are what paid for the difference."""
+    content = tiered(**{"spell:starter": 0, "spell:unlocked": 1})
+    content.spells["spell:unlocked"]["effects"] = [{"kind": "Damage", "amount": 5}]
+
+    assert dominates(content.spells["spell:unlocked"], content.spells["spell:starter"])
+    assert content.progression("spell:unlocked", "spell:starter")
+    assert dominance(content) == []
+
+
+def test_two_spells_offered_at_the_same_depth_must_be_a_choice(tmp_path: Path) -> None:
+    content = tiered(**{"spell:left": 1, "spell:right": 1})
+    content.spells["spell:left"]["effects"] = [{"kind": "Damage", "amount": 5}]
+
+    assert dominance(content) == [("spell:left", "spell:right")]
+
+
+def test_a_pick_that_buys_a_downgrade_is_reported(tmp_path: Path) -> None:
+    """A shallower spell outclassing a deeper one is worse than a tie: the pick costs and gives less."""
+    content = tiered(**{"spell:starter": 0, "spell:unlocked": 2})
+    content.spells["spell:starter"]["effects"] = [{"kind": "Damage", "amount": 5}]
+
+    assert dominance(content) == [("spell:starter", "spell:unlocked")]
+
+
+def test_a_spell_no_tree_teaches_keeps_being_compared(tmp_path: Path) -> None:
+    """An unknown depth is not read as progression: nothing says the pair was paid for."""
+    content = tiered(**{"spell:known": 1})
+    content.spells["spell:orphan"] = spell(id="spell:orphan:v1", effects=[{"kind": "Damage", "amount": 1}])
+
+    assert dominance(content) == [("spell:known", "spell:orphan")]
+
+
+def test_the_repository_tiers_come_from_the_tree_the_creature_is_on() -> None:
+    spells = load_content(REPO_ROOT / "data")
+
+    assert spells.tiers["spell:heavy_strike"] == 0
+    assert spells.tiers["spell:lightning_bolt"] == 1

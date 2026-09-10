@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 KNOBS_FILE = Path("data/balance/knobs.json")
 ALIASES_FILE = "aliases.json"
 SPELLS_FOLDER = "Spells"
+CREATURES_FOLDER = "Creatures"
+TALENT_TREES_FOLDER = "TalentTrees"
 SUPPORTED_VERSIONS = frozenset({"knobs:v1"})
 
 #: Decimals a moved value is rounded to, so a step of 0.05 off 0.667 stays readable in the file it lands in.
@@ -165,6 +167,7 @@ class Content:
     spells: Mapping[str, dict]
     files: Mapping[str, Path]
     disabled: frozenset[str] = frozenset()
+    tiers: Mapping[str, int] = field(default_factory=dict)
 
     def __len__(self) -> int:
         return len(self.spells)
@@ -172,6 +175,17 @@ class Content:
     def knows(self, alias: str) -> bool:
         """Whether an alias names a spell that is on disk, built or not."""
         return alias in self.spells or alias in self.disabled
+
+    def progression(self, better: str, worse: str) -> bool:
+        """Whether ``better`` outclassing ``worse`` is what a talent tree is for.
+
+        True when ``better`` sits deeper than ``worse``: reaching it cost picks and prerequisites, so being
+        better is the reward. Two spells at the same depth are offered at once and one outclassing the other
+        is a decision that is not one; a shallower spell outclassing a deeper one is worse still, since the
+        pick buys a downgrade. An unknown depth is not read as progression.
+        """
+        here, there = self.tiers.get(better), self.tiers.get(worse)
+        return here is not None and there is not None and here > there
 
 
 def load_knobs(path: Path = KNOBS_FILE) -> Knobs:
@@ -213,7 +227,49 @@ def load_content(data_directory: Path) -> Content:
             paths[alias] = files[identifier]
         elif identifier in turned_off:
             off.add(alias)
-    return Content(spells=spells, files=paths, disabled=frozenset(off))
+    by_id = {str(document["id"]): alias for alias, document in spells.items()}
+    return Content(
+        spells=spells,
+        files=paths,
+        disabled=frozenset(off),
+        tiers=_tiers(data_directory, by_id),
+    )
+
+
+def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
+    """How deep each spell sits: 0 for a starting spell or a root node, one more per talent node below.
+
+    A spell taught in two places takes the shallowest, which is how soon a creature can actually have it.
+    """
+    depths: dict[str, int] = {}
+
+    def note(reference: str, depth: int) -> None:
+        alias = reference if reference in by_id.values() else by_id.get(reference)
+        if alias is not None:
+            depths[alias] = min(depth, depths.get(alias, depth))
+
+    for file in sorted((data_directory / CREATURES_FOLDER).rglob("*.json")):
+        creature = _read_json(file)
+        if creature.get("enabled", True):
+            for reference in creature.get("startingSpellIds", []):
+                note(str(reference), 0)
+
+    for file in sorted((data_directory / TALENT_TREES_FOLDER).rglob("*.json")):
+        tree = _read_json(file)
+        if tree.get("enabled", True) and isinstance(tree.get("root"), Mapping):
+            _walk(tree["root"], 0, note)
+    return depths
+
+
+def _walk(node: Mapping[str, object], depth: int, note: object) -> None:
+    spells = node.get("spells", [])
+    for spell in spells if isinstance(spells, list) else []:
+        if isinstance(spell, Mapping) and "id" in spell:
+            note(str(spell["id"]), depth)  # type: ignore[operator]
+    children = node.get("children", [])
+    for child in children if isinstance(children, list) else []:
+        if isinstance(child, Mapping):
+            _walk(child, depth + 1, note)
 
 
 def read_value(document: Mapping[str, object], pointer: str) -> float:
@@ -333,21 +389,25 @@ def findings(content: Content, knobs: Knobs) -> list[str]:
     if knobs.enabled("noIndistinguishableSpells"):
         reports.extend(indistinguishable(content))
     if knobs.enabled("noNewStrictDominance"):
-        reports.extend(f"{better} is strictly better than {worse}." for better, worse in dominance(content))
+        reports.extend(
+            f"{better} is strictly better than {worse}, and both sit at tier "
+            f"{content.tiers.get(better, '?')} and {content.tiers.get(worse, '?')}."
+            for better, worse in dominance(content)
+        )
     return reports
 
 
 def dominance(content: Content) -> list[tuple[str, str]]:
-    """Every ordered pair where the first spell is strictly better than the second.
+    """Every ordered pair where the first spell is strictly better than the second, progression aside.
 
-    A pair is not by itself a defect: a spell three nodes down the talent tree outclassing a starting spell
-    is what progression means. It is a defect when both are offered at once, which is why the constraint is
-    that a candidate adds none rather than that the catalogue has none.
+    A deeper spell outclassing a shallower one is what a talent tree is for and is not reported: reaching
+    it cost picks and prerequisites, so being better is the reward. What is left is two spells offered at
+    the same depth with nothing to choose between them, or a pick that buys a downgrade.
     """
     pairs = []
     for alias, document in sorted(content.spells.items()):
         for other, candidate in sorted(content.spells.items()):
-            if other != alias and dominates(candidate, document):
+            if other != alias and dominates(candidate, document) and not content.progression(other, alias):
                 pairs.append((other, alias))
     return pairs
 

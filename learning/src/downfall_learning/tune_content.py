@@ -16,7 +16,7 @@ import json
 import math
 import shutil
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -51,6 +51,9 @@ DATA_BUILDER_COMMAND = (
 
 #: How many times a proposal is redrawn before the search gives up on finding a legal neighbour.
 ATTEMPTS = 40
+
+#: How much likelier the random phase is to draw a knob the opening sweep showed can move a metric.
+FAVOUR = 4.0
 
 
 @dataclass(frozen=True)
@@ -106,11 +109,21 @@ class ContentEvaluator(Protocol):
 
 
 @dataclass(frozen=True)
+class Search:
+    """What every proposal needs: the space, the catalogue it moves, and the budget it moves under."""
+
+    knobs: Knobs
+    content: Content
+    options: TuneOptions
+
+
+@dataclass(frozen=True)
 class TuneOptions:
     iterations: int = 8
     neighbours: int = 4
     max_changes: int = 12
     seed: int = 0
+    sweep: bool = True
 
 
 @dataclass(frozen=True)
@@ -330,12 +343,27 @@ class EngineContentEvaluator:
             raise EvaluationError(f"{what} exited with {completed.returncode}:\n{tail}")
 
 
+def playable(knobs: Knobs, base: Content) -> list[Knob]:
+    """The knobs on spells the build actually carries. A knob on a spell that is turned off moves nothing."""
+    return [knob for knob in knobs if knob.spell in base.spells]
+
+
+def _weights(all_knobs: Sequence[Knob], favour: Collection[str]) -> np.ndarray:
+    """A draw that leans on the knobs already known to move a metric, without shutting the others out.
+
+    ``favour`` comes from the opening sweep: the knobs whose move changed something the objective reads.
+    They are worth :data:`FAVOUR` times a knob that has never been shown to matter, which is a lean and not
+    a rule — a spell nobody casts is exactly the spell a change might bring into play.
+    """
+    weights = np.array([FAVOUR if knob.key in favour else 1.0 for knob in all_knobs])
+    return weights / weights.sum()
+
+
 def propose(
     rng: np.random.Generator,
-    knobs: Knobs,
-    base: Content,
+    search: Search,
     current: Sequence[Move],
-    options: TuneOptions,
+    favour: Collection[str] = (),
 ) -> tuple[Move, ...] | None:
     """One neighbour of ``current``: the same moves with a single knob nudged one step either way.
 
@@ -343,18 +371,19 @@ def propose(
     an error. A knob already at a bound, a move that breaks a constraint, and a move that would take the
     proposal past ``max_changes`` are all redrawn.
     """
-    all_knobs = list(knobs)
+    all_knobs = playable(search.knobs, search.content)
     if not all_knobs:
         return None
+    weights = _weights(all_knobs, favour)
     here = _values(current)
     for _ in range(ATTEMPTS):
-        knob = all_knobs[int(rng.integers(len(all_knobs)))]
-        moves = _nudged(knob, current, base, int(rng.choice([-1, 1])))
+        knob = all_knobs[int(rng.choice(len(all_knobs), p=weights))]
+        moves = _nudged(knob, current, search.content, int(rng.choice([-1, 1])))
         if moves is None or _values(moves) == here:
             continue
-        if len({move.knob.key for move in moves}) > options.max_changes:
+        if len({move.knob.key for move in moves}) > search.options.max_changes:
             continue
-        if violations(base, apply_moves(base.spells, moves), knobs):
+        if violations(search.content, apply_moves(search.content.spells, moves), search.knobs):
             continue
         return moves
     return None
@@ -400,14 +429,26 @@ def tune_content(
         raise ValueError("The search needs at least one iteration and one neighbour per iteration.")
     rng = np.random.default_rng(options.seed)
     objective = knobs.objective
+    search = Search(knobs=knobs, content=content, options=options)
 
     first = _candidate(evaluator, objective, content.spells, moves=(), iteration=0)
     best = first
     history: list[Candidate] = []
+    favour: set[str] = set()
+    if options.sweep:
+        swept = _sweep(evaluator, knobs, content, first)
+        history.extend(swept)
+        favour = {
+            move.knob.key
+            for candidate in swept
+            if not _same(candidate.metrics, first.metrics)
+            for move in candidate.moves
+        }
+        best = min([first, *swept], key=lambda candidate: candidate.score)
     for iteration in range(1, options.iterations + 1):
         neighbours = []
         for _ in range(options.neighbours):
-            moves = propose(rng, knobs, content, best.moves, options)
+            moves = propose(rng, search, best.moves, favour)
             if moves is None:
                 continue
             spells = apply_moves(content.spells, moves)
@@ -424,6 +465,30 @@ def tune_content(
         spells=apply_moves(content.spells, best.moves),
         files=content.files,
     )
+
+
+def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content, first: Candidate) -> list[Candidate]:
+    """Play every legal single-step move of every playable knob, once, before the random phase starts.
+
+    This is the difference between unlikely and impossible. A uniform draw over 29 knobs with a budget of 40
+    leaves a one-in-four chance that any given knob is never tried, and the run that found this out missed
+    the single best move in the catalogue that way: `lightning_bolt`'s energy cost, worth more on its own
+    than everything the search did find. A sweep costs two evaluations per knob and removes the question.
+    """
+    played: set[tuple[tuple[str, float], ...]] = set()
+    swept: list[Candidate] = []
+    for knob in playable(knobs, content):
+        for direction in (1, -1):
+            moves = _nudged(knob, (), content, direction)
+            if not moves or violations(content, apply_moves(content.spells, moves), knobs):
+                continue
+            key = tuple(sorted(_values(moves).items()))
+            if key in played:
+                continue
+            played.add(key)
+            spells = apply_moves(content.spells, moves)
+            swept.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
+    return swept
 
 
 def _candidate(

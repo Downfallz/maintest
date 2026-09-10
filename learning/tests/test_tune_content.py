@@ -19,10 +19,12 @@ from downfall_learning.tune_content import (
     ContentEngine,
     EngineContentEvaluator,
     Move,
+    Search,
     TuneOptions,
     apply_moves,
     format_result,
     metrics_of,
+    playable,
     propose,
     tune_content,
     violations,
@@ -158,7 +160,7 @@ def test_a_proposal_is_legal_before_the_engine_ever_sees_it(tmp_path: Path) -> N
     rng = np.random.default_rng(0)
 
     for _ in range(20):
-        moves = propose(rng, knobs, content, (), TuneOptions())
+        moves = propose(rng, Search(knobs, content, TuneOptions()), ())
         assert moves is not None
         assert violations(content, apply_moves(content.spells, moves), knobs) == []
 
@@ -172,7 +174,7 @@ def test_a_proposal_never_moves_more_knobs_than_it_is_allowed(tmp_path: Path) ->
     spent: tuple[Move, ...] = (move(content, "spell:jab", DAMAGE, 2),)
 
     for _ in range(20):
-        proposed = propose(rng, knobs, content, spent, options)
+        proposed = propose(rng, Search(knobs, content, options), spent)
         assert proposed is not None
         assert {item.knob.key for item in proposed} <= {"spell:jab/effects/0/amount"}
 
@@ -324,7 +326,7 @@ def test_a_proposal_never_plays_a_catalogue_it_is_already_playing(tmp_path: Path
     pinned = (move(content, "spell:jab", DAMAGE, 1, steps=-2),)
 
     for _ in range(20):
-        proposed = propose(rng, knobs, content, pinned, TuneOptions(max_changes=1))
+        proposed = propose(rng, Search(knobs, content, TuneOptions(max_changes=1)), pinned)
         if proposed is None:
             break
         values = {item.knob.key: item.after for item in proposed}
@@ -493,7 +495,7 @@ def test_a_search_with_no_room_left_gives_up_rather_than_proposing_nothing(tmp_p
         files={"spell:attack": tmp_path / "attack.v1.json"},
     )
 
-    assert propose(np.random.default_rng(0), knobs, content, (), TuneOptions()) is None
+    assert propose(np.random.default_rng(0), Search(knobs, content, TuneOptions()), ()) is None
 
 
 def test_a_search_that_never_finds_a_neighbour_still_reports_the_content_it_played(tmp_path: Path) -> None:
@@ -526,3 +528,50 @@ def test_a_budget_that_plays_nothing_is_refused(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="at least one iteration"):
         tune_content(evaluator, knobs, content, options)
+
+
+def test_the_opening_sweep_plays_every_playable_knob_once(tmp_path: Path) -> None:
+    """The failure this exists for: a uniform draw left the best move in the catalogue untried."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    evaluator = FakeEvaluator()
+
+    result = tune_content(evaluator, knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0))
+
+    swept = {move.knob.key for candidate in result.candidates for move in candidate.moves}
+    assert swept == {"spell:attack/effects/0/amount", "spell:jab/effects/0/amount"}
+
+
+def test_a_knob_on_a_spell_the_build_lacks_is_never_drawn(tmp_path: Path) -> None:
+    """Most of the knobs file can be on turned-off spells; spending draws there buys nothing."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    thin = Content(
+        spells={"spell:attack": content.spells["spell:attack"]},
+        files={"spell:attack": content.files["spell:attack"]},
+    )
+
+    assert [knob.spell for knob in playable(knobs, thin)] == ["spell:attack"]
+
+
+def test_the_sweep_can_be_skipped(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    evaluator = FakeEvaluator()
+
+    tune_content(
+        evaluator, knobs, catalogue(tmp_path), TuneOptions(iterations=1, neighbours=1, seed=0, sweep=False)
+    )
+
+    assert evaluator.calls == 2
+
+
+def test_the_random_phase_leans_on_the_knobs_the_sweep_showed_can_move_a_metric(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    search = Search(knobs, content, TuneOptions())
+    rng = np.random.default_rng(0)
+
+    drawn = [propose(rng, search, (), favour={"spell:jab/effects/0/amount"}) for _ in range(40)]
+    keys = [move.knob.key for moves in drawn if moves for move in moves]
+
+    assert keys.count("spell:jab/effects/0/amount") > keys.count("spell:attack/effects/0/amount")

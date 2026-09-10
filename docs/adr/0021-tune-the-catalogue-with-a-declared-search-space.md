@@ -25,9 +25,10 @@ the numbers a pass may move and their bounds; the intent of the spell in words, 
 into something the spell was not; the **objective**, as bands over the metrics `report.json` already
 publishes, scored as the sum of `weight * (excess / scale) ** 2`; and the **constraints** a candidate may not
 break. Only pointers the file lists may move, so a spell's targeting, its kinds of effect and its identity
-are out of reach of the search by construction. The search is a hill climb, because each candidate costs a
-content build and one engine evaluation per objective entry, and it proposes rather than commits: the run
-writes the winning spell files and a report, and applying them stays a human act with a journal entry.
+are out of reach of the search by construction. The search sweeps every knob once and then hill climbs,
+because each candidate costs a content build and one engine evaluation per objective entry, and it proposes
+rather than commits: the run writes the winning spell files and a report, and applying them stays a human
+act with a journal entry.
 
 No language model runs inside the loop. What a model is good at here — reading the run and proposing which
 spell to touch and why — happens in a session with a person, not in the search.
@@ -40,6 +41,8 @@ spell to touch and why — happens in a session with a person, not in the search
   catalogue has said anywhere what each of its 36 spells is for.
 - Good: constraints are checked before the engine is called, so an illegal candidate costs nothing, and
   `check-knobs` fails the build when the file and the content drift apart.
+- Good: dominance is read against the talent tree, so a deeper spell outclassing a shallower one is the
+  progression it is meant to be and only the pairs offered at once are reported.
 - Bad: the objective is a choice with no proof behind it. Balanced is defined by the bands in that file,
   and a search will happily reach them in a way nobody wanted; the proposal is therefore read, not merged.
 - Bad: the fitness is what `Greedy` does with the content, so the search tunes for one agent's taste. The

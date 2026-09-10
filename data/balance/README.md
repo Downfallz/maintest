@@ -88,27 +88,36 @@ Hard rules. A candidate that breaks one is not scored at all.
 
 | Constraint | What it refuses |
 | --- | --- |
-| `noNewStrictDominance` | A new pair where one spell is better than another on every axis and worse on none. |
+| `noNewStrictDominance` | A new pair where one spell is better than another on every axis and worse on none, **at the same depth in the talent tree or shallower**. A deeper spell outclassing a shallower one is what the tree is for and is not a pair. |
 | `noIndistinguishableSpells` | Two spells with the same cost, Spell initiative, critical chance, targeting and effects. Effects are compared whole and as a multiset, the way the engine's `Spell.Indistinguishable` audit compares them; the engine reads the built schema and stays the authority. |
 | `startingKitOffersAChoice` | Any of the three spells every creature starts with being strictly better than another. |
 
-Dominance is scoped to pairs a candidate **adds**. A spell three nodes down the talent tree outclassing a
-starting spell is what progression means, so the pairs the catalogue already carries are not defects to be
-optimized away: `check-knobs` lists them as findings and the exit code stays 0. What is a defect is taking a
-decision out of a hand that had one, which is why `startingKitOffersAChoice` is named separately: that is
-the one hand every match is dealt, and journal entry `ci-9` is the whole story of getting it wrong.
+Dominance reads the talent tree. A spell is only compared against another at its own depth or deeper:
+reaching a deeper node costs picks and prerequisites, so being better there is the reward, not a defect.
+What is left is two spells offered at once with nothing to choose between them, or a pick that buys a
+downgrade. Beyond that, the constraint is scoped to pairs a candidate **adds**: the ones already in the
+catalogue are findings `check-knobs` lists with the exit code still 0. `startingKitOffersAChoice` is named
+separately because that is the one hand every match is dealt, and journal entry `ci-9` is the whole story of
+getting it wrong.
 
 ## The search
 
-`tune-content` hill climbs: it plays the content as it stands, then plays neighbours of the best thing it
-has found, each one a single knob nudged one step. A proposal that breaks a constraint or moves more than
-`--max-changes` knobs is redrawn before the engine ever sees it, so the budget goes on content worth
-playing.
+`tune-content` opens with a **sweep**: every knob on a spell the build carries, one step each way, played
+once. Then it hill climbs, playing neighbours of the best thing it has found, each one a single knob nudged
+one step, leaning four to one on the knobs the sweep showed can move a metric. A proposal that breaks a
+constraint or moves more than `--max-changes` knobs is redrawn before the engine ever sees it, so the budget
+goes on content worth playing.
+
+The sweep is there because of a real miss. A uniform draw over 29 knobs with a budget of 40 candidates
+leaves a one-in-four chance that any given knob is never tried, and the first full run lost that coin flip
+on `lightning_bolt`'s energy cost — one move worth more than everything the search did find. `--no-sweep`
+skips it when you want a quick look rather than an answer.
 
 Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
-benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty and the default budget
-of `--iterations 8 --neighbours 4` is thirty-three candidates, near ten minutes. Raise the budget rather
-than the step size: a wider step reaches further and reads worse in the diff.
+benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty. The sweep is up to two
+candidates per playable knob — on the nine-spell core content that is 29 knobs and about fifteen minutes —
+and `--iterations 8 --neighbours 4` adds thirty-two more. Raise the budget rather than the step size: a
+wider step reaches further and reads worse in the diff.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is
