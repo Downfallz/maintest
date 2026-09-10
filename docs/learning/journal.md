@@ -4,6 +4,129 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-10. `search-weights` on the nine-spell content: the weights are not what keeps defence off the board
+
+- **What this is**: the experiment the entry below named as the next run. A weight search plays to win and
+  nothing else, so it settles whether Greedy ignores `guard` and `rejuvenate` because its eight weights
+  undervalue defence, or because defence is genuinely not worth buying in this catalogue.
+  `search-weights -o runs/search-9spells --seed 1`, 10 iterations of 16, 161 evaluations, against `greedy`
+  on the benchmark seeds (400 matches, mirrored). Content hash `c0ec6984`, engine `f9488f36136f`.
+- **What it found**: a candidate at **0.5775** mean score against Greedy, interval [0.536, 0.619], found at
+  iteration 2. The population had collapsed onto it by iteration 7 and the remaining four iterations found
+  nothing better, so this is a converged search, not a truncated one.
+- **The weights, read as ratios to `damage`** (only ratios matter — scaling every weight scales every score):
+
+  | Weight | Greedy | Found | Change |
+  | --- | --- | --- | --- |
+  | `damage` | 1.000 | 1.000 | — |
+  | `kill` | 5.000 | 5.569 | +11% |
+  | `heal` | 0.800 | 0.811 | **+1%** |
+  | `stun` | 3.000 | 3.141 | +5% |
+  | `bleed` | 0.800 | 1.340 | +67% |
+  | `buff` | 0.500 | 0.440 | **-12%** |
+  | `energy` | 0.200 | 0.055 | -73% |
+  | `risk` | 2.000 | 2.172 | +9% |
+  | `initiative` | 0.500 | 0.369 | -26% |
+
+- **The answer**: no. A search that cares only about winning left `heal` where it was (+1% is inside the
+  noise of a 400-match evaluation) and moved `buff` **down**. Nothing in the objective told it to avoid
+  defence; it declined to buy it. The two real moves are elsewhere: `bleed` +67% — damage over time is
+  underpriced when a match lasts eight rounds — and `energy` -73%, hoarding energy buys almost nothing.
+- **What the winning agent actually cast** (6009 actions):
+
+  | Spell | Casts |
+  | --- | --- |
+  | `lightning_bolt` | 5205 |
+  | `heavy_strike` | 411 |
+  | `pummel` | 351 |
+  | `throwing_star` | 42 |
+
+  Five of nine spells never cast: `wait`, `basic_attack`, `guard`, `poison_slash`, `rejuvenate`. Across both
+  agents, 11,910 actions produced **0 healing, 0 defense buffs, 0 regenerations**. The winner plays the same
+  four spells as Greedy in nearly the same proportions; its 7.75 points come from targeting and timing, not
+  from a different spell mix.
+- **What this rules out and what it leaves**: tuning the eight weights is not the lever. What remains is the
+  scorer's pricing and the content itself — `HealScore` counts missing health with no notion of the damage
+  actually incoming, and `DefenseBuff` is priced `buff × amount × rounds` on a flat
+  `PermanentConditionRounds = 3` rather than by the damage it prevents. Both are ADR territory, in the line
+  of ADR 0018 on the initiative weight. The horizon is the third suspect and the one no weight can fix: a
+  one-step lookahead cannot see "I survive the round I would otherwise lose".
+- **Decision**: apply nothing. `learning/weights/greedy.json` stays as authored — a 57.75% agent that plays
+  the same four spells is not a better baseline, it is the same baseline with sharper aim, and changing the
+  benchmark opponent would invalidate every comparison in this journal for no insight. The next entry should
+  be about pricing a defensive effect by the damage it prevents, not about weights.
+
+## 2026-09-10. First tuning pass on the tier objective: tier 1 becomes a choice, the defensive half stays dead
+
+- **What this is**: the first run of `tune-content` against the objective that reads per tier. 58 candidates,
+  118 evaluations, **score 119.40 to 34.73**. Content unchanged: this is a proposal, measured and written
+  down, not applied. Scores here do not compare with the 104.05 and 15.56 of the entries below — those were
+  a different objective (the entry below says why).
+- **The five moves**:
+
+  | Spell | Knob | From | To |
+  | --- | --- | --- | --- |
+  | `lightning_bolt` | energy cost | 2 | 3 |
+  | `basic_attack` | damage | 1 | 2 |
+  | `pummel` | critical chance | 0.667 | 0.717 |
+  | `guard` | Spell initiative | 1 | 0 |
+  | `rejuvenate` | heal | 3 | 2 |
+
+- **What it does to the play**, built and played to check rather than read off the score:
+
+  | Tier | Before | After |
+  | --- | --- | --- |
+  | 0 | `heavy_strike` **100%** | `heavy_strike` 81%, `basic_attack` 19% |
+  | 1 | `lightning_bolt` 93%, `pummel` 6% | `lightning_bolt` 57%, `pummel` **43%** |
+
+  Tier 1 becomes a real choice, two spells sharing the casts almost evenly where one took everything. Tier 0
+  opens as well. Matches run **9.4 rounds**, inside the band. Entropy 0.74 to **1.93**. And `tierWinSpread`
+  falls from 0.262 to **0.003**: spells offered together are now worth about the same in results, which is
+  the reading that says a tier is a choice rather than a formality.
+- **What it does not fix, and this is the finding**: `tierUsageShare` stays at **0.814**, still 19.8 of the
+  remaining 34.7, and it is tier 0 — `heavy_strike` keeps 81% and `wait` is never cast. Five of the nine
+  Spells are still never cast: `wait`, `guard`, `poison_slash`, `rejuvenate`, and now `throwing_star`. The
+  whole defensive half of the catalogue is dead, and the first-mover share does not move on this path either
+  (0.640).
+- **Why the defensive half is dead, from the scorer rather than from a guess**: `ActionScorer` is a one-step
+  lookahead, and on the same board `lightning_bolt` scores about 5.2 (3 damage, doubled by a critical 72% of
+  the time, at `damage` 1.0) while `rejuvenate` scores at most 2.4 (`heal` 0.8 × 3 restored) and `guard`
+  2.5 (`buff` 0.5 × 1 × 3 permanent rounds, plus 1 × 2 rounds). An attack is worth twice a defence to the
+  agent that measures the content, every single time.
+- **Which of the two is wrong is a measurable question, not an opinion**: either the weights undervalue
+  defence, or defence genuinely is not worth it in a nine-round game with 20 health. `search-weights` tunes
+  those eight numbers *for winning* and has never been run on this content. If the weights that win keep
+  `heal` low, the content is the problem and no amount of tuning `rejuvenate`'s number will make a bot want
+  it.
+- **Decision**: apply nothing yet. The next run is `search-weights` on this content, and the entry after
+  this one should say whether a bot that plays to win ever buys a heal.
+
+## 2026-09-10. Balance read per tier, and the starting kit turns out not to be a choice at all
+
+- **What changed**: the objective, so **no score from before this entry compares with a score after it**.
+  Three targets are added and one is reweighted. No content moved.
+- **Why**: the catalogue-wide `spellUsageShare` cannot see a monopolised tier. A Tier is the set of Spells
+  offered at one depth of the Talent tree, which is what a player actually chooses between, so that is where
+  the question "is this a choice" belongs.
+- **The three readings**, each on its worst tier: `tierUsageShare`, the largest share of landed casts one
+  Spell takes inside its tier; `tierDamageSpread`, how many times harder the best damaging Spell of a tier
+  hits per landed cast than the worst; `tierWinSpread`, the gap between the best and worst win share. Each
+  skips what it cannot read — a tier nobody cast, a Spell that deals no damage, a Spell too few sides
+  declared — rather than guessing, using the engine's own threshold of eight sides.
+- **The finding, and it is not small**: on the core content `spellUsageShare` reads 0.855 while
+  **`tierUsageShare` reads 1.000**. `heavy_strike` takes *every* landed cast of tier 0; `basic_attack` and
+  `wait` take none. Tier 1 is barely better, `lightning_bolt` at 93% against `pummel` 6% and
+  `throwing_star` 0%. The starting kit every match is dealt is not a choice, and no rule caught it:
+  `startingKitOffersAChoice` only refuses strict dominance, and `basic_attack` is cheaper than
+  `heavy_strike`, so nothing is strictly better than anything. It is simply never worth casting.
+- **What it costs at 3 energy**: with `lightning_bolt` at 3, `tierUsageShare` is still 0.874 — tier 0, the
+  same problem — while `tierWinSpread` falls from 0.262 to 0.071. Fixing the Sorcerer's price does nothing
+  for the starting kit, which the catalogue-wide reading could not have told us.
+- **`spellUsageShare` drops to weight 1.** The tier reading is the better instrument and catches everything
+  the wide one does; the wide one stays as a coarse guard rather than double-counting at full weight.
+- **Decision**: keep, apply no content change. The next question is no longer only what `lightning_bolt`
+  costs, it is why a creature never casts two of the three Spells it starts with.
+
 ## 2026-09-10. The search sweeps first: 104.05 to 15.56, and two good moves that do not add up
 
 - **What changed**: the tuner, not the content. Three things, after the entry below left one spell holding

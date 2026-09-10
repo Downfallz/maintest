@@ -72,8 +72,8 @@
         "on": "mirror",
         "max": 0.25,
         "scale": 0.1,
-        "weight": 2,
-        "why": "The largest share of landed casts any single spell takes: 0.458 at the last measured run, heavy_strike. The scale is wider than the band it guards on purpose — at 0.05 this one target scored more than every other put together, and a search would have chased it alone. Derived from spellOutcomes, which is why the tuner computes it rather than report.json."
+        "weight": 1,
+        "why": "The largest share of landed casts any one spell takes across the whole catalogue. Since tierUsageShare reads the same thing per tier and catches what this one hides — a tier fully monopolised by a spell that is small in the total — this stays as the coarse guard and carries half the weight. 0.855 on the core content."
       },
       {
         "metric": "spellsNeverCast",
@@ -82,6 +82,30 @@
         "scale": 2,
         "weight": 1,
         "why": "Spells in the catalogue that no declaration ever landed. Needs the catalogue as well as the evaluation, so the tuner computes it. The band is read against what the build carries, not against what is on disk: on the nine-spell core content two spells failing to come up is slack, twelve would be the whole game."
+      },
+      {
+        "metric": "tierUsageShare",
+        "on": "mirror",
+        "max": 0.5,
+        "scale": 0.1,
+        "weight": 2,
+        "why": "The largest share of landed casts any one spell takes among the spells of its own tier, worst tier. A tier is the set a player chooses between at one moment, so this is the balance they actually feel. Uniform is 1/n: 0.33 for the three starting spells, 0.17 for the six of tier 1. It reads 1.000 on the core content — heavy_strike takes every landed cast of tier 0 — where the catalogue-wide share reads 0.855 and hides it."
+      },
+      {
+        "metric": "tierDamageSpread",
+        "on": "mirror",
+        "max": 2.0,
+        "scale": 0.5,
+        "weight": 1,
+        "why": "How many times harder the best damaging spell of a tier hits per landed cast than the worst, worst tier. Which spells count is read from the content — does the spell carry a Damage effect — never from what its casts landed, so lowering an attack until its hits are all absorbed widens this reading instead of dropping the spell out of it. A heal is not compared: it shares no unit with an attack. The ratio is floored at half a point of damage per cast and capped at 5. 2.41 on the core content."
+      },
+      {
+        "metric": "tierWinSpread",
+        "on": "mirror",
+        "max": 0.15,
+        "scale": 0.1,
+        "weight": 1,
+        "why": "The gap between the best and the worst win share among the spells of a tier, worst tier, counting only spells enough sides declared. Two spells offered together should not be worth wildly different results. 0.262 on the core content."
       },
       {
         "metric": "winRateA",

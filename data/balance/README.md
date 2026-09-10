@@ -79,8 +79,25 @@ the content with skill held equal, and `skill` (greedy against random) checks th
 playing well. A change that balances the first by flattening the second has removed the decisions instead of
 balancing them.
 
+Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
+of the talent tree, which is the set a player is choosing between at that moment — and report the worst
+tier: `tierUsageShare` (does one spell own its tier), `tierDamageSpread` (do its damaging spells hit
+comparably hard per landed cast) and `tierWinSpread` (do they win comparably often). They exist because the
+catalogue-wide reading hides a monopolised tier: on the nine-spell core content `spellUsageShare` reads
+0.855 while `tierUsageShare` reads 1.000, because `heavy_strike` takes every landed cast of tier 0 and the
+starting kit is not a choice at all.
+
+Each skips what it cannot read rather than guessing: a tier nobody cast (that is `spellsNeverCast`), a spell
+with no `Damage` effect at all (a heal and an attack share no unit), and a spell too few sides declared for
+its own number to be anything but noise. Whether a spell is a damaging one is read from the content, never
+from what its casts landed: otherwise lowering an attack until its hits are all absorbed would drop it out
+of the comparison and *improve* the reading, paying the search to break spells.
+
 What "balanced" means is a choice, not a formula, and this block is where that choice is written down. Move
-a band and say why in `docs/learning/journal.md`, the same as any other change that moves a number.
+a band and say why in `docs/learning/journal.md`, the same as any other change that moves a number. Two
+things are worth knowing before you do: the targets compete, because the score is a sum, so asking hard for
+one thing is paid for elsewhere; and adding or reweighting a target makes every score before it
+incomparable with every score after.
 
 ## The constraints
 

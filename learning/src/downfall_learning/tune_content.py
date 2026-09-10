@@ -18,6 +18,7 @@ import shutil
 import subprocess
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Protocol
 
@@ -30,6 +31,7 @@ from downfall_learning.knobs import (
     Knob,
     Knobs,
     Objective,
+    deals_damage,
     dominates,
     new_dominance,
     new_indistinguishable,
@@ -54,6 +56,18 @@ ATTEMPTS = 40
 
 #: How much likelier the random phase is to draw a knob the opening sweep showed can move a metric.
 FAVOUR = 4.0
+
+#: Landed casts, or sides that declared a spell, below which its own numbers are noise. The engine's own
+#: threshold for listing a spell in its table (``EvaluationConsole``).
+ENOUGH_SIDES = 8
+
+#: The smallest damage per landed cast the tier spread will divide by. An attack whose hits are entirely
+#: absorbed deals zero, and the ratio it belongs in has no value there; this floors it instead.
+MIN_DAMAGE_PER_CAST = 0.5
+
+#: The largest tier damage spread reported. Past it the reading has said what it has to say — one spell of
+#: this tier hits nothing like the others — and a bigger number would only drown every other target.
+MOST_LOPSIDED = 5.0
 
 
 @dataclass(frozen=True)
@@ -234,24 +248,96 @@ def _starting_kit(after: Content, knobs: Knobs) -> list[str]:
     return problems
 
 
-def metrics_of(evaluation: Evaluation, name: str, catalogue: Sequence[str]) -> dict[str, float]:
-    """The report's own metrics for this evaluation, plus the two that need the catalogue.
+def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str, float]:
+    """The report's own metrics for this evaluation, plus the ones that need the catalogue.
 
-    ``spellUsageShare`` is the largest share of landed casts any one spell took, and ``spellsNeverCast``
-    counts the spells of ``catalogue`` that no declaration ever landed. Both read ``spellOutcomes``, which
-    the engine fills with what the casts did rather than with what the agents declared.
+    Two are about the catalogue as a whole: ``spellUsageShare``, the largest share of landed casts any one
+    spell took, and ``spellsNeverCast``, the spells no declaration ever landed. Three are about a tier —
+    spells offered at the same depth of the talent tree, which is the set a player actually chooses between:
+    how concentrated its casts are, how far apart its damage per cast is, and how far apart the win share of
+    the sides that declared it is. Each reports its worst tier.
+
+    All of it reads ``spellOutcomes``, which the engine fills with what the casts did rather than with what
+    the agents declared.
     """
     measured = dict(EvaluationSummary.of(name, evaluation).metrics)
-    outcomes = evaluation.raw.get("spellOutcomes", [])
-    landed = {
-        str(outcome["spell"]): int(outcome.get("resolved", 0))
-        for outcome in outcomes
-        if isinstance(outcome, Mapping)
-    }
+    outcomes = [
+        outcome for outcome in evaluation.raw.get("spellOutcomes", []) if isinstance(outcome, Mapping)
+    ]
+    by_alias = {str(document["id"]): alias for alias, document in content.spells.items()}
+    landed = {str(outcome["spell"]): int(outcome.get("resolved", 0)) for outcome in outcomes}
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
-    measured["spellsNeverCast"] = float(sum(1 for spell in catalogue if landed.get(spell, 0) == 0))
+    measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
+    damaging = {identifier for identifier, alias in by_alias.items() if deals_damage(content.spells[alias])}
+    measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
     return measured
+
+
+def _tier_metrics(
+    outcomes: Sequence[Mapping[str, object]],
+    by_alias: Mapping[str, str],
+    tiers: Mapping[str, int],
+    damaging: Collection[str],
+) -> dict[str, float]:
+    """The three readings of "are the spells of one tier a choice", each on its worst tier.
+
+    A tier nobody cast is not read here: that is what ``spellsNeverCast`` is for. Each reading drops a tier
+    it cannot speak about rather than guessing a number, and a reading no tier could produce is left out
+    entirely, which the objective reports as missing rather than counting as zero.
+    """
+    grouped: dict[int, list[Mapping[str, object]]] = {}
+    for outcome in outcomes:
+        alias = by_alias.get(str(outcome["spell"]))
+        tier = tiers.get(alias) if alias else None
+        if tier is not None:
+            grouped.setdefault(tier, []).append(outcome)
+
+    readings = {
+        "tierUsageShare": _usage_share,
+        "tierDamageSpread": partial(_damage_spread, damaging=damaging),
+        "tierWinSpread": _win_spread,
+    }
+    measured = {}
+    for name, read in readings.items():
+        worst = [value for value in (read(members) for members in grouped.values()) if value is not None]
+        if worst:
+            measured[name] = max(worst)
+    return measured
+
+
+def _usage_share(members: Sequence[Mapping[str, object]]) -> float | None:
+    """The share of a tier's landed casts its most-cast spell takes. None when the tier was never cast."""
+    landed = [int(member.get("resolved", 0)) for member in members]
+    return max(landed) / sum(landed) if sum(landed) > 0 else None
+
+
+def _damage_spread(members: Sequence[Mapping[str, object]], damaging: Collection[str]) -> float | None:
+    """How many times harder the best damaging spell of a tier hits per landed cast than the worst.
+
+    Which spells count is read from the content — does the spell carry a `Damage` effect — and never from
+    what its casts happened to do. Reading it from the result would let a candidate that lowers an attack
+    until every hit is absorbed drop that attack out of the comparison and *improve* this number, which is
+    the opposite of what it is for. A spell whose hits all land on armour keeps its zero and the ratio is
+    floored at :data:`MIN_DAMAGE_PER_CAST` and capped at :data:`MOST_LOPSIDED`.
+
+    A heal has no `Damage` effect and is not compared: it shares no unit with an attack. Only spells with
+    enough landed casts for their own rate to mean anything are read at all.
+    """
+    rates = [
+        float(member["damagePerCast"])
+        for member in members
+        if str(member["spell"]) in damaging and int(member.get("resolved", 0)) >= ENOUGH_SIDES
+    ]
+    if len(rates) < 2:
+        return None
+    return min(max(rates) / max(min(rates), MIN_DAMAGE_PER_CAST), MOST_LOPSIDED)
+
+
+def _win_spread(members: Sequence[Mapping[str, object]]) -> float | None:
+    """The gap between the best and worst win share of a tier, over the spells enough sides declared."""
+    scores = [float(member["score"]) for member in members if int(member.get("sides", 0)) >= ENOUGH_SIDES]
+    return max(scores) - min(scores) if len(scores) > 1 else None
 
 
 @dataclass(frozen=True)
@@ -287,17 +373,12 @@ class EngineContentEvaluator:
         shutil.rmtree(self._candidate / "dst", ignore_errors=True)
         self.calls = 0
 
-    @property
-    def catalogue(self) -> tuple[str, ...]:
-        """The versioned ids the evaluation reports its spells under."""
-        return tuple(str(document["id"]) for document in self._content.spells.values())
-
     def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
         self._write(spells)
         self._build()
         schema = self._candidate / "dst" / "game.schema.json"
         return {
-            name: metrics_of(self._play(name, evaluation, schema), name, self.catalogue)
+            name: metrics_of(self._play(name, evaluation, schema), name, self._content)
             for name, evaluation in self._objective.evaluations.items()
         }
 

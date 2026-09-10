@@ -61,13 +61,21 @@ words, and the objective as bands over the metrics `report.json` already publish
 | `tune-content` | the same, plus a built engine | `tune.json` and the changed spell files under `content/` | Hill climbs: play the content, then play neighbours of the best, one knob at a time. A candidate that breaks a constraint is redrawn before the engine sees it. `--apply` writes the winning numbers into `data/`. |
 
 The score is `sum(weight * (excess / scale) ** 2)` over the objective's targets, zero being on target. Seven
-of the nine targets are `report.json` metrics under their own names, so a tuning run and a normal run are
-read the same way; `spellUsageShare` and `spellsNeverCast` are the two the tuner derives from
-`spellOutcomes`, because they need the catalogue as well as the evaluation.
+of them are `report.json` metrics under their own names, so a tuning run and a normal run are read the same
+way. Five the tuner derives from `spellOutcomes`, because they need the catalogue as well as the evaluation:
+`spellUsageShare` and `spellsNeverCast` over the whole catalogue, and three over a **tier** — the spells
+offered at one depth of the talent tree, which is the set a player chooses between. `tierUsageShare` asks
+whether one of them owns the tier, `tierDamageSpread` whether they hit comparably hard per landed cast, and
+`tierWinSpread` whether they win comparably often. Each reports its worst tier, and each skips what it
+cannot read: a tier nobody cast, a spell with no `Damage` effect, a spell too few sides declared for its
+own number to mean anything. Damaging is read from the content, so an attack whose hits are absorbed widens
+the spread rather than leaving it.
+
+`docs/learning/explained.md` says what a band, a scale and a weight are in plain words, and how to point the
+objective at a match length or at your own agent.
 
 A candidate costs one content build plus one evaluation per objective entry, about twenty seconds on the
-benchmark seeds, so the default budget is near ten minutes. What comes out is a proposal: read the moves
-against each spell's intent, rebuild, regenerate the digest, and write the journal entry.
+benchmark seeds. The opening sweep is up to two candidates per playable knob before the climb starts.
 
 ## Three learners
 

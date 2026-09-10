@@ -224,6 +224,78 @@ The first real run (journal, 2026-09-09) is the worked example: the value policy
 because one rare action got its own fit on almost no data. The fix is those flags, not code:
 `scripts/iterate.sh --run second --against premier --matches 1000 --value-min-samples 50 --value-alpha 10`.
 
+## Balancing the game: bands, scales, weights, and what a score is
+
+The loop above measures. This part is about *changing* the game so the numbers land where you want, and it
+has its own vocabulary, all of it in one file: `data/balance/knobs.json` (ADR 0021).
+
+Careful with one word: the flags of `iterate.sh` above are also called knobs. These are different. A
+**balance knob** is one number of one spell — its energy cost, its damage, how many rounds its bleed lasts.
+
+### The file says three things
+
+**What may move.** Per spell, the numbers a balance pass is allowed to change and how far, plus what the
+spell is *for*, in plain words. Nothing else moves: the search cannot change what a spell targets or what
+kind of effect it has, because those are the spell's identity rather than its tuning.
+
+```json
+{ "path": "/energyCost", "min": 2, "max": 4, "step": 1 }
+```
+
+**What balanced means.** A list of targets. Each one names a number the loop already measures, the range it
+should be inside, and how much it matters.
+
+**What is never allowed.** Hard rules a change may not break, whatever it does to the numbers. For example,
+two spells offered at the same moment must not be one strictly better than the other: that is a choice that
+is not a choice.
+
+### Reading one target
+
+```json
+{ "metric": "averageRounds", "on": "mirror", "min": 8, "max": 16, "scale": 3, "weight": 2 }
+```
+
+- **metric** — the number being watched. Here, how many rounds a match lasts on average.
+- **on** — which match-up it is read from. `mirror` is the bot against itself, which is how you look at the
+  content with skill held equal.
+- **min / max — the band.** Anywhere between 8 and 16 rounds is fine. Inside the band, this target costs
+  nothing at all: there is no prize for being in the middle.
+- **scale** — how much being outside the band hurts. It is the amount of "outside" that counts as one unit
+  of pain. Here one unit is 3 rounds, so a match averaging 11 rounds is fine, 19 rounds is one unit out,
+  22 rounds is two.
+- **weight** — how much this target matters against the others. Two targets, same distance outside, the one
+  with twice the weight complains twice as loud.
+
+The pain of one target is `weight × (units outside) ²`, squared so that one badly broken thing outranks
+several slightly off ones. The **score** of a whole catalogue is the sum over every target. **Zero means
+everything is inside its band. Lower is better.** A score of 104 and a score of 15 on the same targets means
+the second catalogue is far closer to what you asked for.
+
+### Saying what you want
+
+Everything in that block is yours to set, and none of it is code.
+
+- **"I want matches around 12 rounds."** Set the band to `11..13`. Tighten `scale` to `1` so a round out
+  costs a whole unit, and raise `weight` if you want length to win arguments against the other targets.
+- **"Balance it for my bot, not the built-in one."** The `evaluations` block names who plays: `p1` and `p2`
+  take `random`, `greedy`, `heuristic:<weights file>`, `policy:<policy file>` or `explore:<rate>`. Point them
+  at your agent and every number is measured against it. Add a third match-up with its own targets if you
+  want two opinions.
+- **"No spell should own its level."** `tierUsageShare` watches the spells offered at the same depth of the
+  talent tree — the set a player actually chooses between — and reports the worst one. `tierDamageSpread`
+  asks whether they hit comparably hard, and `tierWinSpread` whether they win comparably often.
+
+### The catch, said plainly
+
+The score is a sum, so the targets compete. Asking hard for 12-round matches will be paid for somewhere
+else, and the search will pay wherever your weights make it cheapest. That is not the tool being clever; it
+is doing exactly what the file says. When a proposal surprises you, read the weights before reading the
+moves.
+
+And a proposal is only true for the catalogue it was measured on. Two changes that each help on their own
+can fight each other when applied together — that has already happened here once, and it is in
+`journal.md`. After accepting a change, search again rather than stacking the next proposal on top.
+
 ## How to read a report
 
 - **Player 1 share far from 50% with identical agents**: the rules favour the first mover; a rules question,
