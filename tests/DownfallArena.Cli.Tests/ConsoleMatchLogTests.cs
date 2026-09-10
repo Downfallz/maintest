@@ -40,7 +40,7 @@ public sealed class ConsoleMatchLogTests
     }
 
     /// <summary>
-    /// An energyRegeneration moves no health, so a round where one ticks alone would print nothing at all unless the
+    /// An energy regeneration moves no health, so a round where one ticks alone would print nothing at all unless the
     /// log knows about it -- and the energy it gave is the whole reason the next round looks different.
     /// </summary>
     [Fact]

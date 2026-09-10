@@ -39,8 +39,8 @@ internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
         };
 
     /// <summary>
-    /// The start of the round, in the order it was applied: the energy energyRegenerations gave, the healing, then the
-    /// bleeds (ADR 0019, ADR 0020). Nothing when none of the three ticked.
+    /// The start of the round, in the order it was applied: the energy regenerations, then the healing, then
+    /// the bleeds (ADR 0019, ADR 0020). Nothing when none of the three ticked.
     /// </summary>
     private static string? Describe(OngoingEffectsApplied ongoing)
     {

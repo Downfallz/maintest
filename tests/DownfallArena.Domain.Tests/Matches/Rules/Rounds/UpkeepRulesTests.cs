@@ -105,7 +105,7 @@ public sealed class UpkeepRulesTests
     }
 
     /// <summary>
-    /// ADR 0020: the energy counterpart of a regeneration. Energy has no cap, so every point of an energyRegeneration
+    /// ADR 0020: the energy counterpart of a regeneration. Energy has no cap, so every point of an energy regeneration
     /// lands, round after round, for as long as the condition lasts.
     /// </summary>
     [Fact]
@@ -129,8 +129,8 @@ public sealed class UpkeepRulesTests
     }
 
     /// <summary>
-    /// An energyRegeneration is a condition like any other: the cleanup of the round it was applied in does not count,
-    /// the next one expires a one-round energyRegeneration, and the energy stops with it.
+    /// An energy regeneration is a condition like any other: the cleanup of the round it was applied in does not count,
+    /// the next one expires a one-round energy regeneration, and the energy stops with it.
     /// </summary>
     [Fact]
     public void An_energyRegeneration_counts_down_and_expires_and_the_energy_stops()

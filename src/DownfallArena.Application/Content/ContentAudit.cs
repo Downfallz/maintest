@@ -217,11 +217,15 @@ public static class ContentAudit
     }
 
     /// <summary>
-    /// Whether any of these spells hands out energy, which is what makes an energy ceiling meaningless. An
-    /// energyRegeneration counts: it hands out energy every round it lasts, and can be re-applied.
+    /// Whether any of these spells hands energy to its caster's own side, which is what makes an energy ceiling
+    /// meaningless. An energy regeneration counts: it hands out energy every round it lasts, and can be
+    /// re-applied. A spell that can only reach enemies does not: its caster never receives what it gives, so
+    /// counting it would hide a real <c>Spell.Uncastable</c> finding behind an unbounded ceiling.
     /// </summary>
     private static bool Grants(IReadOnlySet<SpellId> spells, IGameResources resources) =>
-        spells.Any(id => resources.GetSpell(id).Effects.Any(effect => effect is EnergyGain or EnergyRegeneration));
+        spells.Select(resources.GetSpell).Any(spell =>
+            spell.Targeting.Origin is not TargetOrigin.Enemy
+            && spell.Effects.Any(effect => effect is EnergyGain or EnergyRegeneration));
 
     private static SpellReach Row(Spell spell, RuleSet rules, int startingFor, int reachableBy) => new()
     {

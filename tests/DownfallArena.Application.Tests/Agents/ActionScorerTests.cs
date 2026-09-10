@@ -90,6 +90,30 @@ public sealed class ActionScorerTests
         Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyOutcome(Three, 3)]), board).ShouldBe(-0.2 * 3, 1e-9);
     }
 
+    /// <summary>
+    /// An outcome on a creature the same action kills never lands: <c>Heal</c> and <c>GainEnergy</c> both
+    /// return zero on a dead creature. Scored anyway, energy handed to a dying enemy would be a penalty the
+    /// action never pays, and a heal on a dying ally a bonus it never gets. The condition path already gated
+    /// on this; these two did not.
+    /// </summary>
+    [Fact]
+    public void An_outcome_on_a_creature_the_action_kills_scores_nothing()
+    {
+        var board = Board(enemyHealth: 3);
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with { Health = Health.Of(3) };
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+        var action = Strike(One, Three);
+        var kill = new DamageOutcome(Three, 3, Critical: false);
+
+        // 3 effective damage plus the kill weight, and nothing at all for the energy the corpse never gains.
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [kill, new EnergyOutcome(Three, 3)]), creatures)
+            .ShouldBe(3 + 5, 1e-9);
+
+        // The same for a heal on an ally this action's own damage finishes off.
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new DamageOutcome(ally.Id, 3, Critical: false), new HealOutcome(ally.Id, 10)]), creatures)
+            .ShouldBe(-(3 + 5), 1e-9);
+    }
+
     [Fact]
     public void An_energyRegeneration_is_priced_at_the_energy_weight_over_the_rounds_it_lasts()
     {
