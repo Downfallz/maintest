@@ -575,3 +575,15 @@ def test_the_random_phase_leans_on_the_knobs_the_sweep_showed_can_move_a_metric(
     keys = [move.knob.key for moves in drawn if moves for move in moves]
 
     assert keys.count("spell:jab/effects/0/amount") > keys.count("spell:attack/effects/0/amount")
+
+
+def test_a_candidate_is_judged_with_the_tiers_of_the_content_it_came_from(tmp_path: Path) -> None:
+    """Rebuilding the catalogue without its tiers made every candidate look like it added a dominance."""
+    knobs = load(tmp_path)
+    base = catalogue(tmp_path)
+    tiered = Content(spells=base.spells, files=base.files, tiers={"spell:attack": 0, "spell:jab": 1})
+
+    candidate = apply_moves(tiered.spells, [move(tiered, "spell:jab", DAMAGE, 3, steps=2)])
+
+    assert violations(tiered, candidate, knobs) == []
+    assert violations(base, candidate, knobs) == ["spell:jab would become strictly better than spell:attack."]

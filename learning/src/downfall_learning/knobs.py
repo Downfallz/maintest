@@ -176,6 +176,14 @@ class Content:
         """Whether an alias names a spell that is on disk, built or not."""
         return alias in self.spells or alias in self.disabled
 
+    def with_spells(self, spells: Mapping[str, dict]) -> Content:
+        """The same catalogue with other numbers in it: same files, same disabled set, same tiers.
+
+        Everything a candidate is judged by other than the numbers comes from here, so rebuilding a Content
+        by hand is how a rule quietly stops seeing what it needs — the tiers went missing that way once.
+        """
+        return Content(spells=dict(spells), files=self.files, disabled=self.disabled, tiers=self.tiers)
+
     def progression(self, better: str, worse: str) -> bool:
         """Whether ``better`` outclassing ``worse`` is what a talent tree is for.
 

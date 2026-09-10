@@ -209,7 +209,7 @@ def violations(base: Content, candidate: Mapping[str, dict], knobs: Knobs) -> li
 
     Cheap enough to run on every proposal, which is the point: a candidate refused here costs no engine time.
     """
-    after = Content(spells=dict(candidate), files=base.files)
+    after = base.with_spells(candidate)
     problems = []
     if knobs.enabled("noNewStrictDominance"):
         problems.extend(
@@ -515,7 +515,12 @@ def format_result(result: TuneResult, objective: Objective) -> str:
         f"over {len(result.candidates)} candidate(s); zero is on target.",
         "",
     ]
-    if not result.best.moves:
+    if not result.candidates:
+        lines.append(
+            "No candidate was playable at all: every move of every knob was refused by a constraint or "
+            "pinned at a bound. That is the knobs file, not the content."
+        )
+    elif not result.best.moves:
         lines.append("Nothing beat the content as it stands.")
     else:
         lines.append("Moves:")
