@@ -411,3 +411,47 @@ def test_two_hits_of_three_are_not_one_hit_of_six() -> None:
     once = spell(effects=[{"kind": "Damage", "amount": 6}])
 
     assert twins(content(**{"spell:twice": twice, "spell:once": once})) == []
+
+
+def test_a_critical_chance_on_a_spell_that_deals_no_damage_is_refused(tmp_path: Path) -> None:
+    """The multiplier reaches Damage and nothing else, so the knob could only waste the search's budget."""
+    heal = {
+        "id": "spell:heal:v1",
+        "initiative": 1,
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {"origin": "Ally", "scope": "SingleTarget", "maxTargets": 1},
+        "effects": [{"kind": "Heal", "amount": 3}],
+    }
+    document = knobs_json(
+        spells={
+            "spell:heal": {
+                "name": "Heal",
+                "intent": "The heal.",
+                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
+            }
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:heal": heal}))
+
+    assert problems == [
+        "spell:heal/criticalChance: the critical multiplier applies to damage only, and this spell "
+        "deals none, so this knob cannot move anything."
+    ]
+
+
+def test_a_critical_chance_on_a_spell_that_deals_damage_is_a_knob_like_any_other(tmp_path: Path) -> None:
+    document = knobs_json(
+        spells={
+            "spell:attack": {
+                "name": "Attack",
+                "intent": "The yardstick.",
+                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
+            }
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert validate(knobs, content(**{"spell:attack": ATTACK})) == []

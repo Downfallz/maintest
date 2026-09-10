@@ -26,6 +26,9 @@ MAGNITUDES = ("amount", "amountPerRound", "durationRounds")
 #: The one effect kind the critical multiplier applies to (``ResolutionRules``).
 DAMAGE = "Damage"
 
+#: The pointer that names a spell's critical chance bonus.
+CRITICAL_CHANCE = "/criticalChance"
+
 
 class KnobsError(ValueError):
     """A knobs file that cannot be read, or a pointer that does not address anything."""
@@ -259,10 +262,20 @@ def validate(knobs: Knobs, content: Content) -> list[str]:
                 problems.append(
                     f"{knob.key}: the content carries {value}, outside [{knob.minimum}, {knob.maximum}]."
                 )
+            if _inert_critical(knob, document):
+                problems.append(
+                    f"{knob.key}: the critical multiplier applies to damage only, and this spell deals "
+                    "none, so this knob cannot move anything."
+                )
 
     problems.extend(_objective_problems(knobs))
     problems.extend(_constraint_problems(knobs, content))
     return problems
+
+
+def _inert_critical(knob: Knob, document: Mapping[str, object]) -> bool:
+    """A critical chance on a spell with no damage: the multiplier reaches ``Damage`` and nothing else."""
+    return knob.path == CRITICAL_CHANCE and DAMAGE not in _effects(document)
 
 
 def _objective_problems(knobs: Knobs) -> list[str]:

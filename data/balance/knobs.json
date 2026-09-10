@@ -260,9 +260,9 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
-      ]
+      ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
     },
     "spell:crushing_stomp": {
       "name": "Crushing Stomp",
@@ -454,9 +454,9 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.4, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ]
+      ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
     },
     "spell:tranquilizer_dart": {
       "name": "Tranquilizer Dart",
@@ -514,9 +514,9 @@
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ]
+      ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
     },
     "spell:meteor": {
       "name": "Meteor",
@@ -592,9 +592,9 @@
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.4, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ]
+      ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
     },
     "spell:crazed_specter": {
       "name": "Crazed Specter",
@@ -624,9 +624,9 @@
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ]
+      ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
     },
     "spell:restorative_burst": {
       "name": "Restorative Burst",
