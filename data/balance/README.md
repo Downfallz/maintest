@@ -115,11 +115,16 @@ changed spell files under the same tree they came from, so applying a proposal i
 a diff. `--apply` does that copy. Nothing else is written to `data/`: the search works on a copy in
 `<output>/work`.
 
-What to expect on this catalogue today: a full-budget run of 32 candidates moved nothing. Twenty-six of the
-thirty-six spells are never cast in a mirrored run, so most single-knob moves change no metric at all, and
-the report names them. The score is 33.7, and two thirds of it is that dead content and the first-mover
-share, neither of which one number on one spell can fix. The search is the right shape for the last mile of
-a balance pass; the first mile is still a human deciding which spells should be worth casting at all.
+**Run more than one seed.** A hill climb keeps only what improves, so which knobs it happens to draw first
+decides what it finds. On this catalogue, `--seed 1` at the full budget draws 32 candidates and improves
+nothing, while `--seed 11` finds a move in its first two: Ice Spear's Spell initiative from 2 to 1, and the
+score from 33.7 to 29.6. Neither run is wrong; the space is mostly flat and the good moves are sparse.
+
+What to expect here today: 26 of the 36 spells are never cast in a mirrored run, so a third of the
+candidates change no metric at all and the report names them. Two thirds of the score is that dead content
+and the first-mover share, neither of which one number on one spell can fix. The search is the right shape
+for the last mile of a balance pass; the first mile is still a human deciding which spells should be worth
+casting at all.
 
 A proposal is a proposal. Read the moves against the `intent` of each spell it touched, then rebuild the
 content, regenerate the benchmark digest, and write the journal entry — the same steps as any other content
