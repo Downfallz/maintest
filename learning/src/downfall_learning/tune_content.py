@@ -55,6 +55,10 @@ ATTEMPTS = 40
 #: How much likelier the random phase is to draw a knob the opening sweep showed can move a metric.
 FAVOUR = 4.0
 
+#: Landed casts, or sides that declared a spell, below which its own numbers are noise. The engine's own
+#: threshold for listing a spell in its table (``EvaluationConsole``).
+ENOUGH_SIDES = 8
+
 
 @dataclass(frozen=True)
 class Move:
@@ -234,23 +238,71 @@ def _starting_kit(after: Content, knobs: Knobs) -> list[str]:
     return problems
 
 
-def metrics_of(evaluation: Evaluation, name: str, catalogue: Sequence[str]) -> dict[str, float]:
-    """The report's own metrics for this evaluation, plus the two that need the catalogue.
+def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str, float]:
+    """The report's own metrics for this evaluation, plus the ones that need the catalogue.
 
-    ``spellUsageShare`` is the largest share of landed casts any one spell took, and ``spellsNeverCast``
-    counts the spells of ``catalogue`` that no declaration ever landed. Both read ``spellOutcomes``, which
-    the engine fills with what the casts did rather than with what the agents declared.
+    Two are about the catalogue as a whole: ``spellUsageShare``, the largest share of landed casts any one
+    spell took, and ``spellsNeverCast``, the spells no declaration ever landed. Three are about a tier —
+    spells offered at the same depth of the talent tree, which is the set a player actually chooses between:
+    how concentrated its casts are, how far apart its damage per cast is, and how far apart the win share of
+    the sides that declared it is. Each reports its worst tier.
+
+    All of it reads ``spellOutcomes``, which the engine fills with what the casts did rather than with what
+    the agents declared.
     """
     measured = dict(EvaluationSummary.of(name, evaluation).metrics)
-    outcomes = evaluation.raw.get("spellOutcomes", [])
-    landed = {
-        str(outcome["spell"]): int(outcome.get("resolved", 0))
-        for outcome in outcomes
-        if isinstance(outcome, Mapping)
-    }
+    outcomes = [
+        outcome for outcome in evaluation.raw.get("spellOutcomes", []) if isinstance(outcome, Mapping)
+    ]
+    by_alias = {str(document["id"]): alias for alias, document in content.spells.items()}
+    landed = {str(outcome["spell"]): int(outcome.get("resolved", 0)) for outcome in outcomes}
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
-    measured["spellsNeverCast"] = float(sum(1 for spell in catalogue if landed.get(spell, 0) == 0))
+    measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
+    measured.update(_tier_metrics(outcomes, by_alias, content.tiers))
+    return measured
+
+
+def _tier_metrics(
+    outcomes: Sequence[Mapping[str, object]], by_alias: Mapping[str, str], tiers: Mapping[str, int]
+) -> dict[str, float]:
+    """The three readings of "are the spells of one tier a choice", each on its worst tier.
+
+    A tier nobody cast is not read here: that is what ``spellsNeverCast`` is for. Damage per cast is
+    compared only between spells of the tier that deal damage, because a heal and an attack have no common
+    unit, and the win share only between spells enough sides declared for the number to mean anything —
+    ``ENOUGH_SIDES`` is the engine's own threshold for printing a spell in its table.
+    """
+    grouped: dict[int, list[Mapping[str, object]]] = {}
+    for outcome in outcomes:
+        alias = by_alias.get(str(outcome["spell"]))
+        tier = tiers.get(alias) if alias else None
+        if tier is not None:
+            grouped.setdefault(tier, []).append(outcome)
+
+    usage, damage, wins = [], [], []
+    for members in grouped.values():
+        landed = [int(member.get("resolved", 0)) for member in members]
+        if sum(landed) > 0:
+            usage.append(max(landed) / sum(landed))
+        rates = [
+            float(member["damagePerCast"])
+            for member in members
+            if int(member.get("resolved", 0)) >= ENOUGH_SIDES and float(member.get("damage", 0)) > 0
+        ]
+        if len(rates) > 1 and min(rates) > 0:
+            damage.append(max(rates) / min(rates))
+        scores = [float(member["score"]) for member in members if int(member.get("sides", 0)) >= ENOUGH_SIDES]
+        if len(scores) > 1:
+            wins.append(max(scores) - min(scores))
+
+    measured = {}
+    if usage:
+        measured["tierUsageShare"] = max(usage)
+    if damage:
+        measured["tierDamageSpread"] = max(damage)
+    if wins:
+        measured["tierWinSpread"] = max(wins)
     return measured
 
 
@@ -287,17 +339,12 @@ class EngineContentEvaluator:
         shutil.rmtree(self._candidate / "dst", ignore_errors=True)
         self.calls = 0
 
-    @property
-    def catalogue(self) -> tuple[str, ...]:
-        """The versioned ids the evaluation reports its spells under."""
-        return tuple(str(document["id"]) for document in self._content.spells.values())
-
     def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
         self._write(spells)
         self._build()
         schema = self._candidate / "dst" / "game.schema.json"
         return {
-            name: metrics_of(self._play(name, evaluation, schema), name, self.catalogue)
+            name: metrics_of(self._play(name, evaluation, schema), name, self._content)
             for name, evaluation in self._objective.evaluations.items()
         }
 

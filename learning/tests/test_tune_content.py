@@ -259,7 +259,13 @@ def test_the_share_of_the_spell_leaned_on_and_the_spells_never_cast_come_from_th
     ]
     evaluation = Evaluation.from_json(raw)
 
-    metrics = metrics_of(evaluation, "mirror", ("spell:attack:v1", "spell:jab:v1", "spell:quiet:v1"))
+    quiet = json.loads(json.dumps(ATTACK)) | {"id": "spell:quiet:v1"}
+    content = Content(
+        spells={"spell:attack": ATTACK, "spell:jab": JAB, "spell:quiet": quiet},
+        files=dict.fromkeys(("spell:attack", "spell:jab", "spell:quiet"), Path("x.json")),
+    )
+
+    metrics = metrics_of(evaluation, "mirror", content)
 
     assert metrics["spellUsageShare"] == pytest.approx(0.75)
     assert metrics["spellsNeverCast"] == 1
@@ -270,7 +276,9 @@ def test_a_run_with_no_landed_cast_reads_as_one_spell_taking_everything() -> Non
     raw = evaluation_json(0.5, 0.5)
     raw["spellOutcomes"] = []
 
-    metrics = metrics_of(Evaluation.from_json(raw), "mirror", ("spell:attack:v1",))
+    content = Content(spells={"spell:attack": ATTACK}, files={"spell:attack": Path("x.json")})
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
 
     assert metrics["spellUsageShare"] == 1.0
     assert metrics["spellsNeverCast"] == 1
@@ -587,3 +595,78 @@ def test_a_candidate_is_judged_with_the_tiers_of_the_content_it_came_from(tmp_pa
 
     assert violations(tiered, candidate, knobs) == []
     assert violations(base, candidate, knobs) == ["spell:jab would become strictly better than spell:attack."]
+
+
+def outcome(spell_id: str, resolved: int, sides: int, damage: int) -> dict:
+    """One row of the engine's spell table, with the fields the tier readings use."""
+    return {
+        "spell": spell_id,
+        "resolved": resolved,
+        "sides": sides,
+        "damage": damage,
+        "damagePerCast": damage / resolved if resolved else 0,
+        "score": 0.5,
+    }
+
+
+def two_tiers() -> Content:
+    spells = {
+        "spell:starter": json.loads(json.dumps(ATTACK)) | {"id": "spell:starter:v1"},
+        "spell:filler": json.loads(json.dumps(ATTACK)) | {"id": "spell:filler:v1"},
+        "spell:unlocked": json.loads(json.dumps(ATTACK)) | {"id": "spell:unlocked:v1"},
+    }
+    return Content(
+        spells=spells,
+        files=dict.fromkeys(spells, Path("x.json")),
+        tiers={"spell:starter": 0, "spell:filler": 0, "spell:unlocked": 1},
+    )
+
+
+def test_a_tier_one_spell_monopolises_is_named_even_when_it_is_small_overall() -> None:
+    """The whole point of reading per tier: the catalogue-wide share hides a monopolised tier."""
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [
+        outcome("spell:starter:v1", 100, 100, 100),
+        outcome("spell:filler:v1", 0, 0, 0),
+        outcome("spell:unlocked:v1", 900, 100, 900),
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
+
+    assert metrics["spellUsageShare"] == pytest.approx(0.9)
+    assert metrics["tierUsageShare"] == pytest.approx(1.0)
+
+
+def test_damage_per_cast_is_compared_only_inside_a_tier_and_only_between_damaging_spells() -> None:
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [
+        outcome("spell:starter:v1", 100, 100, 100),
+        outcome("spell:filler:v1", 100, 100, 300),
+        outcome("spell:unlocked:v1", 100, 100, 5000),
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
+
+    assert metrics["tierDamageSpread"] == pytest.approx(3.0)
+
+
+def test_a_spell_too_few_sides_declared_is_left_out_of_the_win_spread() -> None:
+    """Its win share on a handful of sides is noise, and the engine leaves it out of its table too."""
+    raw = evaluation_json(0.5, 0.5)
+    loud = outcome("spell:starter:v1", 100, 100, 100) | {"score": 0.9}
+    quiet = outcome("spell:filler:v1", 5, 2, 5) | {"score": 0.1}
+    raw["spellOutcomes"] = [loud, quiet, outcome("spell:unlocked:v1", 100, 100, 100)]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
+
+    assert "tierWinSpread" not in metrics
+
+
+def test_a_tier_nobody_cast_is_left_to_the_never_cast_count() -> None:
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [outcome("spell:unlocked:v1", 100, 100, 100)]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
+
+    assert metrics["tierUsageShare"] == pytest.approx(1.0)
+    assert metrics["spellsNeverCast"] == 2
