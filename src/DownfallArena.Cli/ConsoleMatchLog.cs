@@ -39,11 +39,17 @@ internal sealed class ConsoleMatchLog(TextWriter writer) : IDomainEventListener
         };
 
     /// <summary>
-    /// The start of the round, healing first and then the bleeds (ADR 0019), or nothing when neither ticked.
+    /// The start of the round, in the order it was applied: the energy regenerations, then the healing, then
+    /// the bleeds (ADR 0019, ADR 0020). Nothing when none of the three ticked.
     /// </summary>
     private static string? Describe(OngoingEffectsApplied ongoing)
     {
         var parts = new List<string>();
+        if (ongoing.EnergyRegenerationTicks.Count > 0)
+        {
+            parts.Add("Energy regenerations: " + string.Join(", ", ongoing.EnergyRegenerationTicks.Select(tick => $"creature {tick.Creature} gains {tick.Gained} energy")));
+        }
+
         if (ongoing.RegenerationTicks.Count > 0)
         {
             parts.Add("Regenerations: " + string.Join(", ", ongoing.RegenerationTicks.Select(tick => $"creature {tick.Creature} heals {tick.Healed}")));

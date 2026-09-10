@@ -48,6 +48,22 @@ public sealed class EffectTests
         Should.Throw<ArgumentOutOfRangeException>(() => Regeneration.Of(1, 0));
     }
 
+    /// <summary>ADR 0020: the energy counterpart of a regeneration, and the same shape as one.</summary>
+    [Fact]
+    public void Energy_regeneration_lasts_a_number_of_rounds_and_refreshes_by_default()
+    {
+        var energyRegeneration = EnergyRegeneration.Of(2, rounds: 3);
+
+        energyRegeneration.AmountPerRound.ShouldBe(2);
+        energyRegeneration.Duration.ShouldBe(Duration.OfRounds(3));
+        energyRegeneration.Stacking.ShouldBe(StackingPolicy.Refresh);
+        EnergyRegeneration.Of(1, 2, StackingPolicy.Stack).Stacking.ShouldBe(StackingPolicy.Stack);
+
+        Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(0, 3));
+        Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(-1, 3));
+        Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(1, 0));
+    }
+
     [Fact]
     public void Buffs_and_debuffs_can_be_permanent_and_stack_by_default()
     {

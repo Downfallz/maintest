@@ -108,7 +108,9 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
                     Stuns = entry.Value.Effects.Stuns,
                     Bleeds = entry.Value.Effects.Bleeds,
                     Regens = entry.Value.Effects.Regens,
-                    Buffs = entry.Value.Effects.Buffs,
+                    EnergyRegenerations = entry.Value.Effects.EnergyRegenerations,
+                    DefenseBuffs = entry.Value.Effects.DefenseBuffs,
+                    InitiativeDebuffs = entry.Value.Effects.InitiativeDebuffs,
                     ResolvedWhenWon = entry.Value.ResolvedWhenWon,
                 })
                 .OrderByDescending(outcome => outcome.Score)

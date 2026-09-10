@@ -24,7 +24,7 @@ public sealed class ObservationBuilderTests
 
         observation.ShouldBe(Builder.Build(board));
         observation.SchemaId.ShouldBe(Schema.Id);
-        observation.SchemaId.ShouldStartWith("features:v2+");
+        observation.SchemaId.ShouldStartWith("features:v3+");
         observation.Features.Count.ShouldBe(Schema.Length);
         Builder.Schema.ShouldBeSameAs(Schema);
     }
@@ -188,7 +188,7 @@ public sealed class ObservationBuilderTests
         var exception = Should.Throw<InvalidOperationException>(() => Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])));
 
         exception.Message.ShouldContain("Unpublished");
-        exception.Message.ShouldContain("features:v2");
+        exception.Message.ShouldContain("features:v3");
     }
 
     [Fact]

@@ -122,13 +122,14 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         {
             score += outcome switch
             {
-                HealOutcome heal => HealScore(actor, Target(heal.Target, creatures), heal.Amount),
+                HealOutcome heal => HealScore(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
+                EnergyOutcome energy => EnergyScore(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
                 ConditionOutcome condition => ConditionScore(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target]),
                 _ => 0,
             };
         }
 
-        score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);
+        score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);  // what the actor keeps; what a spell hands out is priced per outcome above
         if (resolution.Action.Targets.Count > 0)
         {
             score -= weights.Risk * resolution.DroppedTargets.Count / resolution.Action.Targets.Count;
@@ -165,9 +166,20 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return remaining;
     }
 
-    /// <summary>Healing counts only what was missing; on an enemy it counts against.</summary>
-    private double HealScore(CreatureSnapshot actor, CreatureSnapshot target, int amount) =>
-        -Sign(actor, target) * weights.Heal * Math.Min(amount, target.MaxHealth.Value - target.Health.Value);
+    /// <summary>
+    /// Healing counts only what was missing; on an enemy it counts against. A target the same action kills is
+    /// healed for nothing, so it scores nothing -- the rule the condition path already applies.
+    /// </summary>
+    private double HealScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
+        remainingHealth == 0 ? 0 : -Sign(actor, target) * weights.Heal * Math.Min(amount, target.MaxHealth.Value - target.Health.Value);
+
+    /// <summary>
+    /// Energy given counts at the same price as energy kept, and counts against when it lands on an enemy.
+    /// Energy has no cap, so unlike healing there is nothing to waste and nothing to clamp -- but a target the
+    /// same action kills gains none of it, so it scores nothing either.
+    /// </summary>
+    private double EnergyScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
+        remainingHealth == 0 ? 0 : -Sign(actor, target) * weights.Energy * amount;
 
     private double ConditionScore(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth)
     {
@@ -183,6 +195,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Stun => sign * weights.Stun,
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
+            EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
             DefenseBuff buff => -sign * weights.Buff * buff.Amount * rounds,
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
             _ => 0,

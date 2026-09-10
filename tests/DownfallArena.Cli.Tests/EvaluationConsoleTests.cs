@@ -1,6 +1,7 @@
 using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Learning;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Resources.Effects;
 
 namespace DownfallArena.Cli.Tests;
 
@@ -38,23 +39,61 @@ public sealed class EvaluationConsoleTests
     }
 
     /// <summary>
-    /// Every lasting effect the recorder counts has a column, or a spell that only applies that effect reads
-    /// as doing nothing. Regeneration was added to the taxonomy by ADR 0019 and the table with it.
+    /// Every lasting effect the recorder counts has a column of its own, or a spell that only applies that
+    /// effect reads as doing nothing in the one table balance is judged from. The count is taken from the
+    /// domain, so a kind added to the taxonomy fails here rather than going quietly missing.
     /// </summary>
     [Fact]
     public void The_spell_table_has_a_column_for_every_lasting_effect_the_recorder_counts()
     {
+        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def", "Init"];
+        var kinds = typeof(LastingEffect).Assembly.GetTypes()
+            .Count(type => type.IsSubclassOf(typeof(LastingEffect)) && !type.IsAbstract);
+
         var printed = Print(Outcome("spell:healing_screech:v1", sides: 10, wins: 5, resolved: 8, fizzled: 0, damage: 0, resolvedWhenWon: 4)
             with
         { Healing = 16, Regens = 8 });
 
-        printed.ShouldContain("Stun");
-        printed.ShouldContain("Bleed");
-        printed.ShouldContain("Regen");
-        printed.ShouldContain("Buff");
+        columns.Length.ShouldBe(kinds, "one column per lasting effect kind in the domain");
+        foreach (var column in columns)
+        {
+            printed.ShouldContain(column);
+        }
+
         // The eight regenerations it applied, next to the 16 healing its instant half gave.
         printed.ShouldContain("16");
         printed.ShouldContain("8");
+    }
+
+    /// <summary>
+    /// Energy is the one thing a spell can hand out that moves no health, so without its own column a spell
+    /// that only restores energy reads as a blank row.
+    /// </summary>
+    [Fact]
+    public void The_spell_table_shows_the_energy_a_spell_handed_back()
+    {
+        var printed = Print(Outcome("spell:summon_minions:v1", sides: 10, wins: 5, resolved: 9, fizzled: 0, damage: 0, resolvedWhenWon: 5)
+            with
+        { Energy = 27, EnergyRegenerations = 3 });
+
+        printed.ShouldContain("Energy");
+        printed.ShouldContain("27");
+    }
+
+    /// <summary>
+    /// Defense and initiative are different stats: one column for both cannot say which one a spell moved.
+    /// </summary>
+    [Fact]
+    public void Defense_and_initiative_conditions_are_counted_apart()
+    {
+        var printed = Print(Outcome("spell:ice_spear:v1", sides: 10, wins: 6, resolved: 20, fizzled: 0, damage: 80, resolvedWhenWon: 12)
+            with
+        { DefenseBuffs = 0, InitiativeDebuffs = 17 });
+
+        var rows = printed.Split('\n').Where(line => line.Contains("spell:ice_spear:v1", StringComparison.Ordinal)).ToList();
+
+        rows.Count.ShouldBe(1);
+        rows[0].ShouldEndWith("17", Case.Sensitive, "the initiative debuffs land in the last column, not folded into the defense one");
     }
 
     [Fact]

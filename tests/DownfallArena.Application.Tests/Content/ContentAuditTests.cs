@@ -94,6 +94,28 @@ public sealed class ContentAuditTests
         finding.Message.ShouldContain("60");
     }
 
+    /// <summary>
+    /// A spell that hands out energy lifts its caster's energy ceiling, because it can be cast again and
+    /// again -- but only if the caster is on the receiving end. One that can reach nothing but enemies gives
+    /// its caster none, and counting it would hide the uncastable spell behind an unbounded ceiling.
+    /// </summary>
+    [Fact]
+    public void A_spell_that_gives_energy_only_to_enemies_does_not_lift_its_casters_ceiling()
+    {
+        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerRound: 2, roundCap: 30, criticalMultiplier: 2.0);
+        var resources = GameResources.Create(
+            "enemy-only-energy",
+            [Creature(Fighter, Tree, [Strike], energy: 0)],
+            [Spell(Strike, cost: 0), Bundle(Follow, EnergyGain.Of(5)), Spell(Lost, cost: (rules.EnergyPerRound * rules.RoundCap) + 1)],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(Follow), Spell(Lost)]))]);
+
+        var report = ContentAudit.Of(resources, rules);
+
+        var finding = ItemFindings(report).ShouldHaveSingleItem();
+        finding.Code.ShouldBe("Spell.Uncastable");
+        finding.Subject.ShouldBe(Lost.Value);
+    }
+
     [Fact]
     public void A_reach_row_separates_the_creatures_that_start_with_a_spell_from_those_that_can_learn_it()
     {

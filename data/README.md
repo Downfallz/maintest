@@ -54,6 +54,7 @@ including the content hash.
 | `EnergyGain` | `amount` | instant |
 | `Bleed` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
 | `Regeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh`; heals before bleeds tick |
+| `EnergyRegeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh`; gives energy at the start of each round, on top of the round's own gain |
 | `Stun` | `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
 | `DefenseBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 | `InitiativeDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |

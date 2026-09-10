@@ -313,14 +313,26 @@ trained before is retired.
 2. Content: the `kind` string in `Infrastructure/Resources/GameSchemaMapper`, a row in `data/README.md`, and
    the spell that applies it under `data/Spells/`.
 3. Learning encodings: `FeatureSchema.ConditionKinds` and `ObservationBuilder` (the two features per kind),
-   and the version bump to `features:v2` with its section in `docs/learning/features.md`, since rule 2 there
-   says a new kind is a new version. `FeatureSchemaTests` fails until the kind is listed, which is the
-   reminder.
+   and the version bump to the next `features:vN` with its section in `docs/learning/features.md`, since rule
+   2 there says a new kind is a new version. `FeatureSchemaTests` fails until the kind is listed, which is the
+   reminder. Then every fixture carrying the old version string: the policy files under
+   `tests/`, the recorder's manifest assertion, and the samples under `viewer/samples/`.
 4. Agents: what the lookahead thinks the condition is worth, in `ActionScorer` and a `ScoringWeights` weight
    if none fits (then `learning/weights/greedy.json`, `JsonScoringWeightsSource`, `docs/learning/agents.md`).
-5. Python: `SUPPORTED_VERSIONS` in `features.py` gains `features:v2`; nothing else reads feature names by
-   position. The viewer shows conditions as chips by kind and needs nothing.
-6. `benchmark --write`, then `scripts/iterate.sh` without `--against`: nothing before this change compares,
+5. **Everything that counts or shows it.** This is the step that has been missed three times, and each time
+   the effect worked and read as doing nothing:
+   - `CombatStatsRecorder` and `SpellEffects`/`SpellOutcome`: its own counter, never folded into another
+     kind's. Two kinds sharing a number cannot be read apart later.
+   - `EvaluationConsole`: its own column. That table is what journal entries are written from, so a kind
+     missing from it is a kind that does not exist as far as any conclusion goes.
+   - `ConsoleMatchLog`: a round where only the new effect ticked must not print nothing.
+   - `viewer/index.html`: the trace describer, `conditionSlot`, the two spell tables, and the run comparison.
+     `ViewerSpellOutcomeContractTests` catches a rename here but not a column nobody added.
+   - `studio/studio.js`: the effect form's field spec, and the content audit's table.
+   - `ContentAudit`/`SpellReach` if the effect adds to a total the audit reasons about.
+6. Python: `SUPPORTED_VERSIONS` in `features.py` gains the new version; nothing else reads feature names by
+   position.
+7. `benchmark --write`, then `scripts/iterate.sh` without `--against`: nothing before this change compares,
    the engine, the content, and the schema all moved. This run is the new baseline; the journal entry says
    so and names the schema version.
 

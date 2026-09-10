@@ -33,7 +33,31 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 
 ## Versions
 
-### features:v2 (published, ADR 0019)
+### features:v3 (published, ADR 0020)
+
+`features:v2` with one more condition pair. Adding `EnergyRegeneration` to the closed taxonomy adds a kind to every
+creature block, so a creature block becomes `C = 6 + 2 x 6 + S + N` and the condition pairs run in the order
+`Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`, `InitiativeDebuff` — the new kind sits beside
+`Regeneration` so the three over-time effects stay together rather than at the end where it would read as an
+afterthought:
+
+| Offset in block | Name | Value |
+| --- | --- | --- |
+| +6, +7 | `Bleed_amount`, `Bleed_remaining` | as in v2 |
+| +8, +9 | `Regeneration_amount`, `Regeneration_remaining` | as in v2 |
+| +10, +11 | `EnergyRegeneration_amount`, `EnergyRegeneration_remaining` | `amount` is the energy per round, summed over the creature's energy regenerations |
+| +12, +13 | `Stun_amount`, `Stun_remaining` | |
+| +14, +15 | `DefenseBuff_amount`, `DefenseBuff_remaining` | |
+| +16, +17 | `InitiativeDebuff_amount`, `InitiativeDebuff_remaining` | |
+| +18 to +18+S-1 | `knows_<spell id>` | as in v2 |
+| +18+S to +18+S+N-1 | `node_<tree id>/<node code>` | as in v2 |
+
+Everything else — the global block, the board slot rule, the naming, the fingerprint — is v1 unchanged. No
+run recorded under v2 is comparable to one under v3 without re-recording: the vectors differ in length and in
+what sits at every index from +10 on. The Python side reads v1, v2 and v3, so an older dataset stays
+analysable; the engine plays only a policy trained on the version it reads.
+
+### features:v2 (superseded by v3, ADR 0019)
 
 `features:v1` with one more condition pair. Adding `Regeneration` to the closed taxonomy adds a kind to every
 creature block, so a creature block becomes `C = 6 + 2 x 5 + S + N` and the condition pairs run in the order

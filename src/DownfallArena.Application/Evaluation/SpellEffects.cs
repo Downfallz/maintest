@@ -25,9 +25,11 @@ public sealed record SpellEffects(
     int Stuns,
     int Bleeds,
     int Regens,
-    int Buffs)
+    int EnergyRegenerations,
+    int DefenseBuffs,
+    int InitiativeDebuffs)
 {
-    public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     /// <summary>Declarations that reached resolution, whether they landed or fizzled.</summary>
     public int Casts => Resolved + Fizzled;
@@ -48,6 +50,8 @@ public sealed record SpellEffects(
             Stuns + other.Stuns,
             Bleeds + other.Bleeds,
             Regens + other.Regens,
-            Buffs + other.Buffs);
+            EnergyRegenerations + other.EnergyRegenerations,
+            DefenseBuffs + other.DefenseBuffs,
+            InitiativeDebuffs + other.InitiativeDebuffs);
     }
 }

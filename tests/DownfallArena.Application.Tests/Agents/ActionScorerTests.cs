@@ -4,6 +4,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
 
@@ -62,6 +63,68 @@ public sealed class ActionScorerTests
         Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new HealOutcome(Three, 10)]), creatures).ShouldBe(0, 1e-9);
         var hurtEnemy = creatures.Select(creature => creature.Id == Three ? creature with { Health = Health.Of(12) } : creature).ToList();
         Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new HealOutcome(Three, 10)]), hurtEnemy).ShouldBe(-0.8 * 8, 1e-9);
+    }
+
+    /// <summary>
+    /// ADR 0020: energy handed out is priced at the energy weight, whole, because energy has no cap to waste
+    /// it against. Without this an <see cref="EnergyOutcome"/> scored zero and a spell whose whole point is
+    /// energy looked worthless to the agent.
+    /// </summary>
+    [Fact]
+    public void Energy_given_to_an_ally_counts_for_at_the_energy_weight()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+        var action = Strike(One, Three);
+
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new EnergyOutcome(ally.Id, 3)]), creatures).ShouldBe(0.2 * 3, 1e-9);
+    }
+
+    [Fact]
+    public void Energy_given_to_an_enemy_counts_against()
+    {
+        var board = Board(enemyHealth: 20);
+        var action = Strike(One, Three);
+
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyOutcome(Three, 3)]), board).ShouldBe(-0.2 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// An outcome on a creature the same action kills never lands: <c>Heal</c> and <c>GainEnergy</c> both
+    /// return zero on a dead creature. Scored anyway, energy handed to a dying enemy would be a penalty the
+    /// action never pays, and a heal on a dying ally a bonus it never gets. The condition path already gated
+    /// on this; these two did not.
+    /// </summary>
+    [Fact]
+    public void An_outcome_on_a_creature_the_action_kills_scores_nothing()
+    {
+        var board = Board(enemyHealth: 3);
+        var ally = Boards.Creature(2, PlayerSlot.Player1) with { Health = Health.Of(3) };
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+        var action = Strike(One, Three);
+        var kill = new DamageOutcome(Three, 3, Critical: false);
+
+        // 3 effective damage plus the kill weight, and nothing at all for the energy the corpse never gains.
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [kill, new EnergyOutcome(Three, 3)]), creatures)
+            .ShouldBe(3 + 5, 1e-9);
+
+        // The same for a heal on an ally this action's own damage finishes off.
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new DamageOutcome(ally.Id, 3, Critical: false), new HealOutcome(ally.Id, 10)]), creatures)
+            .ShouldBe(-(3 + 5), 1e-9);
+    }
+
+    [Fact]
+    public void An_energyRegeneration_is_priced_at_the_energy_weight_over_the_rounds_it_lasts()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+        var action = Strike(One, Three);
+
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(0.2 * 2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 1))]), creatures).ShouldBe(0.2 * 2, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new ConditionOutcome(Three, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(-0.2 * 2 * 3, 1e-9);
     }
 
     [Fact]

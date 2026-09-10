@@ -109,6 +109,7 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
         {
             Bleed bleed => bleed.AmountPerRound,
             Regeneration regeneration => regeneration.AmountPerRound,
+            EnergyRegeneration energyRegeneration => energyRegeneration.AmountPerRound,
             Stun => 1f,
             DefenseBuff buff => buff.Amount,
             InitiativeDebuff debuff => debuff.Amount,
