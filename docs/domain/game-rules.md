@@ -68,9 +68,10 @@ listed in [spells.md](spells.md).
 
 1. **Start of round**
    1. `EnergyGain`: every living Creature gains the Rule set's energy per round (two in the prototypes).
-   2. `OngoingEffects`: regeneration Conditions heal, then bleed Conditions deal their damage, which
-      ignores Defense. Healing goes first (ADR 0019), so a Regeneration can carry a Creature through a
-      Bleed that would otherwise have killed it.
+   2. `OngoingEffects`: attunement Conditions give their Energy, regeneration Conditions heal, then bleed
+      Conditions deal their damage, which ignores Defense. Healing goes before the Bleeds (ADR 0019), so a
+      Regeneration can carry a Creature through a Bleed that would otherwise have killed it. Energy touches
+      no Health, so its place in the order changes nothing (ADR 0020).
 2. **Planning**
    1. `Evolution`: each Player may unlock Spells from the Talent tree, up to the Rule set's picks per round
       (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. A

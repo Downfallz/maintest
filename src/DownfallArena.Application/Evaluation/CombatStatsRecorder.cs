@@ -86,7 +86,9 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             Stuns: Conditions<Stun>(applied),
             Bleeds: Conditions<Bleed>(applied),
             Regens: Conditions<Regeneration>(applied),
-            Buffs: Conditions<DefenseBuff>(applied) + Conditions<InitiativeDebuff>(applied));
+            Attunements: Conditions<Attunement>(applied),
+            DefenseBuffs: Conditions<DefenseBuff>(applied),
+            InitiativeDebuffs: Conditions<InitiativeDebuff>(applied));
     }
 
     private static int Conditions<TEffect>(IReadOnlyList<EffectOutcome> applied)

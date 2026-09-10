@@ -123,12 +123,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             score += outcome switch
             {
                 HealOutcome heal => HealScore(actor, Target(heal.Target, creatures), heal.Amount),
+                EnergyOutcome energy => EnergyScore(actor, Target(energy.Target, creatures), energy.Amount),
                 ConditionOutcome condition => ConditionScore(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target]),
                 _ => 0,
             };
         }
 
-        score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);
+        score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);  // what the actor keeps; what a spell hands out is priced per outcome above
         if (resolution.Action.Targets.Count > 0)
         {
             score -= weights.Risk * resolution.DroppedTargets.Count / resolution.Action.Targets.Count;
@@ -169,6 +170,13 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private double HealScore(CreatureSnapshot actor, CreatureSnapshot target, int amount) =>
         -Sign(actor, target) * weights.Heal * Math.Min(amount, target.MaxHealth.Value - target.Health.Value);
 
+    /// <summary>
+    /// Energy given counts at the same price as energy kept, and counts against when it lands on an enemy.
+    /// Energy has no cap, so unlike healing there is nothing to waste and nothing to clamp.
+    /// </summary>
+    private double EnergyScore(CreatureSnapshot actor, CreatureSnapshot target, int amount) =>
+        -Sign(actor, target) * weights.Energy * amount;
+
     private double ConditionScore(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth)
     {
         if (remainingHealth == 0)
@@ -183,6 +191,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Stun => sign * weights.Stun,
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
+            Attunement attunement => -sign * weights.Energy * attunement.AmountPerRound * rounds,
             DefenseBuff buff => -sign * weights.Buff * buff.Amount * rounds,
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
             _ => 0,

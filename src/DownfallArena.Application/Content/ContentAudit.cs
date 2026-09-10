@@ -94,8 +94,8 @@ public static class ContentAudit
 
     /// <summary>
     /// The most energy this creature could ever be holding: what it starts with, plus every round's gain up to
-    /// the cap. An EnergyGain spell it can reach breaks that bound -- it can be cast again and again -- so a
-    /// creature that can learn one has no ceiling at all rather than a larger one.
+    /// the cap. A spell it can reach that hands out energy breaks that bound -- it can be cast again and again
+    /// -- so a creature that can learn one has no ceiling at all rather than a larger one.
     /// </summary>
     private static int Ceiling(CreatureDefinition creature, IReadOnlySet<SpellId> known, IGameResources resources, RuleSet rules) =>
         Grants(known, resources) ? int.MaxValue : creature.BaseStats.Energy.Value + (rules.EnergyPerRound * rules.RoundCap);
@@ -216,9 +216,12 @@ public static class ContentAudit
         return names.Count <= 5 ? string.Join(", ", names) : $"{string.Join(", ", names.Take(5))} and {names.Count - 5} more";
     }
 
-    /// <summary>Whether any of these spells hands out energy, which is what makes an energy ceiling meaningless.</summary>
+    /// <summary>
+    /// Whether any of these spells hands out energy, which is what makes an energy ceiling meaningless. An
+    /// attunement counts: it hands out energy every round it lasts, and can be re-applied.
+    /// </summary>
     private static bool Grants(IReadOnlySet<SpellId> spells, IGameResources resources) =>
-        spells.Any(id => resources.GetSpell(id).Effects.OfType<EnergyGain>().Any());
+        spells.Any(id => resources.GetSpell(id).Effects.Any(effect => effect is EnergyGain or Attunement));
 
     private static SpellReach Row(Spell spell, RuleSet rules, int startingFor, int reachableBy) => new()
     {
@@ -231,6 +234,8 @@ public static class ContentAudit
         BleedDamage = spell.Effects.OfType<Bleed>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         Healing = spell.Effects.OfType<Heal>().Sum(effect => effect.Amount),
         RegenerationHealing = spell.Effects.OfType<Regeneration>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
+        Energy = spell.Effects.OfType<EnergyGain>().Sum(effect => effect.Amount),
+        AttunementEnergy = spell.Effects.OfType<Attunement>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         MaxTargets = spell.Targeting.MaxTargets,
         StartingFor = startingFor,
         ReachableBy = reachableBy,

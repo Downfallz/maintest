@@ -190,7 +190,7 @@ public sealed class EvaluationRunnerTests
 
         // The test content's Slam stuns, Rend bleeds and Guard buffs, so a run that casts them proves each
         // condition kind reaches its own column rather than all of them landing in one.
-        var conditions = evaluation.SpellOutcomes.Sum(outcome => outcome.Stuns + outcome.Bleeds + outcome.Buffs);
+        var conditions = evaluation.SpellOutcomes.Sum(outcome => outcome.Stuns + outcome.Bleeds + outcome.DefenseBuffs);
         conditions.ShouldBeGreaterThan(0, "the content's conditions are counted, not dropped");
     }
 

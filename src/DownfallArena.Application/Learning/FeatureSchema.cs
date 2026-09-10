@@ -15,13 +15,13 @@ namespace DownfallArena.Application.Learning;
 /// </summary>
 public sealed class FeatureSchema
 {
-    public const string CurrentVersion = "features:v2";
+    public const string CurrentVersion = "features:v3";
 
     /// <summary>The largest team size a schema supports: target masks hold one bit per board slot in an <c>int</c>.</summary>
     public const int MaxTeamSize = BoardSlots.MaxTeamSize;
 
     /// <summary>The condition kinds of the closed effect taxonomy (ADR 0012), in feature order.</summary>
-    public static IReadOnlyList<string> ConditionKinds { get; } = ["Bleed", "Regeneration", "Stun", "DefenseBuff", "InitiativeDebuff"];
+    public static IReadOnlyList<string> ConditionKinds { get; } = ["Bleed", "Regeneration", "Attunement", "Stun", "DefenseBuff", "InitiativeDebuff"];
 
     public static IReadOnlyList<string> GlobalFeatures { get; } =
         ["round_fraction", "phase", "sub_phase", "reveal_progress", "revealed_enemy_actions"];

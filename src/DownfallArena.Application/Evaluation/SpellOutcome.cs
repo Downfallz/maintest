@@ -53,8 +53,14 @@ public sealed record SpellOutcome
     /// <summary>Regenerations applied, not the healing they go on to give.</summary>
     public int Regens { get; init; }
 
-    /// <summary>Defense buffs and initiative debuffs applied.</summary>
-    public int Buffs { get; init; }
+    /// <summary>Attunements applied, not the energy they go on to give.</summary>
+    public int Attunements { get; init; }
+
+    /// <summary>Defense buffs applied. Kept apart from the initiative debuffs: the two move different stats.</summary>
+    public int DefenseBuffs { get; init; }
+
+    /// <summary>Initiative debuffs applied.</summary>
+    public int InitiativeDebuffs { get; init; }
 
     /// <summary>Casts that landed on a side that went on to win.</summary>
     public int ResolvedWhenWon { get; init; }

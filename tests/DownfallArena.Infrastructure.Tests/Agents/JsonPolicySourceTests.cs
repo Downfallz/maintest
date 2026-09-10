@@ -8,9 +8,9 @@ public sealed class JsonPolicySourceTests
     private const string Policy = """
         {
           "kind": "clone",
-          "stamp": { "engineVersion": "abcdef123456", "contentHash": "c", "ruleSet": {}, "featureSchema": "features:v2+0123456789ab", "player1Agent": "Greedy", "player2Agent": "Greedy", "baseSeed": 1 },
-          "schemaId": "features:v2+0123456789ab",
-          "schemaVersion": "features:v2",
+          "stamp": { "engineVersion": "abcdef123456", "contentHash": "c", "ruleSet": {}, "featureSchema": "features:v3+0123456789ab", "player1Agent": "Greedy", "player2Agent": "Greedy", "baseSeed": 1 },
+          "schemaId": "features:v3+0123456789ab",
+          "schemaVersion": "features:v3",
           "featureNames": ["round_fraction", "phase"],
           "actionKeys": ["pass", "intent:0:spell:a:v1"],
           "weights": [[0.5, -1.0], [0.0, 2.0]],
@@ -30,7 +30,7 @@ public sealed class JsonPolicySourceTests
         var policy = source.Load(Path.Combine(directory.Path, "policy.json"));
 
         policy.Kind.ShouldBe("clone");
-        policy.SchemaId.ShouldBe("features:v2+0123456789ab");
+        policy.SchemaId.ShouldBe("features:v3+0123456789ab");
         policy.ActionKeys.ShouldBe(["pass", "intent:0:spell:a:v1"]);
         policy.Weights[1].ShouldBe([0.0, 2.0]);
         policy.Bias.ShouldBe([0.1, -0.2]);
@@ -70,7 +70,7 @@ public sealed class JsonPolicySourceTests
     {
         using var directory = new ContentDirectory()
             .WithFile("no-bias.json", Policy.Replace("\"bias\"", "\"offsets\"", StringComparison.Ordinal))
-            .WithFile("old-version.json", Policy.Replace("features:v2", "features:v0", StringComparison.Ordinal))
+            .WithFile("old-version.json", Policy.Replace("features:v3", "features:v0", StringComparison.Ordinal))
             .WithFile("empty.json", "null");
         var source = new JsonPolicySource();
 

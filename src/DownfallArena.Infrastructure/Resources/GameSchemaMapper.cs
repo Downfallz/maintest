@@ -120,6 +120,7 @@ public static class GameSchemaMapper
             "ENERGYGAIN" => Instant(dto.Amount, AmountField, effectContext, problems, EnergyGain.Of),
             "BLEED" => PerRound(dto, effectContext, problems, Bleed.Of),
             "REGENERATION" => PerRound(dto, effectContext, problems, Regeneration.Of),
+            "ATTUNEMENT" => PerRound(dto, effectContext, problems, Attunement.Of),
             "STUN" => ForRounds(dto, effectContext, problems, Stun.For),
             "DEFENSEBUFF" => WhileLasting(dto, effectContext, problems, DefenseBuff.Of),
             "INITIATIVEDEBUFF" => WhileLasting(dto, effectContext, problems, InitiativeDebuff.Of),

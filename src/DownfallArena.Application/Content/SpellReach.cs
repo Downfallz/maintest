@@ -34,6 +34,15 @@ public sealed record SpellReach
     /// </summary>
     public required int RegenerationHealing { get; init; }
 
+    /// <summary>Energy the spell hands its targets on the spot.</summary>
+    public required int Energy { get; init; }
+
+    /// <summary>
+    /// Energy over time on one target, over the rounds the condition lasts or the round cap when it outlasts
+    /// the match, the mirror of <see cref="RegenerationHealing"/>.
+    /// </summary>
+    public required int AttunementEnergy { get; init; }
+
     /// <summary>Targets the spell takes, or <c>null</c> when it takes every legal target.</summary>
     public int? MaxTargets { get; init; }
 

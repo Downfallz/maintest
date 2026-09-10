@@ -48,6 +48,16 @@ public sealed class EffectTests
         Should.Throw<ArgumentOutOfRangeException>(() => Regeneration.Of(1, 0));
     }
 
+    /// <summary>ADR 0020: the energy counterpart of a bleed, so it asks for a real amount like the others.</summary>
+    [Fact]
+    public void Attunement_refuses_an_amount_below_one()
+    {
+        Attunement.Of(1, rounds: 2).AmountPerRound.ShouldBe(1);
+
+        Should.Throw<ArgumentOutOfRangeException>(() => Attunement.Of(0, 3));
+        Should.Throw<ArgumentOutOfRangeException>(() => Attunement.Of(-1, 3));
+    }
+
     [Fact]
     public void Buffs_and_debuffs_can_be_permanent_and_stack_by_default()
     {

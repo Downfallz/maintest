@@ -65,28 +65,31 @@ internal static class EvaluationConsole
         }
 
         writer.WriteLine($"Spells by the outcome of the sides that declared them ({EnoughSides} sides or more; one half is no signal):");
-        writer.WriteLine($"{"Spell",-32} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"Heal",6} {"Stun",5} {"Bleed",6} {"Regen",6} {"Buff",5}");
+        writer.WriteLine($"{"Spell",-30} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"Heal",5} {"Energy",7} {"Stun",5} {"Bleed",6} {"Regen",6} {"Attune",7} {"Def",4} {"Init",5}");
         foreach (var outcome in ranked)
         {
             writer.WriteLine(string.Join(
                 ' ',
-                outcome.Spell.PadRight(32),
+                outcome.Spell.PadRight(30),
                 Percent(outcome.Score).PadLeft(7),
                 outcome.Sides.ToString(CultureInfo.InvariantCulture).PadLeft(6),
                 outcome.Resolved.ToString(CultureInfo.InvariantCulture).PadLeft(6),
                 Percent(outcome.ResolveRate).PadLeft(8),
                 Percent(outcome.CastShareWhenWon).PadLeft(9),
                 outcome.Damage.ToString(CultureInfo.InvariantCulture).PadLeft(7),
-                outcome.Healing.ToString(CultureInfo.InvariantCulture).PadLeft(6),
+                outcome.Healing.ToString(CultureInfo.InvariantCulture).PadLeft(5),
+                outcome.Energy.ToString(CultureInfo.InvariantCulture).PadLeft(7),
                 outcome.Stuns.ToString(CultureInfo.InvariantCulture).PadLeft(5),
                 outcome.Bleeds.ToString(CultureInfo.InvariantCulture).PadLeft(6),
                 outcome.Regens.ToString(CultureInfo.InvariantCulture).PadLeft(6),
-                outcome.Buffs.ToString(CultureInfo.InvariantCulture).PadLeft(5)));
+                outcome.Attunements.ToString(CultureInfo.InvariantCulture).PadLeft(7),
+                outcome.DefenseBuffs.ToString(CultureInfo.InvariantCulture).PadLeft(4),
+                outcome.InitiativeDebuffs.ToString(CultureInfo.InvariantCulture).PadLeft(5)));
         }
 
         var landed = evaluation.SpellOutcomes.Sum(outcome => outcome.Resolved);
         var landedByWinners = evaluation.SpellOutcomes.Sum(outcome => outcome.ResolvedWhenWon);
-        writer.WriteLine("Cast is what landed; Resolve the share of declarations that landed rather than fizzling, which is what a cost change moves. Bleed counts applications: its damage lands at upkeep, where no spell owns it.");
+        writer.WriteLine("Cast is what landed; Resolve the share of declarations that landed rather than fizzling, which is what a cost change moves. Bleed, Regen and Attune count applications: what they go on to do lands at upkeep, where no spell owns it. Def and Init are the two stat conditions, kept apart because they move different stats.");
         if (landed > 0)
         {
             // Winners survive longer and so act more: every spell's winner share sits above one half, and the

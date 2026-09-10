@@ -22,16 +22,27 @@ public static class UpkeepRules
     }
 
     /// <summary>
-    /// OngoingEffects sub-phase: regenerations heal, then bleeds deal their damage, which ignores defense.
-    /// Healing goes first on purpose (ADR 0019), so a regeneration can carry a creature through a bleed that
-    /// would otherwise have killed it; the other order would make the two never meet.
+    /// OngoingEffects sub-phase: attunements give their energy, regenerations heal, then bleeds deal their
+    /// damage, which ignores defense. Healing goes before the bleeds on purpose (ADR 0019), so a regeneration
+    /// can carry a creature through a bleed that would otherwise have killed it; the other order would make
+    /// the two never meet. Energy touches no health, so its place in the order cannot change an outcome.
     /// </summary>
     public static OngoingEffectTicks OngoingEffects(IReadOnlyList<Creature> creatures)
     {
         ArgumentNullException.ThrowIfNull(creatures);
 
+        var gained = new List<AttunementTick>();
         var healed = new List<RegenerationTick>();
         var bled = new List<BleedTick>();
+        foreach (var creature in creatures.Where(creature => creature.IsAlive))
+        {
+            var attuning = Total<Attunement>(creature, attunement => attunement.AmountPerRound);
+            if (attuning > 0)
+            {
+                gained.Add(new AttunementTick(creature.Id, creature.GainEnergy(attuning)));
+            }
+        }
+
         foreach (var creature in creatures.Where(creature => creature.IsAlive))
         {
             var regenerating = Total<Regeneration>(creature, regeneration => regeneration.AmountPerRound);
@@ -50,7 +61,7 @@ public static class UpkeepRules
             }
         }
 
-        return new OngoingEffectTicks(bled, healed);
+        return new OngoingEffectTicks(bled, healed, gained);
     }
 
     private static int Total<TEffect>(Creature creature, Func<TEffect, int> amount)

@@ -82,6 +82,67 @@ public sealed class UpkeepRulesTests
         knight.Health.ShouldBe(Health.Of(3));
     }
 
+    /// <summary>
+    /// ADR 0020: the energy counterpart of a regeneration. Energy has no cap, so every point of an attunement
+    /// lands, round after round, for as long as the condition lasts.
+    /// </summary>
+    [Fact]
+    public void Attunements_give_their_summed_energy_at_the_start_of_each_of_their_rounds()
+    {
+        var creatures = Arena.FourCreatures();
+        var knight = Arena.Find(creatures, Arena.Knight);
+        knight.Apply(Attunement.Of(2, rounds: 2));
+        knight.Apply(Attunement.Of(3, rounds: 2, StackingPolicy.Stack));
+        var wraith = Arena.Find(creatures, Arena.Wraith);
+        wraith.Apply(Attunement.Of(1, rounds: 2));
+
+        var first = UpkeepRules.OngoingEffects(creatures);
+        UpkeepRules.Cleanup(creatures);
+        var second = UpkeepRules.OngoingEffects(creatures);
+
+        first.AttunementTicks.ShouldBe([new AttunementTick(Arena.Knight, 5), new AttunementTick(Arena.Wraith, 1)]);
+        second.AttunementTicks.ShouldBe([new AttunementTick(Arena.Knight, 5), new AttunementTick(Arena.Wraith, 1)]);
+        knight.Energy.ShouldBe(Energy.Of(10));
+        wraith.Energy.ShouldBe(Energy.Of(2));
+    }
+
+    /// <summary>
+    /// An attunement is a condition like any other: the cleanup of the round it was applied in does not count,
+    /// the next one expires a one-round attunement, and the energy stops with it.
+    /// </summary>
+    [Fact]
+    public void An_attunement_counts_down_and_expires_and_the_energy_stops()
+    {
+        var creatures = Arena.FourCreatures();
+        var knight = Arena.Find(creatures, Arena.Knight);
+        knight.Apply(Attunement.Of(2, rounds: 1));
+
+        UpkeepRules.OngoingEffects(creatures);
+        UpkeepRules.Cleanup(creatures);
+        var last = UpkeepRules.OngoingEffects(creatures);
+        UpkeepRules.Cleanup(creatures);
+        var after = UpkeepRules.OngoingEffects(creatures);
+
+        last.AttunementTicks.ShouldBe([new AttunementTick(Arena.Knight, 2)]);
+        after.AttunementTicks.ShouldBeEmpty();
+        knight.Conditions.ShouldBeEmpty();
+        knight.Energy.ShouldBe(Energy.Of(4));
+    }
+
+    [Fact]
+    public void A_dead_creature_gains_no_energy_from_its_attunement()
+    {
+        var creatures = Arena.FourCreatures();
+        var archer = Arena.Find(creatures, Arena.Archer);
+        archer.Apply(Attunement.Of(4, rounds: 2));
+        archer.TakeDamage(99);
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        ticks.AttunementTicks.ShouldBeEmpty();
+        archer.Energy.ShouldBe(Energy.Of(0));
+    }
+
     [Fact]
     public void Dead_and_unaffected_creatures_do_not_tick()
     {

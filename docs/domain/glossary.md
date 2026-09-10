@@ -31,9 +31,10 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Base initiative | A Creature's own Initiative before any Condition: its Creature definition's, raised by the Spell initiative of everything it has unlocked this Match. It only ever grows. | decided |
 | Current initiative | The Base initiative less the Creature's active initiative debuffs, floored at zero. This is what the Combat timeline orders on. | decided |
 | Spell | An action a Creature can perform in Combat: type, class, Spell initiative, energy cost, Critical chance bonus, targeting spec, and effects. The catalogue is [spells.md](spells.md). | decided |
-| Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012, extended by ADR 0019): instant `Damage`, `Heal`, `EnergyGain`; lasting `Bleed`, `Regeneration`, `Stun`, `DefenseBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
+| Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012, extended by ADR 0019 and ADR 0020): instant `Damage`, `Heal`, `EnergyGain`; lasting `Bleed`, `Regeneration`, `Attunement`, `Stun`, `DefenseBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
 | Regeneration | A lasting Effect that heals its Creature at the start of each of its Rounds, the healing counterpart of Bleed (ADR 0019). Regenerations heal before Bleeds deal their damage. | decided |
-| Condition | A lasting Effect attached to a Creature (stun, bleed, regeneration, defense buff) with a Duration and a Stacking policy. Regenerations heal and then Bleeds deal damage at the start of the round; every Condition counts down at Cleanup, and the first countdown after an application does not count. | decided |
+| Attunement | A lasting Effect that gives its Creature Energy at the start of each of its Rounds, the energy counterpart of Bleed and Regeneration (ADR 0020). Energy has no maximum, so an Attunement is never wasted. | decided |
+| Condition | A lasting Effect attached to a Creature (stun, bleed, regeneration, attunement, defense buff) with a Duration and a Stacking policy. Attunements give Energy, Regenerations heal and then Bleeds deal damage at the start of the round; every Condition counts down at Cleanup, and the first countdown after an application does not count. | decided |
 | Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |
 | Stacking policy | What applying a lasting Effect does when the Creature already carries it: `Stack` (add another), `Refresh` (restart the duration), `Ignore`. | decided |
 | Data builder | The tool that consolidates the authored content under `data/` into one validated `game.schema.json` with a Content hash (ADR 0009). | decided |
@@ -64,6 +65,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
 | Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. | decided |
 | Regeneration tick | The health a Creature regains from its regeneration Conditions at the start of a Round, applied before the Bleed ticks. | decided |
+| Attunement tick | The Energy a Creature gains from its attunement Conditions at the start of a Round, on top of the Round's own Energy gain. | decided |
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
 | Reveal and target | The step where the next Intent on the timeline is revealed and its targets chosen, producing a Combat action. | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
