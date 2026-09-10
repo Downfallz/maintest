@@ -20,5 +20,6 @@
       "kind": "Stun",
       "durationRounds": 1
     }
-  ]
+  ],
+  "enabled": false
 }

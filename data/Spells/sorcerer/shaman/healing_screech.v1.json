@@ -21,5 +21,6 @@
       "amountPerRound": 2,
       "durationRounds": 1
     }
-  ]
+  ],
+  "enabled": false
 }

@@ -26,3 +26,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |
 | [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |
 | [0020](0020-energy-regeneration-and-the-price-of-energy.md) | Energy regeneration, and the price of energy | Accepted |
+| [0021](0021-tune-the-catalogue-with-a-declared-search-space.md) | Tune the catalogue with a declared search space, not with a model | Accepted |

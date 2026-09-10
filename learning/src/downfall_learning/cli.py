@@ -18,15 +18,24 @@ from downfall_learning.iteration import (
     load_report,
     write_report,
 )
+from downfall_learning.knobs import KNOBS_FILE, KnobsError, findings, load_content, load_knobs, validate
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.report import TRAINING_FILE, TrainingLog
 from downfall_learning.search_weights import CliEvaluator, EngineCommand, SearchOptions, search_weights
 from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
 from downfall_learning.train_value import ValueOptions, train_value
+from downfall_learning.tune_content import (
+    ContentEngine,
+    EngineContentEvaluator,
+    TuneOptions,
+    format_result,
+    tune_content,
+)
 from downfall_learning.viewer import RUN_PAGE, write_run_page
 
 RUNS_HELP = "one or more run directories recorded by 'simulate --record'"
+REPO_HELP = "the engine repository root (default: cwd)"
 OUTPUT_HELP = "the directory the model is written to"
 
 
@@ -41,6 +50,80 @@ def _add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--seed", type=int, default=0, help="the seed of the split and the optimizer")
     parser.add_argument("--allow-mixed", action="store_true", help="accept runs whose stamps differ")
+
+
+def _add_search_weights(commands: argparse._SubParsersAction) -> None:
+    search = commands.add_parser(
+        "search-weights", help="cross-entropy search of the heuristic agent's weights"
+    )
+    search.add_argument(
+        "-o", "--output", type=Path, required=True, help="the directory the weights are written to"
+    )
+    search.add_argument(
+        "--initial", type=Path, help="a weights file to start from (default: the built-in weights)"
+    )
+    search.add_argument("--opponent", default="greedy", help="agent B of every evaluation (default greedy)")
+    search.add_argument(
+        "--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file of every evaluation"
+    )
+    search.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
+    search.add_argument("--iterations", type=int, default=10)
+    search.add_argument("--population", type=int, default=16)
+    search.add_argument(
+        "--elite", type=float, default=0.25, help="share of each population kept as the elite"
+    )
+    search.add_argument("--sigma", type=float, default=0.5, help="initial spread, relative to each weight")
+    search.add_argument("--seed", type=int, default=0)
+    search.add_argument(
+        "--engine",
+        nargs="+",
+        default=None,
+        help="the engine command prefix (default: dotnet run on the built Release CLI)",
+    )
+    search.set_defaults(handler=_search_weights)
+
+
+def _add_tune_content(commands: argparse._SubParsersAction) -> None:
+    tune = commands.add_parser(
+        "tune-content", help="search the balance knobs for a catalogue closer to the objective"
+    )
+    tune.add_argument("-o", "--output", type=Path, required=True, help="the directory the proposal lands in")
+    tune.add_argument("--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})")
+    tune.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    tune.add_argument("--iterations", type=int, default=8, help="rounds of neighbours (default 8)")
+    tune.add_argument("--neighbours", type=int, default=4, help="candidates played per round (default 4)")
+    tune.add_argument(
+        "--max-changes", type=int, default=12, help="knobs one proposal may move at once (default 12)"
+    )
+    tune.add_argument("--seed", type=int, default=0)
+    tune.add_argument(
+        "--no-sweep",
+        dest="sweep",
+        action="store_false",
+        help="skip the opening pass that plays every knob once, and start from random neighbours",
+    )
+    tune.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
+    tune.add_argument(
+        "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
+    )
+    tune.add_argument(
+        "--apply",
+        action="store_true",
+        help="write the winning numbers into the content itself, not only into the output directory",
+    )
+    tune.set_defaults(handler=_tune_content)
+
+
+def _add_check_knobs(commands: argparse._SubParsersAction) -> None:
+    check = commands.add_parser("check-knobs", help="the balance knobs against the content they describe")
+    check.add_argument(
+        "--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})"
+    )
+    check.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    check.add_argument(
+        "--strict", action="store_true", help="fail on the content findings too, not only on the knobs file"
+    )
+    check.set_defaults(handler=_check_knobs)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -59,36 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
     value.add_argument("--min-samples", type=int, default=5, help="steps an action needs to get its own row")
     value.set_defaults(handler=_train_value)
 
-    search = commands.add_parser(
-        "search-weights", help="cross-entropy search of the heuristic agent's weights"
-    )
-    search.add_argument(
-        "-o", "--output", type=Path, required=True, help="the directory the weights are written to"
-    )
-    search.add_argument(
-        "--initial", type=Path, help="a weights file to start from (default: the built-in weights)"
-    )
-    search.add_argument("--opponent", default="greedy", help="agent B of every evaluation (default greedy)")
-    search.add_argument(
-        "--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file of every evaluation"
-    )
-    search.add_argument(
-        "--repo", type=Path, default=Path.cwd(), help="the engine repository root (default: cwd)"
-    )
-    search.add_argument("--iterations", type=int, default=10)
-    search.add_argument("--population", type=int, default=16)
-    search.add_argument(
-        "--elite", type=float, default=0.25, help="share of each population kept as the elite"
-    )
-    search.add_argument("--sigma", type=float, default=0.5, help="initial spread, relative to each weight")
-    search.add_argument("--seed", type=int, default=0)
-    search.add_argument(
-        "--engine",
-        nargs="+",
-        default=None,
-        help="the engine command prefix (default: dotnet run on the built Release CLI)",
-    )
-    search.set_defaults(handler=_search_weights)
+    _add_search_weights(commands)
 
     evaluate = commands.add_parser(
         "evaluate-policy", help="play a trained policy against a baseline with the engine"
@@ -96,9 +150,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("model", type=Path, help="the model directory holding policy.json")
     evaluate.add_argument("--opponent", default="greedy", help="agent B of the evaluation (default greedy)")
     evaluate.add_argument("--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file")
-    evaluate.add_argument(
-        "--repo", type=Path, default=Path.cwd(), help="the engine repository root (default: cwd)"
-    )
+    evaluate.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     evaluate.add_argument("--engine", nargs="+", default=None, help="the engine command prefix")
     evaluate.add_argument(
         "--output", type=Path, help="where to write the evaluation (default: in the model directory)"
@@ -122,6 +174,9 @@ def build_parser() -> argparse.ArgumentParser:
     csv.add_argument("-o", "--output", type=Path, required=True, help="the CSV file to write")
     csv.add_argument("--allow-mixed", action="store_true")
     csv.set_defaults(handler=_export_csv)
+
+    _add_check_knobs(commands)
+    _add_tune_content(commands)
 
     stamps = commands.add_parser(
         "compare-stamps",
@@ -211,6 +266,70 @@ def _export_csv(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _check_knobs(arguments: argparse.Namespace) -> int:
+    try:
+        knobs = load_knobs(arguments.knobs)
+        content = load_content(arguments.data)
+    except KnobsError as error:
+        print(error, file=sys.stderr)
+        return 1
+
+    problems = validate(knobs, content)
+    for problem in problems:
+        print(f"problem: {problem}", file=sys.stderr)
+    reports = findings(content, knobs)
+    for report in reports:
+        print(f"finding: {report}")
+    print(
+        f"{len(knobs)} knobs over {len(knobs.spells)} spells, {len(content)} enabled spells in the content."
+    )
+    if problems:
+        return 1
+    return 1 if reports and arguments.strict else 0
+
+
+def _tune_content(arguments: argparse.Namespace) -> int:
+    try:
+        knobs = load_knobs(arguments.knobs)
+        content = load_content(arguments.data)
+    except KnobsError as error:
+        print(error, file=sys.stderr)
+        return 1
+
+    problems = validate(knobs, content)
+    if problems:
+        for problem in problems:
+            print(f"problem: {problem}", file=sys.stderr)
+        print("The knobs and the content disagree; fix that before searching.", file=sys.stderr)
+        return 1
+
+    engine = EngineCommand(root=arguments.repo, seeds=knobs.objective.seeds or EngineCommand().seeds)
+    if arguments.engine:
+        engine = replace(engine, command=tuple(arguments.engine))
+    host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
+    evaluator = EngineContentEvaluator(host, knobs.objective, content)
+    options = TuneOptions(
+        iterations=arguments.iterations,
+        neighbours=arguments.neighbours,
+        max_changes=arguments.max_changes,
+        seed=arguments.seed,
+        sweep=arguments.sweep,
+    )
+    result = tune_content(evaluator, knobs, content, options)
+    result.write(arguments.output, arguments.data)
+    print(format_result(result, knobs.objective))
+    missing = knobs.objective.missing(result.best.metrics)
+    if missing:
+        print(f"Not measured, so not scored: {', '.join(missing)}.")
+    if arguments.apply and result.improved:
+        written = result.apply()
+        print(f"Applied to {len(written)} spell file(s). Rebuild the content and regenerate the digest.")
+    elif arguments.apply:
+        print("Nothing improved, so nothing was applied.")
+    print(f"{evaluator.calls} evaluation(s) played; the proposal is in '{arguments.output}'.")
+    return 0
+
+
 def _stamp_of(path: Path) -> RunStamp:
     if path.name == POLICY_FILE:
         return Policy.load(path).stamp
@@ -270,6 +389,14 @@ def report_command() -> int:
 
 def compare_stamps_command() -> int:
     return _run("compare-stamps")
+
+
+def check_knobs_command() -> int:
+    return _run("check-knobs")
+
+
+def tune_content_command() -> int:
+    return _run("tune-content")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,121 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-10. The search sweeps first: 104.05 to 15.56, and two good moves that do not add up
+
+- **What changed**: the tuner, not the content. Three things, after the entry below left one spell holding
+  85% of the casts and the search failing to touch it (ADR 0021).
+- **Dominance reads the Talent tree now.** A Spell is compared against another at its own depth or deeper,
+  because reaching a deeper node costs picks and prerequisites: being better there is the reward. On this
+  content the report goes from three pairs to none, and all three were a tier-1 Spell beating a tier-0 one.
+  Depth comes from the Creature's starting Spells and from walking the trees, shallowest wins.
+- **The search sweeps every playable knob once before it climbs.** The reason is a measured miss: a uniform
+  draw over 29 knobs with 40 candidates leaves a one-in-four chance a given knob is never tried, and the
+  previous run lost that flip on `lightning_bolt`'s energy cost — the single best move in the catalogue.
+  The random phase that follows leans four to one on the knobs the sweep showed can move a metric, and
+  draws only from Spells the build carries: 110 of the 139 knobs sit on turned-off Spells.
+- **A bug the sweep found immediately**: the first sweep returned zero playable candidates. `violations()`
+  rebuilt the candidate catalogue with only its Spells and files, so the tiers went missing, so a tiered
+  "before" was compared against an untiered "after" and every candidate read as adding the catalogue's three
+  progression pairs. `Content.with_spells` is the one way to say "the same catalogue with other numbers in
+  it" now. 40 of 58 sweep moves are legal; 6 are refused for genuinely creating a same-tier dominance.
+- **The run**: 52 candidates, 106 evaluations, **score 104.05 to 15.56** against 88.76 for the run before.
+  Five moves, and the first is the one that was never tried:
+
+  | Move | From | To |
+  | --- | --- | --- |
+  | `lightning_bolt` energy cost | 2 | 3 |
+  | `guard` Spell initiative | 1 | 0 |
+  | `basic_attack` damage | 1 | 2 |
+  | `pummel` critical chance | 0.667 | 0.717 |
+  | `rejuvenate` heal | 3 | 2 |
+
+  Five of the nine targets are inside their band: average rounds **9.44**, draws, round cap, fizzle rate
+  **0.156**, and the skill gap. `spellUsageShare` falls from 0.855 to **0.357** and entropy rises from 0.74
+  to **1.93**. Only 3 of 52 candidates changed no metric, against 11 of 32 before, which is the draw no
+  longer landing on Spells nobody casts.
+- **What is left is the first-mover edge**: `player1WinShare` 0.640, 9.7 of the remaining 15.6 points.
+- **And a negative result worth more than the run**: the entry below said the two findings should compose.
+  They do not. `lightning_bolt` at 3 *and* `pummel` at Spell initiative 0, measured together, score
+  **25.27** — worse than the sweep's five moves, and `player1WinShare` goes to **0.680**, worse than either
+  change alone. Taking the cheap unlock's tempo away helped while `lightning_bolt` cost 2 and hurts once it
+  costs 3. A proposal is only valid for the catalogue it was measured on, which is an argument for
+  searching again after every accepted change rather than stacking proposals.
+- **Decision**: still apply nothing. The tool is now worth pointing at the question, and the question is
+  what `lightning_bolt` should cost, with the first-mover edge measured again afterwards.
+
+## 2026-09-10. `tune-content` on the nine Spells: the first-mover edge finally moves, and it costs length
+
+- **What this is**: the entry the one below promised. No content changed — this is what the search proposes,
+  measured, and nothing from it is applied. 40 candidates at `--seed 1 --iterations 10 --neighbours 4`, 82
+  evaluations, about a quarter of an hour on content `c0ec6984`.
+- **Score 104.05 to 88.76** over five moves (ADR 0021 scores the distance outside every band, zero being on
+  target):
+
+  | Move | From | To |
+  | --- | --- | --- |
+  | `pummel` Spell initiative | 1 | 0 |
+  | `pummel` damage | 2 | 1 |
+  | `lightning_bolt` damage | 3 | 4 |
+  | `lightning_bolt` critical chance | 0.667 | 0.617 |
+  | `poison_slash` energy cost | 2 | 3 |
+
+- **The number that moved is the one nothing had moved**: `player1WinShare` **0.665 to 0.535**, inside the
+  0.45 to 0.55 band for the first time since the first digest. Making matches half again as long did not
+  touch it (the entry below); taking a point of Spell initiative off the cheapest unlock did. That is ADR
+  0017 read backwards: unlocking is how a Creature gets faster, so the cheapest unlock decides who acts
+  first for the rest of the match, and `pummel` at one energy is the cheapest there is.
+- **It paid for that in length**: `averageRounds` **8.135 to 5.865**, back outside the 8 to 16 band we had
+  just entered, and `fizzleRateA` 0.180 to 0.209. The objective weighs the first-mover share at 3 with a
+  scale of 0.05 and length at 2 with a scale of 3, so a tenth of the share is worth more to it than two
+  rounds. That is a choice written in `data/balance/knobs.json`, not a fact about the game, and this run is
+  the first evidence about whether it is the right one.
+- **The dominant Spell is untouched**: `spellUsageShare` 0.855 to 0.846, still 71 of the remaining 88.8
+  points. A hill climb moving one number one step cannot close a gap that wide, and it raised
+  `lightning_bolt`'s damage rather than lowering it, because damage barely moves its share while it does
+  move the length the objective is also chasing. `spellsNeverCast` stayed at 5 of 9.
+- **Decision**: apply nothing. The proposal names the right lever and the wrong price for it. What
+  `lightning_bolt` should cost is a design question, and answering it first is what would let a search
+  spend its budget on the rest.
+
+## 2026-09-10. The core three classes only: matches lengthen, and one spell takes 86% of the casts
+
+- **What changed**: the content, not the engine. The Creature moved from the full talent tree onto a new
+  `talent-tree:core_classes:v1` — the same root and the same three class nodes, without the nine
+  specialisations — and the old tree and the 27 specialisation Spells were turned off with
+  `"enabled": false` (ADR 0015). The build carries **9 Spells** instead of 36: `wait`, `basic_attack`,
+  `heavy_strike`, then `pummel` and `guard`, `poison_slash` and `throwing_star`, `lightning_bolt` and
+  `rejuvenate`. Nothing on disk was deleted; turning the flags back restores the catalogue.
+- **Why**: the balance signals on 36 Spells were dominated by content no match reaches. 26 of them were
+  never cast, so two thirds of the tuner's score was dead content and no single number could move it
+  (ADR 0021). Nine reachable Spells is a catalogue a balance pass can actually close.
+- **Digest**: `benchmarks/c0ec6984e2c1df0805941aab44649f2d54ebcb5aadb4fc8c1de56a2ee4a7a960.json`, `Greedy`
+  against `Greedy` on the 200 benchmark seeds, mirrored, engine `5475d117d0eb`, against
+  `50a291d5...` before. Content is the only axis that moved.
+- **Matches got longer, which is what we wanted**: **8.1 rounds on average** against 5.8, spread 6 to 10
+  against 5 to 9, still every one by elimination and none by the round cap. The winner ends on **10.1
+  health of 60** against 17.0, so the matches are longer *and* closer. Taking the specialisations away took
+  away the big single casts — Psycho Rush and Hateful Sacrifice hit for 9 and 10 — and what is left trades
+  in twos and threes.
+- **The first-mover edge did not move**: 133 of 200, **66.5%**, against 128 and 64.0%. Well outside the
+  band the objective asks for and unchanged by making matches half again as long, which says the edge is
+  not about how long the race is.
+- **Entropy collapsed, and the reason is one Spell**: **0.74 bits** against 2.21. `Greedy` declares four
+  Spells of the nine, and `lightning_bolt` takes **4172 of 4881 landed casts, 85.5%**, for 20094 of the
+  22000 damage dealt. `heavy_strike` lands 400, `pummel` 288, `throwing_star` 21. `wait`, `guard`,
+  `poison_slash`, `rejuvenate` and `basic_attack` are never declared at all.
+- **Which the audit already predicted**: `check-knobs` reports three strict dominances in this catalogue,
+  and one of them is `lightning_bolt` over `heavy_strike` — same targeting, same cost of 2, same Spell
+  initiative, 3 damage each, and a critical chance of 0.667 against 0. There is no reason to ever declare
+  the second, and `Greedy` does not. The other two are `pummel` and `throwing_star` over `basic_attack`.
+- **Fizzles fell to 18.0%** from 21.4%, and criticals rose to 53.7% from 25.4%: with `lightning_bolt`
+  taking most casts, the run's critical rate is close to its own.
+- **Objective**: `spellsNeverCast` moved from a band of 12 to a band of **2**. Twelve was written for a
+  catalogue of 36 and cannot be exceeded by one of 9, so it had stopped being a target at all.
+- **Decision**: keep. This is the content the balance work continues on, and it poses exactly one obvious
+  question — what `lightning_bolt` should cost — plus the two dominances under it. The next entry is what
+  `tune-content` does with that.
+
 ## 2026-09-10. Energy gets a price and a lasting kind: nothing moves, and that is the finding
 
 - **What changed**: (a) `ActionScorer` scores `EnergyOutcome`, which it never did — the switch matched
