@@ -17,7 +17,6 @@ from downfall_learning.search_weights import (
     SearchOptions,
     SearchResult,
     format_search,
-    overlap,
     reads_as_a_tie,
     search_weights,
     win_rate_lines,
@@ -155,11 +154,6 @@ def test_an_interval_that_straddles_the_even_point_is_a_tie() -> None:
     assert not reads_as_a_tie(0.40, 0.49)
 
 
-def test_two_scores_whose_intervals_cross_cannot_be_told_apart() -> None:
-    assert overlap(_score(0.61, 0.04, 0.5, 0.04), _score(0.59, 0.04, 0.5, 0.04))
-    assert not overlap(_score(0.70, 0.01, 0.5, 0.04), _score(0.59, 0.01, 0.5, 0.04))
-
-
 def _result(before: Mapping[str, float], after: Mapping[str, float], spread: float) -> SearchResult:
     initial = Candidate(0, before, _score(0.5891, spread, 0.52, 0.04))
     best = Candidate(1, after, _score(0.6123, spread, 0.5412, 0.0423))
@@ -176,15 +170,18 @@ def test_the_search_report_names_which_weight_moved_and_which_did_not() -> None:
     assert "Unchanged: heal." in text
 
 
-def test_a_search_whose_intervals_overlap_says_it_measured_nothing() -> None:
-    """A search keeps the best of what it drew, so a score that went up is what it does either way."""
+def test_the_search_report_refuses_to_call_its_own_best_a_measured_improvement() -> None:
+    """The best is chosen for scoring best, on the seeds the search optimised over. Neither the interval nor
+    an overlap between two of them is a test of the difference, and saying so was the old line's whole sin."""
     text = format_search(_result({"damage": 1.0}, {"damage": 1.4}, 0.04), "greedy", 40, Path("w.json"))
 
-    assert "The two intervals overlap" in text
-    assert "cannot tell the new weights from the ones it started with" in text
+    assert "this run cannot say" in text
+    assert "chosen for scoring best out of 40" in text
+    assert "seeds the search never saw" in text
 
 
-def test_a_search_whose_intervals_are_clear_says_the_gap_is_real() -> None:
-    text = format_search(_result({"damage": 1.0}, {"damage": 1.4}, 0.005), "greedy", 40, Path("w.json"))
+def test_the_search_report_still_prints_the_numbers_it_measured() -> None:
+    text = format_search(_result({"damage": 1.0}, {"damage": 1.4}, 0.04), "greedy", 40, Path("w.json"))
 
-    assert "clear of each other" in text
+    assert "score 0.5891 -> 0.6123" in text
+    assert "win rate 0.5412" in text

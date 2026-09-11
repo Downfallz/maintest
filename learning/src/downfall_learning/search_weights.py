@@ -95,61 +95,6 @@ def win_rate_lines(score: Score, opponent: str, indent: str = "  ") -> list[str]
     return lines
 
 
-def overlap(one: Score, other: Score) -> bool:
-    """Whether two score intervals cross, which is "this run cannot tell these two apart"."""
-    return one.low <= other.high and other.low <= one.high
-
-
-def format_search(result: SearchResult, opponent: str, evaluations: int, output: Path) -> str:
-    """What a weight search found, for a reader who wants to know whether to believe it.
-
-    The line this replaced printed the best score, the initial score and a win rate. None of the three says
-    the thing that decides whether the run is worth keeping: the search *always* reports a best at least as
-    good as its initial, because it keeps the best, so a number that went up is not evidence of anything on
-    its own. What is evidence is whether the two intervals are clear of each other.
-    """
-    moved, still = [], []
-    for name, after in result.best.weights.items():
-        before = result.initial.weights.get(name)
-        (moved if before is None or abs(after - before) > 5e-4 else still).append((name, before, after))
-
-    lines = [f"The search played {evaluations} evaluation(s) and kept the best weights it found.", ""]
-    lines.append("What it changed")
-    if moved:
-        width = max(len(name) for name, _, _ in moved)
-        for name, before, after in sorted(moved, key=lambda row: -abs(row[2] - (row[1] or 0.0))):
-            lines.append(f"  {name:<{width}}  {before:.3f} -> {after:.3f}")
-    else:
-        lines.append("  Nothing: no candidate beat the weights it started from.")
-    if still:
-        lines.append(f"  Unchanged: {', '.join(name for name, _, _ in still)}.")
-
-    best, initial = result.best.score, result.initial.score
-    lines.extend(
-        [
-            "",
-            "Is it actually better",
-            f"  score {initial.mean:.4f} -> {best.mean:.4f}, where one half is even against {opponent}.",
-        ]
-    )
-    if overlap(best, initial):
-        lines.extend(
-            [
-                f"  The two intervals overlap ({initial.low:.4f}..{initial.high:.4f} and "
-                f"{best.low:.4f}..{best.high:.4f}), so this",
-                "  run cannot tell the new weights from the ones it started with. The search keeps the",
-                "  best of what it drew, so a score that went up is what it does even when nothing improved.",
-            ]
-        )
-    else:
-        lines.append("  The two intervals are clear of each other, so the gap is one this run can measure.")
-
-    lines.append("")
-    lines.extend(win_rate_lines(best, opponent))
-    lines.extend(["", f"Written to '{output}'."])
-    return "\n".join(lines)
-
-
 class Evaluator(Protocol):
     def evaluate(self, weights: Mapping[str, float]) -> Score: ...
 
@@ -262,6 +207,58 @@ class SearchResult:
             raw = json.dumps(self.best.score.evaluation.raw, indent=2) + "\n"
             (directory / "evaluation.json").write_text(raw, encoding="utf-8")
         return directory
+
+
+def format_search(result: SearchResult, opponent: str, evaluations: int, output: Path) -> str:
+    """What a weight search found, and — plainly — what it did not establish.
+
+    The line this replaced printed the best score, the initial score and a win rate, which reads as a verdict
+    and is not one. The search keeps the best of what it drew, so the best score is at least the initial one
+    by construction; and every candidate is played on the same fixed seeds, so the scores move together and
+    two marginal intervals say nothing about the difference between them either way. The numbers are printed
+    because they are what was measured. The conclusion is not, because this run cannot support one.
+    """
+    moved, still = [], []
+    for name, after in result.best.weights.items():
+        before = result.initial.weights.get(name)
+        (moved if before is None or abs(after - before) > 5e-4 else still).append((name, before, after))
+
+    lines = [f"The search played {evaluations} evaluation(s) and kept the best weights it found.", ""]
+    lines.append("What it changed")
+    if moved:
+        width = max(len(name) for name, _, _ in moved)
+        for name, before, after in sorted(moved, key=lambda row: -abs(row[2] - (row[1] or 0.0))):
+            lines.append(f"  {name:<{width}}  {before:.3f} -> {after:.3f}")
+    else:
+        lines.append("  Nothing: no candidate beat the weights it started from.")
+    if still:
+        lines.append(f"  Unchanged: {', '.join(name for name, _, _ in still)}.")
+
+    best, initial = result.best.score, result.initial.score
+    lines.extend(
+        [
+            "",
+            "What it measured",
+            f"  score {initial.mean:.4f} -> {best.mean:.4f}, where one half is even against {opponent}.",
+            f"  The intervals are {initial.low:.4f}..{initial.high:.4f} and {best.low:.4f}..{best.high:.4f}.",
+            f"  win rate {best.win_rate:.4f}, anywhere from {best.win_rate_low:.4f} to "
+            f"{best.win_rate_high:.4f}.",
+            "",
+            "Whether that is better, this run cannot say",
+            f"  These weights were chosen for scoring best out of {evaluations}, so the interval above is",
+            "  the winner's and not a fair one: picking the highest of many draws moves it up by itself.",
+            "",
+            "  And every candidate played the same fixed seeds, so their scores rise and fall together.",
+            "  Two intervals overlapping is not a test of the difference between them, and two intervals",
+            "  clear of each other is not proof of one either.",
+            "",
+            "  What settles it is replaying these weights on seeds the search never saw, compared seed by",
+            "  seed against the ones they started from.",
+            "",
+            f"Written to '{output}'.",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _as_vector(weights: Mapping[str, float]) -> np.ndarray:

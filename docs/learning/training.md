@@ -63,9 +63,11 @@ words, and the objective as bands over the metrics `report.json` already publish
 **Every one of these runs explains its own result rather than printing it.** `tune-content` names what it
 changed in the content's own words, which measurement the gain came from, what that gain cost elsewhere, and
 what is still outside its range with the number it reads beside the number it should be. `search-weights`
-names which weights moved, and — the part that decides whether to believe it — whether the best score's
-interval is clear of the one it started from: a search keeps the best of what it drew, so a score that went
-up is what it does even when nothing improved. `evaluate-policy` says whether its win rate's interval
+names which weights moved, prints what it measured, and then says plainly that the run cannot settle whether
+that is better: it keeps the best of what it drew, so the best score beats the initial one by construction,
+and every candidate played the same fixed seeds, so comparing two marginal intervals is not a test of the
+difference between them in either direction. What settles it is replaying the weights on seeds the search
+never saw. `evaluate-policy` says whether its win rate's interval
 contains one half, because a win rate of 0.54 whose interval runs 0.50 to 0.58 is not a 54% policy, it is a
 policy that many matches could not measure.
 

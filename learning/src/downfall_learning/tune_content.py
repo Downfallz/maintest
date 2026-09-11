@@ -685,10 +685,11 @@ def format_result(result: TuneResult, objective: Objective) -> str:
         after = result.best.metrics.get(target.on, {}).get(target.metric)
         low = "" if target.minimum is None else f"{target.minimum:g}"
         high = "" if target.maximum is None else f"{target.maximum:g}"
-        penalty = result.best.breakdown.get(target.key, 0.0)
+        scored = result.best.breakdown.get(target.key)
+        penalty = "-" if scored is None else f"{scored:.2f}"
         lines.append(
             f"| {target.on}.{target.metric} | {_number(before)} | {_number(after)} "
-            f"| {low}..{high} | {penalty:.2f} |"
+            f"| {low}..{high} | {penalty} |"
         )
     return "\n".join(lines)
 
@@ -748,8 +749,13 @@ def _unwatched(result: TuneResult, objective: Objective) -> list[str]:
     invisible until it leaves the range, and `skill.winRateA` is in the objective precisely to catch a
     proposal that balances the content by taking the decisions out of it.
     """
+    # `breakdown` leaves out a target nothing measured rather than scoring it zero, so a missing key is not
+    # a passing one: `tierDamageSpread` on a tier with too few damaging spells has no reading at all, and
+    # calling it "inside its range" here while the run goes on to print it as not measured is two answers.
     passing = [
-        target.key for target in objective.targets if result.best.breakdown.get(target.key, 0.0) <= 0.005
+        target.key
+        for target in objective.targets
+        if target.key in result.best.breakdown and result.best.breakdown[target.key] <= 0.005
     ]
     if not passing:
         return []
