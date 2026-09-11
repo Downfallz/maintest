@@ -93,6 +93,67 @@ public sealed class StudioPageContractTests
             .ShouldBeEmpty("the script styles elements with classes the stylesheet does not have");
     }
 
+    /// <summary>
+    /// GitHub Pages sends no cache headers we control, so a browser will happily keep yesterday's `studio.js`
+    /// beside today's `index.html` -- and new markup driven by old script is the worst kind of broken, because
+    /// it looks right and does nothing. The publish step stamps every reference with the commit that published
+    /// it; a module imported without a stamp is one that can be served stale on its own.
+    /// </summary>
+    [Fact]
+    public void Every_reference_between_the_published_files_is_stamped_with_its_commit()
+    {
+        var workflow = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "pages.yml"));
+        var imported = Modules()
+            .SelectMany(path => Ids(File.ReadAllText(path), @"from '\./([a-z0-9.-]+)'"))
+            .ToHashSet(StringComparer.Ordinal);
+        var linked = Ids(Page, @"(?:src|href)=""([a-z0-9.-]+\.(?:js|css))""");
+
+        imported.ShouldNotBeEmpty();
+        linked.ShouldNotBeEmpty();
+        foreach (var name in imported.Concat(linked))
+        {
+            workflow.ShouldContain($"{name}?v=$GITHUB_SHA", Case.Sensitive, $"{name} is referenced by the page but the publish step never stamps it, so a browser can serve it stale beside fresher files");
+        }
+    }
+
+    /// <summary>
+    /// The files the page fetches at runtime are published by the same deployment and cached the same way, but
+    /// nothing rewrites the URL that asks for them: a deployment that only moved `data/` leaves every other URL
+    /// identical, so a returning browser would answer from the catalogue it cached weeks ago. The modules append
+    /// one constant to every request they make beside the page, and the publish step rewrites that constant --
+    /// so this asserts both halves, and that no relative fetch is added later without it.
+    /// </summary>
+    [Fact]
+    public void Every_file_the_page_fetches_beside_itself_is_stamped_with_its_commit()
+    {
+        var workflow = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "pages.yml"));
+        var requested = Modules()
+            .SelectMany(path => Ids(File.ReadAllText(path), @"transport\(\s*[`'""]([^`'""]*)[`'""]"))
+            .Where(Beside)
+            .ToList();
+
+        requested.ShouldNotBeEmpty("no request beside the page was found, so this test is asserting nothing");
+        foreach (var url in requested)
+        {
+            url.ShouldEndWith(Stamp, Case.Sensitive, $"`{url}` is fetched beside the page but carries no deployment stamp, so a browser can answer it from a cache older than the script asking for it");
+        }
+
+        workflow.ShouldContain($"const {Constant} = '?v=$GITHUB_SHA';", Case.Sensitive, $"the publish step never rewrites {Constant}, so every stamped request would ask for the same URL forever");
+    }
+
+    private const string Constant = "DEPLOYMENT";
+
+    private const string Stamp = $"${{{Constant}}}";
+
+    /// <summary>A request the page makes of its own site: not absolute, and not built from another host's base.</summary>
+    private static bool Beside(string url) =>
+        url.Length > 0 && !url.StartsWith("${", StringComparison.Ordinal) && !url.StartsWith('/')
+        && !url.StartsWith("http", StringComparison.Ordinal);
+
+    private static IEnumerable<string> Modules() =>
+        Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "studio"), "*.js")
+            .Where(path => !path.EndsWith(".test.js", StringComparison.Ordinal));
+
     private static HashSet<string> Ids(string text, string pattern) =>
         Regex.Matches(text, pattern, RegexOptions.None, MatchTimeout)
             .Select(match => match.Groups[1].Value)
