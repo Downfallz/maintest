@@ -4,6 +4,51 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-11. The scorer reads the cost of an unlock, and the length of an effect
+
+- **What changed**: three terms of `ActionScorer`, no content and no weight ([ADR 0026](../adr/0026-price-what-a-cast-costs-and-how-long-it-lasts.md)).
+  An unlock is now priced net of `w.energy` x the spell's cost; a Stun and an InitiativeDebuff are priced
+  over the rounds they last instead of once. The unlock term is the one that moves this run: the other two
+  touch effects that only disabled spells carry.
+- **Digest**: `benchmarks/be58a32d1ddf930376caff87b4513de42a95df09b27fb6e25cc2b25810960c2d.json`,
+  regenerated on the same content hash `be58a32d`, `Greedy` against `Greedy` on the 200 benchmark seeds,
+  mirrored (seed set `733404048`), engine `e3d8d64e3a4f` — stamped `-dirty` because the docs of this change
+  were in the tree when it was written.
+- **Numbers**, against the entry below on the same content:
+
+  | Reading | Before | After | Band |
+  | --- | --- | --- | --- |
+  | `guard` landed casts | 573 | **308** | |
+  | `rejuvenate` landed casts | 625 | **140** | |
+  | `rejuvenate` resolve rate | 79.2 % | **46.4 %** | |
+  | `lightning_bolt` share of landed casts | 0.680 | **0.761** | ..0.25 |
+  | `mirror.player1WinShare` | 0.455 | **0.595** | 0.45..0.55 |
+  | `mirror.averageRounds` | 8.29 | **7.05** | 8..16 |
+  | `mirror.spellsNeverCast` | 2 | 3 | ..2 |
+  | `mirror.roundCapShare` | 0.045 | 0.005 | ..0.05 |
+  | `spellUsageShare` penalty | 18.53 | **26.07** | |
+  | **total objective** | **40.45** | **68.66** | |
+
+  Three of the four targets the previous entry had just landed in their bands have left them again:
+  `player1WinShare`, `averageRounds` and `spellsNeverCast`. Six were on target; three are now.
+
+- **Why it matters**: the score gets **worse**, and that is the interesting part. The agent was buying
+  defensive spells on an energy it did not have — `UnlockValue` raises the caster's energy to afford the
+  spell it is valuing, and the resolution's own energy term then reads that raised number, so every unlock
+  compared as if it were free. `rejuvenate`'s resolve rate falling to 46.4 % is the same defect seen from the
+  other side: it was being unlocked and declared by creatures that could not pay for it, and half those
+  declarations fizzled. So the previous entry's headline — the catalogue tuned until the defensive half
+  became playable — was tuned partly against an agent that could not see cost. One reading is that this was
+  masking how far `lightning_bolt` dominates; that is a reading, not a result. What is certain is that a
+  balance objective measured through a scorer blind to a dimension the content carries was measuring the
+  scorer as much as the content.
+- **Not comparable**: nothing stamped before this compares term by term with anything after it, the same
+  warning the two entries below carry, for the same reason. `player1WinShare` and the rest of the balance
+  objective need a fresh `tune-content` run before they mean anything again.
+- **What is next**: re-run `tune-content` on this scorer. The previous run's three moves were chosen against
+  the old prices, so `rejuvenate`'s cost of 2 in particular — the move the entry below credits with landing
+  `player1WinShare` in its band — was picked by an agent that could not feel it.
+
 ## 2026-09-10. The catalogue tuned for an agent that defends, and the first-mover share finally lands in its band
 
 - **What this is**: `tune-content --seed 0` against the scorer of the entry below, once its two review
