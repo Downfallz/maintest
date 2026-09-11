@@ -414,4 +414,43 @@ public sealed class ContentStoreTests
             return true;
         }
     }
+    /// <summary>
+    /// The class promises reading never throws on a bad file. A spell the process cannot open was the one that
+    /// did: the read sat outside the try, so it left <see cref="ContentStore.Read"/> entirely and took the whole
+    /// catalogue with it rather than being listed like a file that does not parse.
+    /// </summary>
+    [Fact]
+    public void A_spell_that_cannot_be_read_is_listed_with_its_problem_rather_than_thrown()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        if (!DenyReads(Path.Combine(content.Path, "Spells", "strike.v1.json")))
+        {
+            Assert.Skip("Reads cannot be denied to this process, so there is nothing here to refuse it.");
+        }
+
+        var catalogue = new ContentStore(content.Path).Read();
+
+        catalogue.Spells.Count.ShouldBe(2);
+        catalogue.Spells.ShouldContain(spell => spell.Path == "Spells/strike.v1.json" && spell.Problem != null);
+    }
+
+    /// <summary>
+    /// An alias map that cannot be read is not an empty one: every reference resolves through it, so falling
+    /// back to none silently turns a permissions mistake into a catalogue where nothing is aliased at all.
+    /// </summary>
+    [Fact]
+    public void An_alias_map_that_cannot_be_read_says_so_rather_than_reading_as_no_aliases()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        if (!DenyReads(Path.Combine(content.Path, "aliases.json")))
+        {
+            Assert.Skip("Reads cannot be denied to this process, so there is nothing here to refuse it.");
+        }
+
+        var catalogue = new ContentStore(content.Path).Read();
+
+        catalogue.Aliases.ShouldBeEmpty();
+        catalogue.Notes.ShouldContain(note => note.Contains("aliases.json", StringComparison.Ordinal));
+    }
+
 }

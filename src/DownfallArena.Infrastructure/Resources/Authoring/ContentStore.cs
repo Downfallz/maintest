@@ -73,7 +73,7 @@ public sealed class ContentStore
             Creatures = ReadAll<CreatureDefinitionDto>(ContentKind.Creature),
             Spells = ReadAll<SpellDto>(ContentKind.Spell),
             TalentTrees = ReadAll<TalentTreeDto>(ContentKind.TalentTree),
-            Aliases = ReadAliases(),
+            Aliases = ReadAliases(notes),
             // After the build, because a knobs file that does not parse is a note and never a problem: it is not
             // build input, and reporting it as one would tell an author their content is broken when it is not.
             Balance = ReadBalance(notes),
@@ -280,7 +280,7 @@ public sealed class ContentStore
         }
     }
 
-    private Dictionary<string, string> ReadAliases()
+    private Dictionary<string, string> ReadAliases(List<string> notes)
     {
         var path = Path.Combine(Root, GameSchemaBuilder.AliasesFile);
         if (!File.Exists(path))
@@ -293,8 +293,12 @@ public sealed class ContentStore
             return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path), GameSchemaJson.ReadOptions)
                 ?? new Dictionary<string, string>(StringComparer.Ordinal);
         }
-        catch (JsonException)
+        // An alias map that cannot be read is not an empty one: every reference in the content resolves through
+        // it, so falling back to none silently turns a permissions mistake into a catalogue where nothing is
+        // aliased. The fallback stays -- the studio still has to open -- but it says so.
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
+            notes.Add($"{GameSchemaBuilder.AliasesFile} could not be read, so no alias resolves: {exception.Message}");
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
     }
@@ -311,15 +315,19 @@ public sealed class ContentStore
 
         foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
         {
-            var text = File.ReadAllText(file);
             var relative = Relative(file);
+            string text;
             JsonElement element;
             try
             {
+                // The read is inside the try, not before it: a file the process cannot open threw straight out
+                // of here, past the studio's own error handling, and took the whole catalogue with it. A file
+                // that cannot be read is listed with what is wrong, the same as one that does not parse.
+                text = File.ReadAllText(file);
                 using var parsed = JsonDocument.Parse(text);
                 element = parsed.RootElement.Clone();
             }
-            catch (JsonException exception)
+            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
             {
                 documents.Add(Broken(kind, relative, exception.Message));
                 continue;
