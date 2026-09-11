@@ -20,6 +20,7 @@
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></symbol>
     <symbol id="i-history" viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9"/><path d="M4.5 4.5V9H9"/></symbol>
     <symbol id="i-audit" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></symbol>
+    <symbol id="i-balance" viewBox="0 0 24 24"><path d="M12 4v16M7 20h10M4 8h16M4 8l-2 6h4zM20 8l-2 6h4z"/></symbol>
     <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H20M17 12v3M14 12v2.5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
@@ -48,6 +49,9 @@
       </button>
       <button id="audit-panel" type="button" class="tool" aria-controls="audit" aria-pressed="false">
         <svg><use href="#i-audit"/></svg><span>Audit</span>
+      </button>
+      <button id="balance-panel" type="button" class="tool" aria-controls="balance" aria-pressed="false">
+        <svg><use href="#i-balance"/></svg><span>Balance</span>
       </button>
       <!-- Only on the published page, where saving is a token away and nothing else on screen would say so. -->
       <button id="access-panel" type="button" class="tool" aria-controls="access" aria-pressed="false" hidden>
@@ -174,6 +178,16 @@
       <button type="button" class="close" data-close="audit" aria-label="Close"><svg><use href="#i-close"/></svg></button>
     </div>
     <div id="audit-body" class="scroll"></div>
+  </section>
+
+  <!-- What a tuning pass may change and what it is aiming at (data/balance/knobs.json). It is read from the
+       catalogue the page already has, so this sheet costs no request and stays true to the edits on screen. -->
+  <section id="balance" class="panel" hidden aria-labelledby="balance-title">
+    <div class="panel-head">
+      <h2 id="balance-title">Balance knobs</h2>
+      <button type="button" class="close" data-close="balance" aria-label="Close"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div id="balance-body" class="scroll"></div>
   </section>
 
   <main>

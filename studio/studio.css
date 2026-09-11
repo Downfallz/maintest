@@ -385,6 +385,107 @@ details { margin: 2px 0 10px; }
 details summary { cursor: pointer; color: var(--muted); font-size: 13px; min-height: 32px; display: flex; align-items: center; }
 details[open] summary { margin-bottom: 6px; }
 
+/* ---------- the balance knobs ---------- */
+
+/* One word for a reading, so every surface says the same thing the same way: accent is a number with room to
+   move, warn is one pinned at an edge of its own band, bad is the knobs file and the content disagreeing.
+   Each tone only sets the two tokens below, so the dark scheme needs nothing of its own down here. */
+.tone-ok { --tone: var(--accent); --tone-wash: var(--accent-wash); }
+.tone-edge { --tone: var(--warn); --tone-wash: var(--warn-wash); }
+.tone-bad { --tone: var(--bad); --tone-wash: var(--bad-wash); }
+
+/* A tree draws a verdict per node and a catalogue is mostly fine, so the ordinary case is grey wherever it is
+   written in words. The accent is kept for the one place it carries information: the mark on a band. */
+.balance.tone-ok .headline, .balance-fold.tone-ok > summary .headline, .brief.tone-ok .headline, .balance-tag.tone-ok { color: var(--muted); }
+.balance.tone-ok { border-left-color: var(--line); }
+
+/* The strip on a spell's sheet. A fold, because on a phone the form's own fields must stay within reach: the
+   part that cannot be folded away -- what the spell is for, and the verdict -- lives in the summary. */
+.balance { margin: 0 0 12px; border-left: 3px solid var(--tone, var(--line)); }
+.balance > summary { display: list-item; list-style-position: inside; min-height: 0; padding: 0; font-size: inherit; color: inherit; }
+.balance > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.balance .what { font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.balance .headline { margin-left: 8px; font-size: 12px; font-weight: 600; color: var(--tone, var(--muted)); }
+/* Nothing to say and no room taken to say it: one folded line where the strip would have been. */
+.balance.quiet { padding: 10px 14px; box-shadow: none; border: 1px dashed var(--line); background: none; }
+.balance.quiet .headline { font-weight: 500; color: var(--muted); }
+.balance .intent { display: block; margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
+.balance .intent.absent { color: var(--bad); }
+.balance .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin: 14px 0 4px; }
+.balance .keep { margin: 0; padding-left: 18px; font-size: 13px; }
+.balance .keep li { margin-bottom: 3px; }
+.balance .note { margin: 12px 0 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--sunken); color: var(--muted); font-size: 12.5px; }
+.balance .source { margin: 12px 0 0; font-size: 11.5px; }
+/* This page has no blanket `.muted`: each place that wants the quiet colour asks for it. */
+.balance .muted, .balance-none, #balance-body .muted { color: var(--muted); }
+.balance-none { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; }
+.balance .problem, .balance-fold .problem { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--bad); }
+
+.balance .knobs { margin-top: 14px; }
+.knob { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 5px 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.knob:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.knob .pointer, .mini-knob code, .balance .source code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.knob .pointer { font-size: 12px; overflow-wrap: anywhere; }
+.knob .value { font-size: 13.5px; font-weight: 650; color: var(--tone, var(--ink)); font-variant-numeric: tabular-nums; }
+.knob .band, .knob .bounds, .knob .problem { grid-column: 1 / -1; }
+.knob .bounds { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.knob .where { color: var(--tone, var(--muted)); }
+.knob .where::before { content: '\00b7'; margin: 0 4px; color: var(--muted); }
+
+/* The band: the track is everywhere the knob may reach, the mark is where the content sits on it today. A
+   value outside its own bounds is drawn as a diamond against the edge it left -- clamping it into the track
+   without saying so is the one lie this view exists to prevent. */
+.band { position: relative; height: 6px; border-radius: 999px; background: var(--sunken); }
+.band::before, .band::after { content: ''; position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--line); }
+.band::before { left: 0; }
+.band::after { right: 0; }
+.band .mark { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--tone, var(--accent)); box-shadow: 0 0 0 2px var(--card); }
+.band .mark.out { border-radius: 2px; transform: rotate(45deg); }
+/* Nothing to place: the pointer addresses no number, so there is no band rather than an empty one. */
+.band.empty { background: repeating-linear-gradient(90deg, var(--line) 0 5px, transparent 5px 10px); }
+
+/* The same reading on a talent node, compact: a tier is several nodes at one depth, so it is read by opening
+   a fold or two rather than by leaving the tree. */
+.balance-fold { margin: 8px 0 2px; }
+/* Both folds keep the browser's own marker (the page's other `details` are flex, which drops it): these hide
+   whole sentences rather than a count, so the triangle is the only thing saying there is more under them. */
+.balance-fold > summary { display: list-item; list-style-position: inside; min-height: 26px; font-size: 12px; }
+.balance-fold > summary .headline { margin-left: 6px; font-weight: 600; color: var(--tone, var(--muted)); }
+.balance-fold > summary .what { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.brief { margin-top: 8px; padding-left: 10px; border-left: 2px solid var(--tone, var(--line)); }
+.brief.tone-ok { border-left-color: var(--line); }
+.brief-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.brief-head .headline { font-size: 11.5px; font-weight: 600; color: var(--tone, var(--muted)); }
+.brief-head .tag { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--warn); }
+/* Two or three lines of intent, and the rest is on the spell's own sheet one tap away. */
+.brief .intent { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mini-knobs { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; }
+.mini-knob { flex: 1 1 110px; min-width: 0; max-width: 220px; }
+.mini-knob code { display: block; font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-knob .band { height: 4px; margin-top: 4px; }
+.mini-knob .band .mark { width: 8px; height: 8px; margin: -4px 0 0 -4px; }
+
+/* In the node editor, beside the picker: the verdict in a word, where the spell is chosen. */
+.balance-tag { padding: 3px 9px; border-radius: 999px; background: var(--tone-wash, var(--sunken)); color: var(--tone, var(--muted)); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.balance-tag.tone-ok { background: var(--sunken); color: var(--muted); }
+
+#balance-body h3.section { font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin: 20px 0 10px; }
+#balance-body .findings ul { margin: 4px 0 0; padding-left: 16px; font-size: 12.5px; color: var(--muted); }
+#balance-body .findings code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+/* One target of the objective, one constraint: the same block, because both are a rule and the reason for it. */
+.constraint, .target { padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.constraint.off { opacity: 0.62; }
+.constraint-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 6px; }
+.constraint-head code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; font-weight: 600; }
+.constraint-head .mono { font-size: 11.5px; }
+.constraint-head .warn { color: var(--warn); font-weight: 600; }
+.constraint .tag { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.constraint .tag.on { color: var(--ok); }
+.constraint p, .target p { margin: 0 0 4px; font-size: 12.5px; line-height: 1.45; }
+.target p { margin: 8px 0 0; }
+.constraint .muted, .target .muted { color: var(--muted); }
+.constraint .chips { margin-top: 8px; }
+
 /* ---------- the run, runs and audit panels ---------- */
 
 .controls { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 0 0 12px; }
@@ -529,6 +630,14 @@ details[open] summary { margin-bottom: 6px; }
   .node { padding: 6px 10px; }
   .node-pick { min-height: 30px; }
   .close, .back { width: 34px; height: 34px; }
+  /* A knob is one line here: what it addresses, what the content carries, the band, and the reading of it. */
+  .knob { grid-template-columns: minmax(120px, 1.2fr) 56px minmax(90px, 1.4fr) minmax(170px, 1.6fr); align-items: center; gap: 6px 14px; }
+  .knob .band, .knob .bounds { grid-column: auto; }
+  .knob .value { text-align: right; }
+  .knob .problem { grid-column: 1 / -1; }
+  .balance .intent { max-width: 80ch; }
+  .mini-knobs { gap: 8px 16px; }
+
   .uses { columns: 2; column-gap: 24px; }
   .uses li { break-inside: avoid; padding: 3px 0; }
   .overview { max-width: 1100px; }

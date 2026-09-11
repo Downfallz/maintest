@@ -60,7 +60,8 @@ a stored token is what separates a page that can save from one that can only rea
 The page is written for a phone first. It opens on the **overview**: every creature with its numbers, what it
 starts with, and its talent tree drawn as a tree, where each node is a tap into the tree editor and each spell a
 chip that opens the spell. A bar along the bottom of the screen holds **Browse**, the list of creatures, spells
-and trees as a sheet that closes on a pick, and the three panels below, each a sheet of its own. An editor's
+and trees as a sheet that closes on a pick, and the panels below, each a sheet of its own — the last of them
+only on the published page, where whether this page can save is a thing worth saying. An editor's
 four actions sit in their own bar just above it, so saving never needs a scroll; the list rows carry the
 numbers a reader scans for (a spell's class, type, cost and what it does), and every number field opens the
 numeric keypad. From 900px wide the same page becomes the list beside the editor, the panels as cards above
@@ -74,6 +75,7 @@ it, and the actions next to the title.
 | Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. |
 | Runs | Every run this studio has played, newest first, with its agents, seed, match count and content hash. Open one, or tick two and compare them. |
 | Audit | What no creature can reach, open or cast; what no match can tell apart; what no spell varies; and whether this content has a benchmark digest. Every spell's cost against what it does. |
+| Balance | What a tuning pass may change and what it is aiming at (`data/balance/knobs.json`): the objective's targets with their bands and the reason each band is where it is, the constraints and the starting kit, and how much of the catalogue the file covers. |
 
 Each item has the same four actions:
 
@@ -146,6 +148,42 @@ A spell's **critical chance bonus** is added to the creature's own before the ro
 "never crits", which is why the editor prints the chance it actually gives next to it — with the content as it
 stands, `0` and a creature at 5% means a cast crits at 5%.
 
+## The balance knobs
+
+`data/balance/knobs.json` says what a tuning pass may change about each spell, between which bounds, and — the
+part a number cannot say — what the spell is for ([ADR 0021](../docs/adr/0021-tune-the-catalogue-with-a-declared-search-space.md),
+`data/balance/README.md`). The page reads it in three places and writes none of it:
+
+- on a **spell's sheet**, a strip between the spell's own numbers and its effects: the intent as prose, the
+  invariants under `keep`, the note when there is one, and every knob as its pointer, the value the content
+  carries today, and a band showing where that value sits between `min` and `max`. It is a fold, closed on a
+  phone so the form stays within reach, and it is redrawn as you type — which is the point, because editing a
+  spell's damage here is exactly what pushes a number outside its own band;
+- on a **talent node**, the same reading compacted to intent and bands, folded away unless the node is the one
+  being picked, so a tier can be read without leaving the tree; and beside each spell in the node editor, the
+  verdict in a word;
+- the **Balance** panel, for what belongs to no one spell: the objective, the constraints, the starting kit,
+  and the coverage of the catalogue.
+
+Everything it flags is `check-knobs`' own list, surfaced where the edit causes it instead of only on the
+command line: an enabled spell with no entry, an entry for a spell no alias resolves to, an entry with no
+intent, a pointer that addresses nothing or something that is not a number, a value outside its own bounds, a
+critical chance knob on a spell that deals no damage, a duplicate pointer, bounds the wrong way round, a step
+of zero, a target reading an evaluation the objective never declares, and a constraint naming a spell nothing
+resolves to. One thing it adds: a knob that is not a knob at all — no pointer, or a bound that is not a number
+— which `check-knobs` refuses while reading the file rather than reporting against the content.
+
+Two readings are deliberately narrower than they look. A value sitting *at* one of its own bounds is not a
+finding: bounds are drawn around what a spell is, so 33 of the 36 entries have one, and it is drawn on the knob
+rather than flagged on the spell. And a spell that is **off** is not judged at all, because `load_content`
+keys only enabled spells and `validate` never reads the entry of a spell that left the build — its strip still
+shows the reading, as what would be owed if the spell came back, but nothing is coloured as a disagreement
+with a build that is green.
+
+**The host does not publish the knobs yet.** The page reads them from `catalogue.balance`, which neither the
+local host nor `studio --export` writes today, so all three views show one honest line saying so rather than a
+blank sheet. They come alive the moment the catalogue carries the file.
+
 ## Reading a tuning change
 
 The evaluation opens on **Spells against outcomes**: per spell, the share of the sides that declared it and
@@ -178,9 +216,15 @@ in the **Runs** panel.
 
 ## What it is made of
 
-`index.html`, `studio.css`, `studio.js` and `backend.js`: no framework and no build step, like the viewer next
-door, whose stylesheet it reuses. The scripts are ES modules, so they are strict and keep their names to
-themselves.
+`index.html`, `studio.css`, `studio.js`, `backend.js`, `github.js` and `balance.js`: no framework and no build
+step, like the viewer next door, whose stylesheet it reuses. The scripts are ES modules, so they are strict and
+keep their names to themselves.
+
+`balance.js` is the reading of the knobs file and nothing else: a JSON pointer into a spell document, a knob
+against the value the content carries, the roll-up over the catalogue. It touches no DOM, which is what lets
+`node --test` cover it (ADR 0024) — `studio.js` reaches for `document` at import time, and Node cannot import
+that. A knob reading is a pure function of the knob and the document, so redrawing after an edit is calling it
+again.
 
 `backend.js` is where the content comes from, and it is the only file that knows a transport (ADR 0023). It
 also says which of the two it is (`kind`), the one thing `studio.js` reads to draw the run sheet as a match

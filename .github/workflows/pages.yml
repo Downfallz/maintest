@@ -77,18 +77,19 @@ jobs:
       - name: Assemble the page
         run: |
           mkdir -p "$SITE"
-          cp studio/index.html studio/studio.css studio/studio.js studio/backend.js studio/github.js "$SITE/"
+          cp studio/index.html studio/studio.css studio/studio.js studio/backend.js studio/github.js studio/balance.js "$SITE/"
           cp viewer/viewer.css "$SITE/"
           sed -i \
             -e "s|href=\"viewer.css\"|href=\"viewer.css?v=$GITHUB_SHA\"|" \
             -e "s|href=\"studio.css\"|href=\"studio.css?v=$GITHUB_SHA\"|" \
             -e "s|src=\"studio.js\"|src=\"studio.js?v=$GITHUB_SHA\"|" \
             "$SITE/index.html"
-          sed -i "s|'./backend.js'|'./backend.js?v=$GITHUB_SHA'|; s|'./github.js'|'./github.js?v=$GITHUB_SHA'|" \
+          sed -i "s|'./backend.js'|'./backend.js?v=$GITHUB_SHA'|; s|'./github.js'|'./github.js?v=$GITHUB_SHA'|; s|'./balance.js'|'./balance.js?v=$GITHUB_SHA'|" \
             "$SITE/studio.js" "$SITE/backend.js"
           sed -i "s|const DEPLOYMENT = '';|const DEPLOYMENT = '?v=$GITHUB_SHA';|" "$SITE/backend.js"
           grep -q "studio.js?v=$GITHUB_SHA" "$SITE/index.html"
           grep -q "github.js?v=$GITHUB_SHA" "$SITE/backend.js"
+          grep -q "balance.js?v=$GITHUB_SHA" "$SITE/studio.js"
           grep -q "const DEPLOYMENT = '?v=$GITHUB_SHA';" "$SITE/backend.js"
 
       # What the read-only routes answer, as files. The content is built first so the catalogue carries a
