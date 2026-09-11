@@ -88,8 +88,15 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// What unlocking a spell is worth: what the spell would do in combat, plus the base initiative it buys for
-    /// the rest of the match (ADR 0017), priced by the initiative weight (ADR 0018). Without the second half a
-    /// pick taken for tempo scores as if it bought nothing.
+    /// the rest of the match (ADR 0017), priced by the initiative weight (ADR 0018), minus the energy every
+    /// cast of it will burn, priced by the energy weight (ADR 0020, ADR 0026).
+    /// <para>
+    /// Without the second term a pick taken for tempo scores as if it bought nothing. Without the third, a
+    /// cheap spell and an expensive one are picked as though energy were free — because <see cref="Estimate"/>
+    /// hands the actor exactly what the spell costs, and the score counts the energy it *keeps*, so a creature
+    /// with nothing keeps nothing either way and the difference in cost cancels itself out. That is most of
+    /// the match: energy starts at zero and is the scarcest thing on the board.
+    /// </para>
     /// </summary>
     public double UnlockValue(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures)
     {
@@ -97,7 +104,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         ArgumentNullException.ThrowIfNull(spellId);
         ArgumentNullException.ThrowIfNull(creatures);
 
-        return Estimate(actor, spellId, creatures) + (weights.Initiative * resources.GetSpell(spellId).Stats.SpellInitiative.Value);
+        var stats = resources.GetSpell(spellId).Stats;
+        return Estimate(actor, spellId, creatures)
+            + (weights.Initiative * stats.SpellInitiative.Value)
+            - (weights.Energy * stats.Cost.Value);
     }
 
     /// <summary>The score of one resolution: what it does to enemies counts for, what it does to allies against.</summary>

@@ -170,14 +170,15 @@ public sealed class ActionScorerTests
     /// weight (ADR 0018). Here Guard is a Spell initiative of 6 and the others 1, and the weight is 0.5.
     /// </summary>
     [Fact]
-    public void Unlocking_a_spell_is_worth_its_combat_value_plus_the_initiative_it_buys()
+    public void Unlocking_a_spell_is_worth_its_combat_value_plus_the_initiative_it_buys_less_what_it_costs()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
 
-        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe(2 + 3, 1e-9);
+        // Energy is 0.2 a point, so the three costs -- Strike 0, Guard 1, Slam 2 -- price at 0, 0.2 and 0.4.
+        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe(2 + 3 - 0.2, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + 0.5, 1e-9);
-        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + 0.5, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + 0.5 - 0.4, 1e-9);
     }
 
     /// <summary>
@@ -198,13 +199,49 @@ public sealed class ActionScorerTests
 
     /// <summary>At a weight of zero an unlock is worth exactly what it does in combat, and tempo buys nothing.</summary>
     [Fact]
-    public void An_initiative_weight_of_zero_prices_an_unlock_at_its_combat_value_alone()
+    public void An_initiative_weight_of_zero_prices_an_unlock_at_its_combat_value_less_its_cost()
     {
         var board = Board(enemyHealth: 20);
         var indifferent = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Initiative = 0 });
 
         indifferent.UnlockValue(board[0], TestContent.Guard, board)
-            .ShouldBe(indifferent.Estimate(board[0], TestContent.Guard, board), 1e-9);
+            .ShouldBe(indifferent.Estimate(board[0], TestContent.Guard, board) - 0.2, 1e-9);
+    }
+
+    /// <summary>
+    /// Both weights at zero leaves the combat value alone, which is the seam the other two are measured from.
+    /// </summary>
+    [Fact]
+    public void An_energy_weight_of_zero_prices_an_unlock_at_its_combat_value_alone()
+    {
+        var board = Board(enemyHealth: 20);
+        var free = new ActionScorer(
+            TestContent.GuardIsFaster,
+            MatchStore.TwoOnTwo(),
+            ScoringWeights.Default with { Initiative = 0, Energy = 0 });
+
+        free.UnlockValue(board[0], TestContent.Guard, board)
+            .ShouldBe(free.Estimate(board[0], TestContent.Guard, board), 1e-9);
+    }
+
+    /// <summary>
+    /// The case the term exists for (ADR 0026). <see cref="ActionScorer.Estimate"/> hands the actor exactly
+    /// what the spell costs, and the score counts the energy it *keeps* -- so a creature with nothing keeps
+    /// nothing whatever it unlocks, and two spells that differ only in cost used to price the same. Energy
+    /// starts at zero and is the scarcest thing on the board, so that was most of the match.
+    /// </summary>
+    [Fact]
+    public void A_creature_with_no_energy_still_prices_what_an_unlock_will_cost_it()
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20);
+        board[0].Energy.Value.ShouldBe(0, "the case is about a creature that can afford neither");
+
+        var free = scorer.UnlockValue(board[0], TestContent.Strike, board);
+        var paid = scorer.UnlockValue(board[0], TestContent.Slam, board);
+
+        (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(0.5, 1e-9);
+        (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(0.5 - 0.4, 1e-9);
     }
 
     /// <summary>
