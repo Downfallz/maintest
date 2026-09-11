@@ -71,7 +71,9 @@ jobs:
       # Every reference between the page's files carries the commit that published them. Pages sends no
       # cache headers we control, so a phone will happily keep yesterday's studio.js beside today's
       # index.html -- and new markup driven by old script is a page that looks right and does nothing. The
-      # query changes with every deployment, so the browser has to fetch them together or not at all.
+      # query changes with every deployment, so the browser has to fetch them together or not at all. The
+      # data the page fetches at runtime is stamped the same way, through the constant backend.js appends:
+      # a deployment that only moved data/ changes no other URL, and would otherwise be invisible.
       - name: Assemble the page
         run: |
           mkdir -p "$SITE"
@@ -84,8 +86,10 @@ jobs:
             "$SITE/index.html"
           sed -i "s|'./backend.js'|'./backend.js?v=$GITHUB_SHA'|; s|'./github.js'|'./github.js?v=$GITHUB_SHA'|" \
             "$SITE/studio.js" "$SITE/backend.js"
+          sed -i "s|const DEPLOYMENT = '';|const DEPLOYMENT = '?v=$GITHUB_SHA';|" "$SITE/backend.js"
           grep -q "studio.js?v=$GITHUB_SHA" "$SITE/index.html"
           grep -q "github.js?v=$GITHUB_SHA" "$SITE/backend.js"
+          grep -q "const DEPLOYMENT = '?v=$GITHUB_SHA';" "$SITE/backend.js"
 
       # What the read-only routes answer, as files. The content is built first so the catalogue carries a
       # content hash rather than the problems of an unbuilt directory.

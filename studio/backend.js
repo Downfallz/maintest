@@ -89,9 +89,17 @@ export function localBackend(transport = globalThis.fetch) {
   };
 }
 
+/**
+ * The deployment that published this page, appended to every file the page fetches beside itself. The publish
+ * step rewrites it (`.github/workflows/pages.yml`); it stays empty everywhere else, because only the published
+ * site serves these as static files a browser can hold on to. Without it a deployment that only moved `data/`
+ * changes no URL at all, and a returning browser answers `read()` from the catalogue it cached last week.
+ */
+const DEPLOYMENT = '';
+
 /** One published file next to the page. Relative, so it does not care what path the site is served under. */
 async function published(transport, name) {
-  const response = await transport(`data/${name}`, { headers: { accept: 'application/json' } });
+  const response = await transport(`data/${name}${DEPLOYMENT}`, { headers: { accept: 'application/json' } });
   if (!response.ok) {
     throw refusal(`Could not read data/${name} (${response.status}). The site publishes it on every push to main;`
       + ' a fresh deployment may still be running.');
