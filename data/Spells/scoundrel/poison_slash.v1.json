@@ -19,7 +19,7 @@
     {
       "kind": "Bleed",
       "amountPerRound": 1,
-      "durationRounds": 1
+      "durationRounds": 2
     }
   ]
 }
