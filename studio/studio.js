@@ -555,9 +555,10 @@ function overview() {
     return view;
   }
 
+  const offNote = off ? ` (${off} off)` : '';
   view.append(element('div', { className: 'overview-head' }, [
     element('h2', { textContent: 'Overview' }),
-    element('p', { className: 'muted', textContent: `${creatures.length} creature${creatures.length === 1 ? '' : 's'}, ${spells.length} spells${off ? ` (${off} off)` : ''}, ${trees.length} talent tree${trees.length === 1 ? '' : 's'}. Tap anything to open it.` }),
+    element('p', { className: 'muted', textContent: `${creatures.length} creature${creatures.length === 1 ? '' : 's'}, ${spells.length} spells${offNote}, ${trees.length} talent tree${trees.length === 1 ? '' : 's'}. Tap anything to open it.` }),
   ]));
 
   const covered = new Set();

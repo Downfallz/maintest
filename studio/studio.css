@@ -114,10 +114,12 @@ header h1 span { color: var(--muted); font-weight: 500; }
 
 /* ---------- the toolbar: a bar along the bottom of a phone ---------- */
 
+/* A fieldset, because a group of controls is what it is and a div with a group role is what a screen reader
+   cannot rely on; the browser's fieldset chrome (border, margins, a minimum width) is undone here. */
 .toolbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
   display: grid; grid-template-columns: repeat(4, 1fr);
-  height: calc(var(--bar) + var(--safe)); padding-bottom: var(--safe);
+  height: calc(var(--bar) + var(--safe)); padding: 0 0 var(--safe); margin: 0; border: 0; min-inline-size: 0;
   background: var(--card); box-shadow: var(--shadow-bar);
 }
 .tool {
