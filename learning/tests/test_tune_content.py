@@ -16,11 +16,13 @@ from downfall_learning.artifacts import Evaluation
 from downfall_learning.knobs import Content, Knob, Knobs, Objective, Target, load_knobs
 from downfall_learning.search_weights import EngineCommand, EvaluationError
 from downfall_learning.tune_content import (
+    Candidate,
     ContentEngine,
     EngineContentEvaluator,
     Move,
     Search,
     TuneOptions,
+    TuneResult,
     apply_moves,
     format_result,
     metrics_of,
@@ -291,7 +293,8 @@ def test_the_proposal_reads_as_what_moved_and_what_it_bought(tmp_path: Path) -> 
 
     text = format_result(result, knobs.objective)
 
-    assert "Score" in text
+    assert "What it changed" in text
+    assert "How balanced the content is" in text
     assert "mirror.averageRounds" in text
     assert "->" in text
 
@@ -323,7 +326,7 @@ def test_a_move_that_changes_no_metric_is_named_as_dead_content(tmp_path: Path) 
 
     assert result.inert
     assert all(move.knob.spell == "spell:jab" for candidate in result.inert for move in candidate.moves)
-    assert "changed no metric at all" in format_result(result, knobs.objective)
+    assert "changed no measurement at all" in format_result(result, knobs.objective)
 
 
 def test_a_proposal_never_plays_a_catalogue_it_is_already_playing(tmp_path: Path) -> None:
@@ -711,3 +714,94 @@ def test_a_heal_is_still_left_out_of_the_damage_spread() -> None:
     ]
 
     assert "tierDamageSpread" not in metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+
+def _report(before: float, after: float) -> str:
+    """One target, measured twice, as the report reads it.
+
+    The search itself is tested above; what these cover is the words it comes back as.
+    """
+    objective = Objective(
+        seeds="seeds.json",
+        evaluations={"mirror": {}},
+        targets=(Target(metric="spellUsageShare", on="mirror", maximum=0.25, scale=0.1, weight=1),),
+    )
+    knob = Knob(spell="spell:pummel", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
+    metrics = {"mirror": {"spellUsageShare": before}}, {"mirror": {"spellUsageShare": after}}
+    initial = Candidate(
+        iteration=0,
+        moves=(),
+        score=objective.score(metrics[0]),
+        breakdown=objective.breakdown(metrics[0]),
+        metrics=metrics[0],
+    )
+    best = Candidate(
+        iteration=1,
+        moves=(Move(knob=knob, steps=1, before=0.667, after=0.717),),
+        score=objective.score(metrics[1]),
+        breakdown=objective.breakdown(metrics[1]),
+        metrics=metrics[1],
+    )
+    result = TuneResult(best=best, initial=initial, candidates=(best,), spells={}, files={})
+    return format_result(result, objective)
+
+
+def test_the_report_says_which_measurement_the_gain_came_from() -> None:
+    """The table prints the penalty a proposal ends on, so a target that fell from 24 to 2 and one that was
+    always 2 read the same. A whole run explained by one measurement is a run to be suspicious of."""
+    text = _report(0.9, 0.5)
+
+    assert "Where the" in text
+    assert "the share of every landed cast taken by the one spell cast most" in text
+
+
+def test_the_report_says_what_a_gain_cost_elsewhere() -> None:
+    text = _report(0.5, 0.9)
+
+    assert "And what that cost" in text
+
+
+def test_what_is_still_wrong_says_the_number_and_the_number_it_should_be() -> None:
+    text = _report(0.9, 0.5)
+
+    assert "reads 0.500, and it should be at most 0.25" in text
+
+
+def test_a_target_inside_its_range_is_named_as_one_the_score_stops_watching() -> None:
+    """A band costs the same anywhere inside it, so a change that worsens a passing target is invisible."""
+    text = _report(0.9, 0.1)
+
+    assert "What the score is not watching" in text
+    assert "mirror.spellUsageShare" in text
+
+
+def test_a_move_reads_as_the_content_names_it_rather_than_as_a_pointer() -> None:
+    text = _report(0.9, 0.5)
+
+    assert "Pummel — critical chance: 0.667 -> 0.717" in text
+
+
+def test_two_targets_on_one_measurement_are_told_apart_by_the_run_they_came_from() -> None:
+    """`mirror` and `skill` play the same seeds, so the same metric read twice would be one row said twice."""
+    objective = Objective(
+        seeds="seeds.json",
+        evaluations={"mirror": {}, "skill": {}},
+        targets=(
+            Target(metric="winRateA", on="mirror", maximum=0.55, scale=0.05, weight=1),
+            Target(metric="winRateA", on="skill", minimum=0.65, scale=0.1, weight=1),
+        ),
+    )
+    metrics = {"mirror": {"winRateA": 0.9}, "skill": {"winRateA": 0.2}}
+    candidate = Candidate(
+        iteration=0,
+        moves=(),
+        score=objective.score(metrics),
+        breakdown=objective.breakdown(metrics),
+        metrics=metrics,
+    )
+    result = TuneResult(best=candidate, initial=candidate, candidates=(candidate,), spells={}, files={})
+
+    text = format_result(result, objective)
+
+    assert "(mirror)" in text
+    assert "(skill)" in text

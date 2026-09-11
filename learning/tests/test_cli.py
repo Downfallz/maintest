@@ -62,7 +62,11 @@ def test_search_weights_drives_the_engine_command(
     assert (tmp_path / "search" / "weights.json").is_file()
     assert (tmp_path / "search" / "search.json").is_file()
     assert (tmp_path / "search" / "evaluation.json").is_file()
-    assert "Best weights after 9 evaluations" in capsys.readouterr().out
+    printed = capsys.readouterr().out
+    assert "The search played 9 evaluation(s)" in printed
+    # A search always reports a best at least as good as its initial, because it keeps the best of what it
+    # drew. The output has to say that rather than let the two numbers read as a verdict.
+    assert "this run cannot say" in printed
 
 
 def test_export_csv_writes_the_projection(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:

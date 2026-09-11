@@ -65,6 +65,36 @@ class Score:
         )
 
 
+def reads_as_a_tie(low: float, high: float, even: float = 0.5) -> bool:
+    """Whether an interval straddles the value that means "no difference".
+
+    A win rate is measured over a finite number of matches, so it arrives as an interval rather than as a
+    number. When that interval contains one half, the run has not told the two sides apart at all — and the
+    point estimate inside it, 0.54 or 0.46, is the most misleading thing the output can print on its own.
+    """
+    return low <= even <= high
+
+
+def win_rate_lines(score: Score, opponent: str, indent: str = "  ") -> list[str]:
+    """The win rate, its interval, and what the interval means. The third line is the one nobody prints."""
+    lines = [
+        f"{indent}win rate {score.win_rate:.4f}, and over {score.matches} matches that is anywhere from "
+        f"{score.win_rate_low:.4f} to {score.win_rate_high:.4f}."
+    ]
+    if reads_as_a_tie(score.win_rate_low, score.win_rate_high):
+        lines.append(
+            f"{indent}That interval includes one half, so this run cannot tell it from {opponent}. It is not"
+        )
+        lines.append(
+            f"{indent}a {score.win_rate:.0%} result; it is a result these matches were too few to measure."
+        )
+    elif score.win_rate_low > 0.5:
+        lines.append(f"{indent}The whole interval is above one half, so it beats {opponent} measurably.")
+    else:
+        lines.append(f"{indent}The whole interval is below one half, so {opponent} beats it measurably.")
+    return lines
+
+
 class Evaluator(Protocol):
     def evaluate(self, weights: Mapping[str, float]) -> Score: ...
 
@@ -177,6 +207,58 @@ class SearchResult:
             raw = json.dumps(self.best.score.evaluation.raw, indent=2) + "\n"
             (directory / "evaluation.json").write_text(raw, encoding="utf-8")
         return directory
+
+
+def format_search(result: SearchResult, opponent: str, evaluations: int, output: Path) -> str:
+    """What a weight search found, and — plainly — what it did not establish.
+
+    The line this replaced printed the best score, the initial score and a win rate, which reads as a verdict
+    and is not one. The search keeps the best of what it drew, so the best score is at least the initial one
+    by construction; and every candidate is played on the same fixed seeds, so the scores move together and
+    two marginal intervals say nothing about the difference between them either way. The numbers are printed
+    because they are what was measured. The conclusion is not, because this run cannot support one.
+    """
+    moved, still = [], []
+    for name, after in result.best.weights.items():
+        before = result.initial.weights.get(name)
+        (moved if before is None or abs(after - before) > 5e-4 else still).append((name, before, after))
+
+    lines = [f"The search played {evaluations} evaluation(s) and kept the best weights it found.", ""]
+    lines.append("What it changed")
+    if moved:
+        width = max(len(name) for name, _, _ in moved)
+        for name, before, after in sorted(moved, key=lambda row: -abs(row[2] - (row[1] or 0.0))):
+            lines.append(f"  {name:<{width}}  {before:.3f} -> {after:.3f}")
+    else:
+        lines.append("  Nothing: no candidate beat the weights it started from.")
+    if still:
+        lines.append(f"  Unchanged: {', '.join(name for name, _, _ in still)}.")
+
+    best, initial = result.best.score, result.initial.score
+    lines.extend(
+        [
+            "",
+            "What it measured",
+            f"  score {initial.mean:.4f} -> {best.mean:.4f}, where one half is even against {opponent}.",
+            f"  The intervals are {initial.low:.4f}..{initial.high:.4f} and {best.low:.4f}..{best.high:.4f}.",
+            f"  win rate {best.win_rate:.4f}, anywhere from {best.win_rate_low:.4f} to "
+            f"{best.win_rate_high:.4f}.",
+            "",
+            "Whether that is better, this run cannot say",
+            f"  These weights were chosen for scoring best out of {evaluations}, so the interval above is",
+            "  the winner's and not a fair one: picking the highest of many draws moves it up by itself.",
+            "",
+            "  And every candidate played the same fixed seeds, so their scores rise and fall together.",
+            "  Two intervals overlapping is not a test of the difference between them, and two intervals",
+            "  clear of each other is not proof of one either.",
+            "",
+            "  What settles it is replaying these weights on seeds the search never saw, compared seed by",
+            "  seed against the ones they started from.",
+            "",
+            f"Written to '{output}'.",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _as_vector(weights: Mapping[str, float]) -> np.ndarray:
