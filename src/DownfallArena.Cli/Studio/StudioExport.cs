@@ -45,6 +45,7 @@ internal static class StudioExport
         Spells = catalogue.Spells,
         TalentTrees = catalogue.TalentTrees,
         Aliases = catalogue.Aliases,
+        Balance = catalogue.Balance,
         ContentHash = catalogue.ContentHash,
         Problems = catalogue.Problems,
         Notes = catalogue.Notes,

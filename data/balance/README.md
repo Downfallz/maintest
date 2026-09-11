@@ -9,6 +9,10 @@
 It is authoring metadata. The data builder reads `Creatures`, `Spells`, `TalentTrees` and `aliases.json`
 only, so this file never reaches `game.schema.json` and never moves the content hash.
 
+The content studio reads it too, and shows each spell's entry beside the numbers it governs — the intent, the
+invariants, and every knob against the value the content carries today (`studio/README.md`). It only reads:
+`check-knobs` below is still the authority, and the studio writes nothing here.
+
 ```bash
 uv run --project learning check-knobs            # the file against the content it describes
 uv run --project learning check-knobs --strict   # and fail on the content findings too

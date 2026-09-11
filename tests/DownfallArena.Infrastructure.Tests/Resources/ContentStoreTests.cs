@@ -300,4 +300,71 @@ public sealed class ContentStoreTests
         contentHash.Length.ShouldBe(64);
         File.ReadAllText(Path.Combine(content.Output, GameSchemaJson.HashFileName)).ShouldBe(contentHash);
     }
+    private const string Knobs = """
+        {
+          "version": "knobs:v1",
+          "objective": { "targets": [] },
+          "constraints": {},
+          "spells": { "spell:strike": { "intent": "The floor.", "knobs": [ { "path": "/energyCost", "min": 0, "max": 2, "step": 1 } ] } }
+        }
+        """;
+
+    [Fact]
+    public void The_balance_knobs_are_read_whole_and_not_interpreted()
+    {
+        using var content = new ContentDirectory().WithValidContent().WithFile("balance/knobs.json", Knobs);
+
+        var balance = new ContentStore(content.Path).Read().Balance.ShouldNotBeNull();
+
+        balance.GetProperty("version").GetString().ShouldBe("knobs:v1");
+        balance.GetProperty("spells").GetProperty("spell:strike").GetProperty("knobs")
+            .EnumerateArray().ShouldHaveSingleItem().GetProperty("path").GetString().ShouldBe("/energyCost");
+    }
+
+    [Fact]
+    public void Content_with_no_knobs_file_reads_as_no_knobs_rather_than_as_a_problem()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+
+        var catalogue = new ContentStore(content.Path).Read();
+
+        catalogue.Balance.ShouldBeNull();
+        catalogue.Problems.ShouldBeEmpty();
+        catalogue.Notes.ShouldNotContain(note => note.Contains("knobs.json", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The knobs are authoring metadata, not build input, so an unreadable one must not tell an author their
+    /// content is broken. It is a note, the content still builds, and the page draws no knobs.
+    /// </summary>
+    [Fact]
+    public void A_knobs_file_that_does_not_parse_is_a_note_and_not_a_problem()
+    {
+        using var content = new ContentDirectory().WithValidContent().WithFile("balance/knobs.json", "{ not json");
+
+        var catalogue = new ContentStore(content.Path).Read();
+
+        catalogue.Balance.ShouldBeNull();
+        catalogue.ContentHash.ShouldNotBeNull();
+        catalogue.Problems.ShouldBeEmpty();
+        catalogue.Notes.ShouldContain(note => note.Contains("balance/knobs.json", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The whole reason the knobs may be keyed by alias and edited freely: the data builder reads Creatures,
+    /// Spells, TalentTrees and aliases.json only, so no benchmark digest and no published hash moves when they do.
+    /// </summary>
+    [Fact]
+    public void The_balance_knobs_do_not_move_the_content_hash()
+    {
+        using var without = new ContentDirectory().WithValidContent();
+        using var with = new ContentDirectory().WithValidContent().WithFile("balance/knobs.json", Knobs);
+
+        var bare = new ContentStore(without.Path).Read();
+        var tuned = new ContentStore(with.Path).Read();
+
+        tuned.Balance.ShouldNotBeNull();
+        tuned.ContentHash.ShouldBe(bare.ContentHash.ShouldNotBeNull());
+    }
+
 }
