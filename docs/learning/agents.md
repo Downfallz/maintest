@@ -38,7 +38,7 @@ The score of one resolution, with the weights `w`:
 | `w.kill` per kill | a target whose health the damage reaches | for an enemy, against an ally |
 | `w.heal` x effective healing | healing capped at what the target was missing | for an ally, against an enemy |
 | `w.kill` per denied kill | a heal or a defense buff that takes its target from dying to this round's threat to surviving it (ADR 0022) | for an ally, against an enemy |
-| `w.stun` x rounds stunned | a Stun on a target still alive after the damage (a permanent condition counts three) | for an enemy, against an ally |
+| `w.stun` x rounds stunned | a Stun on a target still alive after the damage | for an enemy, against an ally |
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
 | `w.heal` x expected regeneration | amount per round x rounds, capped at what the target is still missing after the hit | for an ally, against an enemy |
 | `w.buff` x damage prevented | a DefenseBuff: amount x rounds x the hits the target is expected to face, its attackers spread over its living allies (ADR 0022) | a buff for an ally, a debuff for an enemy, and the reverse against |
@@ -56,9 +56,10 @@ Decisions:
 - **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
   best target set on the current board), plus `w.initiative` x the spell's Spell initiative, the base
   initiative the unlock buys for the rest of the match (ADR 0017, priced by ADR 0018), minus `w.energy` x
-  the spell's cost, the energy casting it will burn every time (ADR 0026); unlock the highest, pass only
-  when nothing can be unlocked. The cost has to be charged here because the value is read on an energy
-  raised to afford the spell, where the resolution's own energy term can no longer see it.
+  the part of the cost the actor cannot cover (ADR 0026); unlock the highest, pass only when nothing can be
+  unlocked. Only that part is charged here: the value is read on an energy raised to at least the spell's
+  cost, so a creature that could not afford it keeps nothing either way and the difference cancels, while
+  above the cost the energy the actor keeps already prices every point.
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.

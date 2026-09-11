@@ -136,9 +136,8 @@ public sealed class ActionScorerTests
     /// computed on the line above them and read by the other three effects, which is what made the omission
     /// invisible -- the switch was exhaustive over the *types* and not over what each type carries.
     ///
-    /// It sweeps the taxonomy rather than naming today's five, so the effect added next is covered the day it
-    /// compiles rather than the day someone remembers. This is the fifth time a dimension the domain models
-    /// has turned out to be one the scorer never read (ADR 0020, ADR 0026).
+    /// The sibling test below holds it to the whole taxonomy, so the effect added next fails here rather than
+    /// scoring zero through <c>ConditionScore</c>'s default arm and nobody noticing.
     /// </summary>
     [Theory]
     [MemberData(nameof(LastingEffects))]
@@ -157,16 +156,59 @@ public sealed class ActionScorerTests
         Math.Abs(two).ShouldBeGreaterThan(Math.Abs(one), $"{name} lasts twice as long and is priced the same");
     }
 
-    /// <summary>Each lasting effect twice: one round, then two. Amounts are equal so only the duration moves.</summary>
-    public static TheoryData<string, LastingEffect, LastingEffect> LastingEffects() => new()
+    /// <summary>
+    /// The sweep names its effects, so this is what keeps the naming honest: every concrete
+    /// <see cref="LastingEffect"/> the domain declares has to be in it. Without this, a new effect compiles,
+    /// falls through <c>ConditionScore</c>'s default arm, scores zero, and the theory above stays green.
+    /// </summary>
+    [Fact]
+    public void The_duration_sweep_covers_every_lasting_effect_the_domain_declares()
     {
-        { nameof(Stun), Stun.For(1), Stun.For(2) },
-        { nameof(Bleed), Bleed.Of(1, rounds: 1), Bleed.Of(1, rounds: 2) },
-        { nameof(Regeneration), Regeneration.Of(1, rounds: 1), Regeneration.Of(1, rounds: 2) },
-        { nameof(EnergyRegeneration), EnergyRegeneration.Of(1, rounds: 1), EnergyRegeneration.Of(1, rounds: 2) },
-        { nameof(DefenseBuff), DefenseBuff.Of(1, Duration.OfRounds(1)), DefenseBuff.Of(1, Duration.OfRounds(2)) },
-        { nameof(InitiativeDebuff), InitiativeDebuff.Of(1, Duration.OfRounds(1)), InitiativeDebuff.Of(1, Duration.OfRounds(2)) },
-    };
+        var declared = typeof(LastingEffect).Assembly.GetTypes()
+            .Where(type => !type.IsAbstract && type.IsSubclassOf(typeof(LastingEffect)))
+            .Select(type => type.Name);
+
+        declared.ShouldBeSubsetOf(Durations.Select(pair => pair.Brief.GetType().Name));
+    }
+
+    /// <summary>Each lasting effect twice: one round, then two. Amounts are equal so only the duration moves.</summary>
+    public static TheoryData<string, LastingEffect, LastingEffect> LastingEffects()
+    {
+        var data = new TheoryData<string, LastingEffect, LastingEffect>();
+        foreach (var (brief, long_) in Durations)
+        {
+            data.Add(brief.GetType().Name, brief, long_);
+        }
+
+        return data;
+    }
+
+    private static IReadOnlyList<(LastingEffect Brief, LastingEffect Long)> Durations { get; } =
+    [
+        (Stun.For(1), Stun.For(2)),
+        (Bleed.Of(1, rounds: 1), Bleed.Of(1, rounds: 2)),
+        (Regeneration.Of(1, rounds: 1), Regeneration.Of(1, rounds: 2)),
+        (EnergyRegeneration.Of(1, rounds: 1), EnergyRegeneration.Of(1, rounds: 2)),
+        (DefenseBuff.Of(1, Duration.OfRounds(1)), DefenseBuff.Of(1, Duration.OfRounds(2))),
+        (InitiativeDebuff.Of(1, Duration.OfRounds(1)), InitiativeDebuff.Of(1, Duration.OfRounds(2))),
+    ];
+
+    /// <summary>
+    /// The sweep only asks that a longer effect scores further from zero, which a sign error would survive.
+    /// These two are the exact prices, in the same shape as the energy regeneration test above: a stun on an
+    /// enemy counts for, an initiative debuff on an enemy counts for, and both multiply by their rounds.
+    /// </summary>
+    [Fact]
+    public void A_stun_and_an_initiative_debuff_are_priced_per_round_against_an_enemy()
+    {
+        var board = Board(enemyHealth: 20);
+        var action = Strike(One, Three);
+
+        Scorer.Score(Cast(action, Three, Stun.For(1)), board).ShouldBe(3.0, 1e-9);
+        Scorer.Score(Cast(action, Three, Stun.For(2)), board).ShouldBe(3.0 * 2, 1e-9);
+        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(1, Duration.OfRounds(2))), board).ShouldBe(0.5 * 1 * 2, 1e-9);
+        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(0.5 * 2 * 3, 1e-9);
+    }
 
     private static CombatResolution Cast(CombatAction action, CreatureId target, LastingEffect effect) =>
         CombatResolution.Resolved(action, [target], [], false, Energy.Of(0), [new ConditionOutcome(target, effect)]);
@@ -218,7 +260,8 @@ public sealed class ActionScorerTests
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
 
-        // Energy is 0.2 a point, so the three costs -- Strike 0, Guard 1, Slam 2 -- price at 0, 0.2 and 0.4.
+        // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. Energy is 0.2 a
+        // point, so the three costs -- Strike 0, Guard 1, Slam 2 -- price at 0, 0.2 and 0.4.
         scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe(2 + 3 - 0.2, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + 0.5, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + 0.5 - 0.4, 1e-9);
@@ -268,13 +311,13 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
-    /// The case the term exists for (ADR 0026). <see cref="ActionScorer.Estimate"/> hands the actor exactly
-    /// what the spell costs, and the score counts the energy it *keeps* -- so a creature with nothing keeps
-    /// nothing whatever it unlocks, and two spells that differ only in cost used to price the same. Energy
-    /// starts at zero and is the scarcest thing on the board, so that was most of the match.
+    /// The case the term exists for (ADR 0026). <see cref="ActionScorer.Estimate"/> raises the actor's energy
+    /// to at least the spell's cost so an unaffordable spell can still be read in combat, and the score counts
+    /// the energy it *keeps* -- so a creature handed exactly what the spell costs keeps nothing whatever the
+    /// spell costs, and two spells it cannot afford used to price the same.
     /// </summary>
     [Fact]
-    public void A_creature_with_no_energy_still_prices_what_an_unlock_will_cost_it()
+    public void A_creature_that_cannot_afford_an_unlock_still_prices_what_it_will_cost()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
@@ -285,6 +328,39 @@ public sealed class ActionScorerTests
 
         (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(0.5, 1e-9);
         (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(0.5 - 0.4, 1e-9);
+    }
+
+    /// <summary>
+    /// The other half of the same term, and the one the first version of ADR 0026 got wrong. Once the actor
+    /// can afford the spell, <see cref="ActionScorer.Estimate"/>'s raise does nothing and the energy it keeps
+    /// already differs by the full cost -- so charging the cost again here would price it twice. At 4 energy
+    /// the unlock is worth its combat value plus its initiative and nothing else.
+    /// </summary>
+    [Theory]
+    [InlineData(2)]
+    [InlineData(4)]
+    public void A_creature_that_can_afford_an_unlock_is_not_charged_for_it_twice(int energy)
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20, actorEnergy: energy);
+
+        foreach (var spell in new[] { TestContent.Strike, TestContent.Guard, TestContent.Slam })
+        {
+            var initiative = spell == TestContent.Guard ? 0.5 * 6 : 0.5;
+            (scorer.UnlockValue(board[0], spell, board) - scorer.Estimate(board[0], spell, board))
+                .ShouldBe(initiative, 1e-9, $"{spell} costs at most {energy}, so its cost is already in the estimate");
+        }
+    }
+
+    /// <summary>Between the two: at 1 energy, Slam's 2 is half affordable, and only the half that is not is charged.</summary>
+    [Fact]
+    public void Only_the_part_of_a_cost_a_creature_cannot_cover_is_charged_at_the_unlock()
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20, actorEnergy: 1);
+
+        (scorer.UnlockValue(board[0], TestContent.Slam, board) - scorer.Estimate(board[0], TestContent.Slam, board))
+            .ShouldBe(0.5 - 0.2, 1e-9);
     }
 
     /// <summary>
