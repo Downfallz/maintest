@@ -106,4 +106,31 @@ public sealed class StudioExportTests : IDisposable
 
     private JsonElement Read(string name) =>
         JsonSerializer.Deserialize<JsonElement>(File.ReadAllText(Path.Combine(_output, name)));
+    /// <summary>
+    /// The knobs ride in the catalogue rather than in a file of their own: the page reads them off
+    /// <c>catalogue.balance</c>, so one payload keeps the content and what may be tuned about it in step. A
+    /// published page that got one without the other would draw bands against numbers it did not have.
+    /// </summary>
+    [Fact]
+    public async Task The_published_catalogue_carries_the_balance_knobs()
+    {
+        _content.Write("balance/knobs.json", """
+            { "version": "knobs:v1", "spells": { "spell:strike": { "intent": "The floor.", "knobs": [] } } }
+            """);
+
+        (await StudioExport.WriteAsync(_api, _output, "data")).ShouldBe(0);
+
+        var balance = Read(StudioExport.CatalogueFile).GetProperty("balance");
+        balance.GetProperty("version").GetString().ShouldBe("knobs:v1");
+        balance.GetProperty("spells").GetProperty("spell:strike").GetProperty("intent").GetString().ShouldBe("The floor.");
+    }
+
+    [Fact]
+    public async Task A_catalogue_published_without_knobs_says_so_rather_than_omitting_the_field()
+    {
+        (await StudioExport.WriteAsync(_api, _output, "data")).ShouldBe(0);
+
+        Read(StudioExport.CatalogueFile).GetProperty("balance").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
 }

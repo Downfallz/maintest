@@ -180,9 +180,21 @@ keys only enabled spells and `validate` never reads the entry of a spell that le
 shows the reading, as what would be owed if the spell came back, but nothing is coloured as a disagreement
 with a build that is green.
 
-**The host does not publish the knobs yet.** The page reads them from `catalogue.balance`, which neither the
-local host nor `studio --export` writes today, so all three views show one honest line saying so rather than a
-blank sheet. They come alive the moment the catalogue carries the file.
+**Where the knobs come from.** `ContentStore` reads `data/balance/knobs.json` and hands it through whole on
+`catalogue.balance`, so the page gets them from the one payload it already reads — the local host on
+`/api/catalogue`, the published page and the token-backed one from the `catalogue.json` that `studio --export`
+writes. Nothing parses the file on the way: a DTO here would be a second definition of a shape only
+`check-knobs` and `balance.js` know, free to drift from both.
+
+Carrying them cannot move the content hash. The data builder reads `Creatures`, `Spells`, `TalentTrees` and
+`aliases.json` and nothing else, which is exactly why the knobs may be keyed by alias and retuned without
+invalidating a benchmark digest — a test holds that open.
+
+A directory with no knobs file reads as no knobs, and all three views show one honest line saying so rather
+than a blank sheet; that path still matters, because a published page on an older deployment reaches it. A
+knobs file that is there and does not parse is a **note** and never a problem: it is not build input, so the
+content still builds, and saying the content is broken because its authoring metadata is would send an author
+hunting in the wrong place.
 
 ## Reading a tuning change
 

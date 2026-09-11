@@ -15,6 +15,14 @@ public sealed class ContentStore
 {
     private const string TemporarySuffix = ".tmp";
 
+    /// <summary>
+    /// Where the balance knobs are authored. Not on <c>GameSchemaBuilder</c> with the folders it reads: this one
+    /// is the folder it deliberately does not, which is what keeps the knobs out of the content hash.
+    /// </summary>
+    private const string BalanceFolder = "balance";
+
+    private const string BalanceFile = "knobs.json";
+
     private static readonly JsonSerializerOptions IndentedOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
     /// <summary>Stands in for the document of a file that does not parse, so the studio can still list it.</summary>
@@ -66,6 +74,9 @@ public sealed class ContentStore
             Spells = ReadAll<SpellDto>(ContentKind.Spell),
             TalentTrees = ReadAll<TalentTreeDto>(ContentKind.TalentTree),
             Aliases = ReadAliases(),
+            // After the build, because a knobs file that does not parse is a note and never a problem: it is not
+            // build input, and reporting it as one would tell an author their content is broken when it is not.
+            Balance = ReadBalance(notes),
             ContentHash = contentHash,
             Problems = problems,
             Notes = notes,
@@ -234,6 +245,38 @@ public sealed class ContentStore
             {
                 File.Delete(temporary);
             }
+        }
+    }
+
+    /// <summary>
+    /// The balance knobs as authored, or nothing, plus a note when the file is there and unreadable.
+    /// <para>
+    /// Passed through whole rather than deserialised: nothing in the engine reads this file, so a DTO here would
+    /// be a second definition of a shape only <c>check-knobs</c> and the studio page know, drifting from both.
+    /// A file that does not parse reads as no file, which is what the page can draw, and the note is what keeps
+    /// that from being silent.
+    /// </para>
+    /// </summary>
+    private JsonElement? ReadBalance(List<string> notes)
+    {
+        var path = Path.Combine(Root, BalanceFolder, BalanceFile);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var parsed = JsonDocument.Parse(File.ReadAllText(path));
+            return parsed.RootElement.Clone();
+        }
+        // `UnauthorizedAccessException` is not an `IOException`, so a knobs file the process may not read would
+        // otherwise leave here as a 500 on the catalogue route and end `studio --export` outright — authoring
+        // metadata taking down a catalogue that is perfectly valid without it.
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            notes.Add($"{BalanceFolder}/{BalanceFile} could not be read, so the studio shows no balance knobs: {exception.Message}");
+            return null;
         }
     }
 
