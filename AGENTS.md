@@ -57,6 +57,7 @@ dotnet build --no-restore                 # warnings are errors
 dotnet test --no-build                    # Microsoft.Testing.Platform runner (see global.json)
 dotnet test --no-build -- --coverage      # with code coverage
 dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to fix
+node --test "studio/*.test.js"            # the studio page's own tests (ADR 0024); needs no install
 dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
@@ -79,7 +80,7 @@ scripts/iterate.sh --explore 0.2                                     # plus an e
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
-ruff check, ruff format check, and pytest. CI runs exactly these, then sends the build and the coverage
+ruff check, ruff format check, and pytest; when `studio/` changes, also run `node --test "studio/*.test.js"`. CI runs exactly these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 

@@ -29,3 +29,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0021](0021-tune-the-catalogue-with-a-declared-search-space.md) | Tune the catalogue with a declared search space, not with a model | Accepted |
 | [0022](0022-price-a-defensive-effect-by-the-damage-it-prevents.md) | Price a defensive effect by the damage it prevents | Accepted |
 | [0023](0023-a-hosted-studio-with-github-as-its-backend.md) | A hosted studio, with GitHub as its backend | Accepted |
+| [0024](0024-test-the-studio-page-with-nodes-own-runner.md) | Test the studio page with Node's own test runner | Accepted |

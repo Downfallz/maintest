@@ -7,6 +7,7 @@ running behind it, because it writes files and plays matches:
 dotnet run --project src/DownfallArena.Cli -- studio        # then open http://127.0.0.1:5099/
 dotnet run --project src/DownfallArena.Cli -- studio --port 5100 --data data
 dotnet run --project src/DownfallArena.Cli -- studio --export site/data   # what the hosted page reads, as files
+node --test "studio/*.test.js"                                            # the page's own tests (ADR 0024)
 ```
 
 Run it from the repository root: the host serves `studio/` and `viewer/` from there, reads the content

@@ -78,12 +78,16 @@ jobs:
           dotnet restore
           dotnet tool restore
 
+      - name: Test the studio page
+        run: node --test "studio/*.test.js"
+
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore
 
       # Coverage is not demanded of the composition root (wiring, exercised by running the app) nor of the two
-      # static pages, which are deliberately framework-free and have no test runner to cover them with (ADR
-      # 0013 decision J, ADR 0015). Sonar still analyses all of them for bugs and code smells.
+      # static pages (ADR 0013 decision J, ADR 0015). The studio's modules do have tests now, run by the step
+      # above, but Node's coverage does not reach Sonar (ADR 0024); the viewer still has no runner at all.
+      # Sonar analyses all of them for bugs and code smells either way.
       - name: Begin SonarCloud analysis
         if: env.SONAR_TOKEN != ''
         run: >
