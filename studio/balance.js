@@ -26,6 +26,9 @@ const DAMAGE = 'Damage';
 /** 0.667 plus 0.05 does not land on 0.717, and a value authored at a band edge must not read as outside it. */
 const EPSILON = 1e-9;
 
+/** Ordinal, like `StringComparer.Ordinal` in the host and `sorted` in check-knobs. Never `localeCompare`. */
+const ordinal = (left, right) => (left < right ? -1 : Number(left > right));
+
 const isRecord = value => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isNumber = value => typeof value === 'number' && Number.isFinite(value);
 const text = value => (typeof value === 'string' ? value : '');
@@ -136,15 +139,7 @@ export function readPointer(document, pointer) {
   // reading it differently from the RFC, and no field of a spell has a `/` or a `~` in its name to escape.
   let node = document;
   for (const token of path.slice(1).split('/')) {
-    if (Array.isArray(node)) {
-      const index = /^\d+$/.test(token) ? Number(token) : -1;
-      node = index >= 0 && index < node.length ? node[index] : undefined;
-    } else if (isRecord(node)) {
-      node = node[token];
-    } else {
-      node = undefined;
-    }
-
+    node = step(node, token);
     if (node === undefined) {
       return { ok: false, reason: 'missing', message: `'${path}' addresses nothing in this spell.` };
     }
@@ -155,6 +150,15 @@ export function readPointer(document, pointer) {
   }
 
   return { ok: true, value: node };
+}
+
+/** One token of a pointer, which is `_child`: a key of an object, or a digit index into an array. */
+function step(node, token) {
+  if (Array.isArray(node)) {
+    return /^\d+$/.test(token) && Number(token) < node.length ? node[Number(token)] : undefined;
+  }
+
+  return isRecord(node) ? node[token] : undefined;
 }
 
 /** What a pointer landed on, short enough to sit in a sentence. */
@@ -227,8 +231,17 @@ export function knobReading(knob, document, { duplicate = false } = {}) {
     at,
     room: room(value, shape),
     problems,
-    tone: problems.length ? 'bad' : (at === 'min' || at === 'max' ? 'edge' : 'ok'),
+    tone: knobTone(problems, at),
   };
+}
+
+/**
+ * A knob in one word. `bad` is a disagreement someone has to fix, `edge` a value with nowhere left to go on
+ * one side -- not wrong, but what a tuning pass cannot move -- and `ok` a number with room either way.
+ */
+function knobTone(problems, at) {
+  if (problems.length) return 'bad';
+  return at === 'min' || at === 'max' ? 'edge' : 'ok';
 }
 
 /** Where the value stands against its own bounds: at one of them, inside, or out. */
@@ -243,7 +256,7 @@ function placement(value, minimum, maximum) {
 /** The value as a fraction of its band, clamped: a value outside it is drawn at the edge it left. */
 function position(value, minimum, maximum) {
   const span = maximum - minimum;
-  if (!(span > 0)) return 0.5;
+  if (span <= 0) return 0.5;
   return Math.min(1, Math.max(0, (value - minimum) / span));
 }
 
@@ -252,7 +265,7 @@ function position(value, minimum, maximum) {
  * grid (`data/balance/README.md`), so this counts from where the spell is, which is what the search would do.
  */
 function room(value, knob) {
-  if (!(knob.step > 0) || knob.minimum > knob.maximum) return null;
+  if (knob.step <= 0 || knob.minimum > knob.maximum) return null;
   const steps = distance => Math.max(0, Math.floor(Number((distance / knob.step).toFixed(6))));
   return { down: steps(value - knob.minimum), up: steps(knob.maximum - value) };
 }
@@ -365,17 +378,27 @@ export function constraintsOf(balance) {
  */
 export function survey(balance, spells, aliases) {
   const map = isRecord(aliases) ? aliases : {};
+  // Only the versions an alias reaches. `load_content` walks the alias map, not the folder, so a spell on disk
+  // that nothing points at is not in the content at all: after **Save as next version** the `:v1` file is
+  // still there and still enabled, and `validate` asks nothing of it. Counting it would turn every version cut
+  // into a spell with no entry that check-knobs has never heard of.
+  const addressable = list(spells)
+    .map(spell => ({ spell, alias: aliasOfSpell(spell?.id, map) }))
+    .filter(({ alias }) => alias !== null);
+
   const covered = new Set();
   const resting = new Set();
   const uncovered = [];
   const flagged = [];
 
-  for (const spell of list(spells)) {
-    const alias = aliasOfSpell(spell?.id, map);
-    const entry = alias ? entryFor(balance, alias) : null;
+  for (const { spell, alias } of addressable) {
+    const entry = entryFor(balance, alias);
     if (!entry) {
       // An entry is owed for what the build carries; a spell that is off is not in it.
-      if (spell?.enabled !== false && !spell?.problem) uncovered.push({ id: text(spell?.id), name: text(spell?.name), path: text(spell?.path), alias });
+      if (spell.enabled !== false && !spell.problem) {
+        uncovered.push({ id: text(spell.id), name: text(spell.name), path: text(spell.path), alias });
+      }
+
       continue;
     }
 
@@ -387,17 +410,8 @@ export function survey(balance, spells, aliases) {
     }
 
     covered.add(alias);
-    if (spell.problem) continue;
-    const summary = summarise(entry, spell.document);
-    if (summary.tone !== 'ok') {
-      flagged.push({
-        alias,
-        name: summary.name || text(spell.name),
-        path: text(spell.path),
-        tone: summary.tone,
-        problems: [...summary.problems, ...summary.knobs.flatMap(knob => knob.problems.map(carried => ({ ...carried, path: knob.path })))],
-      });
-    }
+    const finding = spell.problem ? null : flag(entry, spell, alias);
+    if (finding) flagged.push(finding);
   }
 
   // Every alias the content answers to, not only the one alias each spell was reached by: two aliases may
@@ -409,14 +423,30 @@ export function survey(balance, spells, aliases) {
   return {
     entries: entries.length,
     knobs: entries.reduce((total, alias) => total + (entryFor(balance, alias)?.knobs.length ?? 0), 0),
-    enabled: list(spells).filter(spell => spell?.enabled !== false).length,
+    enabled: addressable.filter(({ spell }) => spell.enabled !== false).length,
     covered: covered.size,
     resting: resting.size,
     uncovered,
     // An entry for a spell no alias resolves to describes nothing: the spell was cut, or the alias was.
-    unresolved: entries.filter(alias => !known.has(alias)).sort(),
+    unresolved: entries.filter(alias => !known.has(alias)).sort(ordinal),
     flagged,
     constraintProblems: constraintProblems(balance, known),
+  };
+}
+
+/** One spell's disagreements, flattened so a finding names the pointer it is about. Null when there are none. */
+function flag(entry, spell, alias) {
+  const summary = summarise(entry, spell.document);
+  if (summary.tone === 'ok') return null;
+  return {
+    alias,
+    name: summary.name || text(spell.name),
+    path: text(spell.path),
+    tone: summary.tone,
+    problems: [
+      ...summary.problems,
+      ...summary.knobs.flatMap(knob => knob.problems.map(carried => ({ ...carried, path: knob.path }))),
+    ],
   };
 }
 

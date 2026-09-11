@@ -6,6 +6,11 @@ namespace DownfallArena.Cli.Studio;
 /// </summary>
 internal sealed class StudioFiles
 {
+    /// <summary>The page is one module graph, so every module it serves answers with the same type.</summary>
+    private const string JavaScript = "text/javascript; charset=utf-8";
+
+    private const string Css = "text/css; charset=utf-8";
+
     private readonly Dictionary<string, (string Path, string ContentType)> _routes;
 
     public StudioFiles(string studioDirectory, string viewerDirectory)
@@ -18,12 +23,12 @@ internal sealed class StudioFiles
         {
             ["/"] = index,
             ["/index.html"] = index,
-            ["/studio.css"] = (Path.Combine(studioDirectory, "studio.css"), "text/css; charset=utf-8"),
-            ["/studio.js"] = (Path.Combine(studioDirectory, "studio.js"), "text/javascript; charset=utf-8"),
-            ["/backend.js"] = (Path.Combine(studioDirectory, "backend.js"), "text/javascript; charset=utf-8"),
-            ["/github.js"] = (Path.Combine(studioDirectory, "github.js"), "text/javascript; charset=utf-8"),
-            ["/balance.js"] = (Path.Combine(studioDirectory, "balance.js"), "text/javascript; charset=utf-8"),
-            ["/viewer.css"] = (Path.Combine(viewerDirectory, "viewer.css"), "text/css; charset=utf-8"),
+            ["/studio.css"] = (Path.Combine(studioDirectory, "studio.css"), Css),
+            ["/studio.js"] = (Path.Combine(studioDirectory, "studio.js"), JavaScript),
+            ["/backend.js"] = (Path.Combine(studioDirectory, "backend.js"), JavaScript),
+            ["/github.js"] = (Path.Combine(studioDirectory, "github.js"), JavaScript),
+            ["/balance.js"] = (Path.Combine(studioDirectory, "balance.js"), JavaScript),
+            ["/viewer.css"] = (Path.Combine(viewerDirectory, "viewer.css"), Css),
         };
     }
 

@@ -113,6 +113,11 @@ function icon(name) {
   return svg;
 }
 
+/** A count and what it counts, in English: `1 knob`, `4 knobs`. Said often enough to be a word, not a ternary. */
+function plural(count, word) {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
+}
+
 /** A label with a shorter reading for a phone; studio.css shows one of the two, so the button is named by one. */
 function labelled(long, short) {
   return [element('span', { className: 'long', textContent: long }), element('span', { className: 'short', textContent: short })];
@@ -426,8 +431,8 @@ function numberBox(target, key, { step = 1, min = null, onChange = null } = {}) 
   if (min !== null) input.min = min;
   input.addEventListener('input', () => {
     target[key] = input.value === '' ? null : Number(input.value);
-    markDirty();
     onChange?.();
+    markDirty();
   });
   return input;
 }
@@ -444,8 +449,10 @@ function picker(target, key, options, { onChange = null, allowEmpty = false } = 
   }
   select.addEventListener('change', () => {
     target[key] = select.value;
-    markDirty();
+    // Before `markDirty`, not after: `onChange` is where a kind swaps in the fields it carries, and a reading
+    // taken between the two is the new kind with the old kind's numbers, left stale until the next keystroke.
     onChange?.();
+    markDirty();
   });
   return select;
 }
@@ -595,7 +602,7 @@ function overview() {
   const offNote = off ? ` (${off} off)` : '';
   view.append(element('div', { className: 'overview-head' }, [
     element('h2', { textContent: 'Overview' }),
-    element('p', { className: 'muted', textContent: `${creatures.length} creature${creatures.length === 1 ? '' : 's'}, ${spells.length} spells${offNote}, ${trees.length} talent tree${trees.length === 1 ? '' : 's'}. Tap anything to open it.` }),
+    element('p', { className: 'muted', textContent: `${plural(creatures.length, 'creature')}, ${spells.length} spells${offNote}, ${plural(trees.length, 'talent tree')}. Tap anything to open it.` }),
   ]));
 
   const covered = new Set();
@@ -1227,20 +1234,25 @@ function fillBalanceStrip(holder) {
   }
 
   if (summary.keep.length) {
-    body.push(element('div', { className: 'label', textContent: 'Whatever the numbers do' }));
-    body.push(element('ul', { className: 'keep' }, summary.keep.map(kept => element('li', { textContent: kept }))));
+    body.push(
+      element('div', { className: 'label', textContent: 'Whatever the numbers do' }),
+      element('ul', { className: 'keep' }, summary.keep.map(kept => element('li', { textContent: kept }))),
+    );
   }
 
   if (summary.note) body.push(element('p', { className: 'note', textContent: summary.note }));
   for (const problem of summary.problems) body.push(element('p', { className: 'problem', textContent: problem.message }));
-  body.push(element('div', { className: 'knobs' }, summary.knobs.length
+  const knobs = summary.knobs.length
     ? summary.knobs.map(knobRow)
-    : [element('p', { className: 'muted', textContent: 'No knob: every number of this spell is its identity, and a tuning pass may move none of it.' })]));
-  body.push(element('p', { className: 'muted source' }, [
-    'Read from ',
-    element('code', { textContent: alias }),
-    ' in data/balance/knobs.json. The studio does not write it.',
-  ]));
+    : [element('p', { className: 'muted', textContent: 'No knob: every number of this spell is its identity, and a tuning pass may move none of it.' })];
+  body.push(
+    element('div', { className: 'knobs' }, knobs),
+    element('p', { className: 'muted source' }, [
+      'Read from ',
+      element('code', { textContent: alias }),
+      ' in data/balance/knobs.json. The studio does not write it.',
+    ]),
+  );
 
   holder.className = off ? 'card balance quiet' : `card balance tone-${summary.tone}`;
   holder.replaceChildren(title, ...body);
@@ -1292,7 +1304,7 @@ function balanceFold(references, open) {
   return element('details', { className: `balance-fold tone-${tone}`, open }, [
     element('summary', {}, [
       element('span', { className: 'what', textContent: 'Balance' }),
-      element('span', { className: 'headline', textContent: `${briefs.length} spell${briefs.length === 1 ? '' : 's'} · ${verdict}` }),
+      element('span', { className: 'headline', textContent: `${plural(briefs.length, 'spell')} · ${verdict}` }),
     ]),
     ...briefs.map(brief),
   ]);
@@ -1344,9 +1356,7 @@ function balanceTag(reference) {
 
   // Terse, because it shares a row with a picker: the whole reading is on hover and in the fold above.
   const count = summary.problems.length + summary.knobs.filter(knob => knob.tone === 'bad').length;
-  const label = summary.tone === 'bad'
-    ? `${count} to look at`
-    : `${summary.knobs.length} knob${summary.knobs.length === 1 ? '' : 's'}`;
+  const label = summary.tone === 'bad' ? `${count} to look at` : plural(summary.knobs.length, 'knob');
   return element('span', { className: `balance-tag tone-${summary.tone}`, textContent: label, title: `${summary.headline} — ${summary.intent}` });
 }
 
@@ -1416,30 +1426,36 @@ function balanceCoverage(balance) {
       rolled.uncovered.length ? element('span', { className: 'warn', textContent: `${rolled.uncovered.length} with no entry` }) : null,
       rolled.flagged.length ? element('span', { className: 'warn', textContent: `${rolled.flagged.length} the file disagrees with` }) : null,
       rolled.unresolved.length ? element('span', { className: 'warn', textContent: `${rolled.unresolved.length} naming nothing` }) : null,
-      rolled.constraintProblems.length ? element('span', { className: 'warn', textContent: `${rolled.constraintProblems.length} constraint${rolled.constraintProblems.length === 1 ? '' : 's'} checking nothing` }) : null,
+      rolled.constraintProblems.length ? element('span', { className: 'warn', textContent: `${plural(rolled.constraintProblems.length, 'constraint')} checking nothing` }) : null,
       clean ? element('span', { textContent: 'every enabled spell is covered' }) : null,
     ]),
   ]);
 
-  if (clean) {
-    block.append(element('p', { className: 'hint', textContent: 'Nothing disagrees: every enabled spell has an entry with an intent, every pointer addresses a number, and every number the content carries sits inside its own band.' }));
-    return block;
-  }
+  block.append(clean
+    ? element('p', { className: 'hint', textContent: 'Nothing disagrees: every enabled spell has an entry with an intent, every pointer addresses a number, and every number the content carries sits inside its own band.' })
+    : balanceFindings(rolled));
+  return block;
+}
 
+/**
+ * Everything the file and the content disagree about, worst first and each one a way in to what it is about.
+ *
+ * The order is the order they are worth acting on. A constraint naming a spell nothing resolves to comes
+ * first because it is the quietest: it does not fail anything, it simply stops guarding.
+ */
+function balanceFindings(rolled) {
   const findings = element('ul', { className: 'findings' });
-  for (const spell of rolled.uncovered) {
-    findings.append(element('li', {}, [
-      openSpell(spell.path, spell.name || spell.id),
-      element('span', { textContent: ` — enabled content with no entry in the knobs file${spell.alias ? '' : ', and no alias to key one by'}.` }),
-    ]));
-  }
-
-  // A constraint naming a spell nothing resolves to is the quietest hole in the file: it does not fail, it
-  // simply stops guarding anything, so it belongs at the top of what there is to look at.
   for (const problem of rolled.constraintProblems) {
     findings.append(element('li', {}, [
       element('span', { className: 'mono', textContent: problem.alias }),
       element('span', { textContent: ` — named by ${problem.constraint}, and not a spell any alias resolves to, so the constraint checks nothing.` }),
+    ]));
+  }
+
+  for (const spell of rolled.uncovered) {
+    findings.append(element('li', {}, [
+      openSpell(spell.path, spell.name || spell.id),
+      element('span', { textContent: ' — enabled content with no entry in the knobs file.' }),
     ]));
   }
 
@@ -1451,16 +1467,16 @@ function balanceCoverage(balance) {
   }
 
   for (const spell of rolled.flagged) {
-    const item = element('li', {}, [openSpell(spell.path, spell.name || spell.alias)]);
-    item.append(element('ul', {}, spell.problems.map(problem => element('li', {}, [
-      problem.path ? element('code', { textContent: `${problem.path} ` }) : null,
-      element('span', { textContent: problem.message }),
-    ]))));
-    findings.append(item);
+    findings.append(element('li', {}, [
+      openSpell(spell.path, spell.name || spell.alias),
+      element('ul', {}, spell.problems.map(problem => element('li', {}, [
+        problem.path ? element('code', { textContent: `${problem.path} ` }) : null,
+        element('span', { textContent: problem.message }),
+      ]))),
+    ]));
   }
 
-  block.append(findings);
-  return block;
+  return findings;
 }
 
 /** What balanced means: which evaluations are played, and the band each metric they report should land in. */

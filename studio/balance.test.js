@@ -433,3 +433,30 @@ test('a spell whose file did not parse is left out of the reading entirely', () 
   assert.deepEqual(rolled.flagged, []);
   assert.deepEqual(rolled.uncovered, []);
 });
+
+test('the version an alias no longer points at is out of the reading, not uncovered', () => {
+  const balance = { version: 'knobs:v1', spells: { 'spell:pummel': { intent: 'The all-in.', knobs: [] } } };
+  const spells = [
+    { id: 'spell:pummel:v1', name: 'Pummel', path: 'Spells/pummel.v1.json', document: {} },
+    { id: 'spell:pummel:v2', name: 'Pummel', path: 'Spells/pummel.v2.json', document: {} },
+  ];
+  const rolled = survey(balance, spells, { 'spell:pummel': 'spell:pummel:v2' });
+
+  assert.deepEqual(rolled.uncovered, []);
+  assert.equal(rolled.enabled, 1);
+  assert.equal(rolled.covered, 1);
+});
+
+test('a spell no alias has ever pointed at is not owed an entry either', () => {
+  const rolled = survey({ version: 'knobs:v1', spells: {} }, [{ id: 'spell:orphan:v1', document: {} }], {});
+
+  assert.deepEqual(rolled.uncovered, []);
+  assert.equal(rolled.enabled, 0);
+});
+
+test('entries naming nothing are listed by code unit, the way check-knobs sorts them', () => {
+  const balance = { version: 'knobs:v1', spells: { 'spell:apple': { intent: 'a', knobs: [] }, 'spell:Apple': { intent: 'b', knobs: [] } } };
+  const rolled = survey(balance, [], {});
+
+  assert.deepEqual(rolled.unresolved, ['spell:Apple', 'spell:apple']);
+});
