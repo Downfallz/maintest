@@ -142,3 +142,26 @@ test('the loopback address is what picks the local host, and nothing else is it'
   // A hostname that merely starts with the loopback address is not the loopback address.
   assert.equal(await readsFrom('127.0.0.1.evil.example'), 'data/catalogue.json');
 });
+
+test('the balance knobs are the last part of a change, after the aliases they are keyed by', async () => {
+  const { calls, fetch } = transport([]);
+
+  await localBackend(fetch).change({
+    kind: 'spells',
+    write: [{ path: 'a.json', document: { id: 'spell:a:v1' } }],
+    aliases: { 'spell:a': 'spell:a:v1' },
+    balance: { version: 'knobs:v1', spells: { 'spell:a': { intent: 'New.' } } },
+  });
+
+  // The knobs name spells by the alias the map has just settled, so they cannot go before it.
+  assert.deepEqual(calls.map(call => call.url), ['/api/documents', '/api/aliases', '/api/balance']);
+  assert.deepEqual(calls[2].body.balance.spells, { 'spell:a': { intent: 'New.' } });
+});
+
+test('a change that touches no knobs sends none, so editing a creature leaves data/balance alone', async () => {
+  const { calls, fetch } = transport([]);
+
+  await localBackend(fetch).change({ kind: 'creatures', write: [{ path: 'main.json', document: {} }] });
+
+  assert.deepEqual(calls.map(call => call.url), ['/api/documents']);
+});

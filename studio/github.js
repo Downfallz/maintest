@@ -2,9 +2,10 @@
 // pull request rather than a file on a disk. Everything here is one seam -- `githubBackend()` answers the same
 // shapes `backend.js` documents -- and every request goes to api.github.com and nowhere else.
 //
-// A change is one commit on purpose. The alias map and the documents it names have to land together: an alias
-// pointing at a file that is not there does not build, and the local host spends a request per part only
-// because it can keep the disk buildable in between. The Git Trees API has no such excuse.
+// A change is one commit on purpose. The alias map, the balance knobs and the documents they name have to land
+// together: an alias pointing at a file that is not there does not build, and a spell with no knobs entry --
+// or an entry for a spell nobody points at -- fails `check-knobs` (ADR 0025). The local host spends a request
+// per part only because it can keep the disk buildable in between. The Git Trees API has no such excuse.
 //
 // The transport is a parameter (ADR 0024), so the tests drive this with a stub and assert on the requests.
 
@@ -16,6 +17,7 @@ const pause = milliseconds => new Promise(resolve => { setTimeout(resolve, milli
 /** Where the content lives in the repository. A path from the page is relative to the content root, not to it. */
 const CONTENT_ROOT = 'data';
 const ALIASES_FILE = `${CONTENT_ROOT}/aliases.json`;
+const BALANCE_FILE = `${CONTENT_ROOT}/balance/knobs.json`;
 
 /** The branch a hosted studio writes to, and the one pull request it keeps open. */
 export const STUDIO_BRANCH = 'studio/content';
@@ -89,7 +91,7 @@ function aliasesFile(aliases) {
  * The tree entries of one change. A written document is a blob with its content; a removal is the same path with
  * a null sha, which is how the Trees API spells "not in this tree any more".
  */
-export function treeEntries({ write = [], remove = [], aliases }) {
+export function treeEntries({ write = [], remove = [], aliases, balance }) {
   const entries = write.map(document => ({
     path: `${CONTENT_ROOT}/${document.path}`,
     mode: '100644',
@@ -105,17 +107,34 @@ export function treeEntries({ write = [], remove = [], aliases }) {
     entries.push({ path: ALIASES_FILE, mode: '100644', type: 'blob', content: aliasesFile(aliases) });
   }
 
+  // Written in the order it carries, not sorted: the knobs file is read top to bottom, entry by entry, and
+  // reordering 36 of them to change one is a diff nobody reads. `withEntry` is what keeps that order.
+  if (balance) {
+    entries.push({ path: BALANCE_FILE, mode: '100644', type: 'blob', content: asFile(balance) });
+  }
+
   return entries;
 }
 
 /** What one change says it did, as a commit subject. The body is the diff; the subject has to carry the intent. */
-function subject({ kind, write = [], remove = [], aliases }) {
+function subject({ kind, write = [], remove = [], aliases, balance }) {
   const wrote = write.map(document => document.path);
-  if (wrote.length === 1 && remove.length === 0) {
+  if (wrote.length === 1 && remove.length === 0 && !balance) {
     return `Studio: save ${wrote[0]}${aliases ? ' and repoint its alias' : ''}`;
   }
 
-  const parts = [wrote.length && `save ${wrote.length} file(s)`, remove.length && `remove ${remove.length}`, aliases && 'repoint aliases'];
+  // A change that only touches the knobs is a balance edit and says so: nothing else in the commit, and the
+  // kind it came from would name the spell tab rather than the file that moved.
+  if (!wrote.length && !remove.length && balance) {
+    return 'Studio: save the balance knobs';
+  }
+
+  const parts = [
+    wrote.length && `save ${wrote.length} file(s)`,
+    remove.length && `remove ${remove.length}`,
+    aliases && 'repoint aliases',
+    balance && 'update the balance knobs',
+  ];
   return `Studio: ${parts.filter(Boolean).join(', ')} in ${kind}`;
 }
 

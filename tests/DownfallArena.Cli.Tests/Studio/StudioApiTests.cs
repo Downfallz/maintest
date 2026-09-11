@@ -277,6 +277,49 @@ public sealed class StudioApiTests : IDisposable
         return text[from..text.IndexOf(end, from, StringComparison.Ordinal)];
     }
 
+    /// <summary>
+    /// The knobs are written whole and answered with the catalogue, like every other part of a change: the page
+    /// adopts one shape whatever it just did, and what it reads back is what is on disk rather than what it
+    /// sent — which is how a write that quietly did something else would show.
+    /// </summary>
+    [Fact]
+    public async Task Saving_the_balance_knobs_writes_them_and_answers_with_the_catalogue()
+    {
+        var result = await AcceptAsync("POST", "/api/balance", """{"balance":{"version":"knobs:v1","spells":{"spell:strike":{"intent":"The floor."}}}}""");
+
+        var balance = result.GetProperty("catalogue").GetProperty("balance");
+        balance.GetProperty("version").GetString().ShouldBe("knobs:v1");
+        balance.GetProperty("spells").GetProperty("spell:strike").GetProperty("intent").GetString().ShouldBe("The floor.");
+    }
+
+    /// <summary>
+    /// The knobs are authoring metadata the data builder never reads, so writing them leaves the hash the
+    /// benchmark digests are filed under exactly where it was.
+    /// </summary>
+    [Fact]
+    public async Task Saving_the_balance_knobs_does_not_move_the_content_hash()
+    {
+        var before = (await AcceptAsync("GET", "/api/catalogue", string.Empty)).GetProperty("contentHash").GetString();
+
+        var result = await AcceptAsync("POST", "/api/balance", """{"balance":{"version":"knobs:v1","spells":{}}}""");
+
+        result.GetProperty("catalogue").GetProperty("contentHash").GetString().ShouldBe(before);
+    }
+
+    /// <summary>
+    /// The one thing the host checks about this document. Its shape belongs to <c>check-knobs</c> and to the
+    /// page, and a DTO here would be a third definition of it — but a file that is not an object at all is not
+    /// a knobs file by anyone's reading, and writing it would leave the next read with nothing to say.
+    /// </summary>
+    [Fact]
+    public async Task Balance_knobs_that_are_not_an_object_are_refused_rather_than_written()
+    {
+        var response = await _api.HandleAsync("POST", "/api/balance", """{"balance":[1,2]}""");
+
+        response.Status.ShouldBe(400);
+        Payload(response).GetProperty("message").GetString().ShouldNotBeNull().ShouldContain("must be a JSON object");
+    }
+
     private async Task<JsonElement> AcceptAsync(string method, string path, string body)
     {
         var response = await _api.HandleAsync(method, path, body);
@@ -287,4 +330,5 @@ public sealed class StudioApiTests : IDisposable
 
     private static JsonElement Payload(StudioResponse response) =>
         JsonDocument.Parse(response.Body).RootElement.Clone();
+
 }

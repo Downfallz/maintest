@@ -10,8 +10,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  aliasOfSpell, constraintsOf, entryFor, knobReading, objectiveOf, readBalance, readPointer, readings,
-  summarise, survey,
+  aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading, objectiveOf,
+  readBalance, readPointer, readings, seedEntry, summarise, survey, withEntry,
 } from './balance.js';
 
 /** A spell as the editor holds it: Pummel, which is the entry the strip was designed against. */
@@ -459,4 +459,96 @@ test('entries naming nothing are listed by code unit, the way check-knobs sorts 
   const rolled = survey(balance, [], {});
 
   assert.deepEqual(rolled.unresolved, ['spell:Apple', 'spell:apple']);
+});
+
+// ---------- writing ----------
+
+const twoEntries = () => ({
+  version: 'knobs:v1',
+  spells: {
+    'spell:wait': { name: 'Wait', intent: 'The floor.', keep: [], knobs: [] },
+    'spell:pummel': { name: 'Pummel', intent: 'The all-in.', keep: [], knobs: [] },
+  },
+});
+
+test('replacing an entry leaves every other entry where it was', () => {
+  const changed = withEntry(twoEntries(), 'spell:wait', { name: 'Wait', intent: 'Rewritten.', keep: [], knobs: [] });
+
+  assert.deepEqual(Object.keys(changed.spells), ['spell:wait', 'spell:pummel']);
+  assert.equal(changed.spells['spell:wait'].intent, 'Rewritten.');
+  assert.equal(changed.spells['spell:pummel'].intent, 'The all-in.');
+});
+
+test('a new entry lands at the end, where a new spell belongs in a file read top to bottom', () => {
+  const changed = withEntry(twoEntries(), 'spell:newcomer', { name: 'Newcomer', intent: 'New.', keep: [], knobs: [] });
+
+  assert.deepEqual(Object.keys(changed.spells), ['spell:wait', 'spell:pummel', 'spell:newcomer']);
+});
+
+test('a pruned entry is gone and the rest keep their order', () => {
+  const changed = withEntry(twoEntries(), 'spell:wait', null);
+
+  assert.deepEqual(Object.keys(changed.spells), ['spell:pummel']);
+});
+
+test('everything outside the spells map survives a write', () => {
+  const changed = withEntry({ ...twoEntries(), about: 'Read the README.' }, 'spell:wait', null);
+
+  assert.equal(changed.version, 'knobs:v1');
+  assert.equal(changed.about, 'Read the README.');
+});
+
+test('a seeded entry carries what the content says and invents no intent', () => {
+  const seeded = seedEntry({ name: 'Newcomer', creatureClass: 'Brawler' });
+
+  assert.deepEqual(seeded, { name: 'Newcomer', class: 'Brawler', intent: '', keep: [], knobs: [] });
+});
+
+test('a seeded entry keeps the intent it was given', () => {
+  assert.equal(seedEntry({ name: 'Newcomer' }, '  The all-in.  ').intent, 'The all-in.');
+});
+
+test('an entry read and written back is the shape the file holds', () => {
+  const written = entryDocument(entryFor(twoEntries(), 'spell:pummel'));
+
+  assert.deepEqual(written, { name: 'Pummel', class: '', intent: 'The all-in.', keep: [], knobs: [] });
+});
+
+test('a knob written back uses the file keys, not the reading ones', () => {
+  const entry = entryFor({ spells: { 'spell:x': { intent: 'i', knobs: [{ path: '/energyCost', min: 0, max: 2, step: 1 }] } } }, 'spell:x');
+
+  assert.deepEqual(entryDocument(entry).knobs, [{ path: '/energyCost', min: 0, max: 2, step: 1 }]);
+});
+
+test('a note is written only when there is one', () => {
+  assert.ok(!Object.hasOwn(entryDocument({ intent: 'i' }), 'note'));
+  assert.equal(entryDocument({ intent: 'i', note: 'Waiting on a rule.' }).note, 'Waiting on a rule.');
+});
+
+test('an entry with no intent is refused before it can be saved', () => {
+  const problems = entryProblems({ intent: '', knobs: [] }, {});
+
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /no intent/);
+});
+
+test('a knob whose value has left its band is named with its pointer', () => {
+  const entry = { intent: 'i', knobs: [{ path: '/energyCost', minimum: 0, maximum: 2, step: 1 }] };
+
+  const problems = entryProblems(entry, { energyCost: 9 });
+
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /^\/energyCost: The content carries 9, outside \[0, 2\]/);
+});
+
+test('an entry the page can check finds nothing to refuse', () => {
+  const entry = { intent: 'The all-in.', knobs: [{ path: '/energyCost', minimum: 0, maximum: 2, step: 1 }] };
+
+  assert.deepEqual(entryProblems(entry, { energyCost: 1 }), []);
+});
+
+test('the starting kit is the aliases a deletion has to be checked against', () => {
+  const balance = { constraints: { startingKitOffersAChoice: { enabled: true, spells: ['spell:wait', 'spell:basic_attack'] } } };
+
+  assert.deepEqual(kitAliases(balance), ['spell:wait', 'spell:basic_attack']);
 });

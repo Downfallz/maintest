@@ -337,3 +337,25 @@ test('a browser that refuses to hold the token says so rather than pretending it
   assert.equal(storeToken(null, working), true);
   assert.equal(storedToken(working), null);
 });
+
+test('the knobs are one blob of the commit, beside the documents they describe', () => {
+  const entries = treeEntries({
+    write: [{ path: 'Spells/a.v1.json', document: { id: 'spell:a:v1' } }],
+    balance: { version: 'knobs:v1', spells: { 'spell:a': { intent: 'New.' } } },
+  });
+
+  assert.deepEqual(entries.map(entry => entry.path), ['data/Spells/a.v1.json', 'data/balance/knobs.json']);
+});
+
+test('the knobs file is written in the order it carries, not sorted like the alias map', () => {
+  const [entry] = treeEntries({ balance: { version: 'knobs:v1', spells: { 'spell:zeal': {}, 'spell:apple': {} } } });
+
+  // Sorting would reorder every entry to change one, which is a diff nobody reads.
+  assert.ok(entry.content.indexOf('spell:zeal') < entry.content.indexOf('spell:apple'));
+});
+
+test('the knobs blob ends with a newline, the way every authored file in this repository does', () => {
+  const [entry] = treeEntries({ balance: { version: 'knobs:v1' } });
+
+  assert.ok(entry.content.endsWith('\n'));
+});

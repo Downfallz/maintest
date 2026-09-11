@@ -30,3 +30,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0022](0022-price-a-defensive-effect-by-the-damage-it-prevents.md) | Price a defensive effect by the damage it prevents | Accepted |
 | [0023](0023-a-hosted-studio-with-github-as-its-backend.md) | A hosted studio, with GitHub as its backend | Accepted |
 | [0024](0024-test-the-studio-page-with-nodes-own-runner.md) | Test the studio page with Node's own test runner | Accepted |
+| [0025](0025-the-balance-knobs-are-a-part-of-a-studio-change.md) | The balance knobs are a part of a studio change, like the alias map | Accepted |

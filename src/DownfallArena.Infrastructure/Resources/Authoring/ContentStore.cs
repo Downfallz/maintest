@@ -158,6 +158,28 @@ public sealed class ContentStore
     }
 
     /// <summary>
+    /// Rewrites <c>balance/knobs.json</c> with the document the page hands over, whole (ADR 0025).
+    /// <para>
+    /// The only thing checked here is that it is a JSON object. The shape belongs to <c>check-knobs</c> and to
+    /// the page's own <c>balance.js</c>, and a DTO in the engine would be a third definition of it, free to
+    /// drift from both — the same reasoning that makes reading it a passthrough. Key order is written as given,
+    /// not sorted: the file is read entry by entry, and reordering it to change one entry is a diff nobody
+    /// reads.
+    /// </para>
+    /// </summary>
+    public void SaveBalance(JsonElement balance)
+    {
+        if (balance.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidGameContentException("The balance knobs must be a JSON object.");
+        }
+
+        var path = Path.Combine(Root, BalanceFolder, BalanceFile);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        WriteAtomically(path, JsonSerializer.Serialize(balance, IndentedOptions));
+    }
+
+    /// <summary>
     /// The absolute path of <paramref name="relativePath"/>, refusing anything that is not a JSON file inside the
     /// folder of its kind. The studio takes this path from a browser, so containment is checked, not assumed.
     /// </summary>

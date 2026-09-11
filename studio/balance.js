@@ -456,3 +456,82 @@ function constraintProblems(balance, known) {
     .filter(alias => !known.has(alias))
     .map(alias => ({ constraint: constraint.name, alias, message: `${constraint.name}: '${alias}' is not a spell any alias resolves to.` })));
 }
+
+// ---------- writing ----------
+//
+// The reading half above answers what the file and the content disagree about. This half is what a change
+// carries back: one entry replaced, seeded or pruned, in a document written whole (ADR 0025). Nothing here
+// touches the page or the network -- a writer takes the knobs it was given and returns new knobs, so the page
+// can show what it is about to commit before it commits it.
+
+/**
+ * The knobs with one spell's entry replaced by `entry`, or removed when `entry` is null.
+ *
+ * Written whole and key by key rather than by spreading, so the order of `spells` survives a change: the file
+ * is reviewed as a diff, and an edit that reorders 36 entries to change one is a diff nobody reads. A new
+ * entry lands at the end, which is where a new spell belongs in a file read top to bottom.
+ */
+export function withEntry(balance, alias, entry) {
+  const key = text(alias);
+  if (!key) return balance;
+  const spells = {};
+  for (const [name, body] of Object.entries(balance?.spells ?? {})) {
+    if (name !== key) {
+      spells[name] = body;
+    } else if (entry) {
+      spells[name] = entry;
+    }
+  }
+
+  if (entry && !Object.hasOwn(spells, key)) spells[key] = entry;
+  return { ...balance, spells };
+}
+
+/**
+ * The entry a spell is owed when it is first created: what the content already says about it, and nothing
+ * invented. `intent` is the author's to write -- ADR 0021 is the argument that it cannot be derived, and
+ * `check-knobs` fails on an empty one, which is the page's cue to ask rather than to guess.
+ */
+export function seedEntry(document, intent = '') {
+  const entry = { name: text(document?.name), class: text(document?.creatureClass), intent: text(intent).trim() };
+  // No knobs: every number of a new spell is its identity until someone says which of them may move.
+  return { ...entry, keep: [], knobs: [] };
+}
+
+/** An entry as the file holds it, from the shape `entryFor` reads it into. The round trip has to be lossless. */
+export function entryDocument(entry) {
+  const written = {
+    name: text(entry?.name),
+    class: text(entry?.creatureClass),
+    intent: text(entry?.intent).trim(),
+    keep: list(entry?.keep).map(text).filter(Boolean),
+  };
+  if (entry?.note) written.note = text(entry.note).trim();
+  written.knobs = list(entry?.knobs).map(knob => ({
+    path: text(knob?.path),
+    min: knob?.minimum,
+    max: knob?.maximum,
+    step: knob?.step,
+  }));
+  return written;
+}
+
+/**
+ * Everything wrong with an entry that a browser can tell, which is the half of `validate` that needs only this
+ * spell: an intent that says nothing, and each knob against the document it governs. The other half -- new
+ * dominance, indistinguishable spells, the tiers, the objective's score -- needs the whole catalogue and the
+ * engine, and stays with `check-knobs` in CI (ADR 0023, ADR 0025). A save is never blocked by what the page
+ * cannot check; it is blocked by what it can.
+ */
+export function entryProblems(entry, document) {
+  const summary = summarise(entry, document);
+  return [
+    ...summary.problems.map(problem => problem.message),
+    ...summary.knobs.flatMap(knob => knob.problems.map(problem => `${knob.path || '(no pointer)'}: ${problem.message}`)),
+  ];
+}
+
+/** The starting-kit aliases a constraint names, which a deletion has to be checked against (ADR 0025). */
+export function kitAliases(balance) {
+  return constraintsOf(balance).flatMap(constraint => constraint.spells);
+}

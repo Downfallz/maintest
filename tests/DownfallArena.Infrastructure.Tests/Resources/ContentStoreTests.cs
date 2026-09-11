@@ -453,4 +453,59 @@ public sealed class ContentStoreTests
         catalogue.Notes.ShouldContain(note => note.Contains("aliases.json", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Key order is written as given and never sorted. The file is reviewed as a diff, entry by entry, and an
+    /// edit that reorders 36 entries to change one is a diff nobody reads — the opposite of what sorting buys
+    /// <c>aliases.json</c>, which is a flat map nobody reads in order.
+    /// </summary>
+    [Fact]
+    public void The_balance_knobs_are_written_in_the_order_they_were_given()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        var store = new ContentStore(content.Path);
+        using var given = JsonDocument.Parse("""{"version":"knobs:v1","spells":{"spell:zeal":{"intent":"z"},"spell:apple":{"intent":"a"}}}""");
+
+        store.SaveBalance(given.RootElement);
+
+        var written = File.ReadAllText(Path.Combine(content.Path, "balance", "knobs.json"));
+        written.IndexOf("spell:zeal", StringComparison.Ordinal).ShouldBeLessThan(written.IndexOf("spell:apple", StringComparison.Ordinal));
+    }
+
+    /// <summary>Written the way every authored file here is: two-space indent and a final newline.</summary>
+    [Fact]
+    public void The_balance_knobs_are_written_the_way_the_repository_holds_a_file()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        using var given = JsonDocument.Parse("""{"version":"knobs:v1"}""");
+
+        new ContentStore(content.Path).SaveBalance(given.RootElement);
+
+        var written = File.ReadAllText(Path.Combine(content.Path, "balance", "knobs.json"));
+        written.ShouldEndWith("\n");
+        written.ShouldContain("\n  \"version\"");
+    }
+
+    [Fact]
+    public void Balance_knobs_that_are_not_an_object_are_refused()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        using var given = JsonDocument.Parse("[1, 2]");
+
+        Should.Throw<InvalidGameContentException>(() => new ContentStore(content.Path).SaveBalance(given.RootElement))
+            .Message.ShouldContain("must be a JSON object");
+    }
+
+    /// <summary>Written into a directory that is not there yet, the way saving the first document creates one.</summary>
+    [Fact]
+    public void The_balance_knobs_can_be_written_where_no_balance_folder_exists_yet()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+        using var given = JsonDocument.Parse("""{"version":"knobs:v1","spells":{}}""");
+
+        new ContentStore(content.Path).SaveBalance(given.RootElement);
+
+        new ContentStore(content.Path).Read().Balance.ShouldNotBeNull()
+            .GetProperty("version").GetString().ShouldBe("knobs:v1");
+    }
+
 }

@@ -152,7 +152,8 @@ stands, `0` and a creature at 5% means a cast crits at 5%.
 
 `data/balance/knobs.json` says what a tuning pass may change about each spell, between which bounds, and — the
 part a number cannot say — what the spell is for ([ADR 0021](../docs/adr/0021-tune-the-catalogue-with-a-declared-search-space.md),
-`data/balance/README.md`). The page reads it in three places and writes none of it:
+`data/balance/README.md`). The page reads it in three places and, since
+[ADR 0025](../docs/adr/0025-the-balance-knobs-are-a-part-of-a-studio-change.md), writes it too:
 
 - on a **spell's sheet**, a strip between the spell's own numbers and its effects: the intent as prose, the
   invariants under `keep`, the note when there is one, and every knob as its pointer, the value the content
@@ -179,6 +180,36 @@ rather than flagged on the spell. And a spell that is **off** is not judged at a
 keys only enabled spells and `validate` never reads the entry of a spell that left the build — its strip still
 shows the reading, as what would be owed if the spell came back, but nothing is coloured as a disagreement
 with a build that is green.
+
+**Writing them.** The knobs are a **part of a change**, alongside the documents written, the paths removed and
+the alias map ([ADR 0025](../docs/adr/0025-the-balance-knobs-are-a-part-of-a-studio-change.md)):
+
+```js
+change({ kind, write: [...], remove: [...], aliases, balance })
+```
+
+`balance` is the whole file, written whole, exactly as `aliases` is the whole alias map — one commit on a
+hosted backend, one more request on the local host, in the order that keeps the content readable in between.
+It is shaped that way because the knobs and the content fail `check-knobs` as a pair, and the three things an
+author does most in the studio are the three ways to break that pair. So the studio carries the file for them:
+
+- **creating a spell** writes its file, points its alias *and* seeds its entry. An enabled spell with no entry
+  fails `check-knobs`, and an intent cannot be derived — ADR 0021 is the whole argument for why — so the page
+  asks for it rather than inventing one;
+- **deleting a spell** removes its file, prunes its alias *and* prunes its entry. Deleting one the starting-kit
+  constraint names is warned about separately: it does not fail the file, it makes the constraint check
+  nothing, quietly, which is worse;
+- **cutting a `:v2`** repoints the alias, and the entry follows on its own, because it is keyed by the
+  unversioned alias and that is the key that moved. What may not follow are its pointers, if the new version
+  changed the effects they address — so the page says which ones stopped addressing a number;
+- **turning a spell off** prunes nothing. `check-knobs` reads the entry of enabled spells only, so an entry for
+  a spell that left the build is owed to no one — and it is the only thing left saying what the spell was for.
+
+What the page refuses is what a browser can check: an empty intent, a pointer addressing nothing or a
+non-number, a value outside its own bounds, a duplicate pointer, bounds the wrong way round, a step of zero.
+What needs the whole catalogue and the engine — dominance, indistinguishable spells, the tiers, the objective's
+score — it does not check and does not pretend to. `check-knobs` in CI stays the authority, the same division
+[ADR 0023](../docs/adr/0023-a-hosted-studio-with-github-as-its-backend.md) already set for the content.
 
 **Where the knobs come from.** `ContentStore` reads `data/balance/knobs.json` and hands it through whole on
 `catalogue.balance`, so the page gets them from the one payload it already reads — the local host on
