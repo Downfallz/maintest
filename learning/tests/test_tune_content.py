@@ -979,3 +979,63 @@ def test_a_pair_is_not_built_when_the_run_may_only_change_one_knob(tmp_path: Pat
 
     assert not result.improved
     assert all(len(candidate.moves) <= 1 for candidate in result.candidates)
+
+
+class PlateauEvaluator:
+    """A catalogue whose good point is two steps of one knob past the pair that reaches it.
+
+    The shape `poison_slash` has on this branch: one step of each knob moves the reading and scores *worse*
+    than the content it came from, and the point worth keeping is one further step of the second knob alone.
+    """
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        self.calls += 1
+        spell = spells["spell:combo"]
+        reached = (spell["effects"][0]["amount"], round(spell["criticalChance"], 3))
+        rounds = {(2, 0.6): 50.0, (2, 0.7): 12.0}.get(reached, 40.0)
+        return {"mirror": {"averageRounds": rounds}}
+
+
+def test_a_pair_whose_first_step_moves_a_reading_without_improving_it_is_stepped_further(
+    tmp_path: Path,
+) -> None:
+    """One step of each knob bridges one flat step; a plateau needs the pair walked past that."""
+    knobs, content = combo_pair(tmp_path)
+
+    result = tune_content(PlateauEvaluator(), knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0))
+
+    assert result.improved
+    assert {(move.knob.path, move.steps) for move in result.best.moves} == {(DAMAGE, 1), (CRITICAL, 2)}
+
+
+def test_a_depth_of_one_is_the_opening_move_alone(tmp_path: Path) -> None:
+    """What the search did before deepening existed, and the seam the test above is measured against."""
+    knobs, content = combo_pair(tmp_path)
+
+    result = tune_content(
+        PlateauEvaluator(), knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0, pair_depth=1)
+    )
+
+    assert not result.improved
+
+
+def test_a_pair_that_moves_nothing_at_all_is_not_stepped_further(tmp_path: Path) -> None:
+    """A longer step into dead content costs an evaluation to learn the same thing again."""
+    knobs, content = combo_pair(tmp_path)
+
+    class Deaf:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+            self.calls += 1
+            return {"mirror": {"averageRounds": 40.0}}
+
+    deaf = Deaf()
+    tune_content(deaf, knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0))
+
+    # One baseline, the legal single steps, one opening pair, one climbing neighbour -- and nothing deeper.
+    assert deaf.calls == 1 + len(playable(knobs, content)) * 2 - 1 + 1 + 1

@@ -33,6 +33,7 @@ from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
 from downfall_learning.train_value import ValueOptions, train_value
 from downfall_learning.tune_content import (
+    PAIR_DEPTH,
     ContentEngine,
     EngineContentEvaluator,
     TuneOptions,
@@ -114,6 +115,13 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
         dest="pairs",
         action="store_false",
         help="skip the paired moves the sweep adds for spells no single step could move at all",
+    )
+    tune.add_argument(
+        "--pair-depth",
+        type=int,
+        default=PAIR_DEPTH,
+        help="how many steps one knob of a paired move may take once its first step moved a measurement "
+        "without improving the score; 1 is the opening move alone",
     )
     tune.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     tune.add_argument(
@@ -332,6 +340,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         seed=arguments.seed,
         sweep=arguments.sweep,
         pairs=arguments.pairs,
+        pair_depth=arguments.pair_depth,
     )
     result = tune_content(evaluator, knobs, content, options)
     result.write(arguments.output, arguments.data)

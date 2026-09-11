@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from itertools import combinations
 from pathlib import Path
@@ -70,6 +70,14 @@ MIN_DAMAGE_PER_CAST = 0.5
 
 #: How many knobs a paired opening move touches. A proposal over the run's --max-changes is not built.
 PAIR_SIZE = 2
+
+#: The most steps one knob of an opening pair may take once its first step has earned a deeper look. One
+#: means the opening move alone, which is what the search did before deepening existed.
+PAIR_DEPTH = 2
+
+#: How many pairs are walked past their own first move, best score first. Deepening is the only part of the
+#: opening that multiplies, so it is spent on the pairs closest to paying off rather than on all of them.
+DEEPENED_PAIRS = 6
 
 #: The largest tier damage spread reported. Past it the reading has said what it has to say — one spell of
 #: this tier hits nothing like the others — and a bigger number would only drown every other target.
@@ -138,6 +146,32 @@ class Search:
 
 
 @dataclass(frozen=True)
+class Opened:
+    """One pair of knobs, the direction it was stepped, and what that first step measured."""
+
+    pair: tuple[Knob, ...]
+    direction: int
+    candidate: Candidate
+
+
+@dataclass(frozen=True)
+class Pairing:
+    """What a paired opening move needs, the way :class:`Search` bundles what a proposal needs.
+
+    ``played`` is the catalogue of every pair already handed to the engine, keyed by the numbers it produces
+    rather than by the steps that got there: two different step counts can land on the same content once a
+    knob is pinned at a bound, and playing it twice buys nothing.
+    """
+
+    evaluator: ContentEvaluator
+    knobs: Knobs
+    content: Content
+    baseline: Candidate
+    depth: int
+    played: set[tuple[tuple[str, float], ...]] = field(default_factory=set)
+
+
+@dataclass(frozen=True)
 class TuneOptions:
     iterations: int = 8
     neighbours: int = 4
@@ -145,6 +179,7 @@ class TuneOptions:
     seed: int = 0
     sweep: bool = True
     pairs: bool = True
+    pair_depth: int = PAIR_DEPTH
 
 
 @dataclass(frozen=True)
@@ -635,23 +670,39 @@ def _opening(
     swept = _sweep(evaluator, knobs, content)
     if not options.pairs or options.max_changes < PAIR_SIZE:
         return swept
-    return [*swept, *_pairs(evaluator, knobs, content, _unmoved(swept, first.metrics))]
+    pairing = Pairing(
+        evaluator=evaluator,
+        knobs=knobs,
+        content=content,
+        baseline=first,
+        depth=options.pair_depth,
+    )
+    return [*swept, *_pairs(pairing, _unimproved(swept, first))]
 
 
-def _unmoved(swept: Sequence[Candidate], baseline: Mapping[str, Mapping[str, float]]) -> list[str]:
-    """The spells every single step of the sweep left every measurement unchanged on."""
-    responded: dict[str, bool] = {}
+def _unimproved(swept: Sequence[Candidate], baseline: Candidate) -> list[str]:
+    """The spells no single step of the sweep could improve the score on.
+
+    This was "the spells no single step moved a measurement on", and that gate was too narrow to fire. On
+    the nine-spell core content exactly one spell was fully inert -- `wait`, which has a single knob, so no
+    pair could be built from it at all -- and the pairs never ran. `poison_slash`, the spell the whole pass
+    exists for, was excluded: its single steps do move readings, they just never move them anywhere better.
+
+    Improving is the right line because it is what the search is for. A spell where one step already helps
+    needs nothing here: the climb takes that step and goes on from it, one knob at a time. A spell where
+    every step is inert or worse is a spell the single-step search has nothing left to say about, whether it
+    is dead or merely stuck on a plateau.
+    """
+    helped: dict[str, bool] = {}
     for candidate in swept:
-        alive = not _same(candidate.metrics, baseline)
+        better = candidate.score < baseline.score
         for move in candidate.moves:
-            responded[move.knob.spell] = responded.get(move.knob.spell, False) or alive
-    return sorted(name for name, alive in responded.items() if not alive)
+            helped[move.knob.spell] = helped.get(move.knob.spell, False) or better
+    return sorted(name for name, better in helped.items() if not better)
 
 
-def _pairs(
-    evaluator: ContentEvaluator, knobs: Knobs, content: Content, spells: Sequence[str]
-) -> list[Candidate]:
-    """Two knobs of one spell moved together, for the spells no single step could move at all.
+def _pairs(pairing: Pairing, spells: Sequence[str]) -> list[Candidate]:
+    """Two knobs of one spell moved together, for the spells no single step could improve.
 
     The sweep is the difference between unlikely and impossible for one knob; this is the same for a pair.
     `poison_slash` is the case it was written for: on the studio/content branch, from a bleed of 1 per round
@@ -660,47 +711,108 @@ def _pairs(
     found against that catalogue's monopoly. A climb that only ever moves one knob has to accept the flat
     step in between, on a gain of 0.005, to find the path at all.
 
-    A pair is one step of each knob and nothing more, so it bridges a single flat step and not a plateau.
     Only the two same-direction combinations are built: a pair pulling against itself lands within a step of
     the single moves the sweep already played. And a run whose ``--max-changes`` is below two does not get
-    here at all -- a two-knob proposal is over that budget, and the budget is the caller's to set.
+    here at all -- a two-knob proposal is over that budget, and the budget is the caller's to set. A deeper
+    pair still touches the same two knobs, so that guard reads the same whatever ``depth`` is.
     """
+    opened = _opened(pairing, spells)
+    return [*(entry.candidate for entry in opened), *_deepened(pairing, opened)]
+
+
+def _opened(pairing: Pairing, spells: Sequence[str]) -> list[Opened]:
+    """Every legal pair of one spell's knobs, each stepped once in each direction."""
     by_spell: dict[str, list[Knob]] = {}
-    for knob in playable(knobs, content):
+    for knob in playable(pairing.knobs, pairing.content):
         by_spell.setdefault(knob.spell, []).append(knob)
 
-    played: set[tuple[tuple[str, float], ...]] = set()
-    paired: list[Candidate] = []
+    opened: list[Opened] = []
     for spell in spells:
         for pair in combinations(by_spell.get(spell, []), PAIR_SIZE):
-            paired.extend(_paired(evaluator, knobs, content, pair, played))
-    return paired
+            for direction in (1, -1):
+                candidate = _play(pairing, pair, direction, (1, 1))
+                if candidate is not None:
+                    opened.append(Opened(pair=pair, direction=direction, candidate=candidate))
+    return opened
 
 
-def _paired(
-    evaluator: ContentEvaluator,
-    knobs: Knobs,
-    content: Content,
-    pair: Sequence[Knob],
-    played: set[tuple[tuple[str, float], ...]],
-) -> list[Candidate]:
-    """One pair of knobs, stepped both ways. Illegal, pinned and repeated draws cost no evaluation."""
-    first, second = pair
-    candidates: list[Candidate] = []
-    for direction in (1, -1):
-        stepped = _nudged(first, (), content, direction)
-        moves = None if stepped is None else _nudged(second, stepped, content, direction)
-        if not moves or len(moves) < PAIR_SIZE:
-            continue
-        key = tuple(sorted(_values(moves).items()))
-        if key in played:
-            continue
-        spells = apply_moves(content.spells, moves)
-        if violations(content, spells, knobs):
-            continue
-        played.add(key)
-        candidates.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
-    return candidates
+def _deepened(pairing: Pairing, opened: Sequence[Opened]) -> list[Candidate]:
+    """The pairs closest to paying off, walked past their own first move.
+
+    A pair is worth walking further when one step of each **moved a measurement and still scored worse than
+    the content it came from**: the reading answering says the knobs are live, and the score says the answer
+    is not yet the one worth keeping. Nothing about that first move says the curve has stopped rising --
+    on `poison_slash` the point is 2 over 3 and the corner, 3 over 3, is worse again.
+
+    Two cases are left alone on purpose. A pair that **improves** needs nothing here: it can become the best
+    candidate, and the climb steps on from there one knob at a time. A pair that **moves nothing at all** is
+    a pair on dead content, and a longer step into the dark costs an evaluation to learn the same thing
+    again.
+
+    Deepening is the only part of the opening that multiplies, so it is capped at
+    :data:`DEEPENED_PAIRS` pairs, best score first: the ones nearest the line are the ones a further step
+    might carry over it.
+    """
+    worth = [
+        entry
+        for entry in opened
+        if not _same(entry.candidate.metrics, pairing.baseline.metrics)
+        and entry.candidate.score >= pairing.baseline.score
+    ]
+    worth.sort(key=lambda entry: entry.candidate.score)
+
+    deepened: list[Candidate] = []
+    for entry in worth[:DEEPENED_PAIRS]:
+        deepened.extend(
+            further
+            for counts in _deeper(pairing.depth)
+            if (further := _play(pairing, entry.pair, entry.direction, counts)) is not None
+        )
+    return deepened
+
+
+def _deeper(depth: int) -> list[tuple[int, int]]:
+    """Every step count a deepened pair may take, the one-each opening move aside.
+
+    Asymmetric on purpose. The move that matters on this catalogue is one step of a bleed's amount and two
+    of its duration, so a search that only ever stepped both knobs together would walk straight past it.
+    A ``depth`` of one is the opening move alone, which is what the search did before this existed.
+    """
+    return [
+        (first, second)
+        for first in range(1, depth + 1)
+        for second in range(1, depth + 1)
+        if (first, second) != (1, 1)
+    ]
+
+
+def _play(pairing: Pairing, pair: Sequence[Knob], direction: int, counts: Sequence[int]) -> Candidate | None:
+    """One pair at one set of step counts. Pinned, illegal and repeated draws cost no evaluation."""
+    moves = _walked(pair, pairing.content, direction, counts)
+    if moves is None or len(moves) < PAIR_SIZE:
+        return None
+    key = tuple(sorted(_values(moves).items()))
+    if key in pairing.played:
+        return None
+    spells = apply_moves(pairing.content.spells, moves)
+    if violations(pairing.content, spells, pairing.knobs):
+        return None
+    pairing.played.add(key)
+    return _candidate(pairing.evaluator, pairing.knobs.objective, spells, moves, iteration=0)
+
+
+def _walked(
+    pair: Sequence[Knob], content: Content, direction: int, counts: Sequence[int]
+) -> tuple[Move, ...] | None:
+    """The moves for stepping each knob of a pair its own number of times, all the same way."""
+    moves: tuple[Move, ...] = ()
+    for knob, count in zip(pair, counts, strict=True):
+        for _ in range(count):
+            nudged = _nudged(knob, moves, content, direction)
+            if nudged is None:
+                return None
+            moves = nudged
+    return moves
 
 
 def _candidate(
