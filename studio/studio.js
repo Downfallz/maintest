@@ -1283,7 +1283,7 @@ function closeNav() {
   syncScrim();
 }
 
-const PANELS = ['run', 'runs', 'audit'];
+const PANELS = ['run', 'runs', 'audit', 'access'];
 
 /** The scrim is there whenever something is open over the editor on a phone; studio.css hides it on a desk. */
 function syncScrim() {
@@ -1542,6 +1542,13 @@ function renderToken() {
   $('token-state').textContent = held
     ? 'Saving from here commits to studio/content.'
     : 'Reading only. Paste a token to save from this page.';
+
+  // The toolbar carries the answer to "can this page save?", so it is on screen without opening anything --
+  // which is the whole reason the token has a panel of its own rather than a corner of the run sheet.
+  $('access-label').textContent = held ? 'Can save' : 'Read only';
+  $('access-panel').title = held
+    ? 'This page saves to studio/content. Tap to change or forget the token.'
+    : 'This page can only read. Tap to add a token and save from here.';
 }
 
 function useToken(token) {
@@ -1562,6 +1569,13 @@ function adoptBackendKind() {
   $('run-local').hidden = hosted;
   $('run-hosted').hidden = !hosted;
   $('run-title').textContent = hosted ? 'Launch on GitHub' : 'Run a match';
+
+  // The local studio writes to the disk it serves from: a token would do nothing there, so the button is not
+  // shown at all rather than shown and inert.
+  $('access-panel').hidden = !hosted;
+  if (!hosted) {
+    $('access').hidden = true;
+  }
 }
 
 /** How many seeds only means something for an evaluation; one match is one match. */
@@ -1583,6 +1597,7 @@ $('build').addEventListener('click', build);
 $('run-go').addEventListener('click', run);
 $('run-weights-reset').addEventListener('click', resetWeights);
 $('runs-compare').addEventListener('click', compareRuns);
+$('access-panel').addEventListener('click', () => togglePanel('access', renderToken));
 $('token-keep').addEventListener('click', () => useToken($('token').value.trim()));
 $('token-forget').addEventListener('click', () => useToken(''));
 renderToken();
