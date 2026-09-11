@@ -337,3 +337,78 @@ test('a browser that refuses to hold the token says so rather than pretending it
   assert.equal(storeToken(null, working), true);
   assert.equal(storedToken(working), null);
 });
+
+test('the knobs are one blob of the commit, beside the documents they describe', () => {
+  const entries = treeEntries({
+    write: [{ path: 'Spells/a.v1.json', document: { id: 'spell:a:v1' } }],
+    balance: { version: 'knobs:v1', spells: { 'spell:a': { intent: 'New.' } } },
+  });
+
+  assert.deepEqual(entries.map(entry => entry.path), ['data/Spells/a.v1.json', 'data/balance/knobs.json']);
+});
+
+test('the knobs file is written in the order it carries, not sorted like the alias map', () => {
+  const [entry] = treeEntries({ balance: { version: 'knobs:v1', spells: { 'spell:zeal': {}, 'spell:apple': {} } } });
+
+  // Sorting would reorder every entry to change one, which is a diff nobody reads.
+  assert.ok(entry.content.indexOf('spell:zeal') < entry.content.indexOf('spell:apple'));
+});
+
+test('the knobs blob ends with a newline, the way every authored file in this repository does', () => {
+  const [entry] = treeEntries({ balance: { version: 'knobs:v1' } });
+
+  assert.ok(entry.content.endsWith('\n'));
+});
+
+test('a change that only moves the knobs names them rather than counting removals it did not make', async () => {
+  const stub = github();
+
+  const result = await backend(stub).change({ kind: 'spells', balance: { version: 'knobs:v1', spells: {} } });
+
+  assert.equal(result.saved, 'the balance knobs');
+});
+
+test('a change that only moves the knobs says so in its commit subject', async () => {
+  const stub = github();
+
+  await backend(stub).change({ kind: 'spells', balance: { version: 'knobs:v1', spells: {} } });
+
+  const commit = stub.calls.find(call => /\/git\/commits$/.test(call.url));
+  assert.equal(commit.body.message, 'Studio: save the balance knobs');
+});
+
+test('one written document is still reported by its path, which is what the author was looking at', async () => {
+  const stub = github();
+
+  const result = await backend(stub).change({
+    kind: 'spells',
+    write: [{ path: 'Spells/a.v1.json', document: {} }],
+    balance: { version: 'knobs:v1' },
+  });
+
+  assert.equal(result.saved, 'Spells/a.v1.json');
+});
+
+test('the knobs come from the branch once it has them, not from what main published', async () => {
+  // The knobs file is written whole, so a page reading main's copy and then saving one entry would discard
+  // every balance edit already committed to the branch -- the same failure the alias overlay exists to prevent.
+  const stub = github({ onBranch: { 'data/balance/knobs.json': { version: 'knobs:v1', spells: { 'spell:a': { intent: 'On the branch.' } } } } });
+
+  const catalogue = await backend(stub, {
+    published: async () => ({ spells: [], balance: { version: 'knobs:v1', spells: { 'spell:a': { intent: 'On main.' } } } }),
+  }).read();
+
+  assert.equal(catalogue.balance.spells['spell:a'].intent, 'On the branch.');
+  assert.deepEqual(catalogue.spells, [], 'the rest of the catalogue is still what the site published');
+});
+
+test('a branch that has not touched the knobs keeps the ones main published', async () => {
+  const stub = github({ onBranch: { 'data/aliases.json': { 'spell:a': 'spell:a:v2' } } });
+
+  const catalogue = await backend(stub, {
+    published: async () => ({ balance: { version: 'knobs:v1', spells: { 'spell:a': { intent: 'On main.' } } } }),
+  }).read();
+
+  assert.equal(catalogue.balance.spells['spell:a'].intent, 'On main.');
+  assert.deepEqual(catalogue.aliases, { 'spell:a': 'spell:a:v2' }, 'and the alias overlay still applies');
+});

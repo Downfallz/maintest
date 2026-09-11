@@ -50,6 +50,7 @@ internal sealed class StudioApi : IDisposable
                 ("POST", "/api/documents") => SaveDocument(body),
                 ("POST", "/api/documents/delete") => DeleteDocument(body),
                 ("POST", "/api/aliases") => SaveAliases(body),
+                ("POST", "/api/balance") => SaveBalance(body),
                 ("POST", "/api/build") => Build(),
                 ("POST", "/api/runs") => await RunAsync(body),
                 _ => Failed(404, $"No such endpoint: {method} {path}."),
@@ -153,6 +154,18 @@ internal sealed class StudioApi : IDisposable
     {
         var request = Parse<SaveAliasesRequest>(body);
         _store.SaveAliases(request.Aliases);
+        return Ok(new { catalogue = _store.Read() });
+    }
+
+    /// <summary>
+    /// The knobs, written whole. It answers with the catalogue like every other part of a change, so the page
+    /// adopts one shape whatever it just did — and the knobs it reads back are the ones on disk rather than the
+    /// ones it sent, which is how a write that quietly did something else would show.
+    /// </summary>
+    private StudioResponse SaveBalance(string body)
+    {
+        var request = Parse<SaveBalanceRequest>(body);
+        _store.SaveBalance(request.Balance);
         return Ok(new { catalogue = _store.Read() });
     }
 

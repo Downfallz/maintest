@@ -266,12 +266,12 @@
         "One point at a time: it stacks by being cast again, not by being bigger",
         "Cheap enough to cast in the rounds that decide the match, or it is not armour"
       ],
+      "note": "Its cost is a knob even though the spell is free today: putting a price on a permanent, repeatable buff is the lever this catalogue most obviously lacks, and it costs nothing to let the search try it.",
       "knobs": [
         { "path": "/energyCost", "min": 0, "max": 1, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ],
-      "note": "Its cost is a knob even though the spell is free today: putting a price on a permanent, repeatable buff is the lever this catalogue most obviously lacks, and it costs nothing to let the search try it."
+      ]
     },
     "spell:restorative_gush": {
       "name": "Restorative Gush",
@@ -281,12 +281,12 @@
         "Heals more in one cast than anything else",
         "Single target: the team heals belong to the Trickster and the Shaman"
       ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
-      ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
+      ]
     },
     "spell:crushing_stomp": {
       "name": "Crushing Stomp",
@@ -475,12 +475,12 @@
         "Team-wide heal",
         "Currently missing its downside"
       ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
+      ]
     },
     "spell:tranquilizer_dart": {
       "name": "Tranquilizer Dart",
@@ -520,13 +520,13 @@
         "Its critical chance is what makes it a Sorcerer spell",
         "The class's baseline attack: everything deeper in the tree must beat it"
       ],
+      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ],
-      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four."
+      ]
     },
     "spell:rejuvenate": {
       "name": "Rejuvenate",
@@ -536,12 +536,12 @@
         "The cheapest heal",
         "Single target"
       ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
+      ]
     },
     "spell:meteor": {
       "name": "Meteor",
@@ -612,14 +612,14 @@
         "Team-wide and permanent: the strongest defensive cast in the game",
         "Priced above the single-target version or it simply replaces it"
       ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
+      ]
     },
     "spell:crazed_specter": {
       "name": "Crazed Specter",
@@ -644,14 +644,14 @@
         "Half of it is lasting",
         "The anticipation heal, not the emergency one"
       ],
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
-      ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none."
+      ]
     },
     "spell:restorative_burst": {
       "name": "Restorative Burst",

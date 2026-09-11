@@ -66,6 +66,14 @@ public sealed class ContentStore
         {
             problems = exception.Problems;
         }
+        // The builder reads the same files this does, and it reads them first. A file the process cannot open
+        // threw from in here, past everything below that was written to report it, and took the whole catalogue
+        // with it — the studio would not open at all. Content that cannot be read is content that does not
+        // build, so it is a problem like any other, and the file that caused it is listed with its own below.
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            problems = [$"The content could not be read: {exception.Message}"];
+        }
 
         return new ContentCatalogue
         {
@@ -73,7 +81,7 @@ public sealed class ContentStore
             Creatures = ReadAll<CreatureDefinitionDto>(ContentKind.Creature),
             Spells = ReadAll<SpellDto>(ContentKind.Spell),
             TalentTrees = ReadAll<TalentTreeDto>(ContentKind.TalentTree),
-            Aliases = ReadAliases(),
+            Aliases = ReadAliases(notes),
             // After the build, because a knobs file that does not parse is a note and never a problem: it is not
             // build input, and reporting it as one would tell an author their content is broken when it is not.
             Balance = ReadBalance(notes),
@@ -155,6 +163,28 @@ public sealed class ContentStore
 
         var sorted = new SortedDictionary<string, string>(aliases.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), StringComparer.Ordinal);
         WriteAtomically(Path.Combine(Root, GameSchemaBuilder.AliasesFile), JsonSerializer.Serialize(sorted, IndentedOptions));
+    }
+
+    /// <summary>
+    /// Rewrites <c>balance/knobs.json</c> with the document the page hands over, whole (ADR 0025).
+    /// <para>
+    /// The only thing checked here is that it is a JSON object. The shape belongs to <c>check-knobs</c> and to
+    /// the page's own <c>balance.js</c>, and a DTO in the engine would be a third definition of it, free to
+    /// drift from both — the same reasoning that makes reading it a passthrough. Key order is written as given,
+    /// not sorted: the file is read entry by entry, and reordering it to change one entry is a diff nobody
+    /// reads.
+    /// </para>
+    /// </summary>
+    public void SaveBalance(JsonElement balance)
+    {
+        if (balance.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidGameContentException("The balance knobs must be a JSON object.");
+        }
+
+        var path = Path.Combine(Root, BalanceFolder, BalanceFile);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        WriteAtomically(path, JsonSerializer.Serialize(balance, IndentedOptions));
     }
 
     /// <summary>
@@ -280,7 +310,7 @@ public sealed class ContentStore
         }
     }
 
-    private Dictionary<string, string> ReadAliases()
+    private Dictionary<string, string> ReadAliases(List<string> notes)
     {
         var path = Path.Combine(Root, GameSchemaBuilder.AliasesFile);
         if (!File.Exists(path))
@@ -293,8 +323,12 @@ public sealed class ContentStore
             return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path), GameSchemaJson.ReadOptions)
                 ?? new Dictionary<string, string>(StringComparer.Ordinal);
         }
-        catch (JsonException)
+        // An alias map that cannot be read is not an empty one: every reference in the content resolves through
+        // it, so falling back to none silently turns a permissions mistake into a catalogue where nothing is
+        // aliased. The fallback stays -- the studio still has to open -- but it says so.
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
+            notes.Add($"{GameSchemaBuilder.AliasesFile} could not be read, so no alias resolves: {exception.Message}");
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
     }
@@ -311,15 +345,19 @@ public sealed class ContentStore
 
         foreach (var file in Directory.EnumerateFiles(folder, "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
         {
-            var text = File.ReadAllText(file);
             var relative = Relative(file);
+            string text;
             JsonElement element;
             try
             {
+                // The read is inside the try, not before it: a file the process cannot open threw straight out
+                // of here, past the studio's own error handling, and took the whole catalogue with it. A file
+                // that cannot be read is listed with what is wrong, the same as one that does not parse.
+                text = File.ReadAllText(file);
                 using var parsed = JsonDocument.Parse(text);
                 element = parsed.RootElement.Clone();
             }
-            catch (JsonException exception)
+            catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
             {
                 documents.Add(Broken(kind, relative, exception.Message));
                 continue;

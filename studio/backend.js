@@ -3,11 +3,12 @@
 // is the local studio host (ADR 0015); the hosted one will be GitHub itself, and what it answers with has to
 // have these shapes.
 //
-// A **change** is one unit of work -- the documents it writes, the paths it removes, and the alias map it
-// leaves behind -- rather than one request per file. It is shaped that way because an alias pointing at a
-// document that is not there yet, or at one that is gone, does not build: the two belong together. The local
-// host spends a request on each part, in the order that keeps the content buildable in between; a hosted
-// backend is expected to make the whole change one commit.
+// A **change** is one unit of work -- the documents it writes, the paths it removes, the alias map and the
+// balance knobs it leaves behind -- rather than one request per file. It is shaped that way because an alias
+// pointing at a document that is not there yet, or at one that is gone, does not build, and because a spell
+// with no knobs entry fails `check-knobs` while a knobs entry for a spell nobody points at fails it too
+// (ADR 0025): the four belong together. The local host spends a request on each part, in the order that keeps
+// the content buildable in between; a hosted backend is expected to make the whole change one commit.
 //
 // Every operation answers with the result the page adopts, and refuses by throwing an Error whose `problems`
 // are the lines to show under the message.
@@ -55,8 +56,9 @@ export function localBackend(transport = globalThis.fetch) {
 
     // The parts of a change go in the order that leaves the content buildable between requests: documents
     // first, so an alias never points at a file that is not written yet, then removals, then the alias map,
-    // which is what prunes the aliases a removal orphaned.
-    async change({ kind, write = [], remove = [], aliases }) {
+    // which is what prunes the aliases a removal orphaned, and last the knobs, which name spells by the alias
+    // the map has just settled.
+    async change({ kind, write = [], remove = [], aliases, balance }) {
       let result = {};
       for (const document of write) {
         result = {
@@ -76,6 +78,10 @@ export function localBackend(transport = globalThis.fetch) {
 
       if (aliases) {
         result = { ...result, ...await call('/api/aliases', { aliases }) };
+      }
+
+      if (balance) {
+        result = { ...result, ...await call('/api/balance', { balance }) };
       }
 
       return result;

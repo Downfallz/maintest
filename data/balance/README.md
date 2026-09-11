@@ -9,9 +9,13 @@
 It is authoring metadata. The data builder reads `Creatures`, `Spells`, `TalentTrees` and `aliases.json`
 only, so this file never reaches `game.schema.json` and never moves the content hash.
 
-The content studio reads it too, and shows each spell's entry beside the numbers it governs — the intent, the
-invariants, and every knob against the value the content carries today (`studio/README.md`). It only reads:
-`check-knobs` below is still the authority, and the studio writes nothing here.
+The content studio reads and writes it, and shows each spell's entry beside the numbers it governs — the
+intent, the invariants, and every knob against the value the content carries today (`studio/README.md`). It
+writes this file as **part of the same change** as the spell it is about ([ADR 0025](../../docs/adr/0025-the-balance-knobs-are-a-part-of-a-studio-change.md)),
+so creating a spell seeds its entry, deleting one prunes it, and a session cannot leave `check-knobs` failing
+through either door. The page refuses only what a browser can check — an empty intent, a pointer that addresses
+no number, a value outside its own bounds, a duplicate pointer, bad bounds, a step of zero. Everything below
+that needs the catalogue and the engine is still `check-knobs`', and it stays the authority.
 
 ```bash
 uv run --project learning check-knobs            # the file against the content it describes
