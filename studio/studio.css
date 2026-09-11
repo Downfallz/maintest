@@ -416,20 +416,21 @@ details[open] summary { margin-bottom: 6px; }
 
 /* The launch list of the published page: one tap, one workflow form. */
 .launch { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.launch a {
+.launch .launch-go { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+.launch a, .launch .launch-go {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px;
   padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--card); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-1);
 }
-.launch a:hover { border-color: var(--accent); box-shadow: var(--shadow-2); }
-.launch a:active { transform: translateY(1px); }
+.launch a:hover, .launch .launch-go:hover { border-color: var(--accent); box-shadow: var(--shadow-2); }
+.launch a:active, .launch .launch-go:active { transform: translateY(1px); }
 .launch .name { font-weight: 600; font-size: 15px; }
 .launch .what { grid-column: 1; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
 .launch svg { grid-row: 1 / span 2; grid-column: 2; color: var(--muted); }
 
 /* ---------- motion ---------- */
 
-.button, .mini, .tool, .tab, .item, .chip, .node, .node-pick, .link, .close, .back, .launch a {
+.button, .mini, .tool, .tab, .item, .chip, .node, .node-pick, .link, .close, .back, .launch a, .launch .launch-go {
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 120ms ease, opacity 150ms ease;
 }
 @keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }

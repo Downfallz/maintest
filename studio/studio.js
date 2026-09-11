@@ -1545,6 +1545,41 @@ function togglePanel(id, load) {
 }
 
 /**
+ * Starts a workflow on the studio branch and takes you to the run.
+ *
+ * The tab is opened before anything is awaited, because a browser only lets a page open one while it is still
+ * handling the tap that asked for it -- open it after the round trip and a phone blocks it. It starts blank and
+ * is pointed at the run once there is one; `opener` is cut so the new tab cannot reach back into this one.
+ * A browser that blocked it anyway leaves `tab` null, and the banner's own button is the way through.
+ */
+async function launch(workflow, name) {
+  const tab = window.open('', '_blank');
+  if (tab) tab.opener = null;
+
+  // `act` answers null when the backend refused, and has already said why: closing the tab is all that is left.
+  const run = await act(`Launching ${name}`, () => backend.dispatch(workflow));
+  if (!run) {
+    tab?.close();
+    return;
+  }
+
+  // Dispatched, but the run has not been registered yet. Not a failure, and not something to open a tab on.
+  if (run.pending) {
+    tab?.close();
+    banner(`${name} was launched on ${run.branch}. Its run has not appeared yet; it will be under Actions.`, 'ok');
+    return;
+  }
+
+  if (tab) {
+    tab.location.replace(run.url);
+  }
+
+  banner(`${name} is running on ${run.branch}.`, 'ok',
+    tab ? [] : ['Your browser kept the run from opening on its own, so it is behind the button.'],
+    { href: run.url, label: `Watch run #${run.id}` });
+}
+
+/**
  * The token, kept in this browser and nowhere else. Pasting or forgetting one picks a different backend, so the
  * page re-reads which one it has rather than waiting for a reload to notice.
  */
@@ -1612,6 +1647,11 @@ $('run-go').addEventListener('click', run);
 $('run-weights-reset').addEventListener('click', resetWeights);
 $('runs-compare').addEventListener('click', compareRuns);
 $('access-panel').addEventListener('click', () => togglePanel('access', renderToken));
+// One listener for the four cards: the workflow is on the button, so adding a fifth is markup and nothing else.
+for (const card of document.querySelectorAll('.launch-go')) {
+  card.addEventListener('click', () => launch(card.dataset.workflow, card.querySelector('.name').textContent));
+}
+
 $('token-keep').addEventListener('click', () => useToken($('token').value.trim()));
 $('token-forget').addEventListener('click', () => useToken(''));
 renderToken();
