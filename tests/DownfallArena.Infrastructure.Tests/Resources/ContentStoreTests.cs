@@ -76,6 +76,24 @@ public sealed class ContentStoreTests
         File.ReadAllText(Path.Combine(content.Path, "Spells", "brawler", "guard.v2.json")).ShouldContain("  \"id\": \"spell:guard:v2\"");
     }
 
+    /// <summary>
+    /// Every authored file in the repository ends with a newline, and the hosted studio writes one too
+    /// (ADR 0023). A save that dropped it turned a line nobody touched into a diff, and made the two backends
+    /// disagree by one byte on the same document.
+    /// </summary>
+    [Fact]
+    public void A_saved_file_ends_with_a_newline_like_every_authored_file()
+    {
+        using var content = new ContentDirectory();
+        var store = new ContentStore(content.Path);
+
+        store.Save(ContentKind.Spell, "Spells/brawler/guard.v2.json", Guard.Replace("spell:guard:v1", "spell:guard:v2", StringComparison.Ordinal));
+        store.SaveAliases(new Dictionary<string, string>(StringComparer.Ordinal) { ["spell:guard"] = "spell:guard:v2" });
+
+        File.ReadAllText(Path.Combine(content.Path, "Spells", "brawler", "guard.v2.json")).ShouldEndWith("\n");
+        File.ReadAllText(Path.Combine(content.Path, "aliases.json")).ShouldEndWith("\n");
+    }
+
     [Fact]
     public void Saving_a_document_with_a_mistyped_field_is_refused_before_it_reaches_the_disk()
     {

@@ -212,8 +212,16 @@ public sealed class ContentStore
     /// Writes through a temporary file so a failure leaves the previous content intact rather than half a
     /// document, and cleans the temporary up so nothing unreviewable is left in the content tree.
     /// </summary>
+    /// <summary>
+    /// Writes through a temporary file so a crash cannot leave a half-written document, and ends the file with a
+    /// newline: every authored file in the repository has one, and a save that dropped it made a diff out of a
+    /// line nobody touched. <see cref="JsonSerializer"/> never writes one, so it is added here rather than at
+    /// each call.
+    /// </summary>
     private static void WriteAtomically(string path, string content)
     {
+        content = content.EndsWith('\n') ? content : content + '\n';
+
         var temporary = path + TemporarySuffix;
         try
         {

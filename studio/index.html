@@ -101,6 +101,19 @@
     <!-- The published page has no engine behind it (ADR 0023). What a phone can launch from there is a
          workflow: each link opens GitHub's own "Run workflow" form, and the run does the rest on the runners. -->
     <div id="run-hosted" hidden>
+      <div class="controls">
+        <label for="token">GitHub token
+          <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
+        </label>
+        <button id="token-keep" type="button" class="button primary">Keep it</button>
+        <button id="token-forget" type="button" class="button ghost danger" hidden>Forget it</button>
+        <span id="token-state" class="hint"></span>
+      </div>
+      <p class="hint">Without a token this page reads and cannot save. With one, a save is a commit on the
+        <code>studio/content</code> branch and a pull request, so CI checks the content the page cannot.
+        Use a <strong>fine-grained</strong> token for this repository only, with <em>Contents</em> and
+        <em>Pull requests</em> write, and give it an expiry: it is kept in this browser and sent to
+        <code>api.github.com</code> and nowhere else, and it is revocable in one click on GitHub.</p>
       <p class="hint">This is the published page, so there is no engine to play a match here. These run on GitHub Actions instead: each opens the workflow's <em>Run workflow</em> form, and the result lands in the run summary, or on a branch with a link to open it as a pull request.</p>
       <ul class="launch">
         <li><a href="https://github.com/Downfallz/maintest/actions/workflows/tune.yml" target="_blank" rel="noopener">

@@ -30,9 +30,11 @@ evaluate, search the agent weights, one turn of the learning loop) and each open
 form.
 
 The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents* and *Pull
-requests* write. It is kept in `localStorage`, sent to `api.github.com` and nowhere else, and it is a standing
-credential in a browser: that cost is accepted rather than argued away in ADR 0023, and it is revocable in one
-click on GitHub. Give it an expiry.
+requests* write. Paste it into the **Run** sheet of the hosted page, where *Keep it* stores it and *Forget it*
+removes it; the page picks its backend again on the spot rather than waiting for a reload. It is kept in
+`localStorage`, sent to `api.github.com` and nowhere else, and it is a standing credential in a browser: that
+cost is accepted rather than argued away in ADR 0023, and it is revocable in one click on GitHub. Give it an
+expiry.
 
 Validation does not happen in the browser and cannot: `ContentStore` checks a document against the same DTOs the
 data builder uses, and a page cannot run that. So a hosted save answers with the commit and the pull request to

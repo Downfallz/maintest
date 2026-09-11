@@ -8,8 +8,10 @@
 // local host and from GitHub Pages, and which backend answers is decided by where it was loaded from.
 
 import { backendForThisPage } from './backend.js';
+import { storeToken, storedToken } from './github.js';
 
-const backend = backendForThisPage();
+// Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
+let backend = backendForThisPage();
 
 // ---------- what the schema allows ----------
 
@@ -1071,9 +1073,40 @@ async function save() {
 
   if (!result) return;
   adopt(result);
+  applyLocally(state.tab, item.path, payload());
   state.dirty = false;
-  report(`Saved ${result.saved}.`);
+  reportSave(result, `Saved ${result.saved}.`);
   select(item.path);
+}
+
+/**
+ * What a hosted save cannot do: rebuild the catalogue. `ContentStore` validates against the same DTOs the data
+ * builder uses and a browser cannot run that, so CI is the authority (ADR 0023) and the page carries its own
+ * edit forward instead of dropping it or pretending to have checked it.
+ */
+function applyLocally(tab, path, document) {
+  if (backend.kind !== 'hosted') return;
+  const found = findDocument(path);
+  if (found) {
+    found.item.document = clone(document);
+    return;
+  }
+
+  // A document the page has just created is not in the catalogue it read, and dropping it would take the edit
+  // off the screen. `kind` is what the list draws a row by, so a row without it would render as nothing.
+  documentsOf(tab).push({ path, kind: TABS[tab].kind, document: clone(document) });
+  renderNav();
+}
+
+/** A save that became a commit says where to watch it; one that rebuilt the content says what it did. */
+function reportSave(result, message) {
+  if (!result.pullRequest) {
+    report(message);
+    return;
+  }
+
+  banner(`${message} Committed ${result.commit.slice(0, 7)} on ${result.branch}.`, 'ok',
+    [`CI validates it on pull request #${result.pullRequest.number} — this page cannot: ${result.pullRequest.url}`]);
 }
 
 async function saveAsNextVersion() {
@@ -1485,6 +1518,32 @@ function togglePanel(id, load) {
   if (!narrow.matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+/**
+ * The token, kept in this browser and nowhere else. Pasting or forgetting one picks a different backend, so the
+ * page re-reads which one it has rather than waiting for a reload to notice.
+ */
+function renderToken() {
+  const held = storedToken();
+  $('token').value = '';
+  $('token').placeholder = held ? 'a token is kept in this browser' : 'github_pat_...';
+  $('token-forget').hidden = !held;
+  $('token-state').textContent = held
+    ? 'Saving from here commits to studio/content.'
+    : 'Reading only. Paste a token to save from this page.';
+}
+
+function useToken(token) {
+  if (!storeToken(token)) {
+    banner('This browser refuses to keep the token, so saving from here is not possible. Site data may be blocked.', 'error');
+    return;
+  }
+
+  backend = backendForThisPage();
+  renderToken();
+  adoptBackendKind();
+  banner(token ? 'Token kept in this browser.' : 'Token forgotten.', 'ok');
+}
+
 /** The run sheet of the published page launches workflows instead of matches; the rest of the page is the same. */
 function adoptBackendKind() {
   const hosted = backend.kind === 'hosted';
@@ -1512,6 +1571,9 @@ $('build').addEventListener('click', build);
 $('run-go').addEventListener('click', run);
 $('run-weights-reset').addEventListener('click', resetWeights);
 $('runs-compare').addEventListener('click', compareRuns);
+$('token-keep').addEventListener('click', () => useToken($('token').value.trim()));
+$('token-forget').addEventListener('click', () => useToken(''));
+renderToken();
 $('run-panel').addEventListener('click', () => togglePanel('run', () => { if (backend.kind !== 'hosted') loadWeights(); }));
 $('runs-panel').addEventListener('click', () => togglePanel('runs', loadRuns));
 $('audit-panel').addEventListener('click', () => togglePanel('audit', loadAudit));
