@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace DownfallArena.Cli.Tests.Studio;
@@ -44,6 +45,30 @@ public sealed class StudioPageContractTests
             Page.ShouldContain($@"id=""{panel}"" class=""panel""", Case.Sensitive, $"{panel} is in PANELS with no section to open");
             Page.ShouldContain($@"id=""{panel}-panel""", Case.Sensitive, $"{panel} is in PANELS with no button to open it");
             Page.ShouldContain($@"data-close=""{panel}""", Case.Sensitive, $"{panel} has no way to close it");
+        }
+    }
+
+    /// <summary>
+    /// On a phone the toolbar is a fixed-height bar along the bottom, so a button past its column count lands on
+    /// a second row that the bar's height crops away: present in the markup, reachable by a screen reader, and
+    /// invisible to the person holding the phone. The published page has one button the local page does not,
+    /// which is exactly how a count written once goes stale -- and it looks fine on a desk, where the same bar
+    /// is an inline flex row.
+    /// </summary>
+    [Fact]
+    public void The_phone_toolbar_has_room_for_every_button_it_holds()
+    {
+        var css = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "studio", "studio.css"));
+        var buttons = Regex.Count(Page, "class=\"tool\"", RegexOptions.None, MatchTimeout);
+        var bar = Regex.Match(css, @"\.toolbar \{(.+?)\}", RegexOptions.Singleline, MatchTimeout).Groups[1].Value;
+        var pinned = Regex.Match(bar, @"grid-template-columns:\s*repeat\((\d+)", RegexOptions.None, MatchTimeout);
+
+        buttons.ShouldBeGreaterThan(0);
+        bar.ShouldNotBeEmpty();
+        if (pinned.Success)
+        {
+            int.Parse(pinned.Groups[1].Value, CultureInfo.InvariantCulture)
+                .ShouldBeGreaterThanOrEqualTo(buttons, "the bottom bar pins fewer columns than it has buttons, so the last ones fall off a phone");
         }
     }
 
