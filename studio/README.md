@@ -26,12 +26,16 @@ on the `studio/content` branch and one pull request kept open, so a content chan
 full CI gate. Without one the page reads and says so where you try, naming both ways out. Building and playing
 always refuse there: they need the engine, which a browser does not have. What a phone *can* launch is a
 workflow -- the hosted **Run** sheet lists the four the repository dispatches by hand (tune the catalogue,
-evaluate, search the agent weights, one turn of the learning loop) and each opens GitHub's own *Run workflow*
-form.
+evaluate, search the agent weights, one turn of the learning loop). With a token that can reach Actions the page
+starts them itself, **on the `studio/content` branch**, so they run against the content the page is showing
+rather than against `main`, and opens the run it started. That needs *Actions* write on the token, alongside
+*Contents* and *Pull requests*.
 
-The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents* and *Pull
-requests* write. Paste it into the **Run** sheet of the hosted page, where *Keep it* stores it and *Forget it*
-removes it; the page picks its backend again on the spot rather than waiting for a reload. It is kept in
+The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents*, *Pull
+requests* and *Actions* write. Paste it into the hosted page's own **Read only / Can save** panel, where *Keep it* stores it and *Forget it*
+removes it; the page picks its backend again on the spot rather than waiting for a reload. That toolbar
+button is also the answer to "can this page save?" without opening anything, which is why the token has a
+panel of its own rather than a corner of the run sheet. It is kept in
 `localStorage`, sent to `api.github.com` and nowhere else, and it is a standing credential in a browser: that
 cost is accepted rather than argued away in ADR 0023, and it is revocable in one click on GitHub. Give it an
 expiry.
@@ -56,7 +60,8 @@ a stored token is what separates a page that can save from one that can only rea
 The page is written for a phone first. It opens on the **overview**: every creature with its numbers, what it
 starts with, and its talent tree drawn as a tree, where each node is a tap into the tree editor and each spell a
 chip that opens the spell. A bar along the bottom of the screen holds **Browse**, the list of creatures, spells
-and trees as a sheet that closes on a pick, and the four panels below, each a sheet of its own. An editor's
+and trees as a sheet that closes on a pick, and the panels below, each a sheet of its own — the last of them
+only on the published page, where whether this page can save is a thing worth saying. An editor's
 four actions sit in their own bar just above it, so saving never needs a scroll; the list rows carry the
 numbers a reader scans for (a spell's class, type, cost and what it does), and every number field opens the
 numeric keypad. From 900px wide the same page becomes the list beside the editor, the panels as cards above

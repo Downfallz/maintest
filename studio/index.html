@@ -21,6 +21,7 @@
     <symbol id="i-history" viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9"/><path d="M4.5 4.5V9H9"/></symbol>
     <symbol id="i-audit" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></symbol>
     <symbol id="i-balance" viewBox="0 0 24 24"><path d="M12 4v16M7 20h10M4 8h16M4 8l-2 6h4zM20 8l-2 6h4z"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H20M17 12v3M14 12v2.5"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
@@ -51,6 +52,10 @@
       </button>
       <button id="balance-panel" type="button" class="tool" aria-controls="balance" aria-pressed="false">
         <svg><use href="#i-balance"/></svg><span>Balance</span>
+      </button>
+      <!-- Only on the published page, where saving is a token away and nothing else on screen would say so. -->
+      <button id="access-panel" type="button" class="tool" aria-controls="access" aria-pressed="false" hidden>
+        <svg><use href="#i-key"/></svg><span id="access-label">Read only</span>
       </button>
     </fieldset>
     <button id="build" type="button" class="button">Build</button>
@@ -105,37 +110,28 @@
     <!-- The published page has no engine behind it (ADR 0023). What a phone can launch from there is a
          workflow: each link opens GitHub's own "Run workflow" form, and the run does the rest on the runners. -->
     <div id="run-hosted" hidden>
-      <div class="controls">
-        <label for="token">GitHub token
-          <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
-        </label>
-        <button id="token-keep" type="button" class="button primary">Keep it</button>
-        <button id="token-forget" type="button" class="button ghost danger" hidden>Forget it</button>
-        <span id="token-state" class="hint"></span>
-      </div>
-      <p class="hint">Without a token this page reads and cannot save. With one, a save is a commit on the
-        <code>studio/content</code> branch and a pull request, so CI checks the content the page cannot.
-        Use a <strong>fine-grained</strong> token for this repository only, with <em>Contents</em> and
-        <em>Pull requests</em> write, and give it an expiry: it is kept in this browser and sent to
-        <code>api.github.com</code> and nowhere else, and it is revocable in one click on GitHub.</p>
-      <p class="hint">This is the published page, so there is no engine to play a match here. These run on GitHub Actions instead: each opens the workflow's <em>Run workflow</em> form, and the result lands in the run summary, or on a branch with a link to open it as a pull request.</p>
+      <p class="hint">This is the published page, so there is no engine to play a match here. These run on GitHub
+        Actions instead, against the content on the <code>studio/content</code> branch &mdash; the content this
+        page is showing, including whatever you have just saved. Each starts the run and opens it, so you watch
+        the run itself rather than a form. Results land in the run summary, or on a branch with a link to open
+        it as a pull request.</p>
       <ul class="launch">
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/tune.yml" target="_blank" rel="noopener">
+        <li><button type="button" class="launch-go" data-workflow="tune.yml">
           <span class="name">Tune the catalogue</span>
           <span class="what">One tuning pass over the balance knobs, pushed as a branch with a new benchmark digest and a link to open it as a pull request.</span>
-          <svg><use href="#i-out"/></svg></a></li>
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/evaluate.yml" target="_blank" rel="noopener">
+          <svg><use href="#i-out"/></svg></button></li>
+        <li><button type="button" class="launch-go" data-workflow="evaluate.yml">
           <span class="name">Evaluate</span>
           <span class="what">Two agents over the benchmark seeds; the numbers land in the run summary.</span>
-          <svg><use href="#i-out"/></svg></a></li>
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/search.yml" target="_blank" rel="noopener">
+          <svg><use href="#i-out"/></svg></button></li>
+        <li><button type="button" class="launch-go" data-workflow="search.yml">
           <span class="name">Search the agent weights</span>
           <span class="what">A cross-entropy search of the heuristic agent's eight weights, reported and not applied.</span>
-          <svg><use href="#i-out"/></svg></a></li>
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/iterate.yml" target="_blank" rel="noopener">
+          <svg><use href="#i-out"/></svg></button></li>
+        <li><button type="button" class="launch-go" data-workflow="iterate.yml">
           <span class="name">Learning loop</span>
           <span class="what">One turn of the loop: a dataset, two trained policies, and their evaluation as an artifact.</span>
-          <svg><use href="#i-out"/></svg></a></li>
+          <svg><use href="#i-out"/></svg></button></li>
       </ul>
     </div>
   </section>
@@ -151,6 +147,29 @@
     </div>
     <p class="hint">Two runs on the same seeds and the same agents make the delta about the content; the older one is the before.</p>
     <div id="runs-body" class="scroll"></div>
+  </section>
+
+  <section id="access" class="panel" hidden aria-labelledby="access-title">
+    <div class="panel-head">
+      <h2 id="access-title">Saving from this page</h2>
+      <button type="button" class="close" data-close="access" aria-label="Close"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div class="scroll">
+      <div class="controls">
+        <label for="token">GitHub token
+          <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_...">
+        </label>
+        <button id="token-keep" type="button" class="button primary">Keep it</button>
+        <button id="token-forget" type="button" class="button ghost danger" hidden>Forget it</button>
+        <span id="token-state" class="hint"></span>
+      </div>
+      <p class="hint">Without a token this page reads and cannot save. With one, a save is a commit on the
+        <code>studio/content</code> branch and a pull request, so CI checks the content the page cannot.</p>
+      <p class="hint">Use a <strong>fine-grained</strong> token for this repository only, with <em>Contents</em>,
+        <em>Pull requests</em> and <em>Actions</em> write &mdash; Actions is what lets this page start a
+        workflow instead of sending you to a form. Give it an expiry: it is kept in this browser and sent to
+        <code>api.github.com</code> and nowhere else, and it is revocable in one click on GitHub.</p>
+    </div>
   </section>
 
   <section id="audit" class="panel" hidden aria-labelledby="audit-title">

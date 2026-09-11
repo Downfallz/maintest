@@ -10,7 +10,18 @@ import { githubBackend, repositoryFromLocation, storeToken, storedToken, treeEnt
 const REPOSITORY = { owner: 'downfallz', repo: 'maintest' };
 
 /** Answers GitHub's shapes in the order the write path asks for them, and records every request. */
-function github({ branchExists = true, openPulls = [], onBranch = {} } = {}) {
+function github({
+  branchExists = true,
+  openPulls = [],
+  onBranch = {},
+  existingRuns = [{ id: 10, html_url: 'https://github.com/run/10' }],
+  appears = { id: 11, html_url: 'https://github.com/run/11' },
+  appearsAfter = 0,
+} = {}) {
+  // A dispatched run does not exist the instant the dispatch is accepted, which is the whole reason the backend
+  // looks more than once. The stub says so: nothing new until `appearsAfter` looks have gone by.
+  let dispatched = false;
+  let looks = 0;
   const calls = [];
   const answer = (url, method) => {
     // Only the studio branch can be missing; the default branch always answers, or nothing could be based on it.
@@ -37,6 +48,18 @@ function github({ branchExists = true, openPulls = [], onBranch = {} } = {}) {
     if (/\/git\/trees$/.test(url)) return { status: 201, payload: { sha: 'newtree' } };
     if (/\/git\/commits$/.test(url)) return { status: 201, payload: { sha: 'c0ffee1' } };
     if (/\/git\/refs\/heads\//.test(url) && method === 'PATCH') return { status: 200, payload: {} };
+    if (/\/actions\/workflows\/[^/]+\/dispatches$/.test(url)) {
+      dispatched = true;
+      looks = 0;
+      return { status: 204, payload: null };
+    }
+
+    if (/\/actions\/workflows\/[^/]+\/runs\?/.test(url)) {
+      if (dispatched) looks += 1;
+      const visible = dispatched && appears && looks > appearsAfter ? [appears, ...existingRuns] : existingRuns;
+      return { status: 200, payload: { workflow_runs: visible.toSorted((left, right) => right.id - left.id).slice(0, 1) } };
+    }
+
     if (/\/pulls\?/.test(url)) return { status: 200, payload: openPulls };
     if (/\/pulls$/.test(url) && method === 'POST') return { status: 201, payload: { number: 51, html_url: 'https://github.com/downfallz/maintest/pull/51' } };
     return { status: 500, payload: { message: `nothing stubbed for ${method} ${url}` } };
@@ -178,11 +201,69 @@ test("GitHub's own refusal is what the page shows, with its errors as the lines 
   assert.equal(stub.calls.length, 0);
 });
 
+test('launching a workflow runs it on the studio branch, not on the default one', async () => {
+  const stub = github();
+
+  const run = await backend(stub).dispatch('tune.yml', { wait: async () => {} });
+
+  const sent = stub.calls.find(call => /\/dispatches$/.test(call.url));
+  // The point of running it here at all: the content on the branch is the content this page is showing.
+  assert.deepEqual(sent.body, { ref: 'studio/content' });
+  assert.match(sent.url, /\/actions\/workflows\/tune\.yml\/dispatches$/);
+  assert.equal(run.branch, 'studio/content');
+});
+
+test('the run it answers with is the one it started, not the one that was already there', async () => {
+  // The dispatch endpoint answers 204 with no body, so the run has to be found -- and ids increase, which is
+  // what tells a new run from the last one without trusting two clocks.
+  const stub = github();
+
+  const run = await backend(stub).dispatch('evaluate.yml', { wait: async () => {} });
+
+  assert.deepEqual(run, { id: 11, url: 'https://github.com/run/11', branch: 'studio/content' });
+});
+
+test('a run that takes a moment to appear is waited for rather than called missing', async () => {
+  const stub = github({ appearsAfter: 3 });
+  let waited = 0;
+
+  const run = await backend(stub).dispatch('search.yml', { wait: async () => { waited += 1; } });
+
+  assert.equal(run.id, 11);
+  assert.ok(waited >= 3, 'it asked again instead of answering on the first look');
+});
+
+test('a dispatch whose run never appears says nothing rather than claiming a failure', async () => {
+  const stub = github({ appears: null });
+
+  const run = await backend(stub).dispatch('iterate.yml', { attempts: 2, wait: async () => {} });
+
+  // It was dispatched; only finding it timed out, and those are not the same thing to tell someone -- a caller
+  // cannot tell a null from a refusal, so this answers with the dispatch it made and says the run is pending.
+  assert.deepEqual(run, { id: null, url: null, branch: 'studio/content', pending: true });
+  assert.equal(stub.calls.filter(call => /\/dispatches$/.test(call.url)).length, 1);
+});
+
+test('there is nothing to run against until something has been saved', async () => {
+  const stub = github({ branchExists: false });
+
+  await assert.rejects(
+    () => backend(stub).dispatch('tune.yml', { wait: async () => {} }),
+    error => {
+      assert.match(error.message, /no studio\/content branch yet/);
+      assert.match(error.problems[0], /Save a change from this page first/);
+      return true;
+    });
+
+  // Running the default branch instead would tune content that is not the content on screen.
+  assert.equal(stub.calls.filter(call => /\/dispatches$/.test(call.url)).length, 0);
+});
+
 test('building and playing still refuse, and say where the engine is', async () => {
   const page = backend(github());
 
   await assert.rejects(() => page.build(), /CI builds the content/);
-  await assert.rejects(() => page.play({}), /Dispatch a workflow/);
+  await assert.rejects(() => page.play({}), /Launch one of the workflows/);
 });
 
 test('reading stays on the published files while the branch has nothing of its own', async () => {

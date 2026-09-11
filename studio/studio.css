@@ -118,7 +118,10 @@ header h1 span { color: var(--muted); font-weight: 500; }
    cannot rely on; the browser's fieldset chrome (border, margins, a minimum width) is undone here. */
 .toolbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  /* Columns follow the buttons rather than being counted here: the published page has one more than the local
+     one, and a hidden button is `display: none`, so it takes no track. A fixed count sent the extra button to a
+     second row, outside the bar's fixed height, where it was invisible on a phone and fine on a desk. */
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
   height: calc(var(--bar) + var(--safe)); padding: 0 0 var(--safe); margin: 0; border: 0; min-inline-size: 0;
   background: var(--card); box-shadow: var(--shadow-bar);
 }
@@ -126,6 +129,8 @@ header h1 span { color: var(--muted); font-weight: 500; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   border: none; background: none; color: var(--muted);
   font: inherit; font-size: 11px; font-weight: 500; cursor: pointer;
+  /* Two-word labels ("Read only") must stay on the line the icon sits above, not wrap out of the bar. */
+  white-space: nowrap;
 }
 .tool svg { width: 22px; height: 22px; }
 .tool:hover { color: var(--ink); }
@@ -146,6 +151,8 @@ header h1 span { color: var(--muted); font-weight: 500; }
 .banner.ok { border-left-color: var(--ok); background: var(--ok-wash); }
 .banner-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; padding-top: 2px; }
 .banner ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+/* On its own line under the message, and a tap target rather than a word to aim at. */
+.banner-action { display: inline-flex; margin-top: 10px; text-decoration: none; }
 .banner .close { width: 32px; height: 32px; margin: -4px 0; }
 .banner.error .close { color: var(--bad); }
 .banner.ok .close { color: var(--ok); }
@@ -510,20 +517,21 @@ details[open] summary { margin-bottom: 6px; }
 
 /* The launch list of the published page: one tap, one workflow form. */
 .launch { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.launch a {
+.launch .launch-go { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+.launch a, .launch .launch-go {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px;
   padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--card); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-1);
 }
-.launch a:hover { border-color: var(--accent); box-shadow: var(--shadow-2); }
-.launch a:active { transform: translateY(1px); }
+.launch a:hover, .launch .launch-go:hover { border-color: var(--accent); box-shadow: var(--shadow-2); }
+.launch a:active, .launch .launch-go:active { transform: translateY(1px); }
 .launch .name { font-weight: 600; font-size: 15px; }
 .launch .what { grid-column: 1; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
 .launch svg { grid-row: 1 / span 2; grid-column: 2; color: var(--muted); }
 
 /* ---------- motion ---------- */
 
-.button, .mini, .tool, .tab, .item, .chip, .node, .node-pick, .link, .close, .back, .launch a {
+.button, .mini, .tool, .tab, .item, .chip, .node, .node-pick, .link, .close, .back, .launch a, .launch .launch-go {
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 120ms ease, opacity 150ms ease;
 }
 @keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }

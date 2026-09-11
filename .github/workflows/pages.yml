@@ -4,7 +4,8 @@ name: Publish the studio
 # when it was published -- the catalogue, the audit and the built-in weights, written by `studio --export`.
 # The page reads those instead of an API, so browsing the content needs no engine, no token and no machine on.
 #
-# It cannot write yet. Every operation that needs the engine refuses in the page and says where to go instead.
+# With a token it also writes, through the Git Trees API (ADR 0023): a save is a commit on studio/content and
+# a pull request. Without one it reads, and every operation that needs the engine refuses and says where to go.
 on:
   push:
     branches: [main]
@@ -67,11 +68,29 @@ jobs:
       # The page is the files it asks for, flat, because index.html names them relatively and so do the
       # modules: the site works under whatever path Pages serves it from. A module missing here is a page that
       # fails at its import, which is why a test asserts the served set against the directory.
+      # Every reference between the page's files carries the commit that published them. Pages sends no
+      # cache headers we control, so a phone will happily keep yesterday's studio.js beside today's
+      # index.html -- and new markup driven by old script is a page that looks right and does nothing. The
+      # query changes with every deployment, so the browser has to fetch them together or not at all. The
+      # data the page fetches at runtime is stamped the same way, through the constant backend.js appends:
+      # a deployment that only moved data/ changes no other URL, and would otherwise be invisible.
       - name: Assemble the page
         run: |
           mkdir -p "$SITE"
           cp studio/index.html studio/studio.css studio/studio.js studio/backend.js studio/github.js studio/balance.js "$SITE/"
           cp viewer/viewer.css "$SITE/"
+          sed -i \
+            -e "s|href=\"viewer.css\"|href=\"viewer.css?v=$GITHUB_SHA\"|" \
+            -e "s|href=\"studio.css\"|href=\"studio.css?v=$GITHUB_SHA\"|" \
+            -e "s|src=\"studio.js\"|src=\"studio.js?v=$GITHUB_SHA\"|" \
+            "$SITE/index.html"
+          sed -i "s|'./backend.js'|'./backend.js?v=$GITHUB_SHA'|; s|'./github.js'|'./github.js?v=$GITHUB_SHA'|; s|'./balance.js'|'./balance.js?v=$GITHUB_SHA'|" \
+            "$SITE/studio.js" "$SITE/backend.js"
+          sed -i "s|const DEPLOYMENT = '';|const DEPLOYMENT = '?v=$GITHUB_SHA';|" "$SITE/backend.js"
+          grep -q "studio.js?v=$GITHUB_SHA" "$SITE/index.html"
+          grep -q "github.js?v=$GITHUB_SHA" "$SITE/backend.js"
+          grep -q "balance.js?v=$GITHUB_SHA" "$SITE/studio.js"
+          grep -q "const DEPLOYMENT = '?v=$GITHUB_SHA';" "$SITE/backend.js"
 
       # What the read-only routes answer, as files. The content is built first so the catalogue carries a
       # content hash rather than the problems of an unbuilt directory.
