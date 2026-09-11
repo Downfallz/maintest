@@ -64,12 +64,13 @@ jobs:
           dotnet restore
           dotnet build --no-restore --configuration Release
 
-      # The page is the four files it asks for, flat, because index.html names them relatively and so does the
-      # backend: the site works under whatever path Pages serves it from.
+      # The page is the files it asks for, flat, because index.html names them relatively and so do the
+      # modules: the site works under whatever path Pages serves it from. A module missing here is a page that
+      # fails at its import, which is why a test asserts the served set against the directory.
       - name: Assemble the page
         run: |
           mkdir -p "$SITE"
-          cp studio/index.html studio/studio.css studio/studio.js studio/backend.js "$SITE/"
+          cp studio/index.html studio/studio.css studio/studio.js studio/backend.js studio/github.js "$SITE/"
           cp viewer/viewer.css "$SITE/"
 
       # What the read-only routes answer, as files. The content is built first so the catalogue carries a

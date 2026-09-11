@@ -20,6 +20,7 @@ public sealed class StudioFilesTests
     [InlineData("/studio.js", "import { backendForThisPage } from './backend.js';")]
     [InlineData("/backend.js", "/api/catalogue")]
     [InlineData("/backend.js", "export function hostedBackend(")]
+    [InlineData("/github.js", "export function githubBackend(")]
     [InlineData("/studio.css", ".banner")]
     [InlineData("/viewer.css", "--ink")]
     public void Every_file_the_page_asks_for_is_served(string path, string expected)
@@ -28,6 +29,28 @@ public sealed class StudioFilesTests
 
         response.Status.ShouldBe(200);
         System.Text.Encoding.UTF8.GetString(response.Body).ShouldContain(expected);
+    }
+
+    /// <summary>
+    /// Every module beside the page is routed, and every module the page publishes is copied by the workflow. A
+    /// list with a row per file cannot notice a new one, and a module that is not served is a page that dies at
+    /// its first import -- silently, because nothing else asks for it.
+    /// </summary>
+    [Fact]
+    public void Every_module_in_the_studio_directory_is_both_served_and_published()
+    {
+        var modules = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "studio"), "*.js")
+            .Select(Path.GetFileName)
+            .Where(name => !name!.EndsWith(".test.js", StringComparison.Ordinal))
+            .ToList();
+        var workflow = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "pages.yml"));
+
+        modules.ShouldNotBeEmpty();
+        foreach (var module in modules)
+        {
+            Files.Get($"/{module}").Status.ShouldBe(200, $"{module} sits beside the page but the host does not serve it");
+            workflow.ShouldContain($"studio/{module}", Case.Sensitive, $"{module} is served but pages.yml never copies it");
+        }
     }
 
     /// <summary>The browser asks for an icon the studio does not ship; a 404 would be a console error on every load.</summary>
