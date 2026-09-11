@@ -181,7 +181,7 @@ function adopt(result) {
 
 // ---------- the banner ----------
 
-function banner(message, kind = 'info', problems = []) {
+function banner(message, kind = 'info', problems = [], action = null) {
   const node = $('banner');
   node.hidden = false;
   node.className = kind === 'error' || kind === 'ok' ? `banner ${kind}` : 'banner';
@@ -190,6 +190,19 @@ function banner(message, kind = 'info', problems = []) {
   const text = element('div', { className: 'banner-text' }, [element('div', { textContent: message })]);
   if (problems.length) {
     text.append(element('ul', {}, problems.map(problem => element('li', { textContent: problem }))));
+  }
+
+  // Somewhere to go, when the banner is about something that happened elsewhere. A real button rather than a
+  // bare link: on a phone this is the one thing in the banner meant to be hit with a thumb. The href is ours --
+  // GitHub's own url for a pull request -- never text that came back from somewhere.
+  if (action) {
+    text.append(element('a', {
+      className: 'button banner-action',
+      href: action.href,
+      textContent: action.label,
+      target: '_blank',
+      rel: 'noopener',
+    }));
   }
   const dismiss = element('button', { type: 'button', className: 'close', ariaLabel: 'Dismiss' }, [icon('close')]);
   dismiss.addEventListener('click', clearBanner);
@@ -1117,7 +1130,8 @@ function reportSave(result, message) {
   }
 
   banner(`${message} Committed ${result.commit.slice(0, 7)} on ${result.branch}.`, 'ok',
-    [`CI validates it on pull request #${result.pullRequest.number} — this page cannot: ${result.pullRequest.url}`]);
+    ['CI validates it, because this page cannot.'],
+    { href: result.pullRequest.url, label: `Open pull request #${result.pullRequest.number}` });
 }
 
 async function saveAsNextVersion() {

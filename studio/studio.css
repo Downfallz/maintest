@@ -151,6 +151,8 @@ header h1 span { color: var(--muted); font-weight: 500; }
 .banner.ok { border-left-color: var(--ok); background: var(--ok-wash); }
 .banner-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; padding-top: 2px; }
 .banner ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+/* On its own line under the message, and a tap target rather than a word to aim at. */
+.banner-action { display: inline-flex; margin-top: 10px; text-decoration: none; }
 .banner .close { width: 32px; height: 32px; margin: -4px 0; }
 .banner.error .close { color: var(--bad); }
 .banner.ok .close { color: var(--ok); }
