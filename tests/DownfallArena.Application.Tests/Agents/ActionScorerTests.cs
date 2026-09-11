@@ -141,8 +141,12 @@ public sealed class ActionScorerTests
     /// </summary>
     [Theory]
     [MemberData(nameof(LastingEffects))]
-    public void A_lasting_effect_is_worth_more_the_longer_it_lasts(string name, LastingEffect brief, LastingEffect long_)
+    public void A_lasting_effect_is_worth_more_the_longer_it_lasts(string name)
     {
+        // The theory takes the effect's name and looks the pair up here, rather than carrying the effects
+        // themselves: xUnit serializes theory data to enumerate rows, and a LastingEffect does not serialize.
+        var (brief, long_) = Durations.First(pair => pair.Brief.GetType().Name == name);
+
         // Hurt, because a heal over time on a target at full health is worth nothing however long it runs --
         // correctly, and it would make this ask the wrong question of Regeneration.
         var board = Board(enemyHealth: 20);
@@ -171,13 +175,13 @@ public sealed class ActionScorerTests
         declared.ShouldBeSubsetOf(Durations.Select(pair => pair.Brief.GetType().Name));
     }
 
-    /// <summary>Each lasting effect twice: one round, then two. Amounts are equal so only the duration moves.</summary>
-    public static TheoryData<string, LastingEffect, LastingEffect> LastingEffects()
+    /// <summary>The name of each lasting effect the sweep covers; the pair itself is looked up by the test.</summary>
+    public static TheoryData<string> LastingEffects()
     {
-        var data = new TheoryData<string, LastingEffect, LastingEffect>();
-        foreach (var (brief, long_) in Durations)
+        var data = new TheoryData<string>();
+        foreach (var (brief, _) in Durations)
         {
-            data.Add(brief.GetType().Name, brief, long_);
+            data.Add(brief.GetType().Name);
         }
 
         return data;

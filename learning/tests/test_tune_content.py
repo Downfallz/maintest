@@ -964,3 +964,18 @@ def test_a_paired_move_that_breaks_a_constraint_is_never_played(tmp_path: Path) 
     )
 
     assert not result.improved
+
+
+def test_a_pair_is_not_built_when_the_run_may_only_change_one_knob(tmp_path: Path) -> None:
+    """A two-knob proposal is over a budget of one, and the budget is the caller's, not the opening's."""
+    knobs, content = combo_pair(tmp_path)
+
+    result = tune_content(
+        ThresholdEvaluator(),
+        knobs,
+        content,
+        TuneOptions(iterations=1, neighbours=1, seed=0, max_changes=1),
+    )
+
+    assert not result.improved
+    assert all(len(candidate.moves) <= 1 for candidate in result.candidates)

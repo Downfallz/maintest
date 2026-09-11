@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
+from operator import itemgetter
 from pathlib import Path
 
 KNOBS_FILE = Path("data/balance/knobs.json")
@@ -673,13 +674,13 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
         }
         if not rivals:
             continue
-        best = max(rivals, key=lambda other: rivals[other])
+        best, bar = max(rivals.items(), key=itemgetter(1))
         ceiling = _value_ceiling(spell, document, prices)
-        if ceiling < rivals[best]:
+        if ceiling < bar:
             reports.append(
                 f"{alias} reaches at most {ceiling:.2f} at the top of its own bounds, and {best} carries "
-                f"{rivals[best]:.2f} today at tier {content.tiers.get(best, '?')}: no move inside these "
-                "bounds makes it a choice, so one of the two spells needs different bounds."
+                f"{bar:.2f} today at tier {content.tiers.get(best, '?')}: no move inside these bounds makes "
+                "it a choice, so one of the two spells needs different bounds."
             )
     return reports
 

@@ -557,7 +557,9 @@ def boxed(alias: str, tier: int, document: dict, *knobs: dict) -> tuple[Content,
 
 def test_a_critical_chance_prices_a_hit_the_way_the_resolution_rules_roll_it() -> None:
     """Expected damage is amount x (1 + chance), because a critical doubles and nothing else does."""
-    assert cast_value({"criticalChance": 0.5, "effects": [{"kind": "Damage", "amount": 4}]}, WEIGHTS) == 6.0
+    hit = {"criticalChance": 0.5, "effects": [{"kind": "Damage", "amount": 4}]}
+
+    assert cast_value(hit, WEIGHTS) == pytest.approx(6.0)
 
 
 def test_a_critical_chance_does_not_reach_a_lasting_effect() -> None:
@@ -693,4 +695,4 @@ def test_a_damage_weight_of_zero_prices_every_hit_at_nothing() -> None:
     """The damage weight is read like the other eight; it only looks like a unit because it is 1.0 today."""
     hit = {"criticalChance": 0.5, "effects": [{"kind": "Damage", "amount": 4}]}
 
-    assert cast_value(hit, WEIGHTS | {"damage": 0.0}) == 0.0
+    assert cast_value(hit, WEIGHTS | {"damage": 0.0}) == pytest.approx(0.0)

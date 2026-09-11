@@ -68,6 +68,9 @@ ENOUGH_SIDES = 8
 #: absorbed deals zero, and the ratio it belongs in has no value there; this floors it instead.
 MIN_DAMAGE_PER_CAST = 0.5
 
+#: How many knobs a paired opening move touches. A proposal over the run's --max-changes is not built.
+PAIR_SIZE = 2
+
 #: The largest tier damage spread reported. Past it the reading has said what it has to say — one spell of
 #: this tier hits nothing like the others — and a bigger number would only drown every other target.
 MOST_LOPSIDED = 5.0
@@ -566,9 +569,7 @@ def tune_content(
     history: list[Candidate] = []
     favour: set[str] = set()
     if options.sweep:
-        swept = _sweep(evaluator, knobs, content)
-        if options.pairs:
-            swept = [*swept, *_pairs(evaluator, knobs, content, swept, first.metrics)]
+        swept = _opening(evaluator, knobs, content, first, options)
         history.extend(swept)
         favour = {
             move.knob.key
@@ -623,54 +624,83 @@ def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[
     return swept
 
 
-def _pairs(
+def _opening(
     evaluator: ContentEvaluator,
     knobs: Knobs,
     content: Content,
-    swept: Sequence[Candidate],
-    baseline: Mapping[str, Mapping[str, float]],
+    first: Candidate,
+    options: TuneOptions,
 ) -> list[Candidate]:
-    """Two knobs of one spell moved together, for the spells no single step could move at all.
+    """The sweep, and the paired moves it adds for the spells it could not move."""
+    swept = _sweep(evaluator, knobs, content)
+    if not options.pairs or options.max_changes < PAIR_SIZE:
+        return swept
+    return [*swept, *_pairs(evaluator, knobs, content, _unmoved(swept, first.metrics))]
 
-    The sweep is the difference between unlikely and impossible for one knob; this is the same for a pair.
-    `poison_slash` is the case it was written for: from a bleed of 1 per round over 2 rounds, raising the
-    amount alone reaches 59 landed casts of about 5300 and raising the duration alone reaches 17, while
-    raising both together reaches 5155 of about 8900 -- the largest move anyone has found against that
-    catalogue's monopoly. A climb that only ever moves one knob has to accept the flat step in between, on a
-    gain of 0.005, to find the path at all.
 
-    Tried only on spells where *every* single step was inert, so a catalogue that is already responding pays
-    nothing for this, and only the two same-direction combinations of each pair: a pair pulling against
-    itself lands within a step of the single moves the sweep already played.
-    """
+def _unmoved(swept: Sequence[Candidate], baseline: Mapping[str, Mapping[str, float]]) -> list[str]:
+    """The spells every single step of the sweep left every measurement unchanged on."""
     responded: dict[str, bool] = {}
     for candidate in swept:
         alive = not _same(candidate.metrics, baseline)
         for move in candidate.moves:
             responded[move.knob.spell] = responded.get(move.knob.spell, False) or alive
+    return sorted(name for name, alive in responded.items() if not alive)
 
+
+def _pairs(
+    evaluator: ContentEvaluator, knobs: Knobs, content: Content, spells: Sequence[str]
+) -> list[Candidate]:
+    """Two knobs of one spell moved together, for the spells no single step could move at all.
+
+    The sweep is the difference between unlikely and impossible for one knob; this is the same for a pair.
+    `poison_slash` is the case it was written for: on the studio/content branch, from a bleed of 1 per round
+    over 2 rounds, raising the amount alone reaches 59 landed casts of about 5300 and raising the duration
+    alone reaches 17, while raising both together reaches 5155 of about 8900 -- the largest move anyone has
+    found against that catalogue's monopoly. A climb that only ever moves one knob has to accept the flat
+    step in between, on a gain of 0.005, to find the path at all.
+
+    A pair is one step of each knob and nothing more, so it bridges a single flat step and not a plateau.
+    Only the two same-direction combinations are built: a pair pulling against itself lands within a step of
+    the single moves the sweep already played. And a run whose ``--max-changes`` is below two does not get
+    here at all -- a two-knob proposal is over that budget, and the budget is the caller's to set.
+    """
     by_spell: dict[str, list[Knob]] = {}
     for knob in playable(knobs, content):
         by_spell.setdefault(knob.spell, []).append(knob)
 
     played: set[tuple[tuple[str, float], ...]] = set()
     paired: list[Candidate] = []
-    for spell in sorted(name for name, alive in responded.items() if not alive):
-        for first, second in combinations(by_spell.get(spell, []), 2):
-            for direction in (1, -1):
-                stepped = _nudged(first, (), content, direction)
-                moves = None if stepped is None else _nudged(second, stepped, content, direction)
-                if not moves or len(moves) < 2:
-                    continue
-                spells = apply_moves(content.spells, moves)
-                if violations(content, spells, knobs):
-                    continue
-                key = tuple(sorted(_values(moves).items()))
-                if key in played:
-                    continue
-                played.add(key)
-                paired.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
+    for spell in spells:
+        for pair in combinations(by_spell.get(spell, []), PAIR_SIZE):
+            paired.extend(_paired(evaluator, knobs, content, pair, played))
     return paired
+
+
+def _paired(
+    evaluator: ContentEvaluator,
+    knobs: Knobs,
+    content: Content,
+    pair: Sequence[Knob],
+    played: set[tuple[tuple[str, float], ...]],
+) -> list[Candidate]:
+    """One pair of knobs, stepped both ways. Illegal, pinned and repeated draws cost no evaluation."""
+    first, second = pair
+    candidates: list[Candidate] = []
+    for direction in (1, -1):
+        stepped = _nudged(first, (), content, direction)
+        moves = None if stepped is None else _nudged(second, stepped, content, direction)
+        if not moves or len(moves) < PAIR_SIZE:
+            continue
+        key = tuple(sorted(_values(moves).items()))
+        if key in played:
+            continue
+        spells = apply_moves(content.spells, moves)
+        if violations(content, spells, knobs):
+            continue
+        played.add(key)
+        candidates.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
+    return candidates
 
 
 def _candidate(
