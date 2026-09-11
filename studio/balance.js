@@ -526,12 +526,55 @@ export function entryDocument(entry) {
 export function entryProblems(entry, document) {
   const summary = summarise(entry, document);
   return [
-    ...summary.problems.map(problem => problem.message),
-    ...summary.knobs.flatMap(knob => knob.problems.map(problem => `${knob.path || '(no pointer)'}: ${problem.message}`)),
+    ...summary.problems.map(problem => ({ ...problem, path: null, line: problem.message })),
+    ...summary.knobs.flatMap(knob => knob.problems.map(problem => ({
+      ...problem,
+      path: knob.path || null,
+      line: `${knob.path || '(no pointer)'}: ${problem.message}`,
+    }))),
   ];
 }
+
+/** The codes that mean a pointer stopped addressing a number, which is what a new version of a spell breaks. */
+export const STALE_POINTER = Object.freeze(['missing', 'notANumber']);
 
 /** The starting-kit aliases a constraint names, which a deletion has to be checked against (ADR 0025). */
 export function kitAliases(balance) {
   return constraintsOf(balance).flatMap(constraint => constraint.spells);
+}
+
+/**
+ * Every pointer into a document that addresses a number, in the document's own order.
+ *
+ * It is the set a knob may hold, so it is built here rather than in the page and against the same idea of
+ * "addresses a number" that `readPointer` reads by: a pointer this offers is a pointer that reads, and the
+ * tests hold the two to each other. A pointer that reads can still be refused for what it *means* -- a
+ * critical chance on a spell that deals no damage is the one the file documents -- and that is
+ * `entryProblems`' to say, not this one's.
+ *
+ * Read from the draft rather than from the file, so adding an effect offers its numbers as soon as they are
+ * typed.
+ */
+export function pointersOf(node, prefix = '') {
+  if (Array.isArray(node)) return node.flatMap((item, index) => pointersOf(item, `${prefix}/${index}`));
+  if (isRecord(node)) return Object.entries(node).flatMap(([key, value]) => pointersOf(value, `${prefix}/${key}`));
+  return isNumber(node) && prefix ? [prefix] : [];
+}
+
+/** The first number of a document no knob of this entry claims yet, or nothing when every one is taken. */
+export function unclaimedPointer(entry, document) {
+  const taken = new Set(list(entry?.knobs).map(knob => text(knob?.path)));
+  return pointersOf(document).find(candidate => !taken.has(candidate)) ?? null;
+}
+
+/**
+ * A knob on the first number no other knob claims, pinned where the content already sits. The band is the
+ * author's to widen: a bound this page invented would be a decision nobody made, sitting in the file as though
+ * someone had (ADR 0021), and a band of no width says plainly that nothing may move yet.
+ */
+export function newKnob(entry, document) {
+  const path = unclaimedPointer(entry, document) ?? '';
+  const found = readPointer(document, path);
+  const value = found.ok ? found.value : 0;
+  return { path, minimum: value, maximum: value, step: Number.isInteger(value) ? 1 : 0.01 };
 }

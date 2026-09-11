@@ -9,7 +9,7 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, objectiveOf, readBalance, readPointer, readings, seedEntry, summarise, survey, withEntry } from './balance.js';
+import { STALE_POINTER, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
 let backend = backendForThisPage();
@@ -1398,12 +1398,21 @@ function knobList(dirty) {
   const list = element('div', { className: 'knobs' });
   const redraw = () => {
     const knobs = state.entry.knobs;
+    // Every block's reading, refreshable without rebuilding the block: whether a pointer is a duplicate is a
+    // question about the other knobs, so changing one pointer changes what two readings say, and neither block
+    // may be torn down to say it.
+    const readingsOf = [];
+    const free = unclaimedPointer(state.entry, state.draft);
     list.replaceChildren(
       ...(knobs.length
-        ? [...knobs.keys()].map(index => knobBlock(index, dirty, redraw))
+        ? [...knobs.keys()].map(index => knobBlock(index, dirty, redraw, readingsOf))
         : [element('p', { className: 'muted', textContent: 'No knob: every number of this spell is its identity, and a tuning pass may move none of it.' })]),
       element('div', { className: 'row' }, [
-        miniButton('Add a knob', () => { knobs.push(newKnob()); dirty(); redraw(); }),
+        // Offered only while there is a number left to claim. A knob with no pointer refuses every save until
+        // it is removed, and the picker cannot be used to fix it: with nothing selected the browser shows the
+        // first option, so choosing what is already on screen fires no change at all.
+        free ? miniButton('Add a knob', () => { knobs.push(newKnob(state.entry, state.draft)); dirty(); redraw(); }) : null,
+        free ? null : element('span', { className: 'muted', textContent: 'Every number this spell has already has a knob.' }),
       ]),
     );
   };
@@ -1418,7 +1427,7 @@ function knobList(dirty) {
  * the controls around it would take the caret with them. A new pointer redraws the list instead: whether a
  * pointer is a duplicate is a question about the other knobs, and the answer is drawn on the second of the two.
  */
-function knobBlock(index, dirty, redrawList) {
+function knobBlock(index, dirty, redrawList, readingsOf) {
   const knob = state.entry.knobs[index];
   const block = element('div', { className: 'knob-block' });
   let row = knobRow(readings(state.entry, state.draft)[index]);
@@ -1428,17 +1437,39 @@ function knobBlock(index, dirty, redrawList) {
     row = next;
   };
 
-  const grain = knobGrain(knob);
-  const bound = key => numberBox(knob, key, { step: grain, dirty, onChange: redrawReading });
+  readingsOf.push(redrawReading);
+  const boxes = [];
+  const bound = key => {
+    const box = numberBox(knob, key, { step: knobGrain(knob), dirty, onChange: redrawReading });
+    boxes.push(box);
+    return box;
+  };
+
+  // A pointer change moves this block's grain and every block's reading, and rebuilds nothing: the select is
+  // still dispatching, and a browser fires `change` on each arrow key over a closed one, so replacing the list
+  // here drops the focus on the first keystroke of a keyboard selection.
+  const repoint = () => {
+    const grain = knobGrain(knob);
+    for (const box of boxes) {
+      box.step = grain;
+      box.inputMode = grain < 1 ? 'decimal' : 'numeric';
+    }
+
+    for (const refresh of readingsOf) refresh();
+  };
+
   block.append(row, element('div', { className: 'row' }, [
-    // Every pointer this spell has a number at, which is every pointer a knob may hold: one that addresses
-    // anything else is refused before the save, so there is nothing else worth offering. A pointer the entry
-    // already holds and the spell no longer has stays in the list, marked unknown, rather than being dropped.
-    picker(knob, 'path', pointersOf(state.draft), { dirty, onChange: redrawList }),
+    // Every pointer this spell has a number at. One that addresses anything else could not be read, so there is
+    // nothing else worth offering -- though a pointer that reads fine can still be refused for what it means,
+    // a critical chance on a spell that deals no damage being the one the file already documents. A pointer the
+    // entry holds and the spell no longer has stays in the list, marked unknown, rather than being dropped.
+    picker(knob, 'path', pointersOf(state.draft), { dirty, onChange: repoint }),
     element('span', { className: 'muted', textContent: 'min' }), bound('minimum'),
     element('span', { className: 'muted', textContent: 'max' }), bound('maximum'),
     element('span', { className: 'muted', textContent: 'step' }), bound('step'),
     element('span', { className: 'grow' }),
+    // The one control that may rebuild the list: a click carries no caret, and a removed knob changes the
+    // structure rather than a reading.
     miniButton('Remove', () => { state.entry.knobs.splice(index, 1); dirty(); redrawList(); }, 'mini remove'),
   ]));
   return block;
@@ -1451,29 +1482,6 @@ function knobBlock(index, dirty, redrawList) {
  */
 function knobGrain(knob) {
   return [knob.minimum, knob.maximum, knob.step].every(Number.isInteger) ? 1 : 0.01;
-}
-
-/**
- * Every pointer into a document that addresses a number, in the document's own order. It is read from the draft
- * rather than from the file, so adding an effect offers its numbers as soon as they are typed.
- */
-function pointersOf(node, prefix = '') {
-  if (Array.isArray(node)) return node.flatMap((item, index) => pointersOf(item, `${prefix}/${index}`));
-  if (node && typeof node === 'object') return Object.entries(node).flatMap(([key, value]) => pointersOf(value, `${prefix}/${key}`));
-  return typeof node === 'number' && Number.isFinite(node) ? [prefix] : [];
-}
-
-/**
- * A knob on the first number no other knob claims, pinned where the content already sits. The band is the
- * author's to widen: a bound this page invented would be a decision nobody made, sitting in the file as though
- * someone had (ADR 0021), and a band of no width says plainly that nothing may move yet.
- */
-function newKnob() {
-  const taken = new Set(state.entry.knobs.map(knob => knob.path));
-  const path = pointersOf(state.draft).find(candidate => !taken.has(candidate)) ?? '';
-  const found = readPointer(state.draft, path);
-  const value = found.ok ? found.value : 0;
-  return { path, minimum: value, maximum: value, step: Number.isInteger(value) ? 1 : 0.01 };
 }
 
 /** The spells one talent node offers, each with what the balance file says about it. */
@@ -1787,9 +1795,14 @@ function balancePart() {
   const answer = knobsHere();
   if (!answer.ok) return {};
 
-  const problems = entryProblems(state.entry, state.draft);
+  const write = { balance: withEntry(answer.balance, state.entry.alias, entryDocument(state.entry)) };
+  // `load_content` keys enabled spells only, so `validate` never reads the entry of a spell that left the
+  // build: refusing one here would block a save on a finding CI does not have. The strip still shows the
+  // reading -- it is what would be owed if the spell came back -- but it is advice and not a refusal, the same
+  // carve-out the strip and `survey` already make for a resting spell.
+  const problems = state.draft.enabled === false ? [] : entryProblems(state.entry, state.draft);
   if (!problems.length) {
-    return { balance: withEntry(answer.balance, state.entry.alias, entryDocument(state.entry)) };
+    return write;
   }
 
   // Opened and scrolled to, because on a phone the strip is folded and may be off screen, and the banner that
@@ -1799,7 +1812,7 @@ function balancePart() {
     strip.open = true;
     strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  banner('Nothing was saved: check-knobs would refuse this balance entry, so the page does not send it.', 'error', problems);
+  banner('Nothing was saved: check-knobs would refuse this balance entry, so the page does not send it.', 'error', problems.map(problem => problem.line));
   return null;
 }
 
@@ -1825,7 +1838,9 @@ async function save() {
 
 /** What a save wrote, which is now one file, the other, or both. Read from the request, which is what was sent. */
 function savedWhat(result, request) {
-  if (!request.write.length) return `Saved the balance entry for ${state.entry?.alias} in data/balance/knobs.json.`;
+  // Read from what was sent, and from the knobs rather than from the absence of a document: a message that
+  // says the entry was saved because no file was written would say it for a request carrying neither.
+  if (request.balance && !request.write.length) return `Saved the balance entry for ${state.entry?.alias} in data/balance/knobs.json.`;
   return request.balance ? `Saved ${result.saved}, and its balance entry with it.` : `Saved ${result.saved}.`;
 }
 
@@ -1846,8 +1861,17 @@ function applyLocally(tab, request) {
     if (found) {
       found.item.document = clone(written.document);
     } else {
-      // `kind` is what the list draws a row by, so a row without it would render as nothing.
-      documentsOf(tab).push({ path: written.path, kind: TABS[tab].kind, document: clone(written.document) });
+      // A row the catalogue never sent, built to look like one it would have: `kind` is what the list draws by,
+      // and `id` is what everything that follows an alias reads -- without it the entry just seeded for this
+      // spell resolves to nothing, and the sheet reports the intent the author typed a moment ago as missing.
+      documentsOf(tab).push({
+        path: written.path,
+        kind: TABS[tab].kind,
+        id: written.document.id,
+        name: written.document.name ?? '',
+        enabled: written.document.enabled !== false,
+        document: clone(written.document),
+      });
     }
   }
 
@@ -1907,7 +1931,11 @@ async function saveAsNextVersion() {
   // The entry is keyed by the unversioned alias, so it followed the repoint on its own and nothing had to move
   // it. What can have moved is the spell under it: a `:v2` that dropped an effect leaves a knob pointing into
   // one that is not there. The strip says so on the new sheet, and this says it on the way to it.
-  const stale = state.entry ? entryProblems(state.entry, request.write[0].document) : [];
+  // Only the pointers, not everything wrong with the entry: a duplicate or a missing intent was already there
+  // before the cut, and filing it under "the new version no longer reads this" would blame the wrong change.
+  const stale = (state.entry ? entryProblems(state.entry, request.write[0].document) : [])
+    .filter(problem => STALE_POINTER.includes(problem.code))
+    .map(problem => problem.line);
   state.dirty = false;
   state.knobsDirty = false;
   reportSave(
@@ -1924,27 +1952,64 @@ async function saveAsNextVersion() {
  * orphans nothing and the entry is left exactly where it is. It is the only thing still saying what the spell
  * was for, which is the whole reason 27 of this file's 36 entries are there.
  */
+/**
+ * Turning a spell off orphans nothing: `check-knobs` reads the entry of enabled spells only, so an entry for a
+ * spell that left the build is owed to no one, and it is the last thing saying what the spell was for. Turning
+ * one back **on** is the direction that can owe an entry, and this says so rather than letting a pipeline.
+ */
 async function setEnabled(enabled) {
+  if (enabled && state.tab === 'spells' && !state.entry) {
+    const warning = `${state.draft.name || state.draft.id} has no entry in the balance knobs, and check-knobs`
+      + ' fails on enabled content with none. Enable it anyway, and write the entry on its sheet?';
+    if (!window.confirm(warning)) return;
+  }
+
+  // The toggle is applied to the draft, so a save the knobs refuse would leave the draft saying the opposite
+  // of the banner and write the toggle on the next save the author did not connect to this click. The entry
+  // is asked first, and the draft is put back when it says no.
+  const before = state.draft.enabled;
+  const dirty = state.dirty;
   state.draft.enabled = enabled;
   if (enabled) delete state.draft.enabled;
   markDirty();
+  if (!balancePart()) {
+    if (before === undefined) delete state.draft.enabled; else state.draft.enabled = before;
+    state.dirty = dirty;
+    renderDetail();
+    return;
+  }
+
   await save();
 }
 
 async function remove(item) {
   const answer = knobsHere();
   const balance = answer.ok ? answer.balance : null;
-  const alias = state.tab === 'spells' ? aliasOfSpell(item.id, state.catalogue.aliases || {}) : null;
-  const entry = balance && alias ? entryFor(balance, alias) : null;
+  // Every alias pointing at this spell, not the one it is reached by: the map below drops them all, so
+  // pruning a single entry would leave the others naming a spell nothing resolves to -- which is the second
+  // door ADR 0025 exists to close, and `survey` already reasons about two aliases on one spell.
+  const aliases = state.tab === 'spells'
+    ? Object.keys(state.catalogue.aliases || {}).filter(name => state.catalogue.aliases[name] === item.id)
+    : [];
+  const entries = balance ? aliases.filter(name => entryFor(balance, name)) : [];
   // A constraint names its spells by hand. Deleting one of them does not fail the knobs file the way an
   // orphaned entry does -- it leaves the constraint checking nothing, quietly, which is worse (ADR 0025), so
   // it is said before the file goes rather than found later in a tuning run that suddenly had more room.
-  const guarded = balance && alias && kitAliases(balance).includes(alias)
-    ? `\n\n${alias} is one of the spells the starting-kit constraint names. Deleting it does not fail the knobs`
-      + ' file: the constraint simply stops checking anything, and nothing says so afterwards.'
+  const named = balance ? aliases.filter(name => kitAliases(balance).includes(name)) : [];
+  const guarded = named.length
+    ? `\n\n${named.join(', ')} is named by a constraint in the knobs file. Deleting it does not fail that file:`
+      + ' the constraint simply stops checking anything, and nothing says so afterwards.'
     : '';
-  const pruned = entry ? '\n\nIts balance entry goes with it.' : '';
-  if (!window.confirm(`Delete ${item.path}?${guarded}${pruned}\n\nThe file goes away; git still has it.`)) return;
+  const pruned = entries.length
+    ? `\n\nIts balance ${entries.length === 1 ? 'entry goes' : 'entries go'} with it.`
+    : '';
+  // The same door as creating a spell here: the page cannot prune an entry out of a file it never read, so it
+  // says which one will be left naming nothing rather than letting a pipeline find it.
+  const orphaned = state.tab === 'spells' && !balance
+    ? '\n\nThis page has not read data/balance/knobs.json, so any entry for this spell stays behind and will'
+      + ' name a spell nothing resolves to. check-knobs fails on that.'
+    : '';
+  if (!window.confirm(`Delete ${item.path}?${guarded}${pruned}${orphaned}\n\nThe file goes away; git still has it.`)) return;
 
   // An alias left pointing at a deleted item stops the content from building, so it goes with the file; an
   // entry naming a spell no alias resolves to fails check-knobs, so it goes in the same change.
@@ -1953,7 +2018,10 @@ async function remove(item) {
     remove: [item.path],
     aliases: Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id)),
   };
-  if (entry) request.balance = withEntry(balance, alias, null);
+  if (entries.length) {
+    request.balance = entries.reduce((knobs, name) => withEntry(knobs, name, null), balance);
+  }
+
   const result = await act('Deleting', () => backend.change(request));
 
   if (!result) return;
@@ -1964,7 +2032,8 @@ async function remove(item) {
   state.entry = null;
   state.knobsDirty = false;
   renderDetail();
-  reportSave(result, `Deleted ${item.path}.${entry ? ` Its entry for ${alias} went with it.` : ''}`);
+  const took = entries.length === 1 ? `Its entry for ${entries[0]} went with it.` : `Its entries for ${entries.join(', ')} went with it.`;
+  reportSave(result, `Deleted ${item.path}.${entries.length ? ` ${took}` : ''}`);
 }
 
 async function create() {
@@ -1983,12 +2052,22 @@ async function create() {
     write: [{ path, document: content, create: true }],
     aliases: { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id },
   };
+  const owed = [];
 
   // A new enabled spell with no entry fails check-knobs, so the entry is seeded in the same change (ADR 0025).
   // Only the intent is asked for: the name and the class are in the document, and an intent cannot be taken
   // from either -- that is the argument of ADR 0021, and a search that chases the metrics alone will happily
-  // make every spell the same spell. A host that publishes no knobs is asked nothing.
+  // make every spell the same spell.
   const answer = knobsHere();
+  // A host that publishes no knobs cannot be handed a file it never read, so this spell goes out without an
+  // entry -- and the author hears it now rather than from a red pipeline, because it is theirs to write by
+  // hand and nothing on this page will ask again.
+  if (state.tab === 'spells' && !answer.ok) {
+    owed.push(`${id} goes out with no entry in data/balance/knobs.json, which check-knobs fails on for enabled`
+      + ' content. This page could not seed one: it never read the file. Write it by hand, or open the studio'
+      + ' where the knobs are published.');
+  }
+
   if (state.tab === 'spells' && answer.ok) {
     const intent = window.prompt(`What is ${content.name} for? A sentence or two: the decision it exists to pose.`
       + ' A tuning pass may move its numbers; it may not move this.', '');
@@ -2008,7 +2087,7 @@ async function create() {
   applyLocally(state.tab, request);
   reportSave(result, `${id} written to ${path}.`, request.balance
     ? ['Its balance entry is seeded with no knob: say on the sheet which of its numbers a tuning pass may move.']
-    : []);
+    : owed);
   select(path);
 }
 

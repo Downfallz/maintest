@@ -263,18 +263,19 @@ in the **Runs** panel.
 step, like the viewer next door, whose stylesheet it reuses. The scripts are ES modules, so they are strict and
 keep their names to themselves.
 
-`balance.js` is the reading of the knobs file and nothing else: a JSON pointer into a spell document, a knob
-against the value the content carries, the roll-up over the catalogue. It touches no DOM, which is what lets
-`node --test` cover it (ADR 0024) — `studio.js` reaches for `document` at import time, and Node cannot import
-that. A knob reading is a pure function of the knob and the document, so redrawing after an edit is calling it
+`balance.js` is the knobs file and nothing else: a JSON pointer into a spell document, a knob against the
+value the content carries, the roll-up over the catalogue, and — since ADR 0025 — what a change writes back
+(`withEntry`, `seedEntry`, `entryDocument`, `entryProblems`, and the pointers a knob may hold). It touches no
+DOM, which is what lets `node --test` cover it (ADR 0024) — `studio.js` reaches for `document` at import time,
+and Node cannot import that. A knob reading is a pure function of the knob and the document, so redrawing after an edit is calling it
 again.
 
 `backend.js` is where the content comes from, and it is the only file that knows a transport (ADR 0023). It
 also says which of the two it is (`kind`), the one thing `studio.js` reads to draw the run sheet as a match
-to play or a workflow to launch. `studio.js` asks it for the catalogue, hands it a **change** -- the documents to write, the paths to remove and
-the alias map to leave behind, as one unit rather than a request per file -- and asks it to build, play or
-audit. The local backend spends a request on each part of a change, in the order that keeps the content
-buildable in between; the hosted one is meant to make the whole change a single commit. The JSON API the local
+to play or a workflow to launch. `studio.js` asks it for the catalogue, hands it a **change** -- the documents
+to write, the paths to remove, the alias map and the balance knobs to leave behind, as one unit rather than a
+request per file -- and asks it to build, play or audit. The local backend spends a request on each part of a
+change, in the order that keeps the content buildable in between; the hosted one is meant to make the whole change a single commit. The JSON API the local
 backend talks to is `StudioApi` in the Cli; the reading and writing of authored files is `ContentStore` in
 Infrastructure, which validates a document against the same DTOs the data builder uses, so "valid content" has
 one definition. Runs land under `runs/studio/<id>/` (git-ignored).

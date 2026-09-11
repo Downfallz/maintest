@@ -7,12 +7,20 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 import {
-  aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading, objectiveOf,
-  readBalance, readPointer, readings, seedEntry, summarise, survey, withEntry,
+  STALE_POINTER, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading,
+  newKnob, objectiveOf, pointersOf,
+  readBalance, readPointer, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry,
 } from './balance.js';
+
+/** Every authored spell, parsed, so a test can hold the page's reading to the content the repository ships. */
+function spellFiles(directory = new URL('../data/Spells/', import.meta.url)) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap(entry => (entry.isDirectory()
+    ? spellFiles(new URL(`${entry.name}/`, directory))
+    : [JSON.parse(readFileSync(new URL(entry.name, directory), 'utf8'))]));
+}
 
 /** A spell as the editor holds it: Pummel, which is the entry the strip was designed against. */
 const pummel = () => ({
@@ -529,7 +537,8 @@ test('an entry with no intent is refused before it can be saved', () => {
   const problems = entryProblems({ intent: '', knobs: [] }, {});
 
   assert.equal(problems.length, 1);
-  assert.match(problems[0], /no intent/);
+  assert.equal(problems[0].code, 'noIntent');
+  assert.match(problems[0].line, /no intent/);
 });
 
 test('a knob whose value has left its band is named with its pointer', () => {
@@ -538,7 +547,9 @@ test('a knob whose value has left its band is named with its pointer', () => {
   const problems = entryProblems(entry, { energyCost: 9 });
 
   assert.equal(problems.length, 1);
-  assert.match(problems[0], /^\/energyCost: The content carries 9, outside \[0, 2\]/);
+  assert.equal(problems[0].code, 'outside');
+  assert.equal(problems[0].path, '/energyCost');
+  assert.match(problems[0].line, /^\/energyCost: The content carries 9, outside \[0, 2\]/);
 });
 
 test('an entry the page can check finds nothing to refuse', () => {
@@ -551,4 +562,90 @@ test('the starting kit is the aliases a deletion has to be checked against', () 
   const balance = { constraints: { startingKitOffersAChoice: { enabled: true, spells: ['spell:wait', 'spell:basic_attack'] } } };
 
   assert.deepEqual(kitAliases(balance), ['spell:wait', 'spell:basic_attack']);
+});
+
+test('a pointer the spell no longer has is named by a code a version cut can filter on', () => {
+  const entry = { intent: 'i', knobs: [{ path: '/effects/0/amount', minimum: 1, maximum: 3, step: 1 }] };
+
+  const [problem] = entryProblems(entry, { effects: [] });
+
+  assert.ok(STALE_POINTER.includes(problem.code));
+  assert.equal(problem.path, '/effects/0/amount');
+});
+
+test('an entry that was already wrong before a version cut is not a stale pointer', () => {
+  const problems = entryProblems({ intent: '', knobs: [] }, {});
+
+  assert.ok(!problems.some(problem => STALE_POINTER.includes(problem.code)));
+});
+
+// ---------- the pointers a knob may hold ----------
+
+test('every pointer offered is one readPointer reads, on the spell the strip was designed against', () => {
+  const spell = pummel();
+
+  for (const pointer of pointersOf(spell)) {
+    assert.equal(readPointer(spell, pointer).ok, true, `${pointer} was offered and does not read`);
+  }
+});
+
+test('every pointer the shipped knobs file uses is one the picker would offer', () => {
+  const shipped = JSON.parse(readFileSync(new URL('../data/balance/knobs.json', import.meta.url), 'utf8'));
+  const spells = new Map();
+  for (const file of spellFiles()) spells.set(file.id.replace(/:v\d+$/, ''), file);
+
+  let checked = 0;
+  for (const [alias, entry] of Object.entries(shipped.spells)) {
+    const document = spells.get(alias);
+    if (!document) continue;
+    const offered = new Set(pointersOf(document));
+    for (const knob of entry.knobs) {
+      assert.ok(offered.has(knob.path), `${alias}: ${knob.path} is in the file and the picker would not offer it`);
+      checked += 1;
+    }
+  }
+
+  assert.ok(checked > 100, `only ${checked} pointers were checked`);
+});
+
+test('a pointer that addresses something other than a number is not offered', () => {
+  const offered = pointersOf({ id: 'spell:a:v1', enabled: false, amount: 2, targeting: { origin: 'Enemy', maxTargets: 1 } });
+
+  assert.deepEqual(offered, ['/amount', '/targeting/maxTargets']);
+});
+
+test('pointers into an array carry its index, the way the file writes them', () => {
+  assert.deepEqual(pointersOf({ effects: [{ amount: 2 }, { amountPerRound: 1 }] }), ['/effects/0/amount', '/effects/1/amountPerRound']);
+});
+
+test('a document that is one bare number offers nothing, because there is no pointer to it', () => {
+  assert.deepEqual(pointersOf(7), []);
+});
+
+test('the first unclaimed number is the one a new knob lands on', () => {
+  const entry = { knobs: [{ path: '/energyCost' }] };
+
+  assert.equal(unclaimedPointer(entry, { energyCost: 1, initiative: 2 }), '/initiative');
+});
+
+test('a spell whose every number already has a knob offers none', () => {
+  const entry = { knobs: [{ path: '/energyCost' }, { path: '/initiative' }] };
+
+  assert.equal(unclaimedPointer(entry, { energyCost: 1, initiative: 2 }), null);
+});
+
+test('a new knob is pinned where the content sits, so the page decides no bound', () => {
+  const knob = newKnob({ knobs: [] }, { energyCost: 2 });
+
+  assert.deepEqual(knob, { path: '/energyCost', minimum: 2, maximum: 2, step: 1 });
+});
+
+test('a new knob on a fractional number steps by a hundredth', () => {
+  assert.equal(newKnob({ knobs: [] }, { criticalChance: 0.25 }).step, 0.01);
+});
+
+test('a new knob the page would refuse to offer is still a knob, not a throw', () => {
+  const knob = newKnob({ knobs: [{ path: '/energyCost' }] }, { energyCost: 1 });
+
+  assert.equal(knob.path, '');
 });

@@ -636,6 +636,11 @@ details[open] summary { margin-bottom: 6px; }
   .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; }
   .fields.single { grid-template-columns: minmax(0, 1fr); }
   .fields input, .fields select, .fields textarea, .row input, .row select, .panel select, .panel input:not([type="checkbox"]), .weight-fields input { min-height: 36px; font-size: 14px; padding: 0 10px; }
+  /* After the line above, and on purpose: that rule gives every single-line control one height and side
+     padding, and a textarea is the one control in it that holds several lines. Same specificity and later, so
+     without this the prose boxes lose the padding they are given outside the media query and the text sits
+     against the top border -- on a desk, which is where the strip opens by default. */
+  .fields textarea { padding: 8px 12px; }
   .row { padding: 8px 10px; }
   .row > select { flex: 0 1 200px; }
   .row > input[type="number"] { flex: 0 1 96px; }
