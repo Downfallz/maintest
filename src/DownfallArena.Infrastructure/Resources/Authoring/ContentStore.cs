@@ -66,6 +66,14 @@ public sealed class ContentStore
         {
             problems = exception.Problems;
         }
+        // The builder reads the same files this does, and it reads them first. A file the process cannot open
+        // threw from in here, past everything below that was written to report it, and took the whole catalogue
+        // with it — the studio would not open at all. Content that cannot be read is content that does not
+        // build, so it is a problem like any other, and the file that caused it is listed with its own below.
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            problems = [$"The content could not be read: {exception.Message}"];
+        }
 
         return new ContentCatalogue
         {
