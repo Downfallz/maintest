@@ -101,6 +101,13 @@ its own number to be anything but noise. Whether a spell is a damaging one is re
 from what its casts landed: otherwise lowering an attack until its hits are all absorbed would drop it out
 of the comparison and *improve* the reading, paying the search to break spells.
 
+A run explains its own score rather than leaving it to be reconstructed: `tune-content` reports what it
+changed in the content's own words, which measurement the gain came from, what that gain cost elsewhere, and
+what is still outside its range with the number it reads and the number it should be. Worth knowing when you
+read one: a whole run explained by a single measurement is a run to be suspicious of, and a target sitting
+inside its range costs the same anywhere inside it, so a change that makes one worse is invisible until it
+leaves the range.
+
 What "balanced" means is a choice, not a formula, and this block is where that choice is written down. Move
 a band and say why in `docs/learning/journal.md`, the same as any other change that moves a number. Two
 things are worth knowing before you do: the targets compete, because the score is a sum, so asking hard for

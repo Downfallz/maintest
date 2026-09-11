@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import shutil
 import subprocess
 from collections.abc import Collection, Mapping, Sequence
@@ -31,6 +32,7 @@ from downfall_learning.knobs import (
     Knob,
     Knobs,
     Objective,
+    Target,
     deals_damage,
     dominates,
     new_dominance,
@@ -589,35 +591,95 @@ def _candidate(
     )
 
 
+#: What each measurement is, in words a reader who has never tuned anything can act on. The objective names
+#: them by metric, and this names them back — without it the report is a table of nouns from `report.json`
+#: and a column of numbers, which says what moved and never what any of it is.
+MEANINGS: Mapping[str, str] = {
+    "player1WinShare": "how often the first side wins, with both sides played equally well",
+    "drawRate": "how often a match ends with neither side able to finish the other",
+    "averageRounds": "how long a match lasts",
+    "roundCapShare": "how often a match runs out of rounds instead of being won",
+    "fizzleRateA": "how often a declared action resolves into nothing",
+    "spellEntropyA": "how widely a side spreads its casts over the spells it has",
+    "spellUsageShare": "the share of every landed cast taken by the one spell cast most",
+    "spellsNeverCast": "how many spells no side casts at all",
+    "tierUsageShare": "the share of one tier's casts taken by one of the spells in it",
+    "tierDamageSpread": "how unevenly the spells offered at one depth hit, per landed cast",
+    "tierWinSpread": "how unevenly the spells offered at one depth go on to win",
+    "winRateA": "how much playing well still beats playing at random",
+}
+
+
 def format_result(result: TuneResult, objective: Objective) -> str:
-    """The proposal as a human reads it: what moved, what it cost, and which target paid for it."""
+    """The proposal as a reader who does not know this loop can act on it.
+
+    Four questions, in the order someone asks them: what did it change, is the content better, where did
+    that come from, and what is still wrong. The score answers none of them on its own — it is a weighted
+    sum of squared distances, so its size means nothing until it is broken back apart.
+    """
+    gained = result.initial.score - result.best.score
     lines = [
-        f"Score {result.initial.score:.3f} -> {result.best.score:.3f} "
-        f"over {len(result.candidates)} candidate(s); zero is on target.",
+        f"The search played {len(result.candidates)} version(s) of the content and kept the best one.",
         "",
+        "What it changed",
     ]
     if not result.candidates:
         lines.append(
-            "No candidate was playable at all: every move of every knob was refused by a constraint or "
-            "pinned at a bound. That is the knobs file, not the content."
+            "  Nothing: every move of every knob was refused by a constraint or pinned at a bound. That is "
+            "the knobs file to look at, not the content."
         )
     elif not result.best.moves:
-        lines.append("Nothing beat the content as it stands.")
+        lines.append("  Nothing beat the content as it stands.")
     else:
-        lines.append("Moves:")
-        lines.extend(f"  {move}" for move in result.best.moves)
+        lines.extend(f"  {_move_line(move)}" for move in result.best.moves)
+
+    lines.extend(
+        [
+            "",
+            "How balanced the content is",
+            f"  {result.initial.score:.3f} -> {result.best.score:.3f}, where 0 is every measurement inside "
+            "the range it should be in.",
+            "",
+            "  The score adds up how far each measurement below sits outside its range, weighted by how much",
+            "  that range matters. It is not a percentage of anything, and it compares only with runs judged",
+            "  by this same objective.",
+        ]
+    )
+
+    changes = _changes(result, objective)
+    better = [row for row in changes if row[1] < -0.005]
+    worse = [row for row in changes if row[1] > 0.005]
+    if better:
+        lines.extend(["", f"Where the {gained:.2f} it gained came from"])
+        lines.extend(f"  {delta:+8.2f}  {what}" for what, delta in better)
+    if worse:
+        lines.extend(["", "And what that cost"])
+        lines.extend(f"  {delta:+8.2f}  {what}" for what, delta in sorted(worse, key=lambda row: -row[1]))
+
+    lines.extend(_still_wrong(result, objective))
+    lines.extend(_unwatched(result, objective))
+
     inert = result.inert
     if inert:
         spells = sorted({move.knob.spell for candidate in inert for move in candidate.moves})
         lines.extend(
             [
                 "",
-                f"{len(inert)} of {len(result.candidates)} candidate(s) changed no metric at all, on: "
+                f"{len(inert)} of {len(result.candidates)} version(s) changed no measurement at all, on: "
                 f"{', '.join(spells)}.",
                 "A spell whose numbers move nothing is a spell no side casts; tuning it cannot help.",
             ]
         )
-    lines.extend(["", "| Target | Before | After | Band | Penalty |", "| --- | --- | --- | --- | --- |"])
+
+    lines.extend(
+        [
+            "",
+            "Every target, as measured",
+            "",
+            "| Target | Before | After | Band | Penalty |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
     for target in objective.targets:
         before = result.initial.metrics.get(target.on, {}).get(target.metric)
         after = result.best.metrics.get(target.on, {}).get(target.metric)
@@ -629,6 +691,110 @@ def format_result(result: TuneResult, objective: Objective) -> str:
             f"| {low}..{high} | {penalty:.2f} |"
         )
     return "\n".join(lines)
+
+
+def _changes(result: TuneResult, objective: Objective) -> list[tuple[str, float]]:
+    """Every target that moved the score, worst improvement first. This is the half the table cannot show.
+
+    The table prints the penalty the proposal *ends* on, so a target that fell from 24 to 2 and one that was
+    always 2 read the same. Where the gain came from is the thing a reader has to check by hand, because a
+    whole run explained by one measurement is a run to be suspicious of.
+    """
+    rows = []
+    for target in objective.targets:
+        before = result.initial.breakdown.get(target.key)
+        after = result.best.breakdown.get(target.key)
+        if before is None or after is None:
+            continue
+        rows.append((_meaning(target, objective), after - before))
+    return sorted(rows, key=lambda row: row[1])
+
+
+def _meaning(target: Target, objective: Objective) -> str:
+    """What a target measures, in words, and which run it was measured on when that is not obvious.
+
+    Two targets may read the same metric from two evaluations — the objective plays `mirror` and `skill` over
+    the same seeds — and two rows reading "how often the first side wins" would be one row said twice.
+    """
+    said = MEANINGS.get(target.metric, target.key)
+    shared = sum(1 for other in objective.targets if other.metric == target.metric) > 1
+    return f"{said} ({target.on})" if shared else said
+
+
+def _still_wrong(result: TuneResult, objective: Objective) -> list[str]:
+    """What the proposal is still paying for, worst first, with the number and the number it should be."""
+    rows = []
+    for target in objective.targets:
+        penalty = result.best.breakdown.get(target.key, 0.0)
+        if penalty <= 0.005:
+            continue
+        value = result.best.metrics.get(target.on, {}).get(target.metric)
+        rows.append((penalty, target, value))
+    if not rows:
+        return ["", "Nothing is outside its range: the content is on target by this objective."]
+
+    lines = ["", f"What is still wrong, worst first ({result.best.score:.2f} of the score)"]
+    for penalty, target, value in sorted(rows, key=lambda row: -row[0]):
+        lines.append(f"  {penalty:8.2f}  {_meaning(target, objective)}")
+        lines.append(f"            reads {_number(value)}, and it should be {_band(target)}")
+    return lines
+
+
+def _unwatched(result: TuneResult, objective: Objective) -> list[str]:
+    """The targets costing nothing, and the one thing that is easy to read as a clean bill of health.
+
+    A target inside its range contributes zero however far inside it is, so the score stops reporting it.
+    That is the point of a band, and it is also the blind spot: a change that makes one of these worse is
+    invisible until it leaves the range, and `skill.winRateA` is in the objective precisely to catch a
+    proposal that balances the content by taking the decisions out of it.
+    """
+    passing = [
+        target.key for target in objective.targets if result.best.breakdown.get(target.key, 0.0) <= 0.005
+    ]
+    if not passing:
+        return []
+    lines = ["", "What the score is not watching"]
+    lines.extend(f"  {key}" for key in passing)
+    lines.extend(
+        [
+            "  Each of these is inside its range, and costs the same anywhere inside it. A change that makes",
+            "  one worse does not show up here at all until it leaves the range.",
+        ]
+    )
+    return lines
+
+
+def _band(target: Target) -> str:
+    """The range a measurement should be in, said the way a reader would say it."""
+    if target.minimum is not None and target.maximum is not None:
+        return f"between {target.minimum:g} and {target.maximum:g}"
+    if target.maximum is not None:
+        return f"at most {target.maximum:g}"
+    if target.minimum is not None:
+        return f"at least {target.minimum:g}"
+    return "anything"
+
+
+def _move_line(move: Move) -> str:
+    """One move, named the way the content names it rather than the way the knobs file addresses it."""
+    return (
+        f"{_spell_name(move.knob.spell)} — {_field_name(move.knob.path)}: {move.before:g} -> {move.after:g}"
+    )
+
+
+def _spell_name(alias: str) -> str:
+    return alias.removeprefix("spell:").replace("_", " ").title()
+
+
+def _field_name(pointer: str) -> str:
+    """`/effects/0/amount` as "effects #1 amount": the pointer is in tune.json, this is for reading."""
+    words = []
+    for token in pointer.split("/"):
+        if not token:
+            continue
+        spaced = re.sub(r"(?<!^)(?=[A-Z])", " ", token).lower()
+        words.append(f"#{int(token) + 1}" if token.isdigit() else spaced)
+    return " ".join(words)
 
 
 def _number(value: float | None) -> str:
