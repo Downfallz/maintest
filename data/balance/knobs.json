@@ -517,14 +517,13 @@
       "class": "Sorcerer",
       "intent": "The Sorcerer's bread and butter: a modest hit that crits two times in three. It is the caster's mirror of Pummel and the spell every Sorcerer branch gets compared against.",
       "keep": [
-        "Its critical chance is what makes it a Sorcerer spell",
         "The class's baseline attack: everything deeper in the tree must beat it"
       ],
-      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four.",
+      "note": "Its price is the open question of this catalogue, so the cost bound is wider than most. At two energy it takes 85% of the landed casts on the core content; at three it takes 36%, matches run 9.5 rounds instead of 8.1, and the objective falls from 104.1 to 19.4. Nothing says three is the end of that curve, so the knob reaches four. Its critical chance was listed here as its identity until a measurement showed the identity does not distinguish it: Pummel carries the same 0.667, and a critical multiplies base damage, so at equal rates it widens the gap it is supposed to close. Against a Pummel at 3 damage, dropping this spell's chance to 0.417 leaves Pummel 448 landed casts of about 5900, 0.317 leaves it 649, and one in six flips the catalogue: Pummel 4986, this spell 754, and eight spells cast instead of seven. The cost is length -- 7.6, 9.2 and 11.3 rounds, with the round-cap share 0.000, 0.045 and 0.100 against a band of 0.05 -- so the objective has a real trade to arbitrate, and none of that range was reachable at a floor of 0.4. What makes this a Sorcerer spell rather than a Brawler one is deliberately left unstated: the critical chance no longer says it, and the answer is a design decision rather than a bound.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
-        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 },
+        { "path": "/criticalChance", "min": 0.17, "max": 0.8, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
