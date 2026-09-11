@@ -79,7 +79,9 @@ jobs:
           dotnet tool restore
 
       - name: Test the studio page
-        run: node --test "studio/*.test.js"
+        # Unquoted on purpose: `node --test` only expands a glob itself on Node 22+, and this workflow
+        # pins no version, so the shell does it and the step works on whatever Node the runner ships.
+        run: node --test studio/*.test.js
 
       - name: Format check
         run: dotnet format --verify-no-changes --no-restore

@@ -89,18 +89,26 @@ test('everything the published page cannot do yet refuses where the user tried i
 });
 
 test('the loopback address is what picks the local host, and nothing else is it', async () => {
-  const on = hostname => {
+  // Where a backend reads the catalogue from is the shortest thing that differs between the two, so it is what
+  // makes the choice observable. Asking whether the object looks local would pass on either.
+  const readsFrom = async hostname => {
     const previous = globalThis.location;
     globalThis.location = { hostname };
+    const { calls, fetch } = transport([{ payload: { ok: true, result: {} } }]);
     try {
-      return backendForThisPage();
+      await backendForThisPage(fetch).read();
+      return calls[0].url;
     } finally {
       globalThis.location = previous;
     }
   };
 
   // The local host binds the loopback address and nothing else (ADR 0015), so "not loopback" is "not local".
-  assert.equal(await on('127.0.0.1').runs.length, await localBackend().runs.length);
-  await assert.rejects(() => on('downfallz.github.io').change({ kind: 'spells' }), /needs the engine/);
-  await assert.rejects(() => on('127.0.0.1.evil.example').change({ kind: 'spells' }), /needs the engine/);
+  assert.equal(await readsFrom('127.0.0.1'), '/api/catalogue');
+  assert.equal(await readsFrom('localhost'), '/api/catalogue');
+  assert.equal(await readsFrom('[::1]'), '/api/catalogue');
+  assert.equal(await readsFrom('downfallz.github.io'), 'data/catalogue.json');
+
+  // A hostname that merely starts with the loopback address is not the loopback address.
+  assert.equal(await readsFrom('127.0.0.1.evil.example'), 'data/catalogue.json');
 });

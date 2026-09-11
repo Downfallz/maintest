@@ -22,8 +22,9 @@ The repository has no JavaScript tooling at all: no `package.json` anywhere, no 
 
 Two things were measured before deciding, not assumed:
 
-- `node --test "studio/*.test.js"` runs a test that imports `studio/backend.js` and prints nothing on stderr:
-  no experimental warning to explain away, no configuration.
+- `node --test studio/*.test.js` runs a test that imports `studio/backend.js` and prints nothing on stderr:
+  no experimental warning to explain away, no configuration. The glob is left for the shell to expand, because
+  `node --test` only expands one itself on Node 22+ and a quoted pattern is taken as a literal path on Node 20.
 - Node 22 will import that file with no `package.json` at all, because it detects module syntax on its own.
   That is a heuristic and a Node 22 behaviour, and the runners' Node version is not ours to pin without adding
   an action, so this decision does not rely on it.
@@ -37,7 +38,7 @@ declares what the browser already assumes about these files and makes the tests 
 runner rather than only on one that guesses right. The tests are `studio/*.test.js`, and the command is:
 
 ```bash
-node --test "studio/*.test.js"
+node --test studio/*.test.js
 ```
 
 Two things follow from choosing it, and they are part of the decision rather than side effects:
