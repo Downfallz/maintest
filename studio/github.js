@@ -170,7 +170,9 @@ export function githubBackend({ transport = globalThis.fetch, token, repository,
       return null;
     }
 
-    const bytes = Uint8Array.from(atob(found.payload.content.replace(/\s/g, '')), character => character.charCodeAt(0));
+    // `atob` answers one byte per character, so a code point and a code unit are the same number here; the
+    // code-point form is the one that stays right if this ever decodes something that is not a byte string.
+    const bytes = Uint8Array.from(atob(found.payload.content.replace(/\s/g, '')), character => character.codePointAt(0));
     return JSON.parse(new TextDecoder().decode(bytes));
   }
 

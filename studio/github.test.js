@@ -201,6 +201,16 @@ test('the aliases come from the branch once it has them, not from what main publ
   assert.deepEqual(catalogue.spells, [], 'the rest of the catalogue is still what the site published');
 });
 
+test('a file on the branch is decoded as UTF-8, not as one byte per character', async () => {
+  // GitHub answers base64 of UTF-8 bytes. Decoding it as if each byte were a character turns an accent into
+  // mojibake, and the aliases would come back subtly wrong rather than failing.
+  const stub = github({ onBranch: { 'data/aliases.json': { 'spell:épée': 'spell:épée:v1', 'spell:大剣': 'spell:大剣:v2' } } });
+
+  const catalogue = await backend(stub, { published: async () => ({ aliases: {} }) }).read();
+
+  assert.deepEqual(catalogue.aliases, { 'spell:épée': 'spell:épée:v1', 'spell:大剣': 'spell:大剣:v2' });
+});
+
 test('a create-only write refuses a path the branch already holds, rather than overwriting it', async () => {
   const stub = github({ onBranch: { 'data/Spells/a.v2.json': { id: 'spell:a:v2' } } });
 
