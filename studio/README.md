@@ -20,17 +20,29 @@ every push to `main` that touches it or the content, next to what the engine kne
 the catalogue, the audit and the built-in weights, written by `studio --export`. Browsing the content there
 needs no engine, no token and no machine left on.
 
-It cannot write yet, and says so where you try rather than where the page loaded: saving, building and playing
-a match each refuse with what to use instead. Writing is the next step of the ADR, and what accepting a token
-in `localStorage` costs is written down there.
+It cannot write yet, and says so where you try rather than where the page loaded: saving and building each
+refuse with what to use instead. Writing is the next step of the ADR, and what accepting a token in
+`localStorage` costs is written down there. What a phone *can* launch from there is a workflow: on the hosted
+page the **Run** sheet lists the four the repository dispatches by hand -- tune the catalogue, evaluate, search
+the agent weights, one turn of the learning loop -- and each opens GitHub's own *Run workflow* form.
 
 Which backend answers is decided by where the page was loaded from: the local host binds the loopback address
 and nothing else (ADR 0015), so "not loopback" is exactly "not the local studio".
 
 ## What the page does
 
+The page is written for a phone first. It opens on the **overview**: every creature with its numbers, what it
+starts with, and its talent tree drawn as a tree, where each node is a tap into the tree editor and each spell a
+chip that opens the spell. A bar along the bottom of the screen holds **Browse**, the list of creatures, spells
+and trees as a sheet that closes on a pick, and the three panels below, each a sheet of its own. An editor's
+four actions sit in their own bar just above it, so saving never needs a scroll; the list rows carry the
+numbers a reader scans for (a spell's class, type, cost and what it does), and every number field opens the
+numeric keypad. From 900px wide the same page becomes the list beside the editor, the panels as cards above
+it, and the actions next to the title.
+
 | Panel | What you get |
 | --- | --- |
+| Overview | What the page opens on: each creature's stats, starting spells and talent tree, then the trees no creature is on. Everything on it is one tap into its editor. |
 | Creatures | Base stats, class, talent tree (one click away), starting spells (each one click away). |
 | Spells | Type, class, spell initiative (what unlocking it adds to a creature's base initiative, ADR 0017), energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. Plus **Used by**: every creature and talent node that names the spell, and the aliases pointing at it. |
 | Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. |
@@ -144,8 +156,9 @@ in the **Runs** panel.
 door, whose stylesheet it reuses. The scripts are ES modules, so they are strict and keep their names to
 themselves.
 
-`backend.js` is where the content comes from, and it is the only file that knows a transport (ADR 0023).
-`studio.js` asks it for the catalogue, hands it a **change** -- the documents to write, the paths to remove and
+`backend.js` is where the content comes from, and it is the only file that knows a transport (ADR 0023). It
+also says which of the two it is (`kind`), the one thing `studio.js` reads to draw the run sheet as a match
+to play or a workflow to launch. `studio.js` asks it for the catalogue, hands it a **change** -- the documents to write, the paths to remove and
 the alias map to leave behind, as one unit rather than a request per file -- and asks it to build, play or
 audit. The local backend spends a request on each part of a change, in the order that keeps the content
 buildable in between; the hosted one is meant to make the whole change a single commit. The JSON API the local

@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- viewport-fit=cover: the bottom bars pad themselves with the safe area, so nothing hides under a home indicator. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161a22" media="(prefers-color-scheme: dark)">
   <title>Downfall Arena content studio</title>
   <!-- Says "there is no icon" without a request: a static host has no route to answer one with. -->
   <link rel="icon" href="data:,">
@@ -10,78 +14,153 @@
   <link rel="stylesheet" href="studio.css">
 </head>
 <body>
+  <!-- The page's icons, drawn once and referenced by id: no icon font, no image requests, one colour (currentColor). -->
+  <svg hidden aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M12 8v4l3 2"/><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9"/><path d="M4.5 4.5V9H9"/></symbol>
+    <symbol id="i-audit" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></symbol>
+  </svg>
+
   <header>
-    <h1>Downfall Arena content studio</h1>
-    <span id="hash" class="hint mono">content not built</span>
+    <div class="brand">
+      <h1>Downfall Arena <span>studio</span></h1>
+      <span id="hash" class="badge mono">content not built</span>
+    </div>
+    <!-- One set of buttons for both shapes of the page: a segmented control up here on a desk, the bar along
+         the bottom of a phone. "Browse" opens the list where the list is a sheet; a desk always shows it. -->
+    <div class="toolbar" id="toolbar" role="group" aria-label="Panels">
+      <button id="browse" type="button" class="tool" aria-controls="nav" aria-expanded="false">
+        <svg><use href="#i-list"/></svg><span>Browse</span>
+      </button>
+      <button id="run-panel" type="button" class="tool" aria-controls="run" aria-pressed="false">
+        <svg><use href="#i-play"/></svg><span>Run<span class="long"> a match</span></span>
+      </button>
+      <button id="runs-panel" type="button" class="tool" aria-controls="runs" aria-pressed="false">
+        <svg><use href="#i-history"/></svg><span>Runs</span>
+      </button>
+      <button id="audit-panel" type="button" class="tool" aria-controls="audit" aria-pressed="false">
+        <svg><use href="#i-audit"/></svg><span>Audit</span>
+      </button>
+    </div>
     <button id="build" type="button" class="button">Build</button>
-    <button id="run-panel" type="button" class="button">Run a match</button>
-    <button id="runs-panel" type="button" class="button">Runs</button>
-    <button id="audit-panel" type="button" class="button">Audit</button>
   </header>
 
   <div id="banner" class="banner" hidden></div>
 
-  <section id="run" class="run" hidden>
-    <h2>Run</h2>
-    <div class="controls">
-      <label>Mode
-        <select id="run-mode">
-          <option value="match">One match, step by step</option>
-          <option value="evaluation">Evaluation, mirrored seeds</option>
-        </select>
-      </label>
-      <label>Player 1
-        <select id="run-p1"></select>
-        <input id="run-p1-path" class="agent-path" hidden aria-label="Player 1 agent spec">
-      </label>
-      <label>Player 2
-        <select id="run-p2"></select>
-        <input id="run-p2-path" class="agent-path" hidden aria-label="Player 2 agent spec">
-      </label>
-      <label>Matches
-        <input id="run-matches" type="number" min="1" max="2000" value="20">
-      </label>
-      <label>Seed
-        <input id="run-seed" type="number" placeholder="random">
-      </label>
-      <button id="run-go" type="button" class="button primary">Play it</button>
-      <span id="run-status" class="hint"></span>
+  <!-- Behind whichever sheet is open on a phone; a tap on it closes the sheet. -->
+  <div id="scrim" class="scrim" hidden></div>
+
+  <section id="run" class="panel" hidden aria-labelledby="run-title">
+    <div class="panel-head">
+      <h2 id="run-title">Run a match</h2>
+      <button type="button" class="close" data-close="run" aria-label="Close"><svg><use href="#i-close"/></svg></button>
     </div>
-    <div id="run-weights" class="weights" hidden>
-      <h3>Scoring weights</h3>
-      <p class="hint">What the heuristic agent values, in points of effective damage (<code>docs/learning/agents.md</code>). They are written next to the run, so a result keeps the weights it was played with.</p>
-      <div id="run-weights-fields" class="weight-fields"></div>
-      <button id="run-weights-reset" type="button" class="button">Back to the built-in weights</button>
+    <div id="run-local">
+      <div class="controls">
+        <label>Mode
+          <select id="run-mode">
+            <option value="match">One match, step by step</option>
+            <option value="evaluation">Evaluation, mirrored seeds</option>
+          </select>
+        </label>
+        <label>Player 1
+          <select id="run-p1"></select>
+          <input id="run-p1-path" class="agent-path" hidden aria-label="Player 1 agent spec">
+        </label>
+        <label>Player 2
+          <select id="run-p2"></select>
+          <input id="run-p2-path" class="agent-path" hidden aria-label="Player 2 agent spec">
+        </label>
+        <div class="pair">
+          <label>Matches
+            <input id="run-matches" type="number" inputmode="numeric" min="1" max="2000" value="20">
+          </label>
+          <label>Seed
+            <input id="run-seed" type="number" inputmode="numeric" placeholder="random">
+          </label>
+        </div>
+      </div>
+      <div id="run-weights" class="weights" hidden>
+        <h3>Scoring weights</h3>
+        <p class="hint">What the heuristic agent values, in points of effective damage (<code>docs/learning/agents.md</code>). They are written next to the run, so a result keeps the weights it was played with.</p>
+        <div id="run-weights-fields" class="weight-fields"></div>
+        <button id="run-weights-reset" type="button" class="button">Back to the built-in weights</button>
+      </div>
+      <div class="go">
+        <button id="run-go" type="button" class="button primary">Play it</button>
+        <span id="run-status" class="hint"></span>
+      </div>
+    </div>
+    <!-- The published page has no engine behind it (ADR 0023). What a phone can launch from there is a
+         workflow: each link opens GitHub's own "Run workflow" form, and the run does the rest on the runners. -->
+    <div id="run-hosted" hidden>
+      <p class="hint">This is the published page, so there is no engine to play a match here. These run on GitHub Actions instead: each opens the workflow's <em>Run workflow</em> form, and the result lands in the run summary, or on a branch with a link to open it as a pull request.</p>
+      <ul class="launch">
+        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/tune.yml" target="_blank" rel="noopener">
+          <span class="name">Tune the catalogue</span>
+          <span class="what">One tuning pass over the balance knobs, pushed as a branch with a new benchmark digest and a link to open it as a pull request.</span>
+          <svg><use href="#i-out"/></svg></a></li>
+        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/evaluate.yml" target="_blank" rel="noopener">
+          <span class="name">Evaluate</span>
+          <span class="what">Two agents over the benchmark seeds; the numbers land in the run summary.</span>
+          <svg><use href="#i-out"/></svg></a></li>
+        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/search.yml" target="_blank" rel="noopener">
+          <span class="name">Search the agent weights</span>
+          <span class="what">A cross-entropy search of the heuristic agent's eight weights, reported and not applied.</span>
+          <svg><use href="#i-out"/></svg></a></li>
+        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/iterate.yml" target="_blank" rel="noopener">
+          <span class="name">Learning loop</span>
+          <span class="what">One turn of the loop: a dataset, two trained policies, and their evaluation as an artifact.</span>
+          <svg><use href="#i-out"/></svg></a></li>
+      </ul>
     </div>
   </section>
 
-  <section id="runs" class="run" hidden>
-    <h2>Runs</h2>
+  <section id="runs" class="panel" hidden aria-labelledby="runs-title">
+    <div class="panel-head">
+      <h2 id="runs-title">Runs</h2>
+      <button type="button" class="close" data-close="runs" aria-label="Close"><svg><use href="#i-close"/></svg></button>
+    </div>
     <div class="controls">
       <button id="runs-compare" type="button" class="button primary">Compare the two ticked</button>
       <span id="runs-status" class="hint"></span>
-      <span class="hint">Two runs on the same seeds and the same agents make the delta about the content; the older one is the before.</span>
     </div>
-    <div id="runs-body"></div>
+    <p class="hint">Two runs on the same seeds and the same agents make the delta about the content; the older one is the before.</p>
+    <div id="runs-body" class="scroll"></div>
   </section>
 
-  <section id="audit" class="run" hidden>
-    <h2>Content audit</h2>
-    <div id="audit-body"></div>
+  <section id="audit" class="panel" hidden aria-labelledby="audit-title">
+    <div class="panel-head">
+      <h2 id="audit-title">Content audit</h2>
+      <button type="button" class="close" data-close="audit" aria-label="Close"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <div id="audit-body" class="scroll"></div>
   </section>
 
   <main>
-    <nav>
-      <div class="tabs" id="tabs">
-        <button type="button" class="tab" data-tab="creatures">Creatures</button>
-        <button type="button" class="tab selected" data-tab="spells">Spells</button>
-        <button type="button" class="tab" data-tab="talentTrees">Talent trees</button>
+    <nav id="nav" aria-label="Content">
+      <div class="nav-head">
+        <div class="tabs" id="tabs">
+          <button type="button" class="tab" data-tab="creatures">Creatures <span class="count"></span></button>
+          <button type="button" class="tab selected" data-tab="spells">Spells <span class="count"></span></button>
+          <button type="button" class="tab" data-tab="talentTrees">Trees <span class="count"></span></button>
+        </div>
+        <button type="button" class="close" id="nav-close" aria-label="Close the list"><svg><use href="#i-close"/></svg></button>
       </div>
-      <input id="search" type="search" placeholder="Filter by name or id" aria-label="Filter content">
+      <input id="search" type="search" placeholder="Filter by name or id" aria-label="Filter content" autocomplete="off">
       <ul id="list"></ul>
-      <button id="new" type="button" class="button">New</button>
+      <div class="nav-foot">
+        <button id="new" type="button" class="button"><svg><use href="#i-plus"/></svg><span>New</span></button>
+      </div>
     </nav>
-    <section id="detail"><p class="empty">Pick something on the left.</p></section>
+    <section id="detail"></section>
   </main>
 
   <script type="module" src="studio.js"></script>

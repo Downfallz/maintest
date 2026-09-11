@@ -74,6 +74,10 @@ const TEMPLATES = {
 
 const state = { catalogue: null, tab: 'spells', selected: null, draft: null, dirty: false, node: null, busy: false, runs: [], weights: null, audit: null };
 
+/** Below this width the list and the panels are sheets over the editor rather than beside it (studio.css agrees). */
+const narrow = globalThis.matchMedia('(max-width: 899px)');
+
+
 // ---------- small helpers ----------
 
 const $ = id => document.getElementById(id);
@@ -94,6 +98,21 @@ function element(tag, properties = {}, children = []) {
     if (child !== null && child !== undefined) node.append(child);
   }
   return node;
+}
+
+/** One of the symbols index.html draws once; SVG lives in its own namespace, so createElement will not do. */
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', `#i-${name}`);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.append(use);
+  return svg;
+}
+
+/** A label with a shorter reading for a phone; studio.css shows one of the two, so the button is named by one. */
+function labelled(long, short) {
+  return [element('span', { className: 'long', textContent: long }), element('span', { className: 'short', textContent: short })];
 }
 
 function documentsOf(tab) {
@@ -164,10 +183,15 @@ function banner(message, kind = 'info', problems = []) {
   const node = $('banner');
   node.hidden = false;
   node.className = kind === 'error' || kind === 'ok' ? `banner ${kind}` : 'banner';
-  node.replaceChildren(element('div', { textContent: message }));
+  // An error interrupts; anything else is read when the reader gets to it.
+  node.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  const text = element('div', { className: 'banner-text' }, [element('div', { textContent: message })]);
   if (problems.length) {
-    node.append(element('ul', {}, problems.map(problem => element('li', { textContent: problem }))));
+    text.append(element('ul', {}, problems.map(problem => element('li', { textContent: problem }))));
   }
+  const dismiss = element('button', { type: 'button', className: 'close', ariaLabel: 'Dismiss' }, [icon('close')]);
+  dismiss.addEventListener('click', clearBanner);
+  node.replaceChildren(text, dismiss);
 }
 
 function clearBanner() {
@@ -193,7 +217,7 @@ function renderHeader() {
   hash.textContent = catalogue.contentHash
     ? `content ${catalogue.contentHash.slice(0, 12)}`
     : `${catalogue.problems.length} problem(s): the content does not build`;
-  hash.classList.toggle('dirty', !catalogue.contentHash);
+  hash.classList.toggle('warn', !catalogue.contentHash);
   if (!catalogue.contentHash && catalogue.problems.length) {
     banner('The content does not build.', 'error', catalogue.problems);
   }
@@ -202,6 +226,7 @@ function renderHeader() {
 function renderNav() {
   for (const tab of document.querySelectorAll('.tab')) {
     tab.classList.toggle('selected', tab.dataset.tab === state.tab);
+    tab.querySelector('.count').textContent = String(documentsOf(tab.dataset.tab).length || '');
   }
 
   const filter = $('search').value.trim().toLowerCase();
@@ -211,15 +236,86 @@ function renderNav() {
 
   $('list').replaceChildren(...items.map(item => {
     const entry = element('li', { className: [item.enabled ? '' : 'off', item.problem ? 'broken' : ''].join(' ').trim() }, [
-      element('span', { textContent: item.name || item.id }),
-      element('span', { className: 'id', textContent: item.id }),
+      itemButton(item),
     ]);
     if (state.selected?.path === item.path) entry.classList.add('selected');
-    entry.addEventListener('click', () => select(item.path));
     return entry;
   }));
 
-  $('new').textContent = `New ${TABS[state.tab].label}`;
+  if (!items.length) {
+    $('list').replaceChildren(element('li', { className: 'none', textContent: filter ? 'Nothing matches.' : 'Nothing here yet.' }));
+  }
+
+  $('new').querySelector('span').textContent = `New ${TABS[state.tab].label}`;
+}
+
+/**
+ * One row of the list: the name, and beside it what a reader scanning for a number wants -- the class and cost
+ * of a spell and what it does, the health and initiative of a creature, the size of a tree. The versioned id
+ * is the tooltip, and what the filter box also matches.
+ */
+function itemButton(item) {
+  const parsed = parseId(item.id);
+  const button = element('button', { type: 'button', className: 'item', title: item.id, ariaCurrent: state.selected?.path === item.path ? 'true' : null }, [
+    element('span', { className: 'name' }, [
+      item.name || item.id,
+      parsed ? element('span', { className: 'version mono', textContent: `v${parsed.version}` }) : null,
+      item.enabled ? null : element('span', { className: 'tag', textContent: 'off' }),
+      item.problem ? element('span', { className: 'tag bad', textContent: 'broken' }) : null,
+    ]),
+    ...glance(item),
+  ]);
+  button.addEventListener('click', () => select(item.path));
+  return button;
+}
+
+/** The figure and the line under the name; a broken file has neither. */
+function glance(item) {
+  const doc = item.document || {};
+  if (item.kind === 'Spell') {
+    const figure = (doc.effects || []).map(effectSummary).filter(Boolean).join(', ');
+    const cost = typeof doc.energyCost === 'number' ? `${doc.energyCost} energy` : null;
+    return [
+      element('span', { className: 'figure', textContent: figure }),
+      element('span', { className: 'meta', textContent: [doc.creatureClass, doc.spellType, cost].filter(Boolean).join(' \u00b7 ') }),
+    ];
+  }
+
+  if (item.kind === 'Creature') {
+    return [
+      element('span', { className: 'figure', textContent: `${doc.baseHealth ?? '?'} hp` }),
+      element('span', { className: 'meta', textContent: [doc.creatureClass, `${doc.baseInitiative ?? '?'} initiative`, `${percent(Number(doc.baseCriticalChance) || 0)} crit`].join(' \u00b7 ') }),
+    ];
+  }
+
+  if (item.kind === 'TalentTree') {
+    let nodes = 0;
+    let spells = 0;
+    walkNodes(doc.root, node => { nodes += 1; spells += (node.spells || []).length; });
+    return [
+      element('span', { className: 'figure', textContent: `${nodes} nodes` }),
+      element('span', { className: 'meta', textContent: `${spells} spells taught` }),
+    ];
+  }
+
+  return [element('span', { className: 'meta mono', textContent: item.path })];
+}
+
+/** What one effect comes to, in a word: what a list row has room for. */
+function effectSummary(effect) {
+  const rounds = effect.permanent ? '' : ` for ${effect.durationRounds ?? 1}r`;
+  switch (effect.kind) {
+    case 'Damage': return `${effect.amount} dmg`;
+    case 'Heal': return `${effect.amount} heal`;
+    case 'EnergyGain': return `+${effect.amount} energy`;
+    case 'Bleed': return `${effect.amountPerRound}/r bleed`;
+    case 'Regeneration': return `${effect.amountPerRound}/r regen`;
+    case 'EnergyRegeneration': return `+${effect.amountPerRound}/r energy`;
+    case 'Stun': return `stun ${effect.durationRounds ?? 1}r`;
+    case 'DefenseBuff': return `+${effect.amount} def${rounds}`;
+    case 'InitiativeDebuff': return `-${effect.amount} init${rounds}`;
+    default: return effect.kind || '';
+  }
 }
 
 function select(path, node = null) {
@@ -227,25 +323,48 @@ function select(path, node = null) {
   if (!found) {
     state.selected = null;
     state.draft = null;
+    state.node = null;
+    renderNav();
     renderDetail();
     return;
   }
 
+  const changed = state.selected?.path !== path;
   state.tab = found.tab;
   state.selected = found.item;
   state.draft = clone(found.item.document);
   state.dirty = false;
-  state.node = node;
+  // The draft is a copy, so a node handed in from the catalogue is found again in it by its code.
+  state.node = node ? nodeNamed(state.draft.root, node.code) : null;
   renderNav();
   renderDetail();
+  closeNav();
+  // A new item starts at its title; a save re-selects the same one and must not throw the reader to the top.
+  if (changed) globalThis.scrollTo({ top: 0 });
+}
+
+function nodeNamed(root, code) {
+  let found = null;
+  walkNodes(root, node => { if (!found && node.code === code) found = node; });
+  return found;
 }
 
 // ---------- form building blocks ----------
 
-function fields(rows) {
-  const grid = element('div', { className: 'fields' });
-  for (const [label, control] of rows) {
-    grid.append(element('label', { textContent: label }), control);
+let fieldSequence = 0;
+
+function fields(rows, { single = false } = {}) {
+  const grid = element('div', { className: single ? 'fields single' : 'fields' });
+  for (const [text, control] of rows) {
+    const label = element('label', { textContent: text });
+    // The label names the first control it is over, so tapping the word focuses the box, and a screen reader
+    // reads the word with the box. A list of rows has no single box to name, and gets no `for`.
+    const target = ['INPUT', 'SELECT', 'TEXTAREA'].includes(control.tagName) ? control : control.querySelector('.inline > input, .inline > select');
+    if (target) {
+      target.id ||= `field-${++fieldSequence}`;
+      label.htmlFor = target.id;
+    }
+    grid.append(element('div', { className: 'field' }, [label, control]));
   }
   return grid;
 }
@@ -253,7 +372,10 @@ function fields(rows) {
 function markDirty() {
   state.dirty = true;
   const flag = $('dirty-flag');
-  if (flag) flag.textContent = 'unsaved changes';
+  if (flag) {
+    flag.textContent = 'Unsaved changes';
+    flag.closest('.actions')?.classList.add('dirty');
+  }
 }
 
 function textBox(target, key, { placeholder = '' } = {}) {
@@ -263,7 +385,7 @@ function textBox(target, key, { placeholder = '' } = {}) {
 }
 
 function numberBox(target, key, { step = 1, min = null, onChange = null } = {}) {
-  const input = element('input', { type: 'number', step, value: target[key] ?? 0 });
+  const input = element('input', { type: 'number', step, value: target[key] ?? 0, inputMode: step < 1 ? 'decimal' : 'numeric' });
   if (min !== null) input.min = min;
   input.addEventListener('input', () => {
     target[key] = input.value === '' ? null : Number(input.value);
@@ -343,7 +465,7 @@ function spellList(target, key) {
 function renderDetail() {
   const view = $('detail');
   if (!state.selected || !state.draft) {
-    view.replaceChildren(element('p', { className: 'empty', textContent: 'Pick something on the left.' }));
+    view.replaceChildren(overview());
     return;
   }
 
@@ -357,7 +479,7 @@ function renderDetail() {
     return;
   }
 
-  const parts = [header(item), actions(item)];
+  const parts = [element('div', { className: 'detail-head' }, [header(item), actions(item)])];
   if (item.problem) {
     parts.push(element('div', { className: 'banner error', textContent: `${item.path}: ${item.problem}` }));
   }
@@ -370,23 +492,163 @@ function renderDetail() {
 }
 
 function header(item) {
+  // One tap back to where this came from: the list, on a phone, where it is a sheet; the overview on a desk,
+  // where the list never left.
+  const back = element('button', { type: 'button', className: 'back', ariaLabel: 'Back to the list', title: 'Back to the list' }, [icon('back')]);
+  back.addEventListener('click', () => { if (narrow.matches) openNav(); else select(null); });
   return element('div', { className: 'title' }, [
-    element('h2', { textContent: state.draft.name || item.id }),
-    element('span', { className: 'muted mono', textContent: item.id }),
-    element('span', { className: 'muted mono', textContent: item.path }),
+    back,
+    element('div', { className: 'title-text' }, [
+      element('h2', { textContent: state.draft.name || item.id }),
+      element('div', { className: 'meta' }, [
+        element('span', { className: 'badge mono', textContent: item.id }),
+        element('span', { className: 'muted mono path', textContent: item.path }),
+      ]),
+    ]),
   ]);
 }
 
+/**
+ * The four actions, loudest last: Save is the one filled button, the two that change what is saved sit beside
+ * it, and Delete is a quiet icon at the other end, so the thumb that reaches for Save never lands on it.
+ */
 function actions(item) {
   const enabled = state.draft.enabled !== false;
-  return element('div', { className: 'actions' }, [
-    miniButton('Save', save, 'button primary'),
-    miniButton('Save as next version', saveAsNextVersion, 'button'),
-    miniButton(enabled ? 'Disable' : 'Enable', () => setEnabled(!enabled), 'button'),
-    element('span', { className: 'spacer' }),
-    element('span', { id: 'dirty-flag', className: 'dirty', textContent: state.dirty ? 'unsaved changes' : '' }),
-    miniButton('Delete', () => remove(item), 'button danger'),
+  const deleteButton = element('button', { type: 'button', className: 'button ghost danger', ariaLabel: 'Delete', title: 'Delete' }, [
+    icon('trash'),
+    element('span', { className: 'long', textContent: 'Delete' }),
   ]);
+  deleteButton.addEventListener('click', () => remove(item));
+  const next = element('button', { type: 'button', className: 'button next', title: 'Save as next version' }, labelled('Save as next version', 'Next version'));
+  next.addEventListener('click', saveAsNextVersion);
+  return element('div', { className: `actions${state.dirty ? ' dirty' : ''}` }, [
+    element('span', { id: 'dirty-flag', className: 'dirty-flag', textContent: state.dirty ? 'Unsaved changes' : '' }),
+    element('span', { className: 'spacer' }),
+    deleteButton,
+    miniButton(enabled ? 'Disable' : 'Enable', () => setEnabled(!enabled), 'button'),
+    next,
+    miniButton('Save', save, 'button primary'),
+  ]);
+}
+
+// ---------- the overview ----------
+
+/**
+ * What the content is, on one screen: each creature with its numbers, what it starts with, and its talent
+ * tree drawn as a tree, every spell a chip that opens it and every node a tap into the tree editor. What no
+ * creature is on comes after. It is what the page opens on, and what nothing-selected shows.
+ */
+function overview() {
+  const creatures = documentsOf('creatures');
+  const trees = documentsOf('talentTrees');
+  const spells = documentsOf('spells');
+  const off = spells.filter(spell => !spell.enabled).length;
+  const view = element('div', { className: 'overview' });
+
+  if (!creatures.length && !trees.length && !spells.length) {
+    view.append(element('div', { className: 'empty' }, [
+      icon('sparkle'),
+      element('h2', { textContent: 'Nothing here yet' }),
+      element('p', { textContent: 'Create a creature, a spell or a talent tree from the list, and it shows up here.' }),
+      browseButton('Open the list'),
+    ]));
+    return view;
+  }
+
+  view.append(element('div', { className: 'overview-head' }, [
+    element('h2', { textContent: 'Overview' }),
+    element('p', { className: 'muted', textContent: `${creatures.length} creature${creatures.length === 1 ? '' : 's'}, ${spells.length} spells${off ? ` (${off} off)` : ''}, ${trees.length} talent tree${trees.length === 1 ? '' : 's'}. Tap anything to open it.` }),
+  ]));
+
+  const covered = new Set();
+  for (const creature of creatures) view.append(creatureCard(creature, covered));
+  const orphans = trees.filter(tree => !covered.has(tree.path));
+  if (orphans.length) {
+    view.append(element('h3', { className: 'section', textContent: creatures.length ? 'Talent trees no creature is on' : 'Talent trees' }));
+    for (const tree of orphans) view.append(treeCard(tree));
+  }
+
+  return view;
+}
+
+/** Opens the list -- a sheet on a phone; on a desk it is already there, so the filter box takes the focus. */
+function browseButton(label) {
+  const button = element('button', { type: 'button', className: 'button' }, [icon('list'), element('span', { textContent: label })]);
+  button.addEventListener('click', () => { if (narrow.matches) openNav(); else $('search').focus(); });
+  return button;
+}
+
+function creatureCard(creature, covered) {
+  const doc = creature.document;
+  const tree = documentsOf('talentTrees').find(candidate => candidate.id === resolveReference(doc.talentTreeId));
+  if (tree) covered.add(tree.path);
+
+  const card = element('div', { className: `card overview-card${creature.enabled ? '' : ' off'}` });
+  card.append(cardTitle(creature, doc.creatureClass));
+  card.append(element('div', { className: 'pills' }, [
+    pill(doc.baseHealth, 'hp'),
+    pill(doc.baseEnergy, 'energy'),
+    pill(doc.baseDefense, 'def'),
+    pill(doc.baseInitiative, 'init'),
+    pill(percent(Number(doc.baseCriticalChance) || 0), 'crit'),
+  ]));
+
+  const starting = doc.startingSpellIds || [];
+  card.append(
+    element('div', { className: 'label', textContent: starting.length ? 'Starts with' : 'Starts with nothing' }),
+    element('div', { className: 'chips' }, starting.map(spellLink)),
+  );
+
+  if (tree) {
+    card.append(element('div', { className: 'label' }, ['Talent tree ', treeLink(tree)]), compactTree(tree));
+  } else if (doc.talentTreeId) {
+    card.append(element('div', { className: 'label warn', textContent: `Talent tree ${doc.talentTreeId} is not in the catalogue.` }));
+  } else {
+    card.append(element('div', { className: 'label', textContent: 'No talent tree.' }));
+  }
+
+  return card;
+}
+
+function treeCard(tree) {
+  const card = element('div', { className: `card overview-card${tree.enabled ? '' : ' off'}` });
+  card.append(cardTitle(tree, tree.enabled ? 'talent tree' : 'talent tree, off'), compactTree(tree));
+  return card;
+}
+
+/** The name as the way in, and beside it what kind of thing it is. */
+function cardTitle(item, kind) {
+  const open = miniButton(item.name || item.id, () => select(item.path), 'link title-link');
+  return element('h3', {}, [open, element('span', { className: 'muted', textContent: kind })]);
+}
+
+function treeLink(tree) {
+  return miniButton(tree.name || tree.id, () => select(tree.path), 'link');
+}
+
+function pill(value, unit) {
+  return element('span', { className: 'pill' }, [element('b', { textContent: String(value ?? '?') }), ` ${unit}`]);
+}
+
+/** The tree with nothing to edit on it: a code per node, the spells it teaches, and the lines between. */
+function compactTree(tree) {
+  const list = element('ul', { className: 'tree compact' });
+  const draw = node => {
+    const pick = element('button', { type: 'button', className: 'node-pick', title: node.name || node.code }, [
+      element('span', { className: 'code', textContent: node.code || '(no code)' }),
+      node.name && node.name !== node.code ? element('span', { className: 'muted', textContent: node.name }) : null,
+    ]);
+    pick.addEventListener('click', () => select(tree.path, node));
+    const card = element('div', { className: 'node' }, [element('div', { className: 'head' }, [pick])]);
+    if ((node.spells || []).length) {
+      card.append(element('div', { className: 'chips' }, node.spells.map(spell => spellLink(spell.id))));
+    }
+    const entry = element('li', {}, [card]);
+    if ((node.children || []).length) entry.append(element('ul', {}, node.children.map(draw)));
+    return entry;
+  };
+  list.append(draw(tree.document.root || emptyNode('Root', 'Root')));
+  return list;
 }
 
 function spellEditor() {
@@ -582,19 +844,30 @@ function treeEditor() {
 function nodeView(node, parent, redraw) {
   const selected = state.node === node;
   const card = element('div', { className: `node${selected ? ' selected' : ''}` });
-  const head = element('div', { className: 'head' }, [
+  // The node itself is the tap: it opens in the editor below, which then scrolls into reach on a phone.
+  // Its own buttons show only on the node being edited, so the tree stays a tree and not a wall of buttons.
+  const pick = element('button', { type: 'button', className: 'node-pick', ariaPressed: selected ? 'true' : 'false' }, [
     element('span', { className: 'code', textContent: node.code || '(no code)' }),
     element('span', { className: 'muted', textContent: node.name || '' }),
-    element('span', { className: 'grow' }),
-    miniButton(selected ? 'Editing' : 'Edit', () => { state.node = node; redraw(); refreshNodeEditor(redraw); }),
-    miniButton('Add child', () => {
+  ]);
+  pick.addEventListener('click', () => {
+    state.node = node;
+    redraw();
+    refreshNodeEditor(redraw);
+    const editor = $('node-editor');
+    if (editor && editor.getBoundingClientRect().top > globalThis.innerHeight * 0.6) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  const head = element('div', { className: 'head' }, [pick]);
+
+  if (selected) {
+    head.append(miniButton('Add child', () => {
       node.children = [...(node.children || []), emptyNode(`Node${(node.children || []).length + 1}`, 'New node')];
       markDirty();
       redraw();
-    }),
-  ]);
+    }));
+  }
 
-  if (parent) {
+  if (selected && parent) {
     head.append(miniButton('Remove', () => {
       parent.children.splice(parent.children.indexOf(node), 1);
       if (state.node === node) state.node = null;
@@ -641,7 +914,7 @@ function fillNodeEditor(holder, redrawTree) {
   if (!node) {
     holder.replaceChildren(
       element('h3', { textContent: 'Node' }),
-      element('p', { className: 'muted', textContent: 'Pick a node above to edit its code, its prerequisites and its spells.' }),
+      element('p', { className: 'muted', textContent: 'Tap a node above to edit its code, its prerequisites and the spells it teaches.' }),
     );
     return;
   }
@@ -697,7 +970,7 @@ function prerequisiteCard(title, prerequisites, redrawTree) {
   wrap.append(fields([
     ['All of', spellList(prerequisites, 'allOf')],
     ['Any of', spellList(prerequisites, 'anyOf')],
-  ]));
+  ], { single: true }));
   wrap.addEventListener('change', () => redrawTree());
   return wrap;
 }
@@ -907,6 +1180,7 @@ async function load() {
   state.catalogue = catalogue;
   renderHeader();
   renderNav();
+  renderDetail();
   if (!catalogue.problems.length) clearBanner();
 }
 
@@ -919,6 +1193,42 @@ for (const tab of document.querySelectorAll('.tab')) {
     renderNav();
     renderDetail();
   });
+}
+
+// ---------- the sheets ----------
+
+/** The list, where it is a sheet: opened from the bar or from an editor's back button, closed by a pick. */
+function openNav() {
+  document.body.classList.add('nav-open');
+  $('browse').setAttribute('aria-expanded', 'true');
+  syncScrim();
+  $('list').querySelector('li.selected')?.scrollIntoView({ block: 'center' });
+}
+
+function closeNav() {
+  document.body.classList.remove('nav-open');
+  $('browse').setAttribute('aria-expanded', 'false');
+  syncScrim();
+}
+
+const PANELS = ['run', 'runs', 'audit'];
+
+/** The scrim is there whenever something is open over the editor on a phone; studio.css hides it on a desk. */
+function syncScrim() {
+  $('scrim').hidden = !document.body.classList.contains('nav-open') && PANELS.every(id => $(id).hidden);
+}
+
+function closePanels() {
+  for (const id of PANELS) {
+    $(id).hidden = true;
+    $(`${id}-panel`).setAttribute('aria-pressed', 'false');
+  }
+}
+
+function closeSheets() {
+  closeNav();
+  closePanels();
+  syncScrim();
 }
 
 // The agents the engine can seat (docs/learning/agents.md). The kinds that read a file keep a box for its
@@ -1130,11 +1440,30 @@ function renderAudit() {
   $('audit-body').replaceChildren(auditSummary(result), auditFindings(result.audit.findings), auditReach(result.audit.reach));
 }
 
-/** Shows one of the panels above the editor, loading what it needs the first time it is opened. */
+/**
+ * Shows one of the panels above the editor, loading what it needs the first time it is opened. One at a
+ * time: the buttons read as a segmented control on a desk, and on a phone two sheets would stack.
+ */
 function togglePanel(id, load) {
   const panel = $(id);
-  panel.hidden = !panel.hidden;
-  if (!panel.hidden) load();
+  const opening = panel.hidden;
+  closePanels();
+  closeNav();
+  panel.hidden = !opening;
+  $(`${id}-panel`).setAttribute('aria-pressed', String(opening));
+  syncScrim();
+  if (!opening) return;
+  load();
+  // On a desk the panel is a card above the editor; opened from halfway down a form, it would open out of sight.
+  if (!narrow.matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** The run sheet of the published page launches workflows instead of matches; the rest of the page is the same. */
+function adoptBackendKind() {
+  const hosted = backend.kind === 'hosted';
+  $('run-local').hidden = hosted;
+  $('run-hosted').hidden = !hosted;
+  $('run-title').textContent = hosted ? 'Launch on GitHub' : 'Run a match';
 }
 
 /** How many seeds only means something for an evaluation; one match is one match. */
@@ -1156,9 +1485,19 @@ $('build').addEventListener('click', build);
 $('run-go').addEventListener('click', run);
 $('run-weights-reset').addEventListener('click', resetWeights);
 $('runs-compare').addEventListener('click', compareRuns);
-$('run-panel').addEventListener('click', () => togglePanel('run', loadWeights));
+$('run-panel').addEventListener('click', () => togglePanel('run', () => { if (backend.kind !== 'hosted') loadWeights(); }));
 $('runs-panel').addEventListener('click', () => togglePanel('runs', loadRuns));
 $('audit-panel').addEventListener('click', () => togglePanel('audit', loadAudit));
+$('browse').addEventListener('click', () => { if (document.body.classList.contains('nav-open')) closeNav(); else { closePanels(); openNav(); } });
+$('nav-close').addEventListener('click', closeNav);
+$('scrim').addEventListener('click', closeSheets);
+for (const button of document.querySelectorAll('.panel .close')) {
+  button.addEventListener('click', () => { $(button.dataset.close).hidden = true; $(`${button.dataset.close}-panel`).setAttribute('aria-pressed', 'false'); syncScrim(); });
+}
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeSheets(); });
+// Growing past the phone width leaves the shell's sheets behind; the scrim must not stay over the desk.
+narrow.addEventListener('change', () => { if (!narrow.matches) closeSheets(); });
+adoptBackendKind();
 
 window.addEventListener('beforeunload', event => {
   if (state.dirty) event.preventDefault();
