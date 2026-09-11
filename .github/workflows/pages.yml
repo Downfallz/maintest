@@ -8,11 +8,18 @@ name: Publish the studio
 on:
   push:
     branches: [main]
+    # Broad on purpose. Two of the three published files are the engine's own answers, not copies of authored
+    # content: the weights are `ScoringWeights.Default` in Application, and the audit is the audit rules plus
+    # whether `benchmarks/` holds a digest for the content hash the DataBuilder computed. A filter that named
+    # only the page and the content would leave a published site quoting weights the engine no longer has, and
+    # nothing on the page would say it was stale.
     paths:
       - "studio/**"
       - "viewer/**"
       - "data/**"
-      - "src/DownfallArena.Cli/Studio/**"
+      - "benchmarks/**"
+      - "src/**"
+      - "tools/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
