@@ -73,8 +73,9 @@ policy that many matches could not measure.
 
 The score is `sum(weight * (excess / scale) ** 2)` over the objective's targets, zero being on target. Seven
 of them are `report.json` metrics under their own names, so a tuning run and a normal run are read the same
-way. Five the tuner derives from `spellOutcomes`, because they need the catalogue as well as the evaluation:
-`spellUsageShare` and `spellsNeverCast` over the whole catalogue, and three over a **tier** — the spells
+way. Six the tuner derives from `spellOutcomes`, because they need the catalogue as well as the evaluation:
+`spellUsageShare`, `spellsNeverCast` and `spellsBarelyCast` over the whole catalogue, and three over a
+**tier** — the spells
 offered at one depth of the talent tree, which is the set a player chooses between. `tierUsageShare` asks
 whether one of them owns the tier, `tierDamageSpread` whether they hit comparably hard per landed cast, and
 `tierWinSpread` whether they win comparably often. Each reports its worst tier, and each skips what it
@@ -86,7 +87,9 @@ the spread rather than leaving it.
 objective at a match length or at your own agent.
 
 A candidate costs one content build plus one evaluation per objective entry, about twenty seconds on the
-benchmark seeds. The opening sweep is up to two candidates per playable knob before the climb starts.
+benchmark seeds. The opening sweep is up to two candidates per playable knob before the climb starts, plus
+up to two more per pair of knobs on a spell no single step could move at all — on the nine-spell core
+content that is up to 41 swept and up to 47 paired. `--no-sweep` and `--no-pairs` turn each off.
 
 ## Three learners
 

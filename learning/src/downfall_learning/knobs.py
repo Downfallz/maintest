@@ -40,6 +40,10 @@ WEIGHTS_FILE = Path(__file__).resolve().parents[2] / "weights" / "greedy.json"
 #: What a permanent condition is worth in rounds, as `ActionScorer.PermanentConditionRounds` prices it.
 PERMANENT_CONDITION_ROUNDS = 3
 
+#: What a critical hit multiplies damage by, as `RuleSet.Default` sets it. Configurable there and mirrored
+#: here, so a rule set that changes it leaves this reading behind until someone changes it too.
+CRITICAL_MULTIPLIER = 2.0
+
 
 class KnobsError(ValueError):
     """A knobs file that cannot be read, or a pointer that does not address anything."""
@@ -401,6 +405,10 @@ def findings(content: Content, knobs: Knobs) -> list[str]:
 
     These are findings about the content as authored, not errors: the engine plays it either way. The
     optimizer refuses a *candidate* that adds one.
+
+    :func:`outclassed` is reported unconditionally, unlike the two above it: it reads no constraint and
+    refuses no candidate, so there is no flag whose meaning it would follow. ``--strict`` is what turns any
+    of this into an exit code.
     """
     reports: list[str] = []
     if knobs.enabled("noIndistinguishableSpells"):
@@ -411,7 +419,7 @@ def findings(content: Content, knobs: Knobs) -> list[str]:
             f"{content.tiers.get(better, '?')} and {content.tiers.get(worse, '?')}."
             for better, worse in dominance(content)
         )
-    reports.extend(unreachable(content, knobs))
+    reports.extend(outclassed(content, knobs))
     return reports
 
 
@@ -554,14 +562,22 @@ def load_weights(path: Path | None = None) -> dict[str, float]:
     }
 
 
-def reach(document: Mapping[str, object], weights: Mapping[str, float]) -> float:
+def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> float:
     """A coarse damage-equivalent of one cast of a spell, priced the way `ActionScorer` prices one.
 
     Deliberately coarse, and the list of what it leaves out is the list of reasons to read it as a finding
-    and never as a failure: no board, no targets, no defense, no cap at a target's health, no threat reading
-    behind a defensive effect (ADR 0022), and no kill term -- which is the largest weight in the game and a
-    threshold, so it rewards a reliable hit over a bigger average one in a way nothing here can see. The
-    caster's own critical chance is left out too, because it belongs to a creature and not to a spell.
+    and never as a failure:
+
+    - no board, no targets, no defense, and no cap at a target's health;
+    - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
+      ``buff x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
+    - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
+      bigger average one in a way nothing here can see;
+    - no energy cost and no Spell initiative, both of which `ActionScorer` prices when it picks an unlock,
+      so a spell whose intent rests on being cheap or on coming up early reads low here. `throwing_star` is
+      the one in this catalogue: its entry says its Spell initiative is worth more to the class than its
+      damage, and none of that is in this number;
+    - the caster's own critical chance, which belongs to a creature and not to a spell.
 
     What it is good for is one question: roughly how much is this spell worth next to the one offered beside
     it. Only `Damage` takes the critical multiplier, the same as `ResolutionRules`.
@@ -580,7 +596,7 @@ def reach(document: Mapping[str, object], weights: Mapping[str, float]) -> float
             else float(effect.get("durationRounds", 0) or 0)
         )
         total += {
-            DAMAGE: amount * (1 + critical),
+            DAMAGE: weights.get("damage", 0) * amount * (1 + critical * (CRITICAL_MULTIPLIER - 1)),
             "Heal": weights.get("heal", 0) * amount,
             "EnergyGain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
@@ -593,12 +609,17 @@ def reach(document: Mapping[str, object], weights: Mapping[str, float]) -> float
     return total
 
 
-def _ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: Mapping[str, float]) -> float:
-    """The most a spell can be worth anywhere inside its own bounds.
+def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: Mapping[str, float]) -> float:
+    """The most a spell can be worth anywhere inside its own bounds, reading the bounds alone.
 
-    Every term of :func:`reach` rises with the magnitude it reads and with the critical chance, and with
-    nothing else, so the top of the box is every knob that reaches a term set to its maximum. A cost knob
-    and a Spell initiative knob move no term here and are left where they are.
+    Every term of :func:`cast_value` is a weight that the weights file keeps at or above zero times a
+    magnitude the content keeps at or above zero, so the top of the box is every knob that reaches a term set
+    to its maximum. A cost knob and a Spell initiative knob move no term here and are left where they are.
+
+    Not the same thing as the most a *tuning pass* can reach: the corner this returns may be a catalogue the
+    constraints refuse (a spell it would dominate, a twin it would become), and nothing here plays them. The
+    error runs one way only -- it overstates the ceiling, so :func:`outclassed` under-reports rather than
+    inventing a finding -- which is why it is left cheap.
     """
     top = dict(document)
     for knob in spell.knobs:
@@ -607,10 +628,10 @@ def _ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: Mapping
         except KnobsError:
             continue
         top = with_value(top, knob.path, knob.maximum)
-    return reach(top, weights)
+    return cast_value(top, weights)
 
 
-def unreachable(content: Content, knobs: Knobs, weights: Mapping[str, float] | None = None) -> list[str]:
+def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | None = None) -> list[str]:
     """Spells no move inside their own bounds brings up to what a rival already carries today.
 
     The case this exists for: `pummel` tops out around 5.4 against `lightning_bolt`'s 6.9, so a tuning pass
@@ -635,7 +656,9 @@ def unreachable(content: Content, knobs: Knobs, weights: Mapping[str, float] | N
         return []
 
     current = {
-        alias: reach(document, prices) for alias, document in content.spells.items() if deals_damage(document)
+        alias: cast_value(document, prices)
+        for alias, document in content.spells.items()
+        if deals_damage(document)
     }
     reports: list[str] = []
     for alias, spell in sorted(knobs.spells.items()):
@@ -651,7 +674,7 @@ def unreachable(content: Content, knobs: Knobs, weights: Mapping[str, float] | N
         if not rivals:
             continue
         best = max(rivals, key=lambda other: rivals[other])
-        ceiling = _ceiling(spell, document, prices)
+        ceiling = _value_ceiling(spell, document, prices)
         if ceiling < rivals[best]:
             reports.append(
                 f"{alias} reaches at most {ceiling:.2f} at the top of its own bounds, and {best} carries "

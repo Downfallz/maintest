@@ -846,7 +846,7 @@ def test_the_share_is_read_against_the_tier_and_not_the_catalogue() -> None:
     assert metrics_of(Evaluation.from_json(raw), "mirror", content)["spellsBarelyCast"] == 0
 
 
-def test_a_tier_nobody_cast_is_left_to_the_count_of_zeros() -> None:
+def test_a_spell_in_a_tier_nobody_cast_is_not_counted_as_barely_cast() -> None:
     """Skipped rather than counted, the same way the tier readings skip a tier they cannot speak about."""
     content, raw = one_tier(**{"spell:cast": 10, "spell:quiet": 0})
     content.tiers["spell:quiet"] = 2
@@ -911,13 +911,56 @@ def test_two_knobs_of_one_spell_are_tried_together_when_neither_moves_anything_a
     assert {move.knob.path for move in result.best.moves} == {DAMAGE, CRITICAL}
 
 
+class DamageEvaluator:
+    """Responds to the damage knob alone, so the pairs gate has something to decline to fire on."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        self.calls += 1
+        return {"mirror": {"averageRounds": 40.0 - spells["spell:combo"]["effects"][0]["amount"]}}
+
+
 def test_a_spell_that_already_responds_to_one_step_costs_no_paired_evaluation(tmp_path: Path) -> None:
-    """A catalogue that is answering pays nothing for this: the pairs are only for the spells that are not."""
-    knobs = load(tmp_path)
-    content = catalogue(tmp_path)
+    """A catalogue that is answering pays nothing for this: the pairs are only for the spells that are not.
 
-    responsive = FakeEvaluator()
-    tune_content(responsive, knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0))
+    The spell has two knobs either way, so a pair *could* be built in both runs; the gate is what stops one.
+    """
+    knobs, content = combo_pair(tmp_path)
+    responsive, stuck = DamageEvaluator(), ThresholdEvaluator()
+    budget = TuneOptions(iterations=1, neighbours=1, seed=0)
 
-    single_steps = len(playable(knobs, content)) * 2
-    assert responsive.calls <= single_steps + 2
+    tune_content(responsive, knobs, content, budget)
+    tune_content(stuck, knobs, content, budget)
+
+    assert responsive.calls < stuck.calls
+
+
+def test_the_pairs_are_skipped_when_the_run_asks_for_it(tmp_path: Path) -> None:
+    """`--no-pairs`: the budget is the caller's, and this is the part of it that has no upper bound."""
+    knobs, content = combo_pair(tmp_path)
+
+    result = tune_content(
+        ThresholdEvaluator(), knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0, pairs=False)
+    )
+
+    assert not result.improved
+
+
+def test_a_paired_move_that_breaks_a_constraint_is_never_played(tmp_path: Path) -> None:
+    """Refused before the engine sees it, the same as every other candidate the search builds.
+
+    The twin makes every move that raises the combo strictly better than a spell of the same price, so the
+    one pair this catalogue has is illegal and the threshold behind it is never reached.
+    """
+    knobs, content = combo_pair(tmp_path)
+    content.spells["spell:twin"] = json.loads(json.dumps(content.spells["spell:combo"])) | {
+        "id": "spell:twin:v1"
+    }
+
+    result = tune_content(
+        ThresholdEvaluator(), knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0)
+    )
+
+    assert not result.improved

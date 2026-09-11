@@ -147,9 +147,12 @@ skips it when you want a quick look rather than an answer.
 
 Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
 benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty. The sweep is up to two
-candidates per playable knob — on the nine-spell core content that is 29 knobs and about fifteen minutes —
-and `--iterations 8 --neighbours 4` adds thirty-two more. Raise the budget rather than the step size: a
-wider step reaches further and reads worse in the diff.
+candidates per playable knob — on the nine-spell core content that is 29 knobs, 41 legal single steps and
+about fifteen minutes — the paired moves below are up to 47 more if every spell is inert, and
+`--iterations 8 --neighbours 4` adds thirty-two. So the default run is 74 candidates on a responding
+catalogue and up to 121 on a dead one, against the 180-minute timeout of the `Tune the catalogue` workflow;
+`--no-pairs` is the switch if that is tight. Raise the budget rather than the step size: a wider step
+reaches further and reads worse in the diff.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is
@@ -196,8 +199,12 @@ why it is a finding and not a failure: widening the one and lowering the other a
 between them is a design decision.
 
 The reading is coarse on purpose — no board, no targets, no defense, no cap at a target's health, no threat
-behind a defensive effect, and no kill term, which is the largest weight in the game and a threshold, so it
-rewards a reliable hit over a bigger average one in a way nothing here can see. It is read off the agents'
+behind a defensive effect (so a `DefenseBuff` is priced as `buff x amount x rounds`, a stand-in and not what
+the scorer does with one), no kill term, which is the largest weight in the game and a threshold so it
+rewards a reliable hit over a bigger average one, and neither the energy cost nor the Spell initiative that
+`ActionScorer` prices when it picks an unlock. That last one is why `throwing_star` is reported: its entry
+says its Spell initiative is worth more to the class than its damage, and none of that is in the number the
+report prints. It is read off the agents'
 own weights (`learning/weights/greedy.json`, which mirrors `ScoringWeights.Default`) rather than restated,
 and it skips any spell with no `Damage` effect on either side of the comparison, for the reason
 `tierDamageSpread` skips one: a heal and an attack share no unit. Without that rule it reports `rejuvenate`
@@ -210,12 +217,21 @@ core content `pummel` took 6 of 5283 landed casts, dead in every sense that deci
 moved it from 4 casts to 6 read as no change at all. `spellsBarelyCast` counts the spells under 1% of the
 landed casts of **their own tier** — the tier and not the catalogue, because a tier is the set a player
 chooses between at one moment, so a spell can be rare overall and still be the right pick where it is
-offered. A tier nobody cast is skipped rather than counted; that one is `spellsNeverCast`'s to report.
+offered. It counts **strictly the spells the other one does not**: a zero is a zero in either reading, and
+with the same band and weight on both, counting it twice would double what the objective asks of that one
+case. A run whose content carries no tiers reports it as missing rather than as zero, the way every tier
+reading does.
 
 And the opening sweep now also plays **two knobs of one spell together**, for the spells where no single step
-moved a measurement at all. `poison_slash` is why: from a bleed of 1 per round over 2 rounds, raising the
-amount alone reaches 59 landed casts and raising the duration alone reaches 17, while raising both together
-reaches 5155 of about 8900 — the largest move found against this catalogue's monopoly. A climb that only ever
-moves one knob has to accept the flat step in between, worth 0.005, to find the path at all. Only the two
-same-direction combinations are played, and only on spells that are not already responding, so a catalogue
-that answers a single step pays nothing for this.
+moved a measurement at all. `poison_slash` is why. On the `studio/content` branch, where it carries a bleed
+of 1 per round over 2 rounds, raising the amount alone reaches 59 landed casts and the duration alone 17,
+while raising both reaches 5155 of about 8900 — the largest move found against that catalogue's monopoly.
+A climb that only ever moves one knob has to accept the flat step in between, worth 0.005, to find the path.
+
+Read the size of that with the bounds it came from. **This** branch carries 1 over 1, so the one pair the
+sweep can build here lands on 2 over 2 and measures 310 landed casts of about 6150, against 3 today — fifty
+times better, and still two steps of the duration short of the interior point. A pair is one step of each
+knob and nothing more, so it bridges a single flat step and not a plateau. Only the two same-direction
+combinations are played, and only on spells that are not already responding, so a catalogue answering a
+single step pays nothing; `--no-pairs` turns it off, which is worth knowing because it is the part of the
+budget with no upper bound — on the nine-spell core content it is up to 47 candidates where the sweep is 41.

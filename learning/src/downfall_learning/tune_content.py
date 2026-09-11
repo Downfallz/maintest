@@ -141,6 +141,7 @@ class TuneOptions:
     max_changes: int = 12
     seed: int = 0
     sweep: bool = True
+    pairs: bool = True
 
 
 @dataclass(frozen=True)
@@ -272,7 +273,9 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
     measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
-    measured["spellsBarelyCast"] = _barely_cast(landed, by_alias, content.tiers)
+    barely = _barely_cast(landed, by_alias, content.tiers)
+    if barely is not None:
+        measured["spellsBarelyCast"] = barely
     damaging = {identifier for identifier, alias in by_alias.items() if deals_damage(content.spells[alias])}
     measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
     return measured
@@ -282,30 +285,40 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
 BARELY_CAST_SHARE = 0.01
 
 
-def _barely_cast(landed: Mapping[str, int], by_alias: Mapping[str, str], tiers: Mapping[str, int]) -> float:
-    """How many spells take less than :data:`BARELY_CAST_SHARE` of the landed casts of their own tier.
+def _barely_cast(
+    landed: Mapping[str, int], by_alias: Mapping[str, str], tiers: Mapping[str, int]
+) -> float | None:
+    """How many spells are cast, but take less than :data:`BARELY_CAST_SHARE` of their own tier's casts.
 
     ``spellsNeverCast`` counts exact zeros, and this is the hole that leaves. On the nine-spell core content
     ``pummel`` took 6 of 5283 landed casts of a mirrored run: dead in every sense that decides a game, and
     invisible to a count of zeros. A buff that moved it from 4 casts to 6 read as no change at all, on a
     metric that was never going to say otherwise.
 
+    **Strictly the spells the other metric does not count.** A zero is a zero in either reading, and the two
+    targets carry the same band and the same weight, so counting it here as well would charge a dead spell
+    twice and quietly double what the objective asks of that one case.
+
     The share is read against the tier and not the catalogue because a tier is the set a player chooses
     between at one moment: a spell can be rare overall and still be the right pick where it is offered. A
-    tier nobody cast at all is skipped rather than counted, the same way the tier readings skip it -- that
-    one is ``spellsNeverCast``'s to report.
+    tier nobody cast at all cannot produce a share, so it is skipped -- and a run whose content carries no
+    tiers at all reads as ``None`` rather than as zero, which the objective reports as missing instead of
+    counting as a metric on target. The tiers have gone missing once already (:meth:`Content.with_spells`).
     """
     per_tier: dict[int, int] = {}
     for identifier, alias in by_alias.items():
         tier = tiers.get(alias)
         if tier is not None:
             per_tier[tier] = per_tier.get(tier, 0) + landed.get(identifier, 0)
+    if not any(cast > 0 for cast in per_tier.values()):
+        return None
 
     barely = 0
     for identifier, alias in by_alias.items():
         tier = tiers.get(alias)
         cast = per_tier.get(tier, 0) if tier is not None else 0
-        if cast > 0 and landed.get(identifier, 0) / cast < BARELY_CAST_SHARE:
+        casts = landed.get(identifier, 0)
+        if cast > 0 and 0 < casts / cast < BARELY_CAST_SHARE:
             barely += 1
     return float(barely)
 
@@ -554,7 +567,8 @@ def tune_content(
     favour: set[str] = set()
     if options.sweep:
         swept = _sweep(evaluator, knobs, content)
-        swept = [*swept, *_pairs(evaluator, knobs, content, swept, first.metrics)]
+        if options.pairs:
+            swept = [*swept, *_pairs(evaluator, knobs, content, swept, first.metrics)]
         history.extend(swept)
         favour = {
             move.knob.key

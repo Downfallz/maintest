@@ -16,6 +16,7 @@ from downfall_learning.knobs import (
     Objective,
     SpellKnobs,
     Target,
+    cast_value,
     dominance,
     dominates,
     findings,
@@ -23,10 +24,9 @@ from downfall_learning.knobs import (
     load_knobs,
     load_weights,
     new_dominance,
-    reach,
+    outclassed,
     read_value,
     twins,
-    unreachable,
     validate,
     with_value,
 )
@@ -519,7 +519,15 @@ def test_the_repository_tiers_come_from_the_tree_the_creature_is_on() -> None:
     assert spells.tiers["spell:lightning_bolt"] == 1
 
 
-WEIGHTS = {"heal": 0.8, "stun": 3.0, "bleed": 0.8, "buff": 0.5, "energy": 0.2, "initiative": 0.5}
+WEIGHTS = {
+    "damage": 1.0,
+    "heal": 0.8,
+    "stun": 3.0,
+    "bleed": 0.8,
+    "buff": 0.5,
+    "energy": 0.2,
+    "initiative": 0.5,
+}
 
 
 def boxed(alias: str, tier: int, document: dict, *knobs: dict) -> tuple[Content, Knobs]:
@@ -549,7 +557,7 @@ def boxed(alias: str, tier: int, document: dict, *knobs: dict) -> tuple[Content,
 
 def test_a_critical_chance_prices_a_hit_the_way_the_resolution_rules_roll_it() -> None:
     """Expected damage is amount x (1 + chance), because a critical doubles and nothing else does."""
-    assert reach({"criticalChance": 0.5, "effects": [{"kind": "Damage", "amount": 4}]}, WEIGHTS) == 6.0
+    assert cast_value({"criticalChance": 0.5, "effects": [{"kind": "Damage", "amount": 4}]}, WEIGHTS) == 6.0
 
 
 def test_a_critical_chance_does_not_reach_a_lasting_effect() -> None:
@@ -559,13 +567,16 @@ def test_a_critical_chance_does_not_reach_a_lasting_effect() -> None:
         "effects": [{"kind": "Bleed", "amountPerRound": 2, "durationRounds": 3}],
     }
 
-    assert reach(bleeding, WEIGHTS) == pytest.approx(0.8 * 2 * 3)
+    assert cast_value(bleeding, WEIGHTS) == pytest.approx(0.8 * 2 * 3)
 
 
 def test_a_permanent_condition_is_priced_over_the_rounds_the_scorer_gives_it() -> None:
-    permanent = {"effects": [{"kind": "DefenseBuff", "amount": 2, "permanent": True}]}
+    """Pinned on `Stun`, which `ActionScorer.ConditionScore` really does price as weight x rounds."""
+    permanent = {"effects": [{"kind": "Stun", "permanent": True}]}
+    two_rounds = {"effects": [{"kind": "Stun", "durationRounds": 2}]}
 
-    assert reach(permanent, WEIGHTS) == pytest.approx(0.5 * 2 * 3)
+    assert cast_value(permanent, WEIGHTS) == pytest.approx(3.0 * 3)
+    assert cast_value(two_rounds, WEIGHTS) == pytest.approx(3.0 * 2)
 
 
 def test_a_spell_whose_whole_box_sits_under_a_rival_is_reported() -> None:
@@ -579,7 +590,7 @@ def test_a_spell_whose_whole_box_sits_under_a_rival_is_reported() -> None:
     content.spells["spell:big"] = spell(id="spell:big:v1", effects=[{"kind": "Damage", "amount": 9}])
     content.tiers["spell:big"] = 1
 
-    assert [report for report in unreachable(content, knobs, WEIGHTS) if "spell:small" in report]
+    assert [report for report in outclassed(content, knobs, WEIGHTS) if "spell:small" in report]
 
 
 def test_a_spell_whose_box_reaches_past_its_rival_is_not_reported() -> None:
@@ -593,7 +604,7 @@ def test_a_spell_whose_box_reaches_past_its_rival_is_not_reported() -> None:
     content.spells["spell:big"] = spell(id="spell:big:v1", effects=[{"kind": "Damage", "amount": 3}])
     content.tiers["spell:big"] = 1
 
-    assert unreachable(content, knobs, WEIGHTS) == []
+    assert outclassed(content, knobs, WEIGHTS) == []
 
 
 def test_being_outclassed_by_something_deeper_in_the_tree_is_not_reported() -> None:
@@ -607,7 +618,7 @@ def test_being_outclassed_by_something_deeper_in_the_tree_is_not_reported() -> N
     content.spells["spell:deep"] = spell(id="spell:deep:v1", effects=[{"kind": "Damage", "amount": 9}])
     content.tiers["spell:deep"] = 1
 
-    assert unreachable(content, knobs, WEIGHTS) == []
+    assert outclassed(content, knobs, WEIGHTS) == []
 
 
 def test_a_spell_that_deals_no_damage_is_left_out_of_the_comparison() -> None:
@@ -622,7 +633,7 @@ def test_a_spell_that_deals_no_damage_is_left_out_of_the_comparison() -> None:
     content.spells["spell:big"] = spell(id="spell:big:v1", effects=[{"kind": "Damage", "amount": 9}])
     content.tiers["spell:big"] = 1
 
-    assert unreachable(content, knobs, WEIGHTS) == []
+    assert outclassed(content, knobs, WEIGHTS) == []
 
 
 def test_without_the_agent_weights_the_reading_is_skipped_rather_than_guessed() -> None:
@@ -635,7 +646,7 @@ def test_without_the_agent_weights_the_reading_is_skipped_rather_than_guessed() 
     content.spells["spell:big"] = spell(id="spell:big:v1", effects=[{"kind": "Damage", "amount": 9}])
     content.tiers["spell:big"] = 1
 
-    assert unreachable(content, knobs, {}) == []
+    assert outclassed(content, knobs, {}) == []
 
 
 def test_the_repository_weights_are_the_nine_the_agents_score_with() -> None:
@@ -651,3 +662,35 @@ def test_the_repository_weights_are_the_nine_the_agents_score_with() -> None:
         "risk",
         "initiative",
     }
+
+
+def test_a_rival_that_deals_no_damage_is_not_the_bar_anything_is_measured_against() -> None:
+    """Both sides of the comparison, not only the subject: a heal is no more a yardstick than it is a case."""
+    content, knobs = boxed(
+        "spell:small",
+        1,
+        spell(id="spell:small:v1", criticalChance=0, effects=[{"kind": "Damage", "amount": 2}]),
+        {"path": DAMAGE_POINTER, "minimum": 1, "maximum": 3, "step": 1},
+    )
+    content.spells["spell:healer"] = spell(
+        id="spell:healer:v1", criticalChance=0, effects=[{"kind": "Heal", "amount": 99}]
+    )
+    content.tiers["spell:healer"] = 1
+
+    assert outclassed(content, knobs, WEIGHTS) == []
+
+
+def test_weights_that_cannot_be_read_are_no_weights_at_all(tmp_path: Path) -> None:
+    """Missing or broken, the reading that needs them is skipped rather than run on invented numbers."""
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+
+    assert load_weights(tmp_path / "absent.json") == {}
+    assert load_weights(broken) == {}
+
+
+def test_a_damage_weight_of_zero_prices_every_hit_at_nothing() -> None:
+    """The damage weight is read like the other eight; it only looks like a unit because it is 1.0 today."""
+    hit = {"criticalChance": 0.5, "effects": [{"kind": "Damage", "amount": 4}]}
+
+    assert cast_value(hit, WEIGHTS | {"damage": 0.0}) == 0.0
