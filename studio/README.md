@@ -6,6 +6,7 @@ running behind it, because it writes files and plays matches:
 ```bash
 dotnet run --project src/DownfallArena.Cli -- studio        # then open http://127.0.0.1:5099/
 dotnet run --project src/DownfallArena.Cli -- studio --port 5100 --data data
+dotnet run --project src/DownfallArena.Cli -- studio --export site/data   # what the hosted page reads, as files
 ```
 
 Run it from the repository root: the host serves `studio/` and `viewer/` from there, reads the content
@@ -13,11 +14,18 @@ directory `--data` names (`data` by default), and rebuilds into the folder of `-
 (`data/dst` by default). It listens on the loopback address only — this is an authoring tool for the machine
 it runs on, not a service (ADR 0015).
 
-[ADR 0023](../docs/adr/0023-a-hosted-studio-with-github-as-its-backend.md) decides a second **hosted** mode
-for authoring away from that machine: the same page served from GitHub Pages, reading the content from the
-public repository with no credential, writing it back as a commit and a pull request through the GitHub API,
-and dispatching the workflows for what needs the engine. Not built yet; the ADR says what it will and will
-not be able to do, and what accepting a token in `localStorage` costs.
+[ADR 0023](../docs/adr/0023-a-hosted-studio-with-github-as-its-backend.md) adds a second **hosted** mode for
+authoring away from that machine. The reading half is live: the same page is published to GitHub Pages on
+every push to `main` that touches it or the content, next to what the engine knew when it was published --
+the catalogue, the audit and the built-in weights, written by `studio --export`. Browsing the content there
+needs no engine, no token and no machine left on.
+
+It cannot write yet, and says so where you try rather than where the page loaded: saving, building and playing
+a match each refuse with what to use instead. Writing is the next step of the ADR, and what accepting a token
+in `localStorage` costs is written down there.
+
+Which backend answers is decided by where the page was loaded from: the local host binds the loopback address
+and nothing else (ADR 0015), so "not loopback" is exactly "not the local studio".
 
 ## What the page does
 

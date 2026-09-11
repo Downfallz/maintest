@@ -1,0 +1,94 @@
+name: Publish the studio
+
+# The studio as a static site (ADR 0023): the same page the local host serves, next to what the engine knew
+# when it was published -- the catalogue, the audit and the built-in weights, written by `studio --export`.
+# The page reads those instead of an API, so browsing the content needs no engine, no token and no machine on.
+#
+# It cannot write yet. Every operation that needs the engine refuses in the page and says where to go instead.
+on:
+  push:
+    branches: [main]
+    # Broad on purpose. Two of the three published files are the engine's own answers, not copies of authored
+    # content: the weights are `ScoringWeights.Default` in Application, and the audit is the audit rules plus
+    # whether `benchmarks/` holds a digest for the content hash the DataBuilder computed. A filter that named
+    # only the page and the content would leave a published site quoting weights the engine no longer has, and
+    # nothing on the page would say it was stale.
+    paths:
+      - "studio/**"
+      - "viewer/**"
+      - "data/**"
+      - "benchmarks/**"
+      - "src/**"
+      - "tools/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# What deploying a Pages site takes, and nothing else.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and the newest push wins: an older site is never worth waiting for.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  SITE: site
+
+jobs:
+  publish:
+    name: Build the site and deploy it
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      # The page is the four files it asks for, flat, because index.html names them relatively and so does the
+      # backend: the site works under whatever path Pages serves it from.
+      - name: Assemble the page
+        run: |
+          mkdir -p "$SITE"
+          cp studio/index.html studio/studio.css studio/studio.js studio/backend.js "$SITE/"
+          cp viewer/viewer.css "$SITE/"
+
+      # What the read-only routes answer, as files. The content is built first so the catalogue carries a
+      # content hash rather than the problems of an unbuilt directory.
+      - name: Publish what the engine knows
+        run: |
+          dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
+          dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- studio --export "$SITE/data"
+
+      # No .nojekyll: a Pages deployment from an artifact serves what it is handed and never runs Jekyll. The
+      # file would also have been dropped on the way -- upload-pages-artifact leaves hidden files out by default.
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ env.SITE }}
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

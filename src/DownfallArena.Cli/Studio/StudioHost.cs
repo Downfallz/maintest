@@ -26,7 +26,7 @@ internal static class StudioHost
             return 1;
         }
 
-        if (!File.Exists(Path.Combine(StudioDirectory, "index.html")))
+        if (options.Export is null && !File.Exists(Path.Combine(StudioDirectory, "index.html")))
         {
             await Console.Error.WriteLineAsync($"'{StudioDirectory}/index.html' not found. Run the studio from the repository root.");
             return 1;
@@ -37,6 +37,14 @@ internal static class StudioHost
         var schemaOutput = Path.GetDirectoryName(options.SchemaPath) is { Length: > 0 } directory ? directory : Path.Combine(options.Data, "dst");
 
         using var api = new StudioApi(store, runner, new BenchmarkStore(options.Benchmarks), GameSession.Rules, schemaOutput);
+
+        // --export writes what the read-only routes answer and stops: the hosted studio reads those files
+        // instead of this host, which it cannot reach (ADR 0023).
+        if (options.Export is { Length: > 0 } export)
+        {
+            return await StudioExport.WriteAsync(api, export, options.Data);
+        }
+
         using var server = new StudioServer(options.Port, api, new StudioFiles(StudioDirectory, ViewerDirectory), ViewerDirectory);
         using var stopping = new CancellationTokenSource();
 
