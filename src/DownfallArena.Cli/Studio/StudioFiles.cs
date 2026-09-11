@@ -22,6 +22,7 @@ internal sealed class StudioFiles
             ["/studio.js"] = (Path.Combine(studioDirectory, "studio.js"), "text/javascript; charset=utf-8"),
             ["/backend.js"] = (Path.Combine(studioDirectory, "backend.js"), "text/javascript; charset=utf-8"),
             ["/github.js"] = (Path.Combine(studioDirectory, "github.js"), "text/javascript; charset=utf-8"),
+            ["/balance.js"] = (Path.Combine(studioDirectory, "balance.js"), "text/javascript; charset=utf-8"),
             ["/viewer.css"] = (Path.Combine(viewerDirectory, "viewer.css"), "text/css; charset=utf-8"),
         };
     }

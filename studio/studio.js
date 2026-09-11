@@ -9,6 +9,7 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
+import { aliasOfSpell, constraintsOf, entryFor, formatNumber, objectiveOf, readBalance, summarise, survey } from './balance.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
 let backend = backendForThisPage();
@@ -176,7 +177,13 @@ function adopt(result) {
     state.catalogue = result.catalogue;
     renderHeader();
     renderNav();
+    refreshBalancePanel();
   }
+}
+
+/** The balance sheet reads the catalogue rather than a request of its own, so a change to it is a redraw. */
+function refreshBalancePanel() {
+  if (!$('balance').hidden) renderBalance();
 }
 
 // ---------- the banner ----------
@@ -386,6 +393,10 @@ function markDirty() {
     flag.textContent = 'Unsaved changes';
     flag.closest('.actions')?.classList.add('dirty');
   }
+
+  // Every control ends here, which makes it the one place a reading of the draft can be kept honest: a band
+  // still showing the damage from before the keystroke is worse than no band.
+  refreshBalanceStrip();
 }
 
 function textBox(target, key, { placeholder = '' } = {}) {
@@ -709,7 +720,9 @@ function spellEditor() {
 
   redraw();
   effects.append(list);
-  return element('div', {}, [card, effects]);
+  // The strip sits between the spell's own numbers and its effects: it reads both, and what it says about a
+  // number is worth knowing before changing the one under it rather than after scrolling past everything.
+  return element('div', {}, [card, balanceStrip(), effects]);
 }
 
 /** A single target takes no count; a multi target takes at least two, which is what the engine will accept. */
@@ -912,6 +925,8 @@ function nodeView(node, parent, redraw) {
 
   if ((node.spells || []).length) {
     card.append(element('div', { className: 'chips' }, node.spells.map(spell => spellLink(spell.id))));
+    // `element` drops what is not there; `append` would write the word "null" into the tree.
+    card.append(...[balanceFold(node.spells.map(spell => spell.id), selected)].filter(Boolean));
   }
 
   const entry = element('li', {}, [card]);
@@ -960,6 +975,8 @@ function fillNodeEditor(holder, redrawTree) {
         element('div', { className: 'row' }, [
           select,
           spellLink(spell.id),
+          // The verdict where the reference is picked: what this node is about to teach, in a word.
+          balanceTag(spell.id),
           element('span', { className: 'grow' }),
           miniButton('Remove', () => { node.spells.splice(index, 1); markDirty(); redrawSpells(); redrawTree(); }, 'mini remove'),
         ]),
@@ -1045,6 +1062,380 @@ function usedBy(item) {
   return card;
 }
 
+// ---------- the balance knobs ----------
+
+// What a tuning pass may change about a spell, and what the spell is for (`data/balance/README.md`). The page
+// reads it and never writes it: the file is authoring metadata the data builder does not even see, and the
+// checks below are `check-knobs`' own, surfaced where an edit causes them instead of only on the command line.
+//
+// The reading itself is `balance.js`, which knows nothing about the DOM; everything here is how it is drawn.
+
+/** Read at draw time, never cached: a save, a build or a reload replaces the catalogue under the page. */
+const knobsHere = () => readBalance(state.catalogue);
+
+/** The one discreet line where the knobs would have gone. A host that publishes none is not a broken sheet. */
+const noKnobs = why => element('p', { className: 'muted balance-none', textContent: why });
+
+/**
+ * One spell's entry, found by the **unversioned alias** that points at the spell rather than by its versioned
+ * id, so cutting a `:v2` keeps the entry instead of orphaning it. `document` is what is on screen -- the draft
+ * in the editor, the catalogue's copy anywhere else -- because the value a knob is judged against is the one
+ * being authored, not the one that was on disk when the page loaded.
+ */
+function balanceOf(balance, id, document) {
+  const alias = aliasOfSpell(id, state.catalogue?.aliases || {});
+  const entry = alias ? entryFor(balance, alias) : null;
+  return entry ? { alias, summary: summarise(entry, document) } : { alias, summary: null };
+}
+
+/** Where a value stands in its band, in words: the part of the strip that is read rather than looked at. */
+function whereLabel(reading) {
+  switch (reading.at) {
+    case 'min': return 'at its minimum';
+    case 'max': return 'at its maximum';
+    case 'below': return 'below its band';
+    case 'above': return 'above its band';
+    case 'inside': return reading.room ? `${reading.room.down} down, ${reading.room.up} up` : 'inside its band';
+    default: return 'nothing to read';
+  }
+}
+
+/**
+ * The band as a bar: the track is what the knob may reach, the mark is where the content sits on it today. A
+ * value outside its bounds is drawn against the edge it left, in the colour of a problem, because clamping it
+ * silently into the track is exactly the lie this view exists to prevent.
+ */
+function knobBand(reading) {
+  if (reading.position === null) {
+    return element('div', { className: 'band empty', title: 'No band to draw: this knob addresses no number.' });
+  }
+
+  const mark = element('span', { className: `mark${reading.at === 'below' || reading.at === 'above' ? ' out' : ''}` });
+  mark.style.left = `${(reading.position * 100).toFixed(2)}%`;
+  const bounds = `${formatNumber(reading.minimum)} to ${formatNumber(reading.maximum)}`;
+  return element('div', {
+    className: 'band',
+    role: 'img',
+    // The bar carries the whole reading for anyone not looking at it; the text beside it repeats the numbers.
+    ariaLabel: `${formatNumber(reading.value)} in a band of ${bounds}, ${whereLabel(reading)}`,
+  }, [mark]);
+}
+
+/** One knob: what it addresses, what the content carries, where that sits, and what is wrong with the pair. */
+function knobRow(reading) {
+  const row = element('div', { className: `knob tone-${reading.tone}` }, [
+    element('code', { className: 'pointer', textContent: reading.path || '(no pointer)' }),
+    element('span', { className: 'value', textContent: reading.value === null ? '—' : formatNumber(reading.value) }),
+    knobBand(reading),
+    element('span', { className: 'bounds' }, [
+      reading.position === null ? 'no band' : `${formatNumber(reading.minimum)}–${formatNumber(reading.maximum)} · step ${formatNumber(reading.step)}`,
+      element('span', { className: 'where', textContent: whereLabel(reading) }),
+    ]),
+  ]);
+  for (const problem of reading.problems) {
+    row.append(element('p', { className: 'problem', textContent: problem.message }));
+  }
+
+  return row;
+}
+
+/**
+ * The strip on a spell's sheet. It is a `details` so a phone keeps the form's own fields within reach: closed,
+ * it still shows the intent and the verdict, which is the part a number cannot say; open, it adds the
+ * invariants and every knob's band. A desk has the room, so it opens there.
+ */
+function balanceStrip() {
+  const holder = element('details', { className: 'card balance', id: 'balance-strip', open: !narrow.matches });
+  fillBalanceStrip(holder);
+  return holder;
+}
+
+/** Redrawn as the spell is typed, the way the critical chance reading is: a stale band is a wrong band. */
+function refreshBalanceStrip() {
+  const holder = $('balance-strip');
+  if (holder) fillBalanceStrip(holder);
+}
+
+function fillBalanceStrip(holder) {
+  const answer = knobsHere();
+  const title = element('summary', {}, [element('span', { className: 'what', textContent: 'Balance' })]);
+  if (!answer.ok) {
+    // Discreet on purpose: a page served by an older deployment shows one folded line here, not a wall about
+    // a file it was never given. The whole sentence is one tap away for whoever wonders why.
+    holder.className = 'card balance quiet';
+    holder.open = false;
+    title.append(element('span', { className: 'headline', textContent: 'not published by this host' }));
+    holder.replaceChildren(title, noKnobs(answer.why));
+    return;
+  }
+
+  // The entry belongs to the spell being edited, so the alias is looked up by the id it was opened under and
+  // the numbers are read from the draft: typing a new id in the box must not make the entry vanish mid-word.
+  const { alias, summary } = balanceOf(answer.balance, state.selected?.id ?? state.draft.id, state.draft);
+  if (!summary) {
+    holder.className = 'card balance tone-bad';
+    holder.replaceChildren(title, missingEntry(alias));
+    return;
+  }
+
+  title.append(element('span', { className: 'headline', textContent: summary.headline }));
+  // A span rather than a paragraph: a summary holds phrasing content, and the stylesheet makes it a block.
+  title.append(element('span', {
+    className: `intent${summary.intent ? '' : ' absent'}`,
+    textContent: summary.intent || 'No intent: nothing says what these numbers are for.',
+  }));
+
+  const body = [];
+  if (summary.keep.length) {
+    body.push(element('div', { className: 'label', textContent: 'Whatever the numbers do' }));
+    body.push(element('ul', { className: 'keep' }, summary.keep.map(kept => element('li', { textContent: kept }))));
+  }
+
+  if (summary.note) body.push(element('p', { className: 'note', textContent: summary.note }));
+  for (const problem of summary.problems) body.push(element('p', { className: 'problem', textContent: problem.message }));
+  body.push(element('div', { className: 'knobs' }, summary.knobs.length
+    ? summary.knobs.map(knobRow)
+    : [element('p', { className: 'muted', textContent: 'No knob: every number of this spell is its identity, and a tuning pass may move none of it.' })]));
+  body.push(element('p', { className: 'muted source' }, [
+    'Read from ',
+    element('code', { textContent: alias }),
+    ' in data/balance/knobs.json. The studio does not write it.',
+  ]));
+
+  holder.className = `card balance tone-${summary.tone}`;
+  holder.replaceChildren(title, ...body);
+}
+
+/**
+ * A spell the knobs file says nothing about. Which of the three reasons it is matters: an enabled spell with no
+ * entry is what `check-knobs` fails on, a spell that is off is owed none, and a spell no alias points at cannot
+ * be named by the file at all, whatever anyone writes in it.
+ */
+function missingEntry(alias) {
+  if (!alias) {
+    return element('p', { className: 'problem', textContent: 'No alias points at this spell, so the knobs file has no name to key an entry by. Aliases live in data/aliases.json.' });
+  }
+
+  if (state.draft.enabled === false) {
+    return element('p', { className: 'muted', textContent: `No entry for ${alias}. This spell is off, so it is out of the build and nothing tunes it.` });
+  }
+
+  return element('p', { className: 'problem', textContent: `No entry for ${alias}: nothing says what this spell is for or which of its numbers may move. check-knobs fails on enabled content with no entry.` });
+}
+
+/** The spells one talent node offers, each with what the balance file says about it. */
+function briefsOf(references) {
+  const answer = knobsHere();
+  if (!answer.ok) return null;
+  return references.map(reference => {
+    const spell = spellNamed(reference);
+    return { reference, spell, ...balanceOf(answer.balance, spell?.id || reference, spell?.document || {}) };
+  });
+}
+
+/**
+ * What the balance file says about the spells a node teaches, folded away unless the node is the one being
+ * edited. A tier is the set offered at one depth, which is several nodes, so reading one means opening a fold
+ * or two rather than leaving the tree; the summary line carries the verdict, so a closed fold still shows
+ * trouble. Nothing is drawn at all when the host publishes no knobs: the sheet says that once, loudly enough.
+ */
+function balanceFold(references, open) {
+  const briefs = briefsOf(references);
+  if (!briefs?.length) return null;
+  const wrong = briefs.filter(brief => !brief.summary || brief.summary.tone === 'bad').length;
+  const tone = wrong ? 'bad' : 'ok';
+  const verdict = wrong ? `${wrong} of ${briefs.length} to look at` : 'all inside their bands';
+
+  return element('details', { className: `balance-fold tone-${tone}`, open }, [
+    element('summary', {}, [
+      element('span', { className: 'what', textContent: 'Balance' }),
+      element('span', { className: 'headline', textContent: `${briefs.length} spell${briefs.length === 1 ? '' : 's'} · ${verdict}` }),
+    ]),
+    ...briefs.map(brief),
+  ]);
+}
+
+/** One spell of a node, compact: what it is for in a line or two, and its knobs as bands and nothing else. */
+function brief({ reference, spell, alias, summary }) {
+  if (!summary) {
+    return element('div', { className: 'brief tone-bad' }, [
+      element('div', { className: 'brief-head' }, [spellLink(reference)]),
+      element('p', { className: 'problem', textContent: alias ? `No entry for ${alias} in the knobs file.` : 'No alias points at this spell, so the knobs file cannot name it.' }),
+    ]);
+  }
+
+  return element('div', { className: `brief tone-${summary.tone}` }, [
+    element('div', { className: 'brief-head' }, [
+      spellLink(reference),
+      element('span', { className: 'headline', textContent: summary.headline }),
+      spell?.enabled === false ? element('span', { className: 'tag', textContent: 'off' }) : null,
+    ]),
+    element('p', {
+      className: `intent${summary.intent ? '' : ' absent'}`,
+      textContent: summary.intent || 'No intent: nothing says what these numbers are for.',
+    }),
+    element('div', { className: 'mini-knobs' }, summary.knobs.map(reading => element('div', { className: `mini-knob tone-${reading.tone}`, title: `${reading.path}: ${reading.value === null ? 'no number' : formatNumber(reading.value)}, ${whereLabel(reading)}` }, [
+      element('code', { textContent: reading.path }),
+      knobBand(reading),
+    ]))),
+  ]);
+}
+
+/** Beside a spell in the node editor: the verdict in a word, where the reference itself is picked. */
+function balanceTag(reference) {
+  const answer = knobsHere();
+  if (!answer.ok) return null;
+  const spell = spellNamed(reference);
+  const { alias, summary } = balanceOf(answer.balance, spell?.id || reference, spell?.document || {});
+  if (!summary) {
+    return element('span', { className: 'balance-tag tone-bad', textContent: alias ? 'no balance entry' : 'no alias, so no entry' });
+  }
+
+  // Terse, because it shares a row with a picker: the whole reading is on hover and in the fold above.
+  const count = summary.problems.length + summary.knobs.filter(knob => knob.tone === 'bad').length;
+  const label = summary.tone === 'bad'
+    ? `${count} to look at`
+    : `${summary.knobs.length} knob${summary.knobs.length === 1 ? '' : 's'}`;
+  return element('span', { className: `balance-tag tone-${summary.tone}`, textContent: label, title: `${summary.headline} — ${summary.intent}` });
+}
+
+// ---------- the balance panel ----------
+
+/**
+ * The file's own half of the story, which belongs to no one spell: what balanced means as a score, what a
+ * candidate may never do, and how much of the catalogue the file covers at all. It reads the catalogue the page
+ * already holds, so it costs no request and moves with the edits on screen.
+ */
+function renderBalance() {
+  const body = $('balance-body');
+  const answer = knobsHere();
+  if (!answer.ok) {
+    body.replaceChildren(noKnobs(answer.why));
+    return;
+  }
+
+  const balance = answer.balance;
+  body.replaceChildren(
+    balanceCoverage(balance),
+    balanceObjective(balance),
+    balanceConstraints(balance),
+    element('p', { className: 'hint', textContent: balance.about || '' }),
+  );
+}
+
+/** The file against the content it describes: the same reading `check-knobs` prints, on what is on screen. */
+function balanceCoverage(balance) {
+  const rolled = survey(balance, documentsOf('spells'), state.catalogue?.aliases || {});
+  const clean = !rolled.uncovered.length && !rolled.unresolved.length && !rolled.flagged.length;
+  const block = element('div', {}, [
+    element('div', { className: 'audit-line' }, [
+      element('span', { textContent: `${rolled.covered} of ${rolled.enabled} enabled spells have an entry` }),
+      element('span', { textContent: `${rolled.entries} entries, ${rolled.knobs} knobs` }),
+      // Most of this catalogue is off, and those entries are kept on purpose: they are the only thing left
+      // saying what a spell was for while it waits for a rule to come back.
+      rolled.resting ? element('span', { textContent: `${rolled.resting} for spells that are off` }) : null,
+      rolled.uncovered.length ? element('span', { className: 'warn', textContent: `${rolled.uncovered.length} with no entry` }) : null,
+      rolled.flagged.length ? element('span', { className: 'warn', textContent: `${rolled.flagged.length} the file disagrees with` }) : null,
+      rolled.unresolved.length ? element('span', { className: 'warn', textContent: `${rolled.unresolved.length} naming nothing` }) : null,
+      clean ? element('span', { textContent: 'every enabled spell is covered' }) : null,
+    ]),
+  ]);
+
+  if (clean) {
+    block.append(element('p', { className: 'hint', textContent: 'Nothing disagrees: every enabled spell has an entry with an intent, every pointer addresses a number, and every number the content carries sits inside its own band.' }));
+    return block;
+  }
+
+  const findings = element('ul', { className: 'findings' });
+  for (const spell of rolled.uncovered) {
+    findings.append(element('li', {}, [
+      miniButton(spell.name || spell.id, () => select(spell.path), 'link'),
+      element('span', { textContent: ` — enabled content with no entry in the knobs file${spell.alias ? '' : ', and no alias to key one by'}.` }),
+    ]));
+  }
+
+  for (const alias of rolled.unresolved) {
+    findings.append(element('li', {}, [
+      element('span', { className: 'mono', textContent: alias }),
+      element('span', { textContent: ' — an entry for a spell no alias resolves to.' }),
+    ]));
+  }
+
+  for (const spell of rolled.flagged) {
+    const item = element('li', {}, [miniButton(spell.name || spell.alias, () => select(spell.path), 'link')]);
+    item.append(element('ul', {}, spell.problems.map(problem => element('li', {}, [
+      problem.path ? element('code', { textContent: `${problem.path} ` }) : null,
+      element('span', { textContent: problem.message }),
+    ]))));
+    findings.append(item);
+  }
+
+  block.append(findings);
+  return block;
+}
+
+/** What balanced means: which evaluations are played, and the band each metric they report should land in. */
+function balanceObjective(balance) {
+  const objective = objectiveOf(balance);
+  const block = element('div', {}, [element('h3', { className: 'section', textContent: 'The objective' })]);
+  if (objective.seeds) block.append(element('p', { className: 'hint', textContent: `Played on ${objective.seeds}. ${objective.score}` }));
+  for (const evaluation of objective.evaluations) {
+    block.append(element('p', { className: 'hint' }, [
+      element('code', { textContent: evaluation.name }),
+      element('span', { textContent: ` — ${evaluation.p1} against ${evaluation.p2}. ${evaluation.reads}` }),
+    ]));
+  }
+
+  if (!objective.targets.length) {
+    block.append(element('p', { className: 'hint', textContent: 'No target, so every candidate scores the same and the search has nothing to climb.' }));
+    return block;
+  }
+
+  // A block each rather than a table: every target carries a paragraph saying why its band is where it is,
+  // and a paragraph in a cell is a row nobody reads on a phone.
+  for (const target of objective.targets) {
+    block.append(element('div', { className: 'target' }, [
+      element('div', { className: 'constraint-head' }, [
+        element('code', { textContent: target.metric }),
+        // A target reading an evaluation nobody plays is a term silently missing from every score.
+        element('span', { className: target.declared ? 'muted mono' : 'warn mono', textContent: target.declared ? `read from ${target.on}` : `reads ${target.on}, which the objective does not declare` }),
+      ]),
+      element('div', { className: 'pills' }, [
+        pill(target.band, 'band'),
+        pill(formatNumber(target.scale), 'scale'),
+        pill(formatNumber(target.weight), 'weight'),
+      ]),
+      element('p', { className: 'muted', textContent: target.why }),
+    ]));
+  }
+
+  return block;
+}
+
+/** The hard rules. A candidate that breaks one is not scored at all, so an author is owed the list. */
+function balanceConstraints(balance) {
+  const block = element('div', {}, [element('h3', { className: 'section', textContent: 'The constraints' })]);
+  for (const constraint of constraintsOf(balance)) {
+    const card = element('div', { className: `constraint${constraint.enabled ? '' : ' off'}` }, [
+      element('div', { className: 'constraint-head' }, [
+        element('code', { textContent: constraint.name }),
+        element('span', { className: `tag ${constraint.enabled ? 'on' : ''}`, textContent: constraint.enabled ? 'enforced' : 'off' }),
+      ]),
+      element('p', { textContent: constraint.what }),
+      element('p', { className: 'muted', textContent: constraint.why }),
+    ]);
+    // The kit is the one hand every match is dealt, so the spells it names are worth a tap each; a name
+    // nothing resolves to shows as unknown on the chip, which is the constraint quietly checking nothing.
+    if (constraint.spells.length) {
+      card.append(element('div', { className: 'chips' }, constraint.spells.map(spellLink)));
+    }
+
+    block.append(card);
+  }
+
+  return block;
+}
+
 function walkNodes(node, visit) {
   if (!node || typeof node !== 'object') return;
   visit(node);
@@ -1107,6 +1498,7 @@ function applyLocally(tab, request) {
 
   if (request.aliases) state.catalogue.aliases = { ...request.aliases };
   renderNav();
+  refreshBalancePanel();
 }
 
 /** A save that became a commit says where to watch it; one that rebuilt the content says what it did. */
@@ -1283,7 +1675,7 @@ function closeNav() {
   syncScrim();
 }
 
-const PANELS = ['run', 'runs', 'audit'];
+const PANELS = ['run', 'runs', 'audit', 'balance'];
 
 /** The scrim is there whenever something is open over the editor on a phone; studio.css hides it on a desk. */
 function syncScrim() {
@@ -1589,6 +1981,8 @@ renderToken();
 $('run-panel').addEventListener('click', () => togglePanel('run', () => { if (backend.kind !== 'hosted') loadWeights(); }));
 $('runs-panel').addEventListener('click', () => togglePanel('runs', loadRuns));
 $('audit-panel').addEventListener('click', () => togglePanel('audit', loadAudit));
+// Nothing to load: the knobs ride in on the catalogue, so opening this sheet is drawing what the page has.
+$('balance-panel').addEventListener('click', () => togglePanel('balance', renderBalance));
 $('browse').addEventListener('click', () => { if (document.body.classList.contains('nav-open')) closeNav(); else { closePanels(); openNav(); } });
 $('nav-close').addEventListener('click', closeNav);
 $('scrim').addEventListener('click', closeSheets);

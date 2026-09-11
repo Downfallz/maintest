@@ -70,7 +70,7 @@ jobs:
       - name: Assemble the page
         run: |
           mkdir -p "$SITE"
-          cp studio/index.html studio/studio.css studio/studio.js studio/backend.js studio/github.js "$SITE/"
+          cp studio/index.html studio/studio.css studio/studio.js studio/backend.js studio/github.js studio/balance.js "$SITE/"
           cp viewer/viewer.css "$SITE/"
 
       # What the read-only routes answer, as files. The content is built first so the catalogue carries a
