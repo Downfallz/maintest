@@ -128,6 +128,49 @@ public sealed class ActionScorerTests
         Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new ConditionOutcome(Three, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(-0.2 * 2 * 3, 1e-9);
     }
 
+    /// <summary>
+    /// Every lasting effect is priced over the rounds it lasts, and this asks all of them at once.
+    ///
+    /// The two it was written for were both priced flat: a three-round stun was worth a one-round stun, and
+    /// Infectious Blast's two-round initiative debuff was worth Ice Spear's one-round one. `rounds` was
+    /// computed on the line above them and read by the other three effects, which is what made the omission
+    /// invisible -- the switch was exhaustive over the *types* and not over what each type carries.
+    ///
+    /// It sweeps the taxonomy rather than naming today's five, so the effect added next is covered the day it
+    /// compiles rather than the day someone remembers. This is the fifth time a dimension the domain models
+    /// has turned out to be one the scorer never read (ADR 0020, ADR 0026).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(LastingEffects))]
+    public void A_lasting_effect_is_worth_more_the_longer_it_lasts(string name, LastingEffect brief, LastingEffect long_)
+    {
+        // Hurt, because a heal over time on a target at full health is worth nothing however long it runs --
+        // correctly, and it would make this ask the wrong question of Regeneration.
+        var board = Board(enemyHealth: 20);
+        var hurt = board[1] with { Health = Health.Of(10) };
+        var creatures = new List<CreatureSnapshot> { board[0], hurt, board[2] };
+        var action = Strike(One, hurt.Id);
+
+        var one = Scorer.Score(Cast(action, hurt.Id, brief), creatures);
+        var two = Scorer.Score(Cast(action, hurt.Id, long_), creatures);
+
+        Math.Abs(two).ShouldBeGreaterThan(Math.Abs(one), $"{name} lasts twice as long and is priced the same");
+    }
+
+    /// <summary>Each lasting effect twice: one round, then two. Amounts are equal so only the duration moves.</summary>
+    public static TheoryData<string, LastingEffect, LastingEffect> LastingEffects() => new()
+    {
+        { nameof(Stun), Stun.For(1), Stun.For(2) },
+        { nameof(Bleed), Bleed.Of(1, rounds: 1), Bleed.Of(1, rounds: 2) },
+        { nameof(Regeneration), Regeneration.Of(1, rounds: 1), Regeneration.Of(1, rounds: 2) },
+        { nameof(EnergyRegeneration), EnergyRegeneration.Of(1, rounds: 1), EnergyRegeneration.Of(1, rounds: 2) },
+        { nameof(DefenseBuff), DefenseBuff.Of(1, Duration.OfRounds(1)), DefenseBuff.Of(1, Duration.OfRounds(2)) },
+        { nameof(InitiativeDebuff), InitiativeDebuff.Of(1, Duration.OfRounds(1)), InitiativeDebuff.Of(1, Duration.OfRounds(2)) },
+    };
+
+    private static CombatResolution Cast(CombatAction action, CreatureId target, LastingEffect effect) =>
+        CombatResolution.Resolved(action, [target], [], false, Energy.Of(0), [new ConditionOutcome(target, effect)]);
+
     [Fact]
     public void Energy_kept_counts_a_little_and_dropped_targets_cost_risk()
     {

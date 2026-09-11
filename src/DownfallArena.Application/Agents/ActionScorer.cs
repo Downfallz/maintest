@@ -206,12 +206,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var sign = Sign(actor, target);
         return effect switch
         {
-            Stun => sign * weights.Stun,
+            Stun => sign * weights.Stun * rounds,
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
             EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
             DefenseBuff => 0,  // priced per target, with the rest of what the cast defends: see DefensiveScore
-            InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
+            InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount * rounds,
             _ => 0,
         };
     }
