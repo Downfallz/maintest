@@ -116,6 +116,21 @@ export function treeEntries({ write = [], remove = [], aliases, balance }) {
   return entries;
 }
 
+/**
+ * What one change saved, in the words the page prints after "Saved". One written file is its path, because
+ * that is what an author just looked at; everything else is counted or named. A change that writes no document
+ * used to read "0 removal(s)" -- true of nothing, and wrong for the two shapes that write a single well-known
+ * file rather than a document.
+ */
+function saved({ write = [], remove = [], aliases, balance }) {
+  if (write.length === 1 && !remove.length) return write[0].path;
+  if (write.length) return `${write.length} file(s)`;
+  if (remove.length) return `${remove.length} removal(s)`;
+  if (balance) return 'the balance knobs';
+  if (aliases) return 'the alias map';
+  return 'nothing';
+}
+
 /** What one change says it did, as a commit subject. The body is the diff; the subject has to carry the intent. */
 function subject({ kind, write = [], remove = [], aliases, balance }) {
   const wrote = write.map(document => document.path);
@@ -319,7 +334,7 @@ export function githubBackend({ transport = globalThis.fetch, token, repository,
       const meta = await api('');
       const pull = await pullRequest(meta.payload.default_branch);
       return {
-        saved: request.write?.[0]?.path ?? `${request.remove?.length ?? 0} removal(s)`,
+        saved: saved(request),
         commit: commit.payload.sha,
         branch,
         pullRequest: { number: pull.number, url: pull.html_url },

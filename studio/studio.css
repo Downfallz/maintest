@@ -411,17 +411,14 @@ details[open] summary { margin-bottom: 6px; }
 .balance.quiet .headline { font-weight: 500; color: var(--muted); }
 .balance .intent { display: block; margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
 .balance .intent.absent { color: var(--bad); }
-.balance .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin: 14px 0 4px; }
-.balance .keep { margin: 0; padding-left: 18px; font-size: 13px; }
-.balance .keep li { margin-bottom: 3px; }
-.balance .note { margin: 12px 0 0; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--sunken); color: var(--muted); font-size: 12.5px; }
 .balance .source { margin: 12px 0 0; font-size: 11.5px; }
 /* This page has no blanket `.muted`: each place that wants the quiet colour asks for it. */
 .balance .muted, .balance-none, #balance-body .muted { color: var(--muted); }
 .balance-none { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; }
 .balance .problem, .balance-fold .problem { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--bad); }
 
-.balance .knobs { margin-top: 14px; }
+/* Under its own label in the grid above, so the spacing is the grid's and not a second one on top of it. */
+.balance .knobs { margin-top: 2px; }
 .knob { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 5px 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .knob:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 .knob .pointer, .mini-knob code, .balance .source code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -443,6 +440,26 @@ details[open] summary { margin-bottom: 6px; }
 .band .mark.out { border-radius: 2px; transform: rotate(45deg); }
 /* Nothing to place: the pointer addresses no number, so there is no band rather than an empty one. */
 .band.empty { background: repeating-linear-gradient(90deg, var(--line) 0 5px, transparent 5px 10px); }
+
+/* Editing the entry (ADR 0025). One knob is the reading above the controls that produced it, so a band moves as
+   its own bounds are typed; the separator between knobs moves out here, or two of them would draw one line. */
+.knob-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.knob-block:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.knob-block .knob { margin-top: 0; padding-top: 0; border-top: none; }
+.knob-block .row { margin: 8px 0 0; }
+/* The one row that is not a knob: the button that adds the next one, clear of the last one's controls. */
+.balance .knobs > .row { margin-top: 10px; }
+.balance .fields { margin-top: 14px; }
+/* A sentence or two, not a line: the box starts at the size of what it is asking for and grows by hand. */
+.fields textarea { padding: 8px 12px; min-height: 0; line-height: 1.45; resize: vertical; }
+/* One Save, two files: the spell's own dirt shows on Save, and the knobs' shows where the knobs were typed --
+   which on a phone is the only one of the two that is on screen. */
+.balance .edited {
+  margin-left: 8px; padding: 1px 7px; border-radius: 999px;
+  background: var(--warn-wash); color: var(--warn);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.balance .edited:empty { display: none; }
 
 /* The same reading on a talent node, compact: a tier is several nodes at one depth, so it is read by opening
    a fold or two rather than by leaving the tree. */

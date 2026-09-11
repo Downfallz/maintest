@@ -73,8 +73,11 @@ the same exposure `aliases.json` already carries and is accepted for the same re
 conflict is a text conflict in a pull request, and the alternative — writing only the entry that changed —
 cannot be expressed through the Git Trees API without reading, patching and racing.
 
-A change that writes no knobs omits the part entirely rather than sending the file unchanged, so editing a
-creature or a tree does not touch `data/balance/` and does not show up in its history.
+A part a change does not touch is omitted entirely rather than sent unchanged, and that holds in both
+directions. Editing a creature or a tree sends no `balance`, so it does not touch `data/balance/` and does not
+show up in its history; widening a band on its own sends no `write`, so it does not rewrite the spell's file
+with the bytes already in it. The second half is what makes a balance pass reviewable — a commit that says
+`Studio: save the balance knobs` and carries one file.
 
 The local host gains one route for the knobs and `ContentStore` one writer. That writer validates the document
 is an object and nothing further: the shape belongs to `check-knobs` and to `balance.js`, and a DTO in the

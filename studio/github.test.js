@@ -359,3 +359,32 @@ test('the knobs blob ends with a newline, the way every authored file in this re
 
   assert.ok(entry.content.endsWith('\n'));
 });
+
+test('a change that only moves the knobs names them rather than counting removals it did not make', async () => {
+  const stub = github();
+
+  const result = await backend(stub).change({ kind: 'spells', balance: { version: 'knobs:v1', spells: {} } });
+
+  assert.equal(result.saved, 'the balance knobs');
+});
+
+test('a change that only moves the knobs says so in its commit subject', async () => {
+  const stub = github();
+
+  await backend(stub).change({ kind: 'spells', balance: { version: 'knobs:v1', spells: {} } });
+
+  const commit = stub.calls.find(call => /\/git\/commits$/.test(call.url));
+  assert.equal(commit.body.message, 'Studio: save the balance knobs');
+});
+
+test('one written document is still reported by its path, which is what the author was looking at', async () => {
+  const stub = github();
+
+  const result = await backend(stub).change({
+    kind: 'spells',
+    write: [{ path: 'Spells/a.v1.json', document: {} }],
+    balance: { version: 'knobs:v1' },
+  });
+
+  assert.equal(result.saved, 'Spells/a.v1.json');
+});

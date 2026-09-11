@@ -9,7 +9,7 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { aliasOfSpell, constraintsOf, entryFor, formatNumber, objectiveOf, readBalance, summarise, survey } from './balance.js';
+import { aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, objectiveOf, readBalance, readPointer, readings, seedEntry, summarise, survey, withEntry } from './balance.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
 let backend = backendForThisPage();
@@ -75,7 +75,10 @@ const TEMPLATES = {
   }),
 };
 
-const state = { catalogue: null, tab: 'spells', selected: null, draft: null, dirty: false, node: null, busy: false, runs: [], weights: null, audit: null };
+// `draft` and `entry` are the two documents one spell sheet edits: the spell's own file, and its entry in the
+// balance knobs, which is a different file with a different meaning (ADR 0025). They dirty separately and are
+// written by the same Save, so the page always says which of the two a Save is about to move.
+const state = { catalogue: null, tab: 'spells', selected: null, draft: null, dirty: false, entry: null, knobsDirty: false, node: null, busy: false, runs: [], weights: null, audit: null };
 
 /** Below this width the list and the panels are sheets over the editor rather than beside it (studio.css agrees). */
 const narrow = globalThis.matchMedia('(max-width: 899px)');
@@ -225,10 +228,14 @@ function clearBanner() {
   $('banner').hidden = true;
 }
 
-/** Says what a change did, and whether the content still builds after it. */
-function report(message) {
+/**
+ * Says what a change did, and whether the content still builds after it. `notes` are what the change left for
+ * the author to look at rather than what went wrong with it, so they do not turn a save that worked into an
+ * error: a knob left pointing at an effect the new version dropped is worth a line under a green banner.
+ */
+function report(message, notes = []) {
   const problems = state.catalogue?.problems || [];
-  banner(problems.length ? `${message} The content does not build yet.` : message, problems.length ? 'error' : 'ok', problems);
+  banner(problems.length ? `${message} The content does not build yet.` : message, problems.length ? 'error' : 'ok', [...problems, ...notes]);
 }
 
 // ---------- header and navigation ----------
@@ -358,6 +365,8 @@ function select(path, node = null) {
   if (!found) {
     state.selected = null;
     state.draft = null;
+    state.entry = null;
+    state.knobsDirty = false;
     state.node = null;
     renderNav();
     renderDetail();
@@ -369,6 +378,10 @@ function select(path, node = null) {
   state.selected = found.item;
   state.draft = clone(found.item.document);
   state.dirty = false;
+  // Both documents are read fresh here, which makes opening an item the one place neither can be half carried
+  // over from the last one. `entryFor` builds its own arrays and objects, so editing it edits nothing else.
+  state.entry = entryOfSelected(found.tab, found.item);
+  state.knobsDirty = false;
   // The draft is a copy, so a node handed in from the catalogue is found again in it by its code.
   state.node = node ? nodeNamed(state.draft.root, node.code) : null;
   renderNav();
@@ -406,11 +419,7 @@ function fields(rows, { single = false } = {}) {
 
 function markDirty() {
   state.dirty = true;
-  const flag = $('dirty-flag');
-  if (flag) {
-    flag.textContent = 'Unsaved changes';
-    flag.closest('.actions')?.classList.add('dirty');
-  }
+  renderDirtyFlag();
 
   // Every control ends here, which makes it the one place a reading of the draft can be kept honest: a band
   // still showing the damage from before the keystroke is worse than no band. The panel surveys the whole
@@ -420,24 +429,69 @@ function markDirty() {
   refreshBalancePanel();
 }
 
-function textBox(target, key, { placeholder = '' } = {}) {
+/**
+ * The other half of dirty: the spell's entry in the balance knobs, which the same Save writes as the `balance`
+ * part of its change (ADR 0025). It is counted apart from `state.dirty` because it is a different file saying a
+ * different thing -- widening a band is not editing the spell -- and because a change that moves one of the two
+ * must leave the other alone rather than rewrite it with what it already said.
+ *
+ * It redraws the flag and the roll-up, and deliberately not the strip: the strip now holds the boxes the entry
+ * is typed into, and rebuilding it under a caret is how an intent gets typed one character at a time into
+ * nothing. What a keystroke there does change -- the verdict, the band beside it -- is redrawn where it is.
+ */
+function markKnobs() {
+  state.knobsDirty = true;
+  renderDirtyFlag();
+  refreshBalancePanel();
+}
+
+/**
+ * What the next Save writes. One sheet now edits two files, and which of the two is pending is not a detail --
+ * an author who widened a band is owed the fact that the spell itself is not about to move, and the other way
+ * round. Short, because it shares a row with the four actions; the strip says the same thing where it was typed.
+ */
+function dirtyLabel() {
+  if (state.dirty && state.knobsDirty) return 'Unsaved spell and knobs';
+  if (state.knobsDirty) return 'Unsaved knobs';
+  return state.dirty ? 'Unsaved spell' : '';
+}
+
+function renderDirtyFlag() {
+  const flag = $('dirty-flag');
+  if (!flag) return;
+  flag.textContent = dirtyLabel();
+  flag.closest('.actions')?.classList.toggle('dirty', state.dirty || state.knobsDirty);
+}
+
+/**
+ * Which of the two documents a control dirties, decided where the control is built rather than where it ends.
+ * Everything on a sheet used to be the spell, so `markDirty` was the only answer and the default keeps it.
+ */
+function textBox(target, key, { placeholder = '', dirty = markDirty } = {}) {
   const input = element('input', { type: 'text', value: target[key] ?? '', placeholder });
-  input.addEventListener('input', () => { target[key] = input.value; markDirty(); });
+  input.addEventListener('input', () => { target[key] = input.value; dirty(); });
   return input;
 }
 
-function numberBox(target, key, { step = 1, min = null, onChange = null } = {}) {
+/** A paragraph rather than a line: an intent is a sentence or two about what a spell is for, and it wraps. */
+function textArea(target, key, { placeholder = '', rows = 3, dirty = markDirty } = {}) {
+  const box = element('textarea', { value: target[key] ?? '', placeholder, rows });
+  box.addEventListener('input', () => { target[key] = box.value; dirty(); });
+  return box;
+}
+
+function numberBox(target, key, { step = 1, min = null, onChange = null, dirty = markDirty } = {}) {
   const input = element('input', { type: 'number', step, value: target[key] ?? 0, inputMode: step < 1 ? 'decimal' : 'numeric' });
   if (min !== null) input.min = min;
   input.addEventListener('input', () => {
     target[key] = input.value === '' ? null : Number(input.value);
     onChange?.();
-    markDirty();
+    dirty();
   });
   return input;
 }
 
-function picker(target, key, options, { onChange = null, allowEmpty = false } = {}) {
+function picker(target, key, options, { onChange = null, allowEmpty = false, dirty = markDirty } = {}) {
   const select = element('select');
   const values = allowEmpty ? ['', ...options] : options;
   for (const value of values) {
@@ -449,10 +503,10 @@ function picker(target, key, options, { onChange = null, allowEmpty = false } = 
   }
   select.addEventListener('change', () => {
     target[key] = select.value;
-    // Before `markDirty`, not after: `onChange` is where a kind swaps in the fields it carries, and a reading
-    // taken between the two is the new kind with the old kind's numbers, left stale until the next keystroke.
+    // Before the dirty mark, not after: `onChange` is where a kind swaps in the fields it carries, and a
+    // reading taken between the two is the new kind with the old kind's numbers, stale until the next keystroke.
     onChange?.();
-    markDirty();
+    dirty();
   });
   return select;
 }
@@ -565,8 +619,8 @@ function actions(item) {
   deleteButton.addEventListener('click', () => remove(item));
   const next = element('button', { type: 'button', className: 'button next', title: 'Save as next version' }, labelled('Save as next version', 'Next version'));
   next.addEventListener('click', saveAsNextVersion);
-  return element('div', { className: `actions${state.dirty ? ' dirty' : ''}` }, [
-    element('span', { id: 'dirty-flag', className: 'dirty-flag', textContent: state.dirty ? 'Unsaved changes' : '' }),
+  return element('div', { className: `actions${state.dirty || state.knobsDirty ? ' dirty' : ''}` }, [
+    element('span', { id: 'dirty-flag', className: 'dirty-flag', textContent: dirtyLabel() }),
     element('span', { className: 'spacer' }),
     deleteButton,
     miniButton(enabled ? 'Disable' : 'Enable', () => setEnabled(!enabled), 'button'),
@@ -1088,10 +1142,13 @@ function usedBy(item) {
 // ---------- the balance knobs ----------
 
 // What a tuning pass may change about a spell, and what the spell is for (`data/balance/README.md`). The page
-// reads it and never writes it: the file is authoring metadata the data builder does not even see, and the
-// checks below are `check-knobs`' own, surfaced where an edit causes them instead of only on the command line.
+// reads it everywhere and writes it from one place: the strip on a spell's sheet, as the fourth part of the
+// change that saves the spell (ADR 0025). The checks below are `check-knobs`' own, surfaced where an edit
+// causes them instead of only on the command line; the ones a browser cannot run stay in CI, and the page does
+// not pretend to have run them.
 //
-// The reading itself is `balance.js`, which knows nothing about the DOM; everything here is how it is drawn.
+// The reading and the writing are both `balance.js`, which knows nothing about the DOM; everything here is how
+// they are drawn and where they are typed.
 
 /** Read at draw time, never cached: a save, a build or a reload replaces the catalogue under the page. */
 const knobsHere = () => readBalance(state.catalogue);
@@ -1109,6 +1166,23 @@ function balanceOf(balance, id, document) {
   const alias = aliasOfSpell(id, state.catalogue?.aliases || {});
   const entry = alias ? entryFor(balance, alias) : null;
   return entry ? { alias, summary: summarise(entry, document) } : { alias, summary: null };
+}
+
+/**
+ * The entry the strip edits: a copy of the one the knobs file holds for the selected spell, or null when there
+ * is none to copy. Read once per selection, so a keystroke in it is an edit to this copy and to nothing the
+ * rest of the page reads -- the catalogue still says what is on disk until a save replaces it.
+ */
+function entryOfSelected(tab, item) {
+  const answer = knobsHere();
+  if (tab !== 'spells' || item.problem || !answer.ok) return null;
+  const alias = aliasOfSpell(item.id, state.catalogue?.aliases || {});
+  return alias ? entryFor(answer.balance, alias) : null;
+}
+
+/** A seeded entry in the shape the strip edits, through the reader, so that shape has one definition. */
+function seededEntry(alias, document, intent) {
+  return entryFor({ spells: { [alias]: seedEntry(document, intent) } }, alias);
 }
 
 /** Where a value stands in its band, in words: the part of the strip that is read rather than looked at. */
@@ -1169,9 +1243,9 @@ function knobRow(reading) {
 }
 
 /**
- * The strip on a spell's sheet. It is a `details` so a phone keeps the form's own fields within reach: closed,
- * it still shows the intent and the verdict, which is the part a number cannot say; open, it adds the
- * invariants and every knob's band. A desk has the room, so it opens there.
+ * The strip on a spell's sheet, which is where the knobs are authored. It is a `details` so a phone keeps the
+ * form's own fields within reach: closed, it still shows the intent and the verdict, which is the part a number
+ * cannot say; open, it is the editor for the entry. A desk has the room, so it opens there.
  */
 function balanceStrip() {
   const holder = element('details', { className: 'card balance', id: 'balance-strip', open: !narrow.matches });
@@ -1210,69 +1284,196 @@ function fillBalanceStrip(holder) {
 
   // The entry belongs to the spell being edited, so the alias is looked up by the id it was opened under and
   // the numbers are read from the draft: typing a new id in the box must not make the entry vanish mid-word.
-  const { alias, summary } = balanceOf(answer.balance, state.selected?.id ?? state.draft.id, state.draft);
-  if (!summary) {
+  const alias = aliasOfSpell(state.selected?.id ?? state.draft.id, state.catalogue?.aliases || {});
+  if (!state.entry) {
     holder.className = 'card balance tone-bad';
-    holder.replaceChildren(title, missingEntry(alias));
+    holder.replaceChildren(title, ...missingEntry(alias));
     return;
   }
 
-  title.append(element('span', { className: 'headline', textContent: summary.headline }));
+  // The summary is the folded reading of what the boxes below hold, so it is redrawn from them rather than
+  // rebuilt: on a phone it is all that is on screen while the entry is open, and it is where "unsaved" shows.
+  const headline = element('span', { className: 'headline' });
+  const edited = element('span', { className: 'edited' });
   // A span rather than a paragraph: a summary holds phrasing content, and the stylesheet makes it a block.
-  title.append(element('span', {
-    className: `intent${summary.intent ? '' : ' absent'}`,
-    textContent: summary.intent || 'No intent: nothing says what these numbers are for.',
-  }));
+  const echo = element('span', { className: 'intent' });
+  title.append(headline, edited, echo);
+
+  const redrawSummary = () => {
+    const reading = summarise(state.entry, state.draft);
+    headline.textContent = reading.headline;
+    edited.textContent = state.knobsDirty ? 'unsaved' : '';
+    echo.textContent = reading.intent || 'No intent: nothing says what these numbers are for.';
+    echo.className = `intent${reading.intent ? '' : ' absent'}`;
+    // Off means out of the build, and `validate` reads the entry of no spell that left it, so the whole strip
+    // drops its colour rather than painting a disagreement with a build that is green.
+    holder.className = state.draft.enabled === false ? 'card balance quiet' : `card balance tone-${reading.tone}`;
+  };
+
+  /** Every box in the strip dirties the knobs and not the spell, and every one of them moves the summary. */
+  const dirtyEntry = () => { markKnobs(); redrawSummary(); };
 
   const body = [];
-  // Off means out of the build, and `validate` reads the entry of no spell that left it. The reading stays --
-  // it is what says whether turning the spell back on would owe anyone work -- but it is not a disagreement
-  // with anything today, so it does not wear the colour of one.
-  const off = state.draft.enabled === false;
-  if (off) {
+  if (state.draft.enabled === false) {
+    // The entry stays on purpose: `check-knobs` asks nothing of a spell that left the build, and this is the
+    // only thing left saying what the spell was for while it waits for a rule to come back.
     body.push(element('p', { className: 'muted', textContent: 'This spell is off, so it is out of the build and check-knobs does not read its entry. Nothing below is failing anything; it is what would be owed if the spell came back.' }));
   }
 
-  if (summary.keep.length) {
-    body.push(
-      element('div', { className: 'label', textContent: 'Whatever the numbers do' }),
-      element('ul', { className: 'keep' }, summary.keep.map(kept => element('li', { textContent: kept }))),
-    );
-  }
-
-  if (summary.note) body.push(element('p', { className: 'note', textContent: summary.note }));
-  for (const problem of summary.problems) body.push(element('p', { className: 'problem', textContent: problem.message }));
-  const knobs = summary.knobs.length
-    ? summary.knobs.map(knobRow)
-    : [element('p', { className: 'muted', textContent: 'No knob: every number of this spell is its identity, and a tuning pass may move none of it.' })];
+  // One grid for the whole entry, so the four things it says are labelled the same way and read as one form
+  // rather than as a reading with boxes grafted onto it. Single column: an intent is a paragraph, and a knob
+  // is a band with four controls under it -- neither is half a row wide, even on a desk.
   body.push(
-    element('div', { className: 'knobs' }, knobs),
+    fields([
+      ['What this spell is for', textArea(state.entry, 'intent', {
+        placeholder: 'The decision this spell exists to pose. A tuning pass may move every number below; it may not move this.',
+        dirty: dirtyEntry,
+      })],
+      ['Whatever the numbers do', keepList(state.entry, dirtyEntry)],
+      ['A note, if the numbers need one', textArea(state.entry, 'note', {
+        rows: 2,
+        placeholder: 'Anything the next reader needs that the numbers do not say.',
+        dirty: dirtyEntry,
+      })],
+      ['What a tuning pass may move', knobList(dirtyEntry)],
+    ], { single: true }),
     element('p', { className: 'muted source' }, [
-      'Read from ',
+      'Keyed by ',
       element('code', { textContent: alias }),
-      ' in data/balance/knobs.json. The studio does not write it.',
+      ' in data/balance/knobs.json, and written there by the same Save as the spell.',
     ]),
   );
 
-  holder.className = off ? 'card balance quiet' : `card balance tone-${summary.tone}`;
   holder.replaceChildren(title, ...body);
+  redrawSummary();
 }
 
 /**
- * A spell the knobs file says nothing about. Which of the three reasons it is matters: an enabled spell with no
- * entry is what `check-knobs` fails on, a spell that is off is owed none, and a spell no alias points at cannot
- * be named by the file at all, whatever anyone writes in it.
+ * A spell the knobs file says nothing about, and the way out of it. Which of the three reasons it is matters:
+ * an enabled spell with no entry is what `check-knobs` fails on, a spell that is off is owed none, and a spell
+ * no alias points at cannot be named by the file at all, whatever anyone writes in it.
  */
 function missingEntry(alias) {
   if (!alias) {
-    return element('p', { className: 'problem', textContent: 'No alias points at this spell, so the knobs file has no name to key an entry by. Aliases live in data/aliases.json.' });
+    return [element('p', { className: 'problem', textContent: 'No alias points at this spell, so the knobs file has no name to key an entry by. Aliases live in data/aliases.json.' })];
   }
 
-  if (state.draft.enabled === false) {
-    return element('p', { className: 'muted', textContent: `No entry for ${alias}. This spell is off, so it is out of the build and nothing tunes it.` });
-  }
+  const off = state.draft.enabled === false;
+  const say = off
+    ? element('p', { className: 'muted', textContent: `No entry for ${alias}. This spell is off, so it is out of the build and nothing tunes it.` })
+    : element('p', { className: 'problem', textContent: `No entry for ${alias}: nothing says what this spell is for or which of its numbers may move. check-knobs fails on enabled content with no entry.` });
+  // Seeded, not written: the name and the class are in the document, and the intent is the one thing that
+  // cannot be derived from it (ADR 0021), so this opens the editor on an empty intent rather than inventing one.
+  const write = miniButton('Write an entry', () => {
+    state.entry = seededEntry(alias, state.draft, '');
+    markKnobs();
+    refreshBalanceStrip();
+  });
+  return [say, element('div', { className: 'row' }, [write])];
+}
 
-  return element('p', { className: 'problem', textContent: `No entry for ${alias}: nothing says what this spell is for or which of its numbers may move. check-knobs fails on enabled content with no entry.` });
+/**
+ * The invariants, one line each. An emptied line is written as no line at all -- `entryDocument` drops it -- so
+ * clearing one and adding one are the same gesture, and neither leaves an empty string in the file.
+ */
+function keepList(entry, dirty) {
+  const container = element('div');
+  const redraw = () => {
+    const rows = [...entry.keep.keys()].map(index => element('div', { className: 'row' }, [
+      element('span', { className: 'grow' }, [textBox(entry.keep, index, { placeholder: 'What has to stay true', dirty })]),
+      miniButton('Remove', () => { entry.keep.splice(index, 1); dirty(); redraw(); }, 'mini remove'),
+    ]));
+    rows.push(element('div', { className: 'row' }, [
+      miniButton('Add an invariant', () => { entry.keep.push(''); dirty(); redraw(); }),
+    ]));
+    container.replaceChildren(...rows);
+  };
+
+  redraw();
+  return container;
+}
+
+/** Every knob of the entry, plus the one way to add another. */
+function knobList(dirty) {
+  const list = element('div', { className: 'knobs' });
+  const redraw = () => {
+    const knobs = state.entry.knobs;
+    list.replaceChildren(
+      ...(knobs.length
+        ? [...knobs.keys()].map(index => knobBlock(index, dirty, redraw))
+        : [element('p', { className: 'muted', textContent: 'No knob: every number of this spell is its identity, and a tuning pass may move none of it.' })]),
+      element('div', { className: 'row' }, [
+        miniButton('Add a knob', () => { knobs.push(newKnob()); dirty(); redraw(); }),
+      ]),
+    );
+  };
+
+  redraw();
+  return list;
+}
+
+/**
+ * One knob: the reading over the controls that produced it. The reading is redrawn on its own as the bounds are
+ * typed -- a band still showing the bound from before the keystroke is worse than no band -- because rebuilding
+ * the controls around it would take the caret with them. A new pointer redraws the list instead: whether a
+ * pointer is a duplicate is a question about the other knobs, and the answer is drawn on the second of the two.
+ */
+function knobBlock(index, dirty, redrawList) {
+  const knob = state.entry.knobs[index];
+  const block = element('div', { className: 'knob-block' });
+  let row = knobRow(readings(state.entry, state.draft)[index]);
+  const redrawReading = () => {
+    const next = knobRow(readings(state.entry, state.draft)[index]);
+    row.replaceWith(next);
+    row = next;
+  };
+
+  const grain = knobGrain(knob);
+  const bound = key => numberBox(knob, key, { step: grain, dirty, onChange: redrawReading });
+  block.append(row, element('div', { className: 'row' }, [
+    // Every pointer this spell has a number at, which is every pointer a knob may hold: one that addresses
+    // anything else is refused before the save, so there is nothing else worth offering. A pointer the entry
+    // already holds and the spell no longer has stays in the list, marked unknown, rather than being dropped.
+    picker(knob, 'path', pointersOf(state.draft), { dirty, onChange: redrawList }),
+    element('span', { className: 'muted', textContent: 'min' }), bound('minimum'),
+    element('span', { className: 'muted', textContent: 'max' }), bound('maximum'),
+    element('span', { className: 'muted', textContent: 'step' }), bound('step'),
+    element('span', { className: 'grow' }),
+    miniButton('Remove', () => { state.entry.knobs.splice(index, 1); dirty(); redrawList(); }, 'mini remove'),
+  ]));
+  return block;
+}
+
+/**
+ * How fine the boxes of one knob move, which is how fine its own numbers are: an energy cost steps by one, and
+ * a critical chance by a hundredth. It also decides the keypad a phone offers, so a band in hundredths is not
+ * typed on a keypad with no decimal point on it.
+ */
+function knobGrain(knob) {
+  return [knob.minimum, knob.maximum, knob.step].every(Number.isInteger) ? 1 : 0.01;
+}
+
+/**
+ * Every pointer into a document that addresses a number, in the document's own order. It is read from the draft
+ * rather than from the file, so adding an effect offers its numbers as soon as they are typed.
+ */
+function pointersOf(node, prefix = '') {
+  if (Array.isArray(node)) return node.flatMap((item, index) => pointersOf(item, `${prefix}/${index}`));
+  if (node && typeof node === 'object') return Object.entries(node).flatMap(([key, value]) => pointersOf(value, `${prefix}/${key}`));
+  return typeof node === 'number' && Number.isFinite(node) ? [prefix] : [];
+}
+
+/**
+ * A knob on the first number no other knob claims, pinned where the content already sits. The band is the
+ * author's to widen: a bound this page invented would be a decision nobody made, sitting in the file as though
+ * someone had (ADR 0021), and a band of no width says plainly that nothing may move yet.
+ */
+function newKnob() {
+  const taken = new Set(state.entry.knobs.map(knob => knob.path));
+  const path = pointersOf(state.draft).find(candidate => !taken.has(candidate)) ?? '';
+  const found = readPointer(state.draft, path);
+  const value = found.ok ? found.value : 0;
+  return { path, minimum: value, maximum: value, step: Number.isInteger(value) ? 1 : 0.01 };
 }
 
 /** The spells one talent node offers, each with what the balance file says about it. */
@@ -1375,7 +1576,7 @@ function renderBalance() {
     return;
   }
 
-  const balance = answer.balance;
+  const balance = surveyedBalance(answer.balance);
   // Filtered rather than handed straight to `replaceChildren`, which is not `element` and writes the word
   // "null" where it is given one. `about` is the file's own prose about itself, and a file without it gets
   // no empty paragraph.
@@ -1395,6 +1596,16 @@ function renderBalance() {
  * would report the spell on disk while its own strip reports the spell on screen -- the same number, read two
  * ways, on one page. The draft is what the author is looking at, so it is what the roll-up counts.
  */
+/**
+ * The knobs to roll up: the file's, with the entry being edited standing in for the one it holds. The same
+ * reason `surveyedSpells` swaps the draft in -- a spell that has just been given an intent must not still be
+ * counted here as a spell with none, on the one page where both readings are on screen at once.
+ */
+function surveyedBalance(balance) {
+  if (!state.knobsDirty || !state.entry) return balance;
+  return withEntry(balance, state.entry.alias, entryDocument(state.entry));
+}
+
 function surveyedSpells() {
   const rows = documentsOf('spells');
   if (!state.draft || state.tab !== 'spells' || !state.selected) return rows;
@@ -1560,17 +1771,62 @@ function payload() {
   return content;
 }
 
+/**
+ * The knobs part of the next change: the whole file with this entry written into it, nothing at all when the
+ * entry was not touched, and null when the page can already tell `check-knobs` would refuse it.
+ *
+ * What it refuses is `entryProblems` and nothing beyond it -- an empty intent, a pointer addressing nothing or
+ * something that is not a number, a value outside its own band, a duplicate pointer, bounds the wrong way
+ * round, a step that moves nothing. New dominance, indistinguishable spells, the tiers and the objective's
+ * score need the whole catalogue and the engine, so they stay with `check-knobs` in CI and this page does not
+ * pretend to have checked them (ADR 0023, ADR 0025). A save is blocked by what a browser can tell, never by
+ * what it cannot.
+ */
+function balancePart() {
+  if (!state.knobsDirty || !state.entry) return {};
+  const answer = knobsHere();
+  if (!answer.ok) return {};
+
+  const problems = entryProblems(state.entry, state.draft);
+  if (!problems.length) {
+    return { balance: withEntry(answer.balance, state.entry.alias, entryDocument(state.entry)) };
+  }
+
+  // Opened and scrolled to, because on a phone the strip is folded and may be off screen, and the banner that
+  // is about to name these lines sits over the bottom bar the refusal came from rather than over them.
+  const strip = $('balance-strip');
+  if (strip) {
+    strip.open = true;
+    strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  banner('Nothing was saved: check-knobs would refuse this balance entry, so the page does not send it.', 'error', problems);
+  return null;
+}
+
 async function save() {
   const item = state.selected;
-  const request = { kind: TABS[state.tab].kind, write: [{ path: item.path, document: payload() }] };
+  const knobs = balancePart();
+  if (!knobs) return;
+
+  // A change that moves only the knobs leaves the spell's own file alone, the way a change that moves only a
+  // creature carries no knobs at all (ADR 0025): each file shows up in its own history and nowhere else.
+  const write = state.knobsDirty && !state.dirty ? [] : [{ path: item.path, document: payload() }];
+  const request = { kind: TABS[state.tab].kind, write, ...knobs };
   const result = await act('Saving', () => backend.change(request));
 
   if (!result) return;
   adopt(result);
   applyLocally(state.tab, request);
   state.dirty = false;
-  reportSave(result, `Saved ${result.saved}.`);
+  state.knobsDirty = false;
+  reportSave(result, savedWhat(result, request));
   select(item.path);
+}
+
+/** What a save wrote, which is now one file, the other, or both. Read from the request, which is what was sent. */
+function savedWhat(result, request) {
+  if (!request.write.length) return `Saved the balance entry for ${state.entry?.alias} in data/balance/knobs.json.`;
+  return request.balance ? `Saved ${result.saved}, and its balance entry with it.` : `Saved ${result.saved}.`;
 }
 
 /**
@@ -1602,19 +1858,22 @@ function applyLocally(tab, request) {
   }
 
   if (request.aliases) state.catalogue.aliases = { ...request.aliases };
+  // The knobs the same way, and for the same reason: the file is written whole, so a copy left behind here
+  // would put the entry that was just seeded back to nothing on the next thing the page draws.
+  if (request.balance) state.catalogue.balance = clone(request.balance);
   renderNav();
   refreshBalancePanel();
 }
 
 /** A save that became a commit says where to watch it; one that rebuilt the content says what it did. */
-function reportSave(result, message) {
+function reportSave(result, message, notes = []) {
   if (!result.pullRequest) {
-    report(message);
+    report(message, notes);
     return;
   }
 
   banner(`${message} Committed ${result.commit.slice(0, 7)} on ${result.branch}.`, 'ok',
-    ['CI validates it, because this page cannot.'],
+    ['CI validates it, because this page cannot.', ...notes],
     { href: result.pullRequest.url, label: `Open pull request #${result.pullRequest.number}` });
 }
 
@@ -1624,6 +1883,9 @@ async function saveAsNextVersion() {
     banner(`'${state.draft.id}' is not a versioned id, so there is no next version to cut.`, 'error');
     return;
   }
+
+  const knobs = balancePart();
+  if (!knobs) return;
 
   const nextId = `${parsed.kind}:${parsed.name}:v${parsed.version + 1}`;
   const path = state.selected.path;
@@ -1635,16 +1897,33 @@ async function saveAsNextVersion() {
     kind: TABS[state.tab].kind,
     write: [{ path: nextPath, document: { ...payload(), id: nextId }, create: true }],
     aliases: { ...state.catalogue.aliases, [`${parsed.kind}:${parsed.name}`]: nextId },
+    ...knobs,
   };
   const result = await act(`Cutting ${nextId}`, () => backend.change(request));
 
   if (!result) return;
   adopt(result);
   applyLocally(state.tab, request);
-  reportSave(result, `${nextId} written to ${nextPath}; the alias ${parsed.kind}:${parsed.name} now points at it.`);
+  // The entry is keyed by the unversioned alias, so it followed the repoint on its own and nothing had to move
+  // it. What can have moved is the spell under it: a `:v2` that dropped an effect leaves a knob pointing into
+  // one that is not there. The strip says so on the new sheet, and this says it on the way to it.
+  const stale = state.entry ? entryProblems(state.entry, request.write[0].document) : [];
+  state.dirty = false;
+  state.knobsDirty = false;
+  reportSave(
+    result,
+    `${nextId} written to ${nextPath}; the alias ${parsed.kind}:${parsed.name} now points at it.`
+      + (stale.length ? ` Its balance entry followed the alias, and no longer reads ${nextId}:` : ''),
+    stale,
+  );
   select(nextPath);
 }
 
+/**
+ * Off is out of the build, and `check-knobs` reads the entry of enabled spells only, so turning a spell off
+ * orphans nothing and the entry is left exactly where it is. It is the only thing still saying what the spell
+ * was for, which is the whole reason 27 of this file's 36 entries are there.
+ */
 async function setEnabled(enabled) {
   state.draft.enabled = enabled;
   if (enabled) delete state.draft.enabled;
@@ -1653,13 +1932,28 @@ async function setEnabled(enabled) {
 }
 
 async function remove(item) {
-  if (!window.confirm(`Delete ${item.path}? The file goes away; git still has it.`)) return;
-  // An alias left pointing at a deleted item stops the content from building, so it goes with the file.
+  const answer = knobsHere();
+  const balance = answer.ok ? answer.balance : null;
+  const alias = state.tab === 'spells' ? aliasOfSpell(item.id, state.catalogue.aliases || {}) : null;
+  const entry = balance && alias ? entryFor(balance, alias) : null;
+  // A constraint names its spells by hand. Deleting one of them does not fail the knobs file the way an
+  // orphaned entry does -- it leaves the constraint checking nothing, quietly, which is worse (ADR 0025), so
+  // it is said before the file goes rather than found later in a tuning run that suddenly had more room.
+  const guarded = balance && alias && kitAliases(balance).includes(alias)
+    ? `\n\n${alias} is one of the spells the starting-kit constraint names. Deleting it does not fail the knobs`
+      + ' file: the constraint simply stops checking anything, and nothing says so afterwards.'
+    : '';
+  const pruned = entry ? '\n\nIts balance entry goes with it.' : '';
+  if (!window.confirm(`Delete ${item.path}?${guarded}${pruned}\n\nThe file goes away; git still has it.`)) return;
+
+  // An alias left pointing at a deleted item stops the content from building, so it goes with the file; an
+  // entry naming a spell no alias resolves to fails check-knobs, so it goes in the same change.
   const request = {
     kind: TABS[state.tab].kind,
     remove: [item.path],
     aliases: Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id)),
   };
+  if (entry) request.balance = withEntry(balance, alias, null);
   const result = await act('Deleting', () => backend.change(request));
 
   if (!result) return;
@@ -1667,8 +1961,10 @@ async function remove(item) {
   applyLocally(state.tab, request);
   state.selected = null;
   state.draft = null;
+  state.entry = null;
+  state.knobsDirty = false;
   renderDetail();
-  reportSave(result, `Deleted ${item.path}.`);
+  reportSave(result, `Deleted ${item.path}.${entry ? ` Its entry for ${alias} went with it.` : ''}`);
 }
 
 async function create() {
@@ -1687,12 +1983,32 @@ async function create() {
     write: [{ path, document: content, create: true }],
     aliases: { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id },
   };
+
+  // A new enabled spell with no entry fails check-knobs, so the entry is seeded in the same change (ADR 0025).
+  // Only the intent is asked for: the name and the class are in the document, and an intent cannot be taken
+  // from either -- that is the argument of ADR 0021, and a search that chases the metrics alone will happily
+  // make every spell the same spell. A host that publishes no knobs is asked nothing.
+  const answer = knobsHere();
+  if (state.tab === 'spells' && answer.ok) {
+    const intent = window.prompt(`What is ${content.name} for? A sentence or two: the decision it exists to pose.`
+      + ' A tuning pass may move its numbers; it may not move this.', '');
+    if (intent === null) return;
+    if (!intent.trim()) {
+      banner(`${id} was not created: its balance entry needs an intent, and check-knobs fails on an empty one.`, 'error');
+      return;
+    }
+
+    request.balance = withEntry(answer.balance, `${parsed.kind}:${safe}`, seedEntry(content, intent));
+  }
+
   const result = await act(`Creating ${id}`, () => backend.change(request));
 
   if (!result) return;
   adopt(result);
   applyLocally(state.tab, request);
-  reportSave(result, `${id} written to ${path}.`);
+  reportSave(result, `${id} written to ${path}.`, request.balance
+    ? ['Its balance entry is seeded with no knob: say on the sheet which of its numbers a tuning pass may move.']
+    : []);
   select(path);
 }
 
@@ -2156,7 +2472,7 @@ narrow.addEventListener('change', () => { if (!narrow.matches) closeSheets(); })
 adoptBackendKind();
 
 window.addEventListener('beforeunload', event => {
-  if (state.dirty) event.preventDefault();
+  if (state.dirty || state.knobsDirty) event.preventDefault();
 });
 
 await load();
