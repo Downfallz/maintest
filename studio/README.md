@@ -30,8 +30,10 @@ evaluate, search the agent weights, one turn of the learning loop) and each open
 form.
 
 The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents* and *Pull
-requests* write. Paste it into the **Run** sheet of the hosted page, where *Keep it* stores it and *Forget it*
-removes it; the page picks its backend again on the spot rather than waiting for a reload. It is kept in
+requests* write. Paste it into the hosted page's own **Read only / Can save** panel, where *Keep it* stores it and *Forget it*
+removes it; the page picks its backend again on the spot rather than waiting for a reload. That toolbar
+button is also the answer to "can this page save?" without opening anything, which is why the token has a
+panel of its own rather than a corner of the run sheet. It is kept in
 `localStorage`, sent to `api.github.com` and nowhere else, and it is a standing credential in a browser: that
 cost is accepted rather than argued away in ADR 0023, and it is revocable in one click on GitHub. Give it an
 expiry.

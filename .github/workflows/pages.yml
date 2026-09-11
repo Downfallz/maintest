@@ -4,7 +4,8 @@ name: Publish the studio
 # when it was published -- the catalogue, the audit and the built-in weights, written by `studio --export`.
 # The page reads those instead of an API, so browsing the content needs no engine, no token and no machine on.
 #
-# It cannot write yet. Every operation that needs the engine refuses in the page and says where to go instead.
+# With a token it also writes, through the Git Trees API (ADR 0023): a save is a commit on studio/content and
+# a pull request. Without one it reads, and every operation that needs the engine refuses and says where to go.
 on:
   push:
     branches: [main]
