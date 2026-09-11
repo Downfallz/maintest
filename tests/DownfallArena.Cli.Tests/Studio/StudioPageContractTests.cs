@@ -72,6 +72,27 @@ public sealed class StudioPageContractTests
         }
     }
 
+    /// <summary>
+    /// A class the script puts on an element and the stylesheet never mentions does not crash anything, which is
+    /// exactly why it survives: the element is simply unstyled, and an unstyled control on a phone is a worse
+    /// failure than a missing one, because it looks like a decision. A class earns its keep without a rule only
+    /// when the script queries it as a hook, so that is a named exception rather than a blanket excuse.
+    /// </summary>
+    [Fact]
+    public void Every_class_the_script_sets_is_styled_or_queried_as_a_hook()
+    {
+        var css = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "studio", "studio.css"));
+        var set = Regex.Matches(Script, "className: '([a-z0-9 -]+)'", RegexOptions.None, MatchTimeout)
+            .SelectMany(match => match.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .ToHashSet(StringComparer.Ordinal);
+        var hooks = Ids(Script, @"querySelectorAll?\('\.([a-z0-9-]+)");
+
+        set.ShouldNotBeEmpty();
+        set.Where(name => !Regex.IsMatch(css, $@"\.{Regex.Escape(name)}(?![\w-])", RegexOptions.None, MatchTimeout))
+            .Except(hooks)
+            .ShouldBeEmpty("the script styles elements with classes the stylesheet does not have");
+    }
+
     private static HashSet<string> Ids(string text, string pattern) =>
         Regex.Matches(text, pattern, RegexOptions.None, MatchTimeout)
             .Select(match => match.Groups[1].Value)

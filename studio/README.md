@@ -26,11 +26,13 @@ on the `studio/content` branch and one pull request kept open, so a content chan
 full CI gate. Without one the page reads and says so where you try, naming both ways out. Building and playing
 always refuse there: they need the engine, which a browser does not have. What a phone *can* launch is a
 workflow -- the hosted **Run** sheet lists the four the repository dispatches by hand (tune the catalogue,
-evaluate, search the agent weights, one turn of the learning loop) and each opens GitHub's own *Run workflow*
-form.
+evaluate, search the agent weights, one turn of the learning loop). With a token that can reach Actions the page
+starts them itself, **on the `studio/content` branch**, so they run against the content the page is showing
+rather than against `main`, and opens the run it started. That needs *Actions* write on the token, alongside
+*Contents* and *Pull requests*.
 
-The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents* and *Pull
-requests* write. Paste it into the hosted page's own **Read only / Can save** panel, where *Keep it* stores it and *Forget it*
+The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents*, *Pull
+requests* and *Actions* write. Paste it into the hosted page's own **Read only / Can save** panel, where *Keep it* stores it and *Forget it*
 removes it; the page picks its backend again on the spot rather than waiting for a reload. That toolbar
 button is also the answer to "can this page save?" without opening anything, which is why the token has a
 panel of its own rather than a corner of the run sheet. It is kept in

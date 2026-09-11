@@ -106,24 +106,28 @@
     <!-- The published page has no engine behind it (ADR 0023). What a phone can launch from there is a
          workflow: each link opens GitHub's own "Run workflow" form, and the run does the rest on the runners. -->
     <div id="run-hosted" hidden>
-      <p class="hint">This is the published page, so there is no engine to play a match here. These run on GitHub Actions instead: each opens the workflow's <em>Run workflow</em> form, and the result lands in the run summary, or on a branch with a link to open it as a pull request.</p>
+      <p class="hint">This is the published page, so there is no engine to play a match here. These run on GitHub
+        Actions instead, against the content on the <code>studio/content</code> branch &mdash; the content this
+        page is showing, including whatever you have just saved. Each starts the run and opens it, so you watch
+        the run itself rather than a form. Results land in the run summary, or on a branch with a link to open
+        it as a pull request.</p>
       <ul class="launch">
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/tune.yml" target="_blank" rel="noopener">
+        <li><button type="button" class="launch-go" data-workflow="tune.yml">
           <span class="name">Tune the catalogue</span>
           <span class="what">One tuning pass over the balance knobs, pushed as a branch with a new benchmark digest and a link to open it as a pull request.</span>
-          <svg><use href="#i-out"/></svg></a></li>
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/evaluate.yml" target="_blank" rel="noopener">
+          <svg><use href="#i-out"/></svg></button></li>
+        <li><button type="button" class="launch-go" data-workflow="evaluate.yml">
           <span class="name">Evaluate</span>
           <span class="what">Two agents over the benchmark seeds; the numbers land in the run summary.</span>
-          <svg><use href="#i-out"/></svg></a></li>
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/search.yml" target="_blank" rel="noopener">
+          <svg><use href="#i-out"/></svg></button></li>
+        <li><button type="button" class="launch-go" data-workflow="search.yml">
           <span class="name">Search the agent weights</span>
           <span class="what">A cross-entropy search of the heuristic agent's eight weights, reported and not applied.</span>
-          <svg><use href="#i-out"/></svg></a></li>
-        <li><a href="https://github.com/Downfallz/maintest/actions/workflows/iterate.yml" target="_blank" rel="noopener">
+          <svg><use href="#i-out"/></svg></button></li>
+        <li><button type="button" class="launch-go" data-workflow="iterate.yml">
           <span class="name">Learning loop</span>
           <span class="what">One turn of the loop: a dataset, two trained policies, and their evaluation as an artifact.</span>
-          <svg><use href="#i-out"/></svg></a></li>
+          <svg><use href="#i-out"/></svg></button></li>
       </ul>
     </div>
   </section>
@@ -157,8 +161,9 @@
       </div>
       <p class="hint">Without a token this page reads and cannot save. With one, a save is a commit on the
         <code>studio/content</code> branch and a pull request, so CI checks the content the page cannot.</p>
-      <p class="hint">Use a <strong>fine-grained</strong> token for this repository only, with <em>Contents</em>
-        and <em>Pull requests</em> write, and give it an expiry: it is kept in this browser and sent to
+      <p class="hint">Use a <strong>fine-grained</strong> token for this repository only, with <em>Contents</em>,
+        <em>Pull requests</em> and <em>Actions</em> write &mdash; Actions is what lets this page start a
+        workflow instead of sending you to a form. Give it an expiry: it is kept in this browser and sent to
         <code>api.github.com</code> and nowhere else, and it is revocable in one click on GitHub.</p>
     </div>
   </section>

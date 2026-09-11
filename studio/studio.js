@@ -181,7 +181,7 @@ function adopt(result) {
 
 // ---------- the banner ----------
 
-function banner(message, kind = 'info', problems = []) {
+function banner(message, kind = 'info', problems = [], action = null) {
   const node = $('banner');
   node.hidden = false;
   node.className = kind === 'error' || kind === 'ok' ? `banner ${kind}` : 'banner';
@@ -190,6 +190,19 @@ function banner(message, kind = 'info', problems = []) {
   const text = element('div', { className: 'banner-text' }, [element('div', { textContent: message })]);
   if (problems.length) {
     text.append(element('ul', {}, problems.map(problem => element('li', { textContent: problem }))));
+  }
+
+  // Somewhere to go, when the banner is about something that happened elsewhere. A real button rather than a
+  // bare link: on a phone this is the one thing in the banner meant to be hit with a thumb. The href is ours --
+  // GitHub's own url for a pull request -- never text that came back from somewhere.
+  if (action) {
+    text.append(element('a', {
+      className: 'button banner-action',
+      href: action.href,
+      textContent: action.label,
+      target: '_blank',
+      rel: 'noopener',
+    }));
   }
   const dismiss = element('button', { type: 'button', className: 'close', ariaLabel: 'Dismiss' }, [icon('close')]);
   dismiss.addEventListener('click', clearBanner);
@@ -1117,7 +1130,8 @@ function reportSave(result, message) {
   }
 
   banner(`${message} Committed ${result.commit.slice(0, 7)} on ${result.branch}.`, 'ok',
-    [`CI validates it on pull request #${result.pullRequest.number} — this page cannot: ${result.pullRequest.url}`]);
+    ['CI validates it, because this page cannot.'],
+    { href: result.pullRequest.url, label: `Open pull request #${result.pullRequest.number}` });
 }
 
 async function saveAsNextVersion() {
@@ -1531,6 +1545,41 @@ function togglePanel(id, load) {
 }
 
 /**
+ * Starts a workflow on the studio branch and takes you to the run.
+ *
+ * The tab is opened before anything is awaited, because a browser only lets a page open one while it is still
+ * handling the tap that asked for it -- open it after the round trip and a phone blocks it. It starts blank and
+ * is pointed at the run once there is one; `opener` is cut so the new tab cannot reach back into this one.
+ * A browser that blocked it anyway leaves `tab` null, and the banner's own button is the way through.
+ */
+async function launch(workflow, name) {
+  const tab = window.open('', '_blank');
+  if (tab) tab.opener = null;
+
+  // `act` answers null when the backend refused, and has already said why: closing the tab is all that is left.
+  const run = await act(`Launching ${name}`, () => backend.dispatch(workflow));
+  if (!run) {
+    tab?.close();
+    return;
+  }
+
+  // Dispatched, but the run has not been registered yet. Not a failure, and not something to open a tab on.
+  if (run.pending) {
+    tab?.close();
+    banner(`${name} was launched on ${run.branch}. Its run has not appeared yet; it will be under Actions.`, 'ok');
+    return;
+  }
+
+  if (tab) {
+    tab.location.replace(run.url);
+  }
+
+  banner(`${name} is running on ${run.branch}.`, 'ok',
+    tab ? [] : ['Your browser kept the run from opening on its own, so it is behind the button.'],
+    { href: run.url, label: `Watch run #${run.id}` });
+}
+
+/**
  * The token, kept in this browser and nowhere else. Pasting or forgetting one picks a different backend, so the
  * page re-reads which one it has rather than waiting for a reload to notice.
  */
@@ -1598,6 +1647,11 @@ $('run-go').addEventListener('click', run);
 $('run-weights-reset').addEventListener('click', resetWeights);
 $('runs-compare').addEventListener('click', compareRuns);
 $('access-panel').addEventListener('click', () => togglePanel('access', renderToken));
+// One listener for the four cards: the workflow is on the button, so adding a fifth is markup and nothing else.
+for (const card of document.querySelectorAll('.launch-go')) {
+  card.addEventListener('click', () => launch(card.dataset.workflow, card.querySelector('.name').textContent));
+}
+
 $('token-keep').addEventListener('click', () => useToken($('token').value.trim()));
 $('token-forget').addEventListener('click', () => useToken(''));
 renderToken();

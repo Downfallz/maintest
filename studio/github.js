@@ -10,6 +10,9 @@
 
 const API = 'https://api.github.com';
 
+/** How the dispatch waits for its run to appear. A parameter, so a test can drive it without sleeping. */
+const pause = milliseconds => new Promise(resolve => { setTimeout(resolve, milliseconds); });
+
 /** Where the content lives in the repository. A path from the page is relative to the content root, not to it. */
 const CONTENT_ROOT = 'data';
 const ALIASES_FILE = `${CONTENT_ROOT}/aliases.json`;
@@ -216,6 +219,44 @@ export function githubBackend({ transport = globalThis.fetch, token, repository,
     return created.payload;
   }
 
+  /**
+   * The newest run of one workflow on this branch, as an id, or 0. Ids increase, so comparing them is how a
+   * dispatch finds the run it started without trusting two clocks to agree.
+   */
+  async function newestRun(workflow) {
+    const runs = await api(`/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&per_page=1`).catch(optional);
+    return runs?.payload?.workflow_runs?.[0] ?? null;
+  }
+
+  /**
+   * Runs one of the repository's workflows against the studio branch, and answers the run to watch.
+   *
+   * The dispatch endpoint answers 204 with no body: it does not say which run it started. So the newest run is
+   * noted first, and the answer is the first run newer than that one -- which takes a moment to exist, so this
+   * waits and asks again rather than reporting nothing for a run that is on its way.
+   */
+  async function dispatch(workflow, { attempts = 8, wait = pause } = {}) {
+    if (!await api(`/git/ref/heads/${branch}`).catch(optional)) {
+      throw refusal(`There is no ${branch} branch yet, so there is nothing of yours to run against.`,
+        ['Save a change from this page first: that is what creates the branch these workflows run on.']);
+    }
+
+    const before = (await newestRun(workflow))?.id ?? 0;
+    await api(`/actions/workflows/${workflow}/dispatches`, { method: 'POST', body: { ref: branch } });
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      await wait(attempt === 0 ? 0 : 1500);
+      const run = await newestRun(workflow);
+      if (run && run.id > before) {
+        return { id: run.id, url: run.html_url, branch };
+      }
+    }
+
+    // It was dispatched; only finding it timed out. That is not a failure, and it must not read as one -- so it
+    // answers with the dispatch it did make rather than with nothing, which a caller cannot tell from an error.
+    return { id: null, url: null, branch, pending: true };
+  }
+
   return {
     kind: 'hosted',
 
@@ -266,8 +307,11 @@ export function githubBackend({ transport = globalThis.fetch, token, repository,
       };
     },
 
-    // Building and playing need the engine, which a browser does not have. The workflows do (ADR 0023).
+    // Building and playing need the engine, which a browser does not have. The workflows do (ADR 0023), and
+    // with a token that can reach Actions the page starts them itself rather than sending you to a form.
+    dispatch,
+
     build: async () => { throw refusal('Building needs the engine. CI builds the content on every push to this branch; watch the pull request.'); },
-    play: async () => { throw refusal('Playing a match needs the engine. Dispatch a workflow under Actions instead.'); },
+    play: async () => { throw refusal('Playing a match needs the engine. Launch one of the workflows instead: they run on the studio branch.'); },
   };
 }
