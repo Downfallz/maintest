@@ -43,6 +43,9 @@ async function request(transport, path, body) {
 export function localBackend(transport = globalThis.fetch) {
   const call = (path, body) => request(transport, path, body);
   return {
+    // Which of the two this is, for the one place the page draws something different (the launch sheet):
+    // an engine to play with here, workflows to dispatch on the hosted page.
+    kind: 'local',
     read: () => call('/api/catalogue'),
 
     // The parts of a change go in the order that leaves the content buildable between requests: documents
@@ -106,6 +109,7 @@ function readOnly(what) {
  */
 export function hostedBackend(transport = globalThis.fetch) {
   return {
+    kind: 'hosted',
     read: () => published(transport, 'catalogue.json'),
     audit: () => published(transport, 'audit.json'),
     weights: () => published(transport, 'weights.json'),

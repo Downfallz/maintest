@@ -105,6 +105,8 @@ test('the loopback address is what picks the local host, and nothing else is it'
 
   // The local host binds the loopback address and nothing else (ADR 0015), so "not loopback" is "not local".
   assert.equal(await readsFrom('127.0.0.1'), '/api/catalogue');
+  assert.equal(localBackend().kind, 'local');
+  assert.equal(hostedBackend().kind, 'hosted');
   assert.equal(await readsFrom('localhost'), '/api/catalogue');
   assert.equal(await readsFrom('[::1]'), '/api/catalogue');
   assert.equal(await readsFrom('downfallz.github.io'), 'data/catalogue.json');
