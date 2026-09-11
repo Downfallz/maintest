@@ -20,6 +20,7 @@ import subprocess
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
+from itertools import combinations
 from pathlib import Path
 from typing import Protocol
 
@@ -66,6 +67,9 @@ ENOUGH_SIDES = 8
 #: The smallest damage per landed cast the tier spread will divide by. An attack whose hits are entirely
 #: absorbed deals zero, and the ratio it belongs in has no value there; this floors it instead.
 MIN_DAMAGE_PER_CAST = 0.5
+
+#: How many knobs a paired opening move touches. A proposal over the run's --max-changes is not built.
+PAIR_SIZE = 2
 
 #: The largest tier damage spread reported. Past it the reading has said what it has to say — one spell of
 #: this tier hits nothing like the others — and a bigger number would only drown every other target.
@@ -140,6 +144,7 @@ class TuneOptions:
     max_changes: int = 12
     seed: int = 0
     sweep: bool = True
+    pairs: bool = True
 
 
 @dataclass(frozen=True)
@@ -271,9 +276,54 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
     measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
+    barely = _barely_cast(landed, by_alias, content.tiers)
+    if barely is not None:
+        measured["spellsBarelyCast"] = barely
     damaging = {identifier for identifier, alias in by_alias.items() if deals_damage(content.spells[alias])}
     measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
     return measured
+
+
+#: Below this share of the landed casts of its own tier, a spell is a choice nobody makes.
+BARELY_CAST_SHARE = 0.01
+
+
+def _barely_cast(
+    landed: Mapping[str, int], by_alias: Mapping[str, str], tiers: Mapping[str, int]
+) -> float | None:
+    """How many spells are cast, but take less than :data:`BARELY_CAST_SHARE` of their own tier's casts.
+
+    ``spellsNeverCast`` counts exact zeros, and this is the hole that leaves. On the nine-spell core content
+    ``pummel`` took 6 of 5283 landed casts of a mirrored run: dead in every sense that decides a game, and
+    invisible to a count of zeros. A buff that moved it from 4 casts to 6 read as no change at all, on a
+    metric that was never going to say otherwise.
+
+    **Strictly the spells the other metric does not count.** A zero is a zero in either reading, and the two
+    targets carry the same band and the same weight, so counting it here as well would charge a dead spell
+    twice and quietly double what the objective asks of that one case.
+
+    The share is read against the tier and not the catalogue because a tier is the set a player chooses
+    between at one moment: a spell can be rare overall and still be the right pick where it is offered. A
+    tier nobody cast at all cannot produce a share, so it is skipped -- and a run whose content carries no
+    tiers at all reads as ``None`` rather than as zero, which the objective reports as missing instead of
+    counting as a metric on target. The tiers have gone missing once already (:meth:`Content.with_spells`).
+    """
+    per_tier: dict[int, int] = {}
+    for identifier, alias in by_alias.items():
+        tier = tiers.get(alias)
+        if tier is not None:
+            per_tier[tier] = per_tier.get(tier, 0) + landed.get(identifier, 0)
+    if not any(cast > 0 for cast in per_tier.values()):
+        return None
+
+    barely = 0
+    for identifier, alias in by_alias.items():
+        tier = tiers.get(alias)
+        cast = per_tier.get(tier, 0) if tier is not None else 0
+        casts = landed.get(identifier, 0)
+        if cast > 0 and 0 < casts / cast < BARELY_CAST_SHARE:
+            barely += 1
+    return float(barely)
 
 
 def _tier_metrics(
@@ -519,7 +569,7 @@ def tune_content(
     history: list[Candidate] = []
     favour: set[str] = set()
     if options.sweep:
-        swept = _sweep(evaluator, knobs, content)
+        swept = _opening(evaluator, knobs, content, first, options)
         history.extend(swept)
         favour = {
             move.knob.key
@@ -574,6 +624,85 @@ def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[
     return swept
 
 
+def _opening(
+    evaluator: ContentEvaluator,
+    knobs: Knobs,
+    content: Content,
+    first: Candidate,
+    options: TuneOptions,
+) -> list[Candidate]:
+    """The sweep, and the paired moves it adds for the spells it could not move."""
+    swept = _sweep(evaluator, knobs, content)
+    if not options.pairs or options.max_changes < PAIR_SIZE:
+        return swept
+    return [*swept, *_pairs(evaluator, knobs, content, _unmoved(swept, first.metrics))]
+
+
+def _unmoved(swept: Sequence[Candidate], baseline: Mapping[str, Mapping[str, float]]) -> list[str]:
+    """The spells every single step of the sweep left every measurement unchanged on."""
+    responded: dict[str, bool] = {}
+    for candidate in swept:
+        alive = not _same(candidate.metrics, baseline)
+        for move in candidate.moves:
+            responded[move.knob.spell] = responded.get(move.knob.spell, False) or alive
+    return sorted(name for name, alive in responded.items() if not alive)
+
+
+def _pairs(
+    evaluator: ContentEvaluator, knobs: Knobs, content: Content, spells: Sequence[str]
+) -> list[Candidate]:
+    """Two knobs of one spell moved together, for the spells no single step could move at all.
+
+    The sweep is the difference between unlikely and impossible for one knob; this is the same for a pair.
+    `poison_slash` is the case it was written for: on the studio/content branch, from a bleed of 1 per round
+    over 2 rounds, raising the amount alone reaches 59 landed casts of about 5300 and raising the duration
+    alone reaches 17, while raising both together reaches 5155 of about 8900 -- the largest move anyone has
+    found against that catalogue's monopoly. A climb that only ever moves one knob has to accept the flat
+    step in between, on a gain of 0.005, to find the path at all.
+
+    A pair is one step of each knob and nothing more, so it bridges a single flat step and not a plateau.
+    Only the two same-direction combinations are built: a pair pulling against itself lands within a step of
+    the single moves the sweep already played. And a run whose ``--max-changes`` is below two does not get
+    here at all -- a two-knob proposal is over that budget, and the budget is the caller's to set.
+    """
+    by_spell: dict[str, list[Knob]] = {}
+    for knob in playable(knobs, content):
+        by_spell.setdefault(knob.spell, []).append(knob)
+
+    played: set[tuple[tuple[str, float], ...]] = set()
+    paired: list[Candidate] = []
+    for spell in spells:
+        for pair in combinations(by_spell.get(spell, []), PAIR_SIZE):
+            paired.extend(_paired(evaluator, knobs, content, pair, played))
+    return paired
+
+
+def _paired(
+    evaluator: ContentEvaluator,
+    knobs: Knobs,
+    content: Content,
+    pair: Sequence[Knob],
+    played: set[tuple[tuple[str, float], ...]],
+) -> list[Candidate]:
+    """One pair of knobs, stepped both ways. Illegal, pinned and repeated draws cost no evaluation."""
+    first, second = pair
+    candidates: list[Candidate] = []
+    for direction in (1, -1):
+        stepped = _nudged(first, (), content, direction)
+        moves = None if stepped is None else _nudged(second, stepped, content, direction)
+        if not moves or len(moves) < PAIR_SIZE:
+            continue
+        key = tuple(sorted(_values(moves).items()))
+        if key in played:
+            continue
+        spells = apply_moves(content.spells, moves)
+        if violations(content, spells, knobs):
+            continue
+        played.add(key)
+        candidates.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
+    return candidates
+
+
 def _candidate(
     evaluator: ContentEvaluator,
     objective: Objective,
@@ -603,6 +732,7 @@ MEANINGS: Mapping[str, str] = {
     "spellEntropyA": "how widely a side spreads its casts over the spells it has",
     "spellUsageShare": "the share of every landed cast taken by the one spell cast most",
     "spellsNeverCast": "how many spells no side casts at all",
+    "spellsBarelyCast": "how many spells take almost none of the casts of the tier they are offered in",
     "tierUsageShare": "the share of one tier's casts taken by one of the spells in it",
     "tierDamageSpread": "how unevenly the spells offered at one depth hit, per landed cast",
     "tierWinSpread": "how unevenly the spells offered at one depth go on to win",

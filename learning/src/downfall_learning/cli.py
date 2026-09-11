@@ -109,6 +109,12 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
         action="store_false",
         help="skip the opening pass that plays every knob once, and start from random neighbours",
     )
+    tune.add_argument(
+        "--no-pairs",
+        dest="pairs",
+        action="store_false",
+        help="skip the paired moves the sweep adds for spells no single step could move at all",
+    )
     tune.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     tune.add_argument(
         "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
@@ -325,6 +331,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         max_changes=arguments.max_changes,
         seed=arguments.seed,
         sweep=arguments.sweep,
+        pairs=arguments.pairs,
     )
     result = tune_content(evaluator, knobs, content, options)
     result.write(arguments.output, arguments.data)

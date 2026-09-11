@@ -38,11 +38,11 @@ The score of one resolution, with the weights `w`:
 | `w.kill` per kill | a target whose health the damage reaches | for an enemy, against an ally |
 | `w.heal` x effective healing | healing capped at what the target was missing | for an ally, against an enemy |
 | `w.kill` per denied kill | a heal or a defense buff that takes its target from dying to this round's threat to surviving it (ADR 0022) | for an ally, against an enemy |
-| `w.stun` per stun | a Stun on a target still alive after the damage | for an enemy, against an ally |
+| `w.stun` x rounds stunned | a Stun on a target still alive after the damage | for an enemy, against an ally |
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
 | `w.heal` x expected regeneration | amount per round x rounds, capped at what the target is still missing after the hit | for an ally, against an enemy |
 | `w.buff` x damage prevented | a DefenseBuff: amount x rounds x the hits the target is expected to face, its attackers spread over its living allies (ADR 0022) | a buff for an ally, a debuff for an enemy, and the reverse against |
-| `w.initiative` x amount | an InitiativeDebuff (amount only, no rounds) | a debuff on an enemy counts for, on an ally against |
+| `w.initiative` x amount x rounds | an InitiativeDebuff (a permanent condition counts three) | a debuff on an enemy counts for, on an ally against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
 | `-w.risk` | a fizzle, or the share of targets dropped at resolution | always |
 
@@ -55,8 +55,11 @@ Decisions:
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
 - **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
   best target set on the current board), plus `w.initiative` x the spell's Spell initiative, the base
-  initiative the unlock buys for the rest of the match (ADR 0017, priced by ADR 0018); unlock the highest,
-  pass only when nothing can be unlocked.
+  initiative the unlock buys for the rest of the match (ADR 0017, priced by ADR 0018), minus `w.energy` x
+  the part of the cost the actor cannot cover (ADR 0026); unlock the highest, pass only when nothing can be
+  unlocked. Only that part is charged here: the value is read on an energy raised to at least the spell's
+  cost, so a creature that could not afford it keeps nothing either way and the difference cancels, while
+  above the cost the energy the actor keeps already prices every point.
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.
@@ -78,7 +81,7 @@ damage spread elsewhere.
 | buff | 0.5 | Half a point per point of damage the buff actually takes off the hits the creature is expected to face. Defense subtracts from every incoming hit, so the same buff is worth more to the last creature standing than to a full team. |
 | energy | 0.2 | Keeping a point of energy for the next round is worth a fifth of a damage. Enough to break a tie towards the cheaper spell, not enough to make the bot hoard. |
 | risk | 2.0 | A wasted action (a fizzle, or the share of targets that vanished before the spell resolved) costs two damage. Roughly one average hit thrown away. |
-| initiative | 0.5 | Half a point per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. Initiative only reorders the timeline, so it is priced like defense: real, indirect, and worth less than the hit it may let you land first. A first guess, and the weight `search-weights` has the least evidence about. |
+| initiative | 0.5 | Half a point per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. Initiative only reorders the timeline, so it is priced like defense: real, indirect, and worth less than the hit it may let you land first. A first guess, and the weight `search-weights` has the least evidence about. Since ADR 0026 a debuff also multiplies by the rounds it lasts while the unlock's permanent gain does not, so a two-round debuff currently outvalues a permanent gain of the same size; the tension is recorded in that ADR and left for content that can measure it. |
 
 To feel out what one of them does, the content studio's run panel can play a heuristic agent from nine boxes
 instead of a file: it writes what you set as `weights.json` next to the run, so the result keeps the weights it

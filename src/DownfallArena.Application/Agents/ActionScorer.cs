@@ -88,8 +88,16 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     /// <summary>
     /// What unlocking a spell is worth: what the spell would do in combat, plus the base initiative it buys for
-    /// the rest of the match (ADR 0017), priced by the initiative weight (ADR 0018). Without the second half a
-    /// pick taken for tempo scores as if it bought nothing.
+    /// the rest of the match (ADR 0017), priced by the initiative weight (ADR 0018), minus the part of the cost
+    /// the combat reading cannot see, priced by the energy weight (ADR 0020, ADR 0026).
+    /// <para>
+    /// Without the second term a pick taken for tempo scores as if it bought nothing. The third exists because
+    /// <see cref="Estimate"/> raises the actor's energy to at least the spell's cost, so that a spell too
+    /// expensive to cast today can still be read in combat. That raise is also what hides the cost: the score
+    /// counts the energy the actor *keeps*, and a creature handed exactly what the spell costs keeps nothing
+    /// whatever the spell costs. Below its cost the difference is invisible, so it is charged here; at or above
+    /// it the keep term already prices every point, and charging again would price it twice.
+    /// </para>
     /// </summary>
     public double UnlockValue(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures)
     {
@@ -97,7 +105,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         ArgumentNullException.ThrowIfNull(spellId);
         ArgumentNullException.ThrowIfNull(creatures);
 
-        return Estimate(actor, spellId, creatures) + (weights.Initiative * resources.GetSpell(spellId).Stats.SpellInitiative.Value);
+        var stats = resources.GetSpell(spellId).Stats;
+        return Estimate(actor, spellId, creatures)
+            + (weights.Initiative * stats.SpellInitiative.Value)
+            - (weights.Energy * Math.Max(0, stats.Cost.Value - actor.Energy.Value));
     }
 
     /// <summary>The score of one resolution: what it does to enemies counts for, what it does to allies against.</summary>
@@ -196,12 +207,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var sign = Sign(actor, target);
         return effect switch
         {
-            Stun => sign * weights.Stun,
+            Stun => sign * weights.Stun * rounds,
             Bleed bleed => sign * weights.Bleed * Math.Min(bleed.AmountPerRound * rounds, remainingHealth),
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
             EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
             DefenseBuff => 0,  // priced per target, with the rest of what the cast defends: see DefensiveScore
-            InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount,
+            InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount * rounds,
             _ => 0,
         };
     }
