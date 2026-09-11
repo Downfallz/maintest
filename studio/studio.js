@@ -1791,16 +1791,32 @@ function payload() {
  * what it cannot.
  */
 function balancePart() {
-  if (!state.knobsDirty || !state.entry) return {};
   const answer = knobsHere();
-  if (!answer.ok) return {};
+  if (!state.entry || !answer.ok) return {};
 
-  const write = { balance: withEntry(answer.balance, state.entry.alias, entryDocument(state.entry)) };
+  const write = state.knobsDirty
+    ? { balance: withEntry(answer.balance, state.entry.alias, entryDocument(state.entry)) }
+    : {};
+
   // `load_content` keys enabled spells only, so `validate` never reads the entry of a spell that left the
   // build: refusing one here would block a save on a finding CI does not have. The strip still shows the
   // reading -- it is what would be owed if the spell came back -- but it is advice and not a refusal, the same
-  // carve-out the strip and `survey` already make for a resting spell.
-  const problems = state.draft.enabled === false ? [] : entryProblems(state.entry, state.draft);
+  // carve-out the strip and `survey` already make for a resting spell. A save that changes nothing is nothing
+  // to refuse either.
+  if (state.draft.enabled === false || (!state.dirty && !state.knobsDirty)) return write;
+
+  // Checked even when only the spell moved. The value a knob governs lives in the *spell*, so pushing a damage
+  // past its own band or dropping the effect a pointer addresses breaks the pair without touching the entry --
+  // and that is the case the strip exists for.
+  //
+  // Refused only for what this edit **adds**, against the entry and the document as they were before it. What
+  // the file and the content already disagreed about is a finding someone else left, and holding this author's
+  // save hostage to it would make every sheet with an old disagreement unsavable. It is the scoping
+  // `noNewStrictDominance` already uses: the pairs a candidate adds are refused, the ones already there are
+  // findings check-knobs lists with the exit code still 0.
+  const before = entryFor(answer.balance, state.entry.alias);
+  const had = new Set(before ? entryProblems(before, state.selected?.document ?? {}).map(problemKey) : []);
+  const problems = entryProblems(state.entry, state.draft).filter(problem => !had.has(problemKey(problem)));
   if (!problems.length) {
     return write;
   }
@@ -1812,8 +1828,14 @@ function balancePart() {
     strip.open = true;
     strip.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  banner('Nothing was saved: check-knobs would refuse this balance entry, so the page does not send it.', 'error', problems.map(problem => problem.line));
+
+  banner('Nothing was saved: check-knobs would refuse what this edit does to the balance entry.', 'error', problems.map(problem => problem.line));
   return null;
+}
+
+/** One problem, identified by what it is and where, so the same one before and after an edit is the same one. */
+function problemKey(problem) {
+  return `${problem.code}:${problem.path ?? ''}`;
 }
 
 async function save() {
@@ -2000,9 +2022,8 @@ async function remove(item) {
     ? `\n\n${named.join(', ')} is named by a constraint in the knobs file. Deleting it does not fail that file:`
       + ' the constraint simply stops checking anything, and nothing says so afterwards.'
     : '';
-  const pruned = entries.length
-    ? `\n\nIts balance ${entries.length === 1 ? 'entry goes' : 'entries go'} with it.`
-    : '';
+  const going = entries.length === 1 ? 'Its balance entry goes with it.' : 'Its balance entries go with it.';
+  const pruned = entries.length ? `\n\n${going}` : '';
   // The same door as creating a spell here: the page cannot prune an entry out of a file it never read, so it
   // says which one will be left naming nothing rather than letting a pipeline find it.
   const orphaned = state.tab === 'spells' && !balance
@@ -2032,8 +2053,10 @@ async function remove(item) {
   state.entry = null;
   state.knobsDirty = false;
   renderDetail();
-  const took = entries.length === 1 ? `Its entry for ${entries[0]} went with it.` : `Its entries for ${entries.join(', ')} went with it.`;
-  reportSave(result, `Deleted ${item.path}.${entries.length ? ` ${took}` : ''}`);
+  const took = entries.length === 1
+    ? `Its entry for ${entries[0]} went with it.`
+    : `Its entries for ${entries.join(', ')} went with it.`;
+  reportSave(result, entries.length ? `Deleted ${item.path}. ${took}` : `Deleted ${item.path}.`);
 }
 
 async function create() {

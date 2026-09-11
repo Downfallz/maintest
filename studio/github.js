@@ -295,14 +295,19 @@ export function githubBackend({ transport = globalThis.fetch, token, repository,
     kind: 'hosted',
 
     /**
-     * The catalogue as the site published it, with the aliases as the *branch* has them. The published files come
-     * from `main`, so a page that read only those would rebuild the whole alias map from a snapshot that predates
-     * its own commits, and silently undo an earlier version cut still waiting in the pull request.
+     * The catalogue as the site published it, with the two files the *branch* owns laid over it.
+     *
+     * The published files come from `main`, so a page that read only those would rebuild the whole alias map
+     * from a snapshot that predates its own commits, and silently undo an earlier version cut still waiting in
+     * the pull request. The balance knobs are written whole for the same reason and carry the same exposure:
+     * one stale read, one per-entry edit, and every balance change already on the branch is gone -- discarded
+     * by a save that looked like it touched one entry. Each is overlaid only when the branch has it; a branch
+     * that never touched a file keeps what `main` published.
      */
     async read() {
       const catalogue = await published('catalogue.json');
-      const aliases = await branchFile(ALIASES_FILE);
-      return aliases ? { ...catalogue, aliases } : catalogue;
+      const [aliases, balance] = await Promise.all([branchFile(ALIASES_FILE), branchFile(BALANCE_FILE)]);
+      return { ...catalogue, ...(aliases ? { aliases } : {}), ...(balance ? { balance } : {}) };
     },
     audit: () => published('audit.json'),
     weights: () => published('weights.json'),

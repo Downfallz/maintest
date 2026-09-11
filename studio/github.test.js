@@ -388,3 +388,27 @@ test('one written document is still reported by its path, which is what the auth
 
   assert.equal(result.saved, 'Spells/a.v1.json');
 });
+
+test('the knobs come from the branch once it has them, not from what main published', async () => {
+  // The knobs file is written whole, so a page reading main's copy and then saving one entry would discard
+  // every balance edit already committed to the branch -- the same failure the alias overlay exists to prevent.
+  const stub = github({ onBranch: { 'data/balance/knobs.json': { version: 'knobs:v1', spells: { 'spell:a': { intent: 'On the branch.' } } } } });
+
+  const catalogue = await backend(stub, {
+    published: async () => ({ spells: [], balance: { version: 'knobs:v1', spells: { 'spell:a': { intent: 'On main.' } } } }),
+  }).read();
+
+  assert.equal(catalogue.balance.spells['spell:a'].intent, 'On the branch.');
+  assert.deepEqual(catalogue.spells, [], 'the rest of the catalogue is still what the site published');
+});
+
+test('a branch that has not touched the knobs keeps the ones main published', async () => {
+  const stub = github({ onBranch: { 'data/aliases.json': { 'spell:a': 'spell:a:v2' } } });
+
+  const catalogue = await backend(stub, {
+    published: async () => ({ balance: { version: 'knobs:v1', spells: { 'spell:a': { intent: 'On main.' } } } }),
+  }).read();
+
+  assert.equal(catalogue.balance.spells['spell:a'].intent, 'On main.');
+  assert.deepEqual(catalogue.aliases, { 'spell:a': 'spell:a:v2' }, 'and the alias overlay still applies');
+});
