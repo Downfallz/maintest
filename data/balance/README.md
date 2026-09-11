@@ -147,12 +147,12 @@ skips it when you want a quick look rather than an answer.
 
 Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
 benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty. The sweep is up to two
-candidates per playable knob — on the nine-spell core content that is 29 knobs, 41 legal single steps and
-about fifteen minutes. The paired moves below add up to two per pair of knobs on a spell the sweep could not
-improve, and up to three more for each of the six pairs closest to paying off; `--iterations 8
---neighbours 4` adds thirty-two after that. Against the 180-minute timeout of the `Tune the catalogue`
-workflow, `--no-pairs` and `--pair-depth 1` are the switches if a run gets tight. Raise the budget rather
-than the step size: a wider step reaches further and reads worse in the diff.
+candidates per playable knob — on the nine-spell core content that is 29 knobs and 41 legal single steps.
+The paired moves below add up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139
+candidates. The workflow then climbs 24 rounds of 6, which is 284 candidates and about 95 minutes against
+its 180-minute timeout; the CLI's own defaults stay at 8 rounds of 4, because a local run should not take an
+hour and a half unasked. `--no-pairs` and `--pair-depth 1` are the switches if a run gets tight. Raise the
+budget rather than the step size: a wider step reaches further and reads worse in the diff.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is

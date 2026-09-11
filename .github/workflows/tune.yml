@@ -14,13 +14,16 @@ on:
         default: "0"
       iterations:
         description: "Rounds of neighbours after the opening sweep"
-        default: "8"
+        default: "24"
       neighbours:
         description: "Candidates played per round"
-        default: "4"
+        default: "6"
       max_changes:
         description: "Knobs one proposal may move at once"
         default: "12"
+      pair_depth:
+        description: "Steps one knob of a paired opening move may take (1 is the opening move alone)"
+        default: "2"
       apply:
         description: "Open a pull request with the winning numbers, or only report them"
         type: boolean
@@ -95,10 +98,11 @@ jobs:
           ITERATIONS: ${{ inputs.iterations }}
           NEIGHBOURS: ${{ inputs.neighbours }}
           MAX_CHANGES: ${{ inputs.max_changes }}
+          PAIR_DEPTH: ${{ inputs.pair_depth }}
           APPLY: ${{ inputs.apply }}
         run: |
           arguments=(-o "$OUT" --seed "$SEED" --iterations "$ITERATIONS"
-            --neighbours "$NEIGHBOURS" --max-changes "$MAX_CHANGES")
+            --neighbours "$NEIGHBOURS" --max-changes "$MAX_CHANGES" --pair-depth "$PAIR_DEPTH")
           if [[ "$APPLY" == "true" ]]; then
             arguments+=(--apply)
           fi
@@ -184,6 +188,7 @@ jobs:
           ITERATIONS: ${{ inputs.iterations }}
           NEIGHBOURS: ${{ inputs.neighbours }}
           MAX_CHANGES: ${{ inputs.max_changes }}
+          PAIR_DEPTH: ${{ inputs.pair_depth }}
         run: |
           hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
           git config user.name "github-actions[bot]"
@@ -213,7 +218,8 @@ jobs:
             echo
             echo "The search is deterministic: the same seed on the same content returns the same moves, so this"
             echo "reproduces locally with \`tune-content --seed $SEED --iterations $ITERATIONS"
-            echo "--neighbours $NEIGHBOURS --max-changes $MAX_CHANGES\`. A tuning pass is measured against one"
+            echo "--neighbours $NEIGHBOURS --max-changes $MAX_CHANGES --pair-depth $PAIR_DEPTH\`. A tuning"
+            echo "pass is measured against one"
             echo "agent, so changing how the agents score an action makes it stale."
           } > "$RUNNER_TEMP/message.txt"
           git commit -F "$RUNNER_TEMP/message.txt"

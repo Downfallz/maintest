@@ -89,8 +89,11 @@ objective at a match length or at your own agent.
 A candidate costs one content build plus one evaluation per objective entry, about twenty seconds on the
 benchmark seeds. The opening sweep is up to two candidates per playable knob before the climb starts, plus
 up to two more per pair of knobs on a spell no single step could improve, plus three more for each of the
-six pairs closest to paying off. `--no-sweep` and `--no-pairs` turn the first two off; `--pair-depth 1`
-leaves the pairs at one step each and turns off only the third.
+six pairs closest to paying off — on the nine-spell core content, up to 139 candidates before the climb
+starts. `--no-sweep` and `--no-pairs` turn the first two off; `--pair-depth 1` leaves the pairs at one step
+each and turns off only the third. The `Tune the catalogue` workflow climbs 24 rounds of 6 on top of that,
+about 95 minutes of its 180-minute budget; the CLI defaults to 8 rounds of 4, so a local run stays short
+enough to iterate on.
 
 ## Three learners
 
