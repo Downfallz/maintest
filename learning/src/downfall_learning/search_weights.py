@@ -65,6 +65,91 @@ class Score:
         )
 
 
+def reads_as_a_tie(low: float, high: float, even: float = 0.5) -> bool:
+    """Whether an interval straddles the value that means "no difference".
+
+    A win rate is measured over a finite number of matches, so it arrives as an interval rather than as a
+    number. When that interval contains one half, the run has not told the two sides apart at all — and the
+    point estimate inside it, 0.54 or 0.46, is the most misleading thing the output can print on its own.
+    """
+    return low <= even <= high
+
+
+def win_rate_lines(score: Score, opponent: str, indent: str = "  ") -> list[str]:
+    """The win rate, its interval, and what the interval means. The third line is the one nobody prints."""
+    lines = [
+        f"{indent}win rate {score.win_rate:.4f}, and over {score.matches} matches that is anywhere from "
+        f"{score.win_rate_low:.4f} to {score.win_rate_high:.4f}."
+    ]
+    if reads_as_a_tie(score.win_rate_low, score.win_rate_high):
+        lines.append(
+            f"{indent}That interval includes one half, so this run cannot tell it from {opponent}. It is not"
+        )
+        lines.append(
+            f"{indent}a {score.win_rate:.0%} result; it is a result these matches were too few to measure."
+        )
+    elif score.win_rate_low > 0.5:
+        lines.append(f"{indent}The whole interval is above one half, so it beats {opponent} measurably.")
+    else:
+        lines.append(f"{indent}The whole interval is below one half, so {opponent} beats it measurably.")
+    return lines
+
+
+def overlap(one: Score, other: Score) -> bool:
+    """Whether two score intervals cross, which is "this run cannot tell these two apart"."""
+    return one.low <= other.high and other.low <= one.high
+
+
+def format_search(result: SearchResult, opponent: str, evaluations: int, output: Path) -> str:
+    """What a weight search found, for a reader who wants to know whether to believe it.
+
+    The line this replaced printed the best score, the initial score and a win rate. None of the three says
+    the thing that decides whether the run is worth keeping: the search *always* reports a best at least as
+    good as its initial, because it keeps the best, so a number that went up is not evidence of anything on
+    its own. What is evidence is whether the two intervals are clear of each other.
+    """
+    moved, still = [], []
+    for name, after in result.best.weights.items():
+        before = result.initial.weights.get(name)
+        (moved if before is None or abs(after - before) > 5e-4 else still).append((name, before, after))
+
+    lines = [f"The search played {evaluations} evaluation(s) and kept the best weights it found.", ""]
+    lines.append("What it changed")
+    if moved:
+        width = max(len(name) for name, _, _ in moved)
+        for name, before, after in sorted(moved, key=lambda row: -abs(row[2] - (row[1] or 0.0))):
+            lines.append(f"  {name:<{width}}  {before:.3f} -> {after:.3f}")
+    else:
+        lines.append("  Nothing: no candidate beat the weights it started from.")
+    if still:
+        lines.append(f"  Unchanged: {', '.join(name for name, _, _ in still)}.")
+
+    best, initial = result.best.score, result.initial.score
+    lines.extend(
+        [
+            "",
+            "Is it actually better",
+            f"  score {initial.mean:.4f} -> {best.mean:.4f}, where one half is even against {opponent}.",
+        ]
+    )
+    if overlap(best, initial):
+        lines.extend(
+            [
+                f"  The two intervals overlap ({initial.low:.4f}..{initial.high:.4f} and "
+                f"{best.low:.4f}..{best.high:.4f}), so this",
+                "  run cannot tell the new weights from the ones it started with. The search keeps the",
+                "  best of what it drew, so a score that went up is what it does even when nothing improved.",
+            ]
+        )
+    else:
+        lines.append("  The two intervals are clear of each other, so the gap is one this run can measure.")
+
+    lines.append("")
+    lines.extend(win_rate_lines(best, opponent))
+    lines.extend(["", f"Written to '{output}'."])
+    return "\n".join(lines)
+
+
 class Evaluator(Protocol):
     def evaluate(self, weights: Mapping[str, float]) -> Score: ...
 

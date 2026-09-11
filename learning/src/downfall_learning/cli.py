@@ -21,7 +21,14 @@ from downfall_learning.iteration import (
 from downfall_learning.knobs import KNOBS_FILE, KnobsError, findings, load_content, load_knobs, validate
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.report import TRAINING_FILE, TrainingLog
-from downfall_learning.search_weights import CliEvaluator, EngineCommand, SearchOptions, search_weights
+from downfall_learning.search_weights import (
+    CliEvaluator,
+    EngineCommand,
+    SearchOptions,
+    format_search,
+    search_weights,
+    win_rate_lines,
+)
 from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
 from downfall_learning.train_value import ValueOptions, train_value
@@ -224,11 +231,7 @@ def _search_weights(arguments: argparse.Namespace) -> int:
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
     result = search_weights(evaluator, options, initial, log)
     result.write(arguments.output)
-    print(
-        f"Best weights after {evaluator.calls} evaluations: score {result.best.score.mean:.4f} "
-        f"(initial {result.initial.score.mean:.4f}), win rate {result.best.score.win_rate:.4f}, "
-        f"written to '{arguments.output / 'weights.json'}'."
-    )
+    print(format_search(result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json"))
     return 0
 
 
@@ -240,11 +243,19 @@ def _engine(arguments: argparse.Namespace) -> EngineCommand:
 def _evaluate_policy(arguments: argparse.Namespace) -> int:
     evaluator = CliEvaluator(_engine(arguments), arguments.model / "work")
     score = evaluate_policy(arguments.model, evaluator, arguments.output, update_log=not arguments.no_log)
-    print(
-        f"Policy of '{arguments.model}' against {arguments.opponent}: win rate {score.win_rate:.4f} "
-        f"({score.win_rate_low:.4f} to {score.win_rate_high:.4f}), "
-        f"score {score.mean:.4f} on {score.matches} matches."
+    lines = [
+        f"Policy of '{arguments.model}' played {score.matches} matches against {arguments.opponent}.",
+        "",
+    ]
+    lines.extend(win_rate_lines(score, arguments.opponent))
+    lines.extend(
+        [
+            "",
+            f"  score {score.mean:.4f}, and anywhere from {score.low:.4f} to {score.high:.4f}.",
+            f"  One half is even against {arguments.opponent}: a win counts one, a draw one half.",
+        ]
     )
+    print("\n".join(lines))
     return 0
 
 

@@ -60,6 +60,15 @@ words, and the objective as bands over the metrics `report.json` already publish
 | `check-knobs` | the knobs file and `data/` | nothing | Fails when a spell has no entry, a pointer addresses nothing, or the authored value sits outside its own bounds. Lists the dominated and indistinguishable spells the catalogue already carries. |
 | `tune-content` | the same, plus a built engine | `tune.json` and the changed spell files under `content/` | Hill climbs: play the content, then play neighbours of the best, one knob at a time. A candidate that breaks a constraint is redrawn before the engine sees it. `--apply` writes the winning numbers into `data/`. |
 
+**Every one of these runs explains its own result rather than printing it.** `tune-content` names what it
+changed in the content's own words, which measurement the gain came from, what that gain cost elsewhere, and
+what is still outside its range with the number it reads beside the number it should be. `search-weights`
+names which weights moved, and — the part that decides whether to believe it — whether the best score's
+interval is clear of the one it started from: a search keeps the best of what it drew, so a score that went
+up is what it does even when nothing improved. `evaluate-policy` says whether its win rate's interval
+contains one half, because a win rate of 0.54 whose interval runs 0.50 to 0.58 is not a 54% policy, it is a
+policy that many matches could not measure.
+
 The score is `sum(weight * (excess / scale) ** 2)` over the objective's targets, zero being on target. Seven
 of them are `report.json` metrics under their own names, so a tuning run and a normal run are read the same
 way. Five the tuner derives from `spellOutcomes`, because they need the catalogue as well as the evaluation:

@@ -9,12 +9,18 @@ from downfall_learning.artifacts import Evaluation
 from downfall_learning.export import DEFAULT_WEIGHTS, WEIGHT_NAMES, read_weights
 from downfall_learning.report import TrainingLog
 from downfall_learning.search_weights import (
+    Candidate,
     CliEvaluator,
     EngineCommand,
     EvaluationError,
     Score,
     SearchOptions,
+    SearchResult,
+    format_search,
+    overlap,
+    reads_as_a_tie,
     search_weights,
+    win_rate_lines,
 )
 
 TARGET = {**DEFAULT_WEIGHTS, "kill": 8.0, "risk": 1.0}
@@ -108,3 +114,77 @@ def test_the_cli_evaluator_reports_an_engine_failure(tmp_path: Path, fake_engine
 
     with pytest.raises(EvaluationError, match="negative damage"):
         evaluator.evaluate({**TARGET, "damage": -1.0})
+
+
+def _score(mean: float, spread: float, win_rate: float, win_spread: float, matches: int = 200) -> Score:
+    return Score(
+        mean=mean,
+        low=mean - spread,
+        high=mean + spread,
+        win_rate=win_rate,
+        win_rate_low=win_rate - win_spread,
+        win_rate_high=win_rate + win_spread,
+        matches=matches,
+    )
+
+
+def test_a_win_rate_whose_interval_contains_one_half_is_named_as_no_result() -> None:
+    """The point estimate inside such an interval is the most misleading thing the output can print."""
+    lines = "\n".join(win_rate_lines(_score(0.51, 0.04, 0.5412, 0.0423), "greedy"))
+
+    assert "cannot tell it from greedy" in lines
+    assert "too few to measure" in lines
+
+
+def test_a_win_rate_clear_of_one_half_is_named_as_a_result() -> None:
+    lines = "\n".join(win_rate_lines(_score(0.7, 0.02, 0.72, 0.03), "random"))
+
+    assert "beats random measurably" in lines
+    assert "too few to measure" not in lines
+
+
+def test_a_win_rate_clear_below_one_half_says_which_side_won() -> None:
+    lines = "\n".join(win_rate_lines(_score(0.3, 0.02, 0.28, 0.03), "greedy"))
+
+    assert "greedy beats it measurably" in lines
+
+
+def test_an_interval_that_straddles_the_even_point_is_a_tie() -> None:
+    assert reads_as_a_tie(0.49, 0.58)
+    assert not reads_as_a_tie(0.51, 0.58)
+    assert not reads_as_a_tie(0.40, 0.49)
+
+
+def test_two_scores_whose_intervals_cross_cannot_be_told_apart() -> None:
+    assert overlap(_score(0.61, 0.04, 0.5, 0.04), _score(0.59, 0.04, 0.5, 0.04))
+    assert not overlap(_score(0.70, 0.01, 0.5, 0.04), _score(0.59, 0.01, 0.5, 0.04))
+
+
+def _result(before: Mapping[str, float], after: Mapping[str, float], spread: float) -> SearchResult:
+    initial = Candidate(0, before, _score(0.5891, spread, 0.52, 0.04))
+    best = Candidate(1, after, _score(0.6123, spread, 0.5412, 0.0423))
+    return SearchResult(best=best, candidates=(best,), initial=initial)
+
+
+def test_the_search_report_names_which_weight_moved_and_which_did_not() -> None:
+    result = _result({"damage": 1.0, "heal": 0.8}, {"damage": 1.352, "heal": 0.8}, 0.04)
+
+    text = format_search(result, "greedy", 40, Path("runs/search/weights.json"))
+
+    assert "damage" in text
+    assert "1.000 -> 1.352" in text
+    assert "Unchanged: heal." in text
+
+
+def test_a_search_whose_intervals_overlap_says_it_measured_nothing() -> None:
+    """A search keeps the best of what it drew, so a score that went up is what it does either way."""
+    text = format_search(_result({"damage": 1.0}, {"damage": 1.4}, 0.04), "greedy", 40, Path("w.json"))
+
+    assert "The two intervals overlap" in text
+    assert "cannot tell the new weights from the ones it started with" in text
+
+
+def test_a_search_whose_intervals_are_clear_says_the_gap_is_real() -> None:
+    text = format_search(_result({"damage": 1.0}, {"damage": 1.4}, 0.005), "greedy", 40, Path("w.json"))
+
+    assert "clear of each other" in text
