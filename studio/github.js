@@ -29,7 +29,7 @@ function refusal(message, problems) {
 /** The repository the page is served from: Pages gives a project site `<owner>.github.io/<repo>/`. */
 export function repositoryFromLocation(location = globalThis.location) {
   const owner = /^([^.]+)\.github\.io$/.exec(location?.hostname ?? '')?.[1];
-  const repo = (location?.pathname ?? '').split('/').filter(Boolean)[0];
+  const repo = (location?.pathname ?? '').split('/').find(Boolean);
   return owner && repo ? { owner, repo } : null;
 }
 
@@ -68,9 +68,15 @@ function asFile(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-/** The aliases file is written sorted, so re-saving an unchanged map is not a diff. */
+/**
+ * The aliases file is written sorted, so re-saving an unchanged map is not a diff -- and sorted the way the
+ * local host sorts it, which is `StringComparer.Ordinal`. Not `localeCompare`: that orders by the reader's
+ * collation, so it would put `spell:apple` before `spell:Apple` where ordinal does the opposite, and every
+ * hosted save would reorder the whole file and disagree with what `ContentStore` writes.
+ */
 function aliasesFile(aliases) {
-  return asFile(Object.fromEntries(Object.keys(aliases).sort().map(key => [key, aliases[key]])));
+  const ordinal = (left, right) => (left < right ? -1 : Number(left > right));
+  return asFile(Object.fromEntries(Object.keys(aliases).sort(ordinal).map(key => [key, aliases[key]])));
 }
 
 /**

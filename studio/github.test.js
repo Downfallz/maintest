@@ -116,6 +116,16 @@ test('a document and the alias that names it land in the same commit', async () 
   assert.equal(entries[1].content, '{\n  "spell:a": "spell:a:v2",\n  "spell:b": "spell:b:v1"\n}\n');
 });
 
+test('the aliases are sorted the way the local host sorts them, not by the reader collation', () => {
+  const entries = treeEntries({ aliases: { 'spell:apple': 'a', 'spell:Zeal': 'z', 'spell:Apple': 'A', 'spell:banana': 'b' } });
+
+  // ContentStore writes a SortedDictionary with StringComparer.Ordinal. `localeCompare` would put apple before
+  // Apple and banana before Zeal, so every hosted save would reorder the whole file and fight the local host.
+  assert.deepEqual(
+    Object.keys(JSON.parse(entries[0].content)),
+    ['spell:Apple', 'spell:Zeal', 'spell:apple', 'spell:banana']);
+});
+
 test('a removal is the path with no blob behind it', async () => {
   const entries = treeEntries({ remove: ['Spells/gone.json'] });
 
