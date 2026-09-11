@@ -659,7 +659,7 @@ function compactTree(tree) {
     ]);
     pick.addEventListener('click', () => select(tree.path, node));
     const card = element('div', { className: 'node' }, [element('div', { className: 'head' }, [pick])]);
-    const taught = asArray(node.spells).filter(spell => spell && spell.id);
+    const taught = asArray(node.spells).filter(spell => spell?.id);
     if (taught.length) {
       card.append(element('div', { className: 'chips' }, taught.map(spell => spellLink(spell.id))));
     }
