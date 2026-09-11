@@ -1066,14 +1066,12 @@ function payload() {
 
 async function save() {
   const item = state.selected;
-  const result = await act('Saving', () => backend.change({
-    kind: TABS[state.tab].kind,
-    write: [{ path: item.path, document: payload() }],
-  }));
+  const request = { kind: TABS[state.tab].kind, write: [{ path: item.path, document: payload() }] };
+  const result = await act('Saving', () => backend.change(request));
 
   if (!result) return;
   adopt(result);
-  applyLocally(state.tab, item.path, payload());
+  applyLocally(state.tab, request);
   state.dirty = false;
   reportSave(result, `Saved ${result.saved}.`);
   select(item.path);
@@ -1083,18 +1081,31 @@ async function save() {
  * What a hosted save cannot do: rebuild the catalogue. `ContentStore` validates against the same DTOs the data
  * builder uses and a browser cannot run that, so CI is the authority (ADR 0023) and the page carries its own
  * edit forward instead of dropping it or pretending to have checked it.
+ *
+ * It is driven by the request that was sent, not by each caller's idea of what it did: every mutation writes,
+ * removes and repoints through the same shape, so what is shown cannot drift from what was committed. The alias
+ * map especially -- it is written whole, so a stale copy silently reverts the edit before it.
  */
-function applyLocally(tab, path, document) {
+function applyLocally(tab, request) {
   if (backend.kind !== 'hosted') return;
-  const found = findDocument(path);
-  if (found) {
-    found.item.document = clone(document);
-    return;
+
+  for (const written of request.write || []) {
+    const found = findDocument(written.path);
+    if (found) {
+      found.item.document = clone(written.document);
+    } else {
+      // `kind` is what the list draws a row by, so a row without it would render as nothing.
+      documentsOf(tab).push({ path: written.path, kind: TABS[tab].kind, document: clone(written.document) });
+    }
   }
 
-  // A document the page has just created is not in the catalogue it read, and dropping it would take the edit
-  // off the screen. `kind` is what the list draws a row by, so a row without it would render as nothing.
-  documentsOf(tab).push({ path, kind: TABS[tab].kind, document: clone(document) });
+  for (const path of request.remove || []) {
+    const list = documentsOf(tab);
+    const at = list.findIndex(item => item.path === path);
+    if (at >= 0) list.splice(at, 1);
+  }
+
+  if (request.aliases) state.catalogue.aliases = { ...request.aliases };
   renderNav();
 }
 
@@ -1122,18 +1133,17 @@ async function saveAsNextVersion() {
     ? path.replace(/\.v\d+\.json$/, `.v${parsed.version + 1}.json`)
     : path.replace(/\.json$/, `.v${parsed.version + 1}.json`);
 
-  const result = await act(`Cutting ${nextId}`, async () => {
-    const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${parsed.name}`]: nextId };
-    return backend.change({
-      kind: TABS[state.tab].kind,
-      write: [{ path: nextPath, document: { ...payload(), id: nextId }, create: true }],
-      aliases,
-    });
-  });
+  const request = {
+    kind: TABS[state.tab].kind,
+    write: [{ path: nextPath, document: { ...payload(), id: nextId }, create: true }],
+    aliases: { ...state.catalogue.aliases, [`${parsed.kind}:${parsed.name}`]: nextId },
+  };
+  const result = await act(`Cutting ${nextId}`, () => backend.change(request));
 
   if (!result) return;
   adopt(result);
-  report(`${nextId} written to ${nextPath}; the alias ${parsed.kind}:${parsed.name} now points at it.`);
+  applyLocally(state.tab, request);
+  reportSave(result, `${nextId} written to ${nextPath}; the alias ${parsed.kind}:${parsed.name} now points at it.`);
   select(nextPath);
 }
 
@@ -1146,18 +1156,21 @@ async function setEnabled(enabled) {
 
 async function remove(item) {
   if (!window.confirm(`Delete ${item.path}? The file goes away; git still has it.`)) return;
-  const result = await act('Deleting', async () => {
-    // An alias left pointing at a deleted item stops the content from building, so it goes with the file.
-    const aliases = Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id));
-    return backend.change({ kind: TABS[state.tab].kind, remove: [item.path], aliases });
-  });
+  // An alias left pointing at a deleted item stops the content from building, so it goes with the file.
+  const request = {
+    kind: TABS[state.tab].kind,
+    remove: [item.path],
+    aliases: Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id)),
+  };
+  const result = await act('Deleting', () => backend.change(request));
 
   if (!result) return;
   adopt(result);
+  applyLocally(state.tab, request);
   state.selected = null;
   state.draft = null;
   renderDetail();
-  report(`Deleted ${item.path}.`);
+  reportSave(result, `Deleted ${item.path}.`);
 }
 
 async function create() {
@@ -1171,18 +1184,17 @@ async function create() {
   const path = `${TABS[state.tab].folder}/${safe}.v1.json`;
   const content = { ...template, id, name: name.trim() };
 
-  const result = await act(`Creating ${id}`, async () => {
-    const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id };
-    return backend.change({
-      kind: TABS[state.tab].kind,
-      write: [{ path, document: content, create: true }],
-      aliases,
-    });
-  });
+  const request = {
+    kind: TABS[state.tab].kind,
+    write: [{ path, document: content, create: true }],
+    aliases: { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id },
+  };
+  const result = await act(`Creating ${id}`, () => backend.change(request));
 
   if (!result) return;
   adopt(result);
-  report(`${id} written to ${path}.`);
+  applyLocally(state.tab, request);
+  reportSave(result, `${id} written to ${path}.`);
   select(path);
 }
 

@@ -10,7 +10,7 @@ import { githubBackend, repositoryFromLocation, storeToken, storedToken, treeEnt
 const REPOSITORY = { owner: 'downfallz', repo: 'maintest' };
 
 /** Answers GitHub's shapes in the order the write path asks for them, and records every request. */
-function github({ branchExists = true, openPulls = [] } = {}) {
+function github({ branchExists = true, openPulls = [], onBranch = {} } = {}) {
   const calls = [];
   const answer = (url, method) => {
     // Only the studio branch can be missing; the default branch always answers, or nothing could be based on it.
@@ -22,6 +22,13 @@ function github({ branchExists = true, openPulls = [] } = {}) {
 
     if (/\/git\/ref\/heads\/main$/.test(url) && method === 'GET') {
       return { status: 200, payload: { object: { sha: 'mainhead' } } };
+    }
+
+    if (/\/contents\//.test(url)) {
+      const path = /\/contents\/([^?]+)/.exec(url)[1];
+      return path in onBranch
+        ? { status: 200, payload: { content: Buffer.from(JSON.stringify(onBranch[path]), 'utf8').toString('base64') } }
+        : { status: 404, payload: { message: 'Not Found' } };
     }
 
     if (url.endsWith('/maintest') && method === 'GET') return { status: 200, payload: { default_branch: 'main' } };
@@ -178,9 +185,39 @@ test('building and playing still refuse, and say where the engine is', async () 
   await assert.rejects(() => page.play({}), /Dispatch a workflow/);
 });
 
-test('reading stays on the published files, so it needs no token and no rate limit', async () => {
+test('reading stays on the published files while the branch has nothing of its own', async () => {
   assert.deepEqual(await backend(github()).read(), { from: 'catalogue.json' });
   assert.deepEqual(await backend(github()).audit(), { from: 'audit.json' });
+});
+
+test('the aliases come from the branch once it has them, not from what main published', async () => {
+  // The published catalogue is built from main, so a page reading only that would rebuild the whole alias map
+  // from a snapshot that predates its own commits -- and silently undo a version cut still waiting in the PR.
+  const stub = github({ onBranch: { 'data/aliases.json': { 'spell:a': 'spell:a:v2' } } });
+
+  const catalogue = await backend(stub, { published: async () => ({ spells: [], aliases: { 'spell:a': 'spell:a:v1' } }) }).read();
+
+  assert.deepEqual(catalogue.aliases, { 'spell:a': 'spell:a:v2' });
+  assert.deepEqual(catalogue.spells, [], 'the rest of the catalogue is still what the site published');
+});
+
+test('a create-only write refuses a path the branch already holds, rather than overwriting it', async () => {
+  const stub = github({ onBranch: { 'data/Spells/a.v2.json': { id: 'spell:a:v2' } } });
+
+  // The Trees API replaces whatever a path holds; the local host refuses, and so must this one.
+  await assert.rejects(
+    () => backend(stub).change({ kind: 'spells', write: [{ path: 'Spells/a.v2.json', document: {}, create: true }] }),
+    /'Spells\/a\.v2\.json' already exists on studio\/content/);
+
+  assert.equal(stub.calls.filter(call => call.method === 'POST').length, 0, 'nothing is committed when a name clashes');
+});
+
+test('a create-only write goes through when the path is free', async () => {
+  const stub = github();
+
+  const result = await backend(stub).change({ kind: 'spells', write: [{ path: 'Spells/new.v1.json', document: {}, create: true }] });
+
+  assert.equal(result.commit, 'c0ffee1');
 });
 
 test('a page not served from a project site says so instead of guessing a repository', () => {

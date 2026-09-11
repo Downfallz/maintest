@@ -34,27 +34,30 @@ export function repositoryFromLocation(location = globalThis.location) {
 }
 
 /**
- * The token, or null. A browser with site data blocked throws on `localStorage` rather than answering, which is
- * "no token" and not a crash: the page then reads, and says so when the user tries to write.
+ * The token, or null. A browser with site data blocked throws on the `localStorage` *property itself*, not on
+ * `getItem`, so reaching for it is inside the try: as a default parameter it would throw before the body ran,
+ * the catch would never fire, and since the page asks for the token while choosing its backend, the whole
+ * published studio would fail to load instead of falling back to reading.
  */
-export function storedToken(store = globalThis.localStorage) {
+export function storedToken(store) {
   try {
-    return store?.getItem(TOKEN_KEY) || null;
+    return (store ?? globalThis.localStorage)?.getItem(TOKEN_KEY) || null;
   } catch {
     return null;
   }
 }
 
 /** Keeps or forgets the token. Answers whether it stuck, so the page can say when a browser refuses to hold it. */
-export function storeToken(token, store = globalThis.localStorage) {
+export function storeToken(token, store) {
   try {
+    const held = store ?? globalThis.localStorage;
     if (token) {
-      store?.setItem(TOKEN_KEY, token);
+      held?.setItem(TOKEN_KEY, token);
     } else {
-      store?.removeItem(TOKEN_KEY);
+      held?.removeItem(TOKEN_KEY);
     }
 
-    return storedToken(store) === (token || null);
+    return storedToken(held) === (token || null);
   } catch {
     return false;
   }
@@ -151,12 +154,35 @@ export function githubBackend({ transport = globalThis.fetch, token, repository,
     return { status: response.status, payload };
   }
 
+  /** Answers null for 404 rather than throwing, for the things that are legitimately not there yet. */
+  const optional = error => {
+    if (/not found/i.test(error.message)) return null;
+    throw error;
+  };
+
+  /**
+   * One file as the studio branch has it, or null. GitHub answers base64 with newlines in it, and the content is
+   * UTF-8, so it is decoded through bytes rather than through `atob` alone, which would mangle anything not ASCII.
+   */
+  async function branchFile(path) {
+    const found = await api(`/contents/${path}?ref=${encodeURIComponent(branch)}`).catch(optional);
+    if (!found) {
+      return null;
+    }
+
+    const bytes = Uint8Array.from(atob(found.payload.content.replace(/\s/g, '')), character => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  /** Whether the branch already holds these paths, which is what a create-only write must not overwrite. */
+  async function taken(paths) {
+    const found = await Promise.all(paths.map(async path => (await api(`/contents/${CONTENT_ROOT}/${path}?ref=${encodeURIComponent(branch)}`).catch(optional)) && path));
+    return found.filter(Boolean);
+  }
+
   /** The studio branch's head, created from the repository's default branch the first time it is needed. */
   async function head() {
-    const existing = await api(`/git/ref/heads/${branch}`).catch(error => {
-      if (/not found/i.test(error.message)) return null;
-      throw error;
-    });
+    const existing = await api(`/git/ref/heads/${branch}`).catch(optional);
 
     if (existing) {
       return existing.payload.object.sha;
@@ -191,12 +217,29 @@ export function githubBackend({ transport = globalThis.fetch, token, repository,
   return {
     kind: 'hosted',
 
-    read: () => published('catalogue.json'),
+    /**
+     * The catalogue as the site published it, with the aliases as the *branch* has them. The published files come
+     * from `main`, so a page that read only those would rebuild the whole alias map from a snapshot that predates
+     * its own commits, and silently undo an earlier version cut still waiting in the pull request.
+     */
+    async read() {
+      const catalogue = await published('catalogue.json');
+      const aliases = await branchFile(ALIASES_FILE);
+      return aliases ? { ...catalogue, aliases } : catalogue;
+    },
     audit: () => published('audit.json'),
     weights: () => published('weights.json'),
     runs: async () => [],
 
     async change(request) {
+      // The Trees API overwrites whatever a path holds, so "create, do not replace" is checked rather than
+      // expressed -- the local host refuses the same way, and losing a file to a reused name is not a save.
+      const creating = (request.write ?? []).filter(document => document.create === true).map(document => document.path);
+      const clash = creating.length ? await taken(creating) : [];
+      if (clash.length) {
+        throw refusal(`'${clash[0]}' already exists on ${branch}. Open it to change it, or pick another name.`, clash.slice(1));
+      }
+
       const parent = await head();
       const base = await api(`/git/commits/${parent}`);
       const tree = await api('/git/trees', {
