@@ -270,7 +270,10 @@ public sealed class ContentStore
             using var parsed = JsonDocument.Parse(File.ReadAllText(path));
             return parsed.RootElement.Clone();
         }
-        catch (Exception exception) when (exception is JsonException or IOException)
+        // `UnauthorizedAccessException` is not an `IOException`, so a knobs file the process may not read would
+        // otherwise leave here as a 500 on the catalogue route and end `studio --export` outright — authoring
+        // metadata taking down a catalogue that is perfectly valid without it.
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
             notes.Add($"{BalanceFolder}/{BalanceFile} could not be read, so the studio shows no balance knobs: {exception.Message}");
             return null;

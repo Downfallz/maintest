@@ -367,4 +367,51 @@ public sealed class ContentStoreTests
         tuned.ContentHash.ShouldBe(bare.ContentHash.ShouldNotBeNull());
     }
 
+    /// <summary>
+    /// A knobs file the process may not read is the same answer as one that does not parse: a note, and no
+    /// knobs. <see cref="UnauthorizedAccessException"/> is not an <see cref="IOException"/>, so it escapes a
+    /// filter written for the readable-but-wrong case, and the catalogue route would answer 500 while
+    /// <c>studio --export</c> ended outright — optional authoring metadata taking down a valid catalogue.
+    /// <para>
+    /// Skipped wherever reads cannot actually be denied: Windows, and every root user. The CI runner is
+    /// neither, so this is a real assertion there and an honest nothing elsewhere, rather than a test that
+    /// quietly proves nothing.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void A_knobs_file_that_cannot_be_read_is_a_note_and_not_a_crash()
+    {
+        using var content = new ContentDirectory().WithValidContent().WithFile("balance/knobs.json", Knobs);
+        if (!DenyReads(Path.Combine(content.Path, "balance", "knobs.json")))
+        {
+            Assert.Skip("Reads cannot be denied to this process, so there is nothing here to refuse it.");
+        }
+
+        var catalogue = new ContentStore(content.Path).Read();
+
+        catalogue.Balance.ShouldBeNull();
+        catalogue.ContentHash.ShouldNotBeNull();
+        catalogue.Problems.ShouldBeEmpty();
+        catalogue.Notes.ShouldContain(note => note.Contains("balance/knobs.json", StringComparison.Ordinal));
+    }
+
+    /// <summary>Takes every permission off a file, and says whether that actually stopped this process.</summary>
+    private static bool DenyReads(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        File.SetUnixFileMode(path, UnixFileMode.None);
+        try
+        {
+            File.ReadAllText(path);
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
 }
