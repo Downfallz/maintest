@@ -357,6 +357,7 @@
         "The bleed is the point, the damage is the garnish",
         "The entry-level bleed: weaker than Mortal Wound on every axis"
       ],
+      "note": "These bounds contain a good answer and it is in the interior, not at a corner. Measured against a Brawler-buffed catalogue (Pummel at 3 damage), at 2 damage: a bleed of 1 per round over 2 rounds is the 6 landed casts this spell has today; 2 over 2 is 59, still nothing; 2 over 3 takes 5155 of about 8900 casts with matches at 11.3 rounds, no draw and nothing at the round cap; 3 over 2 reaches the same usage but with 12.5% draws; and the corner, 3 over 3, is worse than the middle at 2600, because it kills so fast that a match is 6.0 rounds and there are half as many casts to take a share of. The middle point takes the top spell's share of landed casts from 0.778 to 0.578, the largest move anyone has found against this catalogue's monopoly. Worth knowing for a search: it is two steps from where the content sits and the step between is flat, 6 casts to 59, so a climb that only ever moves one knob has to accept a gain of 0.005 to find the path.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
