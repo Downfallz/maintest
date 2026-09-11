@@ -21,14 +21,35 @@ every push to `main` that touches it or the content, next to what the engine kne
 the catalogue, the audit and the built-in weights, written by `studio --export`. Browsing the content there
 needs no engine, no token and no machine left on.
 
-It cannot write yet, and says so where you try rather than where the page loaded: saving and building each
-refuse with what to use instead. Writing is the next step of the ADR, and what accepting a token in
-`localStorage` costs is written down there. What a phone *can* launch from there is a workflow: on the hosted
-page the **Run** sheet lists the four the repository dispatches by hand -- tune the catalogue, evaluate, search
-the agent weights, one turn of the learning loop -- and each opens GitHub's own *Run workflow* form.
+**Writing needs a token.** With one, the hosted page saves through the Git Trees API: every save is one commit
+on the `studio/content` branch and one pull request kept open, so a content change gets a diff, a review and the
+full CI gate. Without one the page reads and says so where you try, naming both ways out. Building and playing
+always refuse there: they need the engine, which a browser does not have. What a phone *can* launch is a
+workflow -- the hosted **Run** sheet lists the four the repository dispatches by hand (tune the catalogue,
+evaluate, search the agent weights, one turn of the learning loop) and each opens GitHub's own *Run workflow*
+form.
 
-Which backend answers is decided by where the page was loaded from: the local host binds the loopback address
-and nothing else (ADR 0015), so "not loopback" is exactly "not the local studio".
+The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents* and *Pull
+requests* write. Paste it into the **Run** sheet of the hosted page, where *Keep it* stores it and *Forget it*
+removes it; the page picks its backend again on the spot rather than waiting for a reload. It is kept in
+`localStorage`, sent to `api.github.com` and nowhere else, and it is a standing credential in a browser: that
+cost is accepted rather than argued away in ADR 0023, and it is revocable in one click on GitHub. Give it an
+expiry.
+
+Validation does not happen in the browser and cannot: `ContentStore` checks a document against the same DTOs the
+data builder uses, and a page cannot run that. So a hosted save answers with the commit and the pull request to
+watch rather than with a rebuilt catalogue, and **CI is the authority** on whether the content builds.
+
+Which backend answers is decided by where the page was loaded from and what it has: the local host binds the
+loopback address and nothing else (ADR 0015), so "not loopback" is exactly "not the local studio"; away from it,
+a stored token is what separates a page that can save from one that can only read.
+
+| | `localBackend` | `hostedBackend` | `githubBackend` |
+| --- | --- | --- | --- |
+| Where | loopback | the published page | the published page, with a token |
+| Read | the content directory | files beside the page | files beside the page |
+| Save | files on the disk | refuses | a commit and a pull request |
+| Build, play | the engine, in process | refuses | refuses |
 
 ## What the page does
 

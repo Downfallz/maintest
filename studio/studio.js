@@ -8,8 +8,10 @@
 // local host and from GitHub Pages, and which backend answers is decided by where it was loaded from.
 
 import { backendForThisPage } from './backend.js';
+import { storeToken, storedToken } from './github.js';
 
-const backend = backendForThisPage();
+// Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
+let backend = backendForThisPage();
 
 // ---------- what the schema allows ----------
 
@@ -1064,16 +1066,58 @@ function payload() {
 
 async function save() {
   const item = state.selected;
-  const result = await act('Saving', () => backend.change({
-    kind: TABS[state.tab].kind,
-    write: [{ path: item.path, document: payload() }],
-  }));
+  const request = { kind: TABS[state.tab].kind, write: [{ path: item.path, document: payload() }] };
+  const result = await act('Saving', () => backend.change(request));
 
   if (!result) return;
   adopt(result);
+  applyLocally(state.tab, request);
   state.dirty = false;
-  report(`Saved ${result.saved}.`);
+  reportSave(result, `Saved ${result.saved}.`);
   select(item.path);
+}
+
+/**
+ * What a hosted save cannot do: rebuild the catalogue. `ContentStore` validates against the same DTOs the data
+ * builder uses and a browser cannot run that, so CI is the authority (ADR 0023) and the page carries its own
+ * edit forward instead of dropping it or pretending to have checked it.
+ *
+ * It is driven by the request that was sent, not by each caller's idea of what it did: every mutation writes,
+ * removes and repoints through the same shape, so what is shown cannot drift from what was committed. The alias
+ * map especially -- it is written whole, so a stale copy silently reverts the edit before it.
+ */
+function applyLocally(tab, request) {
+  if (backend.kind !== 'hosted') return;
+
+  for (const written of request.write || []) {
+    const found = findDocument(written.path);
+    if (found) {
+      found.item.document = clone(written.document);
+    } else {
+      // `kind` is what the list draws a row by, so a row without it would render as nothing.
+      documentsOf(tab).push({ path: written.path, kind: TABS[tab].kind, document: clone(written.document) });
+    }
+  }
+
+  for (const path of request.remove || []) {
+    const list = documentsOf(tab);
+    const at = list.findIndex(item => item.path === path);
+    if (at >= 0) list.splice(at, 1);
+  }
+
+  if (request.aliases) state.catalogue.aliases = { ...request.aliases };
+  renderNav();
+}
+
+/** A save that became a commit says where to watch it; one that rebuilt the content says what it did. */
+function reportSave(result, message) {
+  if (!result.pullRequest) {
+    report(message);
+    return;
+  }
+
+  banner(`${message} Committed ${result.commit.slice(0, 7)} on ${result.branch}.`, 'ok',
+    [`CI validates it on pull request #${result.pullRequest.number} — this page cannot: ${result.pullRequest.url}`]);
 }
 
 async function saveAsNextVersion() {
@@ -1089,18 +1133,17 @@ async function saveAsNextVersion() {
     ? path.replace(/\.v\d+\.json$/, `.v${parsed.version + 1}.json`)
     : path.replace(/\.json$/, `.v${parsed.version + 1}.json`);
 
-  const result = await act(`Cutting ${nextId}`, async () => {
-    const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${parsed.name}`]: nextId };
-    return backend.change({
-      kind: TABS[state.tab].kind,
-      write: [{ path: nextPath, document: { ...payload(), id: nextId }, create: true }],
-      aliases,
-    });
-  });
+  const request = {
+    kind: TABS[state.tab].kind,
+    write: [{ path: nextPath, document: { ...payload(), id: nextId }, create: true }],
+    aliases: { ...state.catalogue.aliases, [`${parsed.kind}:${parsed.name}`]: nextId },
+  };
+  const result = await act(`Cutting ${nextId}`, () => backend.change(request));
 
   if (!result) return;
   adopt(result);
-  report(`${nextId} written to ${nextPath}; the alias ${parsed.kind}:${parsed.name} now points at it.`);
+  applyLocally(state.tab, request);
+  reportSave(result, `${nextId} written to ${nextPath}; the alias ${parsed.kind}:${parsed.name} now points at it.`);
   select(nextPath);
 }
 
@@ -1113,18 +1156,21 @@ async function setEnabled(enabled) {
 
 async function remove(item) {
   if (!window.confirm(`Delete ${item.path}? The file goes away; git still has it.`)) return;
-  const result = await act('Deleting', async () => {
-    // An alias left pointing at a deleted item stops the content from building, so it goes with the file.
-    const aliases = Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id));
-    return backend.change({ kind: TABS[state.tab].kind, remove: [item.path], aliases });
-  });
+  // An alias left pointing at a deleted item stops the content from building, so it goes with the file.
+  const request = {
+    kind: TABS[state.tab].kind,
+    remove: [item.path],
+    aliases: Object.fromEntries(Object.entries(state.catalogue.aliases).filter(([, target]) => target !== item.id)),
+  };
+  const result = await act('Deleting', () => backend.change(request));
 
   if (!result) return;
   adopt(result);
+  applyLocally(state.tab, request);
   state.selected = null;
   state.draft = null;
   renderDetail();
-  report(`Deleted ${item.path}.`);
+  reportSave(result, `Deleted ${item.path}.`);
 }
 
 async function create() {
@@ -1138,18 +1184,17 @@ async function create() {
   const path = `${TABS[state.tab].folder}/${safe}.v1.json`;
   const content = { ...template, id, name: name.trim() };
 
-  const result = await act(`Creating ${id}`, async () => {
-    const aliases = { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id };
-    return backend.change({
-      kind: TABS[state.tab].kind,
-      write: [{ path, document: content, create: true }],
-      aliases,
-    });
-  });
+  const request = {
+    kind: TABS[state.tab].kind,
+    write: [{ path, document: content, create: true }],
+    aliases: { ...state.catalogue.aliases, [`${parsed.kind}:${safe}`]: id },
+  };
+  const result = await act(`Creating ${id}`, () => backend.change(request));
 
   if (!result) return;
   adopt(result);
-  report(`${id} written to ${path}.`);
+  applyLocally(state.tab, request);
+  reportSave(result, `${id} written to ${path}.`);
   select(path);
 }
 
@@ -1485,6 +1530,32 @@ function togglePanel(id, load) {
   if (!narrow.matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+/**
+ * The token, kept in this browser and nowhere else. Pasting or forgetting one picks a different backend, so the
+ * page re-reads which one it has rather than waiting for a reload to notice.
+ */
+function renderToken() {
+  const held = storedToken();
+  $('token').value = '';
+  $('token').placeholder = held ? 'a token is kept in this browser' : 'github_pat_...';
+  $('token-forget').hidden = !held;
+  $('token-state').textContent = held
+    ? 'Saving from here commits to studio/content.'
+    : 'Reading only. Paste a token to save from this page.';
+}
+
+function useToken(token) {
+  if (!storeToken(token)) {
+    banner('This browser refuses to keep the token, so saving from here is not possible. Site data may be blocked.', 'error');
+    return;
+  }
+
+  backend = backendForThisPage();
+  renderToken();
+  adoptBackendKind();
+  banner(token ? 'Token kept in this browser.' : 'Token forgotten.', 'ok');
+}
+
 /** The run sheet of the published page launches workflows instead of matches; the rest of the page is the same. */
 function adoptBackendKind() {
   const hosted = backend.kind === 'hosted';
@@ -1512,6 +1583,9 @@ $('build').addEventListener('click', build);
 $('run-go').addEventListener('click', run);
 $('run-weights-reset').addEventListener('click', resetWeights);
 $('runs-compare').addEventListener('click', compareRuns);
+$('token-keep').addEventListener('click', () => useToken($('token').value.trim()));
+$('token-forget').addEventListener('click', () => useToken(''));
+renderToken();
 $('run-panel').addEventListener('click', () => togglePanel('run', () => { if (backend.kind !== 'hosted') loadWeights(); }));
 $('runs-panel').addEventListener('click', () => togglePanel('runs', loadRuns));
 $('audit-panel').addEventListener('click', () => togglePanel('audit', loadAudit));

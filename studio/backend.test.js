@@ -80,12 +80,40 @@ test('the published page has played no runs, which is an empty list and not a re
   assert.deepEqual(await hostedBackend().runs(), []);
 });
 
-test('everything the published page cannot do yet refuses where the user tried it', async () => {
+test('a published page with no token refuses, and says how to make it able', async () => {
   const page = hostedBackend();
 
-  await assert.rejects(() => page.change({ kind: 'spells' }), /Saving needs the engine/);
-  await assert.rejects(() => page.build(), /Building needs the engine/);
-  await assert.rejects(() => page.play({}), /Playing a match needs the engine/);
+  // The refusal is where the user tried, and it names the two ways out rather than only stating the wall.
+  await assert.rejects(() => page.change({ kind: 'spells' }), /Saving needs either the engine or a token/);
+  await assert.rejects(() => page.change({ kind: 'spells' }), /Paste a fine-grained token/);
+  await assert.rejects(() => page.build(), /Building needs either the engine or a token/);
+  await assert.rejects(() => page.play({}), /Playing a match needs/);
+});
+
+test('a stored token is what turns the published page from reading into writing', async () => {
+  const held = new Map();
+  const previous = { location: globalThis.location, localStorage: globalThis.localStorage };
+  globalThis.location = { hostname: 'downfallz.github.io', pathname: '/maintest/' };
+  globalThis.localStorage = {
+    getItem: key => held.get(key) ?? null,
+    setItem: (key, value) => held.set(key, value),
+    removeItem: key => held.delete(key),
+  };
+
+  try {
+    // Without one, saving refuses. The page is the same page; what it can do is not.
+    await assert.rejects(() => backendForThisPage().change({ kind: 'spells' }), /Saving needs either the engine or a token/);
+
+    held.set('downfall.studio.github-token', 'ghp_stub');
+    const { calls, fetch } = transport([{ payload: { object: { sha: 'head' } } }]);
+    await backendForThisPage(fetch).change({ kind: 'spells', write: [] }).catch(() => {});
+
+    // It is now talking to GitHub about this repository, which is the whole difference.
+    assert.match(calls[0].url, /^https:\/\/api\.github\.com\/repos\/downfallz\/maintest\//);
+  } finally {
+    globalThis.location = previous.location;
+    globalThis.localStorage = previous.localStorage;
+  }
 });
 
 test('the loopback address is what picks the local host, and nothing else is it', async () => {

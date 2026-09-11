@@ -13,8 +13,10 @@
     <Content Include="..\..\viewer\viewer.css" Link="viewer\viewer.css" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\studio\index.html" Link="studio\index.html" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\studio\studio.css" Link="studio\studio.css" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\studio\studio.js" Link="studio\studio.js" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\studio\backend.js" Link="studio\backend.js" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Every module beside the page, by pattern rather than by name: a list per file is a list that goes stale,
+         and StudioFilesTests asserts the served set against whatever lands here. Tests are not part of the page. -->
+    <Content Include="..\..\studio\*.js" Exclude="..\..\studio\*.test.js" Link="studio\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\.github\workflows\pages.yml" Link="pages.yml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -12,9 +12,14 @@
 // Every operation answers with the result the page adopts, and refuses by throwing an Error whose `problems`
 // are the lines to show under the message.
 //
+// There are three: the local host, the published page, and the published page with a token, which writes through
+// GitHub and lives in `github.js` because it is the only one with a transport of its own to explain.
+//
 // Each backend takes the transport it talks through, defaulting to the page's `fetch` (ADR 0024). That is what
 // makes them testable in Node: a test hands one a stub and asserts on the requests it would have made, which
 // is where a write to GitHub can go wrong without failing loudly.
+
+import { githubBackend, repositoryFromLocation, storedToken } from './github.js';
 
 /** The one thing the page knows about failure: a message, and the problems that explain it. */
 function refusal(message, problems) {
@@ -95,11 +100,12 @@ async function published(transport, name) {
   return response.json();
 }
 
-/** What a hosted studio cannot do until it can write: say so where the user tried, not where the page loaded. */
+/** What a hosted studio without a token cannot do: say so where the user tried, not where the page loaded. */
 function readOnly(what) {
-  return refusal(`${what} needs the engine, and this studio is the published page (ADR 0023). Run`
-    + " `dotnet run --project src/DownfallArena.Cli -- studio` for the version that can, or use the workflows"
-    + ' under Actions.');
+  return refusal(`${what} needs either the engine or a token, and this page has neither (ADR 0023). Paste a`
+    + ' fine-grained token for this repository to save from here, run'
+    + ' `dotnet run --project src/DownfallArena.Cli -- studio` for the version with an engine, or use the'
+    + ' workflows under Actions.');
 }
 
 /**
@@ -124,10 +130,18 @@ export function hostedBackend(transport = globalThis.fetch) {
 }
 
 /**
- * The backend for where this page is being served from. The local host binds the loopback address and nothing
- * else (ADR 0015), so "not loopback" is exactly "not the local studio".
+ * The backend for where this page is being served from, and what it has to write with. The local host binds the
+ * loopback address and nothing else (ADR 0015), so "not loopback" is exactly "not the local studio"; away from
+ * it, a stored token is what separates a page that can save from one that can only read (ADR 0023).
  */
 export function backendForThisPage(transport = globalThis.fetch) {
-  const local = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(globalThis.location?.hostname);
-  return local ? localBackend(transport) : hostedBackend(transport);
+  if (['127.0.0.1', 'localhost', '[::1]', '::1'].includes(globalThis.location?.hostname)) {
+    return localBackend(transport);
+  }
+
+  const token = storedToken();
+  const repository = repositoryFromLocation();
+  return token && repository
+    ? githubBackend({ transport, token, repository, published: name => published(transport, name) })
+    : hostedBackend(transport);
 }
