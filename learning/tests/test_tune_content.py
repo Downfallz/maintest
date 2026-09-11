@@ -805,3 +805,119 @@ def test_two_targets_on_one_measurement_are_told_apart_by_the_run_they_came_from
 
     assert "(mirror)" in text
     assert "(skill)" in text
+
+
+def one_tier(**resolved: int) -> tuple[Content, dict]:
+    """Spells at one depth, with the casts each landed, as `metrics_of` reads the pair."""
+    spells = {alias: json.loads(json.dumps(ATTACK)) | {"id": f"{alias}:v1"} for alias in resolved}
+    content = Content(
+        spells=spells,
+        files=dict.fromkeys(spells, Path("x.json")),
+        tiers=dict.fromkeys(spells, 1),
+    )
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [
+        outcome(f"{alias}:v1", landed, landed, landed) for alias, landed in resolved.items()
+    ]
+    return content, raw
+
+
+def test_a_spell_taking_almost_none_of_its_tier_is_counted_even_though_it_is_not_a_zero() -> None:
+    """The hole `spellsNeverCast` leaves: `pummel` took 6 of 5283 landed casts and read as no change."""
+    content, raw = one_tier(**{"spell:big": 1000, "spell:small": 5})
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["spellsNeverCast"] == 0
+    assert metrics["spellsBarelyCast"] == 1
+
+
+def test_a_spell_holding_its_own_in_its_tier_is_not_counted() -> None:
+    content, raw = one_tier(**{"spell:big": 60, "spell:small": 40})
+
+    assert metrics_of(Evaluation.from_json(raw), "mirror", content)["spellsBarelyCast"] == 0
+
+
+def test_the_share_is_read_against_the_tier_and_not_the_catalogue() -> None:
+    """A tier is the set a player chooses between: rare overall can still be the right pick where offered."""
+    content, raw = one_tier(**{"spell:big": 1000, "spell:small": 5})
+    content.tiers["spell:big"] = 0
+
+    assert metrics_of(Evaluation.from_json(raw), "mirror", content)["spellsBarelyCast"] == 0
+
+
+def test_a_tier_nobody_cast_is_left_to_the_count_of_zeros() -> None:
+    """Skipped rather than counted, the same way the tier readings skip a tier they cannot speak about."""
+    content, raw = one_tier(**{"spell:cast": 10, "spell:quiet": 0})
+    content.tiers["spell:quiet"] = 2
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["spellsNeverCast"] == 1
+    assert metrics["spellsBarelyCast"] == 0
+
+
+CRITICAL = "/criticalChance"
+
+
+class ThresholdEvaluator:
+    """A catalogue that only responds when two of its numbers move together.
+
+    The shape `poison_slash` has: raising the bleed amount alone changes nothing a metric can see, raising
+    its duration alone changes nothing, and raising both crosses into a different game.
+    """
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        self.calls += 1
+        spell = spells["spell:combo"]
+        both = spell["effects"][0]["amount"] >= 2 and spell["criticalChance"] >= 0.6
+        return {"mirror": {"averageRounds": 12.0 if both else 40.0}}
+
+
+def combo_pair(tmp_path: Path) -> tuple[Knobs, Content]:
+    document = knobs_document(
+        spells={
+            "spell:combo": {
+                "name": "Combo",
+                "intent": "Two numbers that only matter together.",
+                "knobs": [
+                    {"path": DAMAGE, "min": 1, "max": 3, "step": 1},
+                    {"path": CRITICAL, "min": 0.4, "max": 0.8, "step": 0.1},
+                ],
+            }
+        }
+    )
+    path = tmp_path / "knobs.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    spell = json.loads(json.dumps(JAB)) | {"id": "spell:combo:v1", "criticalChance": 0.5}
+    content = Content(spells={"spell:combo": spell}, files={"spell:combo": tmp_path / "combo.json"})
+    return load_knobs(path), content
+
+
+def test_two_knobs_of_one_spell_are_tried_together_when_neither_moves_anything_alone(
+    tmp_path: Path,
+) -> None:
+    """The sweep is the difference between unlikely and impossible for one knob; this is it for a pair."""
+    knobs, content = combo_pair(tmp_path)
+
+    result = tune_content(
+        ThresholdEvaluator(), knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0)
+    )
+
+    assert result.improved
+    assert {move.knob.path for move in result.best.moves} == {DAMAGE, CRITICAL}
+
+
+def test_a_spell_that_already_responds_to_one_step_costs_no_paired_evaluation(tmp_path: Path) -> None:
+    """A catalogue that is answering pays nothing for this: the pairs are only for the spells that are not."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+
+    responsive = FakeEvaluator()
+    tune_content(responsive, knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0))
+
+    single_steps = len(playable(knobs, content)) * 2
+    assert responsive.calls <= single_steps + 2

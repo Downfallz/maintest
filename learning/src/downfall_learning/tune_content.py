@@ -20,6 +20,7 @@ import subprocess
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
+from itertools import combinations
 from pathlib import Path
 from typing import Protocol
 
@@ -271,9 +272,42 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
     measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
+    measured["spellsBarelyCast"] = _barely_cast(landed, by_alias, content.tiers)
     damaging = {identifier for identifier, alias in by_alias.items() if deals_damage(content.spells[alias])}
     measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
     return measured
+
+
+#: Below this share of the landed casts of its own tier, a spell is a choice nobody makes.
+BARELY_CAST_SHARE = 0.01
+
+
+def _barely_cast(landed: Mapping[str, int], by_alias: Mapping[str, str], tiers: Mapping[str, int]) -> float:
+    """How many spells take less than :data:`BARELY_CAST_SHARE` of the landed casts of their own tier.
+
+    ``spellsNeverCast`` counts exact zeros, and this is the hole that leaves. On the nine-spell core content
+    ``pummel`` took 6 of 5283 landed casts of a mirrored run: dead in every sense that decides a game, and
+    invisible to a count of zeros. A buff that moved it from 4 casts to 6 read as no change at all, on a
+    metric that was never going to say otherwise.
+
+    The share is read against the tier and not the catalogue because a tier is the set a player chooses
+    between at one moment: a spell can be rare overall and still be the right pick where it is offered. A
+    tier nobody cast at all is skipped rather than counted, the same way the tier readings skip it -- that
+    one is ``spellsNeverCast``'s to report.
+    """
+    per_tier: dict[int, int] = {}
+    for identifier, alias in by_alias.items():
+        tier = tiers.get(alias)
+        if tier is not None:
+            per_tier[tier] = per_tier.get(tier, 0) + landed.get(identifier, 0)
+
+    barely = 0
+    for identifier, alias in by_alias.items():
+        tier = tiers.get(alias)
+        cast = per_tier.get(tier, 0) if tier is not None else 0
+        if cast > 0 and landed.get(identifier, 0) / cast < BARELY_CAST_SHARE:
+            barely += 1
+    return float(barely)
 
 
 def _tier_metrics(
@@ -520,6 +554,7 @@ def tune_content(
     favour: set[str] = set()
     if options.sweep:
         swept = _sweep(evaluator, knobs, content)
+        swept = [*swept, *_pairs(evaluator, knobs, content, swept, first.metrics)]
         history.extend(swept)
         favour = {
             move.knob.key
@@ -574,6 +609,56 @@ def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[
     return swept
 
 
+def _pairs(
+    evaluator: ContentEvaluator,
+    knobs: Knobs,
+    content: Content,
+    swept: Sequence[Candidate],
+    baseline: Mapping[str, Mapping[str, float]],
+) -> list[Candidate]:
+    """Two knobs of one spell moved together, for the spells no single step could move at all.
+
+    The sweep is the difference between unlikely and impossible for one knob; this is the same for a pair.
+    `poison_slash` is the case it was written for: from a bleed of 1 per round over 2 rounds, raising the
+    amount alone reaches 59 landed casts of about 5300 and raising the duration alone reaches 17, while
+    raising both together reaches 5155 of about 8900 -- the largest move anyone has found against that
+    catalogue's monopoly. A climb that only ever moves one knob has to accept the flat step in between, on a
+    gain of 0.005, to find the path at all.
+
+    Tried only on spells where *every* single step was inert, so a catalogue that is already responding pays
+    nothing for this, and only the two same-direction combinations of each pair: a pair pulling against
+    itself lands within a step of the single moves the sweep already played.
+    """
+    responded: dict[str, bool] = {}
+    for candidate in swept:
+        alive = not _same(candidate.metrics, baseline)
+        for move in candidate.moves:
+            responded[move.knob.spell] = responded.get(move.knob.spell, False) or alive
+
+    by_spell: dict[str, list[Knob]] = {}
+    for knob in playable(knobs, content):
+        by_spell.setdefault(knob.spell, []).append(knob)
+
+    played: set[tuple[tuple[str, float], ...]] = set()
+    paired: list[Candidate] = []
+    for spell in sorted(name for name, alive in responded.items() if not alive):
+        for first, second in combinations(by_spell.get(spell, []), 2):
+            for direction in (1, -1):
+                stepped = _nudged(first, (), content, direction)
+                moves = None if stepped is None else _nudged(second, stepped, content, direction)
+                if not moves or len(moves) < 2:
+                    continue
+                spells = apply_moves(content.spells, moves)
+                if violations(content, spells, knobs):
+                    continue
+                key = tuple(sorted(_values(moves).items()))
+                if key in played:
+                    continue
+                played.add(key)
+                paired.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
+    return paired
+
+
 def _candidate(
     evaluator: ContentEvaluator,
     objective: Objective,
@@ -603,6 +688,7 @@ MEANINGS: Mapping[str, str] = {
     "spellEntropyA": "how widely a side spreads its casts over the spells it has",
     "spellUsageShare": "the share of every landed cast taken by the one spell cast most",
     "spellsNeverCast": "how many spells no side casts at all",
+    "spellsBarelyCast": "how many spells take almost none of the casts of the tier they are offered in",
     "tierUsageShare": "the share of one tier's casts taken by one of the spells in it",
     "tierDamageSpread": "how unevenly the spells offered at one depth hit, per landed cast",
     "tierWinSpread": "how unevenly the spells offered at one depth go on to win",

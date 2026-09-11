@@ -15,7 +15,7 @@
         "reads": "Playing well still beats playing at random. A change that closes this gap has removed the decisions instead of balancing them."
       }
     },
-    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare and spellsNeverCast are the two the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all.",
+    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one.",
     "targets": [
       {
         "metric": "player1WinShare",
@@ -82,6 +82,14 @@
         "scale": 2,
         "weight": 1,
         "why": "Spells in the catalogue that no declaration ever landed. Needs the catalogue as well as the evaluation, so the tuner computes it. The band is read against what the build carries, not against what is on disk: on the nine-spell core content two spells failing to come up is slack, twelve would be the whole game."
+      },
+      {
+        "metric": "spellsBarelyCast",
+        "on": "mirror",
+        "max": 2,
+        "scale": 2,
+        "weight": 1,
+        "why": "Spells taking under 1% of the landed casts of the tier they are offered in. The hole spellsNeverCast leaves: pummel took 6 of 5283 landed casts of a mirrored run, which is dead in every sense that decides a game and is not a zero, so a buff that moved it from 4 casts to 6 read as no change at all. Read against the tier rather than the catalogue because a tier is the set a player chooses between at one moment. Same band and scale as the count of zeros it subsumes."
       },
       {
         "metric": "tierUsageShare",

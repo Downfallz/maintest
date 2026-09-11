@@ -186,3 +186,36 @@ change (`docs/learning/explained.md`).
 
 `learning/tests/test_knobs.py` runs the same check against this repository, so adding, retuning or cutting
 a spell without saying what it is for fails the build.
+
+It also **reports**, with the exit code still 0, a spell whose whole box sits under a rival: the most it can
+be worth anywhere inside its own bounds, against what a spell at its depth or shallower carries today. The
+case it exists for is `pummel`, which tops out around 5.4 against `lightning_bolt`'s 6.7 — so a tuning pass
+asked to make it a choice was searching a box that did not contain the answer, and then reported that it had
+found nothing as though it had looked in the right place. Either side of such a pair is a way out, which is
+why it is a finding and not a failure: widening the one and lowering the other are both answers, and picking
+between them is a design decision.
+
+The reading is coarse on purpose — no board, no targets, no defense, no cap at a target's health, no threat
+behind a defensive effect, and no kill term, which is the largest weight in the game and a threshold, so it
+rewards a reliable hit over a bigger average one in a way nothing here can see. It is read off the agents'
+own weights (`learning/weights/greedy.json`, which mirrors `ScoringWeights.Default`) rather than restated,
+and it skips any spell with no `Damage` effect on either side of the comparison, for the reason
+`tierDamageSpread` skips one: a heal and an attack share no unit. Without that rule it reports `rejuvenate`
+and `guard`, cast for a survival it cannot see, and `wait`, which is *meant* to stay worse than acting.
+
+## Two things a single step cannot find
+
+`spellsNeverCast` counts exact zeros, and that leaves a hole a catalogue can sit in for a long time: on the
+core content `pummel` took 6 of 5283 landed casts, dead in every sense that decides a game, and a buff that
+moved it from 4 casts to 6 read as no change at all. `spellsBarelyCast` counts the spells under 1% of the
+landed casts of **their own tier** — the tier and not the catalogue, because a tier is the set a player
+chooses between at one moment, so a spell can be rare overall and still be the right pick where it is
+offered. A tier nobody cast is skipped rather than counted; that one is `spellsNeverCast`'s to report.
+
+And the opening sweep now also plays **two knobs of one spell together**, for the spells where no single step
+moved a measurement at all. `poison_slash` is why: from a bleed of 1 per round over 2 rounds, raising the
+amount alone reaches 59 landed casts and raising the duration alone reaches 17, while raising both together
+reaches 5155 of about 8900 — the largest move found against this catalogue's monopoly. A climb that only ever
+moves one knob has to accept the flat step in between, worth 0.005, to find the path at all. Only the two
+same-direction combinations are played, and only on spells that are not already responding, so a catalogue
+that answers a single step pays nothing for this.

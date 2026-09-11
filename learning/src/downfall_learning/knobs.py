@@ -32,6 +32,14 @@ DAMAGE = "Damage"
 #: The pointer that names a spell's critical chance bonus.
 CRITICAL_CHANCE = "/criticalChance"
 
+#: The agents' own prices. `ScoringWeights.Default` is the source and this file mirrors it (AGENTS.md), so
+#: the reading below is read from there rather than restated here and cannot drift from what the bots score
+#: with.
+WEIGHTS_FILE = Path(__file__).resolve().parents[2] / "weights" / "greedy.json"
+
+#: What a permanent condition is worth in rounds, as `ActionScorer.PermanentConditionRounds` prices it.
+PERMANENT_CONDITION_ROUNDS = 3
+
 
 class KnobsError(ValueError):
     """A knobs file that cannot be read, or a pointer that does not address anything."""
@@ -403,6 +411,7 @@ def findings(content: Content, knobs: Knobs) -> list[str]:
             f"{content.tiers.get(better, '?')} and {content.tiers.get(worse, '?')}."
             for better, worse in dominance(content)
         )
+    reports.extend(unreachable(content, knobs))
     return reports
 
 
@@ -528,6 +537,128 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
 def deals_damage(document: Mapping[str, object]) -> bool:
     """Whether the spell as authored carries a `Damage` effect, whatever its casts happen to land."""
     return DAMAGE in _effects(document)
+
+
+def load_weights(path: Path | None = None) -> dict[str, float]:
+    """The nine agent weights. Unreadable or missing, the reading that needs them is skipped, not guessed."""
+    try:
+        body = json.loads(Path(path or WEIGHTS_FILE).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    if not isinstance(body, Mapping):
+        return {}
+    return {
+        str(name): float(value)
+        for name, value in body.items()
+        if isinstance(value, (int, float)) and not isinstance(value, bool)
+    }
+
+
+def reach(document: Mapping[str, object], weights: Mapping[str, float]) -> float:
+    """A coarse damage-equivalent of one cast of a spell, priced the way `ActionScorer` prices one.
+
+    Deliberately coarse, and the list of what it leaves out is the list of reasons to read it as a finding
+    and never as a failure: no board, no targets, no defense, no cap at a target's health, no threat reading
+    behind a defensive effect (ADR 0022), and no kill term -- which is the largest weight in the game and a
+    threshold, so it rewards a reliable hit over a bigger average one in a way nothing here can see. The
+    caster's own critical chance is left out too, because it belongs to a creature and not to a spell.
+
+    What it is good for is one question: roughly how much is this spell worth next to the one offered beside
+    it. Only `Damage` takes the critical multiplier, the same as `ResolutionRules`.
+    """
+    critical = float(document.get("criticalChance", 0) or 0)
+    effects = document.get("effects", [])
+    total = 0.0
+    for effect in effects if isinstance(effects, list) else []:
+        if not isinstance(effect, Mapping):
+            continue
+        amount = float(effect.get("amount", 0) or 0)
+        per_round = float(effect.get("amountPerRound", 0) or 0)
+        rounds = (
+            PERMANENT_CONDITION_ROUNDS
+            if effect.get("permanent")
+            else float(effect.get("durationRounds", 0) or 0)
+        )
+        total += {
+            DAMAGE: amount * (1 + critical),
+            "Heal": weights.get("heal", 0) * amount,
+            "EnergyGain": weights.get("energy", 0) * amount,
+            "Bleed": weights.get("bleed", 0) * per_round * rounds,
+            "Regeneration": weights.get("heal", 0) * per_round * rounds,
+            "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
+            "Stun": weights.get("stun", 0) * rounds,
+            "DefenseBuff": weights.get("buff", 0) * amount * rounds,
+            "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
+        }.get(str(effect.get("kind")), 0.0)
+    return total
+
+
+def _ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: Mapping[str, float]) -> float:
+    """The most a spell can be worth anywhere inside its own bounds.
+
+    Every term of :func:`reach` rises with the magnitude it reads and with the critical chance, and with
+    nothing else, so the top of the box is every knob that reaches a term set to its maximum. A cost knob
+    and a Spell initiative knob move no term here and are left where they are.
+    """
+    top = dict(document)
+    for knob in spell.knobs:
+        try:
+            read_value(top, knob.path)
+        except KnobsError:
+            continue
+        top = with_value(top, knob.path, knob.maximum)
+    return reach(top, weights)
+
+
+def unreachable(content: Content, knobs: Knobs, weights: Mapping[str, float] | None = None) -> list[str]:
+    """Spells no move inside their own bounds brings up to what a rival already carries today.
+
+    The case this exists for: `pummel` tops out around 5.4 against `lightning_bolt`'s 6.9, so a tuning pass
+    asked to make it a choice is searching a box that does not contain the answer, and then reports that it
+    found nothing as though it had looked in the right place. A greedy agent takes the best score and
+    nothing else, so a spell that cannot reach the top of its tier is not merely weaker than its neighbour:
+    it is never cast at all, and the first sign of that is a search that keeps coming back empty.
+
+    Read against what the rival carries *today*, because either side of the pair is a way out -- widening
+    this spell's bounds and lowering the rival's are both answers, and which one is right is a design
+    decision rather than something a check can pick. A spell is only measured against its own depth or
+    shallower, the same rule :func:`dominance` uses, so being outclassed by something deeper in the tree is
+    the reward for getting there and is not reported.
+
+    Only spells that carry a `Damage` effect are read, on either side of the comparison, for the reason
+    `tierDamageSpread` gives: a heal and an attack share no unit. Without that rule this reports `rejuvenate`
+    and `guard`, which are cast for a survival the reading above cannot see, and `wait`, which is *meant* to
+    stay worse than acting -- three answers that are wrong in three different ways.
+    """
+    prices = load_weights() if weights is None else weights
+    if not prices:
+        return []
+
+    current = {
+        alias: reach(document, prices) for alias, document in content.spells.items() if deals_damage(document)
+    }
+    reports: list[str] = []
+    for alias, spell in sorted(knobs.spells.items()):
+        document = content.spells.get(alias)
+        tier = content.tiers.get(alias)
+        if document is None or tier is None or not deals_damage(document):
+            continue
+        rivals = {
+            other: value
+            for other, value in current.items()
+            if other != alias and content.tiers.get(other, tier + 1) <= tier
+        }
+        if not rivals:
+            continue
+        best = max(rivals, key=lambda other: rivals[other])
+        ceiling = _ceiling(spell, document, prices)
+        if ceiling < rivals[best]:
+            reports.append(
+                f"{alias} reaches at most {ceiling:.2f} at the top of its own bounds, and {best} carries "
+                f"{rivals[best]:.2f} today at tier {content.tiers.get(best, '?')}: no move inside these "
+                "bounds makes it a choice, so one of the two spells needs different bounds."
+            )
+    return reports
 
 
 def _effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:
