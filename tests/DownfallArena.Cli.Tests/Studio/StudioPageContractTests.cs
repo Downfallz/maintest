@@ -93,6 +93,31 @@ public sealed class StudioPageContractTests
             .ShouldBeEmpty("the script styles elements with classes the stylesheet does not have");
     }
 
+    /// <summary>
+    /// GitHub Pages sends no cache headers we control, so a browser will happily keep yesterday's `studio.js`
+    /// beside today's `index.html` -- and new markup driven by old script is the worst kind of broken, because
+    /// it looks right and does nothing. The publish step stamps every reference with the commit that published
+    /// it; a module imported without a stamp is one that can be served stale on its own.
+    /// </summary>
+    [Fact]
+    public void Every_reference_between_the_published_files_is_stamped_with_its_commit()
+    {
+        var workflow = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "pages.yml"));
+        var modules = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "studio"), "*.js")
+            .Where(path => !path.EndsWith(".test.js", StringComparison.Ordinal));
+        var imported = modules
+            .SelectMany(path => Ids(File.ReadAllText(path), @"from '\./([a-z0-9.-]+)'"))
+            .ToHashSet(StringComparer.Ordinal);
+        var linked = Ids(Page, @"(?:src|href)=""([a-z0-9.-]+\.(?:js|css))""");
+
+        imported.ShouldNotBeEmpty();
+        linked.ShouldNotBeEmpty();
+        foreach (var name in imported.Concat(linked))
+        {
+            workflow.ShouldContain($"{name}?v=$GITHUB_SHA", Case.Sensitive, $"{name} is referenced by the page but the publish step never stamps it, so a browser can serve it stale beside fresher files");
+        }
+    }
+
     private static HashSet<string> Ids(string text, string pattern) =>
         Regex.Matches(text, pattern, RegexOptions.None, MatchTimeout)
             .Select(match => match.Groups[1].Value)
