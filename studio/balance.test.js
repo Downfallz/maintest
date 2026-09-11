@@ -42,13 +42,11 @@ test('a host that publishes no knobs gets a line to show, not a broken sheet', (
   assert.match(answer.why, /data\/balance\/knobs\.json/);
 });
 
-test('knobs shaped like something else are left unread rather than guessed at', () => {
-  for (const balance of [{ balance: 'knobs:v1' }, { balance: { version: 'knobs:v1' } }, { balance: { version: 'knobs:v1', spells: [] } }]) {
-    const answer = readBalance(balance);
+test('knobs that are not an object at all are left unread rather than guessed at', () => {
+  const answer = readBalance({ balance: 'knobs:v1' });
 
-    assert.equal(answer.ok, false);
-    assert.match(answer.why, /not shaped like data\/balance\/knobs\.json/);
-  }
+  assert.equal(answer.ok, false);
+  assert.match(answer.why, /not shaped like data\/balance\/knobs\.json/);
 });
 
 test('a knobs version this page does not know is read as none of it, and names the version', () => {
@@ -135,12 +133,23 @@ test('a pointer addressing something that is not a number says what it found ins
   assert.match(summary.knobs[0].problems[0].message, /which is not a number/);
 });
 
-test('a pointer into a document is read by tokens, arrays included, and escapes are not path separators', () => {
+test('a pointer walks objects and array indices to the number it addresses', () => {
   assert.deepEqual(readPointer({ effects: [{ amount: 2 }] }, '/effects/0/amount'), { ok: true, value: 2 });
+});
+
+test('a pointer past the end of an array addresses nothing', () => {
   assert.equal(readPointer({ effects: [] }, '/effects/0/amount').reason, 'missing');
+});
+
+test('a pointer whose token is not a digit addresses nothing in an array', () => {
   assert.equal(readPointer({ effects: [{ amount: 2 }] }, '/effects/first/amount').reason, 'missing');
-  assert.equal(readPointer({ 'a/b': 1 }, '/a~1b').value, 1);
+});
+
+test('a pointer that lands on something other than a number says which it found', () => {
   assert.equal(readPointer({ enabled: true }, '/enabled').reason, 'notANumber');
+});
+
+test('a pointer that does not start with a slash is refused as not a pointer', () => {
   assert.equal(readPointer({}, 'energyCost').reason, 'missing');
 });
 
@@ -272,13 +281,22 @@ test('a target reading an evaluation the objective does not declare is a term mi
   assert.deepEqual(objective.targets.map(target => target.band), ['at most 0.05', 'at least 0.65']);
 });
 
-test('an objective and constraints the file does not carry read as empty, not as a throw', () => {
+test('an objective the file does not carry reads as empty, not as a throw', () => {
   const objective = objectiveOf({});
 
   assert.deepEqual(objective.targets, []);
   assert.deepEqual(objective.evaluations, []);
+});
+
+test('constraints the file does not carry read as empty, not as a throw', () => {
   assert.deepEqual(constraintsOf(null), []);
+});
+
+test('an alias the file has no entry for reads as no entry', () => {
   assert.equal(entryFor({ spells: {} }, 'spell:pummel'), null);
+});
+
+test('targets that are not a list read as no targets', () => {
   assert.equal(objectiveOf({ objective: { targets: 'none' } }).targets.length, 0);
 });
 
@@ -306,4 +324,112 @@ test('the knobs file this repository ships is the shape the page reads', () => {
   assert.ok(entry.knobs.some(knob => knob.path === '/criticalChance'));
   assert.ok(objectiveOf(answer.balance).targets.every(target => target.declared));
   assert.ok(constraintsOf(answer.balance).length >= 3);
+});
+
+// ---------- what the review found the page and `validate` disagreeing about ----------
+
+test('a spell that is off is counted but never judged, the way validate never reads it', () => {
+  const balance = { version: 'knobs:v1', spells: { 'spell:old': { name: 'Old', intent: '', knobs: [{ path: '/energyCost', min: 1, max: 3, step: 1 }] } } };
+  const rolled = survey(balance, [{ id: 'spell:old:v1', name: 'Old', path: 'Spells/old.v1.json', enabled: false, document: { energyCost: 9 } }], { 'spell:old': 'spell:old:v1' });
+
+  assert.deepEqual(rolled.flagged, []);
+  assert.equal(rolled.resting, 1);
+  assert.equal(rolled.covered, 0);
+});
+
+test('the same spell turned back on is judged again', () => {
+  const balance = { version: 'knobs:v1', spells: { 'spell:old': { name: 'Old', intent: '', knobs: [{ path: '/energyCost', min: 1, max: 3, step: 1 }] } } };
+  const rolled = survey(balance, [{ id: 'spell:old:v1', name: 'Old', path: 'Spells/old.v1.json', document: { energyCost: 9 } }], { 'spell:old': 'spell:old:v1' });
+
+  assert.equal(rolled.flagged.length, 1);
+  assert.deepEqual(rolled.flagged[0].problems.map(problem => problem.code), ['noIntent', 'outside']);
+});
+
+test('a second alias on the same spell is known, not reported as naming nothing', () => {
+  const balance = { version: 'knobs:v1', spells: { 'spell:pummel': { intent: 'The all-in.', knobs: [] }, 'spell:punch': { intent: 'The same spell, other name.', knobs: [] } } };
+  const rolled = survey(balance, [{ id: 'spell:pummel:v1', document: {} }], { 'spell:pummel': 'spell:pummel:v1', 'spell:punch': 'spell:pummel:v1' });
+
+  assert.deepEqual(rolled.unresolved, []);
+});
+
+test('an entry for a spell nothing points at is still reported as naming nothing', () => {
+  const balance = { version: 'knobs:v1', spells: { 'spell:cut': { intent: 'Gone.', knobs: [] } } };
+  const rolled = survey(balance, [], {});
+
+  assert.deepEqual(rolled.unresolved, ['spell:cut']);
+});
+
+test('a constraint naming a spell nothing resolves to is reported as checking nothing', () => {
+  const balance = {
+    version: 'knobs:v1',
+    spells: {},
+    constraints: { startingKitOffersAChoice: { enabled: true, spells: ['spell:wait', 'spell:ghost'] } },
+  };
+  const rolled = survey(balance, [{ id: 'spell:wait:v1', document: {} }], { 'spell:wait': 'spell:wait:v1' });
+
+  assert.equal(rolled.constraintProblems.length, 1);
+  assert.equal(rolled.constraintProblems[0].alias, 'spell:ghost');
+  assert.equal(rolled.constraintProblems[0].constraint, 'startingKitOffersAChoice');
+});
+
+test('a critical chance on a permanent damage effect is inert, because check-knobs groups it apart', () => {
+  const knob = { path: '/criticalChance', minimum: 0.4, maximum: 0.8, step: 0.05 };
+  const permanent = knobReading(knob, { criticalChance: 0.5, effects: [{ kind: 'Damage', amount: 4, permanent: true }] });
+  const ordinary = knobReading(knob, { criticalChance: 0.5, effects: [{ kind: 'Damage', amount: 4 }] });
+
+  assert.deepEqual(permanent.problems.map(problem => problem.code), ['inert']);
+  assert.deepEqual(ordinary.problems, []);
+});
+
+test('a pointer is split and not unescaped, which is what _tokens does', () => {
+  const found = readPointer({ 'a~1b': 3 }, '/a~1b');
+
+  assert.deepEqual(found, { ok: true, value: 3 });
+});
+
+test('an unknown version is named before the shape is, so a newer file is not called malformed', () => {
+  const answer = readBalance({ balance: { version: 'knobs:v2', spells: 'anything at all' } });
+
+  assert.equal(answer.ok, false);
+  assert.match(answer.why, /version 'knobs:v2'/);
+});
+
+test('a file of the right version with no spells at all covers nothing rather than being refused', () => {
+  const answer = readBalance({ balance: { version: 'knobs:v1' } });
+
+  assert.equal(answer.ok, true);
+  assert.equal(entryFor(answer.balance, 'spell:pummel'), null);
+});
+
+test('a spells that is present and not a map is refused', () => {
+  const answer = readBalance({ balance: { version: 'knobs:v1', spells: ['spell:pummel'] } });
+
+  assert.equal(answer.ok, false);
+  assert.match(answer.why, /not a map of alias to entry/);
+});
+
+test('a reading refuses a knob that is nothing at all rather than throwing', () => {
+  const reading = knobReading({}, {});
+
+  assert.equal(reading.tone, 'bad');
+  assert.deepEqual(reading.problems.map(problem => problem.code), ['malformed']);
+});
+
+test('a summary of no entry at all says so rather than throwing', () => {
+  const summary = summarise(null, {});
+
+  assert.equal(summary.tone, 'bad');
+  assert.deepEqual(summary.problems.map(problem => problem.code), ['noIntent']);
+});
+
+test('an alias is looked up without an alias map rather than throwing', () => {
+  assert.equal(aliasOfSpell('spell:pummel:v1', null), null);
+});
+
+test('a spell whose file did not parse is left out of the reading entirely', () => {
+  const balance = { version: 'knobs:v1', spells: { 'spell:broken': { intent: 'Something.', knobs: [{ path: '/energyCost', min: 1, max: 3, step: 1 }] } } };
+  const rolled = survey(balance, [{ id: 'spell:broken:v1', problem: 'energyCost is required', document: {} }], { 'spell:broken': 'spell:broken:v1' });
+
+  assert.deepEqual(rolled.flagged, []);
+  assert.deepEqual(rolled.uncovered, []);
 });

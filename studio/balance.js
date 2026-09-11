@@ -53,7 +53,7 @@ export function readBalance(catalogue) {
     };
   }
 
-  if (!isRecord(balance) || !isRecord(balance.spells)) {
+  if (!isRecord(balance)) {
     return {
       ok: false,
       why: 'What this host publishes as the balance knobs is not shaped like data/balance/knobs.json, so the'
@@ -61,11 +61,23 @@ export function readBalance(catalogue) {
     };
   }
 
+  // The version is asked before the shape, the order `load_knobs` asks in: a file of a version this page does
+  // not know may be shaped like anything, and reporting its shape would blame the file for being newer.
   if (text(balance.version) !== KNOBS_VERSION) {
     return {
       ok: false,
       why: `The balance knobs are version '${text(balance.version) || '(none)'}' and this page reads`
         + ` ${KNOBS_VERSION}. A version it does not know may mean anything, so it reads none of it.`,
+    };
+  }
+
+  // Absent is not malformed: `load_knobs` defaults `spells` to none at all, which is a file that covers
+  // nothing rather than a file that is wrong. Present and not an object is the one this page refuses.
+  if (balance.spells !== undefined && !isRecord(balance.spells)) {
+    return {
+      ok: false,
+      why: 'The balance knobs publish a `spells` that is not a map of alias to entry, so the page leaves the'
+        + ' file unread rather than guessing at it.',
     };
   }
 
@@ -77,12 +89,13 @@ export function readBalance(catalogue) {
  * authority -- `spell:pummel` is only this spell's alias while it points here -- so the id with its `:vN` cut
  * off is a candidate to confirm, never an answer on its own.
  */
-export function aliasOfSpell(spellId, aliases = {}) {
+export function aliasOfSpell(spellId, aliases) {
+  const map = isRecord(aliases) ? aliases : {};
   const id = text(spellId);
   if (!id) return null;
   const unversioned = id.replace(/:v\d+$/, '');
-  if (aliases[unversioned] === id) return unversioned;
-  return Object.keys(aliases).find(alias => aliases[alias] === id) ?? null;
+  if (map[unversioned] === id) return unversioned;
+  return Object.keys(map).find(alias => map[alias] === id) ?? null;
 }
 
 /** One spell's entry, with every field the renderer reads made safe to read. Null when the file has none. */
@@ -118,8 +131,11 @@ export function readPointer(document, pointer) {
     return { ok: false, reason: 'missing', message: `'${path}' is not a JSON pointer into the spell.` };
   }
 
+  // Split and no more. RFC 6901 would unescape `~1` to `/` and `~0` to `~` here, and `_tokens` does not: it
+  // splits the raw string. Reading a pointer differently from the checker that fails the build is worse than
+  // reading it differently from the RFC, and no field of a spell has a `/` or a `~` in its name to escape.
   let node = document;
-  for (const token of path.slice(1).split('/').map(part => part.replaceAll('~1', '/').replaceAll('~0', '~'))) {
+  for (const token of path.slice(1).split('/')) {
     if (Array.isArray(node)) {
       const index = /^\d+$/.test(token) ? Number(token) : -1;
       node = index >= 0 && index < node.length ? node[index] : undefined;
@@ -149,9 +165,15 @@ function describe(node) {
 
 const problem = (code, message) => ({ code, message });
 
-/** A spell deals damage, which is the only thing the critical multiplier reaches. */
+/**
+ * A spell deals damage, which is the only thing the critical multiplier reaches.
+ *
+ * A permanent damage effect does not count, because `_effects` groups it under `Damage:permanent` and
+ * `_inert_critical` looks for `Damage` alone -- so check-knobs calls the knob inert there, and a page that
+ * disagreed would clear a knob the build is about to refuse.
+ */
 function damaging(document) {
-  return list(document?.effects).some(effect => isRecord(effect) && effect.kind === DAMAGE);
+  return list(document?.effects).some(effect => isRecord(effect) && effect.kind === DAMAGE && !effect.permanent);
 }
 
 /**
@@ -163,46 +185,47 @@ function damaging(document) {
  * cannot move -- and `ok` is a number sitting inside its band with room either way.
  */
 export function knobReading(knob, document, { duplicate = false } = {}) {
-  const shape = { path: knob.path, minimum: knob.minimum, maximum: knob.maximum, step: knob.step };
-  if (!knob.path.startsWith('/') || !isNumber(knob.minimum) || !isNumber(knob.maximum) || !isNumber(knob.step)) {
+  const path = text(knob?.path);
+  const shape = { path, minimum: knob?.minimum, maximum: knob?.maximum, step: knob?.step };
+  if (!path.startsWith('/') || !isNumber(shape.minimum) || !isNumber(shape.maximum) || !isNumber(shape.step)) {
     return {
       ...shape,
       value: null,
       position: null,
       at: null,
       room: null,
-      problems: [problem('malformed', `'${knob.path || '(no pointer)'}' is not a knob: it needs a pointer and a numeric min, max and step.`)],
+      problems: [problem('malformed', `'${path || '(no pointer)'}' is not a knob: it needs a pointer and a numeric min, max and step.`)],
       tone: 'bad',
     };
   }
 
   const problems = [];
-  if (duplicate) problems.push(problem('duplicate', `'${knob.path}' is listed twice, so one of the two moves nothing.`));
-  if (knob.minimum > knob.maximum) problems.push(problem('bounds', `Its bounds are the wrong way round: [${formatNumber(knob.minimum)}, ${formatNumber(knob.maximum)}].`));
-  if (knob.step <= 0) problems.push(problem('step', `A step of ${formatNumber(knob.step)} moves nothing.`));
+  if (duplicate) problems.push(problem('duplicate', `'${path}' is listed twice, so one of the two moves nothing.`));
+  if (shape.minimum > shape.maximum) problems.push(problem('bounds', `Its bounds are the wrong way round: [${formatNumber(shape.minimum)}, ${formatNumber(shape.maximum)}].`));
+  if (shape.step <= 0) problems.push(problem('step', `A step of ${formatNumber(shape.step)} moves nothing.`));
 
-  const found = readPointer(document, knob.path);
+  const found = readPointer(document, path);
   if (!found.ok) {
     problems.push(problem(found.reason, found.message));
     return { ...shape, value: null, position: null, at: null, room: null, problems, tone: 'bad' };
   }
 
   const value = found.value;
-  const at = placement(value, knob.minimum, knob.maximum);
+  const at = placement(value, shape.minimum, shape.maximum);
   if (at === 'below' || at === 'above') {
-    problems.push(problem('outside', `The content carries ${formatNumber(value)}, outside [${formatNumber(knob.minimum)}, ${formatNumber(knob.maximum)}]. A tuning pass would pull it back inside.`));
+    problems.push(problem('outside', `The content carries ${formatNumber(value)}, outside [${formatNumber(shape.minimum)}, ${formatNumber(shape.maximum)}]. A tuning pass would pull it back inside.`));
   }
 
-  if (knob.path === CRITICAL_CHANCE && !damaging(document)) {
+  if (path === CRITICAL_CHANCE && !damaging(document)) {
     problems.push(problem('inert', 'The critical multiplier applies to damage only, and this spell deals none, so this knob cannot move anything.'));
   }
 
   return {
     ...shape,
     value,
-    position: position(value, knob.minimum, knob.maximum),
+    position: position(value, shape.minimum, shape.maximum),
     at,
-    room: room(value, knob),
+    room: room(value, shape),
     problems,
     tone: problems.length ? 'bad' : (at === 'min' || at === 'max' ? 'edge' : 'ok'),
   };
@@ -237,9 +260,9 @@ function room(value, knob) {
 /** Every knob of one entry, with the duplicate pointers marked the way `_knob_problems` marks them: the second one. */
 export function readings(entry, document) {
   const seen = new Set();
-  return (entry?.knobs ?? []).map(knob => {
-    const duplicate = seen.has(knob.path);
-    seen.add(knob.path);
+  return list(entry?.knobs).map(knob => {
+    const duplicate = seen.has(knob?.path);
+    seen.add(knob?.path);
     return knobReading(knob, document, { duplicate });
   });
 }
@@ -250,7 +273,7 @@ export function readings(entry, document) {
  */
 export function summarise(entry, document) {
   const knobs = readings(entry, document);
-  const problems = entry.intent ? [] : [problem('noIntent', 'This entry has no intent, so nothing says what its numbers are for.')];
+  const problems = entry?.intent ? [] : [problem('noIntent', 'This entry has no intent, so nothing says what its numbers are for.')];
   // An entry is only ever `ok` or `bad`: bounds are drawn around what a spell *is*, so a value authored at one
   // of its own bounds is the ordinary case -- 33 of the 36 entries have one -- and escalating that to the whole
   // spell would paint the catalogue amber and teach the reader to ignore the colour. `edge` stays on the knob.
@@ -261,7 +284,7 @@ export function summarise(entry, document) {
 /** The entry in one line: what is wrong if anything is, and otherwise how much room the numbers have. */
 function headline(entry, knobs) {
   const parts = [];
-  if (!entry.intent) parts.push('no intent');
+  if (!entry?.intent) parts.push('no intent');
   const bad = knobs.filter(knob => knob.tone === 'bad').length;
   const edge = knobs.filter(knob => knob.tone === 'edge').length;
   const count = `${knobs.length} knob${knobs.length === 1 ? '' : 's'}`;
@@ -327,22 +350,28 @@ export function constraintsOf(balance) {
 }
 
 /**
- * The knobs file against the catalogue it describes, which is what `check-knobs` answers on the command line.
+ * The knobs file against the catalogue it describes: the same disagreements `validate` fails on, over the
+ * content the page is holding rather than the content on disk.
  *
- * `spells` are the catalogue's own spell rows -- id, name, path, enabled and the document -- so this reads the
- * content the page is holding, edits included. A spell that is turned off keeps its entry on purpose: it left
- * the build, so nothing tunes it, but the entry is still the only thing saying what it was for.
+ * `spells` are the catalogue's own spell rows -- id, name, path, enabled and the document. Two things follow
+ * `validate` rather than intuition. A spell that is **off** is judged not at all: `load_content` keys only
+ * enabled spells, so `validate` never reads its intent or its knobs, and flagging it here would put the page
+ * in disagreement with a build that is green. Its entry still counts as known, and is still the only thing
+ * saying what the spell was for. And a spell whose file did not survive parsing is left alone: its numbers
+ * are whatever the broken file happened to hold, so every knob would read as addressing nothing.
+ *
+ * `constraintProblems` is `_constraint_problems`: a constraint naming a spell nothing resolves to checks
+ * nothing at all, quietly, which is the kind of hole worth showing where the constraints are read.
  */
-export function survey(balance, spells, aliases = {}) {
+export function survey(balance, spells, aliases) {
+  const map = isRecord(aliases) ? aliases : {};
   const covered = new Set();
   const resting = new Set();
-  const known = new Set();
   const uncovered = [];
   const flagged = [];
 
   for (const spell of list(spells)) {
-    const alias = aliasOfSpell(spell?.id, aliases);
-    if (alias) known.add(alias);
+    const alias = aliasOfSpell(spell?.id, map);
     const entry = alias ? entryFor(balance, alias) : null;
     if (!entry) {
       // An entry is owed for what the build carries; a spell that is off is not in it.
@@ -352,8 +381,12 @@ export function survey(balance, spells, aliases = {}) {
 
     // Counted apart, because most of this catalogue is off: 27 of the 36 entries describe a spell that left
     // the build, and folding those into the coverage would read as more covered than the build is.
-    if (spell.enabled === false) resting.add(alias);
-    else covered.add(alias);
+    if (spell.enabled === false) {
+      resting.add(alias);
+      continue;
+    }
+
+    covered.add(alias);
     if (spell.problem) continue;
     const summary = summarise(entry, spell.document);
     if (summary.tone !== 'ok') {
@@ -367,6 +400,11 @@ export function survey(balance, spells, aliases = {}) {
     }
   }
 
+  // Every alias the content answers to, not only the one alias each spell was reached by: two aliases may
+  // point at the same spell, and `content.spells` is keyed by alias, so `validate` knows both. Reading this
+  // from one alias per spell would report the other as an entry for a spell nothing resolves to.
+  const onDisk = new Set(list(spells).map(spell => text(spell?.id)).filter(Boolean));
+  const known = new Set(Object.keys(map).filter(alias => onDisk.has(map[alias])));
   const entries = Object.keys(balance?.spells ?? {});
   return {
     entries: entries.length,
@@ -378,5 +416,13 @@ export function survey(balance, spells, aliases = {}) {
     // An entry for a spell no alias resolves to describes nothing: the spell was cut, or the alias was.
     unresolved: entries.filter(alias => !known.has(alias)).sort(),
     flagged,
+    constraintProblems: constraintProblems(balance, known),
   };
+}
+
+/** A constraint naming a spell no alias resolves to is a constraint that quietly checks nothing. */
+function constraintProblems(balance, known) {
+  return constraintsOf(balance).flatMap(constraint => constraint.spells
+    .filter(alias => !known.has(alias))
+    .map(alias => ({ constraint: constraint.name, alias, message: `${constraint.name}: '${alias}' is not a spell any alias resolves to.` })));
 }

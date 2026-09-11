@@ -395,8 +395,11 @@ function markDirty() {
   }
 
   // Every control ends here, which makes it the one place a reading of the draft can be kept honest: a band
-  // still showing the damage from before the keystroke is worse than no band.
+  // still showing the damage from before the keystroke is worse than no band. The panel surveys the whole
+  // catalogue and redraws only while it is open, so the spell being edited cannot read one way on its own
+  // sheet and another in the roll-up.
   refreshBalanceStrip();
+  refreshBalancePanel();
 }
 
 function textBox(target, key, { placeholder = '' } = {}) {
@@ -1107,7 +1110,13 @@ function whereLabel(reading) {
  */
 function knobBand(reading) {
   if (reading.position === null) {
-    return element('div', { className: 'band empty', title: 'No band to draw: this knob addresses no number.' });
+    // Labelled like every other band: a reader who is not looking at it gets the same sentence the hover does.
+    return element('div', {
+      className: 'band empty',
+      role: 'img',
+      ariaLabel: 'No band to draw: this knob addresses no number.',
+      title: 'No band to draw: this knob addresses no number.',
+    });
   }
 
   const mark = element('span', { className: `mark${reading.at === 'below' || reading.at === 'above' ? ' out' : ''}` });
@@ -1161,11 +1170,21 @@ function fillBalanceStrip(holder) {
   const title = element('summary', {}, [element('span', { className: 'what', textContent: 'Balance' })]);
   if (!answer.ok) {
     // Discreet on purpose: a page served by an older deployment shows one folded line here, not a wall about
-    // a file it was never given. The whole sentence is one tap away for whoever wonders why.
+    // a file it was never given. The whole sentence is one tap away for whoever wonders why. Whether it is
+    // folded is the reader's -- this runs again on every keystroke, so setting it here would snap shut the
+    // explanation they just opened, and today this is the branch every host takes.
     holder.className = 'card balance quiet';
-    holder.open = false;
     title.append(element('span', { className: 'headline', textContent: 'not published by this host' }));
     holder.replaceChildren(title, noKnobs(answer.why));
+    return;
+  }
+
+  // A file that did not survive parsing holds whatever it holds, so every pointer would read as addressing
+  // nothing and the strip would blame the knobs for the file. `survey` leaves these alone for the same reason.
+  if (state.selected?.problem) {
+    holder.className = 'card balance quiet';
+    title.append(element('span', { className: 'headline', textContent: 'not read for this file' }));
+    holder.replaceChildren(title, element('p', { className: 'muted', textContent: 'This file did not parse as a spell, so there are no numbers to read its knobs against. Fix the file and the bands come back.' }));
     return;
   }
 
@@ -1186,6 +1205,14 @@ function fillBalanceStrip(holder) {
   }));
 
   const body = [];
+  // Off means out of the build, and `validate` reads the entry of no spell that left it. The reading stays --
+  // it is what says whether turning the spell back on would owe anyone work -- but it is not a disagreement
+  // with anything today, so it does not wear the colour of one.
+  const off = state.draft.enabled === false;
+  if (off) {
+    body.push(element('p', { className: 'muted', textContent: 'This spell is off, so it is out of the build and check-knobs does not read its entry. Nothing below is failing anything; it is what would be owed if the spell came back.' }));
+  }
+
   if (summary.keep.length) {
     body.push(element('div', { className: 'label', textContent: 'Whatever the numbers do' }));
     body.push(element('ul', { className: 'keep' }, summary.keep.map(kept => element('li', { textContent: kept }))));
@@ -1202,7 +1229,7 @@ function fillBalanceStrip(holder) {
     ' in data/balance/knobs.json. The studio does not write it.',
   ]));
 
-  holder.className = `card balance tone-${summary.tone}`;
+  holder.className = off ? 'card balance quiet' : `card balance tone-${summary.tone}`;
   holder.replaceChildren(title, ...body);
 }
 
@@ -1229,7 +1256,10 @@ function briefsOf(references) {
   if (!answer.ok) return null;
   return references.map(reference => {
     const spell = spellNamed(reference);
-    return { reference, spell, ...balanceOf(answer.balance, spell?.id || reference, spell?.document || {}) };
+    // A file that did not parse is left alone here the way `survey` leaves it alone: its numbers are whatever
+    // the broken file held, so reading knobs against them would report the breakage as a balance problem.
+    const broken = Boolean(spell?.problem);
+    return { reference, spell, broken, ...balanceOf(answer.balance, spell?.id || reference, spell?.document || {}) };
   });
 }
 
@@ -1242,7 +1272,7 @@ function briefsOf(references) {
 function balanceFold(references, open) {
   const briefs = briefsOf(references);
   if (!briefs?.length) return null;
-  const wrong = briefs.filter(brief => !brief.summary || brief.summary.tone === 'bad').length;
+  const wrong = briefs.filter(brief => !brief.broken && (!brief.summary || brief.summary.tone === 'bad')).length;
   const tone = wrong ? 'bad' : 'ok';
   const verdict = wrong ? `${wrong} of ${briefs.length} to look at` : 'all inside their bands';
 
@@ -1256,7 +1286,14 @@ function balanceFold(references, open) {
 }
 
 /** One spell of a node, compact: what it is for in a line or two, and its knobs as bands and nothing else. */
-function brief({ reference, spell, alias, summary }) {
+function brief({ reference, spell, alias, summary, broken }) {
+  if (broken) {
+    return element('div', { className: 'brief' }, [
+      element('div', { className: 'brief-head' }, [spellLink(reference)]),
+      element('p', { className: 'muted', textContent: 'This file did not parse, so there are no numbers to read its knobs against.' }),
+    ]);
+  }
+
   if (!summary) {
     return element('div', { className: 'brief tone-bad' }, [
       element('div', { className: 'brief-head' }, [spellLink(reference)]),
@@ -1286,6 +1323,7 @@ function balanceTag(reference) {
   const answer = knobsHere();
   if (!answer.ok) return null;
   const spell = spellNamed(reference);
+  if (spell?.problem) return null;
   const { alias, summary } = balanceOf(answer.balance, spell?.id || reference, spell?.document || {});
   if (!summary) {
     return element('span', { className: 'balance-tag tone-bad', textContent: alias ? 'no balance entry' : 'no alias, so no entry' });
@@ -1315,18 +1353,46 @@ function renderBalance() {
   }
 
   const balance = answer.balance;
-  body.replaceChildren(
+  // Filtered rather than handed straight to `replaceChildren`, which is not `element` and writes the word
+  // "null" where it is given one. `about` is the file's own prose about itself, and a file without it gets
+  // no empty paragraph.
+  const about = typeof balance.about === 'string' && balance.about.trim() ? balance.about : null;
+  body.replaceChildren(...[
     balanceCoverage(balance),
     balanceObjective(balance),
     balanceConstraints(balance),
-    element('p', { className: 'hint', textContent: balance.about || '' }),
-  );
+    about ? element('p', { className: 'hint', textContent: about }) : null,
+  ].filter(Boolean));
+}
+
+/**
+ * The spell rows to survey: the catalogue's, with the draft standing in for the one being edited.
+ *
+ * `state.catalogue` keeps the document as it was read until a save adopts a new one, so surveying it alone
+ * would report the spell on disk while its own strip reports the spell on screen -- the same number, read two
+ * ways, on one page. The draft is what the author is looking at, so it is what the roll-up counts.
+ */
+function surveyedSpells() {
+  const rows = documentsOf('spells');
+  if (!state.draft || state.tab !== 'spells' || !state.selected) return rows;
+  return rows.map(row => (row.path === state.selected.path ? { ...row, document: state.draft } : row));
+}
+
+/**
+ * A finding's way into the spell it is about, or its name and nothing more.
+ *
+ * `select('')` clears the selection rather than opening anything (see `select`), so a row whose path did not
+ * survive reading would throw the reader out of the editor on a click that looked like a link.
+ */
+function openSpell(path, label) {
+  return path ? miniButton(label, () => select(path), 'link') : element('span', { textContent: label });
 }
 
 /** The file against the content it describes: the same reading `check-knobs` prints, on what is on screen. */
 function balanceCoverage(balance) {
-  const rolled = survey(balance, documentsOf('spells'), state.catalogue?.aliases || {});
-  const clean = !rolled.uncovered.length && !rolled.unresolved.length && !rolled.flagged.length;
+  const rolled = survey(balance, surveyedSpells(), state.catalogue?.aliases || {});
+  const clean = !rolled.uncovered.length && !rolled.unresolved.length && !rolled.flagged.length
+    && !rolled.constraintProblems.length;
   const block = element('div', {}, [
     element('div', { className: 'audit-line' }, [
       element('span', { textContent: `${rolled.covered} of ${rolled.enabled} enabled spells have an entry` }),
@@ -1337,6 +1403,7 @@ function balanceCoverage(balance) {
       rolled.uncovered.length ? element('span', { className: 'warn', textContent: `${rolled.uncovered.length} with no entry` }) : null,
       rolled.flagged.length ? element('span', { className: 'warn', textContent: `${rolled.flagged.length} the file disagrees with` }) : null,
       rolled.unresolved.length ? element('span', { className: 'warn', textContent: `${rolled.unresolved.length} naming nothing` }) : null,
+      rolled.constraintProblems.length ? element('span', { className: 'warn', textContent: `${rolled.constraintProblems.length} constraint${rolled.constraintProblems.length === 1 ? '' : 's'} checking nothing` }) : null,
       clean ? element('span', { textContent: 'every enabled spell is covered' }) : null,
     ]),
   ]);
@@ -1349,8 +1416,17 @@ function balanceCoverage(balance) {
   const findings = element('ul', { className: 'findings' });
   for (const spell of rolled.uncovered) {
     findings.append(element('li', {}, [
-      miniButton(spell.name || spell.id, () => select(spell.path), 'link'),
+      openSpell(spell.path, spell.name || spell.id),
       element('span', { textContent: ` — enabled content with no entry in the knobs file${spell.alias ? '' : ', and no alias to key one by'}.` }),
+    ]));
+  }
+
+  // A constraint naming a spell nothing resolves to is the quietest hole in the file: it does not fail, it
+  // simply stops guarding anything, so it belongs at the top of what there is to look at.
+  for (const problem of rolled.constraintProblems) {
+    findings.append(element('li', {}, [
+      element('span', { className: 'mono', textContent: problem.alias }),
+      element('span', { textContent: ` — named by ${problem.constraint}, and not a spell any alias resolves to, so the constraint checks nothing.` }),
     ]));
   }
 
@@ -1362,7 +1438,7 @@ function balanceCoverage(balance) {
   }
 
   for (const spell of rolled.flagged) {
-    const item = element('li', {}, [miniButton(spell.name || spell.alias, () => select(spell.path), 'link')]);
+    const item = element('li', {}, [openSpell(spell.path, spell.name || spell.alias)]);
     item.append(element('ul', {}, spell.problems.map(problem => element('li', {}, [
       problem.path ? element('code', { textContent: `${problem.path} ` }) : null,
       element('span', { textContent: problem.message }),

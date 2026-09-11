@@ -161,11 +161,19 @@ part a number cannot say — what the spell is for ([ADR 0021](../docs/adr/0021-
   and the coverage of the catalogue.
 
 Everything it flags is `check-knobs`' own list, surfaced where the edit causes it instead of only on the
-command line: an enabled spell with no entry, an entry with no intent, a pointer that addresses nothing or
-something that is not a number, a value outside its own bounds, a critical chance knob on a spell that deals no
-damage, a duplicate pointer, bounds the wrong way round, a step of zero. A value sitting *at* one of its own
-bounds is not one of those: bounds are drawn around what a spell is, so 33 of the 36 entries have one, and it
-is drawn on the knob rather than flagged on the spell.
+command line: an enabled spell with no entry, an entry for a spell no alias resolves to, an entry with no
+intent, a pointer that addresses nothing or something that is not a number, a value outside its own bounds, a
+critical chance knob on a spell that deals no damage, a duplicate pointer, bounds the wrong way round, a step
+of zero, a target reading an evaluation the objective never declares, and a constraint naming a spell nothing
+resolves to. One thing it adds: a knob that is not a knob at all — no pointer, or a bound that is not a number
+— which `check-knobs` refuses while reading the file rather than reporting against the content.
+
+Two readings are deliberately narrower than they look. A value sitting *at* one of its own bounds is not a
+finding: bounds are drawn around what a spell is, so 33 of the 36 entries have one, and it is drawn on the knob
+rather than flagged on the spell. And a spell that is **off** is not judged at all, because `load_content`
+keys only enabled spells and `validate` never reads the entry of a spell that left the build — its strip still
+shows the reading, as what would be owed if the spell came back, but nothing is coloured as a disagreement
+with a build that is green.
 
 **The host does not publish the knobs yet.** The page reads them from `catalogue.balance`, which neither the
 local host nor `studio --export` writes today, so all three views show one honest line saying so rather than a
