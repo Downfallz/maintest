@@ -19,7 +19,7 @@ public sealed class StudioFilesTests
     [InlineData("/index.html", "<script type=\"module\" src=\"studio.js\">")]
     [InlineData("/studio.js", "import { backendForThisPage } from './backend.js';")]
     [InlineData("/backend.js", "/api/catalogue")]
-    [InlineData("/backend.js", "export function hostedBackend()")]
+    [InlineData("/backend.js", "export function hostedBackend(")]
     [InlineData("/studio.css", ".banner")]
     [InlineData("/viewer.css", "--ink")]
     public void Every_file_the_page_asks_for_is_served(string path, string expected)

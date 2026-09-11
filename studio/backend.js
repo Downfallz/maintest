@@ -11,6 +11,10 @@
 //
 // Every operation answers with the result the page adopts, and refuses by throwing an Error whose `problems`
 // are the lines to show under the message.
+//
+// Each backend takes the transport it talks through, defaulting to the page's `fetch` (ADR 0024). That is what
+// makes them testable in Node: a test hands one a stub and asserts on the requests it would have made, which
+// is where a write to GitHub can go wrong without failing loudly.
 
 /** The one thing the page knows about failure: a message, and the problems that explain it. */
 function refusal(message, problems) {
@@ -20,8 +24,8 @@ function refusal(message, problems) {
 }
 
 /** One request to the local host. A GET when there is no body, a POST when there is. */
-async function call(path, body) {
-  const response = await fetch(path, body === undefined
+async function request(transport, path, body) {
+  const response = await transport(path, body === undefined
     ? { headers: { accept: 'application/json' } }
     : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const payload = await response.json().catch(() => ({ ok: false, message: `${response.status} ${response.statusText}` }));
@@ -36,7 +40,8 @@ async function call(path, body) {
  * The studio host of ADR 0015: the authored files on this machine, and the engine in the same process.
  * Reachable only while `dotnet run -- studio` is running, which is what a hosted backend is for.
  */
-export function localBackend() {
+export function localBackend(transport = globalThis.fetch) {
+  const call = (path, body) => request(transport, path, body);
   return {
     // Which of the two this is, for the one place the page draws something different (the launch sheet):
     // an engine to play with here, workflows to dispatch on the hosted page.
@@ -80,8 +85,8 @@ export function localBackend() {
 }
 
 /** One published file next to the page. Relative, so it does not care what path the site is served under. */
-async function published(name) {
-  const response = await fetch(`data/${name}`, { headers: { accept: 'application/json' } });
+async function published(transport, name) {
+  const response = await transport(`data/${name}`, { headers: { accept: 'application/json' } });
   if (!response.ok) {
     throw refusal(`Could not read data/${name} (${response.status}). The site publishes it on every push to main;`
       + ' a fresh deployment may still be running.');
@@ -102,12 +107,12 @@ function readOnly(what) {
  * page. It reads what the engine knew when the site was last built and cannot change anything yet -- writing
  * is the next step of the ADR, and every operation that needs the engine refuses rather than pretending.
  */
-export function hostedBackend() {
+export function hostedBackend(transport = globalThis.fetch) {
   return {
     kind: 'hosted',
-    read: () => published('catalogue.json'),
-    audit: () => published('audit.json'),
-    weights: () => published('weights.json'),
+    read: () => published(transport, 'catalogue.json'),
+    audit: () => published(transport, 'audit.json'),
+    weights: () => published(transport, 'weights.json'),
 
     // Not a refusal: a published page has played no runs of its own, and an empty list is what that is.
     runs: async () => [],
@@ -122,7 +127,7 @@ export function hostedBackend() {
  * The backend for where this page is being served from. The local host binds the loopback address and nothing
  * else (ADR 0015), so "not loopback" is exactly "not the local studio".
  */
-export function backendForThisPage() {
+export function backendForThisPage(transport = globalThis.fetch) {
   const local = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(globalThis.location?.hostname);
-  return local ? localBackend() : hostedBackend();
+  return local ? localBackend(transport) : hostedBackend(transport);
 }

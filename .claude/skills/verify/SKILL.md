@@ -13,11 +13,13 @@ dotnet restore
 dotnet build --no-restore
 dotnet format --verify-no-changes --no-restore
 dotnet test --no-build
+node --test studio/*.test.js
 ```
 
 Rules:
 
 - If `dotnet` is not available, say so plainly. Do not report the gate as passed.
+- `node --test` needs no install: it is Node's own runner and the studio has no dependencies (ADR 0024).
 - If `dotnet format --verify-no-changes` fails, run `dotnet format` to fix it, show the resulting diff, and
   re-run the gate.
 - If a test fails, quote the failing test name and assertion message verbatim. Do not skip or delete it.
