@@ -131,6 +131,9 @@ header h1 span { color: var(--muted); font-weight: 500; }
 .tool:hover { color: var(--ink); }
 .tool[aria-pressed="true"], .tool[aria-expanded="true"] { color: var(--accent); }
 
+/* The line under a broken file's name is its problem, in the colour the tag already uses. */
+.item .meta.bad { color: var(--bad); }
+
 /* ---------- the banner: a snackbar above the bars on a phone ---------- */
 
 .banner {
@@ -146,8 +149,10 @@ header h1 span { color: var(--muted); font-weight: 500; }
 .banner .close { width: 32px; height: 32px; margin: -4px 0; }
 .banner.error .close { color: var(--bad); }
 .banner.ok .close { color: var(--ok); }
+/* Above the scrim (50) and the sheets (60), below the bar (70): a failed audit or run list is reported while
+   the sheet it failed in is still open, and the bar stays tappable. Below the sheets it was reported to nobody. */
 #banner {
-  position: fixed; left: 12px; right: 12px; z-index: 35;
+  position: fixed; left: 12px; right: 12px; z-index: 65;
   bottom: calc(var(--bar) + var(--safe) + 12px);
   max-height: 45vh; overflow: auto;
 }

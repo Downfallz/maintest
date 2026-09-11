@@ -269,11 +269,18 @@ function itemButton(item) {
   return button;
 }
 
-/** The figure and the line under the name; a broken file has neither. */
+/**
+ * The figure and the line under the name. A broken file has neither: its document is the JSON that failed to
+ * parse into its DTO, so nothing below can assume a shape, and the line says what is wrong instead.
+ */
 function glance(item) {
+  if (item.problem) {
+    return [element('span', { className: 'meta bad', textContent: item.problem })];
+  }
+
   const doc = item.document || {};
   if (item.kind === 'Spell') {
-    const figure = (doc.effects || []).map(effectSummary).filter(Boolean).join(', ');
+    const figure = asArray(doc.effects).map(effectSummary).filter(Boolean).join(', ');
     const cost = typeof doc.energyCost === 'number' ? `${doc.energyCost} energy` : null;
     return [
       element('span', { className: 'figure', textContent: figure }),
@@ -291,7 +298,7 @@ function glance(item) {
   if (item.kind === 'TalentTree') {
     let nodes = 0;
     let spells = 0;
-    walkNodes(doc.root, node => { nodes += 1; spells += (node.spells || []).length; });
+    walkNodes(doc.root, node => { nodes += 1; spells += asArray(node.spells).length; });
     return [
       element('span', { className: 'figure', textContent: `${nodes} nodes` }),
       element('span', { className: 'meta', textContent: `${spells} spells taught` }),
@@ -303,6 +310,7 @@ function glance(item) {
 
 /** What one effect comes to, in a word: what a list row has room for. */
 function effectSummary(effect) {
+  if (!effect || typeof effect !== 'object') return '';
   const rounds = effect.permanent ? '' : ` for ${effect.durationRounds ?? 1}r`;
   switch (effect.kind) {
     case 'Damage': return `${effect.amount} dmg`;
@@ -580,7 +588,8 @@ function browseButton(label) {
 }
 
 function creatureCard(creature, covered) {
-  const doc = creature.document;
+  if (creature.problem) return brokenCard(creature, 'creature');
+  const doc = creature.document || {};
   const tree = documentsOf('talentTrees').find(candidate => candidate.id === resolveReference(doc.talentTreeId));
   if (tree) covered.add(tree.path);
 
@@ -594,7 +603,7 @@ function creatureCard(creature, covered) {
     pill(percent(Number(doc.baseCriticalChance) || 0), 'crit'),
   ]));
 
-  const starting = doc.startingSpellIds || [];
+  const starting = asArray(doc.startingSpellIds);
   card.append(
     element('div', { className: 'label', textContent: starting.length ? 'Starts with' : 'Starts with nothing' }),
     element('div', { className: 'chips' }, starting.map(spellLink)),
@@ -612,9 +621,18 @@ function creatureCard(creature, covered) {
 }
 
 function treeCard(tree) {
+  if (tree.problem) return brokenCard(tree, 'talent tree');
   const card = element('div', { className: `card overview-card${tree.enabled ? '' : ' off'}` });
   card.append(cardTitle(tree, tree.enabled ? 'talent tree' : 'talent tree, off'), compactTree(tree));
   return card;
+}
+
+/** A file that did not parse: the way in, and what is wrong with it, and nothing read from its document. */
+function brokenCard(item, kind) {
+  return element('div', { className: 'card overview-card broken' }, [
+    cardTitle(item, `${kind}, does not parse`),
+    element('div', { className: 'label warn', textContent: `${item.path}: ${item.problem}` }),
+  ]);
 }
 
 /** The name as the way in, and beside it what kind of thing it is. */
@@ -641,14 +659,17 @@ function compactTree(tree) {
     ]);
     pick.addEventListener('click', () => select(tree.path, node));
     const card = element('div', { className: 'node' }, [element('div', { className: 'head' }, [pick])]);
-    if ((node.spells || []).length) {
-      card.append(element('div', { className: 'chips' }, node.spells.map(spell => spellLink(spell.id))));
+    const taught = asArray(node.spells).filter(spell => spell && spell.id);
+    if (taught.length) {
+      card.append(element('div', { className: 'chips' }, taught.map(spell => spellLink(spell.id))));
     }
     const entry = element('li', {}, [card]);
-    if ((node.children || []).length) entry.append(element('ul', {}, node.children.map(draw)));
+    const children = asArray(node.children).filter(child => child && typeof child === 'object');
+    if (children.length) entry.append(element('ul', {}, children.map(draw)));
     return entry;
   };
-  list.append(draw(tree.document.root || emptyNode('Root', 'Root')));
+  const root = tree.document?.root;
+  list.append(draw(root && typeof root === 'object' ? root : emptyNode('Root', 'Root')));
   return list;
 }
 
@@ -1023,9 +1044,14 @@ function usedBy(item) {
 }
 
 function walkNodes(node, visit) {
-  if (!node) return;
+  if (!node || typeof node !== 'object') return;
   visit(node);
-  for (const child of node.children || []) walkNodes(child, visit);
+  for (const child of asArray(node.children)) walkNodes(child, visit);
+}
+
+/** The array a field is meant to hold, or nothing: a file that did not parse can hold anything there. */
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 // ---------- the actions ----------
