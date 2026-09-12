@@ -258,7 +258,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
                 prevented += (before - ThreatOn(target, creatures, stacked)) * (buff.Duration.Rounds ?? PermanentConditionRounds);
             }
 
-            score -= sign * weights.Buff * prevented / Math.Max(1, allies);
+            score -= sign * weights.Defense * prevented / Math.Max(1, allies);
             if (bare >= health && ThreatOn(target, creatures, stacked) < health + Restored(resolution, target, targetId))
             {
                 score -= sign * weights.Kill;

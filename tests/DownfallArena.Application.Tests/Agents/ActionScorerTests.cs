@@ -249,7 +249,7 @@ public sealed class ActionScorerTests
 
         Scorer.Estimate(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14), 1e-9);
         // Guard is 2 defense for a round, and the actor faces two attackers with no ally to spread them over:
-        // two hits of it prevented, priced at the buff weight (ADR 0022).
+        // two hits of it prevented, priced at the defense weight (ADR 0022).
         Scorer.Estimate(board[0], TestContent.Guard, board).ShouldBe(0.5 * 2 * 2, 1e-9);
         Scorer.Estimate(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6), 1e-9);
     }

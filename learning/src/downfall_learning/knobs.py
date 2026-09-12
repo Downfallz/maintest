@@ -571,7 +571,7 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
 
     - no board, no targets, no defense, and no cap at a target's health;
     - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
-      ``buff x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
+      ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
       bigger average one in a way nothing here can see;
     - no energy cost and no Spell initiative, both of which `ActionScorer` prices when it picks an unlock,
@@ -604,7 +604,7 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
             "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
             "Stun": weights.get("stun", 0) * rounds,
-            "DefenseBuff": weights.get("buff", 0) * amount * rounds,
+            "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(str(effect.get("kind")), 0.0)
     return total

@@ -4,6 +4,46 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-12. The defence price has a cliff, and 0.5 was sitting just under it by accident
+
+- **What changed**: [ADR 0028](../adr/0028-name-the-defense-weight-and-price-it-below-one.md). The weight
+  called `buff` is now called `defense`, which is the only thing it has priced since ADR 0018 moved
+  `InitiativeDebuff` off it. No value moved.
+- **Digest**: unchanged, 400 of 400 on content `d4a21a55`. The fingerprint is unchanged too — it hashes the
+  values in order, not the names — checked by replaying `search-2` on its hold-out seeds: same stamp
+  `@4e93f46b`, same 0.5875, same 235 of 400. Nothing here is a behaviour change.
+- **Why it needed an entry anyway.** ADR 0022 changed what this term multiplies, from `buff x amount x rounds`
+  to the damage a buff actually prevents, and left the value at 0.5 on purpose. So the number had been
+  reasoned about one quantity and was scaling another. Asked what 0.5 means today, nobody could say. The sweep
+  below is the answer, and it was not the expected one.
+- **A mirror evaluation on the benchmark seeds, moving this weight alone:**
+
+  | `defense` | rounds | round cap | entropy | `guard` | `lightning_bolt` | never cast |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | **0.5** (today) | 7.78 | 4.5 % | 1.800 | 6.9 % | 62.2 % | 2 |
+  | 0.6 | 7.88 | 4.5 % | 1.791 | 8.1 % | 62.1 % | 3 |
+  | 0.7 | **12.36** | 23.0 % | **2.222** | 18.6 % | 41.8 % | **1** |
+  | 0.9 | 14.43 | 32.0 % | 2.404 | 23.3 % | 32.3 % | 1 |
+  | 1.0 | 22.81 | 68.5 % | 2.365 | 26.0 % | 21.9 % | 1 |
+  | **1.5** | **30.00** | **100 %** | 1.612 | 28.9 % | **0 %** | **5** |
+
+- **There is a cliff between 0.6 and 0.7, and a wall at 1.0.** At 1.5 every match runs out of rounds and the
+  catalogue's main attack is never cast: both sides turtle and nobody dies. The cause is compounding, and it
+  is the thing the shared unit hides. `damage` prices a hit paid once; `DefensiveScore` multiplies what a buff
+  prevents by the rounds it holds. A `guard` taking 2 off an incoming hit for 3 rounds prevents 6, so at 1.5
+  it scores 9 — more than any attack in this catalogue can. `defense` and `damage` are in the same unit and
+  were never on the same footing.
+- **And 0.5 is not obviously right either**, which is the uncomfortable half. At 0.5 matches last 7.78 rounds,
+  *below* the 8..16 band, and two spells are never cast. At 0.7 they last 12.36, inside the band, entropy goes
+  1.80 to 2.22, and only one spell stays dead — bought with `roundCapShare` at 23 %, four times its target.
+  That is a real trade-off and a content decision, so it is not taken here: moving the baseline makes every
+  comparison in this journal incomparable, and it deserves a tuning pass behind it rather than a rename's side
+  effect.
+- **Also fixed**: the glossary's Scoring weights entry listed eight terms and missed `initiative`, which ADR
+  0018 added three days ago. The ubiquitous language had drifted off the code it names.
+- **What is next**: if the defence price moves, it moves with a `tune-content` pass that can answer
+  `roundCapShare` — by cheapening attacks or by making healing cost more — rather than alone.
+
 ## 2026-09-12. The searched agent wins on seeds it never saw, and wins by playing fewer spells
 
 - **What this is**: the weights of workflow run 2 of `Search the agent weights`, committed as

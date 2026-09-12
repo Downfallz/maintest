@@ -524,7 +524,7 @@ WEIGHTS = {
     "heal": 0.8,
     "stun": 3.0,
     "bleed": 0.8,
-    "buff": 0.5,
+    "defense": 0.5,
     "energy": 0.2,
     "initiative": 0.5,
 }
@@ -659,7 +659,7 @@ def test_the_repository_weights_are_the_nine_the_agents_score_with() -> None:
         "heal",
         "stun",
         "bleed",
-        "buff",
+        "defense",
         "energy",
         "risk",
         "initiative",

@@ -190,7 +190,7 @@ import json
 import sys
 from pathlib import Path
 
-TARGET = {"damage": 1.0, "kill": 8.0, "heal": 0.8, "stun": 3.0, "bleed": 0.8, "buff": 0.5, "energy": 0.2}
+TARGET = {"damage": 1.0, "kill": 8.0, "heal": 0.8, "stun": 3.0, "bleed": 0.8, "defense": 0.5, "energy": 0.2}
 TARGET["risk"] = 1.0
 
 
