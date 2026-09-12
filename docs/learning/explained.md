@@ -106,7 +106,7 @@ different agents.
 Three ways to make a better bot, from the cheapest to the most ambitious.
 
 1. **Weight search** (`search-weights`). The greedy bot's scoring has eight knobs (damage, kill, heal, stun,
-   bleed, buff, energy, risk). The search turns the knobs at random around the current setting, has the engine
+   bleed, defense, energy, risk). The search turns the knobs at random around the current setting, has the engine
    play each setting against a fixed opponent on the benchmark seeds, keeps the settings that won the most,
    and centres the next round of random turns on those. Repeat ten times. No notes are needed, only the
    engine; it is slow (one engine run per setting) but simple and robust. The result is a weights file the

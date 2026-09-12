@@ -167,7 +167,7 @@ The terms below are the authoritative entries of the "Learning" section of
   critical chance for the spell, so the expected damage includes the critical contribution; score damage
   dealt (capped at the target's health), kills, healing (capped at what was missing), stuns, bleeds as future
   damage, buffs, energy kept, and a risk penalty for a fizzle or dropped targets.
-- `HeuristicAgent`: the lookahead with explicit weights (`damage`, `kill`, `heal`, `stun`, `bleed`, `buff`,
+- `HeuristicAgent`: the lookahead with explicit weights (`damage`, `kill`, `heal`, `stun`, `bleed`, `defense`,
   `energy`, `risk`, `initiative`). Intent: the castable spell whose best target set scores best. Targets: the
   best set for the declared spell at reveal time. Speed: Quick when a kill is on the table, Standard
   otherwise. Evolution: the unlockable spell worth the most as if known and affordable, plus the base

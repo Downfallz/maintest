@@ -386,8 +386,24 @@ def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[st
     return problems
 
 
-#: The agent specs that name a file after the colon. `greedy`, `random` and `explore:<rate>` name none.
-_FILE_BACKED_AGENTS = ("heuristic", "policy")
+#: The agent kinds that name a file after the colon. `greedy`, `random` and `explore:<rate>` name none.
+#: Lower case, because `AgentSpec.Parse` matches a kind case-insensitively.
+_FILE_BACKED_AGENTS = frozenset({"heuristic", "policy"})
+
+
+def _agent_file(spec: str) -> str | None:
+    """The file an agent spec names, or ``None`` when the kind names none.
+
+    Read the way ``AgentSpec.Parse`` reads it, because a reading of its own would check files the engine does
+    not and miss files it does: the kind is matched case-insensitively, and a trailing ``@version`` is the
+    weights fingerprint a stamp carries rather than part of the path. An empty string means the kind wants a
+    file and the spec gives none.
+    """
+    kind, colon, rest = spec.partition(":")
+    if not colon or kind.strip().lower() not in _FILE_BACKED_AGENTS:
+        return None
+    at = rest.rfind("@")
+    return (rest if at < 0 else rest[:at]).strip()
 
 
 def _objective_problems(knobs: Knobs, root: Path | None) -> list[str]:
@@ -412,10 +428,10 @@ def _agent_problems(knobs: Knobs, root: Path) -> list[str]:
     for name, evaluation in sorted(knobs.objective.evaluations.items()):
         for side in ("p1", "p2"):
             spec = str(evaluation.get(side, "greedy"))
-            kind, colon, path = spec.partition(":")
-            if not colon or kind not in _FILE_BACKED_AGENTS:
+            path = _agent_file(spec)
+            if path is None:
                 continue
-            if not path.strip():
+            if not path:
                 problems.append(f"objective: evaluation '{name}' {side} is '{spec}', which names no file.")
             elif not (root / path).is_file():
                 problems.append(f"objective: evaluation '{name}' {side} reads '{path}', which is not a file.")

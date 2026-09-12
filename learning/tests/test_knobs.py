@@ -388,6 +388,32 @@ def test_an_evaluation_naming_a_weights_file_that_is_there_is_accepted(tmp_path:
     assert validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path) == []
 
 
+def test_an_agent_spec_is_read_the_way_the_engine_reads_it(tmp_path: Path) -> None:
+    """A reading of its own would check files the engine does not and miss files it does.
+
+    `AgentSpec.Parse` matches the kind case-insensitively and strips a trailing `@version`, the weights
+    fingerprint a stamp carries. So `Heuristic:` names a file just as `heuristic:` does, and the version is
+    not part of the path.
+    """
+    (tmp_path / "weights").mkdir()
+    (tmp_path / "weights" / "found.json").write_text("{}", encoding="utf-8")
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {
+                "cased": {"p1": "Heuristic:weights/gone.json", "p2": "greedy"},
+                "stamped": {"p1": "heuristic:weights/found.json@deadbeef", "p2": "greedy"},
+            },
+            "targets": [],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == ["objective: evaluation 'cased' p1 reads 'weights/gone.json', which is not a file."]
+
+
 def test_a_starting_kit_naming_a_spell_that_does_not_exist_is_reported(tmp_path: Path) -> None:
     document = knobs_json(
         constraints={"startingKitOffersAChoice": {"enabled": True, "spells": ["spell:ghost"]}}
