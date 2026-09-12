@@ -92,13 +92,15 @@ to tune — tuning is `search-weights` below.
 
 They were **hand-set as a starting point**, in the commit that introduced the agents (phase L5), from the
 readings above: pick damage as the unit, then say what a kill, a stun and a wasted turn are worth in damage.
-They are **not** the output of a search, and no searched weights file is committed. `ScoringWeights.Default`
-is the single source; `learning/weights/greedy.json` holds the same nine numbers so `heuristic:<file>` and
-`greedy` start from the same place, and a test on each side of the repository pins the two together.
+They are **not** the output of a search. `ScoringWeights.Default` is the single source;
+`learning/weights/greedy.json` holds the same nine numbers so `heuristic:<file>` and `greedy` start from the
+same place, and a test on each side of the repository pins the two together.
 
 To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
 candidate set against a fixed opponent on the benchmark seeds and keeps what wins, and leave the result next
-to `greedy.json` under its own name. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+to `greedy.json` under its own name. `search-2.json` is the first of those: a searched set that beats `Greedy`
+on seeds it never saw, committed to be played and compared, not to be the baseline (the 2026-09-12 journal
+entry says what it buys and what it costs). Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
