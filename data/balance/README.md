@@ -82,17 +82,26 @@ score = sum over targets of  weight * (distance outside the band / scale) ** 2
 ```
 
 Zero is on target and lower is better. A metric no evaluation measured is listed as missing rather than
-counted as zero. Three evaluations are played on the benchmark seeds. `mirror` (greedy against greedy) reads
-the content with skill held equal. `skill` (greedy against random) checks that the content still rewards
-playing well. `exploit` (a searched weights file against greedy) reads how far a player who only wants to win
-gets against the way the game is meant to be played.
+counted as zero. Four evaluations are played on the benchmark seeds. `mirror` (greedy against greedy) reads
+who wins, how long a match lasts and how often it runs out of rounds, with skill held equal. `variety`
+(`explore:0.2` against itself) reads whether the content offers a choice. `skill` (greedy against random)
+checks that the content still rewards playing well. `exploit` (a searched weights file against greedy) reads
+how far a player who only wants to win gets against the way the game is meant to be played.
 
-The three are one definition and are read together. `Greedy` is the taste the catalogue is balanced for: nine
+`variety` exists because `Greedy` takes an argmax: two spells of near equal value do not split the casts, the
+marginally better one takes nearly all of them, and no content makes the largest share fall below about a
+half (ADR 0029 has the sweep). Seven targets that need a spell to be cast in order to mean anything are read
+there instead — the spread, the uncast counts, and the per-tier hit and win readings. Their bands did not
+change when they moved; the readings did, and two spells every journal entry called never cast turn out to be
+cast the moment a player looks at them. The rate stays at 0.2 because exploration is a dial between measuring
+the content and measuring the dice: a higher rate reads better precisely because the play is more random.
+
+The four are one definition and are read together. `Greedy` is the taste the catalogue is balanced for: nine
 prices, each decided rather than felt (ADR 0018, ADR 0028). `exploit` seats an agent that shares none of that
 taste and beats `Greedy` anyway, so its gap is the price the content charges for playing it the intended way.
-Closing that gap by flattening the game fails `skill`; keeping one dominant line open fails `tierUsageShare`.
-What all three together ask for is content where playing well matters, where more than one line wins, and
-where winning does not require abandoning the taste.
+Closing that gap by flattening the game fails `skill`; keeping one dominant line open fails `tierUsageShare`
+on `variety`. What the four together ask for is content where playing well matters, where more than one line
+wins, and where winning does not require abandoning the taste.
 
 `exploit` is the only evaluation that names a file. The agent goes stale when the content moves — a tuning
 pass changes what there is to exploit — so it is refreshed from the next `search-weights` run rather than
@@ -158,15 +167,19 @@ on `lightning_bolt`'s energy cost — one move worth more than everything the se
 skips it when you want a quick look rather than an answer.
 
 Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
-benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty-seven across the three.
+benchmark seeds an evaluation is about seven seconds, so a candidate is about thirty-four across the four.
 The sweep is up to two candidates per playable knob — on the nine-spell core content that is 29 knobs and 41
 legal single steps. The paired moves below add up to 80 more, and the deepening up to 18 on top, so the
 opening tops out at 139 candidates. The workflow then climbs 24 rounds of 6, which is 284 candidates and
-about **130 minutes** against its 180-minute timeout; the CLI's own defaults stay at 8 rounds of 4, because a
-local run should not take two hours unasked. Adding `exploit` as a third evaluation is what took that run
-from about 95 minutes to 130, so the headroom is now under an hour: `--no-pairs` and `--pair-depth 1` are the
-switches if a run gets tight, and a fourth evaluation would need the timeout raised with it. Raise the budget
-rather than the step size: a wider step reaches further and reads worse in the diff.
+about **160 minutes**, which is why its timeout is 300 and not 180; the CLI's own defaults stay at 8 rounds
+of 4, because a local run should not take two hours unasked. Two evaluations cost about 95 minutes, `exploit`
+took that to 130 and `variety` to 160, so each one added is worth pricing before it lands. `--no-pairs` and
+`--pair-depth 1` are the switches if a run gets tight. Raise the budget rather than the step size: a wider
+step reaches further and reads worse in the diff.
+
+A budget note the last local pass earned: the climb converged after about ten candidates past the opening
+sweep, so 149 of a possible 235 were played and 16 rounds read the same as 24 would have. On this catalogue
+the opening sweep does nearly all the work, and the rounds are not the binding constraint.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is
