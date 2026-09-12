@@ -16,6 +16,45 @@ public sealed class RunRecorderTests
     private static readonly FeatureSchema Schema = FeatureSchema.Build(TestContent.Resources, Rules);
     private static readonly RunStamp Stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, Rules, Schema, "Random", "Random", 10);
 
+    /// <summary>
+    /// The one line that keeps a recorded run replayable: every match is appended to one `steps.jsonl`, so
+    /// matches playing at once would interleave their lines. Without this the recorder would take a parallel
+    /// batch (the default for a recorder that says nothing) and no other test would notice.
+    /// </summary>
+    [Fact]
+    public void A_recorded_run_refuses_a_batch_that_plays_its_matches_at_once()
+    {
+        var recorder = Recorder(new MemoryArtifactWriter(), null);
+
+        recorder.AllowsParallelMatches.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// And the lines it writes are in one block per match, whatever the batch's degree: a step of match two
+    /// between two steps of match one is a dataset that no longer replays from its seed.
+    /// </summary>
+    [Fact]
+    public async Task A_recorded_run_keeps_each_match_is_steps_together()
+    {
+        var store = new MatchStore();
+        var writer = new MemoryArtifactWriter();
+        var recorder = Recorder(writer, null);
+        var runner = Handlers.Runner(store.Workflow, new TestRandomFactory());
+
+        await recorder.StartAsync(TestContext.Current.CancellationToken);
+        await runner.RunAsync(Scenario(matches: 8), recorder, TestContext.Current.CancellationToken);
+        await recorder.FinishAsync(TestContext.Current.CancellationToken);
+
+        var matches = writer.LinesOf<StepRecord>(RunRecorder.StepsFile).Select(step => step.MatchId).ToList();
+        matches.Distinct().Count().ShouldBe(8);
+        matches.Distinct().Count().ShouldBe(Blocks(matches), "the steps of a match must not be interleaved with another's");
+        writer.LinesOf<EpisodeRecord>(RunRecorder.EpisodesFile).Count.ShouldBe(16, "one episode per side of each match");
+    }
+
+    /// <summary>How many runs of the same value the list falls into, so 8 matches in 8 blocks is contiguous.</summary>
+    private static int Blocks(List<MatchId> matches) =>
+        matches.Count == 0 ? 0 : 1 + matches.Zip(matches.Skip(1)).Count(pair => pair.First != pair.Second);
+
     [Fact]
     public async Task A_recorded_batch_writes_the_manifest_the_steps_the_episodes_and_the_traces()
     {

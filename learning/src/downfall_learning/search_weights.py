@@ -131,6 +131,12 @@ class CliEvaluator:
     """
 
     def __init__(self, engine: EngineCommand, workdir: Path) -> None:
+        # Here rather than at each call site: three commands reach the engine through this, and the one that
+        # had no check (`evaluate-policy`, which `scripts/iterate.sh` runs) reported a file dotnet could not
+        # find instead of the build command that would fix it.
+        unreachable = missing_engine(engine.command, engine.root)
+        if unreachable:
+            raise EvaluationError(unreachable)
         self._engine = engine
         # The engine runs in the repository root, so every path it gets is absolute.
         self._workdir = Path(workdir).resolve()

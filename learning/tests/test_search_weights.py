@@ -209,3 +209,11 @@ def test_a_command_that_names_no_assembly_is_left_alone(tmp_path: Path) -> None:
     """A prefix someone passed with --engine on purpose: guessing at it would refuse commands that work."""
     assert missing_engine(("dotnet", "run", "--project", "src/DownfallArena.Cli", "--"), tmp_path) is None
     assert missing_engine(("python", "fake_engine.py"), tmp_path) is None
+
+
+def test_an_evaluator_refuses_an_engine_that_is_not_built(tmp_path: Path) -> None:
+    """In the evaluator, so no command reaching the engine can forget it -- evaluate-policy had."""
+    engine = EngineCommand(root=tmp_path, command=("dotnet", "artifacts/bin/Cli/release/Cli.dll"))
+
+    with pytest.raises(EvaluationError, match="dotnet build --configuration Release"):
+        CliEvaluator(engine, tmp_path / "work")

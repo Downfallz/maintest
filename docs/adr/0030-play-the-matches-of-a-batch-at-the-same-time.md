@@ -18,8 +18,8 @@ tallies an evaluation reports and the artifacts a recorded run writes.
 
 ## Decision
 
-We will play the matches of a batch at the same time, bounded by `Environment.ProcessorCount`, and keep every
-number the batch reports exactly as it was.
+We will play the matches of a batch at the same time, bounded by a degree that defaults to
+`Environment.ProcessorCount`, and keep every number the batch reports exactly as it was.
 
 Results land in an array by index rather than being appended, so a batch reports the seeds' results in the
 seeds' order however the matches finish. The two tallies an evaluation keeps become concurrent on the outside
@@ -41,9 +41,16 @@ only the recorder knows whether what it writes is order-dependent. `RunRecorder`
 match to one `steps.jsonl`, so matches at once would interleave their lines and a recorded run would stop
 replaying from its seed. It gets the old one-at-a-time walk.
 
+A recorder is not the only thing watching every match, and that is the trap this decision fell into first.
+`IDomainEventListener` is the other family, registered as singletons in the composition root, and it is not
+asked the question above: `MatchTraceRecorder` kept a plain `Dictionary` keyed by match and `--trace` aborted
+the process on six runs in eight before its map became concurrent. Anything registered for the lifetime of
+the process and keyed by match has to be read the same way — concurrent on the outside, single writer per
+match inside.
+
 ## Consequences
 
-- Good: measured on the benchmark seeds, one evaluation goes from about 6.0 s to about 3.4 s, and a tuning
+- Good: measured on the benchmark seeds, one evaluation goes from about 6.0 s to about 3.8 s, and a tuning
   candidate of four evaluations from 29.0 s to 14.2 s. A 149-candidate pass goes from about seventy minutes to
   about twenty-eight, with the replay cache of the same change.
 - Good: it is the engine that got faster, so `search-weights`, `benchmark` and `evaluate` gain it too, not
@@ -79,6 +86,10 @@ replaying from its seed. It gets the old one-at-a-time walk.
 
 ## Follow-up
 
-- `BatchRunner`, `IMatchRecorder`, `RunRecorder`, `CombatStatsRecorder`, `IntentCounter`, `EvaluationRunner`.
+- `BatchRunner`, `IMatchRecorder`, `RunRecorder`, `CombatStatsRecorder`, `IntentCounter`, `EvaluationRunner`,
+  `MatchTraceRecorder`.
+- `BatchRunner`'s degree is a constructor parameter defaulting to the processor count, so a test asks for a
+  degree instead of asserting on whatever the host has: the parallel half of the switch fails on a one-vCPU
+  runner otherwise, and .NET honours a cgroup quota.
 - The test doubles a concurrent batch exercises: `MatchStore` and `TestRandomFactory`.
 - `data/balance/README.md` and `docs/learning/training.md`: the per-candidate and per-run costs.

@@ -13,8 +13,14 @@ using DownfallArena.SharedKernel.Primitives;
 namespace DownfallArena.Application.Simulation;
 
 /// <summary>
-/// Plays a scenario's matches one after the other through the public commands and collects their results.
-/// Every random roll comes from the seeds, so a batch replays identically.
+/// Plays a scenario's matches through the public commands and collects their results. Every random roll comes
+/// from the seeds, so a batch replays identically however its matches are scheduled.
+/// <para>
+/// The matches run at the same time, up to <paramref name="maxParallelism"/> of them (ADR 0030), unless the
+/// recorder watching them says it cannot take that. <paramref name="maxParallelism"/> defaults to the
+/// machine's processor count and is a parameter so a test can ask for a degree instead of asserting on
+/// whatever the host happens to have.
+/// </para>
 /// </summary>
 public sealed class BatchRunner(
     ICommandHandler<CreateMatch, Result<MatchId>> createMatch,
@@ -22,8 +28,11 @@ public sealed class BatchRunner(
     IQueryHandler<GetBoardStateForPlayer, Result<PlayerBoardState>> boardState,
     MatchDriver driver,
     IRandomSourceFactory random,
-    IAgentFactory agents)
+    IAgentFactory agents,
+    int? maxParallelism = null)
 {
+    private readonly int _maxParallelism = maxParallelism ?? Environment.ProcessorCount;
+
     public Task<BatchResult> RunAsync(SimulationScenario scenario, CancellationToken cancellationToken = default) =>
         RunAsync(scenario, null, cancellationToken);
 
@@ -43,9 +52,10 @@ public sealed class BatchRunner(
         // A recorder that appends every match to one artifact says no to this and gets the old one-at-a-time
         // walk, because its lines would interleave and its run would stop replaying.
         var results = new MatchResult[scenario.Matches];
+        var sequential = recorder is { AllowsParallelMatches: false };
         var parallel = new ParallelOptions
         {
-            MaxDegreeOfParallelism = recorder?.AllowsParallelMatches ?? true ? Environment.ProcessorCount : 1,
+            MaxDegreeOfParallelism = sequential ? 1 : _maxParallelism,
             CancellationToken = cancellationToken,
         };
         await Parallel.ForEachAsync(

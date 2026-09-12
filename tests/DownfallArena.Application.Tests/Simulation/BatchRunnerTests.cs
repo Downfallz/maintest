@@ -1,9 +1,11 @@
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Learning.Recording;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Application.Messaging;
 using DownfallArena.Application.Simulation;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
@@ -28,13 +30,11 @@ public sealed class BatchRunnerTests
         batch.Results.ShouldAllBe(result => result.ContentHash == "test-content");
         batch.Results.ShouldAllBe(result => result.Rounds >= 1);
         batch.Results.ShouldAllBe(result => result.Outcome.Reason == MatchEndReason.RoundCap || Math.Min(result.Player1RemainingHealth, result.Player2RemainingHealth) == 0);
-        // As a set: the matches play at the same time, so which one reaches the factory first is not fixed.
-        // What is fixed is that each match seeds the board from its own seed and its two agents from that
-        // seed, which is what makes a batch replay.
-        factory.Seeds.ShouldBeSubsetOf([10, 11, 12, (10 * 31) + 1, (10 * 31) + 2, (11 * 31) + 1, (11 * 31) + 2, (12 * 31) + 1, (12 * 31) + 2]);
-        factory.Seeds.ShouldContain(10);
-        factory.Seeds.ShouldContain((10 * 31) + 1);
-        factory.Seeds.ShouldContain((10 * 31) + 2);
+        // Every seed, order-insensitively. Only the order became unfixed when matches started playing at
+        // once: which seeds are asked for is exactly what makes a batch replay, so it is asserted whole. A
+        // subset check would pass on a batch that reused one match's agent seeds for all three.
+        factory.Seeds.OrderBy(seed => seed).ShouldBe(
+            [10, 11, 12, (10 * 31) + 1, (10 * 31) + 2, (11 * 31) + 1, (11 * 31) + 2, (12 * 31) + 1, (12 * 31) + 2]);
         batch.Summary.Matches.ShouldBe(3);
         (batch.Summary.Player1Wins + batch.Summary.Player2Wins + batch.Summary.Draws).ShouldBe(3);
         batch.Summary.AverageRounds.ShouldBe(batch.Results.Average(result => result.Rounds));
@@ -108,7 +108,7 @@ public sealed class BatchRunnerTests
     public async Task A_recorder_that_allows_parallel_matches_sees_more_than_one_at_a_time()
     {
         var recorder = new CountingRecorder(allowsParallel: true);
-        var runner = Runner(new MatchStore(), new TestRandomFactory());
+        var runner = Runner(new MatchStore(), new TestRandomFactory(), maxParallelism: 4);
 
         await runner.RunAsync(Scenario(matches: 64, baseSeed: 400), recorder, TestContext.Current.CancellationToken);
 
@@ -125,6 +125,27 @@ public sealed class BatchRunnerTests
             .RunAsync(Scenario(matches: 8, baseSeed: 300), new CountingRecorder(allowsParallel: true), TestContext.Current.CancellationToken);
 
         Comparable(parallel).ShouldBe(Comparable(sequential));
+    }
+
+    /// <summary>
+    /// The trace recorder listens to domain events rather than being an `IMatchRecorder`, so it never saw the
+    /// question a recorder is asked and a parallel batch reached it anyway. `--trace` on `simulate` aborted
+    /// the process six runs in eight before its map became concurrent.
+    /// </summary>
+    [Fact]
+    public async Task A_trace_listener_survives_a_batch_that_plays_its_matches_at_once()
+    {
+        var store = new MatchStore();
+        var traces = new MatchTraceRecorder(store.Repository);
+        var runner = Runner(store, new TestRandomFactory(), maxParallelism: 4, listeners: [traces]);
+
+        var batch = await runner.RunAsync(Scenario(matches: 24, baseSeed: 500), TestContext.Current.CancellationToken);
+
+        batch.Results.Count.ShouldBe(24);
+        foreach (var result in batch.Results)
+        {
+            traces.EntriesOf(result.MatchId).ShouldNotBeEmpty($"match {result.Index} traced nothing");
+        }
     }
 
     /// <summary>
@@ -177,24 +198,32 @@ public sealed class BatchRunnerTests
         BaseSeed = baseSeed,
     };
 
-    private static BatchRunner Runner(MatchStore store, TestRandomFactory factory) =>
-        new(
-            new CreateMatchHandler(store.Workflow, TestContent.Resources, factory),
-            new JoinMatchHandler(store.Workflow),
-            new GetBoardStateForPlayerHandler(store.Workflow),
+    private static BatchRunner Runner(
+        MatchStore store,
+        TestRandomFactory factory,
+        int maxParallelism = 4,
+        IDomainEventListener[]? listeners = null)
+    {
+        var workflow = listeners is null ? store.Workflow : store.WorkflowWith(listeners);
+        return new(
+            new CreateMatchHandler(workflow, TestContent.Resources, factory),
+            new JoinMatchHandler(workflow),
+            new GetBoardStateForPlayerHandler(workflow),
             new MatchDriver(
                 new MatchCommandHandlers(
-                    new SubmitEvolutionChoiceHandler(store.Workflow),
-                    new PassEvolutionHandler(store.Workflow),
-                    new SubmitSpeedChoiceHandler(store.Workflow),
-                    new SubmitIntentHandler(store.Workflow),
-                    new SubmitActionHandler(store.Workflow),
-                    new ResolveNextActionHandler(store.Workflow)),
+                    new SubmitEvolutionChoiceHandler(workflow),
+                    new PassEvolutionHandler(workflow),
+                    new SubmitSpeedChoiceHandler(workflow),
+                    new SubmitIntentHandler(workflow),
+                    new SubmitActionHandler(workflow),
+                    new ResolveNextActionHandler(workflow)),
                 new MatchQueryHandlers(
-                    new GetBoardStateForPlayerHandler(store.Workflow),
-                    new GetPlayerOptionsHandler(store.Workflow, TestContent.Resources))),
+                    new GetBoardStateForPlayerHandler(workflow),
+                    new GetPlayerOptionsHandler(workflow, TestContent.Resources))),
             factory,
-            Handlers.Agents());
+            Handlers.Agents(),
+            maxParallelism);
+    }
 
     private static List<string> Comparable(BatchResult batch) =>
         [.. batch.Results.Select(result => $"{result.Seed}:{result.Outcome}:{result.Rounds}:{result.Player1RemainingHealth}:{result.Player2RemainingHealth}")];
