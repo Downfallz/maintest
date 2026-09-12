@@ -1,12 +1,17 @@
 name: Search the agent weights
 
-# One cross-entropy search of the heuristic agent's eight scoring weights on the CI runners, reported and not
-# applied (docs/learning/training.md). Ask for a run from a phone; read the table in the run summary.
+# One cross-entropy search of the heuristic agent's nine scoring weights on the CI runners
+# (docs/learning/training.md). Ask for a run from a phone; read the table in the run summary.
 #
-# It reports rather than commits on purpose. The weights of `Greedy` are the benchmark baseline every learned
-# agent is measured against, so moving them invalidates every comparison in the journal; that is a decision to
-# take deliberately, not a file a workflow rewrites. The journal entry of 2026-09-10 is the worked example:
-# the search found a better agent and the entry decided against adopting it.
+# What `apply` does, and what it deliberately does not do. The weights of `Greedy` are the benchmark baseline
+# every learned agent is measured against, so moving them invalidates every comparison in the journal; that is
+# a decision to take deliberately, not a file a workflow rewrites. So `apply` never touches
+# `ScoringWeights.Default` or `learning/weights/greedy.json`: it commits what the search found under its own
+# name next to them, which is what docs/learning/agents.md says to do with a searched set. Adopting it as the
+# baseline stays a separate, human change.
+#
+# The journal entry of 2026-09-10 is the worked example of why that line is where it is: the search found a
+# better agent and the entry decided against making it the baseline.
 on:
   workflow_dispatch:
     inputs:
@@ -25,9 +30,16 @@ on:
       seed:
         description: "Search seed"
         default: "0"
+      apply:
+        description: "Commit the weights it found as their own file on a branch, or only report them"
+        type: boolean
+        default: false
 
+# Pushing the proposal branch, and nothing else. GitHub Actions permissions cannot be conditional, so this is
+# `write` even on a report-only run; the checkout below is what actually decides whether a credential is on
+# disk, and it only keeps one when `apply` is set.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: search-${{ github.ref }}
@@ -37,6 +49,9 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  BRANCH: search/${{ github.run_number }}
+  # The searched set, under its own name next to greedy.json (docs/learning/agents.md).
+  FOUND: learning/weights/search-${{ github.run_number }}.json
   # Under runs/, which .gitignore covers: inside the workspace for the artifact, invisible to git.
   OUT: runs/search-${{ github.run_number }}
 
@@ -46,10 +61,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
+      # A report-only run keeps no credential on disk, the way this workflow always did. An applying run keeps
+      # the one the checkout sets up and lets git use it, because the alternative is a token inside a remote
+      # URL, which puts it in the process list and in every error message git prints.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: ${{ inputs.apply }}
 
       - name: Set up .NET (version from global.json)
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -127,11 +145,163 @@ jobs:
                 | "| `\(.[0])` | \(.[1] * 1000 | round / 1000) | \(.[2] * 1000 | round / 1000) | \(((.[2] / (if .[1] == 0 then 1 else .[1] end) - 1) * 1000 | round / 10))% |"
               ' "$found" learning/weights/greedy.json
               echo
-              echo "Reported, not applied: \`learning/weights/greedy.json\` is the benchmark baseline, and moving it"
-              echo "makes every comparison in \`docs/learning/journal.md\` incomparable. Adopting these is a commit"
-              echo "with a journal entry that says why, not a workflow's side effect."
+              echo "\`learning/weights/greedy.json\` is not touched either way: it is the benchmark baseline, and"
+              echo "moving it makes every comparison in \`docs/learning/journal.md\` incomparable. Adopting these"
+              echo "as the baseline is a commit with a journal entry that says why, not a workflow's side effect."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      # Two separate questions, and reading one for the other is how a report-only run gets called a failed
+      # search: `improved` is whether the search beat the weights it started from, which it reports whether or
+      # not it was asked to apply anything; a branch is only pushed when it was.
+      - name: What the search found
+        id: found
+        env:
+          APPLY: ${{ inputs.apply }}
+        run: |
+          improved="$(jq -r 'if .best.score > .initial.score then "true" else "false" end' "$OUT/search.json" 2>/dev/null || echo false)"
+          if [[ "$improved" != "true" ]]; then
+            echo "No candidate beat the weights the search started from."
+          elif [[ "$APPLY" != "true" ]]; then
+            echo "The search found better weights and was asked not to apply them. They are in the artifact."
+          fi
+
+          if [[ "$improved" == "true" && "$APPLY" == "true" ]]; then
+            echo "applied=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "applied=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The one thing the search itself cannot establish. Every candidate played the same fixed seeds and the
+      # winner was picked for scoring best on them, so its interval is the winner's and not a fair one. These
+      # are seeds no candidate saw: consecutive integers starting past the largest in the seed file, so they
+      # cannot overlap it whatever that file holds. The baseline is replayed on the same seeds as the control --
+      # against `greedy` it is even by construction, which is exactly what makes it a check on the seed set.
+      - name: Replay on seeds the search never saw
+        if: steps.found.outputs.applied == 'true'
+        id: holdout
+        env:
+          OPPONENT: ${{ inputs.opponent }}
+          SEEDS: ${{ inputs.seeds }}
+        run: |
+          start="$(jq -r '[.seeds[]] | max + 1' "$SEEDS")"
+          matches="$(jq -r '.seeds | length' "$SEEDS")"
+          replay() {
+            dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
+              evaluate --p1 "$1" --p2 "$OPPONENT" --seed "$start" --matches "$matches" \
+              --out "$OUT/holdout-$2.json" > "$OUT/holdout-$2.log"
+          }
+          # `greedy` is the baseline because the search has no --initial input: it always starts from the
+          # built-in weights, which is what `greedy` plays.
+          replay "heuristic:$OUT/weights.json" found
+          replay greedy baseline
+          # The same number the search optimized, so the two are on one scale: agent A's mean score.
+          read -r found_score baseline_score <<< "$(jq -rs '[.[0].agentA.score.mean, .[1].agentA.score.mean] | @tsv' \
+            "$OUT/holdout-found.json" "$OUT/holdout-baseline.json")"
+          echo "found=$found_score" >> "$GITHUB_OUTPUT"
+          echo "baseline=$baseline_score" >> "$GITHUB_OUTPUT"
+          {
+            echo
+            echo "### On $matches seeds no candidate saw ($start to $((start + matches - 1)), mirrored)"
+            echo
+            echo "| Agent | Score against \`$OPPONENT\` |"
+            echo "| --- | --- |"
+            echo "| The weights it found | $found_score |"
+            echo "| The baseline | $baseline_score |"
+            echo
+            echo "This is the comparison the search's own numbers cannot make. A found agent that does not beat"
+            echo "the baseline here has not been shown to be better at anything but the seed file it was"
+            echo "searched on."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The gate a contributor runs before pushing, and the one ci.yml runs. A weights file is content the test
+      # projects copy to their output directory, so the build has to run again before the tests see it: with
+      # `--no-build` they would read the copy from before this file existed.
+      - name: Add the weights and run the gate
+        if: steps.found.outputs.applied == 'true'
+        run: |
+          cp "$OUT/weights.json" "$FOUND"
+          dotnet build --no-restore --configuration Release
+          dotnet test --no-build --configuration Release
+          dotnet format --verify-no-changes
+
+      # The branch is pushed; the pull request is not opened here, and that is the point. A pull request opened
+      # with GITHUB_TOKEN does not start the `pull_request` workflows, so it would arrive with no CI at all and
+      # no SonarCloud quality gate -- which AGENTS.md requires on every pull request. Opening it from the link
+      # below takes one tap and runs the repository's real checks. The branch holds one commit, so GitHub fills
+      # the pull request in from its message: the proposal is already written for you.
+      - name: Push the weights and link the pull request
+        if: steps.found.outputs.applied == 'true'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          BASE: ${{ github.ref_name }}
+          OPPONENT: ${{ inputs.opponent }}
+          SEEDS: ${{ inputs.seeds }}
+          ITERATIONS: ${{ inputs.iterations }}
+          POPULATION: ${{ inputs.population }}
+          SEED: ${{ inputs.seed }}
+          HOLDOUT_FOUND: ${{ steps.holdout.outputs.found }}
+          HOLDOUT_BASELINE: ${{ steps.holdout.outputs.baseline }}
+        run: |
+          hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add "$FOUND"
+
+          # Written to a file: a -m here would carry this file's YAML indentation into the message. The body is
+          # markdown because GitHub offers it as the pull request description.
+          {
+            echo "Add the weights of search run $RUN_NUMBER"
+            echo
+            echo "One weight search from [workflow run $RUN_NUMBER]($SERVER/$REPOSITORY/actions/runs/$RUN_ID),"
+            echo "against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`."
+            echo "Content hash \`$hash\`."
+            echo
+            echo '```'
+            cat "$OUT/search.log"
+            echo '```'
+            echo
+            echo "**On seeds no candidate saw**, which is the one comparison the run above cannot make:"
+            echo "these weights score \`$HOLDOUT_FOUND\` against \`$OPPONENT\` where the baseline scores"
+            echo "\`$HOLDOUT_BASELINE\`."
+            echo
+            echo "This adds \`$FOUND\`. It does **not** move the baseline: \`ScoringWeights.Default\` and"
+            echo "\`learning/weights/greedy.json\` are untouched, so every benchmark and every journal entry stays"
+            echo "comparable. Play it with \`evaluate --p1 heuristic:$FOUND\`."
+            echo
+            echo "Before merging:"
+            echo
+            echo "- **A journal entry.** This carries numbers, not a reason (ADR 0013). The output above is what"
+            echo "  an entry needs."
+            echo "- **The hold-out above is one comparison, not a verdict.** It replays both agents on fresh"
+            echo "  seeds, which is what the search's own interval cannot do -- those weights were picked for"
+            echo "  scoring best out of $ITERATIONS rounds of $POPULATION on one fixed seed file. A gap inside"
+            echo "  the noise of 400 matches is not a gap."
+            echo
+            echo "The search is deterministic: the same seed on the same content and the same engine returns the"
+            echo "same weights, so this reproduces locally with \`search-weights --seed $SEED --iterations"
+            echo "$ITERATIONS --population $POPULATION --opponent $OPPONENT --seeds $SEEDS\`."
+          } > "$RUNNER_TEMP/message.txt"
+          git commit -F "$RUNNER_TEMP/message.txt"
+          git push origin "$BRANCH"
+
+          {
+            echo
+            echo "### The weights are on \`$BRANCH\`"
+            echo
+            echo "**[Open it as a pull request]($SERVER/$REPOSITORY/compare/$BASE...$BRANCH?expand=1)** — one tap,"
+            echo "and the description is already filled in from the commit."
+            echo
+            echo "It is not opened here on purpose: a pull request opened by a workflow does not start the"
+            echo "repository's own checks, so it would arrive with no CI and no SonarCloud quality gate."
+            echo "Opened by a person, it gets both."
+            echo
+            echo "The build, the tests and the format check all passed on this branch before it was pushed."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the search
         if: always()
@@ -144,5 +314,7 @@ jobs:
             runs/search-${{ github.run_number }}/search.json
             runs/search-${{ github.run_number }}/evaluation.json
             runs/search-${{ github.run_number }}/training.jsonl
+            runs/search-${{ github.run_number }}/holdout-found.json
+            runs/search-${{ github.run_number }}/holdout-baseline.json
           if-no-files-found: warn
           retention-days: 30
