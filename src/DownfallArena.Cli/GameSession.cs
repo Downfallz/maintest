@@ -66,6 +66,7 @@ internal sealed class GameSession
         if (cliOptions.Command is "evaluate" or "benchmark")
         {
             serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<CombatStatsRecorder>());
+            serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<UpkeepStatsRecorder>());
         }
     }
 

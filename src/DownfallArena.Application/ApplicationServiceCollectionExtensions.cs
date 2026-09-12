@@ -48,6 +48,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddSingleton<IAgentFactory, AgentFactory>();
         services.TryAddTransient<BatchRunner>();
         services.TryAddSingleton<CombatStatsRecorder>();
+        services.TryAddSingleton<UpkeepStatsRecorder>();
         services.TryAddTransient<EvaluationRunner>();
 
         return services;

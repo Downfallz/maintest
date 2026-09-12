@@ -11,13 +11,20 @@ public sealed class Condition
 {
     private bool _fresh = true;
 
-    internal Condition(LastingEffect effect)
+    internal Condition(LastingEffect effect, ConditionSource? source)
     {
         Effect = effect;
+        Source = source;
         RemainingRounds = effect.Duration.Rounds;
     }
 
     public LastingEffect Effect { get; }
+
+    /// <summary>
+    /// The cast this condition came from, so what it does at upkeep is counted against that spell and that
+    /// side (ADR 0027). Null when something other than a cast applied it, which nothing does today.
+    /// </summary>
+    public ConditionSource? Source { get; private set; }
 
     /// <summary>
     /// Countdowns left before the condition expires, not counting the first one after application;
@@ -30,11 +37,16 @@ public sealed class Condition
 
     public bool IsExpired => RemainingRounds == 0;
 
-    public ConditionSnapshot Snapshot() => new(Effect, RemainingRounds);
+    public ConditionSnapshot Snapshot() => new(Effect, RemainingRounds, Source);
 
-    internal void Refresh()
+    /// <summary>
+    /// Restarts the duration, and hands the condition to the spell that did it: refreshing is what decides
+    /// how long the condition still runs, so what happens from here is that cast's doing (ADR 0027).
+    /// </summary>
+    internal void Refresh(ConditionSource? source)
     {
         RemainingRounds = Effect.Duration.Rounds;
+        Source = source;
         _fresh = true;
     }
 

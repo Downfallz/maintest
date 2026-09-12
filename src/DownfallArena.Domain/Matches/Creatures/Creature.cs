@@ -171,10 +171,10 @@ public sealed class Creature : Entity<CreatureId>
     /// Attaches a lasting effect per its stacking policy. Returns the resulting condition, or <c>null</c> when the
     /// application was ignored or the creature is dead.
     /// </summary>
-    internal Condition? Apply(LastingEffect effect)
+    internal Condition? Apply(LastingEffect effect, ConditionSource? source = null)
     {
         ArgumentNullException.ThrowIfNull(effect);
-        return IsDead ? null : _conditions.Apply(effect);
+        return IsDead ? null : _conditions.Apply(effect, source);
     }
 
     /// <summary>

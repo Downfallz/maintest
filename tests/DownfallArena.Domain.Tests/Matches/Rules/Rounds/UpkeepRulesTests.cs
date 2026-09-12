@@ -1,4 +1,5 @@
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rules.Rounds;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
@@ -209,5 +210,100 @@ public sealed class UpkeepRulesTests
         Should.Throw<ArgumentNullException>(() => UpkeepRules.EnergyGain(Arena.FourCreatures(), null!));
         Should.Throw<ArgumentNullException>(() => UpkeepRules.OngoingEffects(null!));
         Should.Throw<ArgumentNullException>(() => UpkeepRules.Cleanup(null!));
+    }
+
+    /// <summary>ADR 0027: a tick says which cast it came from, so a bleed's damage has an owner.</summary>
+    [Fact]
+    public void A_tick_names_the_cast_behind_it()
+    {
+        var creatures = Arena.FourCreatures();
+        var knight = Arena.Find(creatures, Arena.Knight);
+        knight.Apply(Bleed.Of(2, rounds: 2), new ConditionSource(Arena.Wraith, Arena.Guard));
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        // Asserted field by field: a record does not compare its list member by content.
+        var tick = ticks.BleedTicks.ShouldHaveSingleItem();
+        tick.Creature.ShouldBe(Arena.Knight);
+        tick.Damage.ShouldBe(2);
+        tick.Shares.ShouldHaveSingleItem().ShouldBe(new ConditionShare(new ConditionSource(Arena.Wraith, Arena.Guard), 2));
+    }
+
+    /// <summary>
+    /// A tick the board cuts short is split so the shares add up to what happened, never to what was asked
+    /// (ADR 0027): three points of bleed on a creature with one point of health is one point, owned.
+    /// </summary>
+    [Fact]
+    public void A_tick_cut_short_is_split_down_to_what_the_board_took()
+    {
+        var creatures = Arena.FourCreatures();
+        var ghoul = Arena.Find(creatures, Arena.Ghoul);
+        ghoul.Apply(Bleed.Of(1, rounds: 2), new ConditionSource(Arena.Knight, Arena.Guard));
+        ghoul.Apply(Bleed.Of(2, rounds: 2, StackingPolicy.Stack), new ConditionSource(Arena.Archer, Arena.Strike));
+        ghoul.TakeDamage(ghoul.Health.Value - 1);
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        var tick = ticks.BleedTicks.ShouldHaveSingleItem();
+        tick.Damage.ShouldBe(1);
+        tick.Shares.Sum(share => share.Amount).ShouldBe(1);
+        tick.Shares.ShouldHaveSingleItem().Source.Spell.ShouldBe(Arena.Strike);
+    }
+
+    /// <summary>A condition nothing cast ticks as it always did, and names nobody.</summary>
+    [Fact]
+    public void A_condition_with_no_cast_behind_it_attributes_nothing()
+    {
+        var creatures = Arena.FourCreatures();
+        Arena.Find(creatures, Arena.Knight).Apply(Bleed.Of(2, rounds: 2));
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        ticks.BleedTicks.ShouldHaveSingleItem().Damage.ShouldBe(2);
+        ticks.BleedTicks.ShouldHaveSingleItem().Shares.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Two conditions from the same cast are one claim, not two. Apportioning them separately and then
+    /// handing the leftover point to a source rather than to a condition paid it to both, so the shares
+    /// came to more than the creature lost -- the one thing they are supposed to guarantee.
+    /// </summary>
+    [Fact]
+    public void Two_stacked_conditions_from_one_cast_never_claim_more_than_the_board_took()
+    {
+        var creatures = Arena.FourCreatures();
+        var ghoul = Arena.Find(creatures, Arena.Ghoul);
+        var source = new ConditionSource(Arena.Knight, Arena.Guard);
+        ghoul.Apply(Bleed.Of(1, rounds: 2), source);
+        ghoul.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Stack), source);
+        ghoul.TakeDamage(ghoul.Health.Value - 1);
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        var tick = ticks.BleedTicks.ShouldHaveSingleItem();
+        tick.Damage.ShouldBe(1);
+        tick.Shares.Sum(share => share.Amount).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A condition with no cast behind it still takes its share of a tick the board cut short, and that share
+    /// goes to nobody. Reading the proportion against the sourced part alone would hand the spells damage the
+    /// unowned condition did. Nothing applies an unowned condition today; the arithmetic holds anyway.
+    /// </summary>
+    [Fact]
+    public void An_unowned_condition_takes_its_share_of_a_short_tick_and_credits_no_spell()
+    {
+        var creatures = Arena.FourCreatures();
+        var ghoul = Arena.Find(creatures, Arena.Ghoul);
+        ghoul.Apply(Bleed.Of(1, rounds: 2), new ConditionSource(Arena.Knight, Arena.Guard));
+        ghoul.Apply(Bleed.Of(3, rounds: 2, StackingPolicy.Stack));
+        ghoul.TakeDamage(ghoul.Health.Value - 1);
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        // One point taken of the four asked; the owned condition asked for one of those four, so it earns none.
+        var tick = ticks.BleedTicks.ShouldHaveSingleItem();
+        tick.Damage.ShouldBe(1);
+        tick.Shares.ShouldBeEmpty();
     }
 }

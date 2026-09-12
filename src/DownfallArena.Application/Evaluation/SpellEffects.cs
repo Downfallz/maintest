@@ -10,9 +10,11 @@ namespace DownfallArena.Application.Evaluation;
 /// </para>
 /// <para>
 /// Every total is what the board took rather than what the rules computed, so a hit that overkills counts the
-/// health it actually removed. <see cref="Damage"/> is the damage a cast dealt on the spot. A bleed's damage lands later, at upkeep, and a
-/// condition does not remember the spell that applied it, so it is counted here as an application rather than
-/// as damage.
+/// health it actually removed. <see cref="Damage"/> is the damage a cast dealt on the spot;
+/// <see cref="ConditionDamage"/> is what its bleeds went on to take at upkeep, rounds later, which a condition
+/// now remembers its cast well enough to be counted for (ADR 0027). The two are kept apart because they are
+/// different questions -- how hard a cast hits, and what it is worth in total -- and adding them is the
+/// caller's to do.
 /// </para>
 /// </summary>
 public sealed record SpellEffects(
@@ -27,9 +29,15 @@ public sealed record SpellEffects(
     int Regens,
     int EnergyRegenerations,
     int DefenseBuffs,
-    int InitiativeDebuffs)
+    int InitiativeDebuffs,
+    int ConditionDamage = 0,
+    int ConditionHealing = 0,
+    int ConditionEnergy = 0)
 {
     public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    /// <summary>Everything a spell's casts took off an enemy, on the spot and at upkeep (ADR 0027).</summary>
+    public int TotalDamage => Damage + ConditionDamage;
 
     /// <summary>Declarations that reached resolution, whether they landed or fizzled.</summary>
     public int Casts => Resolved + Fizzled;
@@ -52,6 +60,9 @@ public sealed record SpellEffects(
             Regens + other.Regens,
             EnergyRegenerations + other.EnergyRegenerations,
             DefenseBuffs + other.DefenseBuffs,
-            InitiativeDebuffs + other.InitiativeDebuffs);
+            InitiativeDebuffs + other.InitiativeDebuffs,
+            ConditionDamage + other.ConditionDamage,
+            ConditionHealing + other.ConditionHealing,
+            ConditionEnergy + other.ConditionEnergy);
     }
 }

@@ -98,7 +98,10 @@
       "intentsPerSide": 1.0,
       "resolveRate": 0.875,
       "damagePerCast": 1.0,
-      "castShareWhenWon": 0.7143
+      "castShareWhenWon": 0.7143,
+      "conditionDamage": 0,
+      "conditionHealing": 0,
+      "conditionEnergy": 0
     },
     {
       "spell": "spell:slam:v1",
@@ -124,7 +127,10 @@
       "intentsPerSide": 1.0,
       "resolveRate": 0.7143,
       "damagePerCast": 3.6,
-      "castShareWhenWon": 0.6
+      "castShareWhenWon": 0.6,
+      "conditionDamage": 0,
+      "conditionHealing": 0,
+      "conditionEnergy": 0
     },
     {
       "spell": "spell:guard:v1",
@@ -150,7 +156,10 @@
       "intentsPerSide": 1.1818,
       "resolveRate": 0.9231,
       "damagePerCast": 0.0,
-      "castShareWhenWon": 0.5833
+      "castShareWhenWon": 0.5833,
+      "conditionDamage": 0,
+      "conditionHealing": 0,
+      "conditionEnergy": 0
     },
     {
       "spell": "spell:strike:v1",
@@ -176,7 +185,10 @@
       "intentsPerSide": 1.5833,
       "resolveRate": 0.9474,
       "damagePerCast": 3.1667,
-      "castShareWhenWon": 0.5
+      "castShareWhenWon": 0.5,
+      "conditionDamage": 0,
+      "conditionHealing": 0,
+      "conditionEnergy": 0
     }
   ],
   "pairs": [

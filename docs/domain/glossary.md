@@ -35,6 +35,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Regeneration | A lasting Effect that heals its Creature at the start of each of its Rounds, the healing counterpart of Bleed (ADR 0019). Regenerations heal before Bleeds deal their damage. | decided |
 | Energy regeneration | A lasting Effect that gives its Creature Energy at the start of each of its Rounds, the energy counterpart of Regeneration (ADR 0020). Energy has no maximum, so it is never wasted. | decided |
 | Condition | A lasting Effect attached to a Creature (stun, bleed, regeneration, energy regeneration, defense buff) with a Duration and a Stacking policy. Energy regenerations give Energy, Regenerations heal and then Bleeds deal damage at the start of the round; every Condition counts down at Cleanup, and the first countdown after an application does not count. | decided |
+| Condition source | The Creature and the Spell a Condition came from, carried by the Condition so what it does at Upkeep is counted against that cast; a Condition refreshed by a later cast takes that cast's source (ADR 0027). | decided |
 | Duration | How long a lasting Effect stays: a number of rounds, or permanent. | decided |
 | Stacking policy | What applying a lasting Effect does when the Creature already carries it: `Stack` (add another), `Refresh` (restart the duration), `Ignore`. | decided |
 | Data builder | The tool that consolidates the authored content under `data/` into one validated `game.schema.json` with a Content hash (ADR 0009). | decided |
@@ -63,7 +64,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |
 | Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
-| Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. | decided |
+| Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. It carries one share per Condition source, adding up to exactly what the Creature took. | decided |
 | Regeneration tick | The health a Creature regains from its regeneration Conditions at the start of a Round, applied before the Bleed ticks. | decided |
 | Energy regeneration tick | The Energy a Creature gains from its energy regeneration Conditions at the start of a Round, on top of the Round's own Energy gain. It is given before the Bleed ticks, so a Creature its Bleed kills that Round still gained it. | decided |
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
