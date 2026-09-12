@@ -65,7 +65,7 @@ internal static class EvaluationConsole
         }
 
         writer.WriteLine($"Spells by the outcome of the sides that declared them ({EnoughSides} sides or more; one half is no signal):");
-        writer.WriteLine($"{"Spell",-30} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"Heal",5} {"Energy",7} {"Stun",5} {"Bleed",6} {"Regen",6} {"EnRegen",7} {"Def",4} {"Init",5}");
+        writer.WriteLine($"{"Spell",-30} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"OverTime",9} {"Heal",5} {"Energy",7} {"Stun",5} {"Bleed",6} {"Regen",6} {"EnRegen",7} {"Def",4} {"Init",5}");
         foreach (var outcome in ranked)
         {
             writer.WriteLine(string.Join(
@@ -77,6 +77,7 @@ internal static class EvaluationConsole
                 Percent(outcome.ResolveRate).PadLeft(8),
                 Percent(outcome.CastShareWhenWon).PadLeft(9),
                 outcome.Damage.ToString(CultureInfo.InvariantCulture).PadLeft(7),
+                outcome.ConditionDamage.ToString(CultureInfo.InvariantCulture).PadLeft(9),
                 outcome.Healing.ToString(CultureInfo.InvariantCulture).PadLeft(5),
                 outcome.Energy.ToString(CultureInfo.InvariantCulture).PadLeft(7),
                 outcome.Stuns.ToString(CultureInfo.InvariantCulture).PadLeft(5),
@@ -89,7 +90,7 @@ internal static class EvaluationConsole
 
         var landed = evaluation.SpellOutcomes.Sum(outcome => outcome.Resolved);
         var landedByWinners = evaluation.SpellOutcomes.Sum(outcome => outcome.ResolvedWhenWon);
-        writer.WriteLine("Cast is what landed; Resolve the share of declarations that landed rather than fizzling, which is what a cost change moves. Bleed, Regen and EnRegen count applications: what they go on to do lands at upkeep, where no spell owns it. Def and Init are the two stat conditions, kept apart because they move different stats.");
+        writer.WriteLine("Cast is what landed; Resolve the share of declarations that landed rather than fizzling, which is what a cost change moves. Damage is what a cast took on the spot and OverTime what its bleeds went on to take at upkeep, counted against the spell because a condition remembers its cast (ADR 0027) -- a spell whose hits are absorbed and whose bleed is not can read zero Damage and a large OverTime. Bleed, Regen and EnRegen count applications, not what they did. Def and Init are the two stat conditions, kept apart because they move different stats.");
         if (landed > 0)
         {
             // Winners survive longer and so act more: every spell's winner share sits above one half, and the

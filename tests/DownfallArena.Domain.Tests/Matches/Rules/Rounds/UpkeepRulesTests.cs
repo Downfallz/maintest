@@ -262,4 +262,26 @@ public sealed class UpkeepRulesTests
         ticks.BleedTicks.ShouldHaveSingleItem().Damage.ShouldBe(2);
         ticks.BleedTicks.ShouldHaveSingleItem().Shares.ShouldBeEmpty();
     }
+
+    /// <summary>
+    /// Two conditions from the same cast are one claim, not two. Apportioning them separately and then
+    /// handing the leftover point to a source rather than to a condition paid it to both, so the shares
+    /// came to more than the creature lost -- the one thing they are supposed to guarantee.
+    /// </summary>
+    [Fact]
+    public void Two_stacked_conditions_from_one_cast_never_claim_more_than_the_board_took()
+    {
+        var creatures = Arena.FourCreatures();
+        var ghoul = Arena.Find(creatures, Arena.Ghoul);
+        var source = new ConditionSource(Arena.Knight, Arena.Guard);
+        ghoul.Apply(Bleed.Of(1, rounds: 2), source);
+        ghoul.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Stack), source);
+        ghoul.TakeDamage(ghoul.Health.Value - 1);
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        var tick = ticks.BleedTicks.ShouldHaveSingleItem();
+        tick.Damage.ShouldBe(1);
+        tick.Shares.Sum(share => share.Amount).ShouldBe(1);
+    }
 }

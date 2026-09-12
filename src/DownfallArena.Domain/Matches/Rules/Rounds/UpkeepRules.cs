@@ -74,15 +74,19 @@ public static class UpkeepRules
 
     /// <summary>
     /// What one creature's conditions of a kind ask for this round: the total the rules apply, and what each
-    /// spell behind it asked for (ADR 0027). The total is summed exactly as it was before the shares existed,
-    /// so nothing about the health arithmetic depends on this reading.
+    /// cast behind it asked for (ADR 0027), one entry per cast however many conditions it put there. The total
+    /// is summed exactly as it was before the shares existed, so nothing about the health arithmetic depends
+    /// on this reading.
     /// </summary>
     private static (int Total, IReadOnlyList<ConditionShare> Wanted) Asked<TEffect>(
         Creature creature,
         Func<TEffect, int> amount)
         where TEffect : LastingEffect
     {
-        var wanted = new List<ConditionShare>();
+        // Summed per source, not per condition: two conditions from one cast are one claim, and
+        // apportioning them separately lets the same cast be paid the leftover point twice.
+        var wanted = new Dictionary<ConditionSource, int>();
+        var order = new List<ConditionSource>();
         var total = 0;
         foreach (var condition in creature.Conditions)
         {
@@ -93,13 +97,21 @@ public static class UpkeepRules
 
             var asked = amount(effect);
             total += asked;
-            if (condition.Source is not null && asked > 0)
+            if (condition.Source is null || asked <= 0)
             {
-                wanted.Add(new ConditionShare(condition.Source, asked));
+                continue;
             }
+
+            if (!wanted.TryAdd(condition.Source, asked))
+            {
+                wanted[condition.Source] += asked;
+                continue;
+            }
+
+            order.Add(condition.Source);
         }
 
-        return (total, wanted);
+        return (total, [.. order.Select(source => new ConditionShare(source, wanted[source]))]);
     }
 
     /// <summary>
