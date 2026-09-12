@@ -242,14 +242,18 @@
     "spell:protective_slam": {
       "name": "Protective Slam",
       "class": "Mercenary",
-      "intent": "The Mercenary's opener, and today only half of itself: the point of defense it gave its caster has no counterpart in the taxonomy. Until it does, it is a plain hit with a third of a critical and it should not be tuned into a good attack.",
+      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense, which the taxonomy cannot express: a spell has one target origin, so hitting an enemy and protecting an ally are two spells. Protection is expressed as tempo instead -- a slammed enemy acts later -- which is the one protective thing that can be said to an enemy. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stagger, so this is what a Brawler stacking Guard and Full Plate is answered with.",
       "keep": [
+        "Protection through tempo, never armour: it always carries an initiative debuff",
         "Reads as a trade, not a nuke",
-        "Waiting on a caster-side effect: keep the numbers modest"
+        "The stagger is the point; the damage only has to be worth the activation"
       ],
+      "note": "Most of its value is damage on purpose. The initiative weight is 0.5 on reasoning alone (ADR 0018) and `search-weights` has never tuned it, so a version built mainly on the debuff would rest on an unmeasured number: at Damage 4 and a debuff of 2 over two rounds, 27% of the cast value rides on that weight instead of 43%. The bounds still reach the other shape if a pass finds it better.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
