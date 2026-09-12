@@ -21,16 +21,30 @@ from downfall_learning.export import DEFAULT_WEIGHTS, WEIGHT_NAMES, write_weight
 from downfall_learning.report import TrainingLog, TrainingRow
 from downfall_learning.stamps import RunStamp
 
-ENGINE_COMMAND = (
-    "dotnet",
-    "run",
-    "--project",
-    "src/DownfallArena.Cli",
-    "--no-build",
-    "--configuration",
-    "Release",
-    "--",
-)
+#: Where `dotnet build --configuration Release` puts the CLI, given the `ArtifactsPath` in
+#: `Directory.Build.props`. Relative to the repository root, the way every other path here is.
+ENGINE_ASSEMBLY = "artifacts/bin/DownfallArena.Cli/release/DownfallArena.Cli.dll"
+
+#: The engine, run as the assembly the build produced rather than through `dotnet run --no-build`. The
+#: wrapper re-reads the project on every launch, which costs about nine tenths of a second, and a search
+#: launches it once per evaluation: on a tuning pass of four evaluations a candidate that is a couple of
+#: seconds in five. `--engine` overrides it, and `missing_engine` says what to do when it is not built.
+ENGINE_COMMAND = ("dotnet", ENGINE_ASSEMBLY)
+
+
+def missing_engine(command: Sequence[str], root: Path) -> str | None:
+    """Why this command cannot reach the engine, or ``None`` when it can.
+
+    Only a command that names a `.dll` is checked, and only for the file being there: anything else is a
+    prefix someone passed with `--engine` on purpose, and guessing at it would refuse commands that work.
+    """
+    for argument in command:
+        if argument.endswith(".dll") and not (root / argument).is_file():
+            return (
+                f"'{argument}' is not there, so the engine cannot be reached. Build it with "
+                f"'dotnet build --configuration Release', or pass --engine for another command."
+            )
+    return None
 
 
 class EvaluationError(RuntimeError):

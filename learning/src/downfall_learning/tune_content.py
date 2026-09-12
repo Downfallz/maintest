@@ -43,16 +43,10 @@ from downfall_learning.knobs import (
 )
 from downfall_learning.search_weights import EngineCommand, EvaluationError
 
-DATA_BUILDER_COMMAND = (
-    "dotnet",
-    "run",
-    "--project",
-    "tools/DownfallArena.DataBuilder",
-    "--no-build",
-    "--configuration",
-    "Release",
-    "--",
-)
+#: The data builder, as the assembly the build produced rather than through `dotnet run --no-build`, for the
+#: reason `ENGINE_COMMAND` gives: a tuning pass launches it once per candidate.
+DATA_BUILDER_ASSEMBLY = "artifacts/bin/DownfallArena.DataBuilder/release/DownfallArena.DataBuilder.dll"
+DATA_BUILDER_COMMAND = ("dotnet", DATA_BUILDER_ASSEMBLY)
 
 #: How many times a proposal is redrawn before the search gives up on finding a legal neighbour.
 ATTEMPTS = 40
@@ -191,6 +185,9 @@ class TuneResult:
     candidates: tuple[Candidate, ...]
     spells: Mapping[str, dict]
     files: Mapping[str, Path]
+    #: Catalogues actually handed to the engine. Lower than the candidate count by the replays the search
+    #: proposed and `MemoizingEvaluator` served from what it had already played.
+    played: int = 0
 
     @property
     def improved(self) -> bool:
@@ -581,6 +578,39 @@ def _values(moves: Sequence[Move]) -> dict[str, float]:
     return {move.knob.key: move.after for move in moves}
 
 
+class MemoizingEvaluator:
+    """A `ContentEvaluator` that plays a catalogue it has already played only once.
+
+    The search proposes the same catalogue more than once -- a neighbour of one round is a neighbour of the
+    next, and a paired move can land where a single one already did. On a 149-candidate pass 30 of them were
+    replays, one of them five times over. The engine is deterministic, so the same catalogue gives the same
+    metrics and replaying it buys nothing but half a minute.
+
+    Keyed on the catalogue rather than on the moves that produced it: two different move sets can clamp to
+    the same numbers, and it is the numbers the engine reads.
+    """
+
+    def __init__(self, inner: ContentEvaluator) -> None:
+        self._inner = inner
+        self._seen: dict[str, dict[str, dict[str, float]]] = {}
+        self.hits = 0
+
+    @property
+    def plays(self) -> int:
+        """Catalogues actually handed to the engine."""
+        return len(self._seen)
+
+    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        key = json.dumps(spells, sort_keys=True)
+        cached = self._seen.get(key)
+        if cached is not None:
+            self.hits += 1
+            return cached
+        measured = self._inner.evaluate(spells)
+        self._seen[key] = measured
+        return measured
+
+
 def tune_content(
     evaluator: ContentEvaluator,
     knobs: Knobs,
@@ -595,6 +625,8 @@ def tune_content(
     options = options or TuneOptions()
     if options.iterations < 1 or options.neighbours < 1:
         raise ValueError("The search needs at least one iteration and one neighbour per iteration.")
+    # Wrapped here rather than by the caller, so every search gets it and none of them has to remember.
+    evaluator = MemoizingEvaluator(evaluator)
     rng = np.random.default_rng(options.seed)
     objective = knobs.objective
     search = Search(knobs=knobs, content=content, options=options)
@@ -632,6 +664,7 @@ def tune_content(
         candidates=tuple(history),
         spells=apply_moves(content.spells, best.moves),
         files=content.files,
+        played=evaluator.plays,
     )
 
 
@@ -852,6 +885,25 @@ MEANINGS: Mapping[str, str] = {
 }
 
 
+def _played_line(result: TuneResult) -> str:
+    """How many versions the search tried, and how many of them the engine actually had to play.
+
+    The first sentence counts candidates, which is what every report and journal entry before this one
+    counted, so the number stays comparable. `played` counts catalogues handed to the engine and includes
+    the content as authored, which is not a candidate -- hence the `+ 1` rather than a bare comparison.
+    """
+    tried = len(result.candidates)
+    handed = tried + 1
+    if not result.played or result.played >= handed:
+        return f"The search played {tried} version(s) of the content and kept the best one."
+    return (
+        f"The search played {tried} version(s) of the content and kept the best one. "
+        f"The engine only had to play {result.played} of the {handed} it was handed: the other "
+        f"{handed - result.played} were catalogues it had already played, served from what they measured "
+        f"the first time."
+    )
+
+
 def format_result(result: TuneResult, objective: Objective) -> str:
     """The proposal as a reader who does not know this loop can act on it.
 
@@ -861,7 +913,7 @@ def format_result(result: TuneResult, objective: Objective) -> str:
     """
     gained = result.initial.score - result.best.score
     lines = [
-        f"The search played {len(result.candidates)} version(s) of the content and kept the best one.",
+        _played_line(result),
         "",
         "What it changed",
     ]

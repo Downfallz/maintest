@@ -17,6 +17,7 @@ from downfall_learning.search_weights import (
     SearchOptions,
     SearchResult,
     format_search,
+    missing_engine,
     reads_as_a_tie,
     search_weights,
     win_rate_lines,
@@ -185,3 +186,26 @@ def test_the_search_report_still_prints_the_numbers_it_measured() -> None:
 
     assert "score 0.5891 -> 0.6123" in text
     assert "win rate 0.5412" in text
+
+
+def test_an_engine_that_is_not_built_says_how_to_build_it(tmp_path: Path) -> None:
+    """The default runs the assembly the build produced, so an unbuilt tree has to say so itself."""
+    reason = missing_engine(("dotnet", "artifacts/bin/Cli/release/Cli.dll"), tmp_path)
+
+    assert reason is not None
+    assert "dotnet build --configuration Release" in reason
+    assert "Cli.dll" in reason
+
+
+def test_an_engine_that_is_built_is_accepted(tmp_path: Path) -> None:
+    assembly = tmp_path / "artifacts" / "bin"
+    assembly.mkdir(parents=True)
+    (assembly / "Cli.dll").write_text("", encoding="utf-8")
+
+    assert missing_engine(("dotnet", "artifacts/bin/Cli.dll"), tmp_path) is None
+
+
+def test_a_command_that_names_no_assembly_is_left_alone(tmp_path: Path) -> None:
+    """A prefix someone passed with --engine on purpose: guessing at it would refuse commands that work."""
+    assert missing_engine(("dotnet", "run", "--project", "src/DownfallArena.Cli", "--"), tmp_path) is None
+    assert missing_engine(("python", "fake_engine.py"), tmp_path) is None

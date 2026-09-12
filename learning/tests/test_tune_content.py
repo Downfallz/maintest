@@ -19,6 +19,7 @@ from downfall_learning.tune_content import (
     Candidate,
     ContentEngine,
     EngineContentEvaluator,
+    MemoizingEvaluator,
     Move,
     Search,
     TuneOptions,
@@ -112,6 +113,49 @@ class FakeEvaluator:
         self.calls += 1
         damage = sum(spell["effects"][0]["amount"] for spell in spells.values())
         return {"mirror": {"averageRounds": 40.0 - 2.0 * damage}}
+
+
+def test_a_catalogue_already_played_is_not_played_again(tmp_path: Path) -> None:
+    """The engine is deterministic, so replaying a catalogue costs half a minute and buys nothing."""
+    content = catalogue(tmp_path)
+    inner = FakeEvaluator()
+    evaluator = MemoizingEvaluator(inner)
+
+    first = evaluator.evaluate(content.spells)
+    again = evaluator.evaluate(content.spells)
+
+    assert again == first
+    assert inner.calls == 1
+    assert evaluator.hits == 1
+    assert evaluator.plays == 1
+
+
+def test_two_move_sets_landing_on_the_same_numbers_are_one_play(tmp_path: Path) -> None:
+    """Keyed on the catalogue, not on the moves: clamping can take two different moves to one result."""
+    content = catalogue(tmp_path)
+    inner = FakeEvaluator()
+    evaluator = MemoizingEvaluator(inner)
+    raised = apply_moves(content.spells, [move(content, "spell:attack", DAMAGE, 4)])
+    same = apply_moves(content.spells, [move(content, "spell:attack", DAMAGE, 4)])
+
+    evaluator.evaluate(raised)
+    evaluator.evaluate(same)
+
+    assert inner.calls == 1
+    assert evaluator.hits == 1
+
+
+def test_a_different_catalogue_is_played(tmp_path: Path) -> None:
+    content = catalogue(tmp_path)
+    inner = FakeEvaluator()
+    evaluator = MemoizingEvaluator(inner)
+
+    evaluator.evaluate(content.spells)
+    evaluator.evaluate(apply_moves(content.spells, [move(content, "spell:attack", DAMAGE, 4)]))
+
+    assert inner.calls == 2
+    assert evaluator.hits == 0
+    assert evaluator.plays == 2
 
 
 def test_a_move_changes_the_candidate_and_leaves_the_content_alone(tmp_path: Path) -> None:
@@ -213,13 +257,20 @@ def test_a_search_that_finds_nothing_says_so_rather_than_proposing_noise(tmp_pat
 
 
 def test_every_candidate_the_search_played_is_kept(tmp_path: Path) -> None:
+    """The engine's calls are all accounted for, and the candidate list is never shorter than them.
+
+    It used to read `len(candidates) + 1 == calls`, one call per candidate. Since the search serves a
+    catalogue it has already played from what it measured the first time, a proposal and a call are no
+    longer the same event: `played` is the calls, and the proposals are at least that many.
+    """
     knobs = load(tmp_path)
     evaluator = FakeEvaluator()
 
     options = TuneOptions(iterations=4, neighbours=2, seed=2)
     result = tune_content(evaluator, knobs, catalogue(tmp_path), options)
 
-    assert len(result.candidates) + 1 == evaluator.calls
+    assert result.played == evaluator.calls
+    assert len(result.candidates) + 1 >= result.played
 
 
 def test_the_proposal_is_written_as_the_content_tree_it_came_from(tmp_path: Path) -> None:
@@ -1035,7 +1086,9 @@ def test_a_pair_that_moves_nothing_at_all_is_not_stepped_further(tmp_path: Path)
             return {"mirror": {"averageRounds": 40.0}}
 
     deaf = Deaf()
-    tune_content(deaf, knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0))
+    result = tune_content(deaf, knobs, content, TuneOptions(iterations=1, neighbours=1, seed=0))
 
-    # One baseline, the legal single steps, one opening pair, one climbing neighbour -- and nothing deeper.
-    assert deaf.calls == 1 + len(playable(knobs, content)) * 2 - 1 + 1 + 1
+    # The legal single steps, one opening pair, one climbing neighbour -- and nothing deeper. Counted as
+    # proposals rather than as engine calls: stepping further is a proposal, and on content this deaf the
+    # pair lands back on the catalogue the search started from, which is served without playing it again.
+    assert len(result.candidates) == len(playable(knobs, content)) * 2 - 1 + 1 + 1

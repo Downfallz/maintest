@@ -26,6 +26,7 @@ from downfall_learning.search_weights import (
     EngineCommand,
     SearchOptions,
     format_search,
+    missing_engine,
     search_weights,
     win_rate_lines,
 )
@@ -241,7 +242,12 @@ def _search_weights(arguments: argparse.Namespace) -> int:
     options = SearchOptions(
         arguments.iterations, arguments.population, arguments.elite, arguments.sigma, arguments.seed
     )
-    evaluator = CliEvaluator(_engine(arguments), arguments.output / "work")
+    engine = _engine(arguments)
+    unreachable = missing_engine(engine.command, engine.root)
+    if unreachable:
+        print(unreachable, file=sys.stderr)
+        return 1
+    evaluator = CliEvaluator(engine, arguments.output / "work")
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
     result = search_weights(evaluator, options, initial, log)
     result.write(arguments.output)
@@ -343,6 +349,10 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     if arguments.engine:
         engine = replace(engine, command=tuple(arguments.engine))
     host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
+    unreachable = missing_engine(engine.command, engine.root) or missing_engine(host.builder, engine.root)
+    if unreachable:
+        print(unreachable, file=sys.stderr)
+        return 1
     evaluator = EngineContentEvaluator(host, knobs.objective, content)
     options = TuneOptions(
         iterations=arguments.iterations,
