@@ -205,9 +205,16 @@ public static class ContentAudit
                 $"'{group[0].Name}' and {group.Count - 1} other spell(s) have the same cost, targeting and effects ({Names(group.Skip(1))}), so nothing in a match tells them apart."))
             .OrderBy(finding => finding.Subject, StringComparer.Ordinal);
 
-    /// <summary>Effects are compared as a set, since the same effects in another order are the same spell.</summary>
+    /// <summary>
+    /// Effects are compared as a set, since the same effects in another order are the same spell. What a cast
+    /// does to its own caster is part of the comparison and kept apart from what it does to its targets
+    /// (ADR 0031): two spells alike on their targets and different on their caster are told apart in a match.
+    /// </summary>
     private static string Signature(Spell spell) =>
-        $"{spell.Stats.Cost.Value}|{spell.Stats.SpellInitiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{string.Join(";", spell.Effects.Select(effect => effect.ToString()).Order(StringComparer.Ordinal))}";
+        $"{spell.Stats.Cost.Value}|{spell.Stats.SpellInitiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{Set(spell.Effects)}|{Set(spell.CasterEffects)}";
+
+    private static string Set(IEnumerable<Effect> effects) =>
+        string.Join(";", effects.Select(effect => effect.ToString()).Order(StringComparer.Ordinal));
 
     /// <summary>A few names and then a count: a group of thirty would otherwise be a paragraph.</summary>
     private static string Names(IEnumerable<Spell> spells)
@@ -224,8 +231,16 @@ public static class ContentAudit
     /// </summary>
     private static bool Grants(IReadOnlySet<SpellId> spells, IGameResources resources) =>
         spells.Select(resources.GetSpell).Any(spell =>
-            spell.Targeting.Origin is not TargetOrigin.Enemy
-            && spell.Effects.Any(effect => effect is EnergyGain or EnergyRegeneration));
+            (spell.Targeting.Origin is not TargetOrigin.Enemy && Hands(spell.Effects))
+            || Hands(spell.CasterEffects));
+
+    /// <summary>
+    /// Whether these effects hand out energy. A caster effect is read whatever the spell's targeting origin
+    /// (ADR 0031): it lands on the caster, so an offensive spell that pays its own caster in energy breaks the
+    /// ceiling exactly as a friendly one does.
+    /// </summary>
+    private static bool Hands(IEnumerable<Effect> effects) =>
+        effects.Any(effect => effect is EnergyGain or EnergyRegeneration);
 
     private static SpellReach Row(Spell spell, RuleSet rules, int startingFor, int reachableBy) => new()
     {

@@ -67,8 +67,11 @@ public static class GameSchemaMapper
             ? Problem<TargetingSpec>(problems, $"{context}: 'targeting' is required.")
             : MapTargeting(dto.Targeting, context, problems);
         var effects = dto.Effects.Select(effect => MapEffect(effect, context, problems)).OfType<Effect>().ToList();
+        var authoredCasterEffects = dto.CasterEffects ?? [];
+        var casterEffects = authoredCasterEffects.Select(effect => MapEffect(effect, context, problems)).OfType<Effect>().ToList();
 
-        if (id is null || type is null || creatureClass is null || targeting is null || effects.Count != dto.Effects.Count)
+        if (id is null || type is null || creatureClass is null || targeting is null
+            || effects.Count != dto.Effects.Count || casterEffects.Count != authoredCasterEffects.Count)
         {
             return null;
         }
@@ -81,7 +84,8 @@ public static class GameSchemaMapper
                 creatureClass.Value,
                 new SpellStats(Initiative.Of(dto.Initiative), Energy.Of(dto.EnergyCost), CriticalChance.Of(dto.CriticalChance)),
                 targeting,
-                effects),
+                effects,
+                casterEffects),
             context,
             problems);
     }

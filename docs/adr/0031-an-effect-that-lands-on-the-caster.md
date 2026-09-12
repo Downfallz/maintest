@@ -2,7 +2,7 @@
 
 Date: 2026-09-12
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

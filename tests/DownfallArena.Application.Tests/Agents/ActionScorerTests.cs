@@ -4,6 +4,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -516,6 +517,53 @@ public sealed class ActionScorerTests
         Should.Throw<ArgumentNullException>(() => Scorer.Kills(Strike(One, Three), null!));
         Scorer.Weights.ShouldBe(ScoringWeights.Default);
     }
+
+    /// <summary>
+    /// ADR 0031 claims a caster effect needs no line of this scorer, because every term is signed by ownership
+    /// and an outcome names the creature it landed on. This is that claim, measured: the recoil counts against
+    /// the actor at the damage weight, in both the critical and the plain branch.
+    /// </summary>
+    [Fact]
+    public void A_caster_effect_scores_against_its_own_caster_with_no_rule_of_its_own()
+    {
+        var scorer = ScorerWith(CasterSpell(Recoil, Damage.Of(2)));
+        var board = Board(enemyHealth: 20, actorSpells: [Recoil]);
+
+        // Three to the enemy and two back, six and two on the critical branch: the crit reaches the target
+        // and stops there.
+        scorer.Expected(Action(One, Recoil, Three), board).ShouldBe((0.95 * (3 - 2)) + (0.05 * (6 - 2)), 1e-9);
+    }
+
+    [Fact]
+    public void A_caster_effect_that_would_kill_the_caster_costs_the_kill_weight()
+    {
+        var scorer = ScorerWith(CasterSpell(Recoil, Damage.Of(2)));
+        var board = Board(enemyHealth: 20, actorSpells: [Recoil]);
+        var dying = new List<CreatureSnapshot> { board[0] with { Health = Health.Of(2) }, board[1], board[2] };
+
+        // Two health left and two of recoil: the actor pays its own damage and its own kill, five a kill.
+        scorer.Expected(Action(One, Recoil, Three), dying).ShouldBe((0.95 * (3 - 7)) + (0.05 * (6 - 7)), 1e-9);
+    }
+
+    private static readonly SpellId Recoil = SpellId.Parse("spell:recoil:v1");
+
+    /// <summary>A single-target hit for 3 that also does something to whoever cast it.</summary>
+    private static Spell CasterSpell(SpellId id, params Effect[] casterEffects) =>
+        Spell.Create(
+            id,
+            "Recoil",
+            SpellType.Offensive,
+            CreatureClass.Creature,
+            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            TargetingSpec.SingleTarget(TargetOrigin.Enemy),
+            [Damage.Of(3)],
+            casterEffects);
+
+    private static ActionScorer ScorerWith(Spell extra) =>
+        new(
+            GameResources.Create("test", [.. TestContent.Resources.Creatures], [.. TestContent.Resources.Spells, extra], [.. TestContent.Resources.TalentTrees]),
+            MatchStore.TwoOnTwo(),
+            ScoringWeights.Default);
 
     private static CombatAction Strike(CreatureId actor, CreatureId target) => Action(actor, TestContent.Strike, target);
 
