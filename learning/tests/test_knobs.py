@@ -699,6 +699,76 @@ def test_a_spell_that_deals_no_damage_is_left_out_of_the_comparison() -> None:
     assert outclassed(content, knobs, WEIGHTS) == []
 
 
+def test_a_costlier_rival_is_read_over_the_rounds_it_takes_to_pay_for() -> None:
+    """Energy carries between rounds, so a spell at three energy comes up twice in three rounds. Read a cast
+    at a time, `enraged_charge` at 12.60 reported `protective_slam` as never a choice; read a round, it is
+    8.40 against the slam's 7.33 and there is nothing to report."""
+    content, knobs = boxed(
+        "spell:cheap",
+        2,
+        spell(id="spell:cheap:v1", energyCost=2, effects=[{"kind": "Damage", "amount": 4}]),
+        {"path": DAMAGE_POINTER, "minimum": 1, "maximum": 5, "step": 1},
+    )
+    content.spells["spell:dear"] = spell(
+        id="spell:dear:v1", energyCost=3, effects=[{"kind": "Damage", "amount": 7}]
+    )
+    content.tiers["spell:dear"] = 2
+
+    assert outclassed(content, knobs, WEIGHTS) == []
+
+
+def test_a_cheaper_rival_is_still_the_bar_when_it_wins_a_round_at_a_time() -> None:
+    """Dividing rather than skipping costlier rivals is what keeps the case this check was written for:
+    `pummel` at one energy really is outclassed by `lightning_bolt` at two, 5.15 a round against 6.47."""
+    content, knobs = boxed(
+        "spell:cheap",
+        1,
+        spell(id="spell:cheap:v1", energyCost=1, effects=[{"kind": "Damage", "amount": 2}]),
+        {"path": DAMAGE_POINTER, "minimum": 1, "maximum": 3, "step": 1},
+    )
+    content.spells["spell:dear"] = spell(
+        id="spell:dear:v1", energyCost=2, effects=[{"kind": "Damage", "amount": 6}]
+    )
+    content.tiers["spell:dear"] = 1
+
+    assert [report for report in outclassed(content, knobs, WEIGHTS) if "spell:cheap" in report]
+
+
+def test_a_defensive_spell_whose_box_sits_under_a_defensive_rival_is_reported() -> None:
+    """What this reading misses about a defensive spell -- the kill it denies, the threat it is priced
+    against -- it misses on both sides of a defensive pair, so the comparison holds there. Skipping them
+    outright left `momentum` and `summon_minions` invisible at 0 casts in 400 matches."""
+    content, knobs = boxed(
+        "spell:trickle",
+        1,
+        spell(id="spell:trickle:v1", criticalChance=0, effects=[{"kind": "EnergyGain", "amount": 1}]),
+        {"path": "/effects/0/amount", "minimum": 1, "maximum": 2, "step": 1},
+    )
+    content.spells["spell:ward"] = spell(
+        id="spell:ward:v1",
+        criticalChance=0,
+        effects=[{"kind": "DefenseBuff", "amount": 2, "durationRounds": 3}],
+    )
+    content.tiers["spell:ward"] = 1
+
+    assert [report for report in outclassed(content, knobs, WEIGHTS) if "spell:trickle" in report]
+
+
+def test_a_defensive_spell_is_not_measured_against_an_attack() -> None:
+    """A heal and an attack share no unit, so the miss does not cancel across that line: every healer in the
+    catalogue would be reported, and `wait` is *meant* to stay worse than acting."""
+    content, knobs = boxed(
+        "spell:trickle",
+        1,
+        spell(id="spell:trickle:v1", criticalChance=0, effects=[{"kind": "EnergyGain", "amount": 1}]),
+        {"path": "/effects/0/amount", "minimum": 1, "maximum": 2, "step": 1},
+    )
+    content.spells["spell:big"] = spell(id="spell:big:v1", effects=[{"kind": "Damage", "amount": 9}])
+    content.tiers["spell:big"] = 1
+
+    assert outclassed(content, knobs, WEIGHTS) == []
+
+
 def test_a_cast_is_priced_for_every_target_it_reaches() -> None:
     """`ActionScorer` sums a resolution over its targets, so a sweep is worth several of the same hit.
 
