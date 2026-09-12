@@ -33,3 +33,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0025](0025-the-balance-knobs-are-a-part-of-a-studio-change.md) | The balance knobs are a part of a studio change, like the alias map | Accepted |
 | [0026](0026-price-what-a-cast-costs-and-how-long-it-lasts.md) | Price the part of a cost the combat reading hides, and how long an effect lasts | Accepted |
 | [0027](0027-a-condition-remembers-the-spell-that-applied-it.md) | A condition remembers the spell that applied it | Accepted |
+| [0028](0028-name-the-defense-weight-and-move-its-price-one-step-up.md) | Name the defense weight, and move its price one step up | Accepted |
+| [0029](0029-read-variety-on-an-exploring-run.md) | Read variety on an exploring run, not on the greedy mirror | Accepted |

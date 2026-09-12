@@ -291,6 +291,17 @@ def _export_csv(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _repository_of(knobs: Path) -> Path:
+    """The repository the objective's agent paths are written against.
+
+    They are the engine's own paths, written from the repository root and not from wherever the CLI was
+    launched. The knobs file sits at ``<root>/data/balance/knobs.json``, so its own location is what says
+    where that root is -- both `check-knobs` and `tune-content` read it the same way, because a search that
+    starts before the check would reach the engine one candidate at a time instead of failing its preflight.
+    """
+    return knobs.resolve().parents[2]
+
+
 def _check_knobs(arguments: argparse.Namespace) -> int:
     try:
         knobs = load_knobs(arguments.knobs)
@@ -299,7 +310,7 @@ def _check_knobs(arguments: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 1
 
-    problems = validate(knobs, content)
+    problems = validate(knobs, content, root=_repository_of(arguments.knobs))
     for problem in problems:
         print(f"problem: {problem}", file=sys.stderr)
     reports = findings(content, knobs)
@@ -321,7 +332,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 1
 
-    problems = validate(knobs, content)
+    problems = validate(knobs, content, root=_repository_of(arguments.knobs))
     if problems:
         for problem in problems:
             print(f"problem: {problem}", file=sys.stderr)

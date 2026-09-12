@@ -321,11 +321,16 @@ def with_value(document: Mapping[str, object], pointer: str, value: float) -> di
     return copy
 
 
-def validate(knobs: Knobs, content: Content) -> list[str]:
+def validate(knobs: Knobs, content: Content, root: Path | None = None) -> list[str]:
     """Everything that makes the knobs file and the content disagree, worst first.
 
     An empty list means every enabled spell is covered, every pointer addresses a number, and every number
     the content carries today sits inside its own bounds.
+
+    ``root`` is the repository the objective's agent paths are written against, which is the directory the
+    engine is run from and not this process's. Without it those paths are left unchecked rather than resolved
+    from wherever the caller happens to be: a check that resolves them from the wrong place reports files
+    missing that are there.
     """
     problems: list[str] = []
     for alias in sorted(set(content.spells) - set(knobs.spells)):
@@ -342,7 +347,7 @@ def validate(knobs: Knobs, content: Content) -> list[str]:
             problems.append(f"{alias}: no intent, so nothing says what its numbers are for.")
         problems.extend(_knob_problems(spell, document))
 
-    problems.extend(_objective_problems(knobs))
+    problems.extend(_objective_problems(knobs, root))
     problems.extend(_constraint_problems(knobs, content))
     return problems
 
@@ -381,14 +386,56 @@ def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[st
     return problems
 
 
-def _objective_problems(knobs: Knobs) -> list[str]:
+#: The agent kinds that name a file after the colon. `greedy`, `random` and `explore:<rate>` name none.
+#: Lower case, because `AgentSpec.Parse` matches a kind case-insensitively.
+_FILE_BACKED_AGENTS = frozenset({"heuristic", "policy"})
+
+
+def _agent_file(spec: str) -> str | None:
+    """The file an agent spec names, or ``None`` when the kind names none.
+
+    Read the way ``AgentSpec.Parse`` reads it, because a reading of its own would check files the engine does
+    not and miss files it does: the kind is matched case-insensitively, and a trailing ``@version`` is the
+    weights fingerprint a stamp carries rather than part of the path. An empty string means the kind wants a
+    file and the spec gives none.
+    """
+    kind, colon, rest = spec.partition(":")
+    if not colon or kind.strip().lower() not in _FILE_BACKED_AGENTS:
+        return None
+    at = rest.rfind("@")
+    return (rest if at < 0 else rest[:at]).strip()
+
+
+def _objective_problems(knobs: Knobs, root: Path | None) -> list[str]:
     """A target reading an evaluation nobody plays is a term silently missing from every score."""
     declared = set(knobs.objective.evaluations)
-    return [
+    problems = [
         f"objective: target '{target.key}' reads an evaluation the objective does not declare."
         for target in knobs.objective.targets
         if target.on not in declared
     ]
+    if root is not None:
+        problems.extend(_agent_problems(knobs, root))
+    return problems
+
+
+def _agent_problems(knobs: Knobs, root: Path) -> list[str]:
+    """An evaluation naming a weights or policy file that is not there fails the engine, one candidate at a
+    time, after a search has already started. The path is the engine's own, so it resolves from the repository
+    root the way the engine is given it.
+    """
+    problems = []
+    for name, evaluation in sorted(knobs.objective.evaluations.items()):
+        for side in ("p1", "p2"):
+            spec = str(evaluation.get(side, "greedy"))
+            path = _agent_file(spec)
+            if path is None:
+                continue
+            if not path:
+                problems.append(f"objective: evaluation '{name}' {side} is '{spec}', which names no file.")
+            elif not (root / path).is_file():
+                problems.append(f"objective: evaluation '{name}' {side} reads '{path}', which is not a file.")
+    return problems
 
 
 def _constraint_problems(knobs: Knobs, content: Content) -> list[str]:
@@ -571,7 +618,7 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
 
     - no board, no targets, no defense, and no cap at a target's health;
     - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
-      ``buff x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
+      ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
       bigger average one in a way nothing here can see;
     - no energy cost and no Spell initiative, both of which `ActionScorer` prices when it picks an unlock,
@@ -604,7 +651,7 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
             "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
             "Stun": weights.get("stun", 0) * rounds,
-            "DefenseBuff": weights.get("buff", 0) * amount * rounds,
+            "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(str(effect.get("kind")), 0.0)
     return total

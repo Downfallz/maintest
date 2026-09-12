@@ -249,8 +249,8 @@ public sealed class ActionScorerTests
 
         Scorer.Estimate(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14), 1e-9);
         // Guard is 2 defense for a round, and the actor faces two attackers with no ally to spread them over:
-        // two hits of it prevented, priced at the buff weight (ADR 0022).
-        Scorer.Estimate(board[0], TestContent.Guard, board).ShouldBe(0.5 * 2 * 2, 1e-9);
+        // two hits of it prevented, priced at the defense weight (ADR 0022).
+        Scorer.Estimate(board[0], TestContent.Guard, board).ShouldBe(0.65 * 2 * 2, 1e-9);
         Scorer.Estimate(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6), 1e-9);
     }
 
@@ -266,13 +266,13 @@ public sealed class ActionScorerTests
 
         // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. Energy is 0.2 a
         // point, so the three costs -- Strike 0, Guard 1, Slam 2 -- price at 0, 0.2 and 0.4.
-        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe(2 + 3 - 0.2, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe((0.65 * 2 * 2) + 3 - 0.2, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + 0.5, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + 0.5 - 0.4, 1e-9);
     }
 
     /// <summary>
-    /// Guard is worth 2 in combat against Strike's 3.15 and still wins the pick once the initiative it buys is
+    /// Guard is worth 2.6 in combat against Strike's 3.15 and still wins the pick once the initiative it buys is
     /// priced. This is what it means for a pick to buy tempo, and it is the whole point of the weight.
     /// </summary>
     [Fact]
@@ -414,11 +414,11 @@ public sealed class ActionScorerTests
 
         var pair = WithAlly(Health.Of(20));
         Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), pair)
-            .ShouldBe(0.5 * 1 * 2 * (2 / 2.0), 1e-9);
+            .ShouldBe(0.65 * 1 * 2 * (2 / 2.0), 1e-9);
 
         var alone = WithAlly(Health.Of(0));
         Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), alone)
-            .ShouldBe(0.5 * 1 * 2 * (2 / 1.0), 1e-9);
+            .ShouldBe(0.65 * 1 * 2 * (2 / 1.0), 1e-9);
     }
 
     /// <summary>
@@ -434,7 +434,7 @@ public sealed class ActionScorerTests
         var buff = new ConditionOutcome(One, DefenseBuff.Of(2, Duration.OfRounds(1)));
 
         Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), board)
-            .ShouldBe((0.5 * 2 * 1 * 2) + 5, 1e-9);
+            .ShouldBe((0.65 * 2 * 1 * 2) + 5, 1e-9);
     }
 
     /// <summary>Nothing can hit the creature, so nothing is prevented and the buff is worth nothing.</summary>
@@ -480,7 +480,7 @@ public sealed class ActionScorerTests
         var buff = new ConditionOutcome(One, DefenseBuff.Of(1, Duration.OfRounds(1)));
 
         Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff]), board)
-            .ShouldBe(0.5 * 2 * (0.05 * (3 - 2)), 1e-9);
+            .ShouldBe(0.65 * 2 * (0.05 * (3 - 2)), 1e-9);
     }
 
     /// <summary>
@@ -499,7 +499,7 @@ public sealed class ActionScorerTests
         // 6.3 coming and 5 health: lethal. Stacked, the two points take it to 2.3, and each point is priced on
         // top of the other rather than both from the bare board.
         Scorer.Score(CombatResolution.Resolved(action, [One], [], false, Energy.Of(0), [buff, buff]), board)
-            .ShouldBe((0.5 * (6.3 - 2.3)) + 5, 1e-9);
+            .ShouldBe((0.65 * (6.3 - 2.3)) + 5, 1e-9);
     }
 
     [Fact]

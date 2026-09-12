@@ -138,7 +138,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Random agent | The Player agent that picks uniformly among the options; the floor every other agent is measured against. | decided |
 | Greedy agent | The deterministic Player agent with a one-step lookahead on the domain rules and the built-in Scoring weights; the baseline of the Benchmark digest. | decided |
 | Heuristic agent | The Greedy agent's lookahead with Scoring weights read from a file, so the weights can be tuned by search. | decided |
-| Scoring weights | What the lookahead values in an action's expected outcome: damage, kill, heal, stun, bleed, buff, energy kept, risk. | decided |
+| Scoring weights | What the lookahead values in an action's expected outcome, nine of them: damage, kill, heal, stun, bleed, defense, energy kept, risk, initiative. Only their ratios matter — the scorer is linear, so scaling all nine changes no decision. | decided |
+| Defense weight | The price of one point of damage a Defense buff prevents (ADR 0022, named by ADR 0028). Not read against the damage weight point for point: an attack is paid once, a defensive effect for every round it holds. | decided |
 | Match driver | The application service that plays a started Match to its outcome through the commands, asking each Player agent in turn. | decided |
 | Simulation scenario | What a batch plays: Rule set, both rosters and Player agents, match count, base seed; match `i` uses seed `base + i`. | decided |
 | Match result | One simulated Match: seed, Match outcome, rounds played, remaining Health per Team. | decided |

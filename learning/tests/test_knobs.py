@@ -299,7 +299,7 @@ def test_the_repository_knobs_cover_the_repository_content() -> None:
     knobs = load_knobs(REPO_ROOT / KNOBS_FILE)
     spells = load_content(REPO_ROOT / "data")
 
-    assert validate(knobs, spells) == []
+    assert validate(knobs, spells, root=REPO_ROOT) == []
     assert set(knobs.spells) == set(spells.spells) | spells.disabled
 
 
@@ -352,6 +352,66 @@ def test_a_target_reading_an_evaluation_nobody_plays_is_reported(tmp_path: Path)
     assert problems == [
         "objective: target 'skill.drawRate' reads an evaluation the objective does not declare."
     ]
+
+
+def test_an_evaluation_naming_a_weights_file_that_is_not_there_is_reported(tmp_path: Path) -> None:
+    """Otherwise the engine fails one candidate at a time, an hour into a search that had already started."""
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {"mirror": {"p1": "heuristic:weights/gone.json", "p2": "greedy"}},
+            "targets": [{"metric": "drawRate", "on": "mirror", "max": 0.05, "scale": 0.05, "weight": 1}],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == ["objective: evaluation 'mirror' p1 reads 'weights/gone.json', which is not a file."]
+
+
+def test_an_evaluation_naming_a_weights_file_that_is_there_is_accepted(tmp_path: Path) -> None:
+    (tmp_path / "weights").mkdir()
+    (tmp_path / "weights" / "found.json").write_text("{}", encoding="utf-8")
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {
+                "mirror": {"p1": "heuristic:weights/found.json", "p2": "explore:0.2"},
+                "skill": {"p1": "greedy", "p2": "random"},
+            },
+            "targets": [{"metric": "drawRate", "on": "mirror", "max": 0.05, "scale": 0.05, "weight": 1}],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path) == []
+
+
+def test_an_agent_spec_is_read_the_way_the_engine_reads_it(tmp_path: Path) -> None:
+    """A reading of its own would check files the engine does not and miss files it does.
+
+    `AgentSpec.Parse` matches the kind case-insensitively and strips a trailing `@version`, the weights
+    fingerprint a stamp carries. So `Heuristic:` names a file just as `heuristic:` does, and the version is
+    not part of the path.
+    """
+    (tmp_path / "weights").mkdir()
+    (tmp_path / "weights" / "found.json").write_text("{}", encoding="utf-8")
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {
+                "cased": {"p1": "Heuristic:weights/gone.json", "p2": "greedy"},
+                "stamped": {"p1": "heuristic:weights/found.json@deadbeef", "p2": "greedy"},
+            },
+            "targets": [],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == ["objective: evaluation 'cased' p1 reads 'weights/gone.json', which is not a file."]
 
 
 def test_a_starting_kit_naming_a_spell_that_does_not_exist_is_reported(tmp_path: Path) -> None:
@@ -524,7 +584,7 @@ WEIGHTS = {
     "heal": 0.8,
     "stun": 3.0,
     "bleed": 0.8,
-    "buff": 0.5,
+    "defense": 0.5,
     "energy": 0.2,
     "initiative": 0.5,
 }
@@ -659,7 +719,7 @@ def test_the_repository_weights_are_the_nine_the_agents_score_with() -> None:
         "heal",
         "stun",
         "bleed",
-        "buff",
+        "defense",
         "energy",
         "risk",
         "initiative",

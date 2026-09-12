@@ -13,9 +13,19 @@
         "p1": "greedy",
         "p2": "random",
         "reads": "Playing well still beats playing at random. A change that closes this gap has removed the decisions instead of balancing them."
+      },
+      "variety": {
+        "p1": "explore:0.2",
+        "p2": "explore:0.2",
+        "reads": "Whether the content offers a choice, which is a different question from whether a greedy bot takes one. Both sides play greedily four decisions in five and draw uniformly the fifth (ADR 0014), so a spell the argmax always passes over still gets cast and can be read. Every target that needs a spell to be cast in order to mean anything is read here rather than on the mirrored run."
+      },
+      "exploit": {
+        "p1": "heuristic:learning/weights/search-2.json",
+        "p2": "greedy",
+        "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A goes stale when the content moves — a tuning pass changes what there is to exploit — so it is refreshed from the next search run, not kept."
       }
     },
-    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one.",
+    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one. ADR 0029 did it again, and harder: seven targets moved off the mirrored run onto the exploring one without their bands changing, which took the core content from 69.39 to 52.00 without a single number in the content moving. Compare scores only across runs judged by the same set read from the same runs.",
     "targets": [
       {
         "metric": "player1WinShare",
@@ -61,59 +71,59 @@
       },
       {
         "metric": "spellEntropyA",
-        "on": "mirror",
+        "on": "variety",
         "min": 2.5,
         "scale": 0.5,
         "weight": 1,
-        "why": "Bits over agent A's declared spells. 2.21 at the last measured run over ten distinct spells, of a possible 5.17 over thirty-six."
+        "why": "Bits over agent A's declared spells. 2.21 at the last measured run over ten distinct spells, of a possible 5.17 over thirty-six. Read on the exploring run (ADR 0029), where it reads 2.530 against 1.992 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "spellUsageShare",
-        "on": "mirror",
+        "on": "variety",
         "max": 0.25,
         "scale": 0.1,
         "weight": 1,
-        "why": "The largest share of landed casts any one spell takes across the whole catalogue. Since tierUsageShare reads the same thing per tier and catches what this one hides — a tier fully monopolised by a spell that is small in the total — this stays as the coarse guard and carries half the weight. 0.855 on the core content."
+        "why": "The largest share of landed casts any one spell takes across the whole catalogue. Since tierUsageShare reads the same thing per tier and catches what this one hides — a tier fully monopolised by a spell that is small in the total — this stays as the coarse guard and carries half the weight. 0.855 on the core content. Read on the exploring run (ADR 0029), where it reads 0.410 against 0.478 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "spellsNeverCast",
-        "on": "mirror",
+        "on": "variety",
         "max": 2,
         "scale": 2,
         "weight": 1,
-        "why": "Spells in the catalogue that no declaration ever landed. Needs the catalogue as well as the evaluation, so the tuner computes it. The band is read against what the build carries, not against what is on disk: on the nine-spell core content two spells failing to come up is slack, twelve would be the whole game."
+        "why": "Spells in the catalogue that no declaration ever landed. Needs the catalogue as well as the evaluation, so the tuner computes it. The band is read against what the build carries, not against what is on disk: on the nine-spell core content two spells failing to come up is slack, twelve would be the whole game. Read on the exploring run (ADR 0029), where it reads 0 against 2 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "spellsBarelyCast",
-        "on": "mirror",
+        "on": "variety",
         "max": 2,
         "scale": 2,
         "weight": 1,
-        "why": "Spells taking under 1% of the landed casts of the tier they are offered in. The hole spellsNeverCast leaves: pummel took 6 of 5283 landed casts of a mirrored run, which is dead in every sense that decides a game and is not a zero, so a buff that moved it from 4 casts to 6 read as no change at all. Read against the tier rather than the catalogue because a tier is the set a player chooses between at one moment. Counts strictly the spells spellsNeverCast does not: a zero is a zero in either reading, and with the same band and weight on both, counting it twice would quietly double what the objective asks of that one case. A run whose content carries no tiers reports this as missing rather than as zero."
+        "why": "Spells taking under 1% of the landed casts of the tier they are offered in. The hole spellsNeverCast leaves: pummel took 6 of 5283 landed casts of a mirrored run, which is dead in every sense that decides a game and is not a zero, so a buff that moved it from 4 casts to 6 read as no change at all. Read against the tier rather than the catalogue because a tier is the set a player chooses between at one moment. Counts strictly the spells spellsNeverCast does not: a zero is a zero in either reading, and with the same band and weight on both, counting it twice would quietly double what the objective asks of that one case. A run whose content carries no tiers reports this as missing rather than as zero. Read on the exploring run (ADR 0029), where it reads 0 against 1 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "tierUsageShare",
-        "on": "mirror",
+        "on": "variety",
         "max": 0.5,
         "scale": 0.1,
         "weight": 2,
-        "why": "The largest share of landed casts any one spell takes among the spells of its own tier, worst tier. A tier is the set a player chooses between at one moment, so this is the balance they actually feel. Uniform is 1/n: 0.33 for the three starting spells, 0.17 for the six of tier 1. It reads 1.000 on the core content — heavy_strike takes every landed cast of tier 0 — where the catalogue-wide share reads 0.855 and hides it."
+        "why": "The largest share of landed casts any one spell takes among the spells of its own tier, worst tier. A tier is the set a player chooses between at one moment, so this is the balance they actually feel. Uniform is 1/n: 0.33 for the three starting spells, 0.17 for the six of tier 1. It reads 1.000 on the core content — heavy_strike takes every landed cast of tier 0 — where the catalogue-wide share reads 0.855 and hides it. Read on the exploring run (ADR 0029), where it reads 0.568 against 0.742 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "tierDamageSpread",
-        "on": "mirror",
+        "on": "variety",
         "max": 2.0,
         "scale": 0.5,
         "weight": 1,
-        "why": "How many times harder the best damaging spell of a tier hits per landed cast than the worst, worst tier. Which spells count is read from the content — does the spell carry a Damage effect — never from what its casts landed, so lowering an attack until its hits are all absorbed widens this reading instead of dropping the spell out of it. A heal is not compared: it shares no unit with an attack. The ratio is floored at half a point of damage per cast and capped at 5. 2.41 on the core content."
+        "why": "How many times harder the best damaging spell of a tier hits per landed cast than the worst, worst tier. Which spells count is read from the content — does the spell carry a Damage effect — never from what its casts landed, so lowering an attack until its hits are all absorbed widens this reading instead of dropping the spell out of it. A heal is not compared: it shares no unit with an attack. The ratio is floored at half a point of damage per cast and capped at 5. 2.41 on the core content. Read on the exploring run (ADR 0029), where it reads 5.000, the same as on a mirrored greedy run. That sameness is what says this one is the content and not the agent."
       },
       {
         "metric": "tierWinSpread",
-        "on": "mirror",
+        "on": "variety",
         "max": 0.15,
         "scale": 0.1,
         "weight": 1,
-        "why": "The gap between the best and the worst win share among the spells of a tier, worst tier, counting only spells enough sides declared. Two spells offered together should not be worth wildly different results. 0.262 on the core content."
+        "why": "The gap between the best and the worst win share among the spells of a tier, worst tier, counting only spells enough sides declared. Two spells offered together should not be worth wildly different results. 0.262 on the core content. Read on the exploring run (ADR 0029), where it reads 0.148 against 0.322 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "winRateA",
@@ -122,6 +132,14 @@
         "scale": 0.1,
         "weight": 2,
         "why": "The skill gap. Content that a random agent can hold has stopped asking anything."
+      },
+      {
+        "metric": "winRateA",
+        "on": "exploit",
+        "max": 0.55,
+        "scale": 0.05,
+        "weight": 2,
+        "why": "A guard, not a push. It reads 0.55 today — 220 of 400 — and the 95% interval on 400 matches is about a twentieth either way, so asking for less than this would be asking the tuner to chase noise. What it stops is the tuner widening the gap, which nothing else here can see: every other target reads a mirrored run, where both sides play the same way and an exploit is invisible by construction. Read it with the skill target, which refuses the degenerate answer — flattening the game closes this gap and fails that one."
       }
     ]
   },

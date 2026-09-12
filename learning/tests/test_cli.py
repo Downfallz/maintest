@@ -144,3 +144,48 @@ def test_evaluate_policy_drives_the_engine_and_updates_the_model(
     assert (tmp_path / "model" / "evaluation-vs-random.json").is_file()
     assert "win rate 0.7500" in capsys.readouterr().out
     assert json.loads((tmp_path / "model" / "training.jsonl").read_text())["winRate"] == 0.75
+
+
+def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The preflight, not the engine. Without it the search starts and fails one candidate at a time."""
+    balance = tmp_path / "data" / "balance"
+    balance.mkdir(parents=True)
+    knobs = balance / "knobs.json"
+    knobs.write_text(
+        json.dumps(
+            {
+                "version": "knobs:v1",
+                "objective": {
+                    "seeds": "seeds.json",
+                    "evaluations": {"mirror": {"p1": "heuristic:weights/gone.json", "p2": "greedy"}},
+                    "targets": [],
+                },
+                "constraints": {},
+                "spells": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "data" / "Spells").mkdir()
+    (tmp_path / "data" / "aliases.json").write_text("{}", encoding="utf-8")
+
+    code = cli.main(
+        [
+            "tune-content",
+            "-o",
+            str(tmp_path / "out"),
+            "--knobs",
+            str(knobs),
+            "--data",
+            str(tmp_path / "data"),
+            "--engine",
+            "no-such-engine",
+        ]
+    )
+
+    assert code == 1
+    error = capsys.readouterr().err
+    assert "weights/gone.json" in error
+    assert "no-such-engine" not in error

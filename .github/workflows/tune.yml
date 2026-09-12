@@ -51,7 +51,10 @@ jobs:
   tune:
     name: Search the balance knobs
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    # A candidate costs one content build plus one evaluation per objective entry, and the objective has four
+    # of them since ADR 0029. At about seven seconds an evaluation that is roughly 34 seconds a candidate, so
+    # the default budget of 284 candidates needs about 160 minutes rather than the 95 two evaluations cost.
+    timeout-minutes: 300
     steps:
       # Unlike the other workflows, this one pushes a branch, so it keeps the credentials the checkout sets up
       # and lets git use them. The alternative is a token inside a remote URL, which puts it in the process
