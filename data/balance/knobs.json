@@ -197,6 +197,7 @@
         "At most one energy dearer than Basic Attack",
         "Its critical chance stays its defining stat"
       ],
+      "note": "check-knobs reports this spell as outclassed, and raising its own bounds is not the way out. At 4 damage it would be strictly better than Lightning Bolt -- same damage, same critical chance, one energy cheaper -- so noNewStrictDominance refuses it, and a wider bound here would only buy candidates the constraints throw away. Measured: its whole box tops out around 5.4 against Lightning Bolt's 6.7, and even a certain critical at 3 damage reaches 6.2. Its other edge, costing 1 against 2, is worth nothing on this rule set: 0 of 319 traced declarations had the caster below 2 energy, so the cost never binds. Making this spell a choice is a move on the pair -- Lightning Bolt down as this one comes up -- which is a two-spell candidate, so neither the sweep nor the paired opening can build it and only the climb can. That is what the search budget is for.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },

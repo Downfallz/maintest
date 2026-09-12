@@ -147,12 +147,12 @@ skips it when you want a quick look rather than an answer.
 
 Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
 benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty. The sweep is up to two
-candidates per playable knob — on the nine-spell core content that is 29 knobs, 41 legal single steps and
-about fifteen minutes — the paired moves below are up to 47 more if every spell is inert, and
-`--iterations 8 --neighbours 4` adds thirty-two. So the default run is 74 candidates on a responding
-catalogue and up to 121 on a dead one, against the 180-minute timeout of the `Tune the catalogue` workflow;
-`--no-pairs` is the switch if that is tight. Raise the budget rather than the step size: a wider step
-reaches further and reads worse in the diff.
+candidates per playable knob — on the nine-spell core content that is 29 knobs and 41 legal single steps.
+The paired moves below add up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139
+candidates. The workflow then climbs 24 rounds of 6, which is 284 candidates and about 95 minutes against
+its 180-minute timeout; the CLI's own defaults stay at 8 rounds of 4, because a local run should not take an
+hour and a half unasked. `--no-pairs` and `--pair-depth 1` are the switches if a run gets tight. Raise the
+budget rather than the step size: a wider step reaches further and reads worse in the diff.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is
@@ -223,15 +223,43 @@ case. A run whose content carries no tiers reports it as missing rather than as 
 reading does.
 
 And the opening sweep now also plays **two knobs of one spell together**, for the spells where no single step
-moved a measurement at all. `poison_slash` is why. On the `studio/content` branch, where it carries a bleed
+could improve the score. `poison_slash` is why. On the `studio/content` branch, where it carries a bleed
 of 1 per round over 2 rounds, raising the amount alone reaches 59 landed casts and the duration alone 17,
 while raising both reaches 5155 of about 8900 — the largest move found against that catalogue's monopoly.
 A climb that only ever moves one knob has to accept the flat step in between, worth 0.005, to find the path.
 
-Read the size of that with the bounds it came from. **This** branch carries 1 over 1, so the one pair the
-sweep can build here lands on 2 over 2 and measures 310 landed casts of about 6150, against 3 today — fifty
-times better, and still two steps of the duration short of the interior point. A pair is one step of each
-knob and nothing more, so it bridges a single flat step and not a plateau. Only the two same-direction
-combinations are played, and only on spells that are not already responding, so a catalogue answering a
-single step pays nothing; `--no-pairs` turns it off, which is worth knowing because it is the part of the
-budget with no upper bound — on the nine-spell core content it is up to 47 candidates where the sweep is 41.
+Read the size of that with the bounds it came from. **This** branch carries 1 over 1, so one step of each
+knob lands on 2 over 2, which measures 310 landed casts of about 6150 against 3 today — fifty times better,
+and still two steps of the duration short of the interior point. One step of each bridges one flat step; a
+plateau needs more.
+
+So a pair is **stepped further when its first step earned it**: when one step of each moved a measurement
+and still scored *worse* than the content it came from. The reading answering says the knobs are live; the
+score says the answer is not yet the one worth keeping, and nothing about the first move says the curve has
+stopped rising — on the studio/content readings above, 2 over 3 is the point and 3 over 3, the corner, is
+worse again. The deeper
+step counts are **asymmetric** (`--pair-depth`, two by default: one-and-two, two-and-one, two-and-two),
+because the move that matters here is one step of the amount and two of the duration, and a search that only
+ever moved both knobs together would walk straight past it.
+
+Two cases are deliberately left alone. A pair that **improves** needs nothing: it can become the best
+candidate, and the climb steps on from there one knob at a time. A pair that **moves nothing at all** is a
+pair on dead content, and a longer step into the dark costs an evaluation to learn the same thing again.
+
+**The gate that picks which spells get paired is what decides whether any of this runs at all**, and the
+first version of it was too narrow to fire. It admitted only spells where no single step moved a
+measurement; on this content exactly one spell qualified — `wait`, which has a single knob, so no pair could
+be built from it — and the pass played zero pairs. `poison_slash`, the spell the whole thing exists for, was
+excluded, because its single steps do move readings, they just never move them anywhere better. Improving is
+the right line: a spell one step already helps needs nothing here, because the climb takes that step and
+goes on from it.
+
+Only same-direction combinations are played. `--no-pairs` turns the whole thing off, `--pair-depth 1` leaves
+the pairs at one step each, and deepening is capped at the six pairs closest to paying off — it is the only
+part of the opening that multiplies, and a cap is cheaper to reason about than a rate.
+
+**Deepening only has room where a knob does.** A second step that clamps at a bound lands on the content the
+first step already produced, and that candidate is dropped rather than replayed. On the nine-spell core
+content most knobs are whole numbers one step from their own ceiling, so a full run deepened exactly one
+pair: the critical chance, whose step of 0.05 across 0.4 to 0.8 is the one axis with room to walk. Read a
+small deepening count as bounds that are tight, not as a pass that declined to look.
