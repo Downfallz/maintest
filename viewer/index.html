@@ -652,21 +652,7 @@
           resolved = event;
           creditResolution(rows, spells, rows.get(event.resolution.action.actor), event);
         } else if (event.kind === 'OngoingEffectsApplied') {
-          // A tick names the creature it happened to and, since ADR 0027, the casts behind it. The damage
-          // still belongs to the victim's row as damage taken, and now also to the caster as damage dealt
-          // and to that spell's tally. A trace recorded before that has no shares and reads as it used to.
-          for (const tick of event.bleedTicks || []) {
-            const row = rows.get(tick.creature);
-            if (row) row.bleedTaken += tick.damage || 0;
-            for (const share of tick.shares || []) {
-              credit(rows, spells, share, 'damageDealtOverTime', 'overTime');
-              upkeepKillers.set(tick.creature, share);
-            }
-          }
-
-          for (const tick of event.regenerationTicks || []) {
-            for (const share of tick.shares || []) credit(rows, spells, share, 'healingDoneOverTime', 'healing');
-          }
+          creditUpkeep(rows, spells, event, upkeepKillers);
         }
 
         bledOut += creditKills(rows, alive, resolved, player1, upkeepKillers);
@@ -674,6 +660,27 @@
       }
 
       return { creatures: [...rows.values()], spells: [...spells.values()], bledOut };
+    }
+
+    /**
+     * The start of a round. A tick names the creature it happened to and, since ADR 0027, the casts behind
+     * it: the damage still belongs to the victim's row as damage taken, and now also to the caster as damage
+     * dealt and to that spell's tally. `killers` collects who to credit if the creature does not survive it.
+     * A trace recorded before ADR 0027 has no shares and reads as it always did.
+     */
+    function creditUpkeep(rows, spells, event, killers) {
+      for (const tick of event.bleedTicks || []) {
+        const row = rows.get(tick.creature);
+        if (row) row.bleedTaken += tick.damage || 0;
+        for (const share of tick.shares || []) {
+          credit(rows, spells, share, 'damageDealtOverTime', 'overTime');
+          killers.set(tick.creature, share);
+        }
+      }
+
+      for (const tick of event.regenerationTicks || []) {
+        for (const share of tick.shares || []) credit(rows, spells, share, 'healingDoneOverTime', 'healing');
+      }
     }
 
     /**
