@@ -282,6 +282,8 @@ def test_the_proposal_is_written_as_the_content_tree_it_came_from(tmp_path: Path
 
     written = json.loads((tmp_path / "out" / "tune.json").read_text())
     assert written["best"]["moves"]
+    # The number the report's first line quotes, so a run directory read later says the same thing.
+    assert written["played"] == result.played
     changed = {move["spell"] for move in written["best"]["moves"]}
     for alias in changed:
         name = Path(content.files[alias]).name

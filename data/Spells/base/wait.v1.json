@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "EnergyGain",
-      "amount": 1
+      "amount": 2
     }
   ]
 }

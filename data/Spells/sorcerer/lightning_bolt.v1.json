@@ -5,7 +5,7 @@
   "creatureClass": "Sorcerer",
   "initiative": 1,
   "energyCost": 2,
-  "criticalChance": 0.667,
+  "criticalChance": 0.617,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
