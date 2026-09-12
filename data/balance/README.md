@@ -235,7 +235,14 @@ The reading is coarse on purpose — no board, no targets, no defense, no cap at
 behind a defensive effect (so a `DefenseBuff` is priced as `buff x amount x rounds`, a stand-in and not what
 the scorer does with one), no kill term, which is the largest weight in the game and a threshold so it
 rewards a reliable hit over a bigger average one, and neither the energy cost nor the Spell initiative that
-`ActionScorer` prices when it picks an unlock. That last one is why `throwing_star` is reported: its entry
+`ActionScorer` prices when it picks an unlock.
+
+What a spell does to **its own caster** (ADR 0031) is read, and read with a sign: a heal on the caster counts
+for the spell, a recoil counts against it, because on the caster a harmful kind is the price rather than the
+point. It is counted once per cast and never multiplied by the critical chance. The same sign runs through
+every check — dominance treats the caster half as its own axis, where an absent group is a zero rather than a
+gap (carrying no recoil is being better on that axis, not failing to match it), and the ceiling of a knob
+that addresses a harmful caster effect is its **minimum**, since more of a price is not a better spell. That last one is why `throwing_star` is reported: its entry
 says its Spell initiative is worth more to the class than its damage, and none of that is in the number the
 report prints. It is read off the agents'
 own weights (`learning/weights/greedy.json`, which mirrors `ScoringWeights.Default`) rather than restated,

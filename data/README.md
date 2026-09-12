@@ -66,3 +66,20 @@ including the content hash.
 | `InitiativeDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 
 `stacking` is one of `Stack`, `Refresh`, `Ignore`.
+
+## Effects on the caster
+
+A spell may carry `casterEffects` next to `effects`, from the same table above, resolved **once per cast
+against whoever cast the spell** (ADR 0031). The critical roll does not reach them, a cast that fizzles
+applies none of them, and they go through the same rules as any other outcome — so a self-damage is reduced
+by the caster's own defense, and it can kill its caster.
+
+```json
+"effects": [{ "kind": "Damage", "amount": 3 }],
+"casterEffects": [{ "kind": "Heal", "amount": 2 }]
+```
+
+A spell still needs at least one ordinary effect: this is a half of a spell, never a whole one. Leave the
+field out when there are none — an empty list is not content, and the builder drops one to nothing so that a
+spell without caster effects hashes exactly as it did before the field existed. A knob addresses them the
+usual way, `/casterEffects/0/amount`.

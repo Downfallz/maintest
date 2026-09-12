@@ -314,7 +314,13 @@ function glance(item) {
 
   const doc = item.document || {};
   if (item.kind === 'Spell') {
-    const figure = asArray(doc.effects).map(effectSummary).filter(Boolean).join(', ');
+    // What a cast does to its own caster is named as such: without it two spells that differ only there
+    // read as the same line in this list (ADR 0031).
+    const onCaster = asArray(doc.casterEffects).map(effectSummary).filter(Boolean).join(', ');
+    const figure = [
+      asArray(doc.effects).map(effectSummary).filter(Boolean).join(', '),
+      onCaster && `self: ${onCaster}`,
+    ].filter(Boolean).join(' · ');
     const cost = typeof doc.energyCost === 'number' ? `${doc.energyCost} energy` : null;
     return [
       element('span', { className: 'figure', textContent: figure }),
@@ -797,9 +803,30 @@ function spellEditor() {
 
   redraw();
   effects.append(list);
+
+  // What the cast does to whoever cast it (ADR 0031): its own card, because it is a different half of the
+  // spell and not another row of the same list. Almost every spell has none, so it starts empty.
+  const casterEffects = element('div', { className: 'card' }, [
+    element('h3', { textContent: 'Effects on the caster' }),
+    element('p', { className: 'muted', textContent: 'Resolved once per cast, on whoever cast the spell. No critical multiplier, and nothing at all when the cast fizzles.' }),
+  ]);
+  const casterList = element('div');
+  const redrawCaster = () => {
+    casterList.replaceChildren(...(draft.casterEffects || []).map((effect, index) => effectRow(effect, index, redrawCaster, 'casterEffects')));
+    casterList.append(element('div', { className: 'row' }, [
+      miniButton('Add caster effect', () => {
+        draft.casterEffects = [...(draft.casterEffects || []), { kind: 'Heal', amount: 1 }];
+        markDirty();
+        redrawCaster();
+      }),
+    ]));
+  };
+
+  redrawCaster();
+  casterEffects.append(casterList);
   // The strip sits between the spell's own numbers and its effects: it reads both, and what it says about a
   // number is worth knowing before changing the one under it rather than after scrolling past everything.
-  return element('div', {}, [card, balanceStrip(), effects]);
+  return element('div', {}, [card, balanceStrip(), effects, casterEffects]);
 }
 
 /** A single target takes no count; a multi target takes at least two, which is what the engine will accept. */
@@ -846,7 +873,7 @@ function normalizeTargeting() {
   renderDetail();
 }
 
-function effectRow(effect, index, redraw) {
+function effectRow(effect, index, redraw, field = 'effects') {
   const draft = state.draft;
   const shape = EFFECTS[effect.kind] || { amounts: [] };
   const row = element('div', { className: 'row' });
@@ -854,7 +881,7 @@ function effectRow(effect, index, redraw) {
   row.append(picker(effect, 'kind', Object.keys(EFFECTS), {
     onChange: () => {
       // A kind carries its own fields; keeping the old ones would write nonsense the builder then refuses.
-      draft.effects[index] = defaultEffect(effect.kind);
+      draft[field][index] = defaultEffect(effect.kind);
       redraw();
     },
   }));
@@ -883,7 +910,14 @@ function effectRow(effect, index, redraw) {
   }
 
   row.append(element('span', { className: 'grow' }));
-  row.append(miniButton('Remove', () => { draft.effects.splice(index, 1); markDirty(); redraw(); }, 'mini remove'));
+  row.append(miniButton('Remove', () => {
+    draft[field].splice(index, 1);
+    // An empty list is not content (ADR 0031): the builder drops one anyway, and a spell that carries no
+    // caster effect should read in the file exactly as it did before this existed.
+    if (field !== 'effects' && draft[field].length === 0) delete draft[field];
+    markDirty();
+    redraw();
+  }, 'mini remove'));
   return row;
 }
 
