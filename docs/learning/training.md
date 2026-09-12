@@ -108,8 +108,10 @@ match the model saw. Features are standardized for the optimizer and the scaling
 weights, so a policy file stays a plain dot product. `export-csv` writes the wide CSV projection of a dataset
 (one row per step, one column per feature) for anything that prefers a table.
 
-The weight search is the slow one: one engine run per candidate, a few seconds each on 400 matches, so ten
-iterations of sixteen take around ten minutes. A smaller seed file (`--seeds`) makes it faster and noisier.
+The weight search is the slow one: one engine run per candidate, sequentially, about seven seconds each on
+400 matches (six in the engine, one in `dotnet run`'s own start-up). The defaults play the mean once and then
+ten iterations of sixteen, 161 evaluations, so a run is around twenty minutes. A smaller seed file
+(`--seeds`) makes it faster and noisier; fewer iterations makes it faster and shallower.
 
 ## How big a dataset fits
 
