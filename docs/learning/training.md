@@ -108,8 +108,10 @@ match the model saw. Features are standardized for the optimizer and the scaling
 weights, so a policy file stays a plain dot product. `export-csv` writes the wide CSV projection of a dataset
 (one row per step, one column per feature) for anything that prefers a table.
 
-The weight search is the slow one: one engine run per candidate, a few seconds each on 400 matches, so ten
-iterations of sixteen take around ten minutes. A smaller seed file (`--seeds`) makes it faster and noisier.
+The weight search is the slow one: one engine run per candidate, sequentially, about seven seconds each on
+400 matches (six in the engine, one in `dotnet run`'s own start-up). The defaults play the mean once and then
+ten iterations of sixteen, 161 evaluations, so a run is around twenty minutes. A smaller seed file
+(`--seeds`) makes it faster and noisier; fewer iterations makes it faster and shallower.
 
 ## How big a dataset fits
 
@@ -266,23 +268,37 @@ no local SDK and no machine left on:
 | Workflow | Dispatch inputs | What comes back |
 | --- | --- | --- |
 | **Tune the catalogue** (`tune.yml`) | search seed, rounds, neighbours, knobs per proposal, and whether to apply | The proposal in the run summary, and, when it moved something, a **branch** carrying the changed spell files and a regenerated benchmark digest, with a link that opens it as a pull request. |
-| **Search the agent weights** (`search.yml`) | opponent, seed file, rounds, population, search seed | The weights in the run summary, as ratios to `damage`, beside the baseline's. Nothing is committed. |
+| **Search the agent weights** (`search.yml`) | opponent, seed file, rounds, population, search seed, and whether to apply | The weights in the run summary, as ratios to `damage`, beside the baseline's, and, when asked and when a candidate beat the set it started from, a **branch** carrying them as `learning/weights/search-<run>.json`, with a link that opens it as a pull request. |
 
-The asymmetry is deliberate. A tuning pass proposes content, and content is reviewed as a diff, so it arrives
-on a branch that costs nothing to delete. A weight search proposes an *agent*, and `Greedy`'s weights are the
-baseline every learned agent is measured against, so adopting them makes every comparison in the journal
-incomparable — that is a commit with an entry that says why, not a workflow's side effect. The 2026-09-10
-entry is the worked example: the search found a better agent and the entry decided against taking it.
+Both can propose a branch; what a branch may contain is where they differ. A tuning pass proposes content, and
+content is reviewed as a diff, so its branch changes the spell files themselves. A weight search proposes an
+*agent*, and `Greedy`'s weights are the baseline every learned agent is measured against, so its branch never
+touches them: it adds what the search found under its own name, which is what `agents.md` says to do with a
+searched set, and leaves `ScoringWeights.Default` and `greedy.json` alone. Adopting a searched set as the
+baseline stays a separate change with a journal entry that says why. The 2026-09-10 entry is the worked
+example: the search found a better agent and the entry decided against making it the baseline.
 
-**The tuning workflow pushes the branch and stops there, on purpose.** A pull request opened by a workflow
+Applying is off by default there and on by default for the tuning pass, for the same reason: a tuning proposal
+is a diff someone reads and deletes, a weights file is a claim that something is better, and the run that
+produced it cannot establish that. So an applying weight search makes the comparison it cannot: it replays the
+found weights *and* the baseline on seeds no candidate played — consecutive integers starting past the largest
+in the seed file, so they cannot overlap it — and puts both scores in the run summary and in the commit
+message. Against `greedy` the baseline's side of that is even by construction, which is what makes it a check
+on the seed set rather than a second opinion. Two evaluations, about fifteen seconds after a twenty-minute
+search, and it is the difference between a number and a claim.
+
+**Both workflows push the branch and stop there, on purpose.** A pull request opened by a workflow
 does not start the `pull_request` workflows, so it would arrive with no CI and no SonarCloud quality gate —
 which this file's own rule requires on every pull request. The run summary carries the link that opens the
 branch as a pull request instead: one tap, the repository's real checks run, and because the branch holds a
 single commit GitHub fills the description in from its message, which the workflow wrote for that purpose.
 
-Before it pushes anything the job runs the gate a contributor runs — the .NET build, tests and format check,
+Before it pushes anything each job runs the gate a contributor runs — the .NET build, tests and format check,
 and the learning project's ruff, format check and pytest — so a proposal that breaks any of them never becomes
-a branch. Both jobs call the learning project as a module (`python -m downfall_learning.cli`), the way
+a branch. Both proposals land under a directory that gate covers, so both run all of it. A weights file is
+content the test projects copy to their output directory, so the weight search builds again before it tests:
+with `--no-build` the tests would read the copy from before the file existed. Both jobs call the learning
+project as a module (`python -m downfall_learning.cli`), the way
 `scripts/iterate.sh` does: the runners install the locked dependencies without installing the project itself,
 so its console scripts are not on the path there.
 
