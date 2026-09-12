@@ -37,11 +37,21 @@ public sealed class BatchRunner(
             throw new ArgumentException($"The scenario plays {scenario.Matches} matches but lists only {seeds.Count} seeds.", nameof(scenario));
         }
 
-        var results = new List<MatchResult>(scenario.Matches);
-        for (var index = 0; index < scenario.Matches; index++)
+        // Matches are independent: each draws from its own seed and gets its own agents, so playing several
+        // at once changes how long the batch takes and nothing about what it reports. Results land in an
+        // array by index rather than being appended, so the order is the seeds' order however they finish.
+        // A recorder that appends every match to one artifact says no to this and gets the old one-at-a-time
+        // walk, because its lines would interleave and its run would stop replaying.
+        var results = new MatchResult[scenario.Matches];
+        var parallel = new ParallelOptions
         {
-            results.Add(await PlayOneAsync(scenario, index, recorder, cancellationToken));
-        }
+            MaxDegreeOfParallelism = recorder?.AllowsParallelMatches ?? true ? Environment.ProcessorCount : 1,
+            CancellationToken = cancellationToken,
+        };
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, scenario.Matches),
+            parallel,
+            async (index, token) => results[index] = await PlayOneAsync(scenario, index, recorder, token));
 
         return new BatchResult(scenario, results, SimulationSummary.Of(results));
     }

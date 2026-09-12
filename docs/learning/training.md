@@ -86,14 +86,18 @@ the spread rather than leaving it.
 `docs/learning/explained.md` says what a band, a scale and a weight are in plain words, and how to point the
 objective at a match length or at your own agent.
 
-A candidate costs one content build plus one evaluation per objective entry, about twenty seconds on the
-benchmark seeds. The opening sweep is up to two candidates per playable knob before the climb starts, plus
-up to two more per pair of knobs on a spell no single step could improve, plus three more for each of the
-six pairs closest to paying off — on the nine-spell core content, up to 139 candidates before the climb
-starts. `--no-sweep` and `--no-pairs` turn the first two off; `--pair-depth 1` leaves the pairs at one step
-each and turns off only the third. The `Tune the catalogue` workflow climbs 24 rounds of 6 on top of that,
-about 95 minutes of its 180-minute budget; the CLI defaults to 8 rounds of 4, so a local run stays short
-enough to iterate on.
+A candidate costs one content build plus one evaluation per objective entry, about fourteen seconds on the
+benchmark seeds across the four the objective declares. The opening sweep is up to two candidates per playable
+knob before the climb starts, plus up to two more per pair of knobs on a spell no single step could improve,
+plus three more for each of the six pairs closest to paying off — on the nine-spell core content, up to 139
+candidates before the climb starts. `--no-sweep` and `--no-pairs` turn the first two off; `--pair-depth 1`
+leaves the pairs at one step each and turns off only the third. The `Tune the catalogue` workflow climbs 24
+rounds of 6 on top of that, about 67 minutes of its 300-minute budget; the CLI defaults to 8 rounds of 4, so a
+local run stays short enough to iterate on.
+
+A catalogue the search has already played is served from what it measured the first time rather than replayed:
+the same neighbour comes up in more than one round, and on the last full pass 30 of 149 candidates were
+replays. The report says how many the engine actually had to play.
 
 ## Three learners
 
@@ -108,10 +112,13 @@ match the model saw. Features are standardized for the optimizer and the scaling
 weights, so a policy file stays a plain dot product. `export-csv` writes the wide CSV projection of a dataset
 (one row per step, one column per feature) for anything that prefers a table.
 
-The weight search is the slow one: one engine run per candidate, sequentially, about seven seconds each on
-400 matches (six in the engine, one in `dotnet run`'s own start-up). The defaults play the mean once and then
-ten iterations of sixteen, 161 evaluations, so a run is around twenty minutes. A smaller seed file
-(`--seeds`) makes it faster and noisier; fewer iterations makes it faster and shallower.
+The weight search is the slow one: one engine run per candidate, sequentially, about **3.8 seconds** each on
+400 matches on a four-core machine. The defaults play the mean once and then ten iterations of sixteen, 161
+evaluations, so a run is around **ten minutes**. It was twenty until ADR 0030 played the matches of an
+evaluation at once and the engine stopped going through `dotnet run`; the candidates themselves are still
+played one after another, so a machine with more cores helps and a search that wants to be faster still has
+that to take. A smaller seed file (`--seeds`) makes it faster and noisier; fewer iterations makes it faster
+and shallower.
 
 ## How big a dataset fits
 

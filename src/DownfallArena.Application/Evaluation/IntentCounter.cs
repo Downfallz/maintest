@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Matches.Projections;
@@ -13,15 +14,44 @@ namespace DownfallArena.Application.Evaluation;
 /// </summary>
 internal sealed class IntentCounter : IMatchRecorder
 {
-    private readonly Dictionary<PlayerSlot, Dictionary<string, int>> _usage = new()
+    /// <summary>
+    /// One tally per side of one match. The outer map is concurrent because matches may play at the same
+    /// time; each inner one is touched by a single match, which plays its own rounds in order, so it needs
+    /// nothing.
+    /// </summary>
+    private readonly ConcurrentDictionary<(MatchId Match, PlayerSlot Slot), Dictionary<string, int>> _perMatch = new();
+
+    /// <summary>
+    /// What one slot declared over the whole batch, summed from the matches rather than kept alongside them.
+    /// <para>
+    /// It used to be its own running total, which is the one thing here two matches would have contended
+    /// over: every side of every match increments the same row. Summing on read costs a walk of a few
+    /// hundred tallies once, removes the contention instead of locking it, and leaves one source of truth
+    /// where there were two that had to agree.
+    /// </para>
+    /// </summary>
+    public IReadOnlyDictionary<string, int> UsageOf(PlayerSlot slot)
     {
-        [PlayerSlot.Player1] = new Dictionary<string, int>(StringComparer.Ordinal),
-        [PlayerSlot.Player2] = new Dictionary<string, int>(StringComparer.Ordinal),
-    };
+        var usage = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (key, tally) in _perMatch)
+        {
+            if (key.Slot != slot)
+            {
+                continue;
+            }
 
-    private readonly Dictionary<(MatchId Match, PlayerSlot Slot), Dictionary<string, int>> _perMatch = [];
+            foreach (var (spell, count) in tally)
+            {
+                usage[spell] = usage.GetValueOrDefault(spell) + count;
+            }
+        }
 
-    public IReadOnlyDictionary<string, int> UsageOf(PlayerSlot slot) => _usage[slot];
+        // By spell id, because this is walked out of a concurrent map whose order is not the insertion
+        // order and need not be the same twice. The totals would be right either way; the key order lands
+        // in `evaluation.json`, and an artifact whose bytes move while its numbers do not is a bad artifact.
+        return usage.OrderBy(entry => entry.Key, StringComparer.Ordinal)
+            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+    }
 
     /// <summary>Every side this counter saw declare something, as (match, slot, what it declared).</summary>
     public IEnumerable<(MatchId Match, PlayerSlot Slot, IReadOnlyDictionary<string, int> Usage)> Sides() =>
@@ -33,16 +63,7 @@ internal sealed class IntentCounter : IMatchRecorder
 
     private void Count(MatchId matchId, PlayerSlot slot, SpellId spell)
     {
-        var usage = _usage[slot];
-        usage[spell.Value] = usage.GetValueOrDefault(spell.Value) + 1;
-
-        var key = (matchId, slot);
-        if (!_perMatch.TryGetValue(key, out var perMatch))
-        {
-            perMatch = new Dictionary<string, int>(StringComparer.Ordinal);
-            _perMatch[key] = perMatch;
-        }
-
+        var perMatch = _perMatch.GetOrAdd((matchId, slot), _ => new Dictionary<string, int>(StringComparer.Ordinal));
         perMatch[spell.Value] = perMatch.GetValueOrDefault(spell.Value) + 1;
     }
 

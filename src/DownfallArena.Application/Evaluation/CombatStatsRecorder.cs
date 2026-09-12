@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Messaging;
 using DownfallArena.Domain.Matches;
@@ -20,9 +21,22 @@ namespace DownfallArena.Application.Evaluation;
 /// </summary>
 public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventListener<CombatActionResolved>
 {
-    private readonly Dictionary<(MatchId Match, PlayerSlot Slot), CombatStats> _stats = [];
-    private readonly Dictionary<(MatchId Match, PlayerSlot Slot), Dictionary<string, SpellEffects>> _spells = [];
-    private readonly Dictionary<(MatchId Match, PlayerSlot Slot), HashSet<CreatureId>> _casters = [];
+    // Concurrent on the outside only, because matches may play at the same time (`BatchRunner`) while each
+    // match plays its own rounds in order. Two matches never share a key -- the MatchId is part of it -- and
+    // the two slots of one match are walked by that one match, so every inner tally has a single writer and
+    // needs no protection of its own. What the outer maps have to survive is an insert from one match while
+    // another reads or enumerates, which is what `Attribute` and `Forget` do.
+    private readonly ConcurrentDictionary<(MatchId Match, PlayerSlot Slot), CombatStats> _stats = new();
+    private readonly ConcurrentDictionary<(MatchId Match, PlayerSlot Slot), Dictionary<string, SpellEffects>> _spells = new();
+    private readonly ConcurrentDictionary<(MatchId Match, PlayerSlot Slot), HashSet<CreatureId>> _casters = new();
+
+    /// <summary>
+    /// The two sides of a match, so a lookup names them instead of scanning every key of every match.
+    /// `ConcurrentDictionary.Keys` allocates the whole key list on each access where `Dictionary.Keys` is a
+    /// view, and the walk below runs once per condition tick, so scanning was both a growing allocation and
+    /// a search for something that can only be in one of two places.
+    /// </summary>
+    private static readonly PlayerSlot[] Slots = [PlayerSlot.Player1, PlayerSlot.Player2];
 
     public CombatStats Of(MatchId matchId, PlayerSlot slot) => _stats.GetValueOrDefault((matchId, slot)) ?? new CombatStats(0, 0, 0);
 
@@ -33,19 +47,12 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
     /// <summary>Forgets a match once its numbers were read.</summary>
     public void Forget(MatchId matchId)
     {
-        foreach (var key in _stats.Keys.Where(key => key.Match == matchId).ToList())
+        foreach (var slot in Slots)
         {
-            _stats.Remove(key);
-        }
-
-        foreach (var key in _spells.Keys.Where(key => key.Match == matchId).ToList())
-        {
-            _spells.Remove(key);
-        }
-
-        foreach (var key in _casters.Keys.Where(key => key.Match == matchId).ToList())
-        {
-            _casters.Remove(key);
+            var key = (matchId, slot);
+            _stats.TryRemove(key, out _);
+            _spells.TryRemove(key, out _);
+            _casters.TryRemove(key, out _);
         }
     }
 
@@ -61,19 +68,8 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
         var current = _stats.GetValueOrDefault(key) ?? new CombatStats(0, 0, 0);
         _stats[key] = new CombatStats(current.Actions + 1, current.Fizzles + (resolution.Fizzled ? 1 : 0), current.Criticals + (resolution.IsCritical ? 1 : 0));
 
-        if (!_spells.TryGetValue(key, out var spells))
-        {
-            spells = new Dictionary<string, SpellEffects>(StringComparer.Ordinal);
-            _spells[key] = spells;
-        }
-
-        if (!_casters.TryGetValue(key, out var casters))
-        {
-            casters = [];
-            _casters[key] = casters;
-        }
-
-        casters.Add(actor);
+        var spells = _spells.GetOrAdd(key, _ => new Dictionary<string, SpellEffects>(StringComparer.Ordinal));
+        _casters.GetOrAdd(key, _ => []).Add(actor);
 
         var spell = resolution.Action.Spell.Value;
         spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(Effects(resolution, domainEvent.AppliedOutcomes));
@@ -106,18 +102,23 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
     /// <summary>
     /// Adds one share to the caster's side. The side is read from the tally the caster's own casts already
     /// built: a condition cannot tick before the cast that applied it was recorded, so the row is always there.
+    /// <para>
+    /// The walk stops at the first side that owns the caster, and which side that is does not depend on the
+    /// order the keys come out in: a creature has one owner, so exactly one side of the match can claim it.
+    /// </para>
     /// </summary>
     private void Attribute(MatchId matchId, ConditionShare share, Func<SpellEffects, SpellEffects> tally)
     {
         var spell = share.Source.Spell.Value;
-        foreach (var key in _spells.Keys.Where(key => key.Match == matchId))
+        foreach (var slot in Slots)
         {
-            if (_casters.GetValueOrDefault((matchId, key.Slot))?.Contains(share.Source.Caster) != true)
+            var key = (matchId, slot);
+            if (_casters.GetValueOrDefault(key)?.Contains(share.Source.Caster) != true
+                || !_spells.TryGetValue(key, out var spells))
             {
                 continue;
             }
 
-            var spells = _spells[key];
             spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(tally(SpellEffects.None));
             return;
         }
