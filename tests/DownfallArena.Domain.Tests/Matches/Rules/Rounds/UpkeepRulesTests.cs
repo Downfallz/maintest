@@ -284,4 +284,26 @@ public sealed class UpkeepRulesTests
         tick.Damage.ShouldBe(1);
         tick.Shares.Sum(share => share.Amount).ShouldBe(1);
     }
+
+    /// <summary>
+    /// A condition with no cast behind it still takes its share of a tick the board cut short, and that share
+    /// goes to nobody. Reading the proportion against the sourced part alone would hand the spells damage the
+    /// unowned condition did. Nothing applies an unowned condition today; the arithmetic holds anyway.
+    /// </summary>
+    [Fact]
+    public void An_unowned_condition_takes_its_share_of_a_short_tick_and_credits_no_spell()
+    {
+        var creatures = Arena.FourCreatures();
+        var ghoul = Arena.Find(creatures, Arena.Ghoul);
+        ghoul.Apply(Bleed.Of(1, rounds: 2), new ConditionSource(Arena.Knight, Arena.Guard));
+        ghoul.Apply(Bleed.Of(3, rounds: 2, StackingPolicy.Stack));
+        ghoul.TakeDamage(ghoul.Health.Value - 1);
+
+        var ticks = UpkeepRules.OngoingEffects(creatures);
+
+        // One point taken of the four asked; the owned condition asked for one of those four, so it earns none.
+        var tick = ticks.BleedTicks.ShouldHaveSingleItem();
+        tick.Damage.ShouldBe(1);
+        tick.Shares.ShouldBeEmpty();
+    }
 }

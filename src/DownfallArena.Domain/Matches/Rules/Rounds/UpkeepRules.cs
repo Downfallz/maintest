@@ -45,7 +45,7 @@ public static class UpkeepRules
             if (asked.Total > 0)
             {
                 var given = creature.GainEnergy(asked.Total);
-                gained.Add(new EnergyRegenerationTick(creature.Id, given, Shared(asked.Wanted, given)));
+                gained.Add(new EnergyRegenerationTick(creature.Id, given, Shared(asked, given)));
             }
         }
 
@@ -55,7 +55,7 @@ public static class UpkeepRules
             if (asked.Total > 0)
             {
                 var given = creature.Heal(asked.Total);
-                healed.Add(new RegenerationTick(creature.Id, given, Shared(asked.Wanted, given)));
+                healed.Add(new RegenerationTick(creature.Id, given, Shared(asked, given)));
             }
         }
 
@@ -65,7 +65,7 @@ public static class UpkeepRules
             if (asked.Total > 0)
             {
                 var taken = creature.TakeDamage(asked.Total);
-                bled.Add(new BleedTick(creature.Id, taken, Shared(asked.Wanted, taken)));
+                bled.Add(new BleedTick(creature.Id, taken, Shared(asked, taken)));
             }
         }
 
@@ -121,28 +121,41 @@ public static class UpkeepRules
     /// A tick the board took in full is handed back unchanged. A tick cut short -- two points of bleed on a
     /// creature with one point of health -- is split in proportion, and the point that cannot be halved goes
     /// to the largest remainder, then to the largest ask, then to the first spell in ordinal id order, so two
-    /// equal claims resolve the same way every time.
+    /// equal claims resolve the same way every time. The proportion is read against everything asked for,
+    /// including any condition with no cast behind it, whose share simply goes to nobody.
     /// </para>
     /// </summary>
-    private static IReadOnlyList<ConditionShare> Shared(IReadOnlyList<ConditionShare> wanted, int happened)
+    private static IReadOnlyList<ConditionShare> Shared(
+        (int Total, IReadOnlyList<ConditionShare> Wanted) asked,
+        int happened)
     {
-        var asked = wanted.Sum(share => share.Amount);
-        if (wanted.Count == 0 || happened <= 0 || asked == 0)
+        var wanted = asked.Wanted;
+        var claimed = wanted.Sum(share => share.Amount);
+        if (wanted.Count == 0 || happened <= 0 || claimed == 0)
         {
             return [];
         }
 
-        if (happened >= asked)
+        if (happened >= asked.Total)
         {
             return wanted;
         }
 
+        // Read against everything the conditions asked for, not only the part with a cast behind it: a
+        // condition nothing cast still takes its share of a tick the board cut short, and crediting that
+        // share to the spells would pay them for damage they did not do.
+        var entitled = (int)((long)claimed * happened / asked.Total);
+        if (entitled <= 0)
+        {
+            return [];
+        }
+
         var shares = wanted
-            .Select(share => new { share.Source, Exact = (double)share.Amount * happened / asked, share.Amount })
+            .Select(share => new { share.Source, Exact = (double)share.Amount * entitled / claimed, share.Amount })
             .Select(share => new { share.Source, share.Exact, share.Amount, Whole = (int)Math.Floor(share.Exact) })
             .ToList();
 
-        var left = happened - shares.Sum(share => share.Whole);
+        var left = entitled - shares.Sum(share => share.Whole);
         var extra = shares
             .OrderByDescending(share => share.Exact - share.Whole)
             .ThenByDescending(share => share.Amount)
