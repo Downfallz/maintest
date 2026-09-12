@@ -26,6 +26,7 @@ from downfall_learning.search_weights import (
     EngineCommand,
     SearchOptions,
     format_search,
+    missing_engine,
     search_weights,
     win_rate_lines,
 )
@@ -343,6 +344,11 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     if arguments.engine:
         engine = replace(engine, command=tuple(arguments.engine))
     host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
+    # The evaluator checks the engine itself; the builder is this command's own and nobody else's.
+    unreachable = missing_engine(host.builder, engine.root)
+    if unreachable:
+        print(unreachable, file=sys.stderr)
+        return 1
     evaluator = EngineContentEvaluator(host, knobs.objective, content)
     options = TuneOptions(
         iterations=arguments.iterations,

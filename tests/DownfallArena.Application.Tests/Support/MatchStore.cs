@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DownfallArena.Application.Matches;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Messaging;
@@ -11,13 +12,19 @@ namespace DownfallArena.Application.Tests.Support;
 
 /// <summary>
 /// A substituted repository backed by a dictionary, plus the workflow and the matches the tests need.
+/// <para>
+/// Concurrent, because the repository it stands in for is: `InMemoryMatchRepository` is a
+/// `ConcurrentDictionary` and a batch plays its matches at the same time. A double that models a
+/// sequential store would fail on the batch runner rather than on anything the test is about.
+/// </para>
 /// </summary>
 internal sealed class MatchStore
 {
     public static readonly PlayerId Alice = PlayerId.From(Guid.Parse("00000000-0000-0000-0000-000000000001"));
     public static readonly PlayerId Bob = PlayerId.From(Guid.Parse("00000000-0000-0000-0000-000000000002"));
 
-    private readonly Dictionary<MatchId, Match> _matches = [];
+    private readonly ConcurrentDictionary<MatchId, Match> _matches = new();
+    private readonly ConcurrentQueue<string> _calls = new();
 
     public MatchStore()
     {
@@ -28,21 +35,21 @@ internal sealed class MatchStore
             .Returns(call =>
             {
                 _matches[call.Arg<Match>().Id] = call.Arg<Match>();
-                Calls.Add("save");
+                _calls.Enqueue("save");
                 return Task.CompletedTask;
             });
         Dispatcher = Substitute.For<IDomainEventDispatcher>();
         Dispatcher.DispatchAsync(Arg.Any<Match>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
             {
-                Calls.Add("dispatch");
+                _calls.Enqueue("dispatch");
                 return Task.CompletedTask;
             });
         Workflow = new MatchWorkflow(Repository, Dispatcher);
     }
 
     /// <summary>The port calls in the order they happened: "save" and "dispatch".</summary>
-    public List<string> Calls { get; } = [];
+    public IReadOnlyCollection<string> Calls => _calls;
 
     public IMatchRepository Repository { get; }
 

@@ -29,6 +29,13 @@ public sealed class RunRecorder(
     private readonly Dictionary<MatchId, List<StepRecord>> _steps = [];
     private readonly DateTimeOffset _createdAt = timeProvider.GetUtcNow();
 
+    /// <summary>
+    /// No: every match is appended to one <c>steps.jsonl</c> and one <c>episodes.jsonl</c>, so matches playing
+    /// at the same time would interleave their lines and a recorded run would no longer replay from its seed.
+    /// A dataset that cannot be reproduced is not a dataset anything should be trained on.
+    /// </summary>
+    public bool AllowsParallelMatches => false;
+
     public RunStamp Stamp => stamp;
 
     public int Matches { get; private set; }

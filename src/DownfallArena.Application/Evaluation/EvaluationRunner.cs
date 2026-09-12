@@ -184,7 +184,11 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
             usage[spell] = usage.GetValueOrDefault(spell) + count;
         }
 
-        return usage;
+        // By spell id: the merge appends whatever the second batch saw and the first did not, so the order
+        // would otherwise depend on which spells came up in which pass. This dictionary is what the report
+        // serializes.
+        return usage.OrderBy(entry => entry.Key, StringComparer.Ordinal)
+            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
     }
 
     private CombatStats Combat(IReadOnlyList<SeedPair> pairs, PlayerSlot slotWhenAFirst, PlayerSlot slotWhenBFirst)

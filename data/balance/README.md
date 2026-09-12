@@ -167,19 +167,25 @@ on `lightning_bolt`'s energy cost — one move worth more than everything the se
 skips it when you want a quick look rather than an answer.
 
 Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
-benchmark seeds an evaluation is about seven seconds, so a candidate is about thirty-four across the four.
-The sweep is up to two candidates per playable knob — on the nine-spell core content that is 29 knobs and 41
-legal single steps. The paired moves below add up to 80 more, and the deepening up to 18 on top, so the
-opening tops out at 139 candidates. The workflow then climbs 24 rounds of 6, which is 284 candidates and
-about **160 minutes**, which is why its timeout is 300 and not 180; the CLI's own defaults stay at 8 rounds
-of 4, because a local run should not take two hours unasked. Two evaluations cost about 95 minutes, `exploit`
-took that to 130 and `variety` to 160, so each one added is worth pricing before it lands. `--no-pairs` and
+benchmark seeds an evaluation is about **3.8 seconds** on a four-core machine, so a candidate is about
+**14 seconds** across the four (ADR 0030 plays the 400 matches of an evaluation at once; it was 7 seconds an
+evaluation and 34 a candidate when they went one at a time). The sweep is up to two candidates per playable
+knob — on the nine-spell core content that is 29 knobs and 41 legal single steps. The paired moves below add
+up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139 candidates. The workflow
+then climbs 24 rounds of 6, which is 284 candidates and about **67 minutes**; its timeout stays at 300, which
+is headroom rather than an estimate, because a runner's speed is not a promise. `--no-pairs` and
 `--pair-depth 1` are the switches if a run gets tight. Raise the budget rather than the step size: a wider
 step reaches further and reads worse in the diff.
 
-A budget note the last local pass earned: the climb converged after about ten candidates past the opening
-sweep, so 149 of a possible 235 were played and 16 rounds read the same as 24 would have. On this catalogue
-the opening sweep does nearly all the work, and the rounds are not the binding constraint.
+A catalogue the search has already played is not played again: the same neighbour comes up in more than one
+round, and a paired move can land where a single one did. On the last 149-candidate pass 30 were replays and
+one move set came up five times, so the engine sees about four fifths of what the search proposes. The report
+says which: *"played 149 version(s) … the engine only had to play 119 of the 150 it was handed"*.
+
+Two budget notes the last local pass earned. The climb converged after about ten candidates past the opening
+sweep, so 149 of a possible 235 were played and 16 rounds read the same as 24 would have: on this catalogue
+the opening sweep does nearly all the work, and the rounds are not the binding constraint. And the whole pass
+now costs about **28 minutes** where it cost seventy.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is

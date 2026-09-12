@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Messaging;
@@ -15,7 +16,10 @@ namespace DownfallArena.Application.Learning.Tracing;
 /// </summary>
 public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventListener
 {
-    private readonly Dictionary<MatchId, List<TraceEntry>> _entries = [];
+    // Concurrent on the outside, because a batch plays its matches at the same time (ADR 0030) and this
+    // listens to every one of them. Each match's own list keeps a single writer -- a match plays its rounds
+    // in order -- so only the map itself needs protecting.
+    private readonly ConcurrentDictionary<MatchId, List<TraceEntry>> _entries = new();
 
     public Type EventType => typeof(IMatchEvent);
 
@@ -31,11 +35,7 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
         var match = await matches.FindAsync(matchEvent.MatchId, cancellationToken)
             ?? throw new InvalidOperationException($"Match {matchEvent.MatchId} raised an event but is not stored.");
 
-        if (!_entries.TryGetValue(match.Id, out var entries))
-        {
-            entries = [];
-            _entries[match.Id] = entries;
-        }
+        var entries = _entries.GetOrAdd(match.Id, _ => []);
 
         var player1 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
         entries.Add(new TraceEntry
@@ -57,7 +57,7 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     {
         ArgumentNullException.ThrowIfNull(stamp);
 
-        _entries.Remove(matchId, out var entries);
+        _entries.TryRemove(matchId, out var entries);
         entries ??= [];
         return new MatchTrace
         {
