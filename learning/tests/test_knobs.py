@@ -832,6 +832,24 @@ def test_a_permanent_effect_with_a_price_on_it_is_not_reported() -> None:
     assert unbounded(content) == []
 
 
+def test_a_free_permanent_effect_that_cannot_stack_is_not_reported() -> None:
+    """Permanence alone is not a stack: under `Refresh` a re-cast restarts the condition that is already
+    there and under `Ignore` it is refused, so the creature carries one of them however often it casts."""
+    for policy in ("Refresh", "Ignore"):
+        content = Content(
+            spells={
+                "spell:bounded": spell(
+                    energyCost=0,
+                    effects=[{"kind": "DefenseBuff", "amount": 1, "permanent": True, "stacking": policy}],
+                )
+            },
+            files={"spell:bounded": Path("x.json")},
+            tiers={"spell:bounded": 2},
+        )
+
+        assert unbounded(content) == [], policy
+
+
 def test_a_free_spell_that_lasts_no_time_is_not_reported() -> None:
     """`wait` is free and re-castable and bounded anyway: what it gives is spent."""
     content = Content(

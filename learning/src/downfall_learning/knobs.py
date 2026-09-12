@@ -512,11 +512,27 @@ def _is_free(document: Mapping[str, object]) -> bool:
 
 
 def _has_permanent(document: Mapping[str, object]) -> bool:
+    """Whether the spell carries a permanent effect that a second cast would *add to*.
+
+    Permanence alone is not a stack. `ConditionSet.Apply` adds another condition only under `Stack`: under
+    `Refresh` a re-cast restarts the one that is there and under `Ignore` it is refused outright, so either
+    way the creature carries one of them however many times the spell is cast. Reading `permanent` alone
+    reports those as unbounded, which is a finding about content that is bounded.
+    """
     effects = document.get("effects", [])
     return any(
-        isinstance(effect, Mapping) and bool(effect.get("permanent"))
+        isinstance(effect, Mapping) and bool(effect.get("permanent")) and _stacks(effect)
         for effect in (effects if isinstance(effects, list) else [])
     )
+
+
+def _stacks(effect: Mapping[str, object]) -> bool:
+    """Whether an effect's stacking policy piles a second application on the first.
+
+    `Stack` is the default the mapper gives the two kinds that can be permanent (`data/README.md`), so an
+    effect that says nothing stacks.
+    """
+    return str(effect.get("stacking", "Stack") or "Stack") == "Stack"
 
 
 def dominance(content: Content) -> list[tuple[str, str]]:
