@@ -174,9 +174,12 @@ jobs:
 
       # The one thing the search itself cannot establish. Every candidate played the same fixed seeds and the
       # winner was picked for scoring best on them, so its interval is the winner's and not a fair one. These
-      # are seeds no candidate saw: consecutive integers starting past the largest in the seed file, so they
-      # cannot overlap it whatever that file holds. The baseline is replayed on the same seeds as the control --
-      # against `greedy` it is even by construction, which is exactly what makes it a check on the seed set.
+      # are seeds no candidate saw: a run of consecutive integers clear of every seed in the file. A seed file
+      # may hold any distinct 32-bit integers, so the window goes above the largest seed when it fits in the
+      # signed range and below the smallest otherwise -- `--seed` is parsed as an `int` and the engine adds to
+      # it unchecked, so a window that ran past the maximum would fail the run, or wrap and land back on the
+      # seeds it is supposed to avoid. The baseline is replayed on the same seeds as the control -- against
+      # `greedy` it is even by construction, which is exactly what makes it a check on the seed set.
       - name: Replay on seeds the search never saw
         if: steps.found.outputs.applied == 'true'
         id: holdout
@@ -184,8 +187,17 @@ jobs:
           OPPONENT: ${{ inputs.opponent }}
           SEEDS: ${{ inputs.seeds }}
         run: |
-          start="$(jq -r '[.seeds[]] | max + 1' "$SEEDS")"
           matches="$(jq -r '.seeds | length' "$SEEDS")"
+          start="$(jq -r --argjson n "$matches" '
+            [.seeds[]] as $seeds
+            | ($seeds | max) as $highest | ($seeds | min) as $lowest
+            | if $highest + $n <= 2147483647 then $highest + 1
+              elif $lowest - $n >= 0 then $lowest - $n
+              else "none" end' "$SEEDS")"
+          if [[ "$start" == "none" ]]; then
+            echo "No window of $matches seeds fits clear of '$SEEDS' in the seed space." >&2
+            exit 1
+          fi
           replay() {
             dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
               evaluate --p1 "$1" --p2 "$OPPONENT" --seed "$start" --matches "$matches" \
@@ -224,6 +236,9 @@ jobs:
           dotnet build --no-restore --configuration Release
           dotnet test --no-build --configuration Release
           dotnet format --verify-no-changes
+          uv run --project learning --locked --no-sync --no-build python -m ruff check learning
+          uv run --project learning --locked --no-sync --no-build python -m ruff format --check learning
+          uv run --project learning --locked --no-sync --no-build python -m pytest learning/tests -q
 
       # The branch is pushed; the pull request is not opened here, and that is the point. A pull request opened
       # with GITHUB_TOKEN does not start the `pull_request` workflows, so it would arrive with no CI at all and

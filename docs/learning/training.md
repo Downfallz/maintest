@@ -294,10 +294,11 @@ branch as a pull request instead: one tap, the repository's real checks run, and
 single commit GitHub fills the description in from its message, which the workflow wrote for that purpose.
 
 Before it pushes anything each job runs the gate a contributor runs — the .NET build, tests and format check,
-and, where the proposal touches the learning project, its ruff, format check and pytest — so a proposal that
-breaks any of them never becomes a branch. A weights file is content the test projects copy to their output
-directory, so that job builds again before it tests: with `--no-build` the tests would read the copy from
-before the file existed. Both jobs call the learning project as a module (`python -m downfall_learning.cli`), the way
+and the learning project's ruff, format check and pytest — so a proposal that breaks any of them never becomes
+a branch. Both proposals land under a directory that gate covers, so both run all of it. A weights file is
+content the test projects copy to their output directory, so the weight search builds again before it tests:
+with `--no-build` the tests would read the copy from before the file existed. Both jobs call the learning
+project as a module (`python -m downfall_learning.cli`), the way
 `scripts/iterate.sh` does: the runners install the locked dependencies without installing the project itself,
 so its console scripts are not on the path there.
 
