@@ -292,14 +292,15 @@
     "spell:full_plate": {
       "name": "Full Plate",
       "class": "Warlord",
-      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is a free self-targeted permanent point of defense that can be cast every single round, and free plus permanent is the dangerous combination in this catalogue.",
+      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is a self-targeted permanent point of defense that can be cast every single round, and permanent plus repeatable is only bounded by what it costs. It costs one energy for that reason: half a round's income per point, so a creature that armours itself is a creature not attacking, which is the trade the spell should be.",
       "keep": [
         "One point at a time: it stacks by being cast again, not by being bigger",
+        "Never free: a permanent effect nobody pays for has no brake but the round cap",
         "Cheap enough to cast in the rounds that decide the match, or it is not armour"
       ],
-      "note": "Its cost is a knob even though the spell is free today: putting a price on a permanent, repeatable buff is the lever this catalogue most obviously lacks, and it costs nothing to let the search try it.",
+      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit.",
       "knobs": [
-        { "path": "/energyCost", "min": 0, "max": 1, "step": 1 },
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
