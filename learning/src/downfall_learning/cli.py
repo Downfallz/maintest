@@ -114,7 +114,7 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
         "--no-pairs",
         dest="pairs",
         action="store_false",
-        help="skip the paired moves the sweep adds for spells no single step could move at all",
+        help="skip the paired moves the sweep adds for spells no single step could improve the score on",
     )
     tune.add_argument(
         "--pair-depth",

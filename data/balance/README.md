@@ -257,3 +257,9 @@ goes on from it.
 Only same-direction combinations are played. `--no-pairs` turns the whole thing off, `--pair-depth 1` leaves
 the pairs at one step each, and deepening is capped at the six pairs closest to paying off — it is the only
 part of the opening that multiplies, and a cap is cheaper to reason about than a rate.
+
+**Deepening only has room where a knob does.** A second step that clamps at a bound lands on the content the
+first step already produced, and that candidate is dropped rather than replayed. On the nine-spell core
+content most knobs are whole numbers one step from their own ceiling, so a full run deepened exactly one
+pair: the critical chance, whose step of 0.05 across 0.4 to 0.8 is the one axis with room to walk. Read a
+small deepening count as bounds that are tight, not as a pass that declined to look.
