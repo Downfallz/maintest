@@ -218,6 +218,9 @@ class TuneResult:
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "improved": self.improved,
+            # What the report's first line says, so the artifact and the report cannot disagree about how
+            # much of the search the engine actually played.
+            "played": self.played,
             "candidates": [candidate.to_json() for candidate in self.candidates],
         }
         (directory / "tune.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

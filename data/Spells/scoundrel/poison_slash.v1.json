@@ -14,11 +14,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 2
+      "amount": 3
     },
     {
       "kind": "Bleed",
-      "amountPerRound": 1,
+      "amountPerRound": 3,
       "durationRounds": 1
     }
   ]

@@ -9,6 +9,13 @@ Status: **inherited**. The numbers below are the prototype's, not a balance pass
 the agents, and the learning loop run on content with some variety instead of 36 copies of the same
 one-damage attack. Every one of them is open to change.
 
+**And several have changed.** This table is the record of what the port brought over, so a tuning pass
+([ADR 0021](../adr/0021-tune-the-catalogue-with-a-declared-search-space.md)) does not rewrite it — it would
+erase the only account of where the content started. `data/Spells` is where the numbers a build reads live,
+`data/balance/knobs.json` says which of them a pass may move and what each spell is for, and
+`docs/learning/journal.md` records every move with the reason. The rows below that differ from `data/` differ
+because a pass moved them; read them as history, never as the catalogue.
+
 ## Where they come from
 
 The source is `legacy/DownfallArena/DA.GameResources/Spells/*.cs`, one C# class per class of creature, one
