@@ -13,6 +13,11 @@
         "p1": "greedy",
         "p2": "random",
         "reads": "Playing well still beats playing at random. A change that closes this gap has removed the decisions instead of balancing them."
+      },
+      "exploit": {
+        "p1": "heuristic:learning/weights/search-2.json",
+        "p2": "greedy",
+        "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A goes stale when the content moves — a tuning pass changes what there is to exploit — so it is refreshed from the next search run, not kept."
       }
     },
     "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one.",
@@ -122,6 +127,14 @@
         "scale": 0.1,
         "weight": 2,
         "why": "The skill gap. Content that a random agent can hold has stopped asking anything."
+      },
+      {
+        "metric": "winRateA",
+        "on": "exploit",
+        "max": 0.55,
+        "scale": 0.05,
+        "weight": 2,
+        "why": "A guard, not a push. It reads 0.55 today — 220 of 400 — and the 95% interval on 400 matches is about a twentieth either way, so asking for less than this would be asking the tuner to chase noise. What it stops is the tuner widening the gap, which nothing else here can see: every other target reads a mirrored run, where both sides play the same way and an exploit is invisible by construction. Read it with the skill target, which refuses the degenerate answer — flattening the game closes this gap and fails that one."
       }
     ]
   },

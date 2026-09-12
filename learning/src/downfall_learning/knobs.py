@@ -321,11 +321,16 @@ def with_value(document: Mapping[str, object], pointer: str, value: float) -> di
     return copy
 
 
-def validate(knobs: Knobs, content: Content) -> list[str]:
+def validate(knobs: Knobs, content: Content, root: Path | None = None) -> list[str]:
     """Everything that makes the knobs file and the content disagree, worst first.
 
     An empty list means every enabled spell is covered, every pointer addresses a number, and every number
     the content carries today sits inside its own bounds.
+
+    ``root`` is the repository the objective's agent paths are written against, which is the directory the
+    engine is run from and not this process's. Without it those paths are left unchecked rather than resolved
+    from wherever the caller happens to be: a check that resolves them from the wrong place reports files
+    missing that are there.
     """
     problems: list[str] = []
     for alias in sorted(set(content.spells) - set(knobs.spells)):
@@ -342,7 +347,7 @@ def validate(knobs: Knobs, content: Content) -> list[str]:
             problems.append(f"{alias}: no intent, so nothing says what its numbers are for.")
         problems.extend(_knob_problems(spell, document))
 
-    problems.extend(_objective_problems(knobs))
+    problems.extend(_objective_problems(knobs, root))
     problems.extend(_constraint_problems(knobs, content))
     return problems
 
@@ -381,14 +386,40 @@ def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[st
     return problems
 
 
-def _objective_problems(knobs: Knobs) -> list[str]:
+#: The agent specs that name a file after the colon. `greedy`, `random` and `explore:<rate>` name none.
+_FILE_BACKED_AGENTS = ("heuristic", "policy")
+
+
+def _objective_problems(knobs: Knobs, root: Path | None) -> list[str]:
     """A target reading an evaluation nobody plays is a term silently missing from every score."""
     declared = set(knobs.objective.evaluations)
-    return [
+    problems = [
         f"objective: target '{target.key}' reads an evaluation the objective does not declare."
         for target in knobs.objective.targets
         if target.on not in declared
     ]
+    if root is not None:
+        problems.extend(_agent_problems(knobs, root))
+    return problems
+
+
+def _agent_problems(knobs: Knobs, root: Path) -> list[str]:
+    """An evaluation naming a weights or policy file that is not there fails the engine, one candidate at a
+    time, after a search has already started. The path is the engine's own, so it resolves from the repository
+    root the way the engine is given it.
+    """
+    problems = []
+    for name, evaluation in sorted(knobs.objective.evaluations.items()):
+        for side in ("p1", "p2"):
+            spec = str(evaluation.get(side, "greedy"))
+            kind, colon, path = spec.partition(":")
+            if not colon or kind not in _FILE_BACKED_AGENTS:
+                continue
+            if not path.strip():
+                problems.append(f"objective: evaluation '{name}' {side} is '{spec}', which names no file.")
+            elif not (root / path).is_file():
+                problems.append(f"objective: evaluation '{name}' {side} reads '{path}', which is not a file.")
+    return problems
 
 
 def _constraint_problems(knobs: Knobs, content: Content) -> list[str]:

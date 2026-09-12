@@ -82,10 +82,22 @@ score = sum over targets of  weight * (distance outside the band / scale) ** 2
 ```
 
 Zero is on target and lower is better. A metric no evaluation measured is listed as missing rather than
-counted as zero. Two evaluations are played on the benchmark seeds: `mirror` (greedy against greedy) reads
-the content with skill held equal, and `skill` (greedy against random) checks that the content still rewards
-playing well. A change that balances the first by flattening the second has removed the decisions instead of
-balancing them.
+counted as zero. Three evaluations are played on the benchmark seeds. `mirror` (greedy against greedy) reads
+the content with skill held equal. `skill` (greedy against random) checks that the content still rewards
+playing well. `exploit` (a searched weights file against greedy) reads how far a player who only wants to win
+gets against the way the game is meant to be played.
+
+The three are one definition and are read together. `Greedy` is the taste the catalogue is balanced for: nine
+prices, each decided rather than felt (ADR 0018, ADR 0028). `exploit` seats an agent that shares none of that
+taste and beats `Greedy` anyway, so its gap is the price the content charges for playing it the intended way.
+Closing that gap by flattening the game fails `skill`; keeping one dominant line open fails `tierUsageShare`.
+What all three together ask for is content where playing well matters, where more than one line wins, and
+where winning does not require abandoning the taste.
+
+`exploit` is the only evaluation that names a file. The agent goes stale when the content moves — a tuning
+pass changes what there is to exploit — so it is refreshed from the next `search-weights` run rather than
+kept. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
+because otherwise the engine fails one candidate at a time, once a search has already started.
 
 Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
 of the talent tree, which is the set a player is choosing between at that moment — and report the worst
@@ -146,13 +158,15 @@ on `lightning_bolt`'s energy cost — one move worth more than everything the se
 skips it when you want a quick look rather than an answer.
 
 Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
-benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty. The sweep is up to two
-candidates per playable knob — on the nine-spell core content that is 29 knobs and 41 legal single steps.
-The paired moves below add up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139
-candidates. The workflow then climbs 24 rounds of 6, which is 284 candidates and about 95 minutes against
-its 180-minute timeout; the CLI's own defaults stay at 8 rounds of 4, because a local run should not take an
-hour and a half unasked. `--no-pairs` and `--pair-depth 1` are the switches if a run gets tight. Raise the
-budget rather than the step size: a wider step reaches further and reads worse in the diff.
+benchmark seeds an evaluation is about seven seconds, so a candidate is about twenty-seven across the three.
+The sweep is up to two candidates per playable knob — on the nine-spell core content that is 29 knobs and 41
+legal single steps. The paired moves below add up to 80 more, and the deepening up to 18 on top, so the
+opening tops out at 139 candidates. The workflow then climbs 24 rounds of 6, which is 284 candidates and
+about **130 minutes** against its 180-minute timeout; the CLI's own defaults stay at 8 rounds of 4, because a
+local run should not take two hours unasked. Adding `exploit` as a third evaluation is what took that run
+from about 95 minutes to 130, so the headroom is now under an hour: `--no-pairs` and `--pair-depth 1` are the
+switches if a run gets tight, and a fourth evaluation would need the timeout raised with it. Raise the budget
+rather than the step size: a wider step reaches further and reads worse in the diff.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is

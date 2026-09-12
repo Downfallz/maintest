@@ -299,7 +299,9 @@ def _check_knobs(arguments: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 1
 
-    problems = validate(knobs, content)
+    # The agent paths in the objective are the engine's own, written from the repository root: the knobs
+    # file sits at <root>/data/balance/knobs.json, so its own location is what says where that is.
+    problems = validate(knobs, content, root=arguments.knobs.resolve().parents[2])
     for problem in problems:
         print(f"problem: {problem}", file=sys.stderr)
     reports = findings(content, knobs)
