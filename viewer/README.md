@@ -18,6 +18,13 @@ What it renders, by what you drop:
 
 Traces dropped alongside their run also feed the batch view (fizzle and crit rates) and appear on their own.
 
+Since [ADR 0027](../docs/adr/0027-a-condition-remembers-the-spell-that-applied-it.md) a trace says which cast
+each upkeep tick came from, so the page credits a bleed's damage to the spell and the creature behind it, not
+only to the one bleeding: **Over time** beside Damage in both spell tables, damage dealt and healing done
+carrying what a creature's own conditions did, and a creature that bleeds out counted as the bleed's kill
+rather than as a death nobody is credited with. A trace recorded before that has no shares and reads as it
+always did.
+
 ## Samples
 
 `samples/` holds one small run recorded from a simplified engine so the page can be tried without building

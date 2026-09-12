@@ -32,3 +32,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0024](0024-test-the-studio-page-with-nodes-own-runner.md) | Test the studio page with Node's own test runner | Accepted |
 | [0025](0025-the-balance-knobs-are-a-part-of-a-studio-change.md) | The balance knobs are a part of a studio change, like the alias map | Accepted |
 | [0026](0026-price-what-a-cast-costs-and-how-long-it-lasts.md) | Price the part of a cost the combat reading hides, and how long an effect lasts | Accepted |
+| [0027](0027-a-condition-remembers-the-spell-that-applied-it.md) | A condition remembers the spell that applied it | Accepted |

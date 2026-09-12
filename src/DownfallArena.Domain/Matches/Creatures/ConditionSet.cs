@@ -23,19 +23,19 @@ internal sealed class ConditionSet
     /// Applies an effect and returns the resulting condition: a new one, the refreshed existing one, or
     /// <c>null</c> when the stacking policy ignores the application.
     /// </summary>
-    public Condition? Apply(LastingEffect effect)
+    public Condition? Apply(LastingEffect effect, ConditionSource? source)
     {
         var existing = _conditions.Find(condition => condition.Effect.GetType() == effect.GetType());
         if (existing is null || effect.Stacking == StackingPolicy.Stack)
         {
-            var condition = new Condition(effect);
+            var condition = new Condition(effect, source);
             _conditions.Add(condition);
             return condition;
         }
 
         if (effect.Stacking == StackingPolicy.Refresh)
         {
-            existing.Refresh();
+            existing.Refresh(source);
             return existing;
         }
 

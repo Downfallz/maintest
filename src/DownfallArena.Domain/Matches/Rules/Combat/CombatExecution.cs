@@ -31,10 +31,11 @@ public static class CombatExecution
             throw new InvalidOperationException($"Actor {actor.Id} cannot pay a cost the resolution accepted: {paid.Error.Message}");
         }
 
+        var source = new ConditionSource(resolution.Action.Actor, resolution.Action.Spell);
         var applied = new List<EffectOutcome>();
         foreach (var outcome in resolution.Outcomes)
         {
-            var landed = ApplyTo(outcome, Find(outcome.Target, creatures));
+            var landed = ApplyTo(outcome, Find(outcome.Target, creatures), source);
             if (landed is not null)
             {
                 applied.Add(landed);
@@ -49,7 +50,7 @@ public static class CombatExecution
     /// One outcome against one creature, answering with what it did, or <c>null</c> when it did nothing. An
     /// amount of zero is nothing whether the creature refused it or the rules computed it that way.
     /// </summary>
-    private static EffectOutcome? ApplyTo(EffectOutcome outcome, Creature target)
+    private static EffectOutcome? ApplyTo(EffectOutcome outcome, Creature target, ConditionSource source)
     {
         EffectOutcome? landed;
         switch (outcome)
@@ -67,7 +68,7 @@ public static class CombatExecution
                 landed = gained > 0 ? energy with { Amount = gained } : null;
                 break;
             case ConditionOutcome condition:
-                landed = target.Apply(condition.Effect) is null ? null : condition;
+                landed = target.Apply(condition.Effect, source) is null ? null : condition;
                 break;
             default:
                 throw new InvalidOperationException($"Outcome '{outcome.GetType().Name}' has no execution rule.");

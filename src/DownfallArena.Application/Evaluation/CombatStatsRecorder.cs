@@ -3,6 +3,7 @@ using DownfallArena.Application.Messaging;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Matches.Rules.Rounds;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -21,6 +22,7 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
 {
     private readonly Dictionary<(MatchId Match, PlayerSlot Slot), CombatStats> _stats = [];
     private readonly Dictionary<(MatchId Match, PlayerSlot Slot), Dictionary<string, SpellEffects>> _spells = [];
+    private readonly Dictionary<(MatchId Match, PlayerSlot Slot), HashSet<CreatureId>> _casters = [];
 
     public CombatStats Of(MatchId matchId, PlayerSlot slot) => _stats.GetValueOrDefault((matchId, slot)) ?? new CombatStats(0, 0, 0);
 
@@ -39,6 +41,11 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
         foreach (var key in _spells.Keys.Where(key => key.Match == matchId).ToList())
         {
             _spells.Remove(key);
+        }
+
+        foreach (var key in _casters.Keys.Where(key => key.Match == matchId).ToList())
+        {
+            _casters.Remove(key);
         }
     }
 
@@ -60,8 +67,60 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             _spells[key] = spells;
         }
 
+        if (!_casters.TryGetValue(key, out var casters))
+        {
+            casters = [];
+            _casters[key] = casters;
+        }
+
+        casters.Add(actor);
+
         var spell = resolution.Action.Spell.Value;
         spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(Effects(resolution, domainEvent.AppliedOutcomes));
+    }
+
+    /// <summary>
+    /// What the start of a round took, gave and healed, counted against the cast that asked for it rather than
+    /// against the creature it happened to (ADR 0027). A tick with no share is a condition nothing cast.
+    /// </summary>
+    public void Record(OngoingEffectsApplied domainEvent)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvent);
+
+        foreach (var share in domainEvent.BleedTicks.SelectMany(tick => tick.Shares))
+        {
+            Attribute(domainEvent.MatchId, share, effects => effects with { ConditionDamage = share.Amount });
+        }
+
+        foreach (var share in domainEvent.RegenerationTicks.SelectMany(tick => tick.Shares))
+        {
+            Attribute(domainEvent.MatchId, share, effects => effects with { ConditionHealing = share.Amount });
+        }
+
+        foreach (var share in domainEvent.EnergyRegenerationTicks.SelectMany(tick => tick.Shares))
+        {
+            Attribute(domainEvent.MatchId, share, effects => effects with { ConditionEnergy = share.Amount });
+        }
+    }
+
+    /// <summary>
+    /// Adds one share to the caster's side. The side is read from the tally the caster's own casts already
+    /// built: a condition cannot tick before the cast that applied it was recorded, so the row is always there.
+    /// </summary>
+    private void Attribute(MatchId matchId, ConditionShare share, Func<SpellEffects, SpellEffects> tally)
+    {
+        var spell = share.Source.Spell.Value;
+        foreach (var key in _spells.Keys.Where(key => key.Match == matchId))
+        {
+            if (_casters.GetValueOrDefault((matchId, key.Slot))?.Contains(share.Source.Caster) != true)
+            {
+                continue;
+            }
+
+            var spells = _spells[key];
+            spells[spell] = (spells.GetValueOrDefault(spell) ?? SpellEffects.None).Plus(tally(SpellEffects.None));
+            return;
+        }
     }
 
     /// <summary>

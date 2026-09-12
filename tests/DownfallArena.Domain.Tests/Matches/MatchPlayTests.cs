@@ -126,7 +126,14 @@ public sealed class MatchPlayTests
         expired.Count.ShouldBe(2);
         expired[0].ShouldBeEmpty();
         expired[1].Keys.ShouldBe([CreatureId.From(3)]);
-        expired[1][CreatureId.From(3)].ShouldBe([new ConditionSnapshot(DefenseBuff.Of(2, Duration.OfRounds(1)), 0)]);
+        // The condition names the cast it came from, so what it does at upkeep has an owner (ADR 0027).
+        expired[1][CreatureId.From(3)].ShouldBe(
+        [
+            new ConditionSnapshot(
+                DefenseBuff.Of(2, Duration.OfRounds(1)),
+                0,
+                new ConditionSource(CreatureId.From(3), Arena.Guard)),
+        ]);
     }
 
     [Fact]

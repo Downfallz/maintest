@@ -36,9 +36,23 @@ public sealed record SpellOutcome
 
     /// <summary>
     /// Damage its casts actually dealt on the spot: what the target lost, not what the spell aimed for, so a
-    /// hit that overkills counts the health it removed. A bleed's damage lands at upkeep and is not here.
+    /// hit that overkills counts the health it removed. What a bleed goes on to take is
+    /// <see cref="ConditionDamage"/>.
     /// </summary>
     public int Damage { get; init; }
+
+    /// <summary>
+    /// Damage its bleeds took at upkeep, rounds after the cast, counted against this spell because a condition
+    /// remembers the cast it came from (ADR 0027). Capped the same way: a bleed that finishes a creature counts
+    /// the health left, not what it asked for.
+    /// </summary>
+    public int ConditionDamage { get; init; }
+
+    /// <summary>Healing its regenerations gave at upkeep, the counterpart of <see cref="ConditionDamage"/>.</summary>
+    public int ConditionHealing { get; init; }
+
+    /// <summary>Energy its energy regenerations gave at upkeep.</summary>
+    public int ConditionEnergy { get; init; }
 
     public int Healing { get; init; }
 
@@ -77,8 +91,18 @@ public sealed record SpellOutcome
     /// </summary>
     public double ResolveRate => Resolved + Fizzled == 0 ? 0 : (double)Resolved / (Resolved + Fizzled);
 
-    /// <summary>Damage per landed cast, which compares spells regardless of how often each was reached.</summary>
-    public double DamagePerCast => Resolved == 0 ? 0 : (double)Damage / Resolved;
+    /// <summary>
+    /// Damage per landed cast, on the spot and at upkeep together, which compares spells regardless of how
+    /// often each was reached.
+    /// <para>
+    /// Both halves, because a spell whose point is its bleed would otherwise read as the garnish alone. Before
+    /// ADR 0027 this counted the direct damage only, and the balance objective's `tierDamageSpread` read it:
+    /// raising `poison_slash`'s bleed took the objective from 40.45 to 95.15, not because the content got
+    /// worse but because the spell became worth casting and entered the comparison carrying a number that
+    /// left most of it out.
+    /// </para>
+    /// </summary>
+    public double DamagePerCast => Resolved == 0 ? 0 : (double)(Damage + ConditionDamage) / Resolved;
 
     /// <summary>
     /// The share of its landed casts made by a side that won: <see cref="Score"/> weighed by use rather than by
