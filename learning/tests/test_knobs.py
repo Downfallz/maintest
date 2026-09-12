@@ -27,6 +27,7 @@ from downfall_learning.knobs import (
     outclassed,
     read_value,
     twins,
+    unbounded,
     validate,
     with_value,
 )
@@ -696,6 +697,80 @@ def test_a_spell_that_deals_no_damage_is_left_out_of_the_comparison() -> None:
     content.tiers["spell:big"] = 1
 
     assert outclassed(content, knobs, WEIGHTS) == []
+
+
+def test_a_cast_is_priced_for_every_target_it_reaches() -> None:
+    """`ActionScorer` sums a resolution over its targets, so a sweep is worth several of the same hit.
+
+    Read as one target, `meteor` priced at a third of what it plays and was the strongest spell in the
+    catalogue with every check green.
+    """
+    single = spell(targeting={"origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1})
+    sweep = spell(targeting={"origin": "Enemy", "scope": "Multi", "maxTargets": 3})
+
+    assert cast_value(sweep, WEIGHTS) == pytest.approx(3 * cast_value(single, WEIGHTS))
+
+
+def test_a_sweep_is_not_the_bar_a_single_target_spell_has_to_match() -> None:
+    """A single-target spell cannot reach what a sweep does without ceasing to be single-target, which is
+    `dominates`'s axis and not this one. Without the rule this reports `protective_slam` as never a choice on
+    content that casts it 354 times in 400 matches."""
+    content, knobs = boxed(
+        "spell:single",
+        2,
+        spell(id="spell:single:v1", effects=[{"kind": "Damage", "amount": 4}]),
+        {"path": DAMAGE_POINTER, "minimum": 1, "maximum": 5, "step": 1},
+    )
+    content.spells["spell:sweep"] = spell(
+        id="spell:sweep:v1",
+        effects=[{"kind": "Damage", "amount": 4}],
+        targeting={"origin": "Enemy", "scope": "Multi", "maxTargets": 3},
+    )
+    content.tiers["spell:sweep"] = 2
+
+    assert outclassed(content, knobs, WEIGHTS) == []
+
+
+def test_a_permanent_effect_that_costs_nothing_is_reported_as_unbounded() -> None:
+    """`full_plate`: free, never expires, stacks on every re-cast. No single-cast reading can see the stack,
+    so a bigger permanent horizon would not find it -- the brake is the price."""
+    content = Content(
+        spells={
+            "spell:free": spell(
+                energyCost=0, effects=[{"kind": "DefenseBuff", "amount": 1, "permanent": True}]
+            )
+        },
+        files={"spell:free": Path("x.json")},
+        tiers={"spell:free": 2},
+    )
+
+    assert [report for report in unbounded(content) if "spell:free" in report]
+
+
+def test_a_permanent_effect_with_a_price_on_it_is_not_reported() -> None:
+    """The two energy a round pays is the brake, so `guard` and `thundering_seal` are not this finding."""
+    content = Content(
+        spells={
+            "spell:paid": spell(
+                energyCost=1, effects=[{"kind": "DefenseBuff", "amount": 1, "permanent": True}]
+            )
+        },
+        files={"spell:paid": Path("x.json")},
+        tiers={"spell:paid": 2},
+    )
+
+    assert unbounded(content) == []
+
+
+def test_a_free_spell_that_lasts_no_time_is_not_reported() -> None:
+    """`wait` is free and re-castable and bounded anyway: what it gives is spent."""
+    content = Content(
+        spells={"spell:wait": spell(energyCost=0, effects=[{"kind": "EnergyGain", "amount": 2}])},
+        files={"spell:wait": Path("x.json")},
+        tiers={"spell:wait": 0},
+    )
+
+    assert unbounded(content) == []
 
 
 def test_without_the_agent_weights_the_reading_is_skipped_rather_than_guessed() -> None:

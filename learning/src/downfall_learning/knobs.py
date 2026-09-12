@@ -468,7 +468,48 @@ def findings(content: Content, knobs: Knobs) -> list[str]:
             for better, worse in dominance(content)
         )
     reports.extend(outclassed(content, knobs))
+    reports.extend(unbounded(content))
     return reports
+
+
+def unbounded(content: Content) -> list[str]:
+    """Spells whose permanent effect costs nothing, so casting it again is always free.
+
+    A permanent effect never expires and re-casting stacks it, exactly as the prototype did. That is priced
+    for one cast everywhere it is read -- ``PERMANENT_CONDITION_ROUNDS`` here, ``PermanentConditionRounds`` in
+    `ActionScorer` -- and no single-cast reading can see a stack, so raising that number would not find this:
+    at any horizon, one `full_plate` is a point of defense and six are six.
+
+    What decides whether the stack has a brake is the price. A permanent buff that costs energy is bounded by
+    the two a round pays; at zero it is bounded by nothing but the round cap, and a creature that spends the
+    match re-casting it walks out unhittable. So the reading is the cost, not the magnitude.
+
+    It is a finding and not an error: the engine plays it, and `full_plate` is authored this way today
+    because nothing implements `SpellType.Passive` yet. It is here so that a tuning pass cannot quietly put
+    a price back to zero -- `full_plate`'s own cost knob reaches it -- and ship an unbounded spell with every
+    check green.
+    """
+    return [
+        f"{alias} carries a permanent effect and costs no energy, so re-casting it stacks without a brake: "
+        "one cast is all any reading here prices, and nothing bounds the rest."
+        for alias, document in sorted(content.spells.items())
+        if _is_free(document) and _has_permanent(document)
+    ]
+
+
+def _is_free(document: Mapping[str, object]) -> bool:
+    try:
+        return int(document.get("energyCost", 0) or 0) <= 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _has_permanent(document: Mapping[str, object]) -> bool:
+    effects = document.get("effects", [])
+    return any(
+        isinstance(effect, Mapping) and bool(effect.get("permanent"))
+        for effect in (effects if isinstance(effects, list) else [])
+    )
 
 
 def dominance(content: Content) -> list[tuple[str, str]]:
@@ -595,6 +636,17 @@ def deals_damage(document: Mapping[str, object]) -> bool:
     return DAMAGE in _effects(document)
 
 
+def _max_targets(document: Mapping[str, object]) -> int:
+    """How many creatures one cast is allowed to reach. One when the spell says nothing readable."""
+    targeting = document.get("targeting", {})
+    if not isinstance(targeting, Mapping):
+        return 1
+    try:
+        return max(1, int(targeting.get("maxTargets", 1) or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
 def load_weights(path: Path | None = None) -> dict[str, float]:
     """The nine agent weights. Unreadable or missing, the reading that needs them is skipped, not guessed."""
     try:
@@ -616,7 +668,14 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
     Deliberately coarse, and the list of what it leaves out is the list of reasons to read it as a finding
     and never as a failure:
 
-    - no board, no targets, no defense, and no cap at a target's health;
+    - no board and no defense, and no cap at a target's health. The targets are read from the spell rather
+      than from a board: a cast is priced for every target it is allowed, because the question this number
+      answers -- can this spell ever be a choice next to that one -- is a question about a spell at its best,
+      and a spell reaching several targets is at its best when it finds them all. It overstates a `Multi`
+      spell later in a match, when the creatures that would have been hit are dead: `meteor` landed 1.79 of
+      its three targets on average over the benchmark seeds, where the single-target spells landed 0.88 to
+      1.01 of their one. Before the target count was read at all, the same spell read a third of what it
+      plays, which is how the strongest spell in the catalogue passed every check;
     - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
       ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
@@ -654,7 +713,7 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(str(effect.get("kind")), 0.0)
-    return total
+    return total * _max_targets(document)
 
 
 def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: Mapping[str, float]) -> float:
@@ -698,6 +757,14 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
     `tierDamageSpread` gives: a heal and an attack share no unit. Without that rule this reports `rejuvenate`
     and `guard`, which are cast for a survival the reading above cannot see, and `wait`, which is *meant* to
     stay worse than acting -- three answers that are wrong in three different ways.
+
+    A rival must also reach no more targets than the spell being read. A cast is priced for every target it
+    is allowed (:func:`cast_value`), so a sweep carries several times what a single hit does, and asking a
+    single-target spell to match that is asking it to stop being single-target -- which no move inside its
+    bounds can do, and which :func:`dominates` already reads as its own axis. Without this rule `meteor`
+    becomes the bar for its whole tier and reports `protective_slam` as never a choice, while the same
+    content has it cast 354 times in 400 matches: the one direction this module's error is not allowed to
+    run.
     """
     prices = load_weights() if weights is None else weights
     if not prices:
@@ -714,10 +781,13 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
         tier = content.tiers.get(alias)
         if document is None or tier is None or not deals_damage(document):
             continue
+        reach = _max_targets(document)
         rivals = {
             other: value
             for other, value in current.items()
-            if other != alias and content.tiers.get(other, tier + 1) <= tier
+            if other != alias
+            and content.tiers.get(other, tier + 1) <= tier
+            and _max_targets(content.spells[other]) <= reach
         }
         if not rivals:
             continue
