@@ -190,7 +190,10 @@ import json
 import sys
 from pathlib import Path
 
-TARGET = {"damage": 1.0, "kill": 8.0, "heal": 0.8, "stun": 3.0, "bleed": 0.8, "defense": 0.5, "energy": 0.2}
+# Mirrors test_search_weights.TARGET, which is DEFAULT_WEIGHTS with kill and risk moved. This script runs as
+# a subprocess with no import path back to the project, so the numbers are spelled out; a weight whose default
+# changes has to change here too, and the score this returns is what says so.
+TARGET = {"damage": 1.0, "kill": 8.0, "heal": 0.8, "stun": 3.0, "bleed": 0.8, "defense": 0.65, "energy": 0.2}
 TARGET["risk"] = 1.0
 
 
