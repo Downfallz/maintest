@@ -23,5 +23,11 @@
       "durationRounds": 1
     }
   ],
-  "enabled": true
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "Damage",
+      "amount": 3
+    }
+  ]
 }

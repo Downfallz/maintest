@@ -49,7 +49,7 @@ that took no target at all.
 ## What did not survive the translation
 
 The effect taxonomy is closed and every effect applies to the spell's targets. Six legacy ideas had no
-counterpart, so they were dropped or approximated; two have since been recovered and one half-recovered.
+counterpart, so they were dropped or approximated; two have since been recovered and two half-recovered.
 Each is a rule to decide, not an oversight:
 
 - ~~**Effects on the caster**~~ (`SelfDirect`, `SelfTemporary`). Recovered: a spell may carry `casterEffects`,
@@ -76,14 +76,19 @@ Each is a rule to decide, not an oversight:
   critical half is still out**, and is the one thing here that is not a mirror: `CriticalChance` belongs to a
   creature and a spell, is read once at resolution, and is a probability rather than a quantity. A condition
   that changes it is a new shape, and so a decision of its own.
-- **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter, and the
-  minion cost of those two is dropped. Summon Minions was approximated as the resource they do use, energy,
-  which made it a spell that paid for casts nobody could make — its line is a tier deeper and disabled. Armour
-  spread over the team was tried next and read as a smaller `revenant_guards`, which is the spell it is meant
-  to open rather than rehearse. It is now **what a summoning costs and when it pays**: nothing lands on the
-  cast, the minions gnaw at the whole enemy line over the three rounds that follow, and raising them takes 3
-  of the summoner's own health (ADR 0031). It is the only spell whose damage is entirely deferred and the only
-  one charged to its caster's health.
+- **Minions**, ~~and what spending one costs~~. Half recovered. The Necromancer banked minions and spent them
+  on Revenant Guards and Crazed Specter; legacy carries `MinionsCost = 1` on both, and the port dropped it.
+  There is still no minion **bank** — nothing counts them, and a cast never runs out — but what spending one
+  costs is now said in the currency this class already pays in: **3 health off the caster** on each of the two
+  (ADR 0031). Both were above the tier-3 band with nothing standing between them and their rivals; they are
+  inside it now, and neither energy price moved.
+  Summon Minions itself was first approximated as the resource the children do use, energy, which made it a
+  spell that paid for casts nobody could make. Armour spread over the team was tried next and read as a smaller
+  `revenant_guards`, which is the spell it is meant to open rather than rehearse. It is now **what a summoning
+  costs and when it pays**: nothing lands on the cast, the minions gnaw at the whole enemy line over the three
+  rounds that follow, and raising them takes **2** of the summoner's own health. It is the only spell whose
+  damage is entirely deferred; it is no longer the only one charged to its caster's health, and that is the
+  point — the whole class pays in blood, and Hateful Sacrifice does too.
 - ~~**Healing over time.**~~ Recovered: `Regeneration` was added to the taxonomy (ADR 0019) and Healing
   Screech is the prototype's `Heal 2` plus a regeneration again. The regeneration is now `3` a round for two
   rounds rather than `2` for one: at the prototype's numbers the spell healed 4 for 2 energy, exactly what
