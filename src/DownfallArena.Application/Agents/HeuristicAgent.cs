@@ -63,11 +63,12 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
+        var gone = AlreadyDoomed(board, creatures, actor);
         SpellId? best = null;
         var bestScore = double.NegativeInfinity;
         foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
-            var score = _scorer.Best(actor, spell, creatures)?.Score ?? -weights.Fizzle;
+            var score = _scorer.Best(actor, spell, creatures, gone)?.Score ?? -weights.Fizzle;
             if (score > bestScore)
             {
                 best = spell;
@@ -76,6 +77,72 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         }
 
         return best ?? throw new InvalidOperationException("The options offer no castable spell.");
+    }
+
+    /// <summary>
+    /// The enemies this actor's own team has already committed to killing before the actor acts (ADR 0039).
+    /// <para>
+    /// Both readings it needs are public and already on the board state, and the agent simply never looked at
+    /// them: <c>Timeline</c> says who acts before whom, and <c>Intents</c> says what this player's creatures
+    /// have declared so far this round. An ally counts only when it is <em>earlier on the timeline</em> and
+    /// has <em>already declared</em> -- declaration order is not timeline order, so both tests are needed.
+    /// </para>
+    /// <para>
+    /// An intent carries a spell and no targets: targets are bound at reveal. So the ally's target set is the
+    /// one this same agent will pick for it, read one level deep and with an empty set of its own. Deeper
+    /// would mean guessing how an ally reasons about a third ally, which is a different claim than reading
+    /// what the board says. An ally earlier on the timeline that has not declared yet is skipped: unknown,
+    /// and skipping it under-counts, which is the safe direction.
+    /// </para>
+    /// <para>
+    /// Only the actor's own team is read. What the enemy will do is hidden until it is revealed, so bringing
+    /// it in would be a guess about a hidden choice rather than a reading of public state.
+    /// </para>
+    /// </summary>
+    private IReadOnlySet<CreatureId> AlreadyDoomed(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> creatures, CreatureSnapshot actor)
+    {
+        var position = IndexOnTimeline(board, actor.Id);
+        if (position <= 0)
+        {
+            return ActionScorer.NoneGone;  // acts first, or is not on the timeline at all
+        }
+
+        var doomed = new HashSet<CreatureId>();
+        foreach (var intent in board.Intents)
+        {
+            if (intent.Actor == actor.Id || IndexOnTimeline(board, intent.Actor) >= position)
+            {
+                continue;
+            }
+
+            var ally = creatures.FirstOrDefault(creature => creature.Id == intent.Actor);
+            if (ally is null || !ally.IsAlive)
+            {
+                continue;
+            }
+
+            var targets = _scorer.Best(ally, intent.Spell, creatures)?.Targets;
+            if (targets is not null)
+            {
+                doomed.UnionWith(_scorer.Kills(CombatAction.Bind(intent, targets), creatures, ActionScorer.NoneGone));
+            }
+        }
+
+        return doomed;
+    }
+
+    /// <summary>Where a creature sits in the combat timeline, or -1 when it has no slot this round.</summary>
+    private static int IndexOnTimeline(PlayerBoardState board, CreatureId creature)
+    {
+        for (var index = 0; index < board.Timeline.Count; index++)
+        {
+            if (board.Timeline[index].Creature == creature)
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)

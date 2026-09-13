@@ -31,6 +31,66 @@ public sealed class HeuristicAgentTests
         Agent.DecideIntent(Board(enemyHealth: 3), option).ShouldBe(TestContent.Strike, "a kill beats a bleed");
     }
 
+    /// <summary>
+    /// ADR 0039. Creature Two acts first on the timeline and has already declared Strike, which kills the one
+    /// enemy left. Hitting a corpse is worth nothing and costs the fizzle weight, so One spends its round on
+    /// itself instead. Both readings this needs are public and were already on the board state: the timeline
+    /// says who acts first, and the player's own intents say what it has declared.
+    /// </summary>
+    [Fact]
+    public void A_creature_does_not_aim_at_an_enemy_its_own_team_already_kills_first()
+    {
+        var board = OneEnemyLeft();
+        var option = new IntentOption(One, [TestContent.Guard, TestContent.Strike]);
+
+        Agent.DecideIntent(board, option).ShouldBe(TestContent.Strike, "nothing says the enemy is spoken for");
+        Agent.DecideIntent(WithAllyStriking(board), option).ShouldBe(TestContent.Guard, "Two kills it first, so Strike is a wasted round");
+    }
+
+    /// <summary>
+    /// The two tests the reading has to pass to be a reading of the board and not of the clock: an ally that
+    /// declared but acts *after* the actor takes nothing away, and neither does one earlier on the timeline
+    /// that has not declared yet. Declaration order is not timeline order, so both are real cases.
+    /// </summary>
+    [Fact]
+    public void An_ally_counts_only_when_it_both_acts_first_and_has_already_declared()
+    {
+        var board = OneEnemyLeft();
+        var option = new IntentOption(One, [TestContent.Guard, TestContent.Strike]);
+        var declaredButLater = WithAllyStriking(board) with
+        {
+            Timeline = [Slot(One), Slot(Two)],
+        };
+        var firstButSilent = WithAllyStriking(board) with { Intents = [] };
+
+        Agent.DecideIntent(declaredButLater, option).ShouldBe(TestContent.Strike, "Two swings after One, so the enemy is still there");
+        Agent.DecideIntent(firstButSilent, option).ShouldBe(TestContent.Strike, "Two acts first but has chosen nothing yet");
+    }
+
+    /// <summary>One (Strike, Guard, one energy) and Two beside it, against a single enemy Strike kills.</summary>
+    private static PlayerBoardState OneEnemyLeft()
+    {
+        var one = Boards.Creature(1, PlayerSlot.Player1) with
+        {
+            Energy = Energy.Of(1),
+            KnownSpells = new HashSet<SpellId> { TestContent.Strike, TestContent.Guard },
+        };
+        var two = Boards.Creature(2, PlayerSlot.Player1) with { KnownSpells = new HashSet<SpellId> { TestContent.Strike } };
+        var three = Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(3) };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(0) };
+        return Boards.Board(PlayerSlot.Player1, [one, two], [three, four]);
+    }
+
+    /// <summary>The same board, with Two ahead of One on the timeline and already committed to Strike.</summary>
+    private static PlayerBoardState WithAllyStriking(PlayerBoardState board) => board with
+    {
+        Timeline = [Slot(Two), Slot(One)],
+        Intents = [new CombatIntent(Two, TestContent.Strike)],
+    };
+
+    private static ActivationSlot Slot(CreatureId creature) =>
+        new(PlayerSlot.Player1, creature, Speed.Standard, Initiative.Of(5));
+
     [Fact]
     public void Targets_go_to_the_creature_the_spell_can_kill()
     {

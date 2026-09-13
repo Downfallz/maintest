@@ -22,17 +22,40 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
     public ScoringWeights Weights => weights;
 
-    /// <summary>The expected score of an action on a board: the crit and non-crit outcomes weighted by the crit chance.</summary>
-    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures)
+    /// <summary>No creature is expected to be gone: what every reading outside a declaration assumes.</summary>
+    public static readonly IReadOnlySet<CreatureId> NoneGone = new HashSet<CreatureId>();
+
+    /// <summary>
+    /// The expected score of an action on a board: the crit and non-crit outcomes weighted by the crit chance.
+    /// <para>
+    /// <paramref name="gone"/> names the creatures this action is expected to find dead by the time it
+    /// resolves (ADR 0039). It is empty everywhere except a declaration, which is the one decision taken
+    /// against a board that will have changed before the action lands.
+    /// </para>
+    /// </summary>
+    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(creatures);
 
+        gone ??= NoneGone;
         var actor = creatures.First(creature => creature.Id == action.Actor);
         var chance = actor.CriticalChance.Plus(resources.GetSpell(action.Spell).Stats.CriticalChance.Value).Value;
-        var critical = Score(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical), creatures);
-        var plain = Score(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical), creatures);
+        var critical = Score(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical), creatures, gone);
+        var plain = Score(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical), creatures, gone);
         return (chance * critical) + ((1 - chance) * plain);
+    }
+
+    /// <summary>The actor's enemies this action is expected to kill on a plain roll, by id.</summary>
+    public IEnumerable<CreatureId> Kills(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(creatures);
+
+        var resolution = ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical);
+        return resolution.Fizzled
+            ? []
+            : Damage(resolution, creatures, gone ?? NoneGone).Where(hit => hit.Kills && hit.Enemy).Select(hit => hit.Id);
     }
 
     /// <summary>Whether the action kills an enemy without a critical hit.</summary>
@@ -42,11 +65,11 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         ArgumentNullException.ThrowIfNull(creatures);
 
         var resolution = ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical);
-        return !resolution.Fizzled && Damage(resolution, creatures).Any(hit => hit.Kills && hit.Enemy);
+        return !resolution.Fizzled && Damage(resolution, creatures, NoneGone).Any(hit => hit.Kills && hit.Enemy);
     }
 
     /// <summary>The best target set of a spell for an actor, or null when the spell has no legal target.</summary>
-    public (IReadOnlyList<CreatureId> Targets, double Score)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures)
+    public (IReadOnlyList<CreatureId> Targets, double Score)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(spellId);
@@ -56,7 +79,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         (IReadOnlyList<CreatureId> Targets, double Score)? best = null;
         foreach (var targets in TargetSets.Of(legal))
         {
-            var score = Expected(CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets), creatures);
+            var score = Expected(CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets), creatures, gone);
             if (best is null || score > best.Value.Score)
             {
                 best = (targets, score);
@@ -111,8 +134,15 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             - (weights.Energy * Math.Max(0, stats.Cost.Value - actor.Energy.Value));
     }
 
-    /// <summary>The score of one resolution: what it does to enemies counts for, what it does to allies against.</summary>
-    public double Score(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures)
+    /// <summary>
+    /// The score of one resolution: what it does to enemies counts for, what it does to allies against.
+    /// <para>
+    /// A creature in <paramref name="gone"/> is expected to be dead before this resolution lands, so nothing
+    /// this action does to it counts and the action pays for the share of its targets that are in there
+    /// (ADR 0039). The set is empty for every reading but a declaration.
+    /// </para>
+    /// </summary>
+    public double Score(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null)
     {
         ArgumentNullException.ThrowIfNull(resolution);
         ArgumentNullException.ThrowIfNull(creatures);
@@ -122,14 +152,15 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             return -weights.Fizzle;
         }
 
+        gone ??= NoneGone;
         var actor = creatures.First(creature => creature.Id == resolution.Action.Actor);
         var score = 0.0;
-        foreach (var hit in Damage(resolution, creatures))
+        foreach (var hit in Damage(resolution, creatures, gone))
         {
             score += hit.Sign * ((weights.Damage * hit.Effective) + (hit.Kills ? weights.Kill : 0));
         }
 
-        var remaining = RemainingHealth(resolution, creatures);
+        var remaining = RemainingHealth(resolution, creatures, gone);
         foreach (var outcome in resolution.Outcomes)
         {
             score += outcome switch
@@ -147,7 +178,10 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);  // what the actor keeps; what a spell hands out is priced per outcome above
         if (resolution.Action.Targets.Count > 0)
         {
-            score -= weights.Fizzle * resolution.DroppedTargets.Count / resolution.Action.Targets.Count;
+            // Targets already lost when this was scored, and targets expected to be lost before it lands. A
+            // dropped target cannot also be in `gone`: it is not on the board this resolution was built from.
+            var wasted = resolution.DroppedTargets.Count + resolution.Action.Targets.Count(gone.Contains);
+            score -= weights.Fizzle * wasted / resolution.Action.Targets.Count;
         }
 
         return score;
@@ -158,21 +192,35 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <summary>Plus one for something done to an enemy of the actor, minus one for something done to an ally or the actor.</summary>
     private static int Sign(CreatureSnapshot actor, CreatureSnapshot target) => target.Owner == actor.Owner ? -1 : 1;
 
-    private static IEnumerable<(bool Enemy, int Sign, int Effective, bool Kills)> Damage(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures)
+    private static IEnumerable<(CreatureId Id, bool Enemy, int Sign, int Effective, bool Kills)> Damage(
+        CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId> gone)
     {
         var actor = Target(resolution.Action.Actor, creatures);
         foreach (var group in resolution.Outcomes.OfType<DamageOutcome>().GroupBy(outcome => outcome.Target))
         {
+            if (gone.Contains(group.Key))
+            {
+                continue;  // a creature expected to be dead before this resolves takes none of it
+            }
+
             var target = Target(group.Key, creatures);
             var total = group.Sum(outcome => outcome.Amount);
             var effective = Math.Min(total, target.Health.Value);
-            yield return (target.Owner != actor.Owner, Sign(actor, target), effective, target.IsAlive && total >= target.Health.Value);
+            yield return (group.Key, target.Owner != actor.Owner, Sign(actor, target), effective, target.IsAlive && total >= target.Health.Value);
         }
     }
 
-    private static Dictionary<CreatureId, int> RemainingHealth(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures)
+    /// <summary>
+    /// The health each creature has left once this resolution has landed. A creature in <paramref name="gone"/>
+    /// starts at zero, which is what silences every per-target term for it: healing, energy, drains,
+    /// conditions and the defensive reading all already score nothing on a creature with no health left.
+    /// </summary>
+    private static Dictionary<CreatureId, int> RemainingHealth(
+        CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId> gone)
     {
-        var remaining = creatures.ToDictionary(creature => creature.Id, creature => creature.Health.Value);
+        var remaining = creatures.ToDictionary(
+            creature => creature.Id,
+            creature => gone.Contains(creature.Id) ? 0 : creature.Health.Value);
         foreach (var outcome in resolution.Outcomes.OfType<DamageOutcome>())
         {
             remaining[outcome.Target] = Math.Max(0, remaining[outcome.Target] - outcome.Amount);
