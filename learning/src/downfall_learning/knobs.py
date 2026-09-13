@@ -308,17 +308,26 @@ def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
         if behind:
             required.setdefault(alias, []).extend(behind)
 
+    _note_starting_spells(data_directory, note)
+    _note_tree_nodes(data_directory, note)
+    return _behind(depths, required)
+
+
+def _note_starting_spells(data_directory: Path, note: _Note) -> None:
+    """Everything a creature spawns with sits at depth zero: it is had before anything is chosen."""
     for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
         creature = _read_json(file)
         if creature.get("enabled", True):
             for reference in creature.get("startingSpellIds", []):
                 note(str(reference), 0)
 
+
+def _note_tree_nodes(data_directory: Path, note: _Note) -> None:
+    """Every enabled tree, walked from its root. A tree with no root teaches nothing and is skipped."""
     for file in sorted((data_directory / TALENT_TREES_FOLDER).rglob(JSON_FILES)):
         tree = _read_json(file)
         if tree.get("enabled", True) and isinstance(tree.get("root"), Mapping):
             _walk(tree["root"], 0, note)
-    return _behind(depths, required)
 
 
 def _behind(depths: dict[str, int], required: Mapping[str, Sequence[str]]) -> dict[str, int]:
