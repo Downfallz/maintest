@@ -70,7 +70,10 @@ counterpart, so they were dropped or approximated; one has since been recovered.
   of the summoner's own health (ADR 0031). It is the only spell whose damage is entirely deferred and the only
   one charged to its caster's health.
 - ~~**Healing over time.**~~ Recovered: `Regeneration` was added to the taxonomy (ADR 0019) and Healing
-  Screech is the prototype's `Heal 2` plus `Regeneration 2` for a round again.
+  Screech is the prototype's `Heal 2` plus a regeneration again. The regeneration is now `3` a round for two
+  rounds rather than `2` for one: at the prototype's numbers the spell healed 4 for 2 energy, exactly what
+  `rejuvenate` heals for the same price one tier earlier, and delivered later — a tier-2 pick that bought
+  nothing. Three quarters of it is now the part you have to buy before the damage lands.
 - **Retaliate.** Thundering Seal's damage back on the attacker. Explicitly not carried over until a rule
   defines it (ADR 0012); only its defense half is left.
 
