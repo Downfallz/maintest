@@ -23,6 +23,8 @@ from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.progress import Progress
 from downfall_learning.report import TRAINING_FILE, TrainingLog
 from downfall_learning.search_weights import (
+    BUILDER_SOURCES,
+    ENGINE_SOURCES,
     CliEvaluator,
     EngineCommand,
     SearchOptions,
@@ -159,6 +161,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_dataset_arguments(clone)
     clone.add_argument("--epochs", type=int, default=20)
     clone.add_argument("--alpha", type=float, default=1e-4, help="L2 regularization strength")
+    _add_quiet(clone)
     clone.set_defaults(handler=_train_clone)
 
     value = commands.add_parser("train-value", help="value regression: (observation, action) to return")
@@ -227,9 +230,9 @@ def _add_quiet(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _progress(arguments: argparse.Namespace, label: str, bounded: bool = False) -> Progress:
+def _progress(arguments: argparse.Namespace, label: str) -> Progress:
     """Progress goes to stderr, so the report on stdout stays something a script can read."""
-    return Progress(label=label, bounded=bounded, quiet=getattr(arguments, "quiet", False))
+    return Progress(label=label, quiet=getattr(arguments, "quiet", False))
 
 
 def _write_policy(policy: Policy, directory: Path) -> None:
@@ -362,11 +365,14 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     if arguments.engine:
         engine = replace(engine, command=tuple(arguments.engine))
     host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
-    # The evaluator checks the engine itself; the builder is this command's own and nobody else's.
-    unreachable = missing_engine(host.builder, engine.root)
-    if unreachable:
-        print(unreachable, file=sys.stderr)
-        return 1
+    # Both, each against the trees it is built from. The comment here used to say the evaluator checked the
+    # engine, which was true of `CliEvaluator` and never of `EngineContentEvaluator` -- so a run whose
+    # builder happened to be fresh played every candidate on a stale CLI and said nothing.
+    for command, sources in ((host.builder, BUILDER_SOURCES), (engine.command, ENGINE_SOURCES)):
+        unreachable = missing_engine(command, engine.root, sources)
+        if unreachable:
+            print(unreachable, file=sys.stderr)
+            return 1
     evaluator = EngineContentEvaluator(host, knobs.objective, content)
     options = TuneOptions(
         iterations=arguments.iterations,
@@ -377,9 +383,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         pairs=arguments.pairs,
         pair_depth=arguments.pair_depth,
     )
-    # Bounded: the opening sweep skips the moves the bounds and the constraints refuse, so the total it
-    # reports is a ceiling and no time estimate is built on it.
-    result = tune_content(evaluator, knobs, content, options, _progress(arguments, "tune-content", True))
+    result = tune_content(evaluator, knobs, content, options, _progress(arguments, "tune-content"))
     result.write(arguments.output, arguments.data)
     print(format_result(result, knobs.objective))
     missing = knobs.objective.missing(result.best.metrics)

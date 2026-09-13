@@ -61,18 +61,21 @@ def test_a_run_that_cannot_say_how_long_it_is_reports_only_what_it_knows() -> No
     assert stream.getvalue().strip() == "[tune] · 1 · 5s"
 
 
-def test_a_bounded_total_says_so_and_estimates_nothing() -> None:
-    """The tuning sweep skips the moves its constraints refuse, so its total is a ceiling.
+def test_a_total_learned_partway_through_starts_counting_from_there() -> None:
+    """A tuning pass cannot size its opening before it runs it, so it counts up and sets the total after.
 
-    An estimate built on a ceiling only ever overstates, which is worse than no estimate: it reads like a
-    measurement and is not one.
+    An earlier version advertised a ceiling instead, and the ceiling was wrong in the direction that
+    matters: it forgot the paired moves, which can push the count past its own "of at most".
     """
-    progress, stream, clock = reporter(total=100, bounded=True)
+    progress, stream, clock = reporter()
 
-    clock.now = 60.0
+    clock.now = 10.0
+    progress.step()
+    progress.total = 3
+    clock.now = 20.0
     progress.step()
 
-    assert stream.getvalue().strip() == "[tune] · 1 of at most 100 · 1m00s"
+    assert stream.getvalue().splitlines() == ["[tune] · 1 · 10s", "[tune] · 2 of 3 · 20s · ~10s left"]
 
 
 def test_nothing_is_estimated_before_the_first_step_or_after_the_last() -> None:

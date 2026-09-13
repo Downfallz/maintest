@@ -65,14 +65,17 @@ over several hours and a weight search is not far behind, so `tune-content`, `se
 `train-clone` report progress on **stderr** — one line per unit of work, with the count, how long it has
 taken, how long is left where that can honestly be computed, and the best score so far. Stdout stays the
 report a person reads and a script parses, and the two never interleave. `--quiet` turns the reporting off
-and changes nothing else. The tuner's total is a ceiling rather than a promise, because its opening sweep
-skips the moves the bounds and the constraints refuse, so it says "of at most" and estimates no time from it.
+and changes nothing else. The tuner counts up with no total while its opening pass runs — the opening's size
+is not knowable until it has run, because the paired moves depend on which spells the single steps failed to
+improve — and sets an exact total, with a time estimate, once the climb starts.
 
-Two failures a long run used to hide, and both now fail in the first second instead of the fourth hour: an
-engine that was never built, and **an engine built before the code it is supposed to run**. The second is the
+Two failures a long run used to hide, and both now fail in the first second instead of the fourth hour: a
+command that was never built, and **one built before the code it is supposed to run**. The second is the
 expensive one — the assembly is there, it runs, and every number it reports belongs to the engine you
-replaced. `missing_engine` now compares the build against everything under `src/` and names the file that
-moved. Rebuild with `dotnet build --configuration Release`, which is the build these commands use by default.
+replaced. `missing_engine` compares each build against the trees it is built from and names the file that
+moved: the CLI against `src/`, the data builder against `src/` and `tools/`, since a tool may reference
+Infrastructure. `tune-content` runs both and checks both. Rebuild with
+`dotnet build --configuration Release`, which is the build these commands use by default.
 
 **Every one of these runs explains its own result rather than printing it.** `tune-content` names what it
 changed in the content's own words, which measurement the gain came from, what that gain cost elsewhere, and

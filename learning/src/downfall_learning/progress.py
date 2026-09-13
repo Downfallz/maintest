@@ -37,14 +37,15 @@ def humanize(seconds: float) -> str:
 class Progress:
     """A counter that prints where it is, how fast, and how much longer.
 
-    ``total`` may be an upper bound rather than an exact count -- a tuning sweep skips the moves its own
-    constraints refuse, so it plays *at most* two per knob. Pass ``bounded=True`` and the line says "of at
-    most", because a percentage that only ever overstates is worse than one that admits what it is.
+    ``total`` starts unknown and may be set once the run knows it: a tuning pass cannot say how many
+    candidates its opening will play until the opening has played them, and it would rather count up than
+    advertise a ceiling. An earlier version did advertise one and the ceiling was wrong in the direction that
+    matters -- the paired moves it forgot could push the count past its own "of at most". Counting up says
+    less and cannot be false.
     """
 
     label: str
     total: int | None = UNKNOWN_TOTAL
-    bounded: bool = False
     quiet: bool = False
     stream: TextIO = field(default_factory=lambda: sys.stderr)
     clock: Callable[[], float] = time.monotonic
@@ -83,17 +84,10 @@ class Progress:
         print(" · ".join(parts), file=self.stream, flush=True)
 
     def _counted(self) -> str:
-        if self.total is None:
-            return str(self.done)
-        of = "of at most" if self.bounded else "of"
-        return f"{self.done} {of} {self.total}"
+        return str(self.done) if self.total is None else f"{self.done} of {self.total}"
 
     def _remaining(self) -> float | None:
-        """Seconds left at the rate so far, or None when there is no total or nothing to divide by.
-
-        Not reported for a bounded total: the run may stop well short of it, so an estimate built on it would
-        be an overstatement dressed as a measurement.
-        """
-        if self.total is None or self.bounded or self.done == 0 or self.done >= self.total:
+        """Seconds left at the rate so far, or None when there is no total or nothing to divide by."""
+        if self.total is None or self.done == 0 or self.done >= self.total:
             return None
         return self.elapsed / self.done * (self.total - self.done)

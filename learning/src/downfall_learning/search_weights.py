@@ -37,11 +37,16 @@ ENGINE_COMMAND = ("dotnet", ENGINE_ASSEMBLY)
 #: here is a build that does not run the code in the working tree.
 ENGINE_SOURCES = ("src",)
 
-#: Files under `ENGINE_SOURCES` that a build does not read, so a touch of one is not a stale build.
+#: The data builder's, which is `tools/` *and* `src/`: a tool may reference Infrastructure (AGENTS.md), so a
+#: change under either can leave its assembly behind. Named separately rather than merged into one set, so a
+#: change under `tools/` does not send someone rebuilding a CLI that does not depend on it.
+BUILDER_SOURCES = ("src", "tools")
+
+#: Files under a source tree that a build does not read, so a touch of one is not a stale build.
 NOT_SOURCE = frozenset({".md", ".txt"})
 
 
-def missing_engine(command: Sequence[str], root: Path) -> str | None:
+def missing_engine(command: Sequence[str], root: Path, sources: Sequence[str] = ENGINE_SOURCES) -> str | None:
     """Why this command cannot reach the engine, or ``None`` when it can.
 
     Only a command that names a `.dll` is checked: anything else is a prefix someone passed with `--engine`
@@ -63,7 +68,7 @@ def missing_engine(command: Sequence[str], root: Path) -> str | None:
                 f"'{argument}' is not there, so the engine cannot be reached. Build it with "
                 f"'dotnet build --configuration Release', or pass --engine for another command."
             )
-        newer = _newer_source(assembly, root)
+        newer = _newer_source(assembly, root, sources)
         if newer is not None:
             return (
                 f"'{argument}' was built before '{newer}' changed, so it does not run the code in the "
@@ -73,10 +78,15 @@ def missing_engine(command: Sequence[str], root: Path) -> str | None:
     return None
 
 
-def _newer_source(assembly: Path, root: Path) -> str | None:
-    """The first engine source file newer than the built assembly, as a path to name in the error."""
+def _newer_source(assembly: Path, root: Path, sources: Sequence[str]) -> str | None:
+    """The first source file newer than the built assembly, as a path to name in the error.
+
+    ``sources`` is the caller's, because the two assemblies these commands run are built from different
+    trees: the CLI from `src/`, the data builder from `src/` and `tools/`. Reading one set for both would
+    either miss a stale builder or refuse a CLI over a tool it does not depend on.
+    """
     built = assembly.stat().st_mtime
-    for folder in ENGINE_SOURCES:
+    for folder in sources:
         for source in (root / folder).rglob("*"):
             if source.suffix in NOT_SOURCE or not source.is_file():
                 continue
@@ -364,7 +374,10 @@ def search_weights(
         for vector in vectors:
             candidate = Candidate(iteration, _as_weights(vector), evaluator.evaluate(_as_weights(vector)))
             evaluated.append(candidate)
-            _step(progress, f"round {iteration}/{options.iterations} · best {best.score.mean:.4f}")
+            # Against the running leader, not `best`: that one only moves when the population is finished,
+            # so a line reading it would report a score already beaten for the rest of the iteration.
+            leader = max(candidate.score.mean, best.score.mean, *(c.score.mean for c in evaluated))
+            _step(progress, f"round {iteration}/{options.iterations} · best {leader:.4f}")
         candidates.extend(evaluated)
         ranked = sorted(evaluated, key=lambda candidate: candidate.score.mean, reverse=True)
         elite = ranked[:elite_size]

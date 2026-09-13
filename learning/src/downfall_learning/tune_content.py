@@ -637,8 +637,6 @@ def tune_content(
         raise ValueError("The search needs at least one iteration and one neighbour per iteration.")
     # Wrapped here rather than by the caller, so every search gets it and none of them has to remember.
     evaluator = MemoizingEvaluator(evaluator, progress)
-    if progress is not None:
-        progress.total = _budget(knobs, content, options)
     rng = np.random.default_rng(options.seed)
     objective = knobs.objective
     search = Search(knobs=knobs, content=content, options=options)
@@ -658,6 +656,9 @@ def tune_content(
         }
         best = min([first, *swept], key=lambda candidate: candidate.score)
         _milestone(progress, f"opening pass done · best {best.score:.2f} from {first.score:.2f}")
+    if progress is not None:
+        # Only now: the opening's size is not knowable before it runs, and the climb's is exact.
+        progress.total = progress.done + (options.iterations * options.neighbours)
     for iteration in range(1, options.iterations + 1):
         neighbours = []
         for _ in range(options.neighbours):
@@ -682,20 +683,6 @@ def tune_content(
         files=content.files,
         played=evaluator.plays,
     )
-
-
-def _budget(knobs: Knobs, content: Content, options: TuneOptions) -> int:
-    """How many catalogues this run could hand the engine, as an upper bound rather than a promise.
-
-    Exact for the random phase and a ceiling for the opening one: the sweep tries both directions of every
-    playable knob but skips the ones its own bounds or the constraints refuse, the paired moves depend on
-    which spells the sweep failed to improve, and the memo serves a replay without playing it. So the count
-    is reported as "of at most", and no estimate of the time left is built on it.
-    """
-    total = 1 + (options.iterations * options.neighbours)
-    if options.sweep:
-        total += 2 * len(playable(knobs, content))
-    return total
 
 
 def _milestone(progress: Progress | None, note: str) -> None:
