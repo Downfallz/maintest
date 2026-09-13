@@ -20,8 +20,9 @@
   "enabled": true,
   "casterEffects": [
     {
-      "kind": "Damage",
-      "amount": 3
+      "kind": "Bleed",
+      "amountPerRound": 4,
+      "durationRounds": 1
     }
   ]
 }

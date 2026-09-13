@@ -684,13 +684,13 @@
         "Priced above the single-target version or it simply replaces it -- and the price is health, not energy",
         "The caster pays: a Necromancer never gets a cast for nothing"
       ],
-      "note": "Its second keep was **false**. It asks to be priced above `thundering_seal` and both cost two energy, so the team-wide version simply replaced the single-target one -- 15.60 a round against 9.75, the second-largest reading in the catalogue and above a tier-3 band of 8 to 14. Legacy says why: `MinionsCost = 1`, a second currency the port dropped for this spell and for `crazed_specter` (`docs/domain/spells.md`, 'Minions'). `summon_minions` already settled what a minion costs when it charged the summoner's own health, so spending one costs the same: **3 health on the caster** (ADR 0031). 15.60 to **12.60**, inside the band, and the keep is true in the currency that matters -- `thundering_seal` costs two energy and nothing else, this costs two energy *and* three health. No energy price moved. Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
+      "note": "Its second keep was **false**. It asks to be priced above `thundering_seal` and both cost two energy, so the team-wide version simply replaced the single-target one -- 15.60 a round against 9.75, the second-largest reading in the catalogue and above a tier-3 band of 8 to 14. Legacy says why: `MinionsCost = 1`, a second currency the port dropped for this spell and for `crazed_specter` (`docs/domain/spells.md`, 'Minions'). `summon_minions` already settled what a minion costs when it charged the summoner's own health, so spending one costs the same: **4 health on the caster**, as a one-round `Bleed` (ADR 0031). 15.60 to **12.40**, inside the band, and the keep is true in the currency that matters -- `thundering_seal` costs two energy and nothing else, this costs two energy *and* four health. No energy price moved. The price is a bleed and not a `Damage` because **this spell would otherwise pay its own price down**: `Ally` targeting includes the caster (`TargetingRules`), so every cast permanently armours the summoner, and `ResolutionRules` reduces a caster `Damage` by that armour -- 3 health on the first cast, 1 on the second, 0 on the third. A bleed tick ignores defense (ADR 0019), so the toll is the same every time. `ResolutionRulesTests` pins the difference. Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/casterEffects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
@@ -703,11 +703,11 @@
         "The minion it costs is paid in the summoner's health, the currency `summon_minions` set",
         "It hits harder than `tornado` and pays something `tornado` does not, or the two are one spell"
       ],
-      "note": "It was `tornado` with more damage and nothing else -- same energy, same critical chance, same Spell initiative, same three enemies, 6 against 4 -- so `check-knobs` reported it as strictly better, correctly, and the pair was one spell written twice. Its own second keep said 'its price stands in for the missing minion cost' while its price was `tornado`'s exactly, standing in for nothing. Legacy carries `MinionsCost = 1` on it, dropped at the port, and `summon_minions` already fixed what a minion costs by charging the summoner's health. So the specter costs **3 health** (ADR 0031): 15.96 a round to **13.96**, inside the band from above it, and the domination is gone because more damage now comes with a price `tornado` does not pay. The energy cost did not move -- it was never what was missing.",
+      "note": "It was `tornado` with more damage and nothing else -- same energy, same critical chance, same Spell initiative, same three enemies, 6 against 4 -- so `check-knobs` reported it as strictly better, correctly, and the pair was one spell written twice. Its own second keep said 'its price stands in for the missing minion cost' while its price was `tornado`'s exactly, standing in for nothing. Legacy carries `MinionsCost = 1` on it, dropped at the port, and `summon_minions` already fixed what a minion costs by charging the summoner's health. So the specter costs **4 health**, as a one-round `Bleed` (ADR 0031): 15.96 a round to **13.83**, inside the band from above it, and the domination is gone because more damage now comes with a price `tornado` does not pay. The energy cost did not move -- it was never what was missing. The toll is a bleed rather than a `Damage` so that armour cannot soften it, which is what makes it a minion's due and not a wound: its sibling `revenant_guards` proved the point by armouring its own caster and paying its price down to nothing in three casts.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
-        { "path": "/casterEffects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
