@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -203,6 +204,48 @@ def test_an_engine_that_is_built_is_accepted(tmp_path: Path) -> None:
     (assembly / "Cli.dll").write_text("", encoding="utf-8")
 
     assert missing_engine(("dotnet", "artifacts/bin/Cli.dll"), tmp_path) is None
+
+
+def test_an_engine_built_before_the_code_it_runs_is_refused(tmp_path: Path) -> None:
+    """The expensive failure: a build that is there, runs, and reports the old engine's numbers.
+
+    A release assembly left from before two ADRs was about to send a tuning pass four hours measuring a
+    scoring weight that had already changed. Not being built fails at once; being stale failed silently.
+    """
+    assembly = tmp_path / "artifacts" / "bin"
+    assembly.mkdir(parents=True)
+    (assembly / "Cli.dll").write_text("", encoding="utf-8")
+    source = tmp_path / "src" / "DownfallArena.Application" / "Agents" / "ScoringWeights.cs"
+    source.parent.mkdir(parents=True)
+    source.write_text("", encoding="utf-8")
+    _touch(source, _mtime(assembly / "Cli.dll") + 10)
+
+    reason = missing_engine(("dotnet", "artifacts/bin/Cli.dll"), tmp_path)
+
+    assert reason is not None
+    assert "ScoringWeights.cs" in reason
+    assert "dotnet build --configuration Release" in reason
+
+
+def test_a_document_under_src_does_not_make_a_build_stale(tmp_path: Path) -> None:
+    """A build does not read a README, so touching one is not a reason to refuse a four-hour run."""
+    assembly = tmp_path / "artifacts" / "bin"
+    assembly.mkdir(parents=True)
+    (assembly / "Cli.dll").write_text("", encoding="utf-8")
+    note = tmp_path / "src" / "README.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("", encoding="utf-8")
+    _touch(note, _mtime(assembly / "Cli.dll") + 10)
+
+    assert missing_engine(("dotnet", "artifacts/bin/Cli.dll"), tmp_path) is None
+
+
+def _mtime(path: Path) -> float:
+    return path.stat().st_mtime
+
+
+def _touch(path: Path, when: float) -> None:
+    os.utime(path, (when, when))
 
 
 def test_a_command_that_names_no_assembly_is_left_alone(tmp_path: Path) -> None:

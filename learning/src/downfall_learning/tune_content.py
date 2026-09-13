@@ -41,6 +41,7 @@ from downfall_learning.knobs import (
     read_value,
     with_value,
 )
+from downfall_learning.progress import Progress
 from downfall_learning.search_weights import EngineCommand, EvaluationError
 
 #: The data builder, as the assembly the build produced rather than through `dotnet run --no-build`, for the
@@ -593,10 +594,13 @@ class MemoizingEvaluator:
     the same numbers, and it is the numbers the engine reads.
     """
 
-    def __init__(self, inner: ContentEvaluator) -> None:
+    def __init__(self, inner: ContentEvaluator, progress: Progress | None = None) -> None:
         self._inner = inner
         self._seen: dict[str, dict[str, dict[str, float]]] = {}
         self.hits = 0
+        #: Counted here because this is the one place that knows a catalogue reached the engine: a replay
+        #: served from the cache is not work, and a heartbeat for it would overstate how far the run is.
+        self._progress = progress
 
     @property
     def plays(self) -> int:
@@ -611,6 +615,8 @@ class MemoizingEvaluator:
             return cached
         measured = self._inner.evaluate(spells)
         self._seen[key] = measured
+        if self._progress is not None:
+            self._progress.step(f"{self.hits} replay(s) skipped" if self.hits else "")
         return measured
 
 
@@ -619,6 +625,7 @@ def tune_content(
     knobs: Knobs,
     content: Content,
     options: TuneOptions | None = None,
+    progress: Progress | None = None,
 ) -> TuneResult:
     """Hill climbs the knobs: play the content as it stands, then keep the best neighbour that improves it.
 
@@ -629,7 +636,9 @@ def tune_content(
     if options.iterations < 1 or options.neighbours < 1:
         raise ValueError("The search needs at least one iteration and one neighbour per iteration.")
     # Wrapped here rather than by the caller, so every search gets it and none of them has to remember.
-    evaluator = MemoizingEvaluator(evaluator)
+    evaluator = MemoizingEvaluator(evaluator, progress)
+    if progress is not None:
+        progress.total = _budget(knobs, content, options)
     rng = np.random.default_rng(options.seed)
     objective = knobs.objective
     search = Search(knobs=knobs, content=content, options=options)
@@ -648,6 +657,7 @@ def tune_content(
             for move in candidate.moves
         }
         best = min([first, *swept], key=lambda candidate: candidate.score)
+        _milestone(progress, f"opening pass done · best {best.score:.2f} from {first.score:.2f}")
     for iteration in range(1, options.iterations + 1):
         neighbours = []
         for _ in range(options.neighbours):
@@ -661,6 +671,9 @@ def tune_content(
             leader = min(neighbours, key=lambda candidate: candidate.score)
             if leader.score < best.score:
                 best = leader
+        _milestone(progress, f"round {iteration}/{options.iterations} · best {best.score:.2f}")
+    if progress is not None:
+        progress.finish(f"best {best.score:.2f} from {first.score:.2f}")
     return TuneResult(
         best=best,
         initial=first,
@@ -669,6 +682,26 @@ def tune_content(
         files=content.files,
         played=evaluator.plays,
     )
+
+
+def _budget(knobs: Knobs, content: Content, options: TuneOptions) -> int:
+    """How many catalogues this run could hand the engine, as an upper bound rather than a promise.
+
+    Exact for the random phase and a ceiling for the opening one: the sweep tries both directions of every
+    playable knob but skips the ones its own bounds or the constraints refuse, the paired moves depend on
+    which spells the sweep failed to improve, and the memo serves a replay without playing it. So the count
+    is reported as "of at most", and no estimate of the time left is built on it.
+    """
+    total = 1 + (options.iterations * options.neighbours)
+    if options.sweep:
+        total += 2 * len(playable(knobs, content))
+    return total
+
+
+def _milestone(progress: Progress | None, note: str) -> None:
+    """A line at the end of a phase, carrying the one number a watcher actually wants: the best score."""
+    if progress is not None:
+        progress.write(note)
 
 
 def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[Candidate]:

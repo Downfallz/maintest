@@ -60,6 +60,20 @@ words, and the objective as bands over the metrics `report.json` already publish
 | `check-knobs` | the knobs file and `data/` | nothing | Fails when a spell has no entry, a pointer addresses nothing, or the authored value sits outside its own bounds. Lists the dominated and indistinguishable spells the catalogue already carries. |
 | `tune-content` | the same, plus a built engine | `tune.json` and the changed spell files under `content/` | Hill climbs: play the content, then play neighbours of the best, one knob at a time. A candidate that breaks a constraint is redrawn before the engine sees it. `--apply` writes the winning numbers into `data/`. |
 
+**And every one of them says where it is while it runs.** A tuning pass plays several hundred evaluations
+over several hours and a weight search is not far behind, so `tune-content`, `search-weights` and
+`train-clone` report progress on **stderr** — one line per unit of work, with the count, how long it has
+taken, how long is left where that can honestly be computed, and the best score so far. Stdout stays the
+report a person reads and a script parses, and the two never interleave. `--quiet` turns the reporting off
+and changes nothing else. The tuner's total is a ceiling rather than a promise, because its opening sweep
+skips the moves the bounds and the constraints refuse, so it says "of at most" and estimates no time from it.
+
+Two failures a long run used to hide, and both now fail in the first second instead of the fourth hour: an
+engine that was never built, and **an engine built before the code it is supposed to run**. The second is the
+expensive one — the assembly is there, it runs, and every number it reports belongs to the engine you
+replaced. `missing_engine` now compares the build against everything under `src/` and names the file that
+moved. Rebuild with `dotnet build --configuration Release`, which is the build these commands use by default.
+
 **Every one of these runs explains its own result rather than printing it.** `tune-content` names what it
 changed in the content's own words, which measurement the gain came from, what that gain cost elsewhere, and
 what is still outside its range with the number it reads beside the number it should be. `search-weights`

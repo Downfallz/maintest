@@ -18,6 +18,7 @@ import numpy as np
 
 from downfall_learning.artifacts import Evaluation, load_evaluation
 from downfall_learning.export import DEFAULT_WEIGHTS, WEIGHT_NAMES, write_weights
+from downfall_learning.progress import Progress
 from downfall_learning.report import TrainingLog, TrainingRow
 from downfall_learning.stamps import RunStamp
 
@@ -32,18 +33,55 @@ ENGINE_ASSEMBLY = "artifacts/bin/DownfallArena.Cli/release/DownfallArena.Cli.dll
 ENGINE_COMMAND = ("dotnet", ENGINE_ASSEMBLY)
 
 
+#: Where the engine's own source lives, relative to the repository root. A build older than anything under
+#: here is a build that does not run the code in the working tree.
+ENGINE_SOURCES = ("src",)
+
+#: Files under `ENGINE_SOURCES` that a build does not read, so a touch of one is not a stale build.
+NOT_SOURCE = frozenset({".md", ".txt"})
+
+
 def missing_engine(command: Sequence[str], root: Path) -> str | None:
     """Why this command cannot reach the engine, or ``None`` when it can.
 
-    Only a command that names a `.dll` is checked, and only for the file being there: anything else is a
-    prefix someone passed with `--engine` on purpose, and guessing at it would refuse commands that work.
+    Only a command that names a `.dll` is checked: anything else is a prefix someone passed with `--engine`
+    on purpose, and guessing at it would refuse commands that work.
+
+    Two ways it cannot be reached, and the second is the expensive one. **Not built** is obvious and fails
+    at once. **Built before the code it is supposed to run** fails silently: the search plays for hours and
+    every number it reports belongs to an engine nobody is running any more. A release assembly left from
+    before two ADRs is what this was written for -- a tuning pass was about to spend four hours measuring a
+    scoring weight that had been changed, and the only symptom was a baseline score that looked wrong to a
+    reader who happened to remember the right one.
     """
     for argument in command:
-        if argument.endswith(".dll") and not (root / argument).is_file():
+        if not argument.endswith(".dll"):
+            continue
+        assembly = root / argument
+        if not assembly.is_file():
             return (
                 f"'{argument}' is not there, so the engine cannot be reached. Build it with "
                 f"'dotnet build --configuration Release', or pass --engine for another command."
             )
+        newer = _newer_source(assembly, root)
+        if newer is not None:
+            return (
+                f"'{argument}' was built before '{newer}' changed, so it does not run the code in the "
+                f"working tree and every number it reports would be the old engine's. Rebuild it with "
+                f"'dotnet build --configuration Release', or pass --engine for another command."
+            )
+    return None
+
+
+def _newer_source(assembly: Path, root: Path) -> str | None:
+    """The first engine source file newer than the built assembly, as a path to name in the error."""
+    built = assembly.stat().st_mtime
+    for folder in ENGINE_SOURCES:
+        for source in (root / folder).rglob("*"):
+            if source.suffix in NOT_SOURCE or not source.is_file():
+                continue
+            if source.stat().st_mtime > built:
+                return str(source.relative_to(root))
     return None
 
 
@@ -294,6 +332,7 @@ def search_weights(
     options: SearchOptions | None = None,
     initial: Mapping[str, float] = DEFAULT_WEIGHTS,
     log: TrainingLog | None = None,
+    progress: Progress | None = None,
 ) -> SearchResult:
     """Cross-entropy method over the weights: sample around the mean, keep the elite, move the mean to it.
 
@@ -310,16 +349,22 @@ def search_weights(
     sigma = options.sigma * np.maximum(np.abs(mean), 0.5)
     elite_size = max(2, round(options.elite_share * options.population))
 
+    if progress is not None:
+        # Exact, unlike the tuner's: the population is fixed and nothing here is skipped or memoized.
+        progress.total = 1 + options.iterations * options.population
     first = Candidate(0, _as_weights(mean), evaluator.evaluate(_as_weights(mean)))
+    _step(progress, f"baseline {first.score.mean:.4f}")
     if log is not None and log.stamp is None:
         log.stamp = stamp_of(first.score)
     best = first
     candidates: list[Candidate] = []
     for iteration in range(1, options.iterations + 1):
         vectors = np.vstack([mean, rng.normal(mean, sigma, size=(options.population - 1, len(mean)))])
-        evaluated = [
-            Candidate(iteration, _as_weights(v), evaluator.evaluate(_as_weights(v))) for v in vectors
-        ]
+        evaluated = []
+        for vector in vectors:
+            candidate = Candidate(iteration, _as_weights(vector), evaluator.evaluate(_as_weights(vector)))
+            evaluated.append(candidate)
+            _step(progress, f"round {iteration}/{options.iterations} · best {best.score.mean:.4f}")
         candidates.extend(evaluated)
         ranked = sorted(evaluated, key=lambda candidate: candidate.score.mean, reverse=True)
         elite = ranked[:elite_size]
@@ -344,7 +389,14 @@ def search_weights(
             )
     if log is not None and best.iteration > 0:
         log.mark_best(best.iteration)
+    if progress is not None:
+        progress.finish(f"best {best.score.mean:.4f} from {first.score.mean:.4f}")
     return SearchResult(best=best, candidates=tuple(candidates), initial=first)
+
+
+def _step(progress: Progress | None, note: str) -> None:
+    if progress is not None:
+        progress.step(note)
 
 
 def stamp_of(score: Score) -> RunStamp | None:
