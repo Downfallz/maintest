@@ -264,7 +264,52 @@ public sealed class ContentAuditTests
         ItemFindings(ContentAudit.Of(resources, RuleSet.Default)).ShouldHaveSingleItem().Code.ShouldBe("Spell.Indistinguishable");
     }
 
-    private static Spell Bundle(SpellId id, params Effect[] effects) =>
+    /// <summary>
+    /// Two spells alike on their targets and different on their caster are told apart in a match, so the
+    /// signature has to carry both halves (ADR 0031).
+    /// </summary>
+    [Fact]
+    public void Two_spells_that_differ_only_in_what_they_do_to_their_caster_are_told_apart()
+    {
+        var other = SpellId.Parse("spell:other:v1");
+        var resources = GameResources.Create(
+            "caster",
+            [Creature(Fighter, Tree, [Strike], energy: 0)],
+            [Bundle(Strike, [Damage.Of(2)], Heal.Of(1)), Bundle(other, [Damage.Of(2)], Damage.Of(1))],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(other)]))]);
+
+        ItemFindings(ContentAudit.Of(resources, RuleSet.Default))
+            .ShouldNotContain(finding => finding.Code == "Spell.Indistinguishable");
+    }
+
+    /// <summary>
+    /// A caster effect lands on the caster whatever the spell's targeting origin, so an offensive spell that
+    /// pays its own caster in energy breaks the ceiling exactly as a friendly one does (ADR 0031). Read on a
+    /// spell priced past the ceiling: without the caster half it is unaffordable, with it there is no ceiling.
+    /// </summary>
+    [Fact]
+    public void A_spell_that_pays_its_own_caster_in_energy_removes_the_energy_ceiling()
+    {
+        var rules = RuleSet.Default;
+        var battery = SpellId.Parse("spell:battery:v1");
+        var costly = SpellId.Parse("spell:costly:v1");
+        var resources = GameResources.Create(
+            "paying",
+            [Creature(Fighter, Tree, [Strike], energy: 0)],
+            [
+                Spell(Strike, cost: 0),
+                Bundle(battery, [Damage.Of(1)], EnergyGain.Of(5)),
+                Spell(costly, cost: (rules.EnergyPerRound * rules.RoundCap) + 5, damage: 2),
+            ],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(battery), Spell(costly)]))]);
+
+        ItemFindings(ContentAudit.Of(resources, rules))
+            .ShouldBeEmpty("an offensive spell that pays its own caster lifts the ceiling like a friendly one");
+    }
+
+    private static Spell Bundle(SpellId id, params Effect[] effects) => Bundle(id, effects, []);
+
+    private static Spell Bundle(SpellId id, Effect[] effects, params Effect[] casterEffects) =>
         Domain.Resources.Spell.Create(
             id,
             id.Name,
@@ -272,7 +317,8 @@ public sealed class ContentAuditTests
             CreatureClass.Creature,
             new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
             TargetingSpec.SingleTarget(TargetOrigin.Enemy),
-            effects);
+            effects,
+            casterEffects);
 
     [Fact]
     public void A_spell_stat_every_spell_gives_the_same_value_is_reported_as_one_this_content_does_not_vary()

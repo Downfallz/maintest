@@ -45,9 +45,12 @@ that took no target at all.
 The effect taxonomy is closed and every effect applies to the spell's targets. Six legacy ideas had no
 counterpart, so they were dropped or approximated; one has since been recovered. Each is a rule to decide, not an oversight:
 
-- **Effects on the caster** (`SelfDirect`, `SelfTemporary`). A spell hits its targets and nothing else.
-  Dropped: Protective Slam's +1 defense on itself, Psycho Rush's -2 defense recoil, Parasite Jab's lifesteal,
-  Hateful Sacrifice's 4 self-damage. The last two lose the cost that made the spell a choice.
+- ~~**Effects on the caster**~~ (`SelfDirect`, `SelfTemporary`). Recovered: a spell may carry `casterEffects`,
+  resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself,
+  Psycho Rush's -2 defense recoil and Hateful Sacrifice's 4 self-damage are all expressible. **Parasite Jab's
+  lifesteal is not**: a share of the damage dealt depends on the resolution rather than on the spell, which
+  is a new kind of effect and not a new place to put one. A flat heal on the caster is the approximation.
+  None of the four spells has been re-authored yet; the mechanism landed first.
 - **Debuffing a stat other than initiative.** There is no negative `DefenseBuff` and no energy drain.
   Dropped: Noxious Cure's -2 defense on the healed allies, Soul Devourer's -2 energy. Infectious Blast was
   *only* a defense shred, so it is approximated with the one stat debuff the taxonomy has,
@@ -130,8 +133,10 @@ hit. The name and the length say a lasting wound, so it is a bleed here.
 
 ## Open questions
 
-- Effects on the caster: lifesteal, recoil, and self-buffs are a third of what the prototype's spells did.
-  Either the taxonomy grows a caster-side effect, or those spells stay half of themselves.
+- Proportional effects: lifesteal is a share of the damage a cast actually dealt, so it reads the resolution
+  rather than the spell — the crit, the armour that absorbed it, the targets already dead. A fixed effect on
+  the caster exists now (ADR 0031) and a proportional one would be a new kind carried in the same list.
+  Whether Parasite Jab keeps a flat heal or gets the real thing is open.
 - Defense and energy debuffs, and initiative and critical buffs: the taxonomy only debuffs initiative and
   only buffs defense, which is why three spells are approximations.
 - Passive spells: `SpellType.Passive` exists and does nothing. A passive is an always-on modifier the

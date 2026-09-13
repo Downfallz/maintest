@@ -108,8 +108,17 @@ public static class GameSchemaBuilder
         };
     }
 
+    /// <summary>
+    /// A spell with its alias resolved, and with "no caster effect" written one way only: an empty list
+    /// authored by hand is dropped to null, so it serializes away instead of moving the content hash
+    /// (ADR 0031).
+    /// </summary>
     private static SpellDto Canonical(SpellDto spell, AliasResolver resolver, List<string> problems) =>
-        spell with { Id = resolver.Resolve<SpellId>(spell.Id, $"spell '{spell.Id}'", problems) ?? spell.Id };
+        spell with
+        {
+            Id = resolver.Resolve<SpellId>(spell.Id, $"spell '{spell.Id}'", problems) ?? spell.Id,
+            CasterEffects = spell.CasterEffects is { Count: > 0 } ? spell.CasterEffects : null,
+        };
 
     private static TalentTreeDto Canonical(TalentTreeDto tree, AliasResolver resolver, List<string> problems)
     {

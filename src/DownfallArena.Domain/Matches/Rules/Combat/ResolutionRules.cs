@@ -54,6 +54,11 @@ public static class ResolutionRules
             .SelectMany(target => spell.Effects.Select(effect => Outcome(effect, creatures.First(candidate => candidate.Id == target), multiplier, isCritical)))
             .ToList();
 
+        // What the cast does to whoever cast it (ADR 0031): once, however many targets it reached, and never
+        // multiplied by the critical roll -- a recoil that doubles when the blow lands well is another idea.
+        // Marked, because the target alone cannot say: a Self-targeted spell puts ordinary outcomes here too.
+        outcomes.AddRange(spell.CasterEffects.Select(effect => Outcome(effect, actor, multiplier: 1.0, isCritical) with { OnCaster = true }));
+
         return CombatResolution.Resolved(action, effectiveTargets, [.. report.PerTargetFailures], isCritical, spell.Stats.Cost, outcomes);
     }
 

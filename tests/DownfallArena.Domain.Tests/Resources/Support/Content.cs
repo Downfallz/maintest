@@ -23,7 +23,11 @@ internal static class Content
     public static Spell SpellAtInitiative(string id, int initiative, params Effect[] effects) =>
         Build(id, TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 0, initiative, effects);
 
-    private static Spell Build(string id, TargetingSpec targeting, int cost, double criticalChance, int initiative, Effect[] effects) =>
+    /// <summary>A spell that also does something to whoever cast it (ADR 0031).</summary>
+    public static Spell SpellWithCasterEffects(string id, Effect[] effects, params Effect[] casterEffects) =>
+        Build(id, TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 0, initiative: 1, effects, casterEffects);
+
+    private static Spell Build(string id, TargetingSpec targeting, int cost, double criticalChance, int initiative, Effect[] effects, Effect[]? casterEffects = null) =>
         Domain.Resources.Spell.Create(
             SpellId.Parse(id),
             "Strike",
@@ -31,7 +35,8 @@ internal static class Content
             CreatureClass.Creature,
             new SpellStats(Initiative.Of(initiative), Energy.Of(cost), CriticalChance.Of(criticalChance)),
             targeting,
-            effects.Length == 0 ? [Damage.Of(1)] : effects);
+            effects.Length == 0 ? [Damage.Of(1)] : effects,
+            casterEffects);
 
     public static CreatureDefinition Creature(string id = "creature:main:v1", params string[] startingSpells) =>
         CreatureDefinition.Create(

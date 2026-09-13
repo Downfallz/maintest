@@ -11,4 +11,16 @@ namespace DownfallArena.Domain.Matches.Rules.Combat;
 /// touched; a <c>CombatActionResolved.AppliedOutcomes</c> is what the board took, which can be smaller.
 /// </para>
 /// </summary>
-public abstract record EffectOutcome(CreatureId Target);
+public abstract record EffectOutcome(CreatureId Target)
+{
+    /// <summary>
+    /// Whether this landed on the actor as a caster effect (ADR 0031) rather than on a target of the cast.
+    /// <para>
+    /// The target alone cannot say: a spell whose targeting origin is <c>Self</c> puts ordinary outcomes on
+    /// the actor too, and those are the cast doing what it is for. Anything reading a cast as what it did to
+    /// the other side -- the damage an evaluation attributes to a spell, and `tierDamageSpread` behind it --
+    /// has to leave these out, or a spell that costs its caster two health reads as hitting two harder.
+    /// </para>
+    /// </summary>
+    public bool OnCaster { get; init; }
+}

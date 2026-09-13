@@ -185,6 +185,91 @@ public sealed class ResolutionRulesTests
     }
 
     [Fact]
+    public void A_caster_effect_lands_on_whoever_cast_the_spell()
+    {
+        var spell = Content.SpellWithCasterEffects("spell:drain:v1", [Damage.Of(3)], Heal.Of(2), EnergyGain.Of(1));
+        var resources = Resources(spell);
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.UnlockSpell(spell);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit);
+
+        resolution.Outcomes.ShouldBe(
+        [
+            new DamageOutcome(Arena.Ghoul, 3, false),
+            new HealOutcome(Arena.Knight, 2) with { OnCaster = true },
+            new EnergyOutcome(Arena.Knight, 1) with { OnCaster = true },
+        ]);
+        resolution.EffectiveTargets.ShouldBe([Arena.Ghoul], "the caster is not a target of its own spell");
+    }
+
+    /// <summary>
+    /// ADR 0031: once per cast, however many targets the cast reached. A sweep whose caster effect landed once
+    /// per target would make the reward scale with the board, which is what the target count already does to
+    /// the damage.
+    /// </summary>
+    [Fact]
+    public void A_caster_effect_lands_once_however_many_targets_the_cast_reached()
+    {
+        var spell = Content.SpellWithCasterEffects("spell:reap:v1", [Damage.Of(1)], Heal.Of(2));
+        var sweeping = Domain.Resources.Spell.Create(
+            spell.Id,
+            spell.Name,
+            spell.Type,
+            spell.CreatureClass,
+            spell.Stats,
+            TargetingSpec.Multi(TargetOrigin.Enemy, 3),
+            spell.Effects,
+            spell.CasterEffects);
+        var resources = Resources(sweeping);
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).UnlockSpell(sweeping);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, sweeping.Id), [Arena.Ghoul, Arena.Wraith]);
+
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit);
+
+        resolution.Outcomes.OfType<HealOutcome>().ShouldHaveSingleItem().ShouldBe(new HealOutcome(Arena.Knight, 2) with { OnCaster = true });
+    }
+
+    /// <summary>
+    /// ADR 0031: a recoil that doubles when the blow lands well is a different idea from the one being added,
+    /// so the critical roll reaches the targets and stops there.
+    /// </summary>
+    [Fact]
+    public void A_critical_roll_does_not_reach_a_caster_effect()
+    {
+        var spell = Content.SpellWithCasterEffects("spell:recoil:v1", [Damage.Of(3)], Damage.Of(2));
+        var resources = Resources(spell);
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit);
+
+        resolution.IsCritical.ShouldBeTrue();
+        resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 6, true), new DamageOutcome(Arena.Knight, 2, true) with { OnCaster = true }]);
+    }
+
+    [Fact]
+    public void A_cast_that_fizzles_applies_none_of_its_caster_effects()
+    {
+        var spell = Content.SpellWithCasterEffects("spell:drain:v1", [Damage.Of(3)], Heal.Of(2));
+        var resources = Resources(spell);
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.UnlockSpell(spell);
+        knight.Apply(Stun.For(1));
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit);
+
+        resolution.Fizzled.ShouldBeTrue();
+        resolution.Outcomes.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Null_arguments_are_rejected()
     {
         var creatures = Arena.Snapshots(Arena.FourCreatures());

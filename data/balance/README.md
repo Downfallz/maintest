@@ -250,6 +250,14 @@ a defensive pair, so it very largely cancels, while against an attack it does no
 them outright left a dead defensive spell invisible: `full_plate` was cast 0 times in 400 matches and `guard`
 471, and nothing here told them apart.
 
+What a spell does to **its own caster** (ADR 0031) is read too, and read with a sign: a heal on the caster
+counts for the spell, a recoil counts against it, because on the caster a harmful kind is the price rather
+than the point. It is counted **once per cast** — added after the target count, never multiplied by it — and
+never multiplied by the critical chance. The same sign runs through every check: dominance treats the caster
+half as its own axis, where an absent group is a zero rather than a gap (carrying no recoil is being better
+on that axis, not failing to match it), and the ceiling of a knob that addresses a harmful caster effect is
+its **minimum**, since more of a price is not a better spell.
+
 Everything is read **a round, not a cast**. Energy carries between rounds, so a spell costing three at an
 income of two comes up twice in three rounds: 1.5 rounds a cast, floored at one because a creature acts once
 a round however cheap the spell is. Without that, `enraged_charge` at 12.60 a cast reported

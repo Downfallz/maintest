@@ -30,6 +30,14 @@ MAGNITUDES = ("amount", "amountPerRound", "durationRounds")
 #: The one effect kind the critical multiplier applies to (``ResolutionRules``).
 DAMAGE = "Damage"
 
+#: What a spell does to whoever cast it (ADR 0031), and the pointer prefix a knob addresses it by.
+CASTER_EFFECTS = "casterEffects"
+CASTER_POINTER = f"/{CASTER_EFFECTS}/"
+
+#: The effect kinds that hurt whoever they land on. On a target that is the point of the spell; on the caster
+#: it is the price, so every reading of a caster effect turns on this set.
+HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff"})
+
 #: The pointer that names a spell's critical chance bonus.
 CRITICAL_CHANCE = "/criticalChance"
 
@@ -592,18 +600,28 @@ def twins(content: Content) -> list[frozenset[str]]:
 
 
 def _signature(document: Mapping[str, object]) -> str:
-    effects = document.get("effects", [])
     return json.dumps(
         [
             document.get("energyCost", 0),
             document.get("initiative", 0),
             document.get("criticalChance", 0) or 0,
             document.get("targeting", {}),
-            sorted(
-                (json.dumps(effect, sort_keys=True) for effect in effects if isinstance(effect, Mapping)),
-            ),
+            _multiset(document.get("effects", [])),
+            # Kept as its own element rather than folded in with the rest: a spell that heals its caster and
+            # one that heals its target are told apart in a match, so they must be told apart here too. The
+            # engine's `ContentAudit.Signature` reads both halves, and this has to agree with it (ADR 0031).
+            _multiset(document.get(CASTER_EFFECTS) or []),
         ],
         sort_keys=True,
+    )
+
+
+def _multiset(effects: object) -> list[str]:
+    """The effects as a sorted multiset of their JSON, so the same effects in another order read the same."""
+    return sorted(
+        json.dumps(effect, sort_keys=True)
+        for effect in (effects if isinstance(effects, list) else [])
+        if isinstance(effect, Mapping)
     )
 
 
@@ -624,6 +642,11 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
     Critical chance is compared only between two spells that both deal damage: the multiplier applies to
     `Damage` and to nothing else, so on a heal or a buff it is a number no match reads and comparing it
     would refuse a candidate over nothing.
+
+    What a spell does to its own caster (ADR 0031) is a separate axis, and compared differently: those
+    magnitudes are signed, so an absent group is a zero rather than a gap. Carrying no recoil at all is being
+    better on that axis, not failing to match it, and the rule that a missing effect disqualifies would read
+    it the other way round.
     """
     left, right = better.get("targeting", {}), worse.get("targeting", {})
     if not isinstance(left, Mapping) or not isinstance(right, Mapping):
@@ -632,7 +655,14 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
         return False
 
     ours, theirs = _effects(better), _effects(worse)
+    mine_on_me, yours_on_you = _caster_effects(better), _caster_effects(worse)
+    none = (0.0,) * len(MAGNITUDES)
     comparisons = [
+        pair
+        for group in mine_on_me.keys() | yours_on_you.keys()
+        for pair in zip(mine_on_me.get(group, none), yours_on_you.get(group, none), strict=True)
+    ]
+    comparisons += [
         (int(left.get("maxTargets", 1)), int(right.get("maxTargets", 1))),
         (-int(better.get("energyCost", 0)), -int(worse.get("energyCost", 0))),
         (int(better.get("initiative", 0)), int(worse.get("initiative", 0))),
@@ -758,7 +788,50 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(str(effect.get("kind")), 0.0)
-    return total * _max_targets(document)
+    # The target half is worth what it does to every target it reaches; the caster half is worth what it does
+    # once, so it is added after the count and never inside it (ADR 0031).
+    return (total * _max_targets(document)) + _caster_value(document, weights)
+
+
+def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) -> float:
+    """What a cast is worth for what it does to whoever cast it (ADR 0031), as a signed term.
+
+    Three things it does not share with the reading above, each a decision of that ADR rather than a
+    shortcut: it is **subtracted** when the effect is a harmful kind, because on the caster that kind is the
+    price rather than the point; the critical multiplier does not reach it; and it is counted once per cast
+    however many targets the spell reaches, so it must be added after any target count is applied and never
+    inside it.
+
+    Each effect is priced on its own and the values added, never the magnitudes: two caster bleeds of one
+    over two rounds and three over four are 1x2 + 3x4, and grouping them first would price them as the cross
+    product (1+3) x (2+4).
+    """
+    effects = document.get(CASTER_EFFECTS) or []
+    total = 0.0
+    for effect in effects if isinstance(effects, list) else []:
+        if not isinstance(effect, Mapping):
+            continue
+        kind = str(effect.get("kind"))
+        amount = float(effect.get("amount", 0) or 0)
+        per_round = float(effect.get("amountPerRound", 0) or 0)
+        rounds = (
+            PERMANENT_CONDITION_ROUNDS
+            if effect.get("permanent")
+            else float(effect.get("durationRounds", 0) or 0)
+        )
+        value = {
+            DAMAGE: weights.get("damage", 0) * amount,
+            "Heal": weights.get("heal", 0) * amount,
+            "EnergyGain": weights.get("energy", 0) * amount,
+            "Bleed": weights.get("bleed", 0) * per_round * rounds,
+            "Regeneration": weights.get("heal", 0) * per_round * rounds,
+            "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
+            "Stun": weights.get("stun", 0) * rounds,
+            "DefenseBuff": weights.get("defense", 0) * amount * rounds,
+            "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
+        }.get(kind, 0.0)
+        total += -value if kind in HARMFUL else value
+    return total
 
 
 def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: Mapping[str, float]) -> float:
@@ -769,6 +842,10 @@ def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: M
     to its maximum. A Spell initiative knob moves no term here and is left where it is. A cost knob moves no
     term either, but it moves how often the cast comes up, so the ceiling is read at the *cheapest* price the
     bounds reach -- the corner that is best for the spell, on both counts.
+
+    One kind of knob is turned the other way: a harmful effect on the caster (ADR 0031) is subtracted, so the
+    best corner for the spell is its **minimum**. Sending it to the maximum would understate the ceiling, and
+    an understated ceiling is how :func:`outclassed` invents a finding rather than missing one.
 
     Not the same thing as the most a *tuning pass* can reach: the corner this returns may be a catalogue the
     constraints refuse (a spell it would dominate, a twin it would become), and nothing here plays them. The
@@ -787,8 +864,26 @@ def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: M
         if knob.path == ENERGY_COST:
             cheapest = min(cheapest, int(knob.minimum))
             continue
-        top = with_value(top, knob.path, knob.maximum)
+        top = with_value(top, knob.path, _best_corner(document, knob))
     return cast_value(top, weights) / _rounds_a_cast(cheapest)
+
+
+def _best_corner(document: Mapping[str, object], knob: Knob) -> float:
+    """The end of a knob's range that is best for the spell: its maximum, unless more of it is a price."""
+    return knob.minimum if _addresses_a_price(document, knob.path) else knob.maximum
+
+
+def _addresses_a_price(document: Mapping[str, object], path: str) -> bool:
+    """Whether a pointer addresses the magnitude of a caster effect whose kind hurts the caster."""
+    if not path.startswith(CASTER_POINTER):
+        return False
+    token = path[len(CASTER_POINTER) :].split("/", 1)[0]
+    position = int(token) if token.isdigit() else -1
+    effects = document.get(CASTER_EFFECTS) or []
+    if not isinstance(effects, list) or not 0 <= position < len(effects):
+        return False
+    effect = effects[position]
+    return isinstance(effect, Mapping) and str(effect.get("kind")) in HARMFUL
 
 
 def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | None = None) -> list[str]:
@@ -871,8 +966,32 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
 
 def _effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:
     """The effects of a spell as magnitudes by group, summed when a spell carries a group twice."""
+    return _grouped(document.get("effects", []))
+
+
+def _caster_effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:
+    """What a spell does to whoever cast it, as its own groups, **signed** (ADR 0031).
+
+    Kept apart from the target effects because they are a different axis: a spell that heals its caster and
+    one that heals its target are not the same spell, and neither is better than the other for carrying more.
+
+    The magnitudes of a harmful kind are negated, so that "at least as large" keeps meaning "at least as
+    good" on every group :func:`dominates` compares. Without it a bigger recoil would read as a better spell.
+    """
+    grouped = _grouped(document.get(CASTER_EFFECTS) or [])
+    return {
+        f"caster:{group}": tuple(-value for value in magnitudes) if _harms(group) else magnitudes
+        for group, magnitudes in grouped.items()
+    }
+
+
+def _harms(group: str) -> bool:
+    """Whether a group name, as :func:`_grouped` writes it, names a kind that hurts what it lands on."""
+    return group.split(":", 1)[0] in HARMFUL
+
+
+def _grouped(effects: object) -> dict[str, tuple[float, ...]]:
     grouped: dict[str, tuple[float, ...]] = {}
-    effects = document.get("effects", [])
     for effect in effects if isinstance(effects, list) else []:
         if not isinstance(effect, Mapping):
             continue

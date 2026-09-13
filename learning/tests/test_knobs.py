@@ -591,6 +591,87 @@ WEIGHTS = {
 }
 
 
+def test_an_effect_on_the_caster_is_worth_what_it_does_to_the_caster() -> None:
+    """ADR 0031. A heal on whoever cast the spell is a gift and counts for; a recoil is a price and counts
+    against. Read once per cast and never multiplied by the critical chance."""
+    plain = spell()
+    draining = spell(casterEffects=[{"kind": "Heal", "amount": 2}])
+    recoiling = spell(casterEffects=[{"kind": "Damage", "amount": 2}])
+
+    assert cast_value(draining, WEIGHTS) == pytest.approx(cast_value(plain, WEIGHTS) + (0.8 * 2))
+    assert cast_value(recoiling, WEIGHTS) == pytest.approx(cast_value(plain, WEIGHTS) - 2)
+
+
+def test_two_spells_that_differ_only_on_their_caster_are_not_twins() -> None:
+    """A match tells them apart, and the engine's `ContentAudit.Signature` reads both halves. This has to
+    agree with it: under `noIndistinguishableSpells` a false pair is a finding, and `tune-content` refuses a
+    candidate for adding one."""
+    pairs = twins(
+        content(
+            **{
+                "spell:plain": spell(),
+                "spell:draining": spell(casterEffects=[{"kind": "Heal", "amount": 2}]),
+            }
+        )
+    )
+
+    assert pairs == []
+
+
+def test_two_caster_effects_of_one_kind_are_priced_one_at_a_time() -> None:
+    """Grouping them first multiplies the sums: two bleeds of 1 over 2 rounds and 3 over 4 are 1x2 + 3x4,
+    not (1+3) x (2+4)."""
+    plain = spell()
+    bleeding = spell(
+        casterEffects=[
+            {"kind": "Bleed", "amountPerRound": 1, "durationRounds": 2},
+            {"kind": "Bleed", "amountPerRound": 3, "durationRounds": 4},
+        ]
+    )
+
+    assert cast_value(bleeding, WEIGHTS) == pytest.approx(
+        cast_value(plain, WEIGHTS) - (0.8 * ((1 * 2) + (3 * 4)))
+    )
+
+
+def test_a_spell_that_pays_a_price_on_its_caster_does_not_dominate_one_that_does_not() -> None:
+    """Every other axis alike, the recoil is a cost the other spell never pays. Read as an unsigned extra
+    effect it would have read as the better spell."""
+    recoiling = spell(casterEffects=[{"kind": "Damage", "amount": 2}])
+
+    assert not dominates(recoiling, ATTACK)
+    assert dominates(ATTACK, recoiling)
+
+
+def test_a_spell_that_also_rewards_its_caster_is_strictly_better() -> None:
+    assert dominates(spell(casterEffects=[{"kind": "Heal", "amount": 2}]), ATTACK)
+
+
+def test_healing_the_caster_is_not_the_same_spell_as_healing_the_target() -> None:
+    """The two are different axes: neither dominates the other for carrying more of its own."""
+    on_caster = spell(casterEffects=[{"kind": "Heal", "amount": 2}])
+    on_target = spell(effects=[{"kind": "Damage", "amount": 3}, {"kind": "Heal", "amount": 2}])
+
+    assert not dominates(on_caster, on_target)
+    assert not dominates(on_target, on_caster)
+
+
+def test_the_ceiling_of_a_price_on_the_caster_is_the_smallest_it_may_be() -> None:
+    """A harmful caster effect is subtracted, so the corner that is best for the spell is its minimum. Sent
+    to its maximum the ceiling would be understated, which is how this check invents a finding."""
+    content, knobs = boxed(
+        "spell:recoil",
+        1,
+        spell(id="spell:recoil:v1", casterEffects=[{"kind": "Damage", "amount": 3}]),
+        {"path": "/casterEffects/0/amount", "minimum": 1, "maximum": 5, "step": 1},
+    )
+    content.spells["spell:rival"] = spell(id="spell:rival:v1", effects=[{"kind": "Damage", "amount": 3}])
+    content.tiers["spell:rival"] = 1
+
+    # The rival is the same hit with no recoil, so the box reaches a recoil of 1 and stops one short of it.
+    assert [report for report in outclassed(content, knobs, WEIGHTS) if "spell:recoil" in report]
+
+
 def boxed(alias: str, tier: int, document: dict, *knobs: dict) -> tuple[Content, Knobs]:
     """One spell, its tier and its bounds, as the pair `unreachable` reads."""
     content = Content(
