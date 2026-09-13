@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import sys
 
 import pytest
 
@@ -106,7 +107,9 @@ def test_a_quiet_reporter_still_counts_but_prints_nothing() -> None:
 
 
 def test_progress_defaults_to_stderr_so_it_never_lands_in_the_report() -> None:
-    """stdout is the report a person reads and a script parses; the two must not interleave."""
-    import sys
+    """stdout is the report a person reads and a script parses; the two must not interleave.
 
+    Read at construction rather than frozen at import, so a harness that replaces `sys.stderr` -- pytest's
+    capture, a notebook -- gets the stream it installed and not the one that existed first.
+    """
     assert Progress(label="tune").stream is sys.stderr

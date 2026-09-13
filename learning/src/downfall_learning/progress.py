@@ -23,14 +23,14 @@ UNKNOWN_TOTAL = None
 
 def humanize(seconds: float) -> str:
     """``4m21s``, ``1h04m``, ``12s``. Two units at most: the third never changed a decision."""
-    seconds = max(0.0, seconds)
-    if seconds < 60:
-        return f"{seconds:.0f}s"
-    minutes, rest = divmod(int(seconds), 60)
-    if minutes < 60:
-        return f"{minutes}m{rest:02d}s"
-    hours, minutes = divmod(minutes, 60)
-    return f"{hours}h{minutes:02d}m"
+    span = max(0.0, seconds)
+    if span < 60:
+        return f"{span:.0f}s"
+    total_minutes, remaining_seconds = divmod(int(span), 60)
+    if total_minutes < 60:
+        return f"{total_minutes}m{remaining_seconds:02d}s"
+    hours, remaining_minutes = divmod(total_minutes, 60)
+    return f"{hours}h{remaining_minutes:02d}m"
 
 
 @dataclass
