@@ -63,9 +63,12 @@ counterpart, so they were dropped or approximated; one has since been recovered.
   up to three allies.
 - **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter, and the
   minion cost of those two is dropped. Summon Minions was approximated as the resource they do use, energy,
-  which made it a spell that paid for casts nobody could make — its line is a tier deeper and disabled. It is
-  now **what minions are for rather than what they cost**: a few rounds of armour spread over the team, the
-  same idea `revenant_guards` finishes permanently and twice as large.
+  which made it a spell that paid for casts nobody could make — its line is a tier deeper and disabled. Armour
+  spread over the team was tried next and read as a smaller `revenant_guards`, which is the spell it is meant
+  to open rather than rehearse. It is now **what a summoning costs and when it pays**: nothing lands on the
+  cast, the minions gnaw at the whole enemy line over the three rounds that follow, and raising them takes 3
+  of the summoner's own health (ADR 0031). It is the only spell whose damage is entirely deferred and the only
+  one charged to its caster's health.
 - ~~**Healing over time.**~~ Recovered: `Regeneration` was added to the taxonomy (ADR 0019) and Healing
   Screech is the prototype's `Heal 2` plus `Regeneration 2` for a round again.
 - **Retaliate.** Thundering Seal's damage back on the attacker. Explicitly not carried over until a rule
@@ -77,7 +80,9 @@ Two more places where the model forced a hand:
   effect here, so Wait is `EnergyGain` on the caster: pass the round and gather. **Momentum is
   `EnergyRegeneration`** — the first spell to use the kind ADR 0020 added and deliberately left unused, which
   named it as one of the two candidates. It is Wait's opposite trade: Wait hands energy over now, Momentum
-  builds it over the next few rounds. Summon Minions is the other candidate and is still an `EnergyGain`.
+  builds it over the next few rounds. Summon Minions was the other candidate and declines the nomination: at
+  0.2 a point an energy spell tops out around 1.60 an activation, and two energy openers would have been two
+  dead openers.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive
   yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,
   because free plus permanent plus re-castable is bounded by nothing but the round cap (`check-knobs` reports
