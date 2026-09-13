@@ -14,13 +14,13 @@
   "effects": [
     {
       "kind": "DefenseBuff",
-      "amount": 2,
+      "amount": 3,
       "permanent": true
     },
     {
       "kind": "DefenseBuff",
-      "amount": 2,
-      "durationRounds": 1
+      "amount": 3,
+      "durationRounds": 2
     }
   ],
   "enabled": true

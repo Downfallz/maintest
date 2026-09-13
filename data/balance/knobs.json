@@ -261,11 +261,12 @@
     "spell:chain_slash": {
       "name": "Chain Slash",
       "class": "Mercenary",
-      "intent": "The Mercenary's payoff: the most damage any single cast puts on the board, split over two enemies. It is the reason to walk that line to the end, so it should stay expensive and stay late.",
+      "intent": "The Mercenary's payoff, and the only cast in the catalogue that hits exactly two: the rung between a single-target spike and a line-wide storm. It is the reason to walk that line to the end, so it stays expensive and stays late.",
       "keep": [
-        "Hits at most two: it is a cleave, not a storm",
-        "The largest cast in the catalogue"
+        "Hits exactly two: the one rung between a spike and a storm, and the only spell on it",
+        "Expensive and late: the end of the Mercenary's line, never something to open with"
       ],
+      "note": "It used to claim to be 'the largest cast in the catalogue', which was true only while the spells that beat it were disabled. It puts 10 damage on the board, 5 over two targets; `crazed_specter` puts 18 and `tornado` 12, both at the same depth, and `hateful_sacrifice` ties it at 10 on one. Its numbers are not the problem and were left alone: at 10.00 a round it already sits inside the 8-to-14 band tier 3 is being aimed at, and two candidates that made it bigger -- damage 6 at a cost of 4, and damage 6 at a critical chance of 0.6 -- both measured worse than what is authored. What was wrong was the sentence.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
@@ -276,11 +277,12 @@
     "spell:thundering_seal": {
       "name": "Thundering Seal",
       "class": "Mercenary",
-      "intent": "Guard grown up: two permanent points of defense on an ally and two more for the round. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation.",
+      "intent": "Guard grown up: three permanent points of defense on an ally and three more for two rounds. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation. It is the one place the Mercenary protects with armour rather than with tempo -- `protective_slam` says 'never armour' and means it -- because the taxonomy has no initiative *buff*, so protecting an ally through tempo cannot be said at all.",
       "keep": [
         "Stronger and dearer than Guard",
         "The permanent half stacks on every cast"
       ],
+      "note": "It read 5.20 a round against a tier-3 band of 8 to 14, so it was raised to the top of its own bounds rather than redesigned: 2 permanent and 2 for a round became 3 and 3 for two, at the same price. Measured, that is 16 casts to 94 and `spellsNeverCast` 6 to 1 -- longer matches (5.56 rounds to 6.33) buy more evolution picks, so more of the catalogue comes up at all. It is not the best score available: 3 permanent and 2 for two rounds reads 34.33 against this one's 39.97, and the difference is `spellsBarelyCast`. Taken deliberately, because the tier's problem is its floor and this is the shape closer to the tier-3 median of about 10.5. Its overlap with `revenant_guards` -- the same two effects on three allies -- is left for the Necromancer's turn.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
