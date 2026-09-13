@@ -42,8 +42,8 @@ The score of one resolution, with the weights `w`:
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
 | `w.heal` x expected regeneration | amount per round x rounds, capped at what the target is still missing after the hit | for an ally, against an enemy |
 | `w.defense` x damage prevented | a DefenseBuff, and only a DefenseBuff: amount x rounds x the hits the target is expected to face, its attackers spread over its living allies (ADR 0022) | for an ally, against an enemy |
-| `w.defense` x amount x rounds | a DefenseDebuff (a permanent condition counts three). A stand-in, not the reading above: it does not know what the shred lets through, and it never reaches the threat term, so the bot cannot see that lowering a defense raises what the next hit takes (ADR 0035) | on an enemy counts for, on an ally against |
-| `-w.energy` x energy taken | an EnergyDrain, capped at what the target holds, which is all `Creature.LoseEnergy` takes (ADR 0035) | on an enemy counts for, on an ally against |
+| `w.defense` x amount x rounds | a DefenseDebuff (a permanent condition counts three). A stand-in, not the reading above: it does not know what the debuff lets through, and it never reaches the threat term, so the bot cannot see that lowering a defense raises what the next hit takes (ADR 0035) | on an enemy counts for, on an ally against |
+| `w.energy` x energy taken | an EnergyDrain, capped at what the target holds, which is all `Creature.LoseEnergy` takes (ADR 0035) | on an enemy counts for, on an ally against |
 | `w.initiative` x amount x rounds | an InitiativeDebuff (a permanent condition counts three) | a debuff on an enemy counts for, on an ally against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
 | `-w.risk` | a fizzle, or the share of targets dropped at resolution | always |

@@ -293,24 +293,24 @@ def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
     A spell taught in two places takes the shallowest, which is how soon a creature can actually have it. The
     prerequisite raise applies after that: a prerequisite is a floor, not a choice.
     """
-    depths: dict[str, int] = {}
-    required: dict[str, list[str]] = {}
+    offers: dict[str, list[_Offer]] = {}
 
     def alias_of(reference: str) -> str | None:
         return reference if reference in by_id.values() else by_id.get(reference)
 
-    def note(reference: str, depth: int, prerequisites: Sequence[str] = ()) -> None:
+    def resolve(references: Sequence[str]) -> list[str]:
+        return [found for found in map(alias_of, references) if found is not None]
+
+    def note(reference: str, depth: int, prerequisites: _Prerequisites | None = None) -> None:
         alias = alias_of(reference)
         if alias is None:
             return
-        depths[alias] = min(depth, depths.get(alias, depth))
-        behind = [found for found in map(alias_of, prerequisites) if found is not None]
-        if behind:
-            required.setdefault(alias, []).extend(behind)
+        asked = prerequisites or _Prerequisites([], [])
+        offers.setdefault(alias, []).append(_Offer(depth, resolve(asked.all_of), resolve(asked.any_of)))
 
     _note_starting_spells(data_directory, note)
     _note_tree_nodes(data_directory, note)
-    return _behind(depths, required)
+    return _settle(offers)
 
 
 def _note_starting_spells(data_directory: Path, note: _Note) -> None:
@@ -330,41 +330,75 @@ def _note_tree_nodes(data_directory: Path, note: _Note) -> None:
             _walk(tree["root"], 0, note)
 
 
-def _behind(depths: dict[str, int], required: Mapping[str, Sequence[str]]) -> dict[str, int]:
-    """Raise every spell to one below the deepest thing it requires, until nothing moves.
+@dataclass(frozen=True)
+class _Prerequisites:
+    """What a talent-tree entry asks for, with the two lists kept apart because they are read differently."""
+
+    all_of: list[str]
+    any_of: list[str]
+
+
+@dataclass(frozen=True)
+class _Offer:
+    """One place a spell is taught: how deep that node sits, and what it asks for *there*."""
+
+    depth: int
+    all_of: list[str]
+    any_of: list[str]
+
+
+def _settle(offers: Mapping[str, Sequence[_Offer]]) -> dict[str, int]:
+    """How deep each spell is first reachable, raising it until nothing moves.
+
+    A spell is as shallow as its shallowest offer, and one offer is no shallower than the node holding it or
+    than one past everything that offer gates it behind. The two prerequisite lists are read differently,
+    which is `TalentPrerequisites.AreSatisfiedBy`: `allOf` must all be known, so the **deepest** of them sets
+    the floor; `anyOf` needs one, so the **shallowest** does. Flattening them together over-deepens every
+    spell behind a cheap alternative -- today every `anyOf` pair in the content sits at one depth, so nothing
+    moves, and the rule is written for the content that does not.
 
     A pass at a time rather than a recursion, so a prerequisite chain of any length settles and a cycle --
     which a talent tree should never carry and this must not hang on -- stops at the number of spells.
     """
+    depths = {alias: min(offer.depth for offer in taught) for alias, taught in offers.items()}
     for _ in range(len(depths)):
         moved = False
-        for alias, behind in required.items():
-            if alias not in depths:
-                continue
-            deepest = max((depths[found] for found in behind if found in depths), default=None)
-            if deepest is not None and depths[alias] < deepest + 1:
-                depths[alias] = deepest + 1
+        for alias, taught in offers.items():
+            reachable = min(_offer_depth(offer, depths) for offer in taught)
+            if depths[alias] < reachable:
+                depths[alias] = reachable
                 moved = True
         if not moved:
             break
     return depths
 
 
+def _offer_depth(offer: _Offer, depths: Mapping[str, int]) -> int:
+    """How deep one offer makes its spell reachable: its node, or one past what it gates the spell behind."""
+    floors = [offer.depth]
+    known_all = [depths[found] for found in offer.all_of if found in depths]
+    known_any = [depths[found] for found in offer.any_of if found in depths]
+    if known_all:
+        floors.append(max(known_all) + 1)
+    if known_any:
+        floors.append(min(known_any) + 1)
+    return max(floors)
+
+
 #: What `_walk` hands back for each spell: its id, the depth of the node offering it, and what it requires.
-_Note = Callable[[str, int, Sequence[str]], None]
+_Note = Callable[[str, int, "_Prerequisites | None"], None]
 
 
-def _required_by(spell: Mapping[str, object]) -> list[str]:
-    """The spells a talent-tree entry names as prerequisites. ``anyOf`` counts: one of them still gates it."""
+def _required_by(spell: Mapping[str, object]) -> _Prerequisites:
+    """The spells a talent-tree entry names as prerequisites, with `allOf` and `anyOf` kept apart."""
     prerequisites = spell.get("prerequisites")
     if not isinstance(prerequisites, Mapping):
-        return []
-    names: list[str] = []
-    for key in ("allOf", "anyOf"):
-        listed = prerequisites.get(key)
-        if isinstance(listed, list):
-            names.extend(str(entry) for entry in listed if isinstance(entry, str))
-    return names
+        return _Prerequisites([], [])
+    return _Prerequisites(_names(prerequisites.get("allOf")), _names(prerequisites.get("anyOf")))
+
+
+def _names(listed: object) -> list[str]:
+    return [str(entry) for entry in listed if isinstance(entry, str)] if isinstance(listed, list) else []
 
 
 def _walk(node: Mapping[str, object], depth: int, note: _Note) -> None:

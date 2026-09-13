@@ -660,6 +660,46 @@ def test_a_prerequisite_raises_a_spell_the_node_depth_would_leave_shallow(tmp_pa
     assert tiers["spell:behind"] == 1
 
 
+def test_an_anyof_spell_sits_one_past_its_shallowest_alternative(tmp_path: Path) -> None:
+    """`TalentPrerequisites.AreSatisfiedBy` unlocks on *one* of `anyOf`, so the cheap path is what gates it.
+
+    Read together with `allOf` the deepest alternative won, and every spell behind a cheap alternative read
+    several tiers too deep -- which `tierUsageShare`, `tierDamageSpread` and `tierWinSpread` are all computed
+    over. Every `anyOf` pair in the repository sits at one depth today, so only a tree like this one shows it.
+    """
+    _write_tree(
+        tmp_path,
+        [
+            {"id": "spell:opener:v1"},
+            {"id": "spell:mid:v1", "prerequisites": {"allOf": ["spell:opener"]}},
+            {"id": "spell:deep:v1", "prerequisites": {"allOf": ["spell:mid"]}},
+            {"id": "spell:gated:v1", "prerequisites": {"anyOf": ["spell:opener", "spell:deep"]}},
+        ],
+    )
+
+    tiers = load_content(tmp_path).tiers
+
+    assert tiers["spell:deep"] == 2
+    assert tiers["spell:gated"] == 1, "one past the opener it can take, not one past the deep alternative"
+
+
+def test_an_allof_spell_still_sits_one_past_its_deepest_requirement(tmp_path: Path) -> None:
+    """The other half of the rule: `allOf` must all be known, so the dearest of them is the floor."""
+    _write_tree(
+        tmp_path,
+        [
+            {"id": "spell:opener:v1"},
+            {"id": "spell:mid:v1", "prerequisites": {"allOf": ["spell:opener"]}},
+            {"id": "spell:deep:v1", "prerequisites": {"allOf": ["spell:mid"]}},
+            {"id": "spell:gated:v1", "prerequisites": {"allOf": ["spell:opener", "spell:deep"]}},
+        ],
+    )
+
+    tiers = load_content(tmp_path).tiers
+
+    assert tiers["spell:gated"] == 3, "it needs both, so the deep one sets the floor"
+
+
 def test_a_chain_of_prerequisites_settles_at_its_own_length(tmp_path: Path) -> None:
     """Three deep in one node, declared in the order that makes a single pass insufficient."""
     _write_tree(
