@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "learning" / "src"))
 
+from downfall_learning.export import WEIGHT_NAMES
 from downfall_learning.knobs import load_content, load_knobs
 from downfall_learning.search_weights import EngineCommand
 from downfall_learning.tune_content import (
@@ -131,12 +132,25 @@ def _engine():
     return EngineCommand(command=list(RELEASE_CLI), root=ROOT, seeds="benchmarks/benchmark-seeds.json")
 
 
+def weight_named(argument: str) -> str:
+    """The weight this argument names, as :data:`WEIGHT_NAMES` spells it, or a refusal listing the nine.
+
+    The name reaches a regular expression and a JSON key, so what travels on is the project's own constant
+    rather than the string that was typed: an argument that is not one of the nine never gets that far. It
+    also turns `sweep-weight.py enrgy 0.3` into an answer instead of "'Enrgy:' appears 0 times".
+    """
+    for known in WEIGHT_NAMES:
+        if known == argument:
+            return known
+    raise SystemExit(f"Unknown weight '{argument}'. The weights are: {', '.join(WEIGHT_NAMES)}.")
+
+
 def sweeps(arguments: Sequence[str]) -> list[tuple[str, list[float]]]:
     """Split `initiative 1.0 2.0 -- energy 0.2 0.4` into the sweeps it asks for, run one after the other."""
     groups = [group.split() for group in " ".join(arguments).split(" -- ")]
     if any(len(group) < 2 for group in groups):
         raise SystemExit(__doc__)
-    return [(group[0], [float(value) for value in group[1:]]) for group in groups]
+    return [(weight_named(group[0]), [float(value) for value in group[1:]]) for group in groups]
 
 
 def main() -> None:
