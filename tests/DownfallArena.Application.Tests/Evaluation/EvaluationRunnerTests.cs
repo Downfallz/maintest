@@ -211,7 +211,7 @@ public sealed class EvaluationRunnerTests
     }
 
     /// <summary>
-    /// Every count <see cref="SpellEffects"/> holds reaches the column of its own name. The copy is seventeen
+    /// Every count <see cref="SpellEffects"/> holds reaches the column of its own name. The copy is eighteen
     /// lines of one shape, so a wrong namesake -- <c>DefenseDebuffs = effects.InitiativeDebuffs</c> -- compiles,
     /// keeps every total right, and moves only the one column nothing asserts on. Giving each count a value of
     /// its own is what tells them apart, and reading the field list off the record's own constructor is what

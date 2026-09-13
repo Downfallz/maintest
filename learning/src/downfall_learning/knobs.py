@@ -644,7 +644,7 @@ def _has_permanent(document: Mapping[str, object]) -> bool:
 def _stacks(effect: Mapping[str, object]) -> bool:
     """Whether an effect's stacking policy piles a second application on the first.
 
-    `Stack` is the default the mapper gives the two kinds that can be permanent (`data/README.md`), so an
+    `Stack` is the default the mapper gives the lasting kinds that can be permanent (`data/README.md`), so an
     effect that says nothing stacks.
     """
     return str(effect.get("stacking", "Stack") or "Stack") == "Stack"

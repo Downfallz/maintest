@@ -131,7 +131,7 @@ public sealed record SpellOutcome
     /// <summary>
     /// Everything <see cref="SpellEffects"/> counted, copied onto this outcome field by field.
     /// <para>
-    /// It lives here rather than inline in the caller because it is seventeen lines of the same shape, each one
+    /// It lives here rather than inline in the caller because it is eighteen lines of the same shape, each one
     /// a chance to name the wrong source field -- a mistake that compiles, passes every test that reads a total
     /// rather than a particular column, and quietly moves a number balance is judged on.
     /// <c>EvaluationRunnerTests</c> pins it by giving every count a value of its own.

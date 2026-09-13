@@ -47,10 +47,10 @@ and is a probability rather than a quantity. That is a different shape and so a 
 - Bad: **the feature schema changes again**, `features:v4` to `features:v5`, the second bump in a day. A new
   condition kind is a new observation layout and there is no cheaper way to add one.
 - Bad: **the benchmark digest moves**, and scores either side of this are not comparable.
-- Bad: initiative is the most expensive weight in the game at 2.1, so this kind is the easiest one to
-  over-tune with. Death Squad's bounds stop at an amount of 3 and carry no duration knob for that reason;
-  the top corner still reads 18.90 a round, above the band, which is headroom for the tuner rather than a
-  target for it.
+- Bad: at 2.1 initiative is the dearest weight *per point* — kill at 5.0 and stun at 3.0 are larger numbers,
+  but neither multiplies an authored amount — so this kind is the easiest one to over-tune with. Death
+  Squad's bounds stop at an amount of 3 and carry no duration knob for that reason; the top corner still
+  reads 18.90 a round, above the band, which is headroom for the tuner rather than a target for it.
 - Neutral: `features.md` records that base initiative is recoverable as `initiative + InitiativeDebuff_amount`
   (ADR 0017). It becomes `initiative + InitiativeDebuff_amount - InitiativeBuff_amount`, still recoverable,
   and still lossy only where the debuffs floor the current initiative at zero.

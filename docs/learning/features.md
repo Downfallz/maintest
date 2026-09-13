@@ -26,7 +26,8 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 - **Base initiative is not a feature** (ADR 0017). Unlocking a spell raises a creature's base initiative, so
   the creature now carries a base and a current one, and the block holds only `initiative`, the current. The
   base is `initiative + InitiativeDebuff_amount - InitiativeBuff_amount` (ADR 0036), and those amount features
-  sum every active condition on the stat, so it is recoverable — except where the debuffs floor the current initiative at zero, which loses the difference.
+  sum every active condition on the stat, so it is recoverable — except where the debuffs floor the current
+  initiative at zero, which loses the difference.
   Publishing a `base_initiative` feature for that corner would need a new version of its own, and the corner
   was not worth one. It stayed out of `features:v2` for the same reason. Revisit if a policy is ever trained
   on content where a creature is routinely debuffed past zero.
@@ -52,7 +53,7 @@ creature block, so a creature block becomes `C = 6 + 2 x 8 + S + N` and the cond
 
 Everything else — the global block, the board slot rule, the naming, the fingerprint — is v1 unchanged. No run
 recorded under v4 is comparable to one under v5 without re-recording: the vectors differ in length and in what
-sits at every index from +18 on. This changes the ADR 0017 note below: base initiative is now
+sits at every index from +18 on. This changes the ADR 0017 note above: base initiative is now
 `initiative + InitiativeDebuff_amount - InitiativeBuff_amount`, still recoverable from the block and still
 lossy only where the debuffs floor the current initiative at zero. The Python side reads v1 through v5, so an
 older dataset stays analysable; the engine plays only a policy trained on the version it reads.

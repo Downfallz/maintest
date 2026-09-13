@@ -2,7 +2,8 @@
 
 The 36 spells of `data/Spells`, carried over from the legacy prototype. Vocabulary is defined in
 [glossary.md](glossary.md); the effect taxonomy they are written in is
-[ADR 0012](../adr/0012-effect-taxonomy.md), extended by [ADR 0019](../adr/0019-regeneration-the-healing-counterpart-of-bleed.md),
+[ADR 0012](../adr/0012-effect-taxonomy.md), extended by
+[ADR 0019](../adr/0019-regeneration-the-healing-counterpart-of-bleed.md),
 [ADR 0020](../adr/0020-energy-regeneration-and-the-price-of-energy.md),
 [ADR 0035](../adr/0035-lowering-defense-and-taking-energy.md) and
 [ADR 0036](../adr/0036-raising-initiative-the-mirror-that-was-left-out.md); the authoring format is `data/README.md`.
@@ -34,6 +35,7 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Temporary` + `Stats.Defense`, `Length` | raise it for a few rounds | `DefenseBuff` with `durationRounds` |
 | `EffectType.Direct` or `Temporary` + `Stats.Defense`, negative | lower it, for good or for a few rounds | `DefenseDebuff`, `permanent: true` or `durationRounds` (ADR 0035) |
 | `EffectType.Direct` + `Stats.Stun` | stun the targets | `Stun` |
+| `EffectType.Temporary` + `Stats.Initiative` | speed the targets up | `InitiativeBuff` with `durationRounds` (ADR 0036) |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
 | `SpellType`, `CharacterClass`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
 | `Initiative` | summed over a character's unlocked spells to *be* its initiative | Spell initiative: what the Creature's base gains, once, on unlocking it (ADR 0017) |
@@ -47,7 +49,8 @@ that took no target at all.
 ## What did not survive the translation
 
 The effect taxonomy is closed and every effect applies to the spell's targets. Six legacy ideas had no
-counterpart, so they were dropped or approximated; two have since been recovered and one half-recovered. Each is a rule to decide, not an oversight:
+counterpart, so they were dropped or approximated; two have since been recovered and one half-recovered.
+Each is a rule to decide, not an oversight:
 
 - ~~**Effects on the caster**~~ (`SelfDirect`, `SelfTemporary`). Recovered: a spell may carry `casterEffects`,
   resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself and
