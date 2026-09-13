@@ -10,6 +10,7 @@ from sklearn.metrics import log_loss
 
 from downfall_learning.artifacts import Dataset
 from downfall_learning.policy import UNSEEN_ACTION_SCORE, LinearScorer, Policy
+from downfall_learning.progress import Progress, silent
 from downfall_learning.report import TrainingLog, TrainingRow
 from downfall_learning.training import Scaling, TrainingError, legal_accuracy, now_iso, split_by_match
 
@@ -41,10 +42,14 @@ def _rows_of(model: SGDClassifier, classes: int) -> tuple[np.ndarray, np.ndarray
 
 
 def train_clone(
-    dataset: Dataset, options: CloneOptions | None = None, log: TrainingLog | None = None
+    dataset: Dataset,
+    options: CloneOptions | None = None,
+    log: TrainingLog | None = None,
+    progress: Progress | None = None,
 ) -> Policy:
     """Trains one epoch at a time and keeps the epoch whose choices match held-out matches best."""
     options = options or CloneOptions()
+    progress = progress or silent()
     keys = dataset.action_keys
     if len(keys) < 2:
         raise TrainingError("Behaviour cloning needs at least two distinct actions in the data.")
@@ -62,6 +67,7 @@ def train_clone(
     scored = split.validation if len(split.validation) > 0 else split.train
 
     best = _Epoch(0, float("inf"), float("-inf"), np.zeros_like(scaled[:1]), np.zeros(len(keys)))
+    progress.total = options.epochs
     for epoch in range(1, options.epochs + 1):
         model.partial_fit(scaled[split.train], labels[split.train], classes=classes)
         loss = float(log_loss(labels[split.train], model.predict_proba(scaled[split.train]), labels=classes))
@@ -71,10 +77,12 @@ def train_clone(
             log.append(TrainingRow(epoch, loss, extra={"accuracy": accuracy}))
         if (accuracy, -loss) > (best.accuracy, -best.loss):
             best = _Epoch(epoch, loss, accuracy, weights, bias)
+        progress.step(f"loss {loss:.4f} · accuracy {accuracy:.4f} · best epoch {best.number}")
 
     epoch, loss, accuracy, weights, bias = best.number, best.loss, best.accuracy, best.weights, best.bias
     if log is not None:
         log.mark_best(epoch)
+    progress.finish(f"best epoch {epoch} · accuracy {accuracy:.4f}")
     return Policy(
         kind="clone",
         stamp=dataset.stamp,

@@ -20,8 +20,11 @@ from downfall_learning.iteration import (
 )
 from downfall_learning.knobs import KNOBS_FILE, KnobsError, findings, load_content, load_knobs, validate
 from downfall_learning.policy import POLICY_FILE, Policy
+from downfall_learning.progress import Progress
 from downfall_learning.report import TRAINING_FILE, TrainingLog
 from downfall_learning.search_weights import (
+    BUILDER_SOURCES,
+    ENGINE_SOURCES,
     CliEvaluator,
     EngineCommand,
     SearchOptions,
@@ -89,6 +92,7 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
         default=None,
         help="the engine command prefix (default: dotnet run on the built Release CLI)",
     )
+    _add_quiet(search)
     search.set_defaults(handler=_search_weights)
 
 
@@ -128,6 +132,7 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
     tune.add_argument(
         "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
     )
+    _add_quiet(tune)
     tune.add_argument(
         "--apply",
         action="store_true",
@@ -156,6 +161,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_dataset_arguments(clone)
     clone.add_argument("--epochs", type=int, default=20)
     clone.add_argument("--alpha", type=float, default=1e-4, help="L2 regularization strength")
+    _add_quiet(clone)
     clone.set_defaults(handler=_train_clone)
 
     value = commands.add_parser("train-value", help="value regression: (observation, action) to return")
@@ -215,6 +221,20 @@ def _dataset(arguments: argparse.Namespace) -> Dataset:
     return build_dataset(runs, kinds=getattr(arguments, "kinds", None))
 
 
+def _add_quiet(parser: argparse.ArgumentParser) -> None:
+    """Every command that can run for hours takes the same flag, spelled the same way."""
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="do not report progress on stderr while the run is in flight",
+    )
+
+
+def _progress(arguments: argparse.Namespace, label: str) -> Progress:
+    """Progress goes to stderr, so the report on stdout stays something a script can read."""
+    return Progress(label=label, quiet=getattr(arguments, "quiet", False))
+
+
 def _write_policy(policy: Policy, directory: Path) -> None:
     path = policy.save(directory / POLICY_FILE)
     metrics = ", ".join(f"{name} {value:.4g}" for name, value in policy.metrics.items())
@@ -225,7 +245,8 @@ def _train_clone(arguments: argparse.Namespace) -> int:
     dataset = _dataset(arguments)
     log = TrainingLog(dataset.stamp, arguments.output / TRAINING_FILE)
     options = CloneOptions(arguments.epochs, arguments.alpha, arguments.validation, arguments.seed)
-    _write_policy(train_clone(dataset, options, log), arguments.output)
+    progress = _progress(arguments, "train-clone")
+    _write_policy(train_clone(dataset, options, log, progress), arguments.output)
     return 0
 
 
@@ -244,7 +265,7 @@ def _search_weights(arguments: argparse.Namespace) -> int:
     )
     evaluator = CliEvaluator(_engine(arguments), arguments.output / "work")
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
-    result = search_weights(evaluator, options, initial, log)
+    result = search_weights(evaluator, options, initial, log, _progress(arguments, "search-weights"))
     result.write(arguments.output)
     print(format_search(result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json"))
     return 0
@@ -344,11 +365,14 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     if arguments.engine:
         engine = replace(engine, command=tuple(arguments.engine))
     host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
-    # The evaluator checks the engine itself; the builder is this command's own and nobody else's.
-    unreachable = missing_engine(host.builder, engine.root)
-    if unreachable:
-        print(unreachable, file=sys.stderr)
-        return 1
+    # Both, each against the trees it is built from. The comment here used to say the evaluator checked the
+    # engine, which was true of `CliEvaluator` and never of `EngineContentEvaluator` -- so a run whose
+    # builder happened to be fresh played every candidate on a stale CLI and said nothing.
+    for command, sources in ((host.builder, BUILDER_SOURCES), (engine.command, ENGINE_SOURCES)):
+        unreachable = missing_engine(command, engine.root, sources)
+        if unreachable:
+            print(unreachable, file=sys.stderr)
+            return 1
     evaluator = EngineContentEvaluator(host, knobs.objective, content)
     options = TuneOptions(
         iterations=arguments.iterations,
@@ -359,7 +383,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         pairs=arguments.pairs,
         pair_depth=arguments.pair_depth,
     )
-    result = tune_content(evaluator, knobs, content, options)
+    result = tune_content(evaluator, knobs, content, options, _progress(arguments, "tune-content"))
     result.write(arguments.output, arguments.data)
     print(format_result(result, knobs.objective))
     missing = knobs.objective.missing(result.best.metrics)

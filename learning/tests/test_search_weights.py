@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from downfall_learning.artifacts import Evaluation
 from downfall_learning.export import DEFAULT_WEIGHTS, WEIGHT_NAMES, read_weights
 from downfall_learning.report import TrainingLog
 from downfall_learning.search_weights import (
+    BUILDER_SOURCES,
     Candidate,
     CliEvaluator,
     EngineCommand,
@@ -203,6 +205,68 @@ def test_an_engine_that_is_built_is_accepted(tmp_path: Path) -> None:
     (assembly / "Cli.dll").write_text("", encoding="utf-8")
 
     assert missing_engine(("dotnet", "artifacts/bin/Cli.dll"), tmp_path) is None
+
+
+def test_an_engine_built_before_the_code_it_runs_is_refused(tmp_path: Path) -> None:
+    """The expensive failure: a build that is there, runs, and reports the old engine's numbers.
+
+    A release assembly left from before two ADRs was about to send a tuning pass four hours measuring a
+    scoring weight that had already changed. Not being built fails at once; being stale failed silently.
+    """
+    assembly = tmp_path / "artifacts" / "bin"
+    assembly.mkdir(parents=True)
+    (assembly / "Cli.dll").write_text("", encoding="utf-8")
+    source = tmp_path / "src" / "DownfallArena.Application" / "Agents" / "ScoringWeights.cs"
+    source.parent.mkdir(parents=True)
+    source.write_text("", encoding="utf-8")
+    _touch(source, _mtime(assembly / "Cli.dll") + 10)
+
+    reason = missing_engine(("dotnet", "artifacts/bin/Cli.dll"), tmp_path)
+
+    assert reason is not None
+    assert "ScoringWeights.cs" in reason
+    assert "dotnet build --configuration Release" in reason
+
+
+def test_the_data_builder_is_stale_when_its_own_tool_source_moves(tmp_path: Path) -> None:
+    """The builder is built from `tools/` as well as `src/`, and only its caller knows that.
+
+    Read against `src/` alone -- which is what the first version of this check did -- a data builder left
+    behind by a change to its own `Program.cs` passes, and the whole tuning run consolidates candidates with
+    the old validation.
+    """
+    assembly = tmp_path / "artifacts" / "bin"
+    assembly.mkdir(parents=True)
+    (assembly / "DataBuilder.dll").write_text("", encoding="utf-8")
+    source = tmp_path / "tools" / "DownfallArena.DataBuilder" / "Program.cs"
+    source.parent.mkdir(parents=True)
+    source.write_text("", encoding="utf-8")
+    _touch(source, _mtime(assembly / "DataBuilder.dll") + 10)
+    command = ("dotnet", "artifacts/bin/DataBuilder.dll")
+
+    assert missing_engine(command, tmp_path) is None
+    assert "Program.cs" in (missing_engine(command, tmp_path, BUILDER_SOURCES) or "")
+
+
+def test_a_document_under_src_does_not_make_a_build_stale(tmp_path: Path) -> None:
+    """A build does not read a README, so touching one is not a reason to refuse a four-hour run."""
+    assembly = tmp_path / "artifacts" / "bin"
+    assembly.mkdir(parents=True)
+    (assembly / "Cli.dll").write_text("", encoding="utf-8")
+    note = tmp_path / "src" / "README.md"
+    note.parent.mkdir(parents=True)
+    note.write_text("", encoding="utf-8")
+    _touch(note, _mtime(assembly / "Cli.dll") + 10)
+
+    assert missing_engine(("dotnet", "artifacts/bin/Cli.dll"), tmp_path) is None
+
+
+def _mtime(path: Path) -> float:
+    return path.stat().st_mtime
+
+
+def _touch(path: Path, when: float) -> None:
+    os.utime(path, (when, when))
 
 
 def test_a_command_that_names_no_assembly_is_left_alone(tmp_path: Path) -> None:
