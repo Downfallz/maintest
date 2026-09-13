@@ -600,18 +600,28 @@ def twins(content: Content) -> list[frozenset[str]]:
 
 
 def _signature(document: Mapping[str, object]) -> str:
-    effects = document.get("effects", [])
     return json.dumps(
         [
             document.get("energyCost", 0),
             document.get("initiative", 0),
             document.get("criticalChance", 0) or 0,
             document.get("targeting", {}),
-            sorted(
-                (json.dumps(effect, sort_keys=True) for effect in effects if isinstance(effect, Mapping)),
-            ),
+            _multiset(document.get("effects", [])),
+            # Kept as its own element rather than folded in with the rest: a spell that heals its caster and
+            # one that heals its target are told apart in a match, so they must be told apart here too. The
+            # engine's `ContentAudit.Signature` reads both halves, and this has to agree with it (ADR 0031).
+            _multiset(document.get(CASTER_EFFECTS) or []),
         ],
         sort_keys=True,
+    )
+
+
+def _multiset(effects: object) -> list[str]:
+    """The effects as a sorted multiset of their JSON, so the same effects in another order read the same."""
+    return sorted(
+        json.dumps(effect, sort_keys=True)
+        for effect in (effects if isinstance(effects, list) else [])
+        if isinstance(effect, Mapping)
     )
 
 
@@ -791,11 +801,24 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
     price rather than the point; the critical multiplier does not reach it; and it is counted once per cast
     however many targets the spell reaches, so it must be added after any target count is applied and never
     inside it.
+
+    Each effect is priced on its own and the values added, never the magnitudes: two caster bleeds of one
+    over two rounds and three over four are 1x2 + 3x4, and grouping them first would price them as the cross
+    product (1+3) x (2+4).
     """
+    effects = document.get(CASTER_EFFECTS) or []
     total = 0.0
-    for kind, magnitudes in _grouped(document.get(CASTER_EFFECTS) or []).items():
-        amount, per_round, rounds = magnitudes
-        rounds = PERMANENT_CONDITION_ROUNDS if kind.endswith(":permanent") else rounds
+    for effect in effects if isinstance(effects, list) else []:
+        if not isinstance(effect, Mapping):
+            continue
+        kind = str(effect.get("kind"))
+        amount = float(effect.get("amount", 0) or 0)
+        per_round = float(effect.get("amountPerRound", 0) or 0)
+        rounds = (
+            PERMANENT_CONDITION_ROUNDS
+            if effect.get("permanent")
+            else float(effect.get("durationRounds", 0) or 0)
+        )
         value = {
             DAMAGE: weights.get("damage", 0) * amount,
             "Heal": weights.get("heal", 0) * amount,
@@ -806,8 +829,8 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
-        }.get(kind.split(":", 1)[0], 0.0)
-        total += -value if _harms(kind) else value
+        }.get(kind, 0.0)
+        total += -value if kind in HARMFUL else value
     return total
 
 
@@ -854,11 +877,12 @@ def _addresses_a_price(document: Mapping[str, object], path: str) -> bool:
     """Whether a pointer addresses the magnitude of a caster effect whose kind hurts the caster."""
     if not path.startswith(CASTER_POINTER):
         return False
-    index = path[len(CASTER_POINTER) :].split("/", 1)[0]
+    token = path[len(CASTER_POINTER) :].split("/", 1)[0]
+    position = int(token) if token.isdigit() else -1
     effects = document.get(CASTER_EFFECTS) or []
-    if not isinstance(effects, list) or not index.isdigit() or int(index) >= len(effects):
+    if not isinstance(effects, list) or not 0 <= position < len(effects):
         return False
-    effect = effects[int(index)]
+    effect = effects[position]
     return isinstance(effect, Mapping) and str(effect.get("kind")) in HARMFUL
 
 

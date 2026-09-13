@@ -602,6 +602,38 @@ def test_an_effect_on_the_caster_is_worth_what_it_does_to_the_caster() -> None:
     assert cast_value(recoiling, WEIGHTS) == pytest.approx(cast_value(plain, WEIGHTS) - 2)
 
 
+def test_two_spells_that_differ_only_on_their_caster_are_not_twins() -> None:
+    """A match tells them apart, and the engine's `ContentAudit.Signature` reads both halves. This has to
+    agree with it: under `noIndistinguishableSpells` a false pair is a finding, and `tune-content` refuses a
+    candidate for adding one."""
+    pairs = twins(
+        content(
+            **{
+                "spell:plain": spell(),
+                "spell:draining": spell(casterEffects=[{"kind": "Heal", "amount": 2}]),
+            }
+        )
+    )
+
+    assert pairs == []
+
+
+def test_two_caster_effects_of_one_kind_are_priced_one_at_a_time() -> None:
+    """Grouping them first multiplies the sums: two bleeds of 1 over 2 rounds and 3 over 4 are 1x2 + 3x4,
+    not (1+3) x (2+4)."""
+    plain = spell()
+    bleeding = spell(
+        casterEffects=[
+            {"kind": "Bleed", "amountPerRound": 1, "durationRounds": 2},
+            {"kind": "Bleed", "amountPerRound": 3, "durationRounds": 4},
+        ]
+    )
+
+    assert cast_value(bleeding, WEIGHTS) == pytest.approx(
+        cast_value(plain, WEIGHTS) - (0.8 * ((1 * 2) + (3 * 4)))
+    )
+
+
 def test_a_spell_that_pays_a_price_on_its_caster_does_not_dominate_one_that_does_not() -> None:
     """Every other axis alike, the recoil is a cost the other spell never pays. Read as an unsigned extra
     effect it would have read as the better spell."""

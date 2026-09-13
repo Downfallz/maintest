@@ -220,6 +220,16 @@ dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1040.severity = none
 
 # ---------------------------------------------------------------------------
+# Spell: a content factory whose parameters are the authored fields of one spell
+# ---------------------------------------------------------------------------
+# S107 (too many parameters): Spell.Create takes the eight fields data/Spells authors, and gained the eighth
+# when a spell could carry effects on its caster (ADR 0031). Every call site names them, the mapper fills
+# them straight from the JSON, and grouping any of them would add a type whose only job is to make the count
+# seven. Scoped to this file so the rule keeps biting everywhere else.
+[src/DownfallArena.Domain/Resources/Spell.cs]
+dotnet_diagnostic.S107.severity = none
+
+# ---------------------------------------------------------------------------
 # Test projects: relax rules that fight readable test names and fixtures
 # ---------------------------------------------------------------------------
 [tests/**.cs]

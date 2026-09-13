@@ -40,6 +40,48 @@ public sealed class CombatStatsRecorderTests
         effects.Stuns.ShouldBe(0, "the stun is not in what landed");
     }
 
+    /// <summary>
+    /// These numbers are read as what a spell does when it is cast at someone -- `Damage` is what an
+    /// evaluation attributes to a spell and what `tierDamageSpread` compares -- so a cost the caster pays is
+    /// not part of them (ADR 0031). Counting it would make a recoil of two read as two more points of reach.
+    /// </summary>
+    [Fact]
+    public async Task What_a_cast_did_to_its_own_caster_is_left_out_of_what_the_spell_is_credited_with()
+    {
+        var match = _store.Started();
+        var actor = match.Creatures[0];
+        var enemy = match.Creatures.First(creature => creature.Owner != actor.Owner);
+        EffectOutcome recoil = new DamageOutcome(actor.Id, 2, false) with { OnCaster = true };
+
+        await RecordAsync(
+            match,
+            actor.Id,
+            aimed: [new DamageOutcome(enemy.Id, 3, false), recoil],
+            landed: [new DamageOutcome(enemy.Id, 3, false), recoil]);
+
+        var effects = Recorder.SpellsOf(match.Id, actor.Owner)[TestContent.Strike.Value];
+        effects.Damage.ShouldBe(3, "the two the caster paid are a price, not reach");
+    }
+
+    /// <summary>
+    /// The other half of the test above. A spell whose targeting origin is `Self` puts ordinary outcomes on
+    /// the actor, and those are the cast doing what it is for, so reading the target alone would drop them.
+    /// </summary>
+    [Fact]
+    public async Task A_spell_that_targets_its_own_caster_is_still_credited_with_what_it_did()
+    {
+        var match = _store.Started();
+        var actor = match.Creatures[0];
+
+        await RecordAsync(
+            match,
+            actor.Id,
+            aimed: [new HealOutcome(actor.Id, 2)],
+            landed: [new HealOutcome(actor.Id, 2)]);
+
+        Recorder.SpellsOf(match.Id, actor.Owner)[TestContent.Strike.Value].Healing.ShouldBe(2);
+    }
+
     [Fact]
     public async Task A_fizzle_counts_as_a_declaration_that_did_not_land()
     {

@@ -199,8 +199,8 @@ public sealed class ResolutionRulesTests
         resolution.Outcomes.ShouldBe(
         [
             new DamageOutcome(Arena.Ghoul, 3, false),
-            new HealOutcome(Arena.Knight, 2),
-            new EnergyOutcome(Arena.Knight, 1),
+            new HealOutcome(Arena.Knight, 2) with { OnCaster = true },
+            new EnergyOutcome(Arena.Knight, 1) with { OnCaster = true },
         ]);
         resolution.EffectiveTargets.ShouldBe([Arena.Ghoul], "the caster is not a target of its own spell");
     }
@@ -230,7 +230,7 @@ public sealed class ResolutionRulesTests
 
         var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit);
 
-        resolution.Outcomes.OfType<HealOutcome>().ShouldHaveSingleItem().ShouldBe(new HealOutcome(Arena.Knight, 2));
+        resolution.Outcomes.OfType<HealOutcome>().ShouldHaveSingleItem().ShouldBe(new HealOutcome(Arena.Knight, 2) with { OnCaster = true });
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public sealed class ResolutionRulesTests
         var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit);
 
         resolution.IsCritical.ShouldBeTrue();
-        resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 6, true), new DamageOutcome(Arena.Knight, 2, true)]);
+        resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 6, true), new DamageOutcome(Arena.Knight, 2, true) with { OnCaster = true }]);
     }
 
     [Fact]

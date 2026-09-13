@@ -136,19 +136,25 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             return SpellEffects.None with { Fizzled = 1 };
         }
 
+        // What a cast did to its own caster is left out of every tally below (ADR 0031). These numbers are
+        // read as what a spell does when it is cast at someone -- `Damage` is what an evaluation attributes
+        // to the spell and what `tierDamageSpread` compares -- so counting a recoil here would make a cost
+        // read as two more points of reach. A `Self`-targeted spell is untouched: its outcomes are what the
+        // cast is for, and they are not marked.
+        var onTargets = applied.Where(outcome => !outcome.OnCaster).ToList();
         return new SpellEffects(
             Resolved: 1,
             Fizzled: 0,
             Criticals: resolution.IsCritical ? 1 : 0,
-            Damage: applied.OfType<DamageOutcome>().Sum(outcome => outcome.Amount),
-            Healing: applied.OfType<HealOutcome>().Sum(outcome => outcome.Amount),
-            Energy: applied.OfType<EnergyOutcome>().Sum(outcome => outcome.Amount),
-            Stuns: Conditions<Stun>(applied),
-            Bleeds: Conditions<Bleed>(applied),
-            Regens: Conditions<Regeneration>(applied),
-            EnergyRegenerations: Conditions<EnergyRegeneration>(applied),
-            DefenseBuffs: Conditions<DefenseBuff>(applied),
-            InitiativeDebuffs: Conditions<InitiativeDebuff>(applied));
+            Damage: onTargets.OfType<DamageOutcome>().Sum(outcome => outcome.Amount),
+            Healing: onTargets.OfType<HealOutcome>().Sum(outcome => outcome.Amount),
+            Energy: onTargets.OfType<EnergyOutcome>().Sum(outcome => outcome.Amount),
+            Stuns: Conditions<Stun>(onTargets),
+            Bleeds: Conditions<Bleed>(onTargets),
+            Regens: Conditions<Regeneration>(onTargets),
+            EnergyRegenerations: Conditions<EnergyRegeneration>(onTargets),
+            DefenseBuffs: Conditions<DefenseBuff>(onTargets),
+            InitiativeDebuffs: Conditions<InitiativeDebuff>(onTargets));
     }
 
     private static int Conditions<TEffect>(IReadOnlyList<EffectOutcome> applied)
