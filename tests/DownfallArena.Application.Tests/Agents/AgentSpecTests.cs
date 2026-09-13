@@ -45,14 +45,14 @@ public sealed class AgentSpecTests
     /// The literal, not a self-comparison: the fingerprint is hashed from <c>Named</c>, whose order is now a
     /// list one edit could reorder, and it is stamped into artifacts that are committed. A change here means
     /// every stamp naming these weights no longer matches them, so it has to be deliberate. It was
-    /// <c>7aff3a10</c> until ADR 0028 moved the defense price from 0.5 to 0.65, and <c>a4e83485</c> until
-    /// ADR 0032 moved the initiative price from 0.5 to 2.1. Each came with a journal entry and a regenerated
-    /// benchmark digest.
+    /// <c>7aff3a10</c> until ADR 0028 moved the defense price from 0.5 to 0.65, <c>a4e83485</c> until
+    /// ADR 0032 moved the initiative price from 0.5 to 2.1, and <c>93f3683c</c> until ADR 0037 moved the
+    /// energy price from 0.2 to 0.3. Each came with a journal entry and a regenerated benchmark digest.
     /// </summary>
     [Fact]
     public void The_built_in_weights_keep_the_fingerprint_committed_stamps_were_written_with()
     {
-        ScoringWeights.Default.Fingerprint.ShouldBe("93f3683c");
+        ScoringWeights.Default.Fingerprint.ShouldBe("1933f3ae");
     }
 
     [Fact]

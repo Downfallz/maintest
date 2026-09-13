@@ -1,0 +1,4 @@
+# Python outside `learning/` -- today `scripts/`, which holds tools that import the learning project without
+# being part of it. It is held to the same style rather than to ruff's defaults, and the settings are not
+# copied here: this extends the project's own configuration so the two cannot drift.
+extend = "learning/pyproject.toml"

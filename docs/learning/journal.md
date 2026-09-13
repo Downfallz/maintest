@@ -4,6 +4,114 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-13. The five remaining weights, none of which moves, and a sixth that does nothing
+
+- **What changed**: nothing in the engine. `kill`, `stun`, `heal`, `bleed` and `risk` were swept one at a
+  time on content `91da955c` against the `energy` 0.3 baseline, 400 benchmark seeds, all four evaluations —
+  41 points in all. **Every one of the five stays where phase L5 hand-set it.** `damage` is not swept: it is
+  the unit, so moving it alone is the same experiment as scaling the other eight the other way.
+- **The tables** (objective; lower is better; the current value in bold):
+
+  | `kill` | 0 | 2 | 3 | 4 | 4.5 | **5** | 5.5 | 6 | 8 | 10 |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | objective | 59.54 | 58.15 | 53.63 | 62.22 | 52.53 | **49.32** | 51.01 | 52.88 | 67.16 | 71.77 |
+  | `player1WinShare` | 0.540 | 0.540 | 0.570 | 0.570 | 0.565 | **0.510** | 0.545 | 0.420 | 0.350 | 0.390 |
+
+  | `stun` | 0 | 1 | 2 | **3** | 4 | 5 | 6 |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | objective | 52.70 | 50.67 | 52.45 | **49.32** | 48.76 | 62.98 | 59.87 |
+
+  | `heal` | 0 | 0.4 | 0.6 | **0.8** | 1.0 | 1.2 | 1.6 |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | objective | 50.13 | 62.43 | 58.65 | **49.32** | 62.35 | 68.55 | 73.95 |
+  | rounds | **5.85** | 6.52 | 6.32 | 7.80 | 5.98 | 8.10 | 9.97 |
+
+  | `bleed` | 0 | 0.4 | 0.6 | **0.8** | 1.0 | 1.2 | 1.6 |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | objective | 57.52 | 50.48 | 49.38 | **49.32** | 58.48 | 71.22 | 65.53 |
+
+- **`kill` is the one where the coarse grid lied to me.** On 0/2/3/4/5/6/8/10 it read as a step of 5..6 with
+  5.0 on its lower edge, and I said so. The refinement says the step is **4.5..6.0** and 5.0 is near its
+  middle: 4.0's 62.22 is an isolated spike between 3.0's 53.63 and 4.5's 52.53, not a boundary. A grid coarse
+  enough to miss a spike is coarse enough to invent an edge.
+- **`stun` is flat where it matters.** 0 to 4 all read between 48.76 and 52.70 and `player1WinShare` barely
+  moves; 5 breaks to 62.98. A weight whose value does not matter over most of its range is a result, and 3.0
+  sits well inside that range. 4.0 reads 0.6 better and that is not a reason to move a number.
+- **`heal` 0.8 is a narrow minimum**, not a plateau: 0.6 reads 58.65 and 1.0 reads 62.35, nine and thirteen
+  worse. It is kept because nothing else comes close, and the fragility is recorded rather than smoothed
+  over. Read `heal` 0.0 whole before liking its 50.13: matches end in **5.85 rounds**, under the floor of 8,
+  with entropy at 2.91. The objective is good there because the game is cut short.
+- **`bleed` 0.8 is the top edge of a step** whose middle is 0.6 (49.38 against 49.32). The middle-of-the-step
+  test that chose 0.65, 2.1 and 0.3 would prefer 0.6. It is not moved: 0.06 is noise, the other columns split
+  (0.6 takes `tierWinSpread`, `spellsNeverCast` and `exploit`; 0.8 takes entropy, `player1WinShare` and
+  `spellsBarelyCast`), and the cost is a moved fingerprint and digest. That test picks a **new** value; it is
+  not a reason to move one already inside the step.
+- **`risk` does nothing, and that is the finding.** Swept at 0, 1, 2, 4, 20 and 100 it plays out identically,
+  every column, over 400 seeds — setting it to zero changes not one match. 3, 6 and 9 give one other
+  identical reading (49.25). So the two outcomes are selected by **whether the value is a multiple of three**,
+  not by how large it is, which is a floating-point tie-break and not an effect: `risk x 1 / 3` is an exact
+  integer there and lands on another candidate's score, and ties go to the first spell in ordinal id order.
+- **Why it is inert**: `weights.Risk` is read in two places, both inside `Score` — the `Fizzled` branch and
+  the dropped-target share. A decision goes through `Expected`, which scores a resolution simulated against
+  the **current** board, where nothing has fizzled and no target has dropped. `Best` only offers legal
+  targets. So the term is the same zero for every candidate and cancels in the argmax. The real fizzle rate
+  of 0.163 comes from targets dying between declaration and resolution — exactly what the bot cannot see
+  when it chooses. This is ADR 0020's shape again: a weight that is documented, priced and unreachable.
+- **Open, and not decided here**: whether the bot should learn to see that risk (price the expected drop at
+  declaration) or whether the term should go. That is a decision with an ADR, not a number to tune, and
+  nothing in this entry changes the engine.
+- **The engine is deterministic, checked rather than assumed.** The 49.25 reading looked like noise, so
+  `risk 3.0` was run twice: identical to three decimals. That mattered beyond this entry — three earlier
+  conclusions in this journal lean on exact reproduction, and a single unexplained row would have put them
+  in doubt.
+- **Verified**: the sweep restores both files and rebuilds the engine at the defaults on the way out; the
+  tree is clean and `ScoringWeights.Default` is untouched.
+
+## 2026-09-13. The energy weight was never the tie-breaker it was documented as
+
+- **What changed**: `energy` 0.2 to **0.3** (ADR 0037), `initiative` kept at 2.1. Weights fingerprint
+  `93f3683c` to **`1933f3ae`**, benchmark digest regenerated on content `91da955c`, which does not move.
+- **Why it was read at all**: it is the last weight that was hand-set and never re-measured. Phase L5 set 0.2
+  when it priced one thing, energy *kept*, and `agents.md` still called it "enough to break a tie towards the
+  cheaper spell". ADR 0020, 0026 and 0035 then gave it energy handed out, energy regenerated, the uncovered
+  part of an unlock cost, and energy drained — four jobs on a number chosen for one.
+- **The sweep says the description was wrong, not just stale.** At `energy` 0.0 the first mover wins **0.720**
+  of the mirror and the objective reads **100.09**, the worst point of the sweep below 0.5. A term that moves
+  `player1WinShare` by a fifth between 0.0 and 0.3 was never a tie-breaker.
+
+  | `energy` | 0.0 | 0.1 | **0.2** | **0.3** | 0.4 | 0.5 | 0.6 | 1.0 |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | objective | 100.09 | 61.40 | 54.34 | **49.32** | 50.12 | 108.33 | 73.12 | 81.40 |
+  | `player1WinShare` | 0.720 | 0.620 | 0.575 | **0.510** | 0.525 | 0.535 | 0.520 | 0.530 |
+  | `spellEntropyA` | 2.619 | 3.249 | 3.437 | **3.530** | 2.955 | 2.588 | 2.626 | 2.428 |
+  | `skill` | 0.985 | 0.988 | 0.990 | 0.985 | 0.943 | 0.905 | 0.915 | 0.802 |
+  | `exploit` | 0.335 | 0.212 | 0.195 | 0.198 | 0.233 | 0.790 | 0.708 | 0.710 |
+
+  0.2, 0.3 and 0.4 sit within 5.1 of each other and 0.5 breaks hard, so 0.3 is the middle of the step rather
+  than an end of it — the test ADR 0028 and ADR 0032 each had to pass.
+- **What it buys, stated exactly**: the mirror's first-mover share, **not a stronger agent**. `heuristic:` at
+  0.3 against the compiled `greedy` at 0.2, each seed played from both sides, is a dead heat — **0.505, CI
+  [0.481, 0.529]**, against a same-weights control reading 0.495 — and `exploit` is flat (0.195 to 0.198).
+  ADR 0032 could show its baseline getting harder to exploit; this one cannot, and the ADR says so in its
+  consequences rather than in a footnote.
+- **Initiative was re-swept on the new content and does not move.** Eleven points: 2.1 is still the best
+  (54.34) after six classes were rewritten under it. But it is a **narrow minimum, not a flat step** — 1.95
+  reads 62.51 and 2.25 reads 60.01. What makes keeping it safe is the wider plateau 2.1..2.55 (54 to 60,
+  against 62 to 70 outside), where 2.1 is best on the objective, on `skill` and on `exploit` at once. Weaker
+  evidence than ADR 0032 had, and recorded as such.
+- **Above 2.4 the bot stops playing well**, which the old sweep could not see: `skill` goes 0.990, 0.978,
+  0.925, **0.720** at 2.1, 2.4, 2.7, 3.0, where the `74f02621` catalogue held 0.998 across the range. The new
+  content has choices that overpaying for tempo makes the argmax miss.
+- **Cost**: `spellsNeverCast` 1 to 2, at its target's limit. `check-knobs` stays at **ten findings** — none
+  cleared, none added, two ceilings up (`momentum` 1.60 to 2.40, `restorative_burst` 3.80 to 4.10), neither
+  enough to make either spell a choice.
+- **The method is now a script**, `scripts/sweep-weight.py`. The first run of it was thrown away: two sweeps
+  were started at once, they patch the same two files, and each restored the other's patch mid-flight, so the
+  table was measuring weights it had not set. The script now refuses to start unless both files are clean in
+  git, which is what that collision looks like from outside.
+- **Verified**: build, 756 .NET tests, 304 pytest, `dotnet format`, ruff check and format, `check-knobs`,
+  benchmark digest regenerated and re-verified.
+
 ## 2026-09-13. The minion price paid its own way down, and a review caught it
 
 - **What changed**: `revenant_guards` and `crazed_specter` charge their caster a one-round **`Bleed 4`**
