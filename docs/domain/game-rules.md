@@ -32,8 +32,10 @@ listed in [spells.md](spells.md).
   spell's targeting spec fully (count, duplicates, origin, existence, death) and any failure blocks the action.
   Resolution re-checks against the current state: an actor that cannot act any more, or a global targeting
   failure, fizzles the action at no cost; a target that became invalid is dropped and the action fizzles only
-  when none remains. The critical roll adds the creature's and the spell's chances and multiplies damage only,
-  floored; damage is then reduced by the target's total defense, floor zero. The energy cost is spent, instant
+  when none remains. The critical roll adds the creature's and the spell's chances and multiplies what the cast
+  puts on a target's health now -- damage and a direct heal (ADR 0033) -- floored; damage is then reduced by
+  the target's total defense, floor zero. A lasting effect, an effect on the caster and energy are not
+  multiplied. The energy cost is spent, instant
   effects apply, lasting effects attach as conditions. At the start of a round living creatures gain the rule
   set's energy and bleeds deal their summed damage, ignoring defense. At cleanup every condition counts one
   round down, except that the first countdown after an application does not count: a one-round stun applied
@@ -101,8 +103,8 @@ listed in [spells.md](spells.md).
         failure drops that target, and the action fizzles when no target remains;
       - a fizzled action costs nothing;
       - the energy cost is spent;
-      - a critical roll (creature chance plus Spell chance) multiplies damage by the Rule set's crit
-        multiplier, floored;
+      - a critical roll (creature chance plus Spell chance) multiplies a target's damage and direct heal by
+        the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
       - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy);
       - lasting effects attach as Conditions per their stacking policy.
 4. **End of round**

@@ -27,12 +27,22 @@ PRECISION = 3
 #: Magnitude fields an effect may carry, in the order they are compared.
 MAGNITUDES = ("amount", "amountPerRound", "durationRounds")
 
-#: The one effect kind the critical multiplier applies to (``ResolutionRules``).
+#: The effect kinds the critical multiplier applies to: what a cast puts on a target's health now, and
+#: nothing lasting, on the caster or in another currency (ADR 0033, ``ResolutionRules``).
 DAMAGE = "Damage"
+HEAL = "Heal"
+CRITTABLE = frozenset({DAMAGE, HEAL})
 
 #: What a spell does to whoever cast it (ADR 0031), and the pointer prefix a knob addresses it by.
 CASTER_EFFECTS = "casterEffects"
 CASTER_POINTER = f"/{CASTER_EFFECTS}/"
+
+#: The pointer prefix a knob addresses a target effect by.
+TARGET_POINTER = "/effects/"
+
+#: The targeting origins that put a spell's effects on its caster's own side, where a harmful kind is a cost
+#: rather than the point of the spell.
+FRIENDLY_ORIGINS = frozenset({"Ally", "Self"})
 
 #: The effect kinds that hurt whoever they land on. On a target that is the point of the spell; on the caster
 #: it is the price, so every reading of a caster effect turns on this set.
@@ -368,8 +378,12 @@ def validate(knobs: Knobs, content: Content, root: Path | None = None) -> list[s
 
 
 def _inert_critical(knob: Knob, document: Mapping[str, object]) -> bool:
-    """A critical chance on a spell with no damage: the multiplier reaches ``Damage`` and nothing else."""
-    return knob.path == CRITICAL_CHANCE and DAMAGE not in _effects(document)
+    """A critical chance on a spell that neither damages nor heals a target: the multiplier reaches nothing.
+
+    Both kinds, since ADR 0033. A caster effect is not read here even when it is one of them: the roll stops
+    at the targets, so a chance on a spell whose only damage is its own recoil still moves nothing.
+    """
+    return knob.path == CRITICAL_CHANCE and not (CRITTABLE & set(_effects(document)))
 
 
 def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[str]:
@@ -395,8 +409,8 @@ def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[st
             )
         if _inert_critical(knob, document):
             problems.append(
-                f"{knob.key}: the critical multiplier applies to damage only, and this spell deals "
-                "none, so this knob cannot move anything."
+                f"{knob.key}: the critical multiplier reaches a target's damage and direct heal, and this "
+                "spell does neither, so this knob cannot move anything."
             )
     return problems
 
@@ -639,9 +653,10 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
     Same targeting origin and at least as many targets, cost no higher, Spell initiative no lower, every
     effect of ``worse`` matched by one at least as large, and an extra effect that carries something.
 
-    Critical chance is compared only between two spells that both deal damage: the multiplier applies to
-    `Damage` and to nothing else, so on a heal or a buff it is a number no match reads and comparing it
-    would refuse a candidate over nothing.
+    Critical chance is compared only between two spells that both carry something the multiplier reaches --
+    a `Damage` or a direct `Heal` (ADR 0033). On a spell that carries neither it is a number no match reads,
+    and comparing it would refuse a candidate over nothing. The set is read rather than spelled out here, so
+    the rule cannot drift from the one `cast_value` prices with and `_inert_critical` guards.
 
     What a spell does to its own caster (ADR 0031) is a separate axis, and compared differently: those
     magnitudes are signed, so an absent group is a zero rather than a gap. Carrying no recoil at all is being
@@ -655,28 +670,30 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
         return False
 
     ours, theirs = _effects(better), _effects(worse)
-    mine_on_me, yours_on_you = _caster_effects(better), _caster_effects(worse)
+    # Both halves are signed, so a group either side is missing is a zero and not a gap, and one comparison
+    # covers both cases the old rule needed two for: a group `worse` carries and `better` lacks reads as
+    # 0 < theirs and disqualifies, exactly as before, while a *cost* `better` carries alone now reads as
+    # ours < 0 and disqualifies too -- which it did not when a price could only look like a gift.
     none = (0.0,) * len(MAGNITUDES)
     comparisons = [
         pair
-        for group in mine_on_me.keys() | yours_on_you.keys()
-        for pair in zip(mine_on_me.get(group, none), yours_on_you.get(group, none), strict=True)
+        for half in (
+            (ours, theirs),
+            (_caster_effects(better), _caster_effects(worse)),
+        )
+        for group in half[0].keys() | half[1].keys()
+        for pair in zip(half[0].get(group, none), half[1].get(group, none), strict=True)
     ]
     comparisons += [
         (int(left.get("maxTargets", 1)), int(right.get("maxTargets", 1))),
         (-int(better.get("energyCost", 0)), -int(worse.get("energyCost", 0))),
         (int(better.get("initiative", 0)), int(worse.get("initiative", 0))),
     ]
-    if DAMAGE in ours and DAMAGE in theirs:
+    if CRITTABLE & ours.keys() and CRITTABLE & theirs.keys():
         comparisons.append(
             (float(better.get("criticalChance", 0) or 0), float(worse.get("criticalChance", 0) or 0))
         )
-    for group, magnitudes in theirs.items():
-        if group not in ours:
-            return False
-        comparisons.extend(zip(ours[group], magnitudes, strict=True))
-    extra = [group for group in ours if group not in theirs]
-    strictly_better = any(any(magnitude > 0 for magnitude in ours[group]) for group in extra)
+    strictly_better = False
     for mine, yours in comparisons:
         if mine < yours:
             return False
@@ -762,14 +779,17 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
     - the caster's own critical chance, which belongs to a creature and not to a spell.
 
     What it is good for is one question: roughly how much is this spell worth next to the one offered beside
-    it. Only `Damage` takes the critical multiplier, the same as `ResolutionRules`.
+    it. `Damage` and a direct `Heal` take the critical multiplier, the same as `ResolutionRules` (ADR 0033).
     """
     critical = float(document.get("criticalChance", 0) or 0)
+    crit_factor = 1 + critical * (CRITICAL_MULTIPLIER - 1)
     effects = document.get("effects", [])
+    friendly = _friendly(document)
     total = 0.0
     for effect in effects if isinstance(effects, list) else []:
         if not isinstance(effect, Mapping):
             continue
+        kind = str(effect.get("kind"))
         amount = float(effect.get("amount", 0) or 0)
         per_round = float(effect.get("amountPerRound", 0) or 0)
         rounds = (
@@ -777,9 +797,12 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             if effect.get("permanent")
             else float(effect.get("durationRounds", 0) or 0)
         )
-        total += {
-            DAMAGE: weights.get("damage", 0) * amount * (1 + critical * (CRITICAL_MULTIPLIER - 1)),
-            "Heal": weights.get("heal", 0) * amount,
+        # A harmful kind aimed at a friend is a price, the same way it is on the caster: `noxious_cure` slows
+        # the team it heals, and counting that as upside prices the cost as a gift.
+        sign = -1.0 if friendly and kind in HARMFUL else 1.0
+        total += sign * {
+            DAMAGE: weights.get("damage", 0) * amount * crit_factor,
+            HEAL: weights.get("heal", 0) * amount * crit_factor,
             "EnergyGain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
@@ -787,7 +810,7 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
-        }.get(str(effect.get("kind")), 0.0)
+        }.get(kind, 0.0)
     # The target half is worth what it does to every target it reaches; the caster half is worth what it does
     # once, so it is added after the count and never inside it (ADR 0031).
     return (total * _max_targets(document)) + _caster_value(document, weights)
@@ -819,9 +842,10 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
             if effect.get("permanent")
             else float(effect.get("durationRounds", 0) or 0)
         )
+        # No critical factor on either crittable kind: the roll stops at the targets (ADR 0031, ADR 0033).
         value = {
             DAMAGE: weights.get("damage", 0) * amount,
-            "Heal": weights.get("heal", 0) * amount,
+            HEAL: weights.get("heal", 0) * amount,
             "EnergyGain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
@@ -874,16 +898,34 @@ def _best_corner(document: Mapping[str, object], knob: Knob) -> float:
 
 
 def _addresses_a_price(document: Mapping[str, object], path: str) -> bool:
-    """Whether a pointer addresses the magnitude of a caster effect whose kind hurts the caster."""
-    if not path.startswith(CASTER_POINTER):
+    """Whether a pointer addresses the magnitude of an effect the spell pays rather than buys.
+
+    Two ways an effect is a price, and they are the same rule read on two lists: a harmful kind on the caster
+    always is, and a harmful kind on a target is one when the spell is aimed at friends. `noxious_cure` slows
+    the team it heals, so more of that debuff is a worse spell and the corner best for it is the knob's floor.
+    """
+    if path.startswith(CASTER_POINTER):
+        effects, rest = document.get(CASTER_EFFECTS) or [], path[len(CASTER_POINTER) :]
+    elif path.startswith(TARGET_POINTER) and _friendly(document):
+        effects, rest = document.get("effects") or [], path[len(TARGET_POINTER) :]
+    else:
         return False
-    token = path[len(CASTER_POINTER) :].split("/", 1)[0]
+
+    token = rest.split("/", 1)[0]
     position = int(token) if token.isdigit() else -1
-    effects = document.get(CASTER_EFFECTS) or []
     if not isinstance(effects, list) or not 0 <= position < len(effects):
         return False
     effect = effects[position]
     return isinstance(effect, Mapping) and str(effect.get("kind")) in HARMFUL
+
+
+def _friendly(document: Mapping[str, object]) -> bool:
+    """Whether the spell's targets are on its caster's own side, which is what makes a harmful kind a cost.
+
+    Named origins only, never "not `Enemy`": a document whose targeting cannot be read is not evidence that
+    its effects land on a friend, and reading it as one turns every hit in it into a price.
+    """
+    return str((document.get("targeting") or {}).get("origin")) in FRIENDLY_ORIGINS
 
 
 def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | None = None) -> list[str]:
@@ -965,8 +1007,19 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
 
 
 def _effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:
-    """The effects of a spell as magnitudes by group, summed when a spell carries a group twice."""
-    return _grouped(document.get("effects", []))
+    """The effects of a spell as magnitudes by group, summed when a spell carries a group twice, and
+    **signed** by whether the effect helps the creatures it lands on.
+
+    The targeting origin decides that and nothing else can: a stun or an initiative debuff is the point of a
+    spell aimed at enemies and a price paid by a spell aimed at allies. `noxious_cure` heals a team and slows
+    the team it heals, and read unsigned that slowing is an extra effect for free -- it read as strictly
+    better than a plain heal of the same size, which is a cost mistaken for a gift.
+    """
+    friendly = _friendly(document)
+    return {
+        group: tuple(-value for value in magnitudes) if friendly and _harms(group) else magnitudes
+        for group, magnitudes in _grouped(document.get("effects", [])).items()
+    }
 
 
 def _caster_effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:

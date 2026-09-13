@@ -4,6 +4,348 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-13. A critical cast heals harder, and the match-length target falls at last
+
+- **What changed**: the critical multiplier now reaches a direct `Heal` on a target (ADR 0033), one word in
+  `ResolutionRules`. With it, `healing_screech`'s critical chance goes back to **0.5** and `noxious_cure` stops
+  charging the allies it heals **2** points of initiative and charges **1**. Content `d76a1f84` to
+  **`9211421b`**. Three spells gain a critical-chance knob; `check-knobs` goes **9 findings to 7**.
+- **`averageRounds` reads 8.565.** Band 8..16, penalty **zero**, from 7.000 — and it was 5.8 nine entries ago.
+  This target has been violated for the entire life of this journal and it is the reason the objective exists.
+  What closed it was healing that can have a good round.
+- **Everything outside the three tier readings is now in band.** `player1WinShare` 0.490, `drawRate` 0,
+  `roundCapShare` 0, `fizzleRateA` 0.151, `spellEntropyA` **3.496** (best ever), `spellUsageShare` 0.219,
+  `spellsNeverCast` 0. `spellsBarelyCast` 4 to 3. Objective **17.89 to 12.95**, which is where it stood before
+  the entry below — with every target better than it was then.
+- **What it did to the healers.** `healing_screech` **0.2 % of the mirror's casts to 9.9 %** and 12 declaring
+  sides to **165**, the tier's best win share at 0.64. `noxious_cure` 0.0 % to 1.0 %, 12 sides to **100**, win
+  share 0.58 — from a spell that read -3.00 a round to one people take and win with. `rejuvenate` goes the
+  other way, 0.7 % to 0.0 %: the tier-1 heal displaced by the tier-2 one, which is the tree doing its job.
+- **This reverses part of the entry below, and the reversal is the interesting bit.** That entry dropped
+  `healing_screech`'s chance to 0 on the measured ground that it could not change a score. The measurement was
+  right and the conclusion was the wrong way round: a number that does nothing is either decoration to remove
+  or a rule to fix, and nothing in that entry asked which. The rule was the answer. The noise floor it
+  measured on the way (12.95 against 12.93, and that spell's own casts 12 to 7, on a change that provably
+  could not affect a decision) survives and is still the most useful number in it.
+- **`noxious_cure` was broken by arithmetic, not by taste.** At 2.1 a point of initiative a slow of 2 costs
+  4.2 an ally against a heal of 4 worth 3.2: the cast was worth less than passing. The smallest price the
+  taxonomy can say is 1 point for 1 round, 2.1, and that is what it now charges. Its bounds are rebuilt so a
+  search can actually work — the heal reaches 5 instead of 4 so it has room to pay, the slow stops at 2
+  because 3 is unaffordable at any heal in the box, and the critical chance is a knob. Ceiling 3.30 a round
+  to **11.70**.
+- **The one thing that got worse**: `exploit` 0.237 to **0.340**. More healing in the game gives an agent with
+  different weights more to exploit, and `search-2` picks some of it up. Still well inside its band, and the
+  agent is due a refresh anyway.
+- **Left open deliberately**: `EnergyGain` does not take the multiplier. Health is what the roll is about and
+  energy is a separate economy, so it is named in ADR 0033 as open rather than settled by omission. And
+  `healing_screech` at 9.9 % of casts with the tier's best win share is a spell to watch: it is inside its box
+  and the tuner can pull it back, but nobody authored it to be the tier's best.
+
+## 2026-09-13. Opener 9 of 9: Healing Screech was a tier-1 heal wearing a tier-2 badge
+
+- **What changed**: `healing_screech`'s regeneration goes from **2 a round for one round to 3 a round for
+  two**, and its critical chance from **0.5 to 0**. Same price of 2. Content `74f02621` to **`d76a1f84`**.
+  Cast value 3.20 to **6.40 a round**.
+- **The defect, in one line**: it healed 4 for 2 energy at tier 2. `rejuvenate` heals 4 for 2 energy at tier
+  1. Not merely tied — *behind*, because `healing_screech` delivered half of it next round and a creature that
+  dies this round never collects. A Shaman's first pick bought a worse copy of a spell a tier above it. This
+  is the same defect the other eight openers had, and it is the last of them.
+- **Where the step went is the identity.** The instant half stays at 2 and the regeneration carries the
+  increase: 8 health against `rejuvenate`'s 4, with three quarters of it arriving over the next two rounds.
+  So it is worth double a tier-1 heal *only if it is cast before the damage*, and on a creature dying this
+  round it is still worth 2. The knob entry called it "the anticipation heal, not the emergency one"; now the
+  numbers say it too.
+- **Numbers**: 12 casts on the greedy mirror to **38**, 12 declaring sides on the exploring run to **49**, and
+  its takers' win share 0.583 to **0.694** — the best in tier 2. Matches 6.855 to **7.000**, the closest this
+  pass has come to the 8..16 band. `spellsBarelyCast` **5 to 4**: one of the five spells the weight change
+  killed, back, and for a design reason rather than a search.
+- **The objective still charged 4.96 for it**, 12.95 to 17.89, and for the third time every penny is
+  `tierWinSpread` (2.01 to 8.64) while *every other target improves or holds*: rounds, entropy,
+  `spellUsageShare`, `tierUsageShare`, `tierDamageSpread`, `spellsBarelyCast`. **The reason is worth writing
+  down as a property of the metric, not of the spell.** `tierWinSpread` is max minus min over a tier, so
+  raising a weak spell toward the middle helps and raising it past the middle hurts, and the metric cannot
+  tell "one spell is too strong" from "one spell is too weak". Tier 2's floor is `full_plate`, and until that
+  moves, every improvement to anything else in the tier is billed to whatever improved.
+- **A noise floor, measured instead of asserted.** The critical chance of 0.5 could not change a score — the
+  multiplier reaches `Damage` and this spell deals none — but it does change the match, because the crit roll
+  draws from the shared random source. Removing it *alone* moves the objective 12.95 to 12.93 and this
+  spell's own mirror casts 12 to **7**. So: the aggregate targets are stable to about 0.02, and a single
+  low-usage spell's cast count can move 40 % on a change that provably cannot affect any decision. Every
+  per-spell reading in this journal taken off twenty or thirty declaring sides should be read against that.
+- **Two findings handed to the tuning pass rather than fixed here.** `noxious_cure` now reads **-3.00 a
+  round**: it puts an `InitiativeDebuff` of 2 on the three allies it heals, and at 2.1 a point that price
+  (4.2 an ally) exceeds the heal (3.2 an ally). I sized that bargain against 0.5 three entries ago and the
+  weight moved under it. Worse, `check-knobs` says its ceiling is **3.30** at the best corner of its own
+  bounds, so **the tuner cannot fix it** — it needs new bounds or a new shape, and that is a decision, not a
+  search. And `noxious_cure` (0.33) and `rejuvenate` (0.17) still carry the same decorative critical chance
+  this spell just shed.
+
+## 2026-09-13. The initiative weight was a guess for fourteen ADRs, and it was four times too low
+
+- **What changed**: `weights.initiative` goes from **0.5 to 2.1**, swept alone on fixed content `74f02621`
+  (ADR 0032). No content moved. Agent fingerprint `a4e83485` to **`93f3683c`**, digest regenerated.
+- **The entry below guessed the wrong direction, and said so out loud.** It measured a line-wide initiative
+  debuff that Greedy declared 86 times and won 0.279 with, and concluded the scorer over-buys tempo. The sweep
+  says the opposite: at 0 and 0.1 the objective reads 50.98 and 40.94 with `player1WinShare` at 0.705 and
+  0.680, the worst readings in the sweep. **The bot was losing to tempo because it would not buy it**, and
+  buying one bad tempo spell is what a too-low price looks like from the inside. Worth writing down as a
+  method note: "the bot picks X and loses with it" does not tell you which way the weight behind X is wrong.
+- **`player1WinShare` lands at 0.500.** Band 0.45..0.55, penalty 0, from 0.645. This target has been out of
+  band for the whole project and it is the one that says whether going first decides the match. Objective
+  **36.66 to 12.95** on unchanged content — the largest single move of this pass, and the only one that came
+  from the agent rather than the catalogue.
+- **A second measurement the objective does not contain agrees.** `exploit` plays `search-2` — an agent
+  searched against the *old* baseline — against this one. Its win share falls **0.390 to 0.177**. A baseline
+  that is harder to beat by an exploiter built for its predecessor is not a metric artifact. The fizzle rate
+  falls 0.211 to 0.169 and `skill` holds at 0.998 against random.
+- **The step, and why 2.1 rather than 2.0.** The readings come in steps because the agents take an argmax.
+  1.5 and 1.75 sit on either side of a flip — `throwing_star` goes 1.5 % of casts to 26.5 % — and 2.0, 2.1 and
+  2.2 read 12.22, 12.95 and 12.99 with `player1WinShare` 0.490, 0.500 and 0.505. 1.9 and 2.25 are the edges at
+  18.51 and 19.58. 2.1 is the middle of the step; 2.0 is the better single number and 0.1 from an edge. Same
+  test 0.65 had to pass in ADR 0028.
+- **What it costs, and it is a real bill**: `spellsBarelyCast` 0 to **5**. `pummel` 5.0 % of the mirror's casts
+  to 0.0 %, `noxious_cure` 0.6 % to 0.0 %, `full_plate` and `healing_screech` under 0.2 % — and
+  **`summon_minions`, committed an hour ago, 0.7 % to 0.0 %**. `throwing_star` goes 0.9 % to **30.8 %**, which
+  is one spell's stat carrying a weight decision: fifteen of the eighteen enabled spells have a Spell
+  initiative of 1, so the unlock term is nearly a flat bonus and what 2.1 really re-prices is `throwing_star`
+  (3), `momentum` (3) and `pummel` (0). `pummel` dying is that fact from the other side: an initiative of 0 is
+  now a 2.1-point penalty against every rival.
+- **And `check-knobs` goes four findings to eight.** `protective_slam` reads 7.33 a round to 13.73 and
+  outclasses three tier-2 spells on paper while taking 7.0 % of the casts in play against `meteor`'s 10.8 %.
+  The paper reading assumes a full board at full health; `Expected` reads the board in front of it. Bounds
+  work for the next pass.
+- **What this unblocks**: the tempo version of `summon_minions` was rejected because Greedy over-bought it at
+  an unmeasured price. That objection is spent — but so is the spell's current shape, which this weight no
+  longer casts. Both go back on the table together, against a baseline that now prices tempo from a
+  measurement.
+
+## 2026-09-13. Opener 8 of 9, second pass: Summon Minions becomes a summoning, and the objective charges for it
+
+- **What changed**: `summon_minions` stops being armour on the team and becomes **`Bleed` 2 a round for three
+  rounds on up to three enemies**, with **`Damage` 3 on its own caster** (ADR 0031), at a price of **3**
+  instead of 2. Content `7ac86454` to **`74f02621`**. Cast value 3.90 to **7.60 a round**.
+- **Why the armour version was thrown away.** It measured fine and it read as nothing: a smaller
+  `revenant_guards`, which is the spell this one is supposed to *open* rather than rehearse. The entry below
+  called that "the class's own idea, one tier early" and that is exactly the defect — an opener whose only
+  idea is a weaker copy of its own reward teaches a player nothing on the way there.
+- **What it is instead, and it is two firsts.** Nothing lands when the cast resolves: every point of its
+  damage is deferred, which is what makes it a summoning and not an attack. And it is the first spell charged
+  to its caster's own health, which is what the taxonomy had to say for "raising the dead costs the living".
+  No other spell in the catalogue does either.
+- **The objective got worse and the number is not small**: **25.51 to 36.66**. Where it comes from, target by
+  target: `tierWinSpread` 0.233 to 0.452, which is 0.69 to 9.13 of penalty on its own and accounts for almost
+  all of it. That reading is the gap between the best and worst win share inside tier 2, and the two ends of
+  it are `healing_screech` (0.567 to 0.652, on 23 declaring sides) and `full_plate` (0.333 to **0.200**, on
+  35) — two spells this change does not touch, read off samples of about thirty. The baseline's 0.233 was not
+  health; `full_plate`'s takers were already losing. **This spell's own reading went the other way: 0.356 to
+  0.429**, the best any defensive-flavoured tier-2 opener has read. `player1WinShare` is flat, 0.640 to 0.645.
+- **Numbers**: 37 casts on the greedy mirror and 22 on the exploring run, **7.53 damage a cast** — second in
+  the tier behind `enraged_charge`. All 18 enabled spells are cast on the exploring run, so `spellsNeverCast`
+  reaches **0**. Matches 6.72 to 6.32 rounds. The `check-knobs` findings stay at **four**, none of them this
+  spell's.
+- **The negative result is worth more than the change.** Three other versions were measured and all three are
+  worse, and one of them found something. **Tempo**: `InitiativeDebuff` 3 for two rounds on the enemy line,
+  same caster price, at 2 — objective **37.72**, but `player1WinShare` **0.640 to 0.575**, a penalty of 9.72
+  down to 0.75. Nothing else in this whole pass has moved that target, and it is the objective's second-worst
+  after `tierUsageShare`: with both sides played equally well the first side wins 64 % of the time, in a game
+  that lasts six rounds. The lever that moves it is a line-wide initiative debuff. **The reason it was not
+  kept**: Greedy declared it 86 times on the mirror and won 0.279 with it — a trap, and the same blind spot
+  this journal has now flagged twice. `weights.Initiative` is 0.5 because someone reasoned it there and no
+  search has ever touched it, so the scorer over-buys tempo and loses with it. Fixing that weight is the
+  prerequisite for spending this lever, and it would re-price `protective_slam` and `noxious_cure` too.
+- **The other two, for the record**: the same rot at a price of 2 with a caster cost of 2 reads **39.96** and
+  pushes `player1WinShare` to 0.675 — cheaper reach makes the first-mover problem worse, which is the same
+  finding from the other side. Rot and tempo together read **45.90**, the worst of the five: the synthesis is
+  not the best of both, it is the sum of what each one costs.
+- **What is still open**: whether 36.66 is a price worth paying for an identity. The two alternatives are one
+  revert away — the armour version at 25.51, and the tempo version at 37.72 with the initiative weight fixed
+  first.
+
+## 2026-09-13. Opener 8 of 9: Summon Minions stops paying for casts nobody can make
+
+- **What changed**: `summon_minions` stops being `EnergyGain 3` on its caster and becomes **`DefenseBuff` 1
+  for two rounds on up to three allies**, at the same price of 2. Content `e28be68d` to **`7ac86454`**.
+  Cast value 0.60 to **3.90 a round**.
+- **It was paying for a line nobody can cast.** Its intent said it "decides how long the Necromancer's
+  expensive line takes to come online" — and that line, `revenant_guards` and `crazed_specter`, is a tier
+  deeper and disabled. The same defect `meteor` had one entry ago, where the numbers deferred to `tornado`.
+  A spell whose job is to enable other spells has no job when they are off.
+- **ADR 0020's nomination is declined, with a measurement.** That ADR named this spell and `momentum` as the
+  two natural candidates for `EnergyRegeneration`. `momentum` took it one entry ago and the entry records what
+  happened: 0 casts at `explore:0.2`, 8 at `explore:0.5`, because energy is 0.2 a point and an energy spell
+  tops out near 1.60 an activation against an attack's 6 and up. Giving this one the same treatment would have
+  bought a second dead opener. Declining a written nomination needs a reason, and the reason is that one.
+- **What it is instead is the class's own idea, one tier early.** The dead stand in front of the living:
+  `revenant_guards` is that permanently and twice the size, so the Necromancer now reads as one thought from
+  its first pick to its last, and the opener is deliberately the smaller half.
+- **Numbers**: **0 casts to 44** on the greedy mirror and **5 to 75** on the exploring run. Spells cast go to
+  15 of 18 on the mirror and **17 of 18** on variety, which leaves `momentum` as the only one nothing ever
+  casts — `spellsNeverCast` at 1, inside its band of 2 for the first time this pass. The `check-knobs` findings
+  drop from five to **four**. Matches hold at 6.7 rounds.
+- **The cost, and it is real**: `guard` falls from 156 casts to **50**. A team-wide two rounds of armour is
+  simply a better use of an activation than one ally's, and the Brawler's tier-1 answer is what pays for it.
+  That is the tree working — deeper beats shallower — but a three-fold fall is worth a look before this tier
+  is called done.
+
+## 2026-09-13. Opener 7 of 9: Meteor pays for its reach, and buys back a round instead of the spread
+
+- **What changed**: `meteor` hits for **3** a target instead of 4, and its damage bounds go from 3..5 to
+  **2..4** — a floor low enough to reach a real per-target discount, a cap that can never match
+  `lightning_bolt` on one target. Content `7f1ec9ee` to **`e28be68d`**. Read per round, 12.00 to **9.00**.
+- **First, a correction to this journal.** Three entries have called this spell the tier's monopoly. That was
+  true when the tier was enabled — 946 casts, the largest damage source, nothing else in the tier — and it has
+  not been true for a while. Its share of landed casts is about 8 %, against `heavy_strike`'s 28 %. What it
+  was is the **ceiling**, not a monopoly, and the number that says so is `tierDamageSpread`.
+- **What was actually wrong**: a sweep that hits each target as hard as a single-target spell of the same
+  depth is not a sweep, it is that spell three times. `meteor` dealt 4 a target where `lightning_bolt` deals
+  4 to one, so reach cost nothing. Its entry deferred the question — *"its relation to Tornado is the
+  decision, not its absolute numbers"* — to a spell a tier deeper and disabled, so it was deferring its
+  numbers to one nobody can cast while it became its own tier's ceiling.
+- **The change was aimed at the spread and it moved the match length instead**, which is the honest headline:
+
+  | | before | after |
+  | --- | --- | --- |
+  | `meteor` damage a landed cast | 11.37 | **8.69** |
+  | **matches** | 5.8 rounds | **6.7** |
+  | `parasite_jab` casts, greedy mirror | 263 | **465** |
+  | `protective_slam` | 81 | **141** |
+  | `noxious_cure` | 31 | **74** |
+  | `tierDamageSpread`, tier 2 | 3.06 | **3.01** |
+
+  Taking a quarter off the biggest damage source lengthened matches by 16 % and spread the casts across the
+  tier. `averageRounds` is the objective's most-violated target — band 8..16 — and this is the first change all
+  pass to move it the right way.
+- **The spread did not move because the ceiling changed hands.** `enraged_charge` now leads at 10.94 damage a
+  landed cast, and the floor is `parasite_jab` at 3.64. Both are deliberate: the first is the gamble the
+  maintainer chose at opener 3, the second is the weak attack that pays in healing from opener 4. To bring the
+  ratio under 2 the ceiling has to fall under 7.3 or the floor rise over 5.5.
+- **Which is worth saying plainly: `tierDamageSpread` reads "a deliberately weak attack that pays in another
+  currency" as a balance failure.** `parasite_jab` is in the tier's damage comparison because it deals damage,
+  and its damage is low on purpose. The same family as the finding that `spellUsageShare` under 0.25 is
+  unreachable for an argmax: a target the content cannot satisfy without abandoning a design decision.
+
+## 2026-09-13. Noxious Cure's price moves back onto the cured, and three readings had to learn the sign
+
+- **What changed**: the caster bleed of the entry below is replaced by an **`InitiativeDebuff` of 2 for one
+  round on the allies it heals**. The heal stays at 4. Content `1220e301` to **`7f1ec9ee`**.
+- **Why this is the better answer, and it was the maintainer's.** Legacy stripped 2 defense from the allies it
+  healed. `infectious_blast` already shows what this repository does with a defense shred it cannot say — it
+  becomes the one stat debuff the taxonomy has — so Noxious Cure takes the same substitution and the cure is
+  noxious to the cured again, rather than to the curer. The caster bleed was a faithful *cost* in the wrong
+  place.
+- **And it exposed a blind spot that had been there all along.** `cast_value` and `dominates` read a target
+  effect unsigned, so slowing the allies you heal read as an **extra effect for free**: the spell priced at
+  12.60 where a plain heal of the same size priced at 9.60, and it read as *strictly dominating* that plain
+  heal. A cost mistaken for a gift, which `noNewStrictDominance` would have refused a candidate over.
+- **The rule is the one the caster half already uses, read one level out**: a harmful kind is the point of a
+  spell aimed at enemies and a price in one aimed at friends, and the targeting origin is the only thing that
+  says which. Three readings turn on it — the value, the dominance comparison, and which end of a knob is the
+  spell's best corner. Fixing two of the three produced a finding at 0.60 that was pure tooling; fixing the
+  third cleared it.
+- **A default that was nearly a bug**: the first version read "friendly" as *not `Enemy`*, so a document whose
+  targeting could not be read turned every hit in it into a price. Three existing tests caught it — a spell
+  fixture with no targeting priced at -9.0 instead of 9.0. It reads the named origins `Ally` and `Self` now.
+- **Numbers**, both runs still above where the spell started, and the same five findings as before with no new
+  one:
+
+  | | before any change | caster bleed | **debuff on the cured** |
+  | --- | --- | --- | --- |
+  | greedy mirror | 15 | 39 | **31** |
+  | `explore:0.2` (variety) | 56 | 77 | **63** |
+
+- **Also**: `momentum` comes off zero on the exploring run — one cast, which is noise, but it is no longer a
+  spell nothing ever touches.
+
+## 2026-09-13. Opener 6 of 9: Noxious Cure gets its bargain back, on the other shoulder
+
+- **What changed**: `noxious_cure` heals **4** instead of 3 to up to three allies, and its caster now **bleeds
+  1 a round for two rounds**. Content `633c017a` to **`1220e301`**. Cast value 7.20 to **8.00** — a bigger heal
+  and a real cost, not one or the other.
+- **The toxin moved from the cured to the curer.** Legacy stripped 2 defense from the allies it healed, and the
+  taxonomy cannot say that: `DefenseBuff.Of` refuses anything below 1, so there is no negative buff and no way
+  to put a cost on an ally. Its knobs entry said so in as many words — *"Currently missing its downside"*. The
+  downside now sits on whoever brewed the cure (ADR 0031), which is a different spell from the prototype's and
+  is the point: what cannot be said about an ally can be said about the caster.
+- **The first attempt was worse than doing nothing, and the measurement said so.** Keeping the heal at 3 and
+  adding the bleed took it from 15 casts to **2** on the greedy mirror: the cost moved the spell from just
+  above Greedy's attack line to just below it — 5.60 against `lightning_bolt`'s 6.47 — and an argmax does not
+  take second best. The staircase again, from a change worth 1.6.
+- **So the bargain was made generous as well as costly**, which is what a bargain is. Heal 4 with the same
+  bleed reads 8.00, and both runs go **up from where they started**, not merely back:
+
+  | | before | heal 3 + bleed | **heal 4 + bleed** |
+  | --- | --- | --- | --- |
+  | greedy mirror | 15 | 2 | **39** |
+  | `explore:0.2` (variety) | 56 | 23 | **77** |
+
+- **The bleed is load-bearing twice.** It is the spell's identity, and it is also what stops it dominating
+  `rejuvenate`: same origin, same cost, same Spell initiative, four healing against four, and three targets
+  against one — without a cost on the caster this would have been a strict domination the moment the heal
+  reached 4. Signed caster effects are what let the check see that.
+- **Two readings the numbers hide**, both now in the entry's note: `HealScore` counts only the health an ally
+  is *missing*, so on a whole team this spell is worth nothing and is never a free cast; and `ConditionScore`
+  prices a bleed against the health left, so the cost is real but an agent cannot see its own bleed killing
+  it — true of every bleed in the game rather than of this spell.
+- **Unchanged**: 5.8 rounds, the same five `check-knobs` findings and no new one.
+
+## 2026-09-13. Opener 5 of 9: Momentum builds energy instead of handing it over, and is still never cast
+
+- **What changed**: `momentum` stops being `EnergyGain 1` and becomes **`EnergyRegeneration` 1 a round for 3
+  rounds**, the first spell to use the kind [ADR 0020](../adr/0020-energy-regeneration-and-the-price-of-energy.md)
+  added and deliberately left unused — that ADR named Momentum as one of its two candidates, and this is the
+  decision it was waiting for. Free and self-targeted as before, Spell initiative still 3. Content `5bd398ce`
+  to **`633c017a`**. Cast value 0.20 to **0.60**, ceiling 0.40 to **1.60**.
+- **The name finally says what the spell does.** It was `Wait` with a bigger unlock reward and *less* energy:
+  Wait is free and gives 2, Momentum was free and gave 1, and both spend the same activation — strictly worse
+  than a spell every creature starts with. It is now Wait's **opposite trade** rather than its weaker copy:
+  Wait hands energy over now, Momentum builds it, and the Assassin comes out ahead if the match lasts and
+  behind if it does not.
+- **And it is still never cast.** Measured three ways rather than assumed: `random` casts it **290** times, so
+  it is reachable and castable and nothing is wrong with the plumbing; `explore:0.5` casts it **8** times, last
+  of eighteen; `explore:0.2` — the run the objective reads variety on — casts it **0**. Greedy never casts it
+  either. It is simply the last thing any agent with an opinion will choose.
+- **No knob in its box changes that, and the reason is structural.** Energy is priced at 0.2 a point, so the
+  top of its bounds is 1.60 an activation against an attack's 6 and up. To clear the bar `check-knobs` holds it
+  to it would have to hand out twenty points of energy. The finding against `full_plate` therefore survives
+  this change — and it is **right**: the way out it names is the other one, the rival's bounds or the price of
+  energy, which ADR 0020 set and nothing has ever tuned.
+- **Nor is there a design answer inside the taxonomy.** A `Self` spell may Heal, Regenerate, buff Defense or
+  give Energy. The first three would make Momentum a worse Guard; the fourth is the cheapest weight in the
+  game. Buffing initiative — the Assassin's actual identity — is on the list of what did not survive the port.
+  So a tempo spell cannot be worth casting here, and that is a fact about the scorer and the taxonomy rather
+  than about this spell.
+- **Where that leaves it**: coherent, named correctly, using a kind that had no user, and still costing the
+  objective a `spellsNeverCast`. The same shape as `full_plate` two entries ago — the spell is right and what
+  would make it live is outside a content pass. Two weights are now identified as set-by-reasoning and never
+  measured: `weights.Initiative` (ADR 0018) and `weights.Energy` (ADR 0020).
+
+## 2026-09-13. Opener 4 of 9: Parasite Jab feeds its caster, and only matters when it is hurt
+
+- **What changed**: `parasite_jab` goes from `Damage 2` to `Damage 3` and gains a **caster `Heal` of 3**, the
+  first content in the catalogue to use the mechanism of
+  [ADR 0031](../adr/0031-an-effect-that-lands-on-the-caster.md). Its entry said "placeholder until
+  caster-side effects exist"; they exist. Content `113f9acd` to **`5bd398ce`**.
+- **The design is in a term nobody authored.** `ActionScorer.HealScore` counts only the health a target is
+  *missing*, and the caster is a target of its own caster effect, so this spell is worth **4.50 at full
+  health** — below `lightning_bolt`'s 6.47, so it is not cast — and **6.90 once its caster has three points
+  to get back**, above it, so it is. A Leech reaches for this when it is hurt and for something else when it
+  is not. That is lifesteal's whole feel, and it is emergent from a rule written for healing in general
+  rather than designed into this spell.
+- **Numbers**, greedy mirror on the benchmark seeds: **0 casts to 257**, declared by 140 sides of 400, and a
+  **52.1 % win share against a 51.9 % baseline** — the first opener whose takers win at all. `protective_slam`
+  read 37.4 % and `enraged_charge` 51.3 %. Spells cast go from 13 of 18 to **14**.
+- **Verified end to end rather than inferred**, in a recorded match: the heal lands marked `onCaster: true`,
+  the damage lands marked `false` and takes the critical multiplier while the heal stays at 3 whatever the
+  roll — ADR 0031's second decision, read off a real trace. One cast in the sample landed *only* the heal, its
+  damage entirely absorbed, which is the spell doing exactly what it is for.
+- **Why it is not lifesteal, still.** A share of the damage dealt reads the resolution — the crit, the armour
+  that absorbed it, the target that was already dead — not the spell. That is a new kind of effect and remains
+  the open question `docs/domain/spells.md` now carries. A flat heal is the approximation, and it is
+  better-behaved: it is the same number whether the bite landed or not.
+- **What it did not fix**: matches stay at **5.8 rounds** against a band of 8..16, and the five remaining
+  openers are still the prototype's. `check-knobs` is down to five findings, none of them this spell's, and
+  four of the five are about spells this pass has not reached yet.
+
 ## 2026-09-12. A spell can do something to whoever cast it
 
 - **What changed**: the mechanism of [ADR 0031](../adr/0031-an-effect-that-lands-on-the-caster.md), across the

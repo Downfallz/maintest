@@ -1,19 +1,26 @@
 {
   "id": "spell:summon_minions:v1",
   "name": "Summon Minions",
-  "spellType": "Defensive",
+  "spellType": "Offensive",
   "creatureClass": "Necromancer",
   "initiative": 1,
-  "energyCost": 2,
+  "energyCost": 3,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Self",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "origin": "Enemy",
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
-      "kind": "EnergyGain",
+      "kind": "Bleed",
+      "amountPerRound": 2,
+      "durationRounds": 3
+    }
+  ],
+  "casterEffects": [
+    {
+      "kind": "Damage",
       "amount": 3
     }
   ],

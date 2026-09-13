@@ -248,7 +248,7 @@
         "Reads as a trade, not a nuke",
         "The stagger is the point; the damage only has to be worth the activation"
       ],
-      "note": "Most of its value is damage on purpose. The initiative weight is 0.5 on reasoning alone (ADR 0018) and `search-weights` has never tuned it, so a version built mainly on the debuff would rest on an unmeasured number: at Damage 4 and a debuff of 2 over two rounds, 27% of the cast value rides on that weight instead of 43%. The bounds still reach the other shape if a pass finds it better.",
+      "note": "Most of its value was damage on purpose, because the initiative weight was 0.5 on reasoning alone (ADR 0018) and a version built mainly on the debuff would have rested on an unmeasured number. That objection is now spent: ADR 0032 swept the weight alone and moved it to 2.1, and the debuff half of this spell is what moved with it -- 1.6% of the mirror's casts to 7.0%, without a number here changing. The shape is worth revisiting deliberately rather than by default: at 2.1 the debuff is no longer the cheap half.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
@@ -313,7 +313,7 @@
         "Heals more in one cast than anything else",
         "Single target: the team heals belong to the Trickster and the Shaman"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance became a live number with ADR 0033: the multiplier reaches a direct heal. The spell is disabled, so nothing measures it yet, and it carries no chance today -- the knob is here for the pass that enables it.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
@@ -417,14 +417,17 @@
     "spell:parasite_jab": {
       "name": "Parasite Jab",
       "class": "Leech",
-      "intent": "Half of itself: the lifesteal that made it a Leech spell has no counterpart in the taxonomy, so what is left is an expensive small hit with a coin-flip critical. Do not tune it into a good attack, it is waiting for a rule.",
+      "intent": "The Leech's opener and the first spell in the catalogue that feeds its caster (ADR 0031): a modest bite that puts some of what it takes back into whoever threw it. It is deliberately the weaker attack of its tier and the only one that answers being hurt, so the choice it offers is not how hard to hit but whether you need the health.",
       "keep": [
-        "Placeholder until caster-side effects exist",
-        "Its critical chance is the only thing it has left"
+        "It always feeds its caster: the bite is the price of the meal, not the point of it",
+        "A worse attack than the tier's attacks: the healing is what it is for",
+        "Never more healing than a real heal: it is a bite, not a Restorative Gush"
       ],
+      "note": "The reading that matters is not in the numbers: `ActionScorer.HealScore` counts only the health a target is missing, so at full health this spell is worth its damage alone -- 4.50 against `lightning_bolt`'s 6.47 -- and only passes it once its caster has three points to get back. That is lifesteal's whole feel, and it is emergent rather than authored: a Leech reaches for this when it is hurt and for something else when it is not. `cast_value` cannot see the condition and prices the healing whole, so it reads 6.90 where play reads between 4.50 and 6.90.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.7, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
@@ -461,13 +464,16 @@
     "spell:momentum": {
       "name": "Momentum",
       "class": "Assassin",
-      "intent": "Wait with a Spell initiative of three: the Assassin passes the round and comes out permanently faster for having learned how. The energy is incidental, the unlock reward is the spell.",
+      "intent": "Wait's opposite trade, and the spell whose name finally says what it does: Wait hands over energy now, Momentum builds it, a point at the start of each of the next few rounds. The Assassin spends the same activation and comes out ahead if the match lasts, behind if it does not -- and permanently faster either way, because its Spell initiative of three is the highest in the catalogue.",
       "keep": [
-        "Free, like Wait",
-        "Its Spell initiative is what it is for"
+        "Free, like Wait, and it is the same activation: the trade is when the energy arrives, not what it costs",
+        "It builds rather than hands over: the day it gives energy on the spot it is Wait again",
+        "Its Spell initiative is half of what it is for"
       ],
+      "note": "The first spell to use `EnergyRegeneration`, which ADR 0020 added and deliberately left unused, naming Momentum as one of the two candidates. Do not read its bounds as a route to making it castable: at 0.2 a point of energy the top of this box is 1.60 an activation against an attack's 6-and-up, so `check-knobs` reports it against `full_plate` and will keep reporting it. That finding is right and the way out it names is the other one -- the rival's bounds, or the price of energy, which ADR 0020 set and nothing has ever tuned. Widening this spell until it clears the bar would mean handing out twenty points of energy.",
       "knobs": [
-        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 },
         { "path": "/initiative", "min": 2, "max": 4, "step": 1 }
       ]
     },
@@ -505,15 +511,19 @@
     "spell:noxious_cure": {
       "name": "Noxious Cure",
       "class": "Trickster",
-      "intent": "The most healing per energy in the game, because the defense it used to strip from the allies it healed was dropped. It is a pure team heal until that debuff has a home, so keep the numbers honest about that.",
+      "intent": "The cure is noxious to the cured: the whole team is mended and the whole team is slowed for having drunk it. Legacy stripped 2 defense from the allies it healed, which the taxonomy cannot say -- `DefenseBuff.Of` refuses anything below 1, so there is no negative buff -- and the substitution is the one `infectious_blast` already uses, a defense shred rendered as the single stat debuff that exists. The bargain is the spell: without a cost it is a free team heal, and the Trickster is the class that makes you pay for things.",
       "keep": [
-        "Team-wide heal",
-        "Currently missing its downside"
+        "Team-wide heal: it reaches the team or it is Rejuvenate",
+        "It always slows the allies it heals: the price is paid by the cured, which is what makes it noxious",
+        "Never enough slow to be worth casting on an enemy: this is a cure, not a weapon"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "The bargain was sized against an initiative weight of 0.5 and ADR 0032 measured it at 2.1, which broke the spell rather than bending it: a slow of 2 costs 4.2 an ally where the heal of 4 is worth 3.2, so the cast read **-3.00 a round** -- worth less than doing nothing -- and its own bounds could not reach better than 3.30. The price is now a slow of **1**, the smallest the taxonomy can say, and the bounds are rebuilt around a heal that has room to pay for it: the heal reaches 5 instead of 4, the slow stops at 2 because 3 is unaffordable at any heal in this box, and the critical chance is a knob for the first time (ADR 0033 made the multiplier reach a direct heal). Two readings the numbers still hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, slowing the allies you heal made this spell read as strictly better than a plain heal of the same size.",
       "knobs": [
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 5, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
@@ -570,24 +580,27 @@
         "The cheapest heal",
         "Single target"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration is now worth 0.68 of expected healing, and it is a knob. The cheapest heal setting the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
     "spell:meteor": {
       "name": "Meteor",
       "class": "Wizard",
-      "intent": "The Wizard's sweep, and half of a balance question: Tornado hits the same three enemies for the same damage one energy cheaper with a worse critical. These two are priced against each other or one of them is dead content.",
+      "intent": "The Wizard's sweep, and the spell that says what reach costs: each enemy takes less than one of them would take from a single-target spell of the same depth, and the whole line is worth more than any of them. It opens the class whose three spells are all about reach, so it is the one that has to make the trade legible -- a sweep that hit as hard per target as a bolt would simply be a bolt that hits three.",
       "keep": [
         "Reaches three enemies",
-        "Its relation to Tornado is the decision, not its absolute numbers"
+        "Each of them takes less than a single-target spell of its tier deals: reach is paid for per target",
+        "The strongest thing in its tier, but by a step and not by half again"
       ],
+      "note": "Its bounds used to defer to Tornado -- 'these two are priced against each other or one of them is dead content' -- and Tornado is a tier deeper and disabled, so this spell was deferring its numbers to one nobody can cast while it became the ceiling of its own tier. Read per round, four damage on three targets was 12.00 against `enraged_charge`'s 8.40, 43% clear of everything; three is 9.00, a step ahead rather than a different game. The damage floor drops to 2 so a real per-target discount is reachable, and the cap to 4 so it can never hit as hard per target as `lightning_bolt` does on one. When Tornado is enabled the comparison comes back, and it is a comparison between two sweeps rather than a reason to leave this one unpriced.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
@@ -627,14 +640,18 @@
     "spell:summon_minions": {
       "name": "Summon Minions",
       "class": "Necromancer",
-      "intent": "The minions became energy: the only spell that pays for itself. It decides how long the Necromancer's expensive line takes to come online, so its net gain is the class's whole tempo curve.",
+      "intent": "The only cast in the catalogue that does nothing when it lands: the minions are raised, and they gnaw at the whole enemy line over the rounds that follow. Raising them is paid in the Necromancer's own health, so the class opens on a bargain rather than on a blow -- patience bought with life. It is what both its children inherit: `crazed_specter`'s reach and `revenant_guards`' willingness to pay.",
       "keep": [
-        "Gives back more than it costs, or it has no reason to exist",
-        "Self only"
+        "Nothing lands now: every point of its damage is deferred, which is what makes it a summon and not an attack",
+        "It is paid in the summoner's own health, never in anyone else's",
+        "It reaches the whole enemy line: one minion each, not three on one"
       ],
+      "note": "Two firsts, and they are the design: no other spell defers all of its damage, and no other spell charges its caster health (ADR 0031). It used to be `EnergyGain 3` for 2, an approximation of the minions the two spells behind it spent -- and ADR 0020 named it as one of the two candidates for `EnergyRegeneration`. That nomination is declined here, with a measurement: energy is 0.2 a point, so an energy spell tops out around 1.60 an activation against an attack's 6 and up, and `momentum` was measured cast 0 times at `explore:0.2` and 8 at `explore:0.5` after being given exactly that treatment. Two energy openers would have been two dead openers. It was then briefly `DefenseBuff 1` for two rounds on three allies, which measured fine and read as nothing: a smaller `revenant_guards`, the spell it is supposed to open rather than rehearse.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amountPerRound", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 5, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
@@ -646,7 +663,7 @@
         "Team-wide and permanent: the strongest defensive cast in the game",
         "Priced above the single-target version or it simply replaces it"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
@@ -673,17 +690,19 @@
     "spell:healing_screech": {
       "name": "Healing Screech",
       "class": "Shaman",
-      "intent": "The one heal that arrives in two pieces: some now and some next round, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019).",
+      "intent": "The one heal that arrives in pieces: a quarter of it now and the rest over the next two rounds, so it rewards healing before the damage lands rather than after. Regeneration exists in the taxonomy for it (ADR 0019). It is also where the Shaman's tier step lives -- 8 health against `rejuvenate`'s 4 for the same price -- and the step is entirely in the part that has to be bought early.",
       "keep": [
-        "Half of it is lasting",
-        "The anticipation heal, not the emergency one"
+        "Most of it is lasting: the instant half is a down payment, never the point",
+        "The anticipation heal, not the emergency one: on a creature dying this round it does 2",
+        "Worth more than a tier-1 heal, or the Shaman's first pick buys nothing"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance of 0.5 was dropped to 0 as decoration and then restored: ADR 0033 made the multiplier reach a direct heal, so it is a live number and a knob like an attacker's. It reaches the instant half only -- a regeneration pays out at each upkeep and one roll at the cast does not decide several rounds of it -- which is a second reason the split between the two halves is the spell: the instant half is the half that can have a good round. The measurement taken while it was 0 is still worth keeping: removing a chance that provably could not change a score still moved the objective 12.95 to 12.93 and this spell's own mirror casts 12 to 7, because the roll draws from the shared random source. That pair is the pass's noise floor, and it is why a per-spell reading off twenty or thirty declaring sides is not evidence.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },

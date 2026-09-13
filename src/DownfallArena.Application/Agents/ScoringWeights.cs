@@ -22,7 +22,7 @@ public sealed record ScoringWeights(
 {
     /// <summary>
     /// The greedy agent's weights: a kill is worth five damage, a stun three, energy kept, two thirds of a
-    /// point per point of damage prevented, a point of initiative a little, a wasted action costs two.
+    /// point per point of damage prevented, two and a bit per point of initiative, a wasted action costs two.
     /// <para>
     /// <c>Defense</c> is not read against <c>Damage</c> point for point, whatever the shared unit suggests:
     /// an attack is paid once and a defensive effect is paid for every round it holds
@@ -30,8 +30,13 @@ public sealed record ScoringWeights(
     /// <c>Damage</c> does not, which is why it sits below one and why it moves the play in steps rather than
     /// smoothly: ADR 0028 has the sweep, and 0.65 sits in the middle of a step rather than on its edge.
     /// </para>
+    /// <para>
+    /// <c>Initiative</c> is above one for the opposite reason: a point of it is bought once and kept for the
+    /// match, in a game the first mover was winning 64 % of. ADR 0018 guessed 0.5 and said so; ADR 0032 has
+    /// the sweep that replaced the guess, and 2.1 sits in the middle of its step the same way.
+    /// </para>
     /// </summary>
-    public static ScoringWeights Default { get; } = new(Damage: 1.0, Kill: 5.0, Heal: 0.8, Stun: 3.0, Bleed: 0.8, Defense: 0.65, Energy: 0.2, Risk: 2.0, Initiative: 0.5);
+    public static ScoringWeights Default { get; } = new(Damage: 1.0, Kill: 5.0, Heal: 0.8, Stun: 3.0, Bleed: 0.8, Defense: 0.65, Energy: 0.2, Risk: 2.0, Initiative: 2.1);
 
     /// <summary>
     /// The weights under the names a weights file uses, in the order the fingerprint hashes them. One list, so

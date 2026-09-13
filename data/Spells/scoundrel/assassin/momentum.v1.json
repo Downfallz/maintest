@@ -13,8 +13,9 @@
   },
   "effects": [
     {
-      "kind": "EnergyGain",
-      "amount": 1
+      "kind": "EnergyRegeneration",
+      "amountPerRound": 1,
+      "durationRounds": 3
     }
   ],
   "enabled": true

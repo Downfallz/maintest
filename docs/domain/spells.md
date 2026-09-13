@@ -49,29 +49,43 @@ counterpart, so they were dropped or approximated; one has since been recovered.
   resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself,
   Psycho Rush's -2 defense recoil and Hateful Sacrifice's 4 self-damage are all expressible. **Parasite Jab's
   lifesteal is not**: a share of the damage dealt depends on the resolution rather than on the spell, which
-  is a new kind of effect and not a new place to put one. A flat heal on the caster is the approximation.
-  None of the four spells has been re-authored yet; the mechanism landed first.
-- **Debuffing a stat other than initiative.** There is no negative `DefenseBuff` and no energy drain.
-  Dropped: Noxious Cure's -2 defense on the healed allies, Soul Devourer's -2 energy. Infectious Blast was
-  *only* a defense shred, so it is approximated with the one stat debuff the taxonomy has,
-  -2 initiative for two rounds.
+  is a new kind of effect and not a new place to put one. It carries a **flat heal of 3 on its caster**
+  instead, which is the approximation and the first content to use the mechanism. Psycho Rush and Hateful
+  Sacrifice are still halves of themselves, and are re-authored when their tier is opened.
+- **Debuffing a stat other than initiative.** There is no negative `DefenseBuff` and no energy drain: both
+  factories refuse anything below 1. Dropped: Noxious Cure's -2 defense on the healed allies, Soul Devourer's
+  -2 energy. Infectious Blast was *only* a defense shred, so it is approximated with the one stat debuff the
+  taxonomy has, -2 initiative for two rounds. **Noxious Cure takes the same substitution**: its shred of the
+  healed allies is now an initiative debuff on those same allies, so the cure is noxious to the cured exactly
+  as it was, in the one stat the taxonomy can lower.
 - **Buffing initiative or critical chance.** Death Squad gave its team +10 initiative and +100% crit for a
   round; both are unrepresentable. It is approximated as the tempo it was meant to buy: 1 energy to each of
   up to three allies.
-- **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter.
-  Summon Minions is approximated as a resource the other two do use, energy (3 for a cost of 2); the minion
-  cost of the other two is dropped.
+- **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter, and the
+  minion cost of those two is dropped. Summon Minions was approximated as the resource they do use, energy,
+  which made it a spell that paid for casts nobody could make — its line is a tier deeper and disabled. Armour
+  spread over the team was tried next and read as a smaller `revenant_guards`, which is the spell it is meant
+  to open rather than rehearse. It is now **what a summoning costs and when it pays**: nothing lands on the
+  cast, the minions gnaw at the whole enemy line over the three rounds that follow, and raising them takes 3
+  of the summoner's own health (ADR 0031). It is the only spell whose damage is entirely deferred and the only
+  one charged to its caster's health.
 - ~~**Healing over time.**~~ Recovered: `Regeneration` was added to the taxonomy (ADR 0019) and Healing
-  Screech is the prototype's `Heal 2` plus `Regeneration 2` for a round again.
+  Screech is the prototype's `Heal 2` plus a regeneration again. The regeneration is now `3` a round for two
+  rounds rather than `2` for one: at the prototype's numbers the spell healed 4 for 2 energy, exactly what
+  `rejuvenate` heals for the same price one tier earlier, and delivered later — a tier-2 pick that bought
+  nothing. Three quarters of it is now the part you have to buy before the damage lands.
 - **Retaliate.** Thundering Seal's damage back on the attacker. Explicitly not carried over until a rule
   defines it (ADR 0012); only its defense half is left.
 
 Two more places where the model forced a hand:
 
 - **Spells with no effect.** Legacy Wait and Momentum did literally nothing. A spell needs at least one
-  effect here, so both are `EnergyGain 1` on the caster: pass the round and gather. `EnergyRegeneration`, energy over
-  time, now exists (ADR 0020) and no spell uses it: Momentum and Summon Minions are the candidates when
-  re-pricing them is decided on its own, rather than folded into the change that added the kind.
+  effect here, so Wait is `EnergyGain` on the caster: pass the round and gather. **Momentum is
+  `EnergyRegeneration`** — the first spell to use the kind ADR 0020 added and deliberately left unused, which
+  named it as one of the two candidates. It is Wait's opposite trade: Wait hands energy over now, Momentum
+  builds it over the next few rounds. Summon Minions was the other candidate and declines the nomination: at
+  0.2 a point an energy spell tops out around 1.60 an activation, and two energy openers would have been two
+  dead openers.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive
   yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,
   because free plus permanent plus re-castable is bounded by nothing but the round cap (`check-knobs` reports
@@ -146,9 +160,9 @@ hit. The name and the length say a lasting wound, so it is a bleed here.
   `baseInitiative` is authored knowing the starting kit, so counting it twice would be double payment
   (ADR 0017). The cost is that two Creatures knowing the same Spells can differ in Initiative depending on how
   they got them.
-- What a point of Initiative is worth. The heuristic agents now price an unlock as its combat value plus
-  `w.initiative` times the Spell initiative, but that weight is set at 0.5 on reasoning alone (ADR 0018);
-  `search-weights` has never tuned it.
+- ~~What a point of Initiative is worth.~~ Settled: the heuristic agents price an unlock as its combat value
+  plus `w.initiative` times the Spell initiative, and that weight was swept alone and moved from 0.5 to 2.1
+  (ADR 0032). It is worth about four times what ADR 0018 guessed.
 - Whether the numbers are right for their new job. They were the prototype's per-cast speeds and are now
   one-off unlock rewards, so nothing about them was chosen for this: 1 to 3 across the catalogue, and a
   Creature that unlocks everything on one line gains 6 or 7 on a base of 5.

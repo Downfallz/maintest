@@ -258,6 +258,15 @@ half as its own axis, where an absent group is a zero rather than a gap (carryin
 on that axis, not failing to match it), and the ceiling of a knob that addresses a harmful caster effect is
 its **minimum**, since more of a price is not a better spell.
 
+**A harmful effect aimed at a friend is a price too**, and the targeting origin is the only thing that says
+so: a stun or an initiative debuff is the point of a spell aimed at enemies and a cost in one aimed at allies
+or at the caster's own creature. `noxious_cure` heals a team and slows the team it heals; read unsigned, that
+slowing was an extra effect for free, so the spell read as *strictly better* than a plain heal of the same
+size and `cast_value` priced the cost as three points of upside. The same three readings turn on it — the
+value, the dominance comparison, and which end of a knob is the spell's best corner. Only the named origins
+`Ally` and `Self` count: a document whose targeting cannot be read is not evidence that its effects land on a
+friend, and reading it as one turns every hit in it into a price.
+
 Everything is read **a round, not a cast**. Energy carries between rounds, so a spell costing three at an
 income of two comes up twice in three rounds: 1.5 rounds a cast, floored at one because a creature acts once
 a round however cheap the spell is. Without that, `enraged_charge` at 12.60 a cast reported

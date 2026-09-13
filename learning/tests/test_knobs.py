@@ -465,8 +465,8 @@ def test_two_targets_on_the_same_metric_of_two_evaluations_both_count() -> None:
     assert objective.score(metrics) == pytest.approx(8.0)
 
 
-def test_a_critical_chance_a_match_never_reads_does_not_order_two_spells() -> None:
-    """The multiplier applies to damage only, so on a heal it is a number no result can attribute."""
+def test_a_critical_chance_orders_two_heals_that_are_otherwise_the_same() -> None:
+    """ADR 0033 put a direct heal under the multiplier, so the chance is a number a result can attribute."""
     heal = {
         "id": "spell:heal:v1",
         "initiative": 1,
@@ -478,8 +478,26 @@ def test_a_critical_chance_a_match_never_reads_does_not_order_two_spells() -> No
     plain = json.loads(json.dumps(heal))
     plain["criticalChance"] = 0.0
 
-    assert not dominates(heal, plain)
+    assert dominates(heal, plain)
     assert not dominates(plain, heal)
+
+
+def test_a_critical_chance_a_match_never_reads_does_not_order_two_spells() -> None:
+    """The one shape left out: the multiplier reaches neither a buff nor the rounds it lasts, so on armour
+    the chance is a number no result can attribute and comparing it would refuse a candidate over nothing."""
+    armour = {
+        "id": "spell:armour:v1",
+        "initiative": 1,
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {"origin": "Ally", "scope": "SingleTarget", "maxTargets": 1},
+        "effects": [{"kind": "DefenseBuff", "amount": 2, "durationRounds": 2}],
+    }
+    plain = json.loads(json.dumps(armour))
+    plain["criticalChance"] = 0.0
+
+    assert not dominates(armour, plain)
+    assert not dominates(plain, armour)
 
 
 def test_two_hits_of_three_are_not_one_hit_of_six() -> None:
@@ -490,8 +508,52 @@ def test_two_hits_of_three_are_not_one_hit_of_six() -> None:
     assert twins(content(**{"spell:twice": twice, "spell:once": once})) == []
 
 
-def test_a_critical_chance_on_a_spell_that_deals_no_damage_is_refused(tmp_path: Path) -> None:
+def test_a_critical_chance_on_a_spell_that_neither_damages_nor_heals_is_refused(tmp_path: Path) -> None:
     """The multiplier reaches Damage and nothing else, so the knob could only waste the search's budget."""
+    guard = {
+        "id": "spell:guard:v1",
+        "initiative": 1,
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {"origin": "Ally", "scope": "SingleTarget", "maxTargets": 1},
+        "effects": [{"kind": "DefenseBuff", "amount": 2, "durationRounds": 2}],
+    }
+    document = knobs_json(
+        spells={
+            "spell:guard": {
+                "name": "Guard",
+                "intent": "The armour.",
+                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
+            }
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:guard": guard}))
+
+    assert problems == [
+        "spell:guard/criticalChance: the critical multiplier reaches a target's damage and direct heal, "
+        "and this spell does neither, so this knob cannot move anything."
+    ]
+
+
+def test_a_critical_chance_on_a_spell_that_deals_damage_is_a_knob_like_any_other(tmp_path: Path) -> None:
+    document = knobs_json(
+        spells={
+            "spell:attack": {
+                "name": "Attack",
+                "intent": "The yardstick.",
+                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
+            }
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert validate(knobs, content(**{"spell:attack": ATTACK})) == []
+
+
+def test_a_critical_chance_on_a_spell_that_only_heals_is_a_knob_like_any_other(tmp_path: Path) -> None:
+    """ADR 0033: the multiplier reaches a direct heal, so a healer carries the same dial an attacker does."""
     heal = {
         "id": "spell:heal:v1",
         "initiative": 1,
@@ -511,27 +573,20 @@ def test_a_critical_chance_on_a_spell_that_deals_no_damage_is_refused(tmp_path: 
     )
     knobs = load_knobs(write_knobs(tmp_path, document))
 
-    problems = validate(knobs, content(**{"spell:heal": heal}))
-
-    assert problems == [
-        "spell:heal/criticalChance: the critical multiplier applies to damage only, and this spell "
-        "deals none, so this knob cannot move anything."
-    ]
+    assert validate(knobs, content(**{"spell:heal": heal})) == []
 
 
-def test_a_critical_chance_on_a_spell_that_deals_damage_is_a_knob_like_any_other(tmp_path: Path) -> None:
-    document = knobs_json(
-        spells={
-            "spell:attack": {
-                "name": "Attack",
-                "intent": "The yardstick.",
-                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
-            }
-        }
-    )
-    knobs = load_knobs(write_knobs(tmp_path, document))
+def test_a_critical_chance_is_priced_into_a_direct_heal_but_not_a_regeneration(tmp_path: Path) -> None:
+    """The same boundary the engine draws: what lands on health now takes the roll, what lasts does not."""
+    weights = {"heal": 1.0}
+    instant = {"criticalChance": 0.5, "effects": [{"kind": "Heal", "amount": 4}]}
+    lasting = {
+        "criticalChance": 0.5,
+        "effects": [{"kind": "Regeneration", "amountPerRound": 2, "durationRounds": 2}],
+    }
 
-    assert validate(knobs, content(**{"spell:attack": ATTACK})) == []
+    assert cast_value(instant, weights) == pytest.approx(4 * 1.5)
+    assert cast_value(lasting, weights) == pytest.approx(4.0)
 
 
 def tiered(**tiers: int) -> Content:
@@ -589,6 +644,85 @@ WEIGHTS = {
     "energy": 0.2,
     "initiative": 0.5,
 }
+
+
+ALLY = {"origin": "Ally", "scope": "Multi", "maxTargets": 3}
+
+
+def test_a_harmful_effect_aimed_at_a_friend_is_a_price_and_not_a_gift() -> None:
+    """`noxious_cure` slows the team it heals. The targeting origin is the only thing that says whether a
+    stun or a debuff is the point of the spell or what it costs."""
+    heal = spell(criticalChance=0, targeting=ALLY, effects=[{"kind": "Heal", "amount": 4}])
+    heal_and_slow = spell(
+        criticalChance=0,
+        targeting=ALLY,
+        effects=[
+            {"kind": "Heal", "amount": 4},
+            {"kind": "InitiativeDebuff", "amount": 2, "durationRounds": 1},
+        ],
+    )
+
+    assert cast_value(heal_and_slow, WEIGHTS) < cast_value(heal, WEIGHTS)
+    assert cast_value(heal_and_slow, WEIGHTS) == pytest.approx(((0.8 * 4) - (0.5 * 2 * 1)) * 3)
+
+
+def test_a_harmful_effect_aimed_at_an_enemy_is_still_the_point_of_the_spell() -> None:
+    """The other side of the rule: on an enemy the same debuff is what the spell is for."""
+    hit = spell(criticalChance=0, effects=[{"kind": "Damage", "amount": 3}])
+    hit_and_slow = spell(
+        criticalChance=0,
+        effects=[
+            {"kind": "Damage", "amount": 3},
+            {"kind": "InitiativeDebuff", "amount": 2, "durationRounds": 1},
+        ],
+    )
+
+    assert cast_value(hit_and_slow, WEIGHTS) > cast_value(hit, WEIGHTS)
+    assert dominates(hit_and_slow, hit)
+
+
+def test_slowing_the_allies_you_heal_does_not_dominate_healing_them_cleanly() -> None:
+    """Read unsigned, the debuff was an extra effect for free and this pair read as a strict domination --
+    a cost mistaken for a gift, which `noNewStrictDominance` would have refused a candidate over."""
+    clean = spell(criticalChance=0, targeting=ALLY, effects=[{"kind": "Heal", "amount": 4}])
+    noxious = spell(
+        criticalChance=0,
+        targeting=ALLY,
+        effects=[
+            {"kind": "Heal", "amount": 4},
+            {"kind": "InitiativeDebuff", "amount": 2, "durationRounds": 1},
+        ],
+    )
+
+    assert not dominates(noxious, clean)
+    assert dominates(clean, noxious)
+
+
+def test_the_ceiling_of_a_debuff_on_a_friend_is_the_smallest_it_may_be() -> None:
+    """The corner best for the spell is the floor of a price, whichever list the price sits in: sent to its
+    maximum the ceiling counts the largest cost and understates what the spell can reach."""
+    content, knobs = boxed(
+        "spell:cure",
+        1,
+        spell(
+            id="spell:cure:v1",
+            criticalChance=0,
+            targeting=ALLY,
+            effects=[
+                {"kind": "Heal", "amount": 4},
+                {"kind": "InitiativeDebuff", "amount": 2, "durationRounds": 1},
+            ],
+        ),
+        {"path": "/effects/1/amount", "minimum": 1, "maximum": 3, "step": 1},
+    )
+    content.spells["spell:rival"] = spell(
+        criticalChance=0, targeting=ALLY, effects=[{"kind": "Heal", "amount": 3}]
+    )
+    content.tiers["spell:rival"] = 1
+
+    # The rival carries 7.20. The cure reaches 8.10 with the smallest debuff its bounds allow and only 5.10
+    # with the largest, so this passes if and only if the ceiling is read at the floor of the price.
+    assert outclassed(content, knobs, WEIGHTS) == []
 
 
 def test_an_effect_on_the_caster_is_worth_what_it_does_to_the_caster() -> None:

@@ -35,8 +35,13 @@ public sealed class ResolutionRulesTests
         Resolve(Strike(Arena.Wraith), creatures, NoCrit).Outcomes.ShouldBe([new DamageOutcome(Arena.Wraith, 0, false)]);
     }
 
+    /// <summary>
+    /// ADR 0033: one roll multiplies what the cast puts on a target's health now -- the damage and the direct
+    /// heal -- and nothing else. The energy and the bleed in this spell are the boundary: a condition pays out
+    /// at each upkeep, and one roll at the cast should not decide several rounds of it.
+    /// </summary>
     [Fact]
-    public void A_critical_roll_multiplies_damage_only()
+    public void A_critical_roll_multiplies_the_damage_and_the_direct_heal_and_nothing_else()
     {
         var spell = Content.Spell("spell:mixed:v1", TargetingSpec.SingleTarget(TargetOrigin.Any), cost: 1, criticalChance: 0.5, Damage.Of(3), Heal.Of(2), EnergyGain.Of(1), Bleed.Of(1, 2));
         var resources = Resources(spell);
@@ -55,7 +60,7 @@ public sealed class ResolutionRulesTests
         resolution.Outcomes.ShouldBe(
         [
             new DamageOutcome(Arena.Ghoul, 5, true),
-            new HealOutcome(Arena.Ghoul, 2),
+            new HealOutcome(Arena.Ghoul, 4),
             new EnergyOutcome(Arena.Ghoul, 1),
             new ConditionOutcome(Arena.Ghoul, Bleed.Of(1, 2)),
         ]);
@@ -250,6 +255,24 @@ public sealed class ResolutionRulesTests
 
         resolution.IsCritical.ShouldBeTrue();
         resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 6, true), new DamageOutcome(Arena.Knight, 2, true) with { OnCaster = true }]);
+    }
+
+    /// <summary>
+    /// The same boundary from the other side, now that a direct heal crits (ADR 0033): the target's heal
+    /// doubles and the caster's does not, because what a cast refunds its caster is not what the roll is about.
+    /// </summary>
+    [Fact]
+    public void A_critical_roll_does_not_reach_a_heal_on_the_caster()
+    {
+        var spell = Content.SpellWithCasterEffects("spell:siphon:v1", [Heal.Of(3)], Heal.Of(2));
+        var resources = Resources(spell);
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit);
+
+        resolution.Outcomes.ShouldBe([new HealOutcome(Arena.Ghoul, 6), new HealOutcome(Arena.Knight, 2) with { OnCaster = true }]);
     }
 
     [Fact]

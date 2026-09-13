@@ -14,6 +14,14 @@ namespace DownfallArena.Application.Tests.Agents;
 public sealed class ActionScorerTests
 {
     private static readonly ActionScorer Scorer = new(TestContent.Resources, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+
+    /// <summary>
+    /// The built-in price of one point of initiative, read rather than repeated. These tests assert the shape
+    /// of the two terms that use it -- rounds multiply a debuff, Spell initiative multiplies an unlock -- and
+    /// that shape is what must not change; the number itself is a measurement and has moved once already
+    /// (ADR 0018 set 0.5, ADR 0032 swept it to 2.1). <c>AgentSpecTests</c> is where the value is pinned.
+    /// </summary>
+    private static readonly double Tempo = ScoringWeights.Default.Initiative;
     private static readonly CreatureId One = CreatureId.From(1);
     private static readonly CreatureId Two = CreatureId.From(2);
     private static readonly CreatureId Three = CreatureId.From(3);
@@ -211,8 +219,8 @@ public sealed class ActionScorerTests
 
         Scorer.Score(Cast(action, Three, Stun.For(1)), board).ShouldBe(3.0, 1e-9);
         Scorer.Score(Cast(action, Three, Stun.For(2)), board).ShouldBe(3.0 * 2, 1e-9);
-        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(1, Duration.OfRounds(2))), board).ShouldBe(0.5 * 1 * 2, 1e-9);
-        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(0.5 * 2 * 3, 1e-9);
+        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(1, Duration.OfRounds(2))), board).ShouldBe(Tempo * 1 * 2, 1e-9);
+        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(Tempo * 2 * 3, 1e-9);
     }
 
     private static CombatResolution Cast(CombatAction action, CreatureId target, LastingEffect effect) =>
@@ -257,7 +265,7 @@ public sealed class ActionScorerTests
 
     /// <summary>
     /// An unlock is worth what the spell does plus the initiative it buys (ADR 0017), priced by the initiative
-    /// weight (ADR 0018). Here Guard is a Spell initiative of 6 and the others 1, and the weight is 0.5.
+    /// weight (ADR 0018, measured by ADR 0032). Here Guard is a Spell initiative of 6 and the others 1.
     /// </summary>
     [Fact]
     public void Unlocking_a_spell_is_worth_its_combat_value_plus_the_initiative_it_buys_less_what_it_costs()
@@ -267,9 +275,9 @@ public sealed class ActionScorerTests
 
         // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. Energy is 0.2 a
         // point, so the three costs -- Strike 0, Guard 1, Slam 2 -- price at 0, 0.2 and 0.4.
-        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe((0.65 * 2 * 2) + 3 - 0.2, 1e-9);
-        scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + 0.5, 1e-9);
-        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + 0.5 - 0.4, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe((0.65 * 2 * 2) + (Tempo * 6) - 0.2, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - 0.4, 1e-9);
     }
 
     /// <summary>
@@ -331,8 +339,8 @@ public sealed class ActionScorerTests
         var free = scorer.UnlockValue(board[0], TestContent.Strike, board);
         var paid = scorer.UnlockValue(board[0], TestContent.Slam, board);
 
-        (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(0.5, 1e-9);
-        (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(0.5 - 0.4, 1e-9);
+        (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(Tempo, 1e-9);
+        (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(Tempo - 0.4, 1e-9);
     }
 
     /// <summary>
@@ -351,7 +359,7 @@ public sealed class ActionScorerTests
 
         foreach (var spell in new[] { TestContent.Strike, TestContent.Guard, TestContent.Slam })
         {
-            var initiative = spell == TestContent.Guard ? 0.5 * 6 : 0.5;
+            var initiative = spell == TestContent.Guard ? Tempo * 6 : Tempo;
             (scorer.UnlockValue(board[0], spell, board) - scorer.Estimate(board[0], spell, board))
                 .ShouldBe(initiative, 1e-9, $"{spell} costs at most {energy}, so its cost is already in the estimate");
         }
@@ -365,7 +373,7 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20, actorEnergy: 1);
 
         (scorer.UnlockValue(board[0], TestContent.Slam, board) - scorer.Estimate(board[0], TestContent.Slam, board))
-            .ShouldBe(0.5 - 0.2, 1e-9);
+            .ShouldBe(Tempo - 0.2, 1e-9);
     }
 
     /// <summary>
