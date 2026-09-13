@@ -33,7 +33,8 @@ viewer/                        Static HTML viewer for learning artifacts (traces
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
-scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md).
+scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md), and
+                               sweep-weight.py, which measures one agent scoring weight alone (ADR 0037).
 tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
@@ -72,6 +73,7 @@ uv sync --project learning && uv run --project learning ruff check learning && (
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
 uv run --project learning check-knobs                                # the balance knobs against the content they describe (data/balance/README.md)
 uv run --project learning tune-content -o runs/tune-1                # search those knobs for a better catalogue (ADR 0021); --apply writes it
+uv run --project learning python scripts/sweep-weight.py energy 0.2 0.3 0.4   # one scoring weight alone, on fixed content (ADR 0037); one sweep at a time
 # the same two searches run on GitHub Actions, each able to push a proposal branch: "Tune the catalogue" changes the content, "Search the agent weights" adds what it found next to greedy.json (docs/learning/training.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log

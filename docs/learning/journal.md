@@ -13,7 +13,7 @@ first.
   cheaper spell". ADR 0020, 0026 and 0035 then gave it energy handed out, energy regenerated, the uncovered
   part of an unlock cost, and energy drained — four jobs on a number chosen for one.
 - **The sweep says the description was wrong, not just stale.** At `energy` 0.0 the first mover wins **0.720**
-  of the mirror and the objective reads **100.09**, the worst point of either sweep. A term that moves
+  of the mirror and the objective reads **100.09**, the worst point of the sweep below 0.5. A term that moves
   `player1WinShare` by a fifth between 0.0 and 0.3 was never a tie-breaker.
 
   | `energy` | 0.0 | 0.1 | **0.2** | **0.3** | 0.4 | 0.5 | 0.6 | 1.0 |
@@ -24,7 +24,7 @@ first.
   | `skill` | 0.985 | 0.988 | 0.990 | 0.985 | 0.943 | 0.905 | 0.915 | 0.802 |
   | `exploit` | 0.335 | 0.212 | 0.195 | 0.198 | 0.233 | 0.790 | 0.708 | 0.710 |
 
-  0.2, 0.3 and 0.4 sit within 5 of each other and 0.5 breaks hard, so 0.3 is the middle of the step rather
+  0.2, 0.3 and 0.4 sit within 5.1 of each other and 0.5 breaks hard, so 0.3 is the middle of the step rather
   than an end of it — the test ADR 0028 and ADR 0032 each had to pass.
 - **What it buys, stated exactly**: the mirror's first-mover share, **not a stronger agent**. `heuristic:` at
   0.3 against the compiled `greedy` at 0.2, each seed played from both sides, is a dead heat — **0.505, CI

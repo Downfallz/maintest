@@ -42,7 +42,7 @@ so a reading changes only when an ordering flips.
 | 0.8 | 63.26 | 13.10 | 2.474 | 0.535 | 0.772 | 0.800 | 0.670 |
 | 1.0 | 81.40 | 12.42 | 2.428 | 0.530 | 0.778 | 0.802 | 0.710 |
 
-0.2, 0.3 and 0.4 read within 5 of each other; 0.1 and 0.5 are the edges, and the right edge breaks hard rather
+0.2, 0.3 and 0.4 read within 5.1 of each other; 0.1 and 0.5 are the edges, and the right edge breaks hard rather
 than sloping. **0.3 is the middle of that step rather than one of its ends** — the same test 0.65 had to pass
 in ADR 0028 and 2.1 in ADR 0032 — and it is also the best single reading.
 
@@ -57,7 +57,7 @@ value ADR 0032 chose survives a catalogue that has been rewritten class by class
 - Good: the objective goes 54.34 to **49.32** on unchanged content, and `spellEntropyA` reaches **3.530**, the
   highest reading in either sweep. Casts spread rather than concentrate.
 - Good: **the weight was never the tie-breaker it was documented as.** At 0.0 the first mover wins 0.720 of the
-  mirror and the objective reads 100.09, the worst point of either sweep. A term that decides a fifth of
+  mirror and the objective reads 100.09, the worst point of the sweep below 0.5. A term that decides a fifth of
   `player1WinShare` between 0.0 and 0.3 was mis-described, not mis-set, and that description is now corrected.
 - Bad: **it does not make the agent play better, and the ADR must not be read as saying so.** The independent
   check — `heuristic:` at 0.3 against the compiled `greedy` at 0.2, each seed played from both sides — is a
@@ -73,12 +73,18 @@ value ADR 0032 chose survives a catalogue that has been rewritten class by class
   ceilings rise (`momentum` 1.60 to 2.40, `restorative_burst` 3.80 to 4.10) and neither rise is enough to make
   either spell a choice. ADR 0032 doubled the findings; this one moves two numbers.
 - Neutral: `initiative` is unchanged, so nothing priced by it moves.
+- Neutral: [ADR 0036](0036-raising-initiative-the-mirror-that-was-left-out.md) reasons about Death Squad's
+  discarded substitution at "0.2 a point". That sentence stays as written — an accepted ADR is not edited —
+  and the conclusion it supports is unaffected: at 0.3 the substitution would have read 0.90 against a
+  tier-3 band of 8 to 14, the same dead spell. `docs/domain/spells.md` and `data/balance/knobs.json` carry
+  the current price, since they describe what is true now rather than what was decided when.
 
 ## Alternatives considered
 
 - **0.4, the other half of the step.** It reads 50.12, within 0.8 of 0.3, and loses on every column that is not
-  the objective: `skill` falls 0.985 to 0.943, `spellEntropyA` 3.530 to 2.955, `spellsBarelyCast` 2 to 4, and
-  matches at 0.4's neighbour 0.5 run 12 rounds. The step is not homogeneous and its right half is the bad half.
+  the objective: `skill` falls 0.985 to 0.943, `spellEntropyA` 3.530 to 2.955, `spellsBarelyCast` 2 to 4. Past
+  the step the matches stop ending: 0.8 and 1.0 run 13.10 and 12.42 rounds. The step is not homogeneous and
+  its right half is the bad half.
 - **Leave it at 0.2.** Defensible — it is inside the step, and the head-to-head says the agent is no better at
   0.3. It loses on the one reading that is not about agent strength: at 0.2 going first wins 0.575 of the
   mirror, outside the band, and that is what the objective is for.

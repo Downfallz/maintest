@@ -179,6 +179,33 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
+    /// The four energy terms read the weight, rather than a constant that happens to equal it. Every other
+    /// test here asserts the scorer against <see cref="PerEnergy"/>, which is the same number the scorer
+    /// itself reads, so all of them would still pass if a term hard-coded today's 0.3. This one scores the
+    /// four at a weight of 1.0, where the expected values are the energy amounts themselves.
+    /// </summary>
+    [Fact]
+    public void Every_energy_term_is_priced_at_the_weight_and_not_at_a_constant()
+    {
+        var board = Board(enemyHealth: 20, actorEnergy: 2);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] }
+            .Select(creature => creature.Id == Three ? creature with { Energy = Energy.Of(5) } : creature)
+            .ToList();
+        var scorer = new ActionScorer(TestContent.Resources, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Energy = 1.0 });
+        var action = Strike(One, Three);
+
+        scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), []), creatures)
+            .ShouldBe(2, 1e-9, "two points of energy kept");
+        scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new EnergyOutcome(ally.Id, 3)]), creatures)
+            .ShouldBe(2 + 3, 1e-9, "three points handed to an ally, on top of the two kept");
+        scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), creatures)
+            .ShouldBe(2 + 3, 1e-9, "three points torn out of an enemy that holds them");
+        scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 3))]), creatures)
+            .ShouldBe(2 + (2 * 3), 1e-9, "two points a round for three rounds");
+    }
+
+    /// <summary>
     /// Every lasting effect is priced over the rounds it lasts, and this asks all of them at once.
     ///
     /// The two it was written for were both priced flat: a three-round stun was worth a one-round stun, and

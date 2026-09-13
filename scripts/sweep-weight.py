@@ -89,7 +89,9 @@ def patched(name: str, value: float):
 
 def require_clean() -> None:
     """Refuse to run over a file another sweep is holding patched, or over an edit of your own."""
-    dirty = subprocess.run(
+    # Two fixed paths given to git, without a shell: nothing here comes from a user other than the one who
+    # launched the sweep.
+    dirty = subprocess.run(  # NOSONAR
         ["git", "diff", "--name-only", "--", str(WEIGHTS), str(GREEDY_JSON)],
         cwd=ROOT,
         capture_output=True,
@@ -104,7 +106,8 @@ def require_clean() -> None:
 
 
 def build() -> None:
-    done = subprocess.run(
+    # A fixed build command, without a shell: same reasoning as `require_clean`.
+    done = subprocess.run(  # NOSONAR
         ["dotnet", "build", "--configuration", "Release", "--no-restore"],
         cwd=ROOT,
         capture_output=True,
