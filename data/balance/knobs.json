@@ -242,14 +242,18 @@
     "spell:protective_slam": {
       "name": "Protective Slam",
       "class": "Mercenary",
-      "intent": "The Mercenary's opener, and today only half of itself: the point of defense it gave its caster has no counterpart in the taxonomy. Until it does, it is a plain hit with a third of a critical and it should not be tuned into a good attack.",
+      "intent": "The Mercenary's opener, and the branch's answer to armour. Legacy gave its caster a point of defense, which the taxonomy cannot express: a spell has one target origin, so hitting an enemy and protecting an ally are two spells. Protection is expressed as tempo instead -- a slammed enemy acts later -- which is the one protective thing that can be said to an enemy. That also gives it teeth a bigger hit would not have: defense absorbs damage and does nothing to a stagger, so this is what a Brawler stacking Guard and Full Plate is answered with.",
       "keep": [
+        "Protection through tempo, never armour: it always carries an initiative debuff",
         "Reads as a trade, not a nuke",
-        "Waiting on a caster-side effect: keep the numbers modest"
+        "The stagger is the point; the damage only has to be worth the activation"
       ],
+      "note": "Most of its value is damage on purpose. The initiative weight is 0.5 on reasoning alone (ADR 0018) and `search-weights` has never tuned it, so a version built mainly on the debuff would rest on an unmeasured number: at Damage 4 and a debuff of 2 over two rounds, 27% of the cast value rides on that weight instead of 43%. The bounds still reach the other shape if a pass finds it better.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
@@ -288,15 +292,16 @@
     "spell:full_plate": {
       "name": "Full Plate",
       "class": "Warlord",
-      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is a free self-targeted permanent point of defense that can be cast every single round, and free plus permanent is the dangerous combination in this catalogue.",
+      "intent": "Armour the Warlord is meant to always wear. Nothing implements passives yet, so it is a self-targeted permanent point of defense that can be cast every single round, and permanent plus repeatable is only bounded by what it costs. It costs one energy for that reason: half a round's income per point, so a creature that armours itself is a creature not attacking, which is the trade the spell should be.",
       "keep": [
-        "One point at a time: it stacks by being cast again, not by being bigger",
+        "Plate, not a shirt: one cast is armour a creature can feel, and it stacks by being cast again",
+        "Never free: a permanent effect nobody pays for has no brake but the round cap",
         "Cheap enough to cast in the rounds that decide the match, or it is not armour"
       ],
-      "note": "Its cost is a knob even though the spell is free today: putting a price on a permanent, repeatable buff is the lever this catalogue most obviously lacks, and it costs nothing to let the search try it.",
+      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit.",
       "knobs": [
-        { "path": "/energyCost", "min": 0, "max": 1, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
@@ -334,15 +339,17 @@
     "spell:enraged_charge": {
       "name": "Enraged Charge",
       "class": "Berserker",
-      "intent": "Two swings in one cast and no critical chance at all: the reliable version of the Berserker's gamble. It is the spell that says this class can also just hit twice.",
+      "intent": "The Berserker's gamble, and the one spell in the catalogue whose whole point is the roll. One heavy swing at the highest critical chance anywhere, bought at a price that keeps it to every other round: rage that lands or does not, rather than a steady beat. It is what the class is offered before it is offered anything reliable.",
       "keep": [
-        "Two damage effects: it reads as a flurry",
-        "No critical chance: it is the dependable half of the line"
+        "One swing, not a flurry: the roll is the spell, and two effects only split it",
+        "The highest critical chance in the catalogue, or it is just an expensive hit",
+        "Expensive enough that it cannot be the every-round attack"
       ],
+      "note": "It reads big per cast on purpose and must be read per round instead: at three energy against an income of two it comes up every other round, so 12.60 a cast is 8.40 a round against `protective_slam`'s 7.33 at two energy. Read per cast it looks like twice the bolt; read per round it is fifteen percent over the spell beside it, which is what a tier-2 opener should be. Its own history is the warning: at 7.00 a cast it was 4.67 a round and fell from 122 landed casts to 32 the moment something at two energy arrived.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/amount", "min": 2, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 5, "max": 8, "step": 1 },
+        { "path": "/criticalChance", "min": 0.5, "max": 0.8, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },

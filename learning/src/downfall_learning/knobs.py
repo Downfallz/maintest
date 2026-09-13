@@ -41,6 +41,9 @@ HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff"})
 #: The pointer that names a spell's critical chance bonus.
 CRITICAL_CHANCE = "/criticalChance"
 
+#: The pointer that names a spell's energy cost.
+ENERGY_COST = "/energyCost"
+
 #: The agents' own prices. `ScoringWeights.Default` is the source and this file mirrors it (AGENTS.md), so
 #: the reading below is read from there rather than restated here and cannot drift from what the bots score
 #: with.
@@ -52,6 +55,10 @@ PERMANENT_CONDITION_ROUNDS = 3
 #: What a critical hit multiplies damage by, as `RuleSet.Default` sets it. Configurable there and mirrored
 #: here, so a rule set that changes it leaves this reading behind until someone changes it too.
 CRITICAL_MULTIPLIER = 2.0
+
+#: The energy a creature gains at each upkeep, as `RuleSet.Default` sets it. Mirrored the same way, and for
+#: the same reason: it is what turns a spell's price into how often the spell can be cast at all.
+ENERGY_PER_ROUND = 2
 
 
 class KnobsError(ValueError):
@@ -476,7 +483,64 @@ def findings(content: Content, knobs: Knobs) -> list[str]:
             for better, worse in dominance(content)
         )
     reports.extend(outclassed(content, knobs))
+    reports.extend(unbounded(content))
     return reports
+
+
+def unbounded(content: Content) -> list[str]:
+    """Spells whose permanent effect costs nothing, so casting it again is always free.
+
+    A permanent effect never expires and re-casting stacks it, exactly as the prototype did. That is priced
+    for one cast everywhere it is read -- ``PERMANENT_CONDITION_ROUNDS`` here, ``PermanentConditionRounds`` in
+    `ActionScorer` -- and no single-cast reading can see a stack, so raising that number would not find this:
+    at any horizon, one `full_plate` is a point of defense and six are six.
+
+    What decides whether the stack has a brake is the price. A permanent buff that costs energy is bounded by
+    the two a round pays; at zero it is bounded by nothing but the round cap, and a creature that spends the
+    match re-casting it walks out unhittable. So the reading is the cost, not the magnitude.
+
+    It is a finding and not an error: the engine plays it, and `full_plate` is authored this way today
+    because nothing implements `SpellType.Passive` yet. It is here so that a tuning pass cannot quietly put
+    a price back to zero -- `full_plate`'s own cost knob reaches it -- and ship an unbounded spell with every
+    check green.
+    """
+    return [
+        f"{alias} carries a permanent effect and costs no energy, so re-casting it stacks without a brake: "
+        "one cast is all any reading here prices, and nothing bounds the rest."
+        for alias, document in sorted(content.spells.items())
+        if _is_free(document) and _has_permanent(document)
+    ]
+
+
+def _is_free(document: Mapping[str, object]) -> bool:
+    try:
+        return int(document.get("energyCost", 0) or 0) <= 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _has_permanent(document: Mapping[str, object]) -> bool:
+    """Whether the spell carries a permanent effect that a second cast would *add to*.
+
+    Permanence alone is not a stack. `ConditionSet.Apply` adds another condition only under `Stack`: under
+    `Refresh` a re-cast restarts the one that is there and under `Ignore` it is refused outright, so either
+    way the creature carries one of them however many times the spell is cast. Reading `permanent` alone
+    reports those as unbounded, which is a finding about content that is bounded.
+    """
+    effects = document.get("effects", [])
+    return any(
+        isinstance(effect, Mapping) and bool(effect.get("permanent")) and _stacks(effect)
+        for effect in (effects if isinstance(effects, list) else [])
+    )
+
+
+def _stacks(effect: Mapping[str, object]) -> bool:
+    """Whether an effect's stacking policy piles a second application on the first.
+
+    `Stack` is the default the mapper gives the two kinds that can be permanent (`data/README.md`), so an
+    effect that says nothing stacks.
+    """
+    return str(effect.get("stacking", "Stack") or "Stack") == "Stack"
 
 
 def dominance(content: Content) -> list[tuple[str, str]]:
@@ -615,6 +679,39 @@ def deals_damage(document: Mapping[str, object]) -> bool:
     return DAMAGE in _effects(document)
 
 
+def _rounds_a_cast(cost: float) -> float:
+    """How many rounds of income one cast of a spell at ``cost`` takes to pay for.
+
+    Energy has no cap and carries between rounds, so the rate is the amortised one and not a whole number of
+    rounds: at an income of two, a spell costing three comes up twice in three rounds, which is 1.5 rounds a
+    cast and not 2. Floored at one, because a creature acts once a round however cheap the spell is -- which
+    is also why one energy and two cost the same in this reading.
+
+    This is the whole reason a spell's value has to be read a round rather than a cast: `enraged_charge`
+    carried the highest single-target value in the catalogue at three energy and was cast 32 times in 400
+    matches, because 7.00 a cast is 4.67 a round.
+    """
+    return max(1.0, float(cost) / ENERGY_PER_ROUND)
+
+
+def _energy_cost(document: Mapping[str, object]) -> int:
+    try:
+        return max(0, int(document.get("energyCost", 0) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _max_targets(document: Mapping[str, object]) -> int:
+    """How many creatures one cast is allowed to reach. One when the spell says nothing readable."""
+    targeting = document.get("targeting", {})
+    if not isinstance(targeting, Mapping):
+        return 1
+    try:
+        return max(1, int(targeting.get("maxTargets", 1) or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
 def load_weights(path: Path | None = None) -> dict[str, float]:
     """The nine agent weights. Unreadable or missing, the reading that needs them is skipped, not guessed."""
     try:
@@ -636,7 +733,14 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
     Deliberately coarse, and the list of what it leaves out is the list of reasons to read it as a finding
     and never as a failure:
 
-    - no board, no targets, no defense, and no cap at a target's health;
+    - no board and no defense, and no cap at a target's health. The targets are read from the spell rather
+      than from a board: a cast is priced for every target it is allowed, because the question this number
+      answers -- can this spell ever be a choice next to that one -- is a question about a spell at its best,
+      and a spell reaching several targets is at its best when it finds them all. It overstates a `Multi`
+      spell later in a match, when the creatures that would have been hit are dead: `meteor` landed 1.79 of
+      its three targets on average over the benchmark seeds, where the single-target spells landed 0.88 to
+      1.01 of their one. Before the target count was read at all, the same spell read a third of what it
+      plays, which is how the strongest spell in the catalogue passed every check;
     - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
       ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
@@ -674,7 +778,9 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(str(effect.get("kind")), 0.0)
-    return total + _caster_value(document, weights)
+    # The target half is worth what it does to every target it reaches; the caster half is worth what it does
+    # once, so it is added after the count and never inside it (ADR 0031).
+    return (total * _max_targets(document)) + _caster_value(document, weights)
 
 
 def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) -> float:
@@ -710,7 +816,9 @@ def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: M
 
     Every term of :func:`cast_value` is a weight that the weights file keeps at or above zero times a
     magnitude the content keeps at or above zero, so the top of the box is every knob that reaches a term set
-    to its maximum. A cost knob and a Spell initiative knob move no term here and are left where they are.
+    to its maximum. A Spell initiative knob moves no term here and is left where it is. A cost knob moves no
+    term either, but it moves how often the cast comes up, so the ceiling is read at the *cheapest* price the
+    bounds reach -- the corner that is best for the spell, on both counts.
 
     One kind of knob is turned the other way: a harmful effect on the caster (ADR 0031) is subtracted, so the
     best corner for the spell is its **minimum**. Sending it to the maximum would understate the ceiling, and
@@ -720,15 +828,21 @@ def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: M
     constraints refuse (a spell it would dominate, a twin it would become), and nothing here plays them. The
     error runs one way only -- it overstates the ceiling, so :func:`outclassed` under-reports rather than
     inventing a finding -- which is why it is left cheap.
+
+    Returned a round, not a cast: see :func:`_rounds_a_cast`.
     """
     top = dict(document)
+    cheapest = _energy_cost(document)
     for knob in spell.knobs:
         try:
             read_value(top, knob.path)
         except KnobsError:
             continue
+        if knob.path == ENERGY_COST:
+            cheapest = min(cheapest, int(knob.minimum))
+            continue
         top = with_value(top, knob.path, _best_corner(document, knob))
-    return cast_value(top, weights)
+    return cast_value(top, weights) / _rounds_a_cast(cheapest)
 
 
 def _best_corner(document: Mapping[str, object], knob: Knob) -> float:
@@ -763,30 +877,55 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
     shallower, the same rule :func:`dominance` uses, so being outclassed by something deeper in the tree is
     the reward for getting there and is not reported.
 
-    Only spells that carry a `Damage` effect are read, on either side of the comparison, for the reason
-    `tierDamageSpread` gives: a heal and an attack share no unit. Without that rule this reports `rejuvenate`
-    and `guard`, which are cast for a survival the reading above cannot see, and `wait`, which is *meant* to
-    stay worse than acting -- three answers that are wrong in three different ways.
+    An attack is only ever read against another attack, and a spell that deals no damage only against
+    another that deals none, for the reason `tierDamageSpread` gives: a heal and an attack share no unit.
+    Comparing across that line reports `rejuvenate` and `guard`, cast for a survival this reading cannot see,
+    and `wait`, which is *meant* to stay worse than acting -- three answers wrong in three different ways.
+
+    Inside the defensive half the comparison holds, which is why it is made rather than skipped. What this
+    reading misses about a defensive spell -- the kill it denies, the largest weight in the game (ADR 0022),
+    and the threat it is priced against -- it misses on *both* sides of a defensive pair, so it very largely
+    cancels; against an attack it does not cancel at all. Skipping them outright left a dead defensive spell
+    invisible: `full_plate` was cast 0 times in 400 matches and `guard` 471, and nothing here told them apart.
+
+    A rival must also reach no more targets than the spell being read. A cast is priced for every target it
+    is allowed (:func:`cast_value`), so a sweep carries several times what a single hit does, and asking a
+    single-target spell to match that is asking it to stop being single-target -- which no move inside its
+    bounds can do, and which :func:`dominates` already reads as its own axis. Without this rule `meteor`
+    becomes the bar for its whole tier and reports `protective_slam` as never a choice, while the same
+    content has it cast 354 times in 400 matches: the one direction this module's error is not allowed to
+    run.
+
+    Everything here is read **a round and not a cast** (:func:`_rounds_a_cast`), which is the same mistake as
+    the sweep on the other axis. A spell at three energy comes up half as often as one at two, so comparing
+    what each does in a single cast asks the cheaper spell to match a number it never has to match:
+    `enraged_charge` at 12.60 a cast reported `protective_slam` as never a choice, and it is 6.30 a round
+    against the slam's 7.33. Dividing rather than filtering on price is what keeps the case this check was
+    written for -- `pummel` at one energy really is outclassed by `lightning_bolt` at two, 5.15 a round
+    against 6.47, and a rule that skipped costlier rivals would have lost it.
     """
     prices = load_weights() if weights is None else weights
     if not prices:
         return []
 
     current = {
-        alias: cast_value(document, prices)
+        alias: cast_value(document, prices) / _rounds_a_cast(_energy_cost(document))
         for alias, document in content.spells.items()
-        if deals_damage(document)
     }
     reports: list[str] = []
     for alias, spell in sorted(knobs.spells.items()):
         document = content.spells.get(alias)
         tier = content.tiers.get(alias)
-        if document is None or tier is None or not deals_damage(document):
+        if document is None or tier is None:
             continue
+        reach, attacks = _max_targets(document), deals_damage(document)
         rivals = {
             other: value
             for other, value in current.items()
-            if other != alias and content.tiers.get(other, tier + 1) <= tier
+            if other != alias
+            and content.tiers.get(other, tier + 1) <= tier
+            and _max_targets(content.spells[other]) <= reach
+            and deals_damage(content.spells[other]) == attacks
         }
         if not rivals:
             continue
@@ -794,9 +933,9 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
         ceiling = _value_ceiling(spell, document, prices)
         if ceiling < bar:
             reports.append(
-                f"{alias} reaches at most {ceiling:.2f} at the top of its own bounds, and {best} carries "
-                f"{bar:.2f} today at tier {content.tiers.get(best, '?')}: no move inside these bounds makes "
-                "it a choice, so one of the two spells needs different bounds."
+                f"{alias} reaches at most {ceiling:.2f} a round at the top of its own bounds, and {best} "
+                f"carries {bar:.2f} today at tier {content.tiers.get(best, '?')}: no move inside these "
+                "bounds makes it a choice, so one of the two spells needs different bounds."
             )
     return reports
 

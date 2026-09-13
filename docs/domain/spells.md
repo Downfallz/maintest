@@ -73,9 +73,11 @@ Two more places where the model forced a hand:
   time, now exists (ADR 0020) and no spell uses it: Momentum and Summon Minions are the candidates when
   re-pricing them is decided on its own, rather than folded into the change that added the kind.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive
-  yet, so it is a castable, self-targeted, permanent +1 defense. Same for the permanent half of Guard,
-  Thundering Seal and Revenant Guards: legacy applied those to the stat for good, and re-casting stacks them,
-  exactly as it did there.
+  yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,
+  because free plus permanent plus re-castable is bounded by nothing but the round cap (`check-knobs` reports
+  that pair, and `data/balance/knobs.json` says why its cost may not fall back to zero). Same for the
+  permanent half of Guard, Thundering Seal and Revenant Guards: legacy applied those to the stat for good,
+  and re-casting stacks them, exactly as it did there.
 
 One deliberate correction: legacy Poison Slash is `SpellType.Defensive` while dealing damage to an enemy.
 That reads as a typo in the prototype; it is `Offensive` here.

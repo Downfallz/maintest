@@ -231,24 +231,55 @@ found nothing as though it had looked in the right place. Either side of such a 
 why it is a finding and not a failure: widening the one and lowering the other are both answers, and picking
 between them is a design decision.
 
-The reading is coarse on purpose — no board, no targets, no defense, no cap at a target's health, no threat
-behind a defensive effect (so a `DefenseBuff` is priced as `buff x amount x rounds`, a stand-in and not what
-the scorer does with one), no kill term, which is the largest weight in the game and a threshold so it
+The reading is coarse on purpose — no board, no defense, no cap at a target's health, no threat
+behind a defensive effect (so a `DefenseBuff` is priced as `defense x amount x rounds`, a stand-in and not
+what the scorer does with one), no kill term, which is the largest weight in the game and a threshold so it
 rewards a reliable hit over a bigger average one, and neither the energy cost nor the Spell initiative that
 `ActionScorer` prices when it picks an unlock.
 
-What a spell does to **its own caster** (ADR 0031) is read, and read with a sign: a heal on the caster counts
-for the spell, a recoil counts against it, because on the caster a harmful kind is the price rather than the
-point. It is counted once per cast and never multiplied by the critical chance. The same sign runs through
-every check — dominance treats the caster half as its own axis, where an absent group is a zero rather than a
-gap (carrying no recoil is being better on that axis, not failing to match it), and the ceiling of a knob
-that addresses a harmful caster effect is its **minimum**, since more of a price is not a better spell. That last one is why `throwing_star` is reported: its entry
+That last one is why `throwing_star` is reported: its entry
 says its Spell initiative is worth more to the class than its damage, and none of that is in the number the
 report prints. It is read off the agents'
-own weights (`learning/weights/greedy.json`, which mirrors `ScoringWeights.Default`) rather than restated,
-and it skips any spell with no `Damage` effect on either side of the comparison, for the reason
-`tierDamageSpread` skips one: a heal and an attack share no unit. Without that rule it reports `rejuvenate`
-and `guard`, cast for a survival it cannot see, and `wait`, which is *meant* to stay worse than acting.
+own weights (`learning/weights/greedy.json`, which mirrors `ScoringWeights.Default`) rather than restated.
+
+An attack is only compared with another attack, and a spell that deals no damage only with another that
+deals none, for the reason `tierDamageSpread` skips one: a heal and an attack share no unit. Inside the
+defensive half the comparison holds, which is why it is made rather than skipped — what the reading misses
+about a defensive spell (the kill it denies, the threat it is priced against) it misses on **both** sides of
+a defensive pair, so it very largely cancels, while against an attack it does not cancel at all. Skipping
+them outright left a dead defensive spell invisible: `full_plate` was cast 0 times in 400 matches and `guard`
+471, and nothing here told them apart.
+
+What a spell does to **its own caster** (ADR 0031) is read too, and read with a sign: a heal on the caster
+counts for the spell, a recoil counts against it, because on the caster a harmful kind is the price rather
+than the point. It is counted **once per cast** — added after the target count, never multiplied by it — and
+never multiplied by the critical chance. The same sign runs through every check: dominance treats the caster
+half as its own axis, where an absent group is a zero rather than a gap (carrying no recoil is being better
+on that axis, not failing to match it), and the ceiling of a knob that addresses a harmful caster effect is
+its **minimum**, since more of a price is not a better spell.
+
+Everything is read **a round, not a cast**. Energy carries between rounds, so a spell costing three at an
+income of two comes up twice in three rounds: 1.5 rounds a cast, floored at one because a creature acts once
+a round however cheap the spell is. Without that, `enraged_charge` at 12.60 a cast reported
+`protective_slam` as never a choice, when per round it is 8.40 against the slam's 7.33. The price is
+divided by rather than filtered on, because a cheaper spell can still be outclassed through it — `pummel` at
+one energy really does lose to `lightning_bolt` at two, 5.15 a round against 6.47, which is the case this
+whole check was written for.
+
+The targets it **does** read, from the spell rather than from a board: a cast is priced for every target it
+is allowed, because the question is whether a spell can ever be a choice and a sweep is at its best when it
+finds them all. It therefore overstates a `Multi` spell later in a match, when the creatures it would have
+hit are dead — `meteor` lands 1.79 of its three on average over the benchmark seeds, where the single-target
+spells land 0.88 to 1.01 of their one. Before the count was read at all, a sweep priced at a third of what it
+plays, which is how the strongest spell in the catalogue passed every check. A rival is only the bar for a
+spell that reaches **as many targets or more**: a single-target spell cannot match a sweep without ceasing to
+be single-target, which is `noNewStrictDominance`'s axis and not this one.
+
+It also reports a spell whose **permanent effect costs no energy**. A permanent effect never expires and
+re-casting stacks it, so a free one has no brake but the round cap; every reading here prices a single cast,
+and no horizon finds a stack, so the price is what decides it and not the magnitude. `full_plate` is authored
+that way today because nothing implements `SpellType.Passive` yet — the finding is there so a tuning pass
+cannot put a price back to zero and ship an unbounded spell with every check green.
 
 ## Two things a single step cannot find
 
