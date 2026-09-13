@@ -49,8 +49,9 @@ counterpart, so they were dropped or approximated; one has since been recovered.
   resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself,
   Psycho Rush's -2 defense recoil and Hateful Sacrifice's 4 self-damage are all expressible. **Parasite Jab's
   lifesteal is not**: a share of the damage dealt depends on the resolution rather than on the spell, which
-  is a new kind of effect and not a new place to put one. A flat heal on the caster is the approximation.
-  None of the four spells has been re-authored yet; the mechanism landed first.
+  is a new kind of effect and not a new place to put one. It carries a **flat heal of 3 on its caster**
+  instead, which is the approximation and the first content to use the mechanism. Psycho Rush and Hateful
+  Sacrifice are still halves of themselves, and are re-authored when their tier is opened.
 - **Debuffing a stat other than initiative.** There is no negative `DefenseBuff` and no energy drain.
   Dropped: Noxious Cure's -2 defense on the healed allies, Soul Devourer's -2 energy. Infectious Blast was
   *only* a defense shred, so it is approximated with the one stat debuff the taxonomy has,

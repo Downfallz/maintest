@@ -417,14 +417,17 @@
     "spell:parasite_jab": {
       "name": "Parasite Jab",
       "class": "Leech",
-      "intent": "Half of itself: the lifesteal that made it a Leech spell has no counterpart in the taxonomy, so what is left is an expensive small hit with a coin-flip critical. Do not tune it into a good attack, it is waiting for a rule.",
+      "intent": "The Leech's opener and the first spell in the catalogue that feeds its caster (ADR 0031): a modest bite that puts some of what it takes back into whoever threw it. It is deliberately the weaker attack of its tier and the only one that answers being hurt, so the choice it offers is not how hard to hit but whether you need the health.",
       "keep": [
-        "Placeholder until caster-side effects exist",
-        "Its critical chance is the only thing it has left"
+        "It always feeds its caster: the bite is the price of the meal, not the point of it",
+        "A worse attack than the tier's attacks: the healing is what it is for",
+        "Never more healing than a real heal: it is a bite, not a Restorative Gush"
       ],
+      "note": "The reading that matters is not in the numbers: `ActionScorer.HealScore` counts only the health a target is missing, so at full health this spell is worth its damage alone -- 4.50 against `lightning_bolt`'s 6.47 -- and only passes it once its caster has three points to get back. That is lifesteal's whole feel, and it is emergent rather than authored: a Leech reaches for this when it is hurt and for something else when it is not. `cast_value` cannot see the condition and prices the healing whole, so it reads 6.90 where play reads between 4.50 and 6.90.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.4, "max": 0.7, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
