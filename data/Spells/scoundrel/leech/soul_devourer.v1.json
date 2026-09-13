@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Leech",
   "initiative": 2,
-  "energyCost": 3,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
@@ -14,8 +14,18 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 3
+      "amount": 5
+    },
+    {
+      "kind": "EnergyDrain",
+      "amount": 2
     }
   ],
-  "enabled": false
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "Heal",
+      "amount": 4
+    }
+  ]
 }

@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "DefenseBuff",
-      "amount": 2,
+      "amount": 3,
       "permanent": true
     }
   ],

@@ -2,8 +2,9 @@
 
 The 36 spells of `data/Spells`, carried over from the legacy prototype. Vocabulary is defined in
 [glossary.md](glossary.md); the effect taxonomy they are written in is
-[ADR 0012](../adr/0012-effect-taxonomy.md), extended by [ADR 0019](../adr/0019-regeneration-the-healing-counterpart-of-bleed.md)
-and [ADR 0020](../adr/0020-energy-regeneration-and-the-price-of-energy.md); the authoring format is `data/README.md`.
+[ADR 0012](../adr/0012-effect-taxonomy.md), extended by [ADR 0019](../adr/0019-regeneration-the-healing-counterpart-of-bleed.md),
+[ADR 0020](../adr/0020-energy-regeneration-and-the-price-of-energy.md) and
+[ADR 0035](../adr/0035-lowering-defense-and-taking-energy.md); the authoring format is `data/README.md`.
 
 Status: **inherited**. The numbers below are the prototype's, not a balance pass. They exist so the engine,
 the agents, and the learning loop run on content with some variety instead of 36 copies of the same
@@ -27,8 +28,10 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Temporary` + `Stats.Damage`, `Length` | damage the targets each round | `Bleed` (`amountPerRound`, `durationRounds`) |
 | `EffectType.Direct` + `Stats.Health` | heal the targets now | `Heal` |
 | `EffectType.Direct` + `Stats.Energy` | give the targets energy | `EnergyGain` |
+| `EffectType.Direct` + `Stats.Energy`, negative | take energy off the targets | `EnergyDrain` (ADR 0035) |
 | `EffectType.Direct` + `Stats.Defense` | raise the targets' defense for good | `DefenseBuff` with `permanent: true` |
 | `EffectType.Temporary` + `Stats.Defense`, `Length` | raise it for a few rounds | `DefenseBuff` with `durationRounds` |
+| `EffectType.Direct` or `Temporary` + `Stats.Defense`, negative | lower it, for good or for a few rounds | `DefenseDebuff`, `permanent: true` or `durationRounds` (ADR 0035) |
 | `EffectType.Direct` + `Stats.Stun` | stun the targets | `Stun` |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
 | `SpellType`, `CharacterClass`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
@@ -43,21 +46,24 @@ that took no target at all.
 ## What did not survive the translation
 
 The effect taxonomy is closed and every effect applies to the spell's targets. Six legacy ideas had no
-counterpart, so they were dropped or approximated; one has since been recovered. Each is a rule to decide, not an oversight:
+counterpart, so they were dropped or approximated; two have since been recovered. Each is a rule to decide, not an oversight:
 
 - ~~**Effects on the caster**~~ (`SelfDirect`, `SelfTemporary`). Recovered: a spell may carry `casterEffects`,
-  resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself,
-  Psycho Rush's -2 defense recoil and Hateful Sacrifice's 4 self-damage are all expressible. **Parasite Jab's
-  lifesteal is not**: a share of the damage dealt depends on the resolution rather than on the spell, which
-  is a new kind of effect and not a new place to put one. It carries a **flat heal of 3 on its caster**
-  instead, which is the approximation and the first content to use the mechanism. Psycho Rush and Hateful
-  Sacrifice are still halves of themselves, and are re-authored when their tier is opened.
-- **Debuffing a stat other than initiative.** There is no negative `DefenseBuff` and no energy drain: both
-  factories refuse anything below 1. Dropped: Noxious Cure's -2 defense on the healed allies, Soul Devourer's
-  -2 energy. Infectious Blast was *only* a defense shred, so it is approximated with the one stat debuff the
-  taxonomy has, -2 initiative for two rounds. **Noxious Cure takes the same substitution**: its shred of the
-  healed allies is now an initiative debuff on those same allies, so the cure is noxious to the cured exactly
-  as it was, in the one stat the taxonomy can lower.
+  resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself and
+  Hateful Sacrifice's 4 self-damage are expressible — and Hateful Sacrifice now carries it, re-authored when
+  its tier opened. **One is still not**, and it is not the place that is missing: a caster effect is a new
+  *place* to put an effect, never a new *kind*. Parasite Jab's lifesteal is a share of the damage dealt,
+  which depends on the resolution rather than on the spell; it carries a **flat heal of 3 on its caster**
+  instead, the approximation and the first content to use the mechanism. Psycho Rush's recoil needed the place
+  *and* a kind that could lower a stat; it has both now, and carries `DefenseDebuff 2 (1r)` on its own caster.
+- ~~**Debuffing a stat other than initiative.**~~ Recovered: ADR 0035 added `DefenseDebuff` and `EnergyDrain`,
+  the mirrors of the buff and the gain, and all four spells that were waiting on them say what they meant.
+  Soul Devourer tears **2 energy** out of what it hits again, beside the hit and the lifesteal. Infectious
+  Blast is the **permanent -2 defense on the whole enemy line** it always was. Noxious Cure shreds **2 defense
+  for a round** off the allies it heals, so the cure is noxious to the cured in the stat legacy charged.
+  Psycho Rush is the fourth, above. The substitution they shared — whatever a spell meant to take, it took
+  tempo instead — had been used three times, and once ADR 0032 priced a point of initiative at 2.1 it was not
+  a neutral translation: Infectious Blast read 25.20 a round on that stand-in and 11.70 on its own.
 - **Buffing initiative or critical chance.** Death Squad gave its team +10 initiative and +100% crit for a
   round; both are unrepresentable. It is approximated as the tempo it was meant to buy: 1 energy to each of
   up to three allies.

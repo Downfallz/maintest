@@ -46,7 +46,7 @@ public sealed class EvaluationConsoleTests
     [Fact]
     public void The_spell_table_has_a_column_for_every_lasting_effect_the_recorder_counts()
     {
-        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def", "Init"];
+        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def+", "Def-", "Init"];
         var kinds = typeof(LastingEffect).Assembly.GetTypes()
             .Count(type => type.IsSubclassOf(typeof(LastingEffect)) && !type.IsAbstract);
 
@@ -81,19 +81,38 @@ public sealed class EvaluationConsoleTests
     }
 
     /// <summary>
-    /// Defense and initiative are different stats: one column for both cannot say which one a spell moved.
+    /// The drain has a column beside the gain rather than sharing it: netted, a spell that hands two back and
+    /// a spell that tears two out would print the same row (ADR 0035).
     /// </summary>
     [Fact]
-    public void Defense_and_initiative_conditions_are_counted_apart()
+    public void The_energy_a_spell_took_is_a_column_of_its_own()
+    {
+        var printed = Print(Outcome("spell:soul_devourer:v1", sides: 10, wins: 6, resolved: 20, fizzled: 0, damage: 100, resolvedWhenWon: 12)
+            with
+        { Energy = 0, EnergyDrained = 31 });
+
+        var row = printed.Split('\n').Single(line => line.Contains("spell:soul_devourer:v1", StringComparison.Ordinal));
+
+        printed.ShouldContain("Drain");
+        row.ShouldContain("      0     31", Case.Sensitive);
+    }
+
+    /// <summary>
+    /// Defense and initiative are different stats: one column for both cannot say which one a spell moved. The
+    /// defense debuff is a third, and it needs its own column most of all -- it moves the same stat as the
+    /// buff, the other way, so folding the two together would net one spell's debuff against another's buff.
+    /// </summary>
+    [Fact]
+    public void The_two_defense_conditions_and_the_initiative_one_are_counted_apart()
     {
         var printed = Print(Outcome("spell:ice_spear:v1", sides: 10, wins: 6, resolved: 20, fizzled: 0, damage: 80, resolvedWhenWon: 12)
             with
-        { DefenseBuffs = 0, InitiativeDebuffs = 17 });
+        { DefenseBuffs = 4, DefenseDebuffs = 9, InitiativeDebuffs = 17 });
 
         var rows = printed.Split('\n').Where(line => line.Contains("spell:ice_spear:v1", StringComparison.Ordinal)).ToList();
 
         rows.Count.ShouldBe(1);
-        rows[0].ShouldEndWith("17", Case.Sensitive, "the initiative debuffs land in the last column, not folded into the defense one");
+        rows[0].ShouldEndWith("    4     9    17", Case.Sensitive, "the three stat conditions are three columns, not one sum");
     }
 
     [Fact]

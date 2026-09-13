@@ -61,6 +61,26 @@ public sealed class CombatExecutionTests
         applied.ShouldHaveSingleItem().ShouldBeOfType<DamageOutcome>().Amount.ShouldBe(2, "it had two health to lose, not seven");
     }
 
+    /// <summary>
+    /// A drain takes what is there and reports what it took (ADR 0035), the same way damage and healing do: a
+    /// spell that drains two from an empty pool did nothing, and nothing is what the recorder must count.
+    /// </summary>
+    [Fact]
+    public void Energy_drained_beyond_what_the_target_had_is_reported_at_what_it_took()
+    {
+        var creatures = Arena.FourCreatures();
+        var ghoul = Arena.Find(creatures, Arena.Ghoul);
+        ghoul.GainEnergy(1);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Ghoul]);
+        var resolution = CombatResolution.Resolved(action, [Arena.Ghoul], [], false, Energy.Of(0), [new EnergyDrainOutcome(Arena.Ghoul, 3)]);
+
+        var applied = CombatExecution.Apply(resolution, creatures);
+
+        ghoul.Energy.ShouldBe(Energy.Of(0));
+        applied.ShouldHaveSingleItem().ShouldBeOfType<EnergyDrainOutcome>().Amount.ShouldBe(1, "it had one point to lose, not three");
+        CombatExecution.Apply(resolution, creatures).ShouldBeEmpty("a drain against an empty pool did nothing");
+    }
+
     [Fact]
     public void Healing_beyond_what_was_missing_is_reported_at_what_it_restored()
     {

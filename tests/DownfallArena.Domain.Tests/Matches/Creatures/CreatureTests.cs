@@ -53,6 +53,7 @@ public sealed class CreatureTests
         creature.TakeDamage(3).ShouldBe(0);
         creature.Heal(3).ShouldBe(0);
         creature.GainEnergy(3).ShouldBe(0);
+        creature.LoseEnergy(3).ShouldBe(0);
         creature.SpendEnergy(Energy.Of(0)).Error.ShouldBe(CreatureErrors.Dead);
         creature.UnlockSpell(Content.Spell("spell:new:v1")).Error.ShouldBe(CreatureErrors.Dead);
         creature.Health.ShouldBe(Health.Of(0));
@@ -82,6 +83,18 @@ public sealed class CreatureTests
     }
 
     [Fact]
+    public void Drained_energy_is_capped_at_what_the_creature_has()
+    {
+        var creature = Spawn();
+        creature.GainEnergy(3);
+
+        creature.LoseEnergy(2).ShouldBe(2);
+        creature.Energy.ShouldBe(Energy.Of(1));
+        creature.LoseEnergy(5).ShouldBe(1);
+        creature.Energy.ShouldBe(Energy.Of(0));
+    }
+
+    [Fact]
     public void Negative_amounts_are_programming_errors()
     {
         var creature = Spawn();
@@ -89,6 +102,7 @@ public sealed class CreatureTests
         Should.Throw<ArgumentOutOfRangeException>(() => creature.TakeDamage(-1));
         Should.Throw<ArgumentOutOfRangeException>(() => creature.Heal(-1));
         Should.Throw<ArgumentOutOfRangeException>(() => creature.GainEnergy(-1));
+        Should.Throw<ArgumentOutOfRangeException>(() => creature.LoseEnergy(-1));
     }
 
     [Fact]

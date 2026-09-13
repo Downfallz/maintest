@@ -5,7 +5,7 @@
   "creatureClass": "Berserker",
   "initiative": 1,
   "energyCost": 3,
-  "criticalChance": 0.33,
+  "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,8 +14,15 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 9
+      "amount": 10
     }
   ],
-  "enabled": false
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "DefenseDebuff",
+      "amount": 2,
+      "durationRounds": 1
+    }
+  ]
 }

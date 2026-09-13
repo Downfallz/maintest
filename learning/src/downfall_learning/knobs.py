@@ -8,7 +8,7 @@ an evaluation already reports. Everything here reads the authored content in ``d
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
@@ -46,7 +46,7 @@ FRIENDLY_ORIGINS = frozenset({"Ally", "Self"})
 
 #: The effect kinds that hurt whoever they land on. On a target that is the point of the spell; on the caster
 #: it is the price, so every reading of a caster effect turns on this set.
-HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff"})
+HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff", "DefenseDebuff", "EnergyDrain"})
 
 #: The pointer that names a spell's critical chance bonus.
 CRITICAL_CHANCE = "/criticalChance"
@@ -284,35 +284,128 @@ def load_content(data_directory: Path) -> Content:
 
 
 def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
-    """How deep each spell sits: 0 for a starting spell or a root node, one more per talent node below.
+    """How deep each spell sits: what it requires as well as where it is written (ADR 0034).
 
-    A spell taught in two places takes the shallowest, which is how soon a creature can actually have it.
+    A node's depth is where a spell is *offered*; a prerequisite is how deep it is *reachable*. A class node
+    holds its opener and both spells that require it, so reading the node alone puts all three at one depth
+    and calls a set a player never chooses between a tier.
+
+    A spell taught in two places takes the shallowest, which is how soon a creature can actually have it. The
+    prerequisite raise applies after that: a prerequisite is a floor, not a choice.
     """
-    depths: dict[str, int] = {}
+    offers: dict[str, list[_Offer]] = {}
 
-    def note(reference: str, depth: int) -> None:
-        alias = reference if reference in by_id.values() else by_id.get(reference)
-        if alias is not None:
-            depths[alias] = min(depth, depths.get(alias, depth))
+    def alias_of(reference: str) -> str | None:
+        return reference if reference in by_id.values() else by_id.get(reference)
 
+    def resolve(references: Sequence[str]) -> list[str]:
+        return [found for found in map(alias_of, references) if found is not None]
+
+    def note(reference: str, depth: int, prerequisites: _Prerequisites | None = None) -> None:
+        alias = alias_of(reference)
+        if alias is None:
+            return
+        asked = prerequisites or _Prerequisites([], [])
+        offers.setdefault(alias, []).append(_Offer(depth, resolve(asked.all_of), resolve(asked.any_of)))
+
+    _note_starting_spells(data_directory, note)
+    _note_tree_nodes(data_directory, note)
+    return _settle(offers)
+
+
+def _note_starting_spells(data_directory: Path, note: _Note) -> None:
+    """Everything a creature spawns with sits at depth zero: it is had before anything is chosen."""
     for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
         creature = _read_json(file)
         if creature.get("enabled", True):
             for reference in creature.get("startingSpellIds", []):
                 note(str(reference), 0)
 
+
+def _note_tree_nodes(data_directory: Path, note: _Note) -> None:
+    """Every enabled tree, walked from its root. A tree with no root teaches nothing and is skipped."""
     for file in sorted((data_directory / TALENT_TREES_FOLDER).rglob(JSON_FILES)):
         tree = _read_json(file)
         if tree.get("enabled", True) and isinstance(tree.get("root"), Mapping):
             _walk(tree["root"], 0, note)
+
+
+@dataclass(frozen=True)
+class _Prerequisites:
+    """What a talent-tree entry asks for, with the two lists kept apart because they are read differently."""
+
+    all_of: list[str]
+    any_of: list[str]
+
+
+@dataclass(frozen=True)
+class _Offer:
+    """One place a spell is taught: how deep that node sits, and what it asks for *there*."""
+
+    depth: int
+    all_of: list[str]
+    any_of: list[str]
+
+
+def _settle(offers: Mapping[str, Sequence[_Offer]]) -> dict[str, int]:
+    """How deep each spell is first reachable, raising it until nothing moves.
+
+    A spell is as shallow as its shallowest offer, and one offer is no shallower than the node holding it or
+    than one past everything that offer gates it behind. The two prerequisite lists are read differently,
+    which is `TalentPrerequisites.AreSatisfiedBy`: `allOf` must all be known, so the **deepest** of them sets
+    the floor; `anyOf` needs one, so the **shallowest** does. Flattening them together over-deepens every
+    spell behind a cheap alternative -- today every `anyOf` pair in the content sits at one depth, so nothing
+    moves, and the rule is written for the content that does not.
+
+    A pass at a time rather than a recursion, so a prerequisite chain of any length settles and a cycle --
+    which a talent tree should never carry and this must not hang on -- stops at the number of spells.
+    """
+    depths = {alias: min(offer.depth for offer in taught) for alias, taught in offers.items()}
+    for _ in range(len(depths)):
+        moved = False
+        for alias, taught in offers.items():
+            reachable = min(_offer_depth(offer, depths) for offer in taught)
+            if depths[alias] < reachable:
+                depths[alias] = reachable
+                moved = True
+        if not moved:
+            break
     return depths
 
 
-def _walk(node: Mapping[str, object], depth: int, note: Callable[[str, int], None]) -> None:
+def _offer_depth(offer: _Offer, depths: Mapping[str, int]) -> int:
+    """How deep one offer makes its spell reachable: its node, or one past what it gates the spell behind."""
+    floors = [offer.depth]
+    known_all = [depths[found] for found in offer.all_of if found in depths]
+    known_any = [depths[found] for found in offer.any_of if found in depths]
+    if known_all:
+        floors.append(max(known_all) + 1)
+    if known_any:
+        floors.append(min(known_any) + 1)
+    return max(floors)
+
+
+#: What `_walk` hands back for each spell: its id, the depth of the node offering it, and what it requires.
+_Note = Callable[[str, int, "_Prerequisites | None"], None]
+
+
+def _required_by(spell: Mapping[str, object]) -> _Prerequisites:
+    """The spells a talent-tree entry names as prerequisites, with `allOf` and `anyOf` kept apart."""
+    prerequisites = spell.get("prerequisites")
+    if not isinstance(prerequisites, Mapping):
+        return _Prerequisites([], [])
+    return _Prerequisites(_names(prerequisites.get("allOf")), _names(prerequisites.get("anyOf")))
+
+
+def _names(listed: object) -> list[str]:
+    return [str(entry) for entry in listed if isinstance(entry, str)] if isinstance(listed, list) else []
+
+
+def _walk(node: Mapping[str, object], depth: int, note: _Note) -> None:
     spells = node.get("spells", [])
     for spell in spells if isinstance(spells, list) else []:
         if isinstance(spell, Mapping) and "id" in spell:
-            note(str(spell["id"]), depth)
+            note(str(spell["id"]), depth, _required_by(spell))
     children = node.get("children", [])
     for child in children if isinstance(children, list) else []:
         if isinstance(child, Mapping):
@@ -769,7 +862,9 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
       1.01 of their one. Before the target count was read at all, the same spell read a third of what it
       plays, which is how the strongest spell in the catalogue passed every check;
     - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
-      ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
+      ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one. A
+      `DefenseDebuff` is the same stand-in the other way, and wrong the same way: it does not read the damage
+      the shred lets through (ADR 0035);
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
       bigger average one in a way nothing here can see;
     - no energy cost and no Spell initiative, both of which `ActionScorer` prices when it picks an unlock,
@@ -804,11 +899,13 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             DAMAGE: weights.get("damage", 0) * amount * crit_factor,
             HEAL: weights.get("heal", 0) * amount * crit_factor,
             "EnergyGain": weights.get("energy", 0) * amount,
+            "EnergyDrain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
             "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
+            "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(kind, 0.0)
     # The target half is worth what it does to every target it reaches; the caster half is worth what it does
@@ -847,11 +944,13 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
             DAMAGE: weights.get("damage", 0) * amount,
             HEAL: weights.get("heal", 0) * amount,
             "EnergyGain": weights.get("energy", 0) * amount,
+            "EnergyDrain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
             "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
+            "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(kind, 0.0)
         total += -value if kind in HARMFUL else value

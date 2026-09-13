@@ -149,12 +149,14 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             Damage: onTargets.OfType<DamageOutcome>().Sum(outcome => outcome.Amount),
             Healing: onTargets.OfType<HealOutcome>().Sum(outcome => outcome.Amount),
             Energy: onTargets.OfType<EnergyOutcome>().Sum(outcome => outcome.Amount),
+            EnergyDrained: onTargets.OfType<EnergyDrainOutcome>().Sum(outcome => outcome.Amount),
             Stuns: Conditions<Stun>(onTargets),
             Bleeds: Conditions<Bleed>(onTargets),
             Regens: Conditions<Regeneration>(onTargets),
             EnergyRegenerations: Conditions<EnergyRegeneration>(onTargets),
             DefenseBuffs: Conditions<DefenseBuff>(onTargets),
-            InitiativeDebuffs: Conditions<InitiativeDebuff>(onTargets));
+            InitiativeDebuffs: Conditions<InitiativeDebuff>(onTargets),
+            DefenseDebuffs: Conditions<DefenseDebuff>(onTargets));
     }
 
     private static int Conditions<TEffect>(IReadOnlyList<EffectOutcome> applied)

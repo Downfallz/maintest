@@ -17,8 +17,8 @@
       "amount": 4
     },
     {
-      "kind": "InitiativeDebuff",
-      "amount": 1,
+      "kind": "DefenseDebuff",
+      "amount": 2,
       "durationRounds": 1
     }
   ],

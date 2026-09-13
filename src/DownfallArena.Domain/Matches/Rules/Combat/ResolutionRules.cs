@@ -73,6 +73,7 @@ public static class ResolutionRules
             Damage damage => new DamageOutcome(target.Id, Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value), isCritical),
             Heal heal => new HealOutcome(target.Id, Multiplied(heal.Amount, multiplier)),
             EnergyGain energy => new EnergyOutcome(target.Id, energy.Amount),
+            EnergyDrain drain => new EnergyDrainOutcome(target.Id, drain.Amount),
             LastingEffect lasting => new ConditionOutcome(target.Id, lasting),
             _ => throw new InvalidOperationException($"Effect '{effect.GetType().Name}' has no resolution rule."),
         };

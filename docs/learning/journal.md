@@ -4,6 +4,217 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-13. ADR 0035: the taxonomy stops telling the content what it may mean
+
+- **What changed**: two effect kinds, `DefenseDebuff` and `EnergyDrain`, the mirrors of `DefenseBuff` and
+  `EnergyGain` (ADR 0035), and the four spells that were waiting on them. `soul_devourer` tears **2 energy**
+  out of what it hits, with its caster heal down 5 to 4; `infectious_blast` is the **permanent -2 defense on
+  all three enemies** it always was; `noxious_cure` takes **2 defense for a round** off the allies it heals
+  instead of slowing them; `psycho_rush` carries its **-2 defense recoil on its own caster** and stops being
+  half a spell. Content `2e85d5af` to **`4b50a377`**. Feature schema **`features:v3` to `features:v4`** — a new
+  condition kind is a new layout, so no run recorded before this is comparable with one after it.
+- **The substitution had been used three times and it was the same one every time**: whatever a spell meant to
+  take, it took tempo instead. That was neutral while a point of initiative was priced at 0.5. ADR 0032
+  measured it at **2.1**, and from then on every spell pushed onto that stand-in became a tempo spell whether
+  or not tempo was its idea. `infectious_blast` read **25.20 a round**, the largest number in the catalogue,
+  purely from the substitution; as the defense debuff it always was it reads **11.70**.
+- **Two `check-knobs` findings went away without a single bound moving.** `revenant_guards` was reported as
+  having no bounds that could make it a choice beside `infectious_blast` at 25.20, and `psycho_rush` as
+  strictly better than `engulfing_flames` -- which it was only because its recoil was missing. 14 findings to
+  12. `death_squad`'s is still reported and now names `revenant_guards` at 15.60 instead, so that one is its
+  own bounds and was never about the substitution. A finding can be a missing half rather than a wrong number.
+- **The spell nobody could cast woke up.** `tranquilizer_dart` landed **1 cast in 400 matches before and 23
+  after**: `infectious_blast` at one energy was strictly better tempo, and it was taking the Trickster's whole
+  budget. `noxious_cure` goes **38 casts to 141** and 0.412 to 0.543 — its bargain is payable now that the
+  price is 1.30 an ally in defense instead of 4.20 in tempo. `infectious_blast` itself goes the other way,
+  290 casts to 89, and its win share **0.262 to 0.427**: cast less and winning more is what over-casting a
+  spell looks like from the other side.
+- **The objective got worse and it is not being chased: 29.04 to 58.92.** Almost all of it is
+  `tierDamageSpread` hitting its cap (14.61 to 36.00, the ceiling). The cause is the paragraph above:
+  `tranquilizer_dart` now has enough casts to be read at all, at **1.17 damage a cast**, in a tier-3 that also
+  holds `crazed_specter` at 15.85. That imbalance was there the whole time; the substitution was hiding it by
+  keeping the spell out of the sample. This is 1 of the 18 spells of the rework and the larger tuning pass
+  comes after it, so the number is recorded rather than answered.
+- **`soul_devourer`'s drain is priced at 0.40 and that reading is wrong.** Energy is 0.2 a point, so tearing
+  two out scores like handing two over. Taking two energy off a creature does not cost it two points of
+  anything — it costs it the cast it was saving for, and nothing in the scorers reads a cast denied. Its knob
+  note says so. It won anyway: 0.628 to **0.707** win share.
+- **And the drain finds less than it asks for**, which the new `Drain` column is what says: 205 landed casts
+  took **97 energy**, under half of the 2 each one aims at. `Creature.LoseEnergy` takes what is there and a
+  greedy bot spends down to nothing, so most casts land on an empty pool. That is the mechanic working, and it
+  is the second reason this spell's drain is worth less in play than on paper.
+- **The bot cannot see what the debuff does, only what it costs.** `DefensiveScore` is the only term that
+  reads the threat a creature faces, and only a `DefenseBuff` reaches it. So nothing in `ActionScorer` knows
+  that lowering a defense raises what the next hit takes -- not on the enemy, which is the point of
+  `infectious_blast`, and not on `psycho_rush`'s own caster, which is the point of its recoil. ADR 0035
+  recorded the pricing as a stand-in; this is the part that is a decision and not a rounding error, and it is
+  written where it still governs one, in `ConditionScore`.
+- **A review caught what the whole suite missed.** `FeatureSchema.ConditionKinds` and `ObservationBuilder`'s
+  amount switch are two lists that must move together, and only one of them moved: every `simulate --record`
+  and every policy decision threw the moment a defense debuff landed, with 282 of 282 tests green, because no test had
+  ever put one on a board. `ObservationBuilderTests` now asks every published kind for its amount, and the
+  message for a kind the schema knows and the builder does not says that rather than "publish a new version",
+  which is the sentence that sends a reader to the wrong file.
+
+## 2026-09-13. Leech, 4 of 9: two halves the port left behind, one restored and one substituted
+
+- **Checked the legacy source before touching anything, and it held the answer to both spells.**
+  `legacy/.../LeechSpells.cs` pairs Hateful Sacrifice's hit of 10 with `SelfDirect Health -4`, and Soul
+  Devourer's hit of 3 with `Direct Energy -2` on the target. Only the first halves were ported.
+  `docs/domain/spells.md` had already written the instruction: "Psycho Rush and Hateful Sacrifice are still
+  halves of themselves, and are **re-authored when their tier is opened**." It is open.
+- **What changed**: `hateful_sacrifice` gains `casterEffects: Damage 4` — the sacrifice its name promises;
+  `soul_devourer` goes from Damage 3 at a price of 3 to **Damage 5 with a caster heal of 5 at a price of 2**.
+  Content `ce613dba` to **`2e85d5af`**.
+- **The energy drain is not coming back, and would not help if it did.** There is no negative `EnergyGain`,
+  and energy is 0.2 a point — the reading that killed `momentum` and that made ADR 0020's nomination of
+  `summon_minions` decline itself. So the theft keeps its meaning and changes its currency, the way
+  `infectious_blast` traded a defense shred for tempo: the Leech takes, and what it takes is health.
+  **0 casts to 343**, 2.00 a round to 9.00.
+- **`hateful_sacrifice` loses its stand-in.** Its second keep read "its price stands in for the missing
+  self-damage"; the self-damage is here, so the stand-in is gone. It reads 10.00 a round to **7.33**, just
+  under the band, and that is accepted rather than compensated — `cast_value` charges four health in full
+  where a bot pays it only in the rounds when four health is what it had left. 621 casts to 420.
+- **The alternative put both in the band and cost the class its shape**: damage 11 with the recoil, and 7 with
+  a heal of 7 at a price of 3, reads 33.42 against 29.04 and gives `soul_devourer` **626** casts against
+  `hateful_sacrifice`'s 269. One spell replacing another, where the chosen pair reads 420 / 343 / 417 across
+  the three — a class with three spells in it.
+- **And two things `docs/domain/spells.md` claimed that are not true.** It said Psycho Rush's recoil was
+  expressible through caster effects: it is **-2 defense**, and `DefenseBuff.Of` refuses anything below 1, so
+  there is no negative buff to put anywhere. A caster effect is a new *place* for an effect, never a new
+  *kind* — the same reason Parasite Jab's real lifesteal is still out. Psycho Rush is still half of itself,
+  and the Berserker entry above buffed it without noticing that its missing half was still missing.
+
+## 2026-09-13. Berserker, 3 of 9: the class whose point is the roll, whose deep spells did not gamble
+
+- **What changed**: `tornado`'s price 2 to **3**; `psycho_rush` damage 9 to **10** and critical chance 0.33 to
+  **0.5**; and `crushing_stomp`'s chance back down from 0.8 to **0.75**, one entry after it went up. Content
+  `7c8cecf1` to **`ce613dba`**. Objective **41.60 to 26.77**, the largest single drop of this pass.
+- **The class's identity was in its opener and nowhere else.** `enraged_charge` carries the highest critical
+  chance in the catalogue and its entry keeps that as the thing making it a Berserker spell "rather than an
+  expensive hit". Both spells behind it sat at **0.33** — lower than the opener, on a line whose own keep
+  reads "the line's gamble". `psycho_rush` now takes 0.5, the top of its bounds, and goes from 7.98 a round to
+  **10.00** and from **6 casts to 53**.
+- **The entry before this one broke that claim and this one puts it back.** Raising `crushing_stomp` to 0.8
+  tied `enraged_charge` exactly. Nothing `crushing_stomp` keeps mentions its chance, so the tie cost the
+  Berserker its identity and cost the Warlord nothing: 0.75 reads 9.12 a round against 9.30, and the highest
+  chance in the catalogue is one spell's again.
+- **`tornado` was the second-largest reading in the catalogue** at 15.96 against a band of 8 to 14, and its own
+  intent nominates its price — "the first place to look when matches end too quickly", with matches at 6.4
+  rounds under a band of 8. At 3 it reads 10.64.
+- **The better number lost on purpose.** Cutting its damage to 3 and keeping the price at 2 reads **7.01
+  rounds** and takes `spellsNeverCast` to **0**, against 6.55 and 1 for the price move, and scores 31.93
+  against 26.77. It also makes `tornado` a cheaper `meteor` — the same hit on the same three targets, a tier
+  deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove.
+- **And another keep that stopped being true when the tier came on**: "the cheapest spell that reaches three
+  enemies" — `infectious_blast` costs one. Same shape as `chain_slash`'s two entries ago, and there will be
+  more.
+
+## 2026-09-13. Warlord, 2 of 9: the branch nobody walked
+
+- **What changed**: three spells, the whole class. `full_plate` 2 permanent defense to **3**;
+  `restorative_gush` Heal 6 to **7** with a critical chance of 0.17 to **0.5**; `crushing_stomp` damage 6 to
+  **7**, chance 0.667 to **0.8**, stun one round to **two** — all three at their existing prices. Content
+  `31952876` to **`7c8cecf1`**, digest regenerated and verified.
+- **The opener had to move, and it is a tier-2 spell in a tier-3 pass.** `full_plate` is the Warlord's gate,
+  and at 2 permanent it was declared by **5 sides of 400** on the mirrored run while both of its children were
+  cast **zero** times. Nothing could be learned about the two spells this pass was about, because nobody
+  arrived to use them: a buff to either would have read zero before and zero after. At 3 the gate is declared
+  by 34, and `restorative_gush` and `crushing_stomp` are cast **26** and **55**.
+- **Two of the three were capped under their own tier by their own bounds.** `restorative_gush` could reach
+  6.55 a round on its heal alone against a band of 8 to 14; `full_plate` tops out at 5.85 against a tier-2
+  median of 7.20, which `check-knobs` has been saying for some time. Only `crushing_stomp` had the room, and
+  it used it: 6.50 to **9.30** without its price moving, because the price is the spell.
+- **A knob an earlier entry claimed to have added was never added.** `restorative_gush`'s note said ADR 0033
+  made its critical chance live and "the knob is here for the pass that enables it". It was not there. The
+  note also said the spell was disabled and carried no chance; by the time anyone read it, all three sentences
+  were false. The knob exists now, and it is what takes the spell into its band — 5.62 to **8.40** — so the
+  omission was load-bearing rather than untidy.
+- **It costs the objective 1.6**, 39.97 to 41.60, and the alternative measured worse: a one-round stun reads
+  45.31 and gets `crushing_stomp` cast 29 times against 55. `spellsBarelyCast` goes 8 to 6. A tuning pass can
+  price a branch people walk; it cannot invent one nobody reaches.
+
+## 2026-09-13. Mercenary, 1 of 9: a false claim withdrawn and an armour spell raised to its tier
+
+- **`chain_slash` keeps every number it has.** It reads 10.00 a round and the tier-3 band being aimed at is 8
+  to 14, so it is already there. Two candidates that made it bigger — damage 6 at a cost of 4, and damage 6 at
+  a critical chance of 0.6 — both measured worse than what is authored. What was wrong was the sentence: its
+  entry claimed "the largest cast in the catalogue", true only while the spells that beat it were disabled.
+  It puts 10 on the board; `crazed_specter` puts 18 and `tornado` 12 at the same depth. It is now what it
+  actually is — the only cast that hits exactly two, the one rung between a spike and a storm.
+- **`thundering_seal` goes to the top of its own bounds**: 2 permanent and 2 for a round become **3 and 3 for
+  two**, same price of 2. Cast value 5.20 to **9.75** a round. Content `5e9e95c6` to **`31952876`**, digest
+  regenerated and verified.
+- **Numbers**: 16 casts to **94**, and `spellsNeverCast` **6 to 1** — matches run 5.56 rounds to **6.33**, and
+  a longer match buys more evolution picks, so more of the catalogue comes up at all. That second-order effect
+  is worth more here than the spell itself.
+- **Not the best score on the board, and taken deliberately.** 3 permanent with 2 for two rounds reads 34.33
+  against this one's 39.97; the difference is `spellsBarelyCast` going 4 to 8. The tier's problem is its
+  floor — ten of eighteen sit under the band — so the shape nearer the tier-3 median of about 10.5 wins over
+  the shape that scores better today. A tuning pass can walk it back inside its own bounds; it cannot invent
+  the floor.
+- **The class has one tension and it is recorded rather than solved**: `protective_slam` says "protection
+  through tempo, never armour" and the Mercenary's defensive payoff is pure armour. The taxonomy has no
+  initiative *buff*, so protecting an ally through tempo cannot be said at all. And `thundering_seal` is
+  `revenant_guards` on one ally instead of three — left for the Necromancer's turn.
+- **Note on the baseline**: HEAD reads 36.16 here, not the 41.50 the entry below records. ADR 0034 changed the
+  tier reading between them and said scores across it are not comparable. This is that.
+
+## 2026-09-13. A tier is a depth a player climbs, and the tier-3 step is 1.13x
+
+- **What changed**: `_tiers` reads a spell's prerequisites as well as its node (ADR 0034). The catalogue's
+  shape goes from 3 / 6 / **27** to 3 / 6 / 9 / **18**. No content moved; scores across this change are not
+  comparable, the way ADR 0029 made them incomparable.
+- **The entry below called this "not a blocker" and that was wrong.** It was measured the lazy way — the
+  values barely move, because each target reports its worst tier — when the test that mattered was whether
+  the reading still ranks two candidates the same way. It does not. On two proposals for `chain_slash`,
+  `tierDamageSpread` reads 3.360 / 3.662 / 4.164 under node depth and 2.910 / **2.825** / **2.884** under the
+  real one: both look worse one way and better the other. The blob holds the openers and the biggest tier-3
+  casts together, so any tier-3 buff widens it; split, the same buff is measured against the tier-3 floor and
+  narrows it. Eighteen spells were about to be designed against a yardstick that reverses the sign.
+- **What the fix makes visible, and it is the number the tier-3 pass needs.** Cast value a round, by tier
+  median: 2.00, 4.53, 7.20, **8.12**. The step between tiers is **2.26x, then 1.59x, then 1.13x** — tier 3 is
+  barely a tier. And it is the widest: 0.60 to 25.20, a factor of **42**, against 7.6 at tier 2 and 2.2 at
+  tier 1.
+- **So the pass has two jobs, not one**: raise the median toward roughly 10.5 — what a 1.45x step on 7.20
+  would give, holding the decay between the last two steps — and collapse the spread. Against a working band
+  of **8 to 14**, tier 3 today is four spells too big (`infectious_blast` 25.2, `tornado` 16.0,
+  `crazed_specter` 16.0, `revenant_guards` 15.6), four already inside it (`toxic_waves` 11.2, `ice_spear`
+  10.2, `hateful_sacrifice` 10.0, `chain_slash` 10.0) and **ten too small**, ending at `death_squad` 0.6.
+- **Which settles the first spell before it was touched.** `chain_slash` reads 10.00 and is already in the
+  band; two candidates that made it bigger both measured worse. Its problem was never its size — its knob
+  entry claims "the largest cast in the catalogue" and that has been false since `crazed_specter` (18 damage
+  on the board) and `tornado` (12) were enabled beside it.
+
+## 2026-09-13. Tier 3 is on, and it costs what enabling a tier costs
+
+- **What changed**: the eighteen spells behind the nine openers are `enabled`. Eighteen files, one flag each,
+  no number touched. Content `c1b49503` to **`5e9e95c6`**, 36 spells in the tree, digest regenerated and
+  verified 400/400. Objective **4.773 to 41.50**.
+- **What it costs, and none of it is a surprise**: `averageRounds` 9.200 to **5.560**, well under its band —
+  the new spells are the big ones, and a catalogue that kills faster ends sooner. `spellsNeverCast` 0 to
+  **6** and `spellsBarelyCast` 0 to **5**, so twelve of thirty-six are never cast at all. `throwing_star`
+  takes **37.6 %** of the mirror's casts, up from 26.1 %. This is the same shape the tier-2 enable had, and
+  the pass that follows is what pays it down.
+- **Two findings worth having before the spell-by-spell work starts.**
+- **The tier reading does not see prerequisites.** `_tiers` walks talent-tree *nodes*, and a class node holds
+  its opener and both of its children — they are separated by `prerequisites`, which `_walk` never reads. So
+  twenty-seven spells now share "tier 2" where reading the prerequisites gives 3 / 6 / 9 / **18**, the real
+  shape. **Smaller than it looks**, and worth writing down because the first reading of it here was wrong:
+  each tier metric reports its *worst* tier, so splitting 27 into 9 and 18 moves only `tierDamageSpread`
+  (3.360 to 2.910) and leaves `tierUsageShare` and `tierWinSpread` where they were. A real defect, one metric,
+  not a blocker.
+- **A child is only ever as reachable as its opener**, and that splits the dead into two kinds that need
+  different answers. **Dead at the root**: `restorative_gush` and `crushing_stomp` at zero behind `full_plate`
+  at 0.06 %, `revenant_guards` behind `summon_minions` at 0.18 %, `toxic_waves` behind `healing_screech` at
+  0.41 %. No number on the child moves anything while nobody takes the parent. **Dead on its own merits**:
+  `soul_devourer` at zero behind `parasite_jab`, which takes **12.16 %** — the opener thrives and the child
+  is refused anyway, at 2.00 a round against its opener's 6.90.
+- **And one claim the content makes that the numbers do not support.** `chain_slash`'s knob entry calls it
+  "the largest cast in the catalogue". It puts 10 damage on the board (5 over two targets); `crazed_specter`
+  puts **18** (6 over three) and `tornado` puts 12, both at the same depth, and `hateful_sacrifice` ties it at
+  10. The claim was true when the two spells that beat it were disabled.
+
 ## 2026-09-13. The first tuning pass against the measured baseline pays the bill the weight left
 
 - **What changed**: seven numbers, found by `tune-content` on the "Tune the catalogue" workflow (run 6, seed

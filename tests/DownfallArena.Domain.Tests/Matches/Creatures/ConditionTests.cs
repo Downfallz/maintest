@@ -114,6 +114,39 @@ public sealed class ConditionTests
         creature.CurrentInitiative.ShouldBe(Initiative.Of(0));
     }
 
+    /// <summary>
+    /// A defense debuff is the buff's mirror and the two meet in the same total (ADR 0035): they add up
+    /// against each other, and the total floors at zero rather than turning damage into a bonus.
+    /// </summary>
+    [Fact]
+    public void Defense_debuffs_lower_the_total_defense_down_to_zero()
+    {
+        var creature = Spawn();
+
+        creature.Apply(DefenseBuff.Of(4, Duration.OfRounds(2)));
+        creature.Apply(DefenseDebuff.Of(3, Duration.OfRounds(1)));
+        creature.TotalDefense.ShouldBe(Defense.Of(1));
+
+        creature.Apply(DefenseDebuff.Of(9, Duration.Permanent));
+        creature.TotalDefense.ShouldBe(Defense.Of(0));
+    }
+
+    /// <summary>A defense debuff that runs out gives the defense back; a permanent one never does.</summary>
+    [Fact]
+    public void A_defense_debuff_lasts_the_rounds_it_was_given()
+    {
+        var creature = Spawn();
+        creature.Apply(DefenseBuff.Of(5, Duration.Permanent));
+
+        creature.Apply(DefenseDebuff.Of(2, Duration.OfRounds(1)));
+        creature.TotalDefense.ShouldBe(Defense.Of(3));
+
+        creature.TickConditions();
+        creature.TickConditions();
+
+        creature.TotalDefense.ShouldBe(Defense.Of(5));
+    }
+
     [Fact]
     public void A_dead_creature_takes_no_conditions_and_is_not_stunned()
     {

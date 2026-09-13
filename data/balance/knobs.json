@@ -261,11 +261,12 @@
     "spell:chain_slash": {
       "name": "Chain Slash",
       "class": "Mercenary",
-      "intent": "The Mercenary's payoff: the most damage any single cast puts on the board, split over two enemies. It is the reason to walk that line to the end, so it should stay expensive and stay late.",
+      "intent": "The Mercenary's payoff, and the only cast in the catalogue that hits exactly two: the rung between a single-target spike and a line-wide storm. It is the reason to walk that line to the end, so it stays expensive and stays late.",
       "keep": [
-        "Hits at most two: it is a cleave, not a storm",
-        "The largest cast in the catalogue"
+        "Hits exactly two: the one rung between a spike and a storm, and the only spell on it",
+        "Expensive and late: the end of the Mercenary's line, never something to open with"
       ],
+      "note": "It used to claim to be 'the largest cast in the catalogue', which was true only while the spells that beat it were disabled. It puts 10 damage on the board, 5 over two targets; `crazed_specter` puts 18 and `tornado` 12, both at the same depth, and `hateful_sacrifice` ties it at 10 on one. Its numbers are not the problem and were left alone: at 10.00 a round it already sits inside the 8-to-14 band tier 3 is being aimed at, and two candidates that made it bigger -- damage 6 at a cost of 4, and damage 6 at a critical chance of 0.6 -- both measured worse than what is authored. What was wrong was the sentence.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
@@ -276,11 +277,12 @@
     "spell:thundering_seal": {
       "name": "Thundering Seal",
       "class": "Mercenary",
-      "intent": "Guard grown up: two permanent points of defense on an ally and two more for the round. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation.",
+      "intent": "Guard grown up: three permanent points of defense on an ally and three more for two rounds. The damage it used to send back to the attacker was not carried over (ADR 0012), so what is left is pure stacking mitigation. It is the one place the Mercenary protects with armour rather than with tempo -- `protective_slam` says 'never armour' and means it -- because the taxonomy has no initiative *buff*, so protecting an ally through tempo cannot be said at all.",
       "keep": [
         "Stronger and dearer than Guard",
         "The permanent half stacks on every cast"
       ],
+      "note": "It read 5.20 a round against a tier-3 band of 8 to 14, so it was raised to the top of its own bounds rather than redesigned: 2 permanent and 2 for a round became 3 and 3 for two, at the same price. Measured, that is 16 casts to 94 and `spellsNeverCast` 6 to 1 -- longer matches (5.56 rounds to 6.33) buy more evolution picks, so more of the catalogue comes up at all. It is not the best score available: 3 permanent and 2 for two rounds reads 34.33 against this one's 39.97, and the difference is `spellsBarelyCast`. Taken deliberately, because the tier's problem is its floor and this is the shape closer to the tier-3 median of about 10.5. Its overlap with `revenant_guards` -- the same two effects on three allies -- is left for the Necromancer's turn.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
@@ -298,7 +300,7 @@
         "Never free: a permanent effect nobody pays for has no brake but the round cap",
         "Cheap enough to cast in the rounds that decide the match, or it is not armour"
       ],
-      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit.",
+      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit. It is also the Warlord's opener, so `restorative_gush` and `crushing_stomp` are only ever as reachable as it is. At 2 permanent it was declared by 5 sides of 400 on the mirrored run and both children were cast zero times -- a branch nobody walked, whose numbers could not be measured because nobody arrived to use them. At 3 it is declared by 34 and the two behind it are cast 26 and 55. Raising it was the only way to learn anything about the two spells this pass was about.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
@@ -313,10 +315,11 @@
         "Heals more in one cast than anything else",
         "Single target: the team heals belong to the Trickster and the Shaman"
       ],
-      "note": "Its critical chance became a live number with ADR 0033: the multiplier reaches a direct heal. The spell is disabled, so nothing measures it yet, and it carries no chance today -- the knob is here for the pass that enables it.",
+      "note": "Its critical chance became a live number with ADR 0033, and that ADR's follow-up said the knob was added here. It was not -- this entry carried three sentences that were false by the time anyone read them: that the knob existed, that the spell was disabled, and that it carried no chance. The knob is real now. The heal goes to 7 with a chance of 0.5, which is 5.62 a round to 8.40 and inside the 8-to-14 band tier 3 is aimed at; its own bounds could not reach the band on the heal alone, which is why the missing knob mattered rather than being a tidy-up.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
     },
@@ -328,6 +331,7 @@
         "The most expensive cast in the catalogue",
         "Damage and stun together, or it is just an expensive hit"
       ],
+      "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it. Its chance then came back down from 0.8 to 0.75, one round after it went up: at 0.8 it tied `enraged_charge`, whose entry keeps 'the highest critical chance in the catalogue' as the thing that makes it a Berserker spell rather than an expensive hit. Nothing this spell keeps mentions its chance, so the tie cost the other class its identity and cost this one nothing -- 9.30 a round to 9.12.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
@@ -356,11 +360,13 @@
     "spell:tornado": {
       "name": "Tornado",
       "class": "Berserker",
-      "intent": "The cheapest sweep in the game: against a full team it is the best damage per energy anywhere. Its cost is the first place to look when matches end too quickly.",
+      "intent": "The sweep: against a full team it is among the best damage per energy anywhere. Its cost is the first place to look when matches end too quickly, and that is where it has been looked.",
       "keep": [
-        "The cheapest spell that reaches three enemies",
-        "Its efficiency comes from breadth, not from the size of the hit"
+        "The cheapest *damaging* sweep -- never the cheapest spell that reaches three, which is `infectious_blast` at one",
+        "Its efficiency comes from breadth, not from the size of the hit",
+        "It hits harder than `meteor` at the same price, or the two are one spell"
       ],
+      "note": "Its price went 2 to 3, which its own intent nominates: at 15.96 a round against a tier-3 band of 8 to 14 it was the second-largest reading in the catalogue, and matches were ending at 6.4 rounds under a band of 8. At 3 it reads 10.64. The alternative measured -- damage 4 to 3, keeping the price at 2 -- reads 7.01 rounds against this one's 6.55 and is the better number, but it turns the spell into a cheaper `meteor`: the same hit on the same three targets, a tier deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove, so the better reading lost. The old first keep, 'the cheapest spell that reaches three enemies', had been false since `infectious_blast` was enabled at a cost of one.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
@@ -371,14 +377,16 @@
     "spell:psycho_rush": {
       "name": "Psycho Rush",
       "class": "Berserker",
-      "intent": "The Berserker's all-in: close to half a creature in a single cast. The two points of defense it used to cost its caster are not in the taxonomy, so it is a nuke with no downside and its price is doing all the work.",
+      "intent": "The Berserker's all-in: close to half a creature in a single cast, and the caster stands there open for a round afterwards. It throws itself at one target and the recoil is the spell -- swing that hard and you are not covering yourself.",
       "keep": [
         "The line's gamble: big, single target, expensive",
-        "Priced as if the recoil existed, because one day it will"
+        "It costs its caster defense, not health: the Berserker is not hurt by its own swing, it is exposed by it"
       ],
+      "note": "The Berserker is the class whose point is the roll -- `enraged_charge` carries the highest critical chance in the catalogue and says so in its own first line -- and neither spell behind it gambled at all: both sat at 0.33, below the opener. This one now takes 0.5, the top of its own bounds, with the damage at 10: 7.98 a round to 10.00, inside the tier-3 band. Measured, 6 casts to 53. Its second keep used to read 'priced as if the recoil existed, because one day it will'; that day is ADR 0035, and the recoil is on the spell -- 2 defense off its own caster for a round, which is what legacy wrote and what `casterEffects` was built to carry (ADR 0031). It costs 1.30 of the reading, 10.00 a round to 9.13, and the spell stopped reading as strictly better than `engulfing_flames`: the finding was the missing half, not a bound.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
@@ -435,14 +443,16 @@
     "spell:hateful_sacrifice": {
       "name": "Hateful Sacrifice",
       "class": "Leech",
-      "intent": "The largest single hit in the game, and it was meant to cost the caster four health. Without that self-damage the energy price is the only thing paying for it.",
+      "intent": "The largest single hit in the game, and it costs the caster four health to throw. The sacrifice is the name of the spell and it is finally in it (ADR 0031): the legacy prototype paired a hit of 10 with `SelfDirect Health -4`, and only the first half survived the port.",
       "keep": [
         "The heaviest single-target hit",
-        "Its price stands in for the missing self-damage"
+        "It is paid in the caster's own health: that is the sacrifice the name promises"
       ],
+      "note": "The self-damage was restored when its tier opened, which `docs/domain/spells.md` said would happen -- 'Psycho Rush and Hateful Sacrifice are still halves of themselves, and are re-authored when their tier is opened'. Its old second keep said the energy price stood in for the missing recoil; the recoil is here, so the stand-in is gone. It reads 10.00 a round to 7.33, just under the tier-3 band of 8 to 14, and that is accepted rather than compensated: `cast_value` charges the four health in full, where a bot pays it only in the rounds where four health is what it had left. Measured, 621 casts to 420.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 7, "max": 11, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
@@ -450,14 +460,18 @@
     "spell:soul_devourer": {
       "name": "Soul Devourer",
       "class": "Leech",
-      "intent": "The worst rate in the catalogue, because the energy it used to drain from the target was dropped. It exists as a node on the Leech line rather than as a spell anyone should want, and fixing the price comes before making it hit harder.",
+      "intent": "Parasite Jab grown up: the Leech takes what it hits, and this one takes two things. The health it drinks is the class signature the opener already has; the energy it tears out is this spell's own, the half the port dropped and ADR 0035 gave back.",
       "keep": [
-        "Waiting on an energy-drain effect",
-        "Cheaper before it is stronger"
+        "It takes from what it hits: the Leech's whole line does, and this is the large version",
+        "It takes energy, not only health: that is what makes it a Soul Devourer and not a bigger `parasite_jab`",
+        "Dearer and heavier than `parasite_jab`, or the opener is the better spell"
       ],
+      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it is back where legacy had it, 2 energy off the target, with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.40 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.2 a point, and taking two off a creature does not cost it two points of anything, it costs it the cast it was saving for. Nothing in the scorers reads a cast denied, so what this spell is worth will read low here until something does.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
     },
@@ -511,15 +525,15 @@
     "spell:noxious_cure": {
       "name": "Noxious Cure",
       "class": "Trickster",
-      "intent": "The cure is noxious to the cured: the whole team is mended and the whole team is slowed for having drunk it. Legacy stripped 2 defense from the allies it healed, which the taxonomy cannot say -- `DefenseBuff.Of` refuses anything below 1, so there is no negative buff -- and the substitution is the one `infectious_blast` already uses, a defense shred rendered as the single stat debuff that exists. The bargain is the spell: without a cost it is a free team heal, and the Trickster is the class that makes you pay for things.",
+      "intent": "The cure is noxious to the cured: the whole team is mended and the whole team is left open for having drunk it. Legacy stripped 2 defense from the allies it healed and ADR 0035 gave that stat back, so the bargain is now written in the currency it was written in. The bargain is the spell: without a cost it is a free team heal, and the Trickster is the class that makes you pay for things.",
       "keep": [
         "Team-wide heal: it reaches the team or it is Rejuvenate",
-        "It always slows the allies it heals: the price is paid by the cured, which is what makes it noxious",
-        "Never enough slow to be worth casting on an enemy: this is a cure, not a weapon"
+        "It always shreds the allies it heals: the price is paid by the cured, which is what makes it noxious",
+        "The shred runs out: a cure that costs the team its armour for good is not a cure"
       ],
-      "note": "The bargain was sized against an initiative weight of 0.5 and ADR 0032 measured it at 2.1, which broke the spell rather than bending it: a slow of 2 costs 4.2 an ally where the heal of 4 is worth 3.2, so the cast read **-3.00 a round** -- worth less than doing nothing -- and its own bounds could not reach better than 3.30. The price is now a slow of **1**, the smallest the taxonomy can say, and the bounds are rebuilt around a heal that has room to pay for it: the heal reaches 5 instead of 4, the slow stops at 2 because 3 is unaffordable at any heal in this box, and the critical chance is a knob for the first time (ADR 0033 made the multiplier reach a direct heal). Two readings the numbers still hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, slowing the allies you heal made this spell read as strictly better than a plain heal of the same size.",
+      "note": "Sized against an initiative weight of 0.5, the bargain broke when ADR 0032 measured that weight at 2.1: a slow of 2 cost 4.2 an ally where the heal of 4 is worth 3.2, the cast read **-3.00 a round** -- worse than doing nothing -- and the price had to come down to a slow of 1 to be payable at all. The cost is now the shred legacy wrote, 2 defense for one round, and it is affordable in a way the substitution never was: defense is 0.65 a point, so the price is 1.30 an ally against a heal worth 3.20. That is the ADR's point in one line -- the spell did not need smaller numbers, it needed the right stat. The bounds stay where they were rebuilt, and the amount reaches 3 because the shred has room the slow did not. Two readings the numbers still hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, shredding the allies you heal makes this spell read as strictly better than a plain heal of the same size.",
       "knobs": [
-        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 5, "step": 1 },
@@ -545,15 +559,16 @@
     "spell:infectious_blast": {
       "name": "Infectious Blast",
       "class": "Trickster",
-      "intent": "The only spell that neither damages nor heals: one energy to slow the whole enemy team. It was a defense shred and is approximated with the one debuff the taxonomy has, which makes it the game's only pure tempo play.",
+      "intent": "The only spell that neither damages nor heals: one energy to strip the armour off the whole enemy team, and it never grows back. It is what the rest of the board hits through, so what it is worth depends on who is casting beside it.",
       "keep": [
         "No damage: it is control or it is nothing",
-        "The cheapest thing that touches all three enemies"
+        "The cheapest thing that touches all three enemies",
+        "The shred is permanent: the Trickster takes something off the board rather than borrowing it"
       ],
+      "note": "It carried the substitution ADR 0035 removed, and it carried it at the wrong price: rendered as tempo it read **25.20 a round**, the largest number in the catalogue, and `revenant_guards` and `death_squad` were both reported as having no bounds that could make them a choice beside it. As the defense debuff it always was it reads 11.70, inside the tier-3 band. The `revenant_guards` finding went away without either spell moving; `death_squad` is still reported, now against `revenant_guards` at 15.60, which is its own bounds and not this spell's. The duration knob went with the substitution -- the debuff is permanent, and a permanent duration is not a number the tuner can turn.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
     },

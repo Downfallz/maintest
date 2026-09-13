@@ -136,6 +136,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             {
                 HealOutcome heal => HealScore(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
                 EnergyOutcome energy => EnergyScore(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
+                EnergyDrainOutcome drain => EnergyDrainScore(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target]),
                 ConditionOutcome condition => ConditionScore(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target]),
                 _ => 0,
             };
@@ -196,6 +197,21 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private double EnergyScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
         remainingHealth == 0 ? 0 : -Sign(actor, target) * weights.Energy * amount;
 
+    /// <summary>
+    /// Energy taken is energy given with the sign turned over, clamped to what the target has because
+    /// <c>Creature.LoseEnergy</c> takes no more than that (ADR 0035) -- the same reason <see cref="HealScore"/>
+    /// clamps to the health that is missing, and the same reason the damage path reads the health that is left:
+    /// a resolution is priced before it is applied, so what the board can actually give up is read here.
+    /// <para>
+    /// The clamp is per outcome and not per target, so two drains in one cast would each be capped at the full
+    /// pool and together price more than the target can lose. <see cref="HealScore"/> has the same shape; only
+    /// the damage path groups per target first. No spell carries two drains, and a spell that did would need
+    /// the grouping rather than this note.
+    /// </para>
+    /// </summary>
+    private double EnergyDrainScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
+        -EnergyScore(actor, target, Math.Min(amount, target.Energy.Value), remainingHealth);
+
     private double ConditionScore(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth)
     {
         if (remainingHealth == 0)
@@ -213,6 +229,15 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
             DefenseBuff => 0,  // priced per target, with the rest of what the cast defends: see DefensiveScore
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount * rounds,
+            // A stand-in, and the same one `cast_value` uses for a buff: it does not read the damage the
+            // debuff actually lets through, the way `DefensiveScore` reads what a buff prevents (ADR 0035).
+            // That costs the bot more than precision. `DefensiveScore` is the only term that reads the threat
+            // a creature faces, and only a DefenseBuff reaches it, so nothing here can see that lowering a
+            // defense raises what the next hit takes -- neither an enemy's, which is the point of the debuff,
+            // nor its own caster's, which is the cost of `psycho_rush`'s recoil. The price is right in shape
+            // and the decision it feeds is blind; a spell that needs that seen needs `DefensiveScore` to read
+            // both kinds, which is a change to the one function every defensive spell is scored by.
+            DefenseDebuff debuff => sign * weights.Defense * debuff.Amount * rounds,
             _ => 0,
         };
     }

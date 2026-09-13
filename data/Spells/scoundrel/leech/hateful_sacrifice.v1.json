@@ -17,5 +17,11 @@
       "amount": 10
     }
   ],
-  "enabled": false
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "Damage",
+      "amount": 4
+    }
+  ]
 }

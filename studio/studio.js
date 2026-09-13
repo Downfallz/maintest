@@ -36,11 +36,13 @@ const EFFECTS = {
   Damage: { amounts: ['amount'] },
   Heal: { amounts: ['amount'] },
   EnergyGain: { amounts: ['amount'] },
+  EnergyDrain: { amounts: ['amount'] },
   Bleed: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
   Regeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
   EnergyRegeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
   Stun: { amounts: [], rounds: true, stacking: 'Refresh' },
   DefenseBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
+  DefenseDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
 };
 
@@ -356,11 +358,13 @@ function effectSummary(effect) {
     case 'Damage': return `${effect.amount} dmg`;
     case 'Heal': return `${effect.amount} heal`;
     case 'EnergyGain': return `+${effect.amount} energy`;
+    case 'EnergyDrain': return `-${effect.amount} energy`;
     case 'Bleed': return `${effect.amountPerRound}/r bleed`;
     case 'Regeneration': return `${effect.amountPerRound}/r regen`;
     case 'EnergyRegeneration': return `+${effect.amountPerRound}/r energy`;
     case 'Stun': return `stun ${effect.durationRounds ?? 1}r`;
     case 'DefenseBuff': return `+${effect.amount} def${rounds}`;
+    case 'DefenseDebuff': return `-${effect.amount} def${rounds}`;
     case 'InitiativeDebuff': return `-${effect.amount} init${rounds}`;
     default: return effect.kind || '';
   }

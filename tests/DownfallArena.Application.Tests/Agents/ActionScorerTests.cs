@@ -124,6 +124,22 @@ public sealed class ActionScorerTests
             .ShouldBe(-(3 + 5), 1e-9);
     }
 
+    /// <summary>
+    /// Taking energy is giving it with the sign turned over, and capped at what the target has (ADR 0035):
+    /// draining three from a creature holding one is worth one point, not three, because one is all it loses.
+    /// </summary>
+    [Fact]
+    public void Energy_taken_from_an_enemy_counts_for_and_only_up_to_what_the_enemy_has()
+    {
+        var board = Board(enemyHealth: 20);
+        var rich = board.Select(creature => creature.Id == Three ? creature with { Energy = Energy.Of(5) } : creature).ToList();
+        var poor = board.Select(creature => creature.Id == Three ? creature with { Energy = Energy.Of(1) } : creature).ToList();
+        var action = Strike(One, Three);
+
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), rich).ShouldBe(0.2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), poor).ShouldBe(0.2 * 1, 1e-9);
+    }
+
     [Fact]
     public void An_energyRegeneration_is_priced_at_the_energy_weight_over_the_rounds_it_lasts()
     {
@@ -204,6 +220,7 @@ public sealed class ActionScorerTests
         (EnergyRegeneration.Of(1, rounds: 1), EnergyRegeneration.Of(1, rounds: 2)),
         (DefenseBuff.Of(1, Duration.OfRounds(1)), DefenseBuff.Of(1, Duration.OfRounds(2))),
         (InitiativeDebuff.Of(1, Duration.OfRounds(1)), InitiativeDebuff.Of(1, Duration.OfRounds(2))),
+        (DefenseDebuff.Of(1, Duration.OfRounds(1)), DefenseDebuff.Of(1, Duration.OfRounds(2))),
     ];
 
     /// <summary>
@@ -221,6 +238,22 @@ public sealed class ActionScorerTests
         Scorer.Score(Cast(action, Three, Stun.For(2)), board).ShouldBe(3.0 * 2, 1e-9);
         Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(1, Duration.OfRounds(2))), board).ShouldBe(Tempo * 1 * 2, 1e-9);
         Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(Tempo * 2 * 3, 1e-9);
+    }
+
+    /// <summary>
+    /// A defense debuff is priced like the buff it mirrors — <c>defense x amount x rounds</c> — and not through
+    /// <see cref="ActionScorer"/>'s reading of damage prevented (ADR 0035). A permanent one is priced over the
+    /// same horizon every permanent condition is, not forever.
+    /// </summary>
+    [Fact]
+    public void A_defense_debuff_is_priced_per_round_and_counts_against_whoever_carries_it()
+    {
+        var board = Board(enemyHealth: 20);
+        var action = Strike(One, Three);
+
+        Scorer.Score(Cast(action, Three, DefenseDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(0.65 * 2 * 3, 1e-9);
+        Scorer.Score(Cast(action, One, DefenseDebuff.Of(2, Duration.OfRounds(3))), board).ShouldBe(-0.65 * 2 * 3, 1e-9);
+        Scorer.Score(Cast(action, Three, DefenseDebuff.Of(1, Duration.Permanent)), board).ShouldBe(0.65 * 1 * 3, 1e-9);
     }
 
     private static CombatResolution Cast(CombatAction action, CreatureId target, LastingEffect effect) =>

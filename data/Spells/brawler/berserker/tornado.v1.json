@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Berserker",
   "initiative": 1,
-  "energyCost": 2,
+  "energyCost": 3,
   "criticalChance": 0.33,
   "targeting": {
     "origin": "Enemy",
@@ -17,5 +17,5 @@
       "amount": 4
     }
   ],
-  "enabled": false
+  "enabled": true
 }

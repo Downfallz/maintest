@@ -24,7 +24,7 @@ public sealed class ObservationBuilderTests
 
         observation.ShouldBe(Builder.Build(board));
         observation.SchemaId.ShouldBe(Schema.Id);
-        observation.SchemaId.ShouldStartWith("features:v3+");
+        observation.SchemaId.ShouldStartWith("features:v4+");
         observation.Features.Count.ShouldBe(Schema.Length);
         Builder.Schema.ShouldBeSameAs(Schema);
     }
@@ -180,6 +180,48 @@ public sealed class ObservationBuilderTests
         features[Schema.IndexOf("enemy1_Stun_amount")].ShouldBe(0f);
     }
 
+    /// <summary>
+    /// The schema's kind list and this builder's amount switch are two lists that have to move together, and
+    /// nothing but this makes them. `DefenseDebuff` went into one and not the other, and every recording run
+    /// threw the moment one landed -- with the whole suite green, because no test put one on a board.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(EveryPublishedKind))]
+    public void Every_condition_kind_the_schema_publishes_has_an_amount(string kind)
+    {
+        var effect = Sample(kind);
+        var creature = Boards.Creature(1, PlayerSlot.Player1) with { Conditions = [new ConditionSnapshot(effect, 1)] };
+
+        var features = Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])).Features;
+
+        features[Schema.IndexOf($"own0_{kind}_amount")].ShouldBeGreaterThan(0f, $"'{kind}' has no amount in the builder");
+        features[Schema.IndexOf($"own0_{kind}_remaining")].ShouldBe(1f);
+    }
+
+    public static TheoryData<string> EveryPublishedKind()
+    {
+        var data = new TheoryData<string>();
+        foreach (var kind in FeatureSchema.ConditionKinds)
+        {
+            data.Add(kind);
+        }
+
+        return data;
+    }
+
+    /// <summary>One condition of each published kind, all of amount 2 for one round so the test reads alike.</summary>
+    private static LastingEffect Sample(string kind) => kind switch
+    {
+        "Bleed" => Bleed.Of(2, rounds: 1),
+        "Regeneration" => Regeneration.Of(2, rounds: 1),
+        "EnergyRegeneration" => EnergyRegeneration.Of(2, rounds: 1),
+        "Stun" => Stun.For(1),
+        "DefenseBuff" => DefenseBuff.Of(2, Duration.OfRounds(1)),
+        "DefenseDebuff" => DefenseDebuff.Of(2, Duration.OfRounds(1)),
+        "InitiativeDebuff" => InitiativeDebuff.Of(2, Duration.OfRounds(1)),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "The schema publishes a kind this test has no sample for."),
+    };
+
     [Fact]
     public void A_condition_kind_outside_the_schema_is_refused()
     {
@@ -188,7 +230,7 @@ public sealed class ObservationBuilderTests
         var exception = Should.Throw<InvalidOperationException>(() => Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])));
 
         exception.Message.ShouldContain("Unpublished");
-        exception.Message.ShouldContain("features:v3");
+        exception.Message.ShouldContain("features:v4");
     }
 
     [Fact]

@@ -99,23 +99,8 @@ public sealed class EvaluationRunner(BatchRunner batches, CombatStatsRecorder? c
                     Wins = entry.Value.Wins,
                     Losses = entry.Value.Losses,
                     Draws = entry.Value.Draws,
-                    Resolved = entry.Value.Effects.Resolved,
-                    Fizzled = entry.Value.Effects.Fizzled,
-                    Criticals = entry.Value.Effects.Criticals,
-                    Damage = entry.Value.Effects.Damage,
-                    Healing = entry.Value.Effects.Healing,
-                    Energy = entry.Value.Effects.Energy,
-                    Stuns = entry.Value.Effects.Stuns,
-                    Bleeds = entry.Value.Effects.Bleeds,
-                    Regens = entry.Value.Effects.Regens,
-                    EnergyRegenerations = entry.Value.Effects.EnergyRegenerations,
-                    DefenseBuffs = entry.Value.Effects.DefenseBuffs,
-                    InitiativeDebuffs = entry.Value.Effects.InitiativeDebuffs,
-                    ConditionDamage = entry.Value.Effects.ConditionDamage,
-                    ConditionHealing = entry.Value.Effects.ConditionHealing,
-                    ConditionEnergy = entry.Value.Effects.ConditionEnergy,
                     ResolvedWhenWon = entry.Value.ResolvedWhenWon,
-                })
+                }.With(entry.Value.Effects))
                 .OrderByDescending(outcome => outcome.Score)
                 .ThenByDescending(outcome => outcome.Sides)
                 .ThenBy(outcome => outcome.Spell, StringComparer.Ordinal),

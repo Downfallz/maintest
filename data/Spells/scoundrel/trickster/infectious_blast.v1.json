@@ -13,10 +13,10 @@
   },
   "effects": [
     {
-      "kind": "InitiativeDebuff",
+      "kind": "DefenseDebuff",
       "amount": 2,
-      "durationRounds": 2
+      "permanent": true
     }
   ],
-  "enabled": false
+  "enabled": true
 }
