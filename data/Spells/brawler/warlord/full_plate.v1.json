@@ -4,7 +4,7 @@
   "spellType": "Passive",
   "creatureClass": "Warlord",
   "initiative": 1,
-  "energyCost": 0,
+  "energyCost": 1,
   "criticalChance": 0,
   "targeting": {
     "origin": "Self",
@@ -14,9 +14,9 @@
   "effects": [
     {
       "kind": "DefenseBuff",
-      "amount": 1,
+      "amount": 2,
       "permanent": true
     }
   ],
-  "enabled": false
+  "enabled": true
 }

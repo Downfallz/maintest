@@ -5,7 +5,7 @@
   "creatureClass": "Berserker",
   "initiative": 1,
   "energyCost": 3,
-  "criticalChance": 0,
+  "criticalChance": 0.8,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,12 +14,8 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 4
-    },
-    {
-      "kind": "Damage",
-      "amount": 3
+      "amount": 7
     }
   ],
-  "enabled": false
+  "enabled": true
 }

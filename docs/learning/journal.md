@@ -4,6 +4,184 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-12. Opener 3 of 9: Enraged Charge becomes the gamble, and Full Plate gets its second point
+
+- **What changed**: `enraged_charge` merges its two damage effects into one of **7** and takes a critical
+  chance of **0.8**, the highest in the catalogue, keeping its price of 3. `full_plate` goes to **2** points
+  of permanent defense. Content `5095c388` to **`113f9acd`**.
+- **The Berserker's opener changes sides.** Its entry called it "the reliable version of the Berserker's
+  gamble", the dependable half of a line whose gambling half (`psycho_rush`) is a tier deeper and disabled —
+  so the class was offered the safe version of a choice it could not yet make. The opener is the gamble now,
+  one heavy swing on the highest roll in the game, and depth can carry the reliable one.
+- **Two effects into one**: the scorer sums damage per target anyway, so a flurry of 4 and 3 and a swing of 7
+  are the same number with one of them harder to read. Its `keep` said "two damage effects: it reads as a
+  flurry"; that is no longer what the spell is for and the entry says so.
+- **Read a round, not a cast** — and this is where the reasoning had to be corrected twice. 12.60 a cast
+  looks like twice the bolt and is 8.40 a round against `protective_slam`'s 7.33, because three energy at an
+  income of two comes up twice in three rounds. The first arithmetic here divided by 2 instead of 1.5 and
+  made the spell look unreachable inside its own bounds; energy has no cap and carries, so the amortised rate
+  is the right one.
+- **Numbers**: `enraged_charge` **32 casts to 322**, ten times, with a 51.3 % win share for the sides that
+  declare it against a 51.9 % baseline — the healthiest reading any opener has had.
+- **Full Plate: the prediction was wrong.** Yesterday's entry said nothing inside its bounds would make it a
+  choice. At two points it is cast **56 times**, from zero. The reason the estimate missed is the same one
+  that keeps it out of `outclassed`: the score divides what a buff prevents by the allies it could have gone
+  to, and reading that without a board understated what a second point does to the threat behind it.
+- **And the cost, stated plainly: this went the wrong way on the things the objective measures.**
+  `protective_slam` falls from 354 casts to **83**, `guard` from 471 to 149, spells cast from 14 to 13, and
+  matches from 6.5 rounds to **5.8** — further below the 8..16 band, not nearer. An opener at 8.40 a round is
+  now the strongest thing in the tier and it took the air from the one designed before it.
+- **Which is what a spell-at-a-time pass does**, each spell designed against the state the last one left. The
+  tier is re-measured whole at the end and this entry is not a claim that the tier is balanced — it is the
+  record of what one spell did to the others.
+
+## 2026-09-12. The knobs check reads a round instead of a cast, and stops skipping the defensive half
+
+- **What changed**: `learning/`, no content. `outclassed` compares a defensive spell with defensive spells
+  instead of skipping it, and everything it reads is divided by the rounds a cast takes to pay for itself.
+- **The defensive half.** Spells with no `Damage` effect were skipped outright, because a heal and an attack
+  share no unit — true, and it left a dead defensive spell invisible: `full_plate` at 0 casts and `guard` at
+  471 read the same to every check in the repository. What the reading misses about a defensive spell, the
+  kill it denies (ADR 0022) and the threat behind it, it misses on **both** sides of a defensive pair, so it
+  cancels there and does not cancel against an attack. Partitioning rather than skipping finds `momentum`
+  (0.40 against 3.90) and `summon_minions` (0.80) — two of the nine openers, both never cast.
+- **A round, not a cast**, which is the same mistake as the sweep on the other axis. Energy carries between
+  rounds, so a spell costing three at an income of two comes up twice in three rounds — 1.5 rounds a cast,
+  not 2 — floored at one because a creature acts once a round however cheap the spell is. Read a cast at a
+  time, `enraged_charge` at 12.60 reported `protective_slam` as never a choice on content that casts it 354
+  times; a round at a time it is 8.40 against the slam's 7.33 and there is nothing to report.
+- **Divided by, not filtered on.** Skipping costlier rivals would have been the cheaper fix and it loses the
+  case this check exists for: `pummel` at one energy really is outclassed by `lightning_bolt` at two, 5.15 a
+  round against 6.47. A cheaper spell can be outclassed through its price as well as despite it.
+- **What the invariant is worth.** Both halves of this were found the same way — by making the change, running
+  it against the catalogue, and reading a finding the measurement contradicted. `outclassed` may under-report
+  and may not invent, and each time it invented one, the cause was a real axis it was not reading.
+- **Left standing**: `rejuvenate` reports at 3.20 against `guard`'s 3.25, a 1.5 % hairline on a spell cast 145
+  times. True about the bounds and not worth a tolerance constant to silence.
+- **Not fixed, and now understood**: `full_plate` is still not reported, because the reading has no board. It
+  is dead for a reason no static check can see — it can only armour *itself*, while `guard` puts its defense
+  on whichever ally is under threat.
+
+## 2026-09-12. Opener 2 of 9: Full Plate gets a price, and is still not a choice
+
+- **What changed**: `full_plate` costs **1 energy** instead of 0, and its cost knob's lower bound goes from
+  0 to 1 so no pass can put it back. The permanent point of defense is untouched. Content `a319d2cc` to
+  **`5095c388`**.
+- **Why the price and not a cap.** The spell is `SpellType.Passive` in a model where nothing implements a
+  passive, so it is castable, repeatable and permanent — bounded by nothing but the round cap. Capping it
+  (a few rounds instead of permanent) would have made it a second `guard` and dropped the one idea the spell
+  has, armour the Warlord always wears. The price is the brake that keeps the idea: half a round's income per
+  point, so a creature armouring itself is a creature not attacking.
+- **The check written an hour earlier is what cleared it.** `unbounded` reported `full_plate` before this and
+  reports nothing after, which is the whole reason that check reads the price rather than the magnitude.
+- **Numbers**: play is **identical**, cast for cast and round for round — 6.5 rounds, the same 14 spells in
+  the same counts. `full_plate` was cast 0 times before and is cast 0 times now. The digest is regenerated
+  because the hash moved, not because an outcome did.
+- **Said plainly: this did not make it a choice, and nothing inside its bounds will.** Greedy prices
+  `weights.Defense x prevented / allies`, so a permanent point of defense on one creature of three reads
+  **0.65** against the bolt's 6.47; at its knob ceiling of 2 points it reads 1.30. `outclassed` cannot see
+  this because it skips spells with no `Damage` effect — the rule that keeps it from reporting `rejuvenate`
+  and `guard`, which are cast for a survival it cannot read. But `guard` is cast 471 times and `full_plate`
+  zero, and no reading in the tooling tells those two apart.
+- **So the deferral is now concrete**: `full_plate` becomes a real choice when a passive is a real always-on
+  modifier the creature never spends an activation on, which is a domain rule and an ADR, not a content pass.
+  Until then it is a safe dead spell rather than a dangerous one, and that is the whole claim.
+
+## 2026-09-12. The knobs check learns to read a sweep, and to see a free permanent buff
+
+- **What changed**: `learning/`, no content. `cast_value` now prices a cast for every target the spell is
+  allowed, `outclassed` only takes a rival that reaches as many targets or more, and a new `unbounded` check
+  reports a permanent effect that costs no energy. No number in `data/` moved, so the content hash and the
+  digest are untouched.
+- **The sweep.** `cast_value` read one target where `ActionScorer` sums a resolution over all of them, so
+  `meteor` priced at **6.00** and played at **10.74 damage a landed cast** — the largest single source in the
+  catalogue, passing every check. Measured over the benchmark seeds, the single-target spells land 0.88 to
+  1.01 of their expected value and `meteor` lands **1.79** of its three targets: reading one understated it
+  by 1.8x, reading three overstates it by 1.7x. Three is the reading kept, because the question the number
+  answers — can this spell ever be a choice — is a question about a spell at its best.
+- **Which broke the module's own rule, and the fix is the second half.** With a sweep priced at 18.00,
+  `outclassed` made `meteor` the bar for its whole tier and reported `protective_slam` as never a choice on
+  content that casts it **354 times in 400 matches**. That module states its error may only run one way —
+  under-report, never invent — so a rival now has to reach as many targets or more. A single-target spell
+  cannot match a sweep without ceasing to be single-target, which is `dominates`'s axis and not this one.
+  With the rule, the findings are `parasite_jab` twice, `pummel` and `throwing_star`: the four true ones.
+- **The permanent buff, where the diagnosis was wrong and worth writing down.** The suspicion was that
+  `PERMANENT_CONDITION_ROUNDS = 3` understated a permanent effect. It does not: it matches
+  `ActionScorer.PermanentConditionRounds`, and raising it would not find the real problem anyway, because
+  every reading here prices **one cast** and one `full_plate` is a point of defense at any horizon. What has
+  no brake is re-casting: free, never expiring, stacking, bounded by nothing but the round cap. So the check
+  reads the **price**, not the magnitude, and `full_plate` is the one spell in the catalogue that trips it.
+  Its own cost knob reaches zero, so this is also what stops a tuning pass from putting it back.
+- **Why it matters now**: the nine openers are being designed against these numbers. A tool that reads a
+  sweep at a third of its worth and calls an unbounded spell fine is not a tool to design nine spells with.
+
+## 2026-09-12. Opener 1 of 9: Protective Slam protects by staggering
+
+- **What changed**: `protective_slam` gains an `InitiativeDebuff` of 2 over two rounds and its damage goes
+  from 3 to 4. Content `ef078082` to **`a319d2cc`**. Cast value 4.00 to **7.33**, against 6.47 for
+  `lightning_bolt` at the same two energy.
+- **The identity decision**: legacy gave the slam a point of defense on its caster, which the taxonomy cannot
+  express — a spell has one target origin, so hitting an enemy and protecting an ally are two spells. Rather
+  than leave it a plain hit that nothing can save, protection is expressed as tempo: a slammed enemy acts
+  later. It is the one protective thing that can be said to an enemy, and it gives the spell teeth a bigger
+  hit would not have, because defense absorbs damage and does nothing to a stagger.
+- **Above the tier-1 baseline on purpose.** A deeper spell outclassing a shallower one is what a talent tree
+  is for — `dominance()` already exempts it — so an opener should beat `lightning_bolt`, not sit under it.
+  How far above is bounded by the match, not by taste: 3 creatures of 20 health give a side 60, three casts a
+  round at 6.47 wipe that in 3.1 rounds in theory and 6.2 in play, and `averageRounds` wants 8 to 16. The
+  tier 0 to tier 1 step was 2.15x; repeating it here would put an opener at 13.9 and end matches in half the
+  rounds we already cannot afford. The premium is therefore about a fifth, and the reward for the pick is the
+  capability rather than the magnitude.
+- **Where the value sits, and why it is mostly damage.** Damage 4 with a debuff of 2 puts 27 % of the cast
+  value on `weights.Initiative`; 3 damage with a debuff of 3 reads the same 7.00 but puts 43 % there. That
+  weight is 0.5 on reasoning alone (ADR 0018) and `search-weights` has never tuned it, so the smaller
+  exposure wins. The bounds reach the other shape.
+- **Numbers**, greedy mirror on the benchmark seeds: **0 casts to 354**, declared by 155 sides of 400,
+  88.1 % of declarations land. Matches lengthen from 6.2 rounds to **6.5** — the stagger slows the damage
+  race — draws fall to zero, and the spells cast go from 12 to 14: `wait` and `poison_slash` come back.
+  `enraged_charge` falls from 122 casts to 32, which is the Berserker opener losing to the Mercenary one and
+  is opener 3 of 9's problem to answer.
+- **The caveat, with a number on it now**: sides that declare it win **37.4 %** of the time against a
+  51.9 % baseline. It is cast often and taking it currently correlates with losing. That is either the
+  opportunity cost of the picks it takes, or the unmeasured initiative weight paying less on the board than
+  in the score — the risk named above, arriving. Left standing rather than patched: it is one spell of nine,
+  and the tier is re-measured whole at the end.
+
+## 2026-09-12. The nine openers of tier 2 are on, with the prototype's numbers and no balance claim
+
+- **What changed**: the one opener of each of the nine specialisations is enabled — `protective_slam`,
+  `full_plate`, `enraged_charge`, `parasite_jab`, `momentum`, `noxious_cure`, `meteor`, `summon_minions`,
+  `healing_screech` — together with `talent-tree:base_creature:v1`, which carries them, and the one creature
+  now points at that tree. The eighteen deeper spells of those specialisations stay off and are pruned from
+  their nodes. The catalogue goes from 9 spells to **18**. Content `37ec4b49` to **`ef078082`**.
+- **`talent-tree:core_classes:v1` is disabled in the same change.** `base_creature` has the same root, the
+  same three branch nodes and the same six tier-1 spells, so it is a strict superset: leaving both on would
+  ship a tree no creature can reach. This is what the one failing test caught —
+  `The_repository_content_builds_and_loads` asserts the repository ships a single tree, and that assertion is
+  right.
+- **No number was tuned.** Every enabled spell carries the value the legacy port gave it. This entry is the
+  measurement of that state, not a balance pass, and the state is deliberately unbalanced.
+- **Numbers**, greedy mirror on the benchmark seeds: matches fall from 8.5 rounds to **6.2**, 0.5 % reach the
+  round cap, 12 of the 18 spells are cast. Of the nine openers, four are cast — `meteor` **946**,
+  `noxious_cure` 151, `enraged_charge` 122, `healing_screech` 55 — and **five are never cast at all**:
+  `protective_slam`, `full_plate`, `parasite_jab`, `momentum`, `summon_minions`.
+- **`meteor` is the new monopoly**: 946 landed casts for **8928 damage**, the largest single source in the
+  game. Four damage on up to three enemies for three energy, on teams of three.
+- **Why the five are dead, and it is not close.** Greedy takes the highest raw score it can afford, and
+  `weights.Energy` is 0.2, so a cheaper spell gains almost nothing in the score: cost bites through the two
+  energy a round pays, not through the price. `lightning_bolt` carries 6.47 at two energy and any creature can
+  unlock it beside its own specialisation, so that is the bar. `protective_slam` carries 4.00 at the same
+  price, `parasite_jab` 3.00, `full_plate` 1.95, `summon_minions` 0.60, `momentum` 0.20 — and `momentum` and
+  `summon_minions` both hand over less energy per activation than the free `wait` every creature starts with.
+  `check-knobs` reaches the same finding from the content alone: `lightning_bolt` strictly dominates
+  `protective_slam` and `parasite_jab`, and neither becomes a choice anywhere inside its declared bounds.
+- **A gap in the tooling this exposed**: `cast_value` — what `check-knobs` compares spells with — ignores
+  `maxTargets`, while `ActionScorer` sums a cast over every target it hits. `meteor` reads 6.00 to the knobs
+  and plays at roughly 18. That is why an AoE could be the strongest spell in the game and no check said so.
+  Recorded here; fixing it is its own change.
+- **What follows**: the nine openers are designed one at a time, identity first, and this digest is the
+  before. Nothing in this entry is a claim that the tier is balanced.
+
 ## 2026-09-12. The catalogue tuned against a yardstick that measures it, and Greedy narrows anyway
 
 - **What this is**: `tune-content --seed 0`, 24 rounds of 6, `--pair-depth 2`, against the objective of
