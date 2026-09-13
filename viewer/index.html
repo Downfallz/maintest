@@ -721,6 +721,28 @@
       return entry.appliedOutcomes || entry.resolution.outcomes || [];
     }
 
+    // What each outcome adds to its spell's tally: an amount for the instant kinds, one application for a
+    // condition. A lookup rather than a chain, for the reason CONDITION_SLOTS is one -- and because the chain
+    // was what tipped creditResolution past the complexity the build allows.
+    const OUTCOME_SLOTS = {
+      DamageOutcome: 'damage',
+      HealOutcome: 'healing',
+      EnergyOutcome: 'energy',
+      EnergyDrainOutcome: 'energyDrained',
+    };
+
+    function creditTally(tally, outcome) {
+      if (outcome.kind === 'ConditionOutcome') {
+        const slot = conditionSlot(outcome);
+        if (slot) tally[slot] += 1;
+        else console.warn('Unknown condition kind, not counted:', outcome.effect?.kind);
+        return;
+      }
+
+      const slot = OUTCOME_SLOTS[outcome.kind];
+      if (slot) tally[slot] += outcome.amount || 0;
+    }
+
     function creditResolution(rows, spells, actor, entry) {
       const resolution = entry.resolution;
       const tally = spellTally(spells, spellName(resolution.action.spell), actor ? actor.owner : null);
@@ -740,15 +762,7 @@
 
       for (const outcome of landed(entry)) {
         creditOutcome(rows, actor, outcome);
-        if (outcome.kind === 'DamageOutcome') tally.damage += outcome.amount || 0;
-        else if (outcome.kind === 'HealOutcome') tally.healing += outcome.amount || 0;
-        else if (outcome.kind === 'EnergyOutcome') tally.energy += outcome.amount || 0;
-        else if (outcome.kind === 'EnergyDrainOutcome') tally.energyDrained += outcome.amount || 0;
-        else if (outcome.kind === 'ConditionOutcome') {
-          const slot = conditionSlot(outcome);
-          if (slot) tally[slot] += 1;
-          else console.warn('Unknown condition kind, not counted:', outcome.effect?.kind);
-        }
+        creditTally(tally, outcome);
       }
     }
 
