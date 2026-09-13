@@ -331,7 +331,7 @@
         "The most expensive cast in the catalogue",
         "Damage and stun together, or it is just an expensive hit"
       ],
-      "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it.",
+      "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it. Its chance then came back down from 0.8 to 0.75, one round after it went up: at 0.8 it tied `enraged_charge`, whose entry keeps 'the highest critical chance in the catalogue' as the thing that makes it a Berserker spell rather than an expensive hit. Nothing this spell keeps mentions its chance, so the tie cost the other class its identity and cost this one nothing -- 9.30 a round to 9.12.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
@@ -360,11 +360,13 @@
     "spell:tornado": {
       "name": "Tornado",
       "class": "Berserker",
-      "intent": "The cheapest sweep in the game: against a full team it is the best damage per energy anywhere. Its cost is the first place to look when matches end too quickly.",
+      "intent": "The sweep: against a full team it is among the best damage per energy anywhere. Its cost is the first place to look when matches end too quickly, and that is where it has been looked.",
       "keep": [
-        "The cheapest spell that reaches three enemies",
-        "Its efficiency comes from breadth, not from the size of the hit"
+        "The cheapest *damaging* sweep -- never the cheapest spell that reaches three, which is `infectious_blast` at one",
+        "Its efficiency comes from breadth, not from the size of the hit",
+        "It hits harder than `meteor` at the same price, or the two are one spell"
       ],
+      "note": "Its price went 2 to 3, which its own intent nominates: at 15.96 a round against a tier-3 band of 8 to 14 it was the second-largest reading in the catalogue, and matches were ending at 6.4 rounds under a band of 8. At 3 it reads 10.64. The alternative measured -- damage 4 to 3, keeping the price at 2 -- reads 7.01 rounds against this one's 6.55 and is the better number, but it turns the spell into a cheaper `meteor`: the same hit on the same three targets, a tier deeper. A tier-3 spell that copies a tier-2 one is the defect this pass exists to remove, so the better reading lost. The old first keep, 'the cheapest spell that reaches three enemies', had been false since `infectious_blast` was enabled at a cost of one.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
@@ -380,6 +382,7 @@
         "The line's gamble: big, single target, expensive",
         "Priced as if the recoil existed, because one day it will"
       ],
+      "note": "The Berserker is the class whose point is the roll -- `enraged_charge` carries the highest critical chance in the catalogue and says so in its own first line -- and neither spell behind it gambled at all: both sat at 0.33, below the opener. This one now takes 0.5, the top of its own bounds, with the damage at 10: 7.98 a round to 10.00, inside the tier-3 band, and 'the line's gamble' becomes true of the numbers and not only of the sentence. Measured, 6 casts to 53.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },

@@ -5,7 +5,7 @@
   "creatureClass": "Warlord",
   "initiative": 1,
   "energyCost": 4,
-  "criticalChance": 0.8,
+  "criticalChance": 0.75,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
