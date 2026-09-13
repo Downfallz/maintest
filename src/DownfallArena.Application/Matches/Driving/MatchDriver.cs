@@ -54,6 +54,19 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         }
     }
 
+    /// <summary>The creatures still to declare, in the order they will act. Any without a slot go last, in the
+    /// order the options gave them, so a creature that is not on the timeline is neither lost nor reordered.</summary>
+    private static IEnumerable<IntentOption> InTimelineOrder(IReadOnlyList<IntentOption> options, PlayerBoardState board)
+    {
+        var position = new Dictionary<CreatureId, int>();
+        for (var index = 0; index < board.Timeline.Count; index++)
+        {
+            position[board.Timeline[index].Creature] = index;
+        }
+
+        return options.OrderBy(option => position.TryGetValue(option.Creature, out var slot) ? slot : int.MaxValue);
+    }
+
     private async Task<bool> ActAsync(MatchId matchId, PlayerSlot slot, IPlayerAgent agent, PlayerBoardState board, PlayerOptions options, CancellationToken cancellationToken)
     {
         switch (options.Kind)
@@ -73,7 +86,11 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
                 // declares in sequence and knows what they have already declared; the projection has carried
                 // those intents all along (`PlayerBoardState.Intents`) and this loop used to hand every
                 // creature the same board from before the first of them chose (ADR 0039).
-                foreach (var option in Section(options.Intent).Creatures)
+                //
+                // In timeline order, so that a creature deciding has already heard from every ally that acts
+                // before it. Asked in any other order, an ally that swings first may not have chosen yet, and
+                // what it is about to do cannot be read at all.
+                foreach (var option in InTimelineOrder(Section(options.Intent).Creatures, board))
                 {
                     var current = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(matchId, slot), cancellationToken);
                     if (current.IsFailure)
