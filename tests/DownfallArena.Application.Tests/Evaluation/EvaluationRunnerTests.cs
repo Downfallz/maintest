@@ -210,6 +210,30 @@ public sealed class EvaluationRunnerTests
         fromTable.ShouldBe(fromReports / 2, "self-play replays each match once more, and the table counts it once");
     }
 
+    /// <summary>
+    /// Every count <see cref="SpellEffects"/> holds reaches the column of its own name. The copy is seventeen
+    /// lines of one shape, so a wrong namesake -- <c>DefenseDebuffs = effects.InitiativeDebuffs</c> -- compiles,
+    /// keeps every total right, and moves only the one column nothing asserts on. Giving each count a value of
+    /// its own is what tells them apart, and reading the field list off the record's own constructor is what
+    /// makes a count added later fail here rather than go quietly uncopied.
+    /// </summary>
+    [Fact]
+    public void Every_count_a_spell_did_is_copied_onto_the_column_of_its_own_name()
+    {
+        var constructor = typeof(SpellEffects).GetConstructors().Single(candidate => candidate.GetParameters().Length > 1);
+        var counts = constructor.GetParameters();
+        var effects = (SpellEffects)constructor.Invoke([.. counts.Select((_, index) => (object)(index + 1))]);
+
+        var outcome = new SpellOutcome { Spell = "spell:strike:v1", Intents = 0, Sides = 0, Wins = 0, Losses = 0, Draws = 0 }.With(effects);
+
+        counts.Length.ShouldBeGreaterThan(10, "this is the whole point of the test: there are many of them");
+        foreach (var count in counts)
+        {
+            var column = typeof(SpellOutcome).GetProperty(count.Name!).ShouldNotBeNull($"'{count.Name}' has no column of its own");
+            column.GetValue(outcome).ShouldBe(typeof(SpellEffects).GetProperty(count.Name!)!.GetValue(effects), $"'{count.Name}' is copied from another count");
+        }
+    }
+
     [Fact]
     public async Task An_evaluation_without_a_combat_recorder_reports_no_effects_rather_than_wrong_ones()
     {

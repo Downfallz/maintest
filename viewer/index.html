@@ -478,6 +478,7 @@
         case 'DamageOutcome': return `${target} takes ${outcome.amount}${outcome.critical ? ' (critical)' : ''}`;
         case 'HealOutcome': return `${target} heals ${outcome.amount}`;
         case 'EnergyOutcome': return `${target} gains ${outcome.amount} energy`;
+        case 'EnergyDrainOutcome': return `${target} loses ${outcome.amount} energy`;
         case 'ConditionOutcome': return `${target} gets ${outcome.effect.kind}`;
         default: return `${target}: ${outcome.kind}`;
       }

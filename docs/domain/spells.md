@@ -28,8 +28,10 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Temporary` + `Stats.Damage`, `Length` | damage the targets each round | `Bleed` (`amountPerRound`, `durationRounds`) |
 | `EffectType.Direct` + `Stats.Health` | heal the targets now | `Heal` |
 | `EffectType.Direct` + `Stats.Energy` | give the targets energy | `EnergyGain` |
+| `EffectType.Direct` + `Stats.Energy`, negative | take energy off the targets | `EnergyDrain` (ADR 0035) |
 | `EffectType.Direct` + `Stats.Defense` | raise the targets' defense for good | `DefenseBuff` with `permanent: true` |
 | `EffectType.Temporary` + `Stats.Defense`, `Length` | raise it for a few rounds | `DefenseBuff` with `durationRounds` |
+| `EffectType.Direct` or `Temporary` + `Stats.Defense`, negative | lower it, for good or for a few rounds | `DefenseDebuff`, `permanent: true` or `durationRounds` (ADR 0035) |
 | `EffectType.Direct` + `Stats.Stun` | stun the targets | `Stun` |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
 | `SpellType`, `CharacterClass`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |

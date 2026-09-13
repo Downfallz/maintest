@@ -124,4 +124,38 @@ public sealed record SpellOutcome
     /// </para>
     /// </summary>
     public double CastShareWhenWon => Resolved == 0 ? 0 : (double)ResolvedWhenWon / Resolved;
+
+    /// <summary>
+    /// Everything <see cref="SpellEffects"/> counted, copied onto this outcome field by field.
+    /// <para>
+    /// It lives here rather than inline in the caller because it is seventeen lines of the same shape, each one
+    /// a chance to name the wrong source field -- a mistake that compiles, passes every test that reads a total
+    /// rather than a particular column, and quietly moves a number balance is judged on.
+    /// <c>EvaluationRunnerTests</c> pins it by giving every count a value of its own.
+    /// </para>
+    /// </summary>
+    public SpellOutcome With(SpellEffects effects)
+    {
+        ArgumentNullException.ThrowIfNull(effects);
+        return this with
+        {
+            Resolved = effects.Resolved,
+            Fizzled = effects.Fizzled,
+            Criticals = effects.Criticals,
+            Damage = effects.Damage,
+            Healing = effects.Healing,
+            Energy = effects.Energy,
+            EnergyDrained = effects.EnergyDrained,
+            Stuns = effects.Stuns,
+            Bleeds = effects.Bleeds,
+            Regens = effects.Regens,
+            EnergyRegenerations = effects.EnergyRegenerations,
+            DefenseBuffs = effects.DefenseBuffs,
+            DefenseDebuffs = effects.DefenseDebuffs,
+            InitiativeDebuffs = effects.InitiativeDebuffs,
+            ConditionDamage = effects.ConditionDamage,
+            ConditionHealing = effects.ConditionHealing,
+            ConditionEnergy = effects.ConditionEnergy,
+        };
+    }
 }

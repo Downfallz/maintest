@@ -142,6 +142,42 @@ public sealed class CombatStatsRecorderTests
         effects.Energy.ShouldBe(0);
     }
 
+    /// <summary>
+    /// Each lasting kind is counted in the field of its own name. <c>Conditions&lt;DefenseDebuff&gt;</c> and
+    /// <c>Conditions&lt;InitiativeDebuff&gt;</c> differ by one word, and swapping them moves a number the
+    /// balance objective reads while every total stays right -- so the kinds go on in one cast, in numbers that
+    /// tell them apart, and each is read back on its own.
+    /// </summary>
+    [Fact]
+    public async Task Each_condition_kind_is_counted_in_the_field_of_its_own_name()
+    {
+        var match = _store.Started();
+        var actor = match.Creatures[0];
+        var enemy = match.Creatures.First(creature => creature.Owner != actor.Owner);
+        LastingEffect[] applied =
+        [
+            Stun.For(1),
+            Bleed.Of(1, rounds: 1), Bleed.Of(2, rounds: 1),
+            Regeneration.Of(1, rounds: 1), Regeneration.Of(2, rounds: 1), Regeneration.Of(3, rounds: 1),
+            .. Enumerable.Range(0, 4).Select(round => (LastingEffect)EnergyRegeneration.Of(round + 1, rounds: 1)),
+            .. Enumerable.Range(0, 5).Select(amount => (LastingEffect)DefenseBuff.Of(amount + 1, Duration.OfRounds(1))),
+            .. Enumerable.Range(0, 6).Select(amount => (LastingEffect)DefenseDebuff.Of(amount + 1, Duration.OfRounds(1))),
+            .. Enumerable.Range(0, 7).Select(amount => (LastingEffect)InitiativeDebuff.Of(amount + 1, Duration.OfRounds(1))),
+        ];
+        var outcomes = applied.Select(effect => (EffectOutcome)new ConditionOutcome(enemy.Id, effect)).ToList();
+
+        await RecordAsync(match, actor.Id, aimed: outcomes, landed: outcomes);
+
+        var effects = Recorder.SpellsOf(match.Id, actor.Owner)[TestContent.Strike.Value];
+        effects.Stuns.ShouldBe(1);
+        effects.Bleeds.ShouldBe(2);
+        effects.Regens.ShouldBe(3);
+        effects.EnergyRegenerations.ShouldBe(4);
+        effects.DefenseBuffs.ShouldBe(5);
+        effects.DefenseDebuffs.ShouldBe(6);
+        effects.InitiativeDebuffs.ShouldBe(7);
+    }
+
     [Fact]
     public void A_match_nothing_was_recorded_for_reports_no_spells_rather_than_failing()
     {

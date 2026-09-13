@@ -233,7 +233,8 @@ between them is a design decision.
 
 The reading is coarse on purpose — no board, no defense, no cap at a target's health, no threat
 behind a defensive effect (so a `DefenseBuff` is priced as `defense x amount x rounds`, a stand-in and not
-what the scorer does with one), no kill term, which is the largest weight in the game and a threshold so it
+what the scorer does with one, and a `DefenseDebuff` is the same stand-in the other way, blind in the same
+way to the damage the shred lets through), no kill term, which is the largest weight in the game and a threshold so it
 rewards a reliable hit over a bigger average one, and neither the energy cost nor the Spell initiative that
 `ActionScorer` prices when it picks an unlock.
 

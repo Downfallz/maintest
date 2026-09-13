@@ -43,6 +43,12 @@ first.
   took **97 energy**, under half of the 2 each one aims at. `Creature.LoseEnergy` takes what is there and a
   greedy bot spends down to nothing, so most casts land on an empty pool. That is the mechanic working, and it
   is the second reason this spell's drain is worth less in play than on paper.
+- **The bot cannot see what the debuff does, only what it costs.** `DefensiveScore` is the only term that
+  reads the threat a creature faces, and only a `DefenseBuff` reaches it. So nothing in `ActionScorer` knows
+  that lowering a defense raises what the next hit takes -- not on the enemy, which is the point of
+  `infectious_blast`, and not on `psycho_rush`'s own caster, which is the point of its recoil. ADR 0035
+  recorded the pricing as a stand-in; this is the part that is a decision and not a rounding error, and it is
+  written where it still governs one, in `ConditionScore`.
 - **A review caught what the whole suite missed.** `FeatureSchema.ConditionKinds` and `ObservationBuilder`'s
   amount switch are two lists that must move together, and only one of them moved: every `simulate --record`
   and every policy decision threw the moment a defense debuff landed, with 282 of 282 tests green, because no test had
