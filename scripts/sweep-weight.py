@@ -11,8 +11,9 @@ a file, so the `exploit` evaluation's attacker is untouched and its defender mov
 the point of keeping it: it is a reading the objective does not contain.
 
 One sweep at a time, always. Two of these running together patch the same two files and share the same
-working directory, so each one restores the other's patch and measures a weight it did not set. The run
-refuses to start unless both files are clean in git, which is what that collision looks like from outside.
+working directory, so each one restores the other's patch and measures a weight it did not set — which has
+happened, and cost a whole table. A lock file taken atomically is what prevents it; the cleanliness check
+beside it catches the other case, a sweep that died holding the files patched.
 
 Usage:
     uv run --project learning python scripts/sweep-weight.py initiative 1.0 1.5 2.1 2.7
@@ -21,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -42,6 +44,7 @@ from downfall_learning.tune_content import (
 ROOT = Path(__file__).resolve().parents[1]
 WEIGHTS = ROOT / "src" / "DownfallArena.Application" / "Agents" / "ScoringWeights.cs"
 GREEDY_JSON = ROOT / "learning" / "weights" / "greedy.json"
+LOCK = ROOT / ".sweep.lock"
 RELEASE_CLI = (
     "dotnet",
     "run",
@@ -88,12 +91,40 @@ def patched(name: str, value: float):
         GREEDY_JSON.write_text(weights)
 
 
+@contextmanager
+def locked():
+    """Hold the sweep lock for the whole run, restore included.
+
+    The cleanliness check below cannot do this job on its own: two sweeps can both read a clean tree before
+    either one writes, which is exactly the race that produced a table of mixed measurements once already.
+    `O_CREAT | O_EXCL` is the atomic part -- the second sweep loses the create and stops.
+    """
+    try:
+        handle = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        raise SystemExit(
+            f"Refusing to sweep: {LOCK} exists, so another sweep holds it.\n"
+            "Wait for it, or delete that file if no sweep is running."
+        ) from None
+    try:
+        os.write(handle, f"{os.getpid()}\n".encode())
+        os.close(handle)
+        yield
+    finally:
+        LOCK.unlink(missing_ok=True)
+
+
 def require_clean() -> None:
-    """Refuse to run over a file another sweep is holding patched, or over an edit of your own."""
+    """Refuse to run over a file a sweep died holding patched, or over an edit of your own.
+
+    Against `HEAD`, not against the index: the bare `git diff` form compares the worktree with the index, so
+    a staged edit to either file reports nothing and the sweep would measure that edit alongside the weight
+    it was asked for.
+    """
     # Two fixed paths given to git, without a shell: nothing here comes from a user other than the one who
     # launched the sweep.
     dirty = subprocess.run(  # NOSONAR
-        ["git", "diff", "--name-only", "--", str(WEIGHTS), str(GREEDY_JSON)],
+        ["git", "diff", "--name-only", "HEAD", "--", str(WEIGHTS), str(GREEDY_JSON)],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -102,7 +133,7 @@ def require_clean() -> None:
     if dirty:
         raise SystemExit(
             "Refusing to sweep: " + ", ".join(dirty) + " already differs from HEAD.\n"
-            "Another sweep is running, or one died patched. Finish or restore it first."
+            "A sweep died patched, or the change is yours. Restore or commit it first."
         )
 
 
@@ -153,9 +184,7 @@ def sweeps(arguments: Sequence[str]) -> list[tuple[str, list[float]]]:
     return [(weight_named(group[0]), [float(value) for value in group[1:]]) for group in groups]
 
 
-def main() -> None:
-    planned = sweeps(sys.argv[1:])
-    require_clean()
+def run(planned: Sequence[tuple[str, list[float]]]) -> None:
     workdir = ROOT / ".sweep"
     for name, values in planned:
         print(
@@ -168,6 +197,19 @@ def main() -> None:
             print(f"{value:>11} {score:>10.2f} {cells}", flush=True)
         print(flush=True)
     shutil.rmtree(workdir, ignore_errors=True)
+
+
+def main() -> None:
+    planned = sweeps(sys.argv[1:])
+    with locked():
+        require_clean()
+        try:
+            run(planned)
+        finally:
+            # `patched` restores the sources, not the engine: the Release build is still the last candidate's,
+            # and a later `--no-build` run would play a weight nobody set while git reads clean. One rebuild
+            # here puts the binary back with the sources, on the failure paths too.
+            build()
 
 
 if __name__ == "__main__":

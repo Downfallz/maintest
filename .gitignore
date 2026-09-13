@@ -86,3 +86,4 @@ simulation.csv
 
 # scratch space for scripts/sweep-weight.py
 .sweep/
+.sweep.lock
