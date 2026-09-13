@@ -178,7 +178,7 @@ public sealed class StudioRunnerTests : IDisposable
 
         exception.Message.ShouldContain("dammage");
         exception.Message.ShouldContain("damage");
-        exception.Message.ShouldContain("risk");
+        exception.Message.ShouldContain("fizzle");
     }
 
     [Fact]

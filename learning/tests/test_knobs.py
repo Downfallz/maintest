@@ -1283,7 +1283,7 @@ def test_the_repository_weights_are_the_nine_the_agents_score_with() -> None:
         "bleed",
         "defense",
         "energy",
-        "risk",
+        "fizzle",
         "initiative",
     }
 
