@@ -85,6 +85,9 @@ public sealed record SpellOutcome
     /// <summary>Defense debuffs applied (ADR 0035). Kept apart from the buffs: one raises, one lowers.</summary>
     public int DefenseDebuffs { get; init; }
 
+    /// <summary>InitiativeBuffs applied, kept apart from the debuffs: they move the same stat opposite ways.</summary>
+    public int InitiativeBuffs { get; init; }
+
     /// <summary>Casts that landed on a side that went on to win.</summary>
     public int ResolvedWhenWon { get; init; }
 
@@ -152,6 +155,7 @@ public sealed record SpellOutcome
             EnergyRegenerations = effects.EnergyRegenerations,
             DefenseBuffs = effects.DefenseBuffs,
             DefenseDebuffs = effects.DefenseDebuffs,
+            InitiativeBuffs = effects.InitiativeBuffs,
             InitiativeDebuffs = effects.InitiativeDebuffs,
             ConditionDamage = effects.ConditionDamage,
             ConditionHealing = effects.ConditionHealing,

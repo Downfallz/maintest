@@ -113,6 +113,7 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
             Stun => 1f,
             DefenseBuff buff => buff.Amount,
             DefenseDebuff debuff => debuff.Amount,
+            InitiativeBuff buff => buff.Amount,
             InitiativeDebuff debuff => debuff.Amount,
             _ => throw Unpriced(effect),
         };

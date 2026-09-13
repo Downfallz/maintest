@@ -65,6 +65,7 @@ including the content hash.
 | `Stun` | `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
 | `DefenseBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 | `DefenseDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; subtracts from the same total the buff adds to, floored at zero |
+| `InitiativeBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; adds to the same total the debuff subtracts from, floored at zero |
 | `InitiativeDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 
 `stacking` is one of `Stack`, `Refresh`, `Ignore`.

@@ -494,14 +494,16 @@
     "spell:death_squad": {
       "name": "Death Squad",
       "class": "Assassin",
-      "intent": "Energy spent to give the whole team energy: a small net gain and a tempo swing for three creatures at once. It stands in for the initiative and critical buff the taxonomy cannot express, so read it as haste rather than as a battery.",
+      "intent": "The whole squad moves first. One activation buys the team a round of haste, which is what legacy wrote and what ADR 0036 finally made sayable: the Assassin does not out-damage anyone, it gets there first.",
       "keep": [
-        "Costs more than any one ally receives",
-        "Team-wide, or it is Momentum with extra steps"
+        "Team-wide, or it is one creature's initiative and the Assassin has no reason to own it",
+        "One round: haste that lasts is a stat change, not a play",
+        "No damage and no energy: it buys tempo and only tempo"
       ],
+      "note": "It was **cast 0 times in 400 matches** and its own bounds reached 1.20 a round against a tier-3 band of 8 to 14, so `check-knobs` reported it as a spell no move could make a choice -- correctly, because the numbers were never what was wrong with it. Legacy gave the team +10 initiative and +100% critical for a round; neither was expressible, so it was substituted into the tempo it was meant to *buy*, one energy an ally, and energy is 0.2 a point. As the haste it always was it reads **12.60**. The critical half is still out and is a different shape, not a mirror (ADR 0036). Measured, it goes **0 casts to 182** and lands 288 hastes. But greedy takes it to a **0.333 win share over 36 sides** while the exploring agent reads **0.463 over 54** -- the signature of a spell the scorer overvalues rather than a bad spell, the same shape `infectious_blast` showed from the other side. `mortal_wound` drops 104 casts to 69 beside it, so the class is being crowded out of its own win condition by its support spell. At an amount of 1 it reads 6.30, below the band, and only 12 sides pick it up -- too few to read, which is why 2 ships. What this really names is the initiative weight: ADR 0032 swept 2.1 on content whose only initiative effect was a *debuff on one enemy*, and nothing has asked whether the same price holds for a *buff on three allies*. That is the next measurement, not this entry's. There is no duration knob, because the first keep above says one round and a knob that can spend it is not a bound on the spell, it is a way out of its own identity. The amount stops at 3, whose corner reads **18.90** -- above the band on purpose, so the tuner has somewhere to go, and not a target: initiative is the dearest weight in the game at 2.1, which makes this the easiest spell in the catalogue to over-tune.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/initiative", "min": 2, "max": 4, "step": 1 }
       ]
     },

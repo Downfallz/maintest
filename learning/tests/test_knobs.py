@@ -785,6 +785,25 @@ def test_a_drain_and_a_shred_are_harmful_and_priced_by_the_weight_of_what_they_m
     assert cast_value(healing_and_shredding, WEIGHTS) == pytest.approx(((0.8 * 4) - (0.5 * 2 * 1)) * 3)
 
 
+def test_an_initiative_buff_is_priced_like_the_debuff_it_mirrors() -> None:
+    """One price for one point whether it is given or taken (ADR 0032, ADR 0036). Both spells reach three, so
+    the only thing left between them is the direction, and the reading is the same either way."""
+    enemies = {"origin": "Enemy", "scope": "Multi", "maxTargets": 3}
+    hasting = spell(
+        criticalChance=0,
+        targeting=ALLY,
+        effects=[{"kind": "InitiativeBuff", "amount": 2, "durationRounds": 1}],
+    )
+    slowing = spell(
+        criticalChance=0,
+        targeting=enemies,
+        effects=[{"kind": "InitiativeDebuff", "amount": 2, "durationRounds": 1}],
+    )
+
+    assert cast_value(hasting, WEIGHTS) == pytest.approx(0.5 * 2 * 1 * 3)
+    assert cast_value(slowing, WEIGHTS) == pytest.approx(cast_value(hasting, WEIGHTS))
+
+
 def test_a_critical_chance_does_not_reach_a_drain_or_a_shred() -> None:
     """Neither is health on a target now, so neither takes the roll (ADR 0033, ADR 0035)."""
     draining = {"criticalChance": 1.0, "effects": [{"kind": "EnergyDrain", "amount": 2}]}

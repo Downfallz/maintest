@@ -75,10 +75,11 @@ public sealed class GameSchemaBuilderTests
 
     /// <summary>
     /// The two kinds ADR 0035 added, authored the way the table in <c>data/README.md</c> says: a drain takes an
-    /// amount like any instant effect, a debuff a duration like the buff it mirrors, permanent included.
+    /// amount like any instant effect, and each lasting one a duration like the kind it mirrors, permanent
+    /// included.
     /// </summary>
     [Fact]
-    public void A_drain_and_a_defense_debuff_are_authored_like_the_kinds_they_mirror()
+    public void The_mirrored_kinds_are_authored_like_the_kinds_they_mirror()
     {
         using var content = new ContentDirectory().WithValidContent()
             .WithFile("Spells/strike.v1.json", """
@@ -89,7 +90,8 @@ public sealed class GameSchemaBuilderTests
                   "effects": [
                     { "kind": "EnergyDrain", "amount": 2 },
                     { "kind": "DefenseDebuff", "amount": 1, "permanent": true },
-                    { "kind": "DefenseDebuff", "amount": 3, "durationRounds": 1 }
+                    { "kind": "DefenseDebuff", "amount": 3, "durationRounds": 1 },
+                    { "kind": "InitiativeBuff", "amount": 2, "durationRounds": 2 }
                   ]
                 }
                 """);
@@ -101,6 +103,7 @@ public sealed class GameSchemaBuilderTests
             EnergyDrain.Of(2),
             DefenseDebuff.Of(1, Duration.Permanent),
             DefenseDebuff.Of(3, Duration.OfRounds(1)),
+            InitiativeBuff.Of(2, Duration.OfRounds(2)),
         ]);
     }
 

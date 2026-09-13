@@ -43,6 +43,7 @@ const EFFECTS = {
   Stun: { amounts: [], rounds: true, stacking: 'Refresh' },
   DefenseBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   DefenseDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
+  InitiativeBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
 };
 
@@ -365,6 +366,7 @@ function effectSummary(effect) {
     case 'Stun': return `stun ${effect.durationRounds ?? 1}r`;
     case 'DefenseBuff': return `+${effect.amount} def${rounds}`;
     case 'DefenseDebuff': return `-${effect.amount} def${rounds}`;
+    case 'InitiativeBuff': return `+${effect.amount} init${rounds}`;
     case 'InitiativeDebuff': return `-${effect.amount} init${rounds}`;
     default: return effect.kind || '';
   }

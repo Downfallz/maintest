@@ -419,7 +419,7 @@
       return describer ? describer(event, names) : event.kind;
     }
 
-    const CHIP_CLASSES = { Stun: 'chip stun', DefenseBuff: 'chip buff', Regeneration: 'chip buff', DefenseDebuff: 'chip stun' };
+    const CHIP_CLASSES = { Stun: 'chip stun', DefenseBuff: 'chip buff', Regeneration: 'chip buff', DefenseDebuff: 'chip stun', InitiativeBuff: 'chip buff' };
 
     function conditionChip(condition) {
       const effect = condition.effect;
@@ -705,7 +705,7 @@
     /** The tally of one spell for one side, made when that side first casts it. */
     function spellTally(spells, spell, side) {
       const key = `${spell}\u0000${side}`;
-      const tally = spells.get(key) || { spell, side, casts: 0, fizzles: 0, crits: 0, damage: 0, overTime: 0, healing: 0, energy: 0, energyDrained: 0, stuns: 0, bleeds: 0, regens: 0, energyRegenerations: 0, defenseBuffs: 0, defenseDebuffs: 0, initiativeDebuffs: 0 };
+      const tally = spells.get(key) || { spell, side, casts: 0, fizzles: 0, crits: 0, damage: 0, overTime: 0, healing: 0, energy: 0, energyDrained: 0, stuns: 0, bleeds: 0, regens: 0, energyRegenerations: 0, defenseBuffs: 0, defenseDebuffs: 0, initiativeBuffs: 0, initiativeDebuffs: 0 };
       spells.set(key, tally);
       return tally;
     }
@@ -756,6 +756,7 @@
       if (kind === 'Regeneration') return 'regens';
       if (kind === 'EnergyRegeneration') return 'energyRegenerations';
       if (kind === 'DefenseDebuff') return 'defenseDebuffs';
+      if (kind === 'InitiativeBuff') return 'initiativeBuffs';
       if (kind === 'InitiativeDebuff') return 'initiativeDebuffs';
       return 'defenseBuffs';
     }
@@ -909,7 +910,7 @@
       const rows = [...spells].sort((one, other) => (other.damage + other.overTime) - (one.damage + one.overTime) || other.casts - one.casts || one.spell.localeCompare(other.spell));
       if (!rows.length) return null;
       const table = el('table');
-      table.append(el('tr', {}, ['Spell', 'Side', 'Cast', 'Fizzled', 'Resolve', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init', 'Crits']
+      table.append(el('tr', {}, ['Spell', 'Side', 'Cast', 'Fizzled', 'Resolve', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init+', 'Init-', 'Crits']
         .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
       for (const row of rows) {
         const declared = row.casts + row.fizzles;
@@ -930,6 +931,7 @@
           el('td', { class: 'num' }, row.energyRegenerations),
           el('td', { class: 'num' }, row.defenseBuffs),
           el('td', { class: 'num' }, row.defenseDebuffs),
+          el('td', { class: 'num' }, row.initiativeBuffs),
           el('td', { class: 'num' }, row.initiativeDebuffs),
           el('td', { class: 'num' }, row.crits),
         ]));
@@ -1117,7 +1119,7 @@
 
     function spellOutcomeTable(outcomes) {
       const table = el('table');
-      table.append(el('tr', {}, ['Spell', 'Won by the side that used it', 'Sides', 'Cast', 'Resolve', 'Won-cast', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init', 'Casts/side']
+      table.append(el('tr', {}, ['Spell', 'Won by the side that used it', 'Sides', 'Cast', 'Resolve', 'Won-cast', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init+', 'Init-', 'Casts/side']
         .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
       for (const outcome of outcomes) {
         const thin = outcome.sides < ENOUGH_SIDES;
@@ -1139,6 +1141,7 @@
           el('td', { class: 'num' }, outcome.energyRegenerations ?? '-'),
           el('td', { class: 'num' }, outcome.defenseBuffs ?? '-'),
           el('td', { class: 'num' }, outcome.defenseDebuffs ?? '-'),
+          el('td', { class: 'num' }, outcome.initiativeBuffs ?? '-'),
           el('td', { class: 'num' }, outcome.initiativeDebuffs ?? '-'),
           el('td', { class: 'num' }, fixed(outcome.intentsPerSide, 1)),
         ]));
@@ -1420,7 +1423,7 @@
         row.fizzled += outcome.fizzled || 0;
         row.damage += outcome.damage || 0;
         row.healing += outcome.healing || 0;
-        row.conditions += (outcome.stuns || 0) + (outcome.bleeds || 0) + (outcome.regens || 0) + (outcome.energyRegenerations || 0) + (outcome.defenseBuffs || 0) + (outcome.defenseDebuffs || 0) + (outcome.initiativeDebuffs || 0);
+        row.conditions += (outcome.stuns || 0) + (outcome.bleeds || 0) + (outcome.regens || 0) + (outcome.energyRegenerations || 0) + (outcome.defenseBuffs || 0) + (outcome.defenseDebuffs || 0) + (outcome.initiativeBuffs || 0) + (outcome.initiativeDebuffs || 0);
         totals.set(name, row);
       }
       for (const row of totals.values()) {

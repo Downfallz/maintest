@@ -115,6 +115,40 @@ public sealed class ConditionTests
     }
 
     /// <summary>
+    /// The buff is the debuff's mirror and the two meet in one total (ADR 0036). The order matters: the buffs
+    /// are added before the debuffs are taken off, so a creature buffed past what a debuff takes keeps the
+    /// difference instead of losing it to a floor applied halfway through.
+    /// </summary>
+    [Fact]
+    public void Initiative_buffs_raise_the_current_initiative_and_meet_the_debuffs_in_one_total()
+    {
+        var creature = Spawn();
+
+        creature.Apply(InitiativeBuff.Of(3, Duration.OfRounds(1)));
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(8));
+
+        creature.Apply(InitiativeDebuff.Of(10, Duration.OfRounds(1)));
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(0), "the total floors at zero, not each half");
+
+        creature.Apply(InitiativeBuff.Of(4, Duration.OfRounds(1)));
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(2), "5 + 3 + 4 - 10, and not zero plus four");
+    }
+
+    /// <summary>A buff that runs out gives the speed back, the same as a debuff that runs out takes it back.</summary>
+    [Fact]
+    public void An_initiative_buff_lasts_the_rounds_it_was_given()
+    {
+        var creature = Spawn();
+        creature.Apply(InitiativeBuff.Of(2, Duration.OfRounds(1)));
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(7));
+
+        creature.TickConditions();
+        creature.TickConditions();
+
+        creature.CurrentInitiative.ShouldBe(Initiative.Of(5));
+    }
+
+    /// <summary>
     /// A defense debuff is the buff's mirror and the two meet in the same total (ADR 0035): they add up
     /// against each other, and the total floors at zero rather than turning damage into a bonus.
     /// </summary>

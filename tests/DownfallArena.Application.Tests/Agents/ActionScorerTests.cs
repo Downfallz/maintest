@@ -140,6 +140,23 @@ public sealed class ActionScorerTests
         Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), poor).ShouldBe(0.2 * 1, 1e-9);
     }
 
+    /// <summary>
+    /// One price for one point whether it is given or taken (ADR 0032, ADR 0036): hasting an ally is worth
+    /// exactly what slowing an enemy by the same amount for the same rounds is, and hasting an enemy costs it.
+    /// </summary>
+    [Fact]
+    public void An_initiative_buff_on_an_ally_is_worth_what_the_same_debuff_on_an_enemy_is()
+    {
+        var board = Board(enemyHealth: 20);
+        var ally = Boards.Creature(2, PlayerSlot.Player1);
+        var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
+        var action = Strike(One, Three);
+
+        Scorer.Score(Cast(action, ally.Id, InitiativeBuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(Tempo * 2 * 3, 1e-9);
+        Scorer.Score(Cast(action, Three, InitiativeDebuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(Tempo * 2 * 3, 1e-9);
+        Scorer.Score(Cast(action, Three, InitiativeBuff.Of(2, Duration.OfRounds(3))), creatures).ShouldBe(-Tempo * 2 * 3, 1e-9);
+    }
+
     [Fact]
     public void An_energyRegeneration_is_priced_at_the_energy_weight_over_the_rounds_it_lasts()
     {
@@ -221,6 +238,7 @@ public sealed class ActionScorerTests
         (DefenseBuff.Of(1, Duration.OfRounds(1)), DefenseBuff.Of(1, Duration.OfRounds(2))),
         (InitiativeDebuff.Of(1, Duration.OfRounds(1)), InitiativeDebuff.Of(1, Duration.OfRounds(2))),
         (DefenseDebuff.Of(1, Duration.OfRounds(1)), DefenseDebuff.Of(1, Duration.OfRounds(2))),
+        (InitiativeBuff.Of(1, Duration.OfRounds(1)), InitiativeBuff.Of(1, Duration.OfRounds(2))),
     ];
 
     /// <summary>

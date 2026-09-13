@@ -129,6 +129,7 @@ public static class GameSchemaMapper
             "STUN" => ForRounds(dto, effectContext, problems, Stun.For),
             "DEFENSEBUFF" => WhileLasting(dto, effectContext, problems, DefenseBuff.Of),
             "DEFENSEDEBUFF" => WhileLasting(dto, effectContext, problems, DefenseDebuff.Of),
+            "INITIATIVEBUFF" => WhileLasting(dto, effectContext, problems, InitiativeBuff.Of),
             "INITIATIVEDEBUFF" => WhileLasting(dto, effectContext, problems, InitiativeDebuff.Of),
             _ => Problem<Effect>(problems, $"{context}: unknown effect kind '{dto.Kind}'. See data/README.md for the supported kinds."),
         };
@@ -157,7 +158,7 @@ public static class GameSchemaMapper
         return Rounds(dto, context, problems) is { } rounds ? Guard(() => create(rounds, stacking), context, problems) : null;
     }
 
-    /// <summary>DefenseBuff, DefenseDebuff and InitiativeDebuff: an amount for a duration, which may be permanent.</summary>
+    /// <summary>DefenseBuff, DefenseDebuff, InitiativeBuff and InitiativeDebuff: an amount for a duration, which may be permanent.</summary>
     private static Effect? WhileLasting(EffectDto dto, string context, List<string> problems, Func<int, Duration, StackingPolicy, Effect> create)
     {
         var stacking = Stacking(dto, context, problems, StackingPolicy.Stack);

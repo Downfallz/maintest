@@ -163,6 +163,7 @@ public sealed class CombatStatsRecorderTests
             .. Enumerable.Range(0, 5).Select(amount => (LastingEffect)DefenseBuff.Of(amount + 1, Duration.OfRounds(1))),
             .. Enumerable.Range(0, 6).Select(amount => (LastingEffect)DefenseDebuff.Of(amount + 1, Duration.OfRounds(1))),
             .. Enumerable.Range(0, 7).Select(amount => (LastingEffect)InitiativeDebuff.Of(amount + 1, Duration.OfRounds(1))),
+            .. Enumerable.Range(0, 8).Select(amount => (LastingEffect)InitiativeBuff.Of(amount + 1, Duration.OfRounds(1))),
         ];
         var outcomes = applied.Select(effect => (EffectOutcome)new ConditionOutcome(enemy.Id, effect)).ToList();
 
@@ -176,6 +177,7 @@ public sealed class CombatStatsRecorderTests
         effects.DefenseBuffs.ShouldBe(5);
         effects.DefenseDebuffs.ShouldBe(6);
         effects.InitiativeDebuffs.ShouldBe(7);
+        effects.InitiativeBuffs.ShouldBe(8);
     }
 
     [Fact]
