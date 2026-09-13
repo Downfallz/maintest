@@ -70,9 +70,10 @@ counterpart, so they were dropped or approximated; one has since been recovered.
 Two more places where the model forced a hand:
 
 - **Spells with no effect.** Legacy Wait and Momentum did literally nothing. A spell needs at least one
-  effect here, so both are `EnergyGain 1` on the caster: pass the round and gather. `EnergyRegeneration`, energy over
-  time, now exists (ADR 0020) and no spell uses it: Momentum and Summon Minions are the candidates when
-  re-pricing them is decided on its own, rather than folded into the change that added the kind.
+  effect here, so Wait is `EnergyGain` on the caster: pass the round and gather. **Momentum is
+  `EnergyRegeneration`** — the first spell to use the kind ADR 0020 added and deliberately left unused, which
+  named it as one of the two candidates. It is Wait's opposite trade: Wait hands energy over now, Momentum
+  builds it over the next few rounds. Summon Minions is the other candidate and is still an `EnergyGain`.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive
   yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,
   because free plus permanent plus re-castable is bounded by nothing but the round cap (`check-knobs` reports

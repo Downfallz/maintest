@@ -464,13 +464,16 @@
     "spell:momentum": {
       "name": "Momentum",
       "class": "Assassin",
-      "intent": "Wait with a Spell initiative of three: the Assassin passes the round and comes out permanently faster for having learned how. The energy is incidental, the unlock reward is the spell.",
+      "intent": "Wait's opposite trade, and the spell whose name finally says what it does: Wait hands over energy now, Momentum builds it, a point at the start of each of the next few rounds. The Assassin spends the same activation and comes out ahead if the match lasts, behind if it does not -- and permanently faster either way, because its Spell initiative of three is the highest in the catalogue.",
       "keep": [
-        "Free, like Wait",
-        "Its Spell initiative is what it is for"
+        "Free, like Wait, and it is the same activation: the trade is when the energy arrives, not what it costs",
+        "It builds rather than hands over: the day it gives energy on the spot it is Wait again",
+        "Its Spell initiative is half of what it is for"
       ],
+      "note": "The first spell to use `EnergyRegeneration`, which ADR 0020 added and deliberately left unused, naming Momentum as one of the two candidates. Do not read its bounds as a route to making it castable: at 0.2 a point of energy the top of this box is 1.60 an activation against an attack's 6-and-up, so `check-knobs` reports it against `full_plate` and will keep reporting it. That finding is right and the way out it names is the other one -- the rival's bounds, or the price of energy, which ADR 0020 set and nothing has ever tuned. Widening this spell until it clears the bar would mean handing out twenty points of energy.",
       "knobs": [
-        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 },
         { "path": "/initiative", "min": 2, "max": 4, "step": 1 }
       ]
     },
