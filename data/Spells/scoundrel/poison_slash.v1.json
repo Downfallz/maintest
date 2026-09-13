@@ -3,7 +3,7 @@
   "name": "Poison Slash",
   "spellType": "Offensive",
   "creatureClass": "Scoundrel",
-  "initiative": 1,
+  "initiative": 0,
   "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
