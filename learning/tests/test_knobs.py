@@ -465,8 +465,8 @@ def test_two_targets_on_the_same_metric_of_two_evaluations_both_count() -> None:
     assert objective.score(metrics) == pytest.approx(8.0)
 
 
-def test_a_critical_chance_a_match_never_reads_does_not_order_two_spells() -> None:
-    """The multiplier applies to damage only, so on a heal it is a number no result can attribute."""
+def test_a_critical_chance_orders_two_heals_that_are_otherwise_the_same() -> None:
+    """ADR 0033 put a direct heal under the multiplier, so the chance is a number a result can attribute."""
     heal = {
         "id": "spell:heal:v1",
         "initiative": 1,
@@ -478,8 +478,26 @@ def test_a_critical_chance_a_match_never_reads_does_not_order_two_spells() -> No
     plain = json.loads(json.dumps(heal))
     plain["criticalChance"] = 0.0
 
-    assert not dominates(heal, plain)
+    assert dominates(heal, plain)
     assert not dominates(plain, heal)
+
+
+def test_a_critical_chance_a_match_never_reads_does_not_order_two_spells() -> None:
+    """The one shape left out: the multiplier reaches neither a buff nor the rounds it lasts, so on armour
+    the chance is a number no result can attribute and comparing it would refuse a candidate over nothing."""
+    armour = {
+        "id": "spell:armour:v1",
+        "initiative": 1,
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {"origin": "Ally", "scope": "SingleTarget", "maxTargets": 1},
+        "effects": [{"kind": "DefenseBuff", "amount": 2, "durationRounds": 2}],
+    }
+    plain = json.loads(json.dumps(armour))
+    plain["criticalChance"] = 0.0
+
+    assert not dominates(armour, plain)
+    assert not dominates(plain, armour)
 
 
 def test_two_hits_of_three_are_not_one_hit_of_six() -> None:

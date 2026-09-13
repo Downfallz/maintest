@@ -653,9 +653,10 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
     Same targeting origin and at least as many targets, cost no higher, Spell initiative no lower, every
     effect of ``worse`` matched by one at least as large, and an extra effect that carries something.
 
-    Critical chance is compared only between two spells that both deal damage: the multiplier applies to
-    `Damage` and to nothing else, so on a heal or a buff it is a number no match reads and comparing it
-    would refuse a candidate over nothing.
+    Critical chance is compared only between two spells that both carry something the multiplier reaches --
+    a `Damage` or a direct `Heal` (ADR 0033). On a spell that carries neither it is a number no match reads,
+    and comparing it would refuse a candidate over nothing. The set is read rather than spelled out here, so
+    the rule cannot drift from the one `cast_value` prices with and `_inert_critical` guards.
 
     What a spell does to its own caster (ADR 0031) is a separate axis, and compared differently: those
     magnitudes are signed, so an absent group is a zero rather than a gap. Carrying no recoil at all is being
@@ -688,7 +689,7 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
         (-int(better.get("energyCost", 0)), -int(worse.get("energyCost", 0))),
         (int(better.get("initiative", 0)), int(worse.get("initiative", 0))),
     ]
-    if DAMAGE in ours and DAMAGE in theirs:
+    if CRITTABLE & ours.keys() and CRITTABLE & theirs.keys():
         comparisons.append(
             (float(better.get("criticalChance", 0) or 0), float(worse.get("criticalChance", 0) or 0))
         )

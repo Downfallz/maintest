@@ -72,7 +72,9 @@ critical cast multiplies what it puts on a target's health *now*.**
 
 - `src/DownfallArena.Domain/Matches/Rules/Combat/ResolutionRules.cs`: the `Heal` arm of `Outcome`.
 - `tests/DownfallArena.Domain.Tests`: a critical heal, and a critical regeneration that is not multiplied.
-- `learning/src/downfall_learning/knobs.py`: `cast_value`'s `Heal` term and `_inert_critical`.
+- `learning/src/downfall_learning/knobs.py`: `cast_value`'s `Heal` term, `_inert_critical`, and `dominates`,
+  which compared the chance only between two spells that both damage. All three read the same set, so the
+  rule cannot drift between what the tuner prices, what it is allowed to tune, and what it calls dominant.
 - `data/Spells/.../healing_screech.v1.json`: its critical chance back to 0.5.
 - `data/balance/knobs.json`: the notes that called a chance decoration, and the chance knobs the healers may
   now carry.
