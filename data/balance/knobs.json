@@ -546,11 +546,12 @@
     "spell:tranquilizer_dart": {
       "name": "Tranquilizer Dart",
       "class": "Trickster",
-      "intent": "The cheap stun: a modest hit and a stolen activation for less than Crushing Stomp asks. The Trickster buys the tempo the Warlord pays full price for, and pays for it in damage.",
+      "intent": "The cheap stun: a stolen activation for half what Crushing Stomp asks, and almost nothing else. The Trickster buys the tempo the Warlord pays full price for, and pays for it in damage.",
       "keep": [
         "Cheaper than Crushing Stomp and weaker for it",
-        "The stun is the spell"
+        "The stun is the spell: the damage is a rounding error, not a second half"
       ],
+      "note": "It was **1 declaration in 400 matches** -- and legacy is not what went wrong with it. The port is faithful (3 energy, 3 damage, a one-round stun) and so was the relationship it was built on: legacy Crushing Stomp is 4 energy, 6 damage, and a stun of **one round**. The second round is this catalogue's, added in the Warlord pass along with damage 6 to 7 and a critical chance of 0.75, and it turned the cheap stun into a strictly worse expensive one -- 75% of the price for 44% of the reading. Nothing caught it: `outclassed` compares a spell's *ceiling* against a rival's *current* value, and this spell's ceiling sat just under `ice_spear`'s, so the check named the Wizard and never mentioned the Warlord. The fix is this spell's own intent, applied: price **2**, damage 3 to **2**, stun to **2 rounds**. 4.00 a round to 8.00, inside the band and still under `crushing_stomp`'s 9.12 -- cheaper and weaker, which is the first keep, while buying tempo at half the Warlord's price, which is the sentence the intent has always carried. Measured: 1 declaration to **78**, 72 stuns landed, and `crushing_stomp` unmoved at 93.1% over 99. Greedy wins 0.387 of the sides that declare it against the exploring agent's **0.659 over 44** -- greedy under-plays it, which is `death_squad`'s split read the other way round. The `check-knobs` finding stays: its ceiling of 10.00 is held down by a damage bound its own identity requires, and the rival is `ice_spear` at 10.20, so the bounds that need to move are the Wizard's.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
