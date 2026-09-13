@@ -14,7 +14,14 @@
   "effects": [
     {
       "kind": "Heal",
-      "amount": 3
+      "amount": 4
+    }
+  ],
+  "casterEffects": [
+    {
+      "kind": "Bleed",
+      "amountPerRound": 1,
+      "durationRounds": 2
     }
   ],
   "enabled": true

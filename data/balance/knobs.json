@@ -511,13 +511,16 @@
     "spell:noxious_cure": {
       "name": "Noxious Cure",
       "class": "Trickster",
-      "intent": "The most healing per energy in the game, because the defense it used to strip from the allies it healed was dropped. It is a pure team heal until that debuff has a home, so keep the numbers honest about that.",
+      "intent": "The most healing per energy in the game, and the Trickster pays for it in its own blood: the whole team is mended and the one who brewed the cure bleeds for two rounds. Legacy stripped defense from the allies it healed, which the taxonomy cannot say -- there is no negative buff -- so the toxin moved from the cured to the curer (ADR 0031). The bargain is the spell: without a cost it is a free team heal, and the Trickster is the class that makes you pay for things.",
       "keep": [
-        "Team-wide heal",
-        "Currently missing its downside"
+        "Team-wide heal: it reaches the team or it is Rejuvenate",
+        "It always costs the caster something that lasts: the bargain is the point, not the healing",
+        "The toxin is on the curer, never on the cured: an ally is healed cleanly"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance is not a knob: the multiplier applies to damage only, this spell deals none, and a critical roll does not reach a caster effect either (ADR 0031). Two readings the numbers hide: `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast; and `ConditionScore` prices a bleed against the health left, so the cost is real but the agent cannot see its own bleed killing it -- true of every bleed in the game, not of this spell.",
       "knobs": [
+        { "path": "/casterEffects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
+        { "path": "/casterEffects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
