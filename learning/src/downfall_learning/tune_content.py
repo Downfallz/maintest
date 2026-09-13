@@ -637,9 +637,9 @@ def tune_content(
         raise ValueError("The search needs at least one iteration and one neighbour per iteration.")
     # Wrapped here rather than by the caller, so every search gets it and none of them has to remember.
     evaluator = MemoizingEvaluator(evaluator, progress)
-    rng = np.random.default_rng(options.seed)
     objective = knobs.objective
     search = Search(knobs=knobs, content=content, options=options)
+    climb = Climb(evaluator, objective, search, np.random.default_rng(options.seed))
 
     first = _candidate(evaluator, objective, content.spells, moves=(), iteration=0)
     best = first
@@ -659,18 +659,9 @@ def tune_content(
     # Only now: the opening's size is not knowable before it runs, and the climb's is exact.
     progress.total = progress.done + (options.iterations * options.neighbours)
     for iteration in range(1, options.iterations + 1):
-        neighbours = []
-        for _ in range(options.neighbours):
-            moves = propose(rng, search, best.moves, favour)
-            if moves is None:
-                continue
-            spells = apply_moves(content.spells, moves)
-            neighbours.append(_candidate(evaluator, objective, spells, moves, iteration))
+        neighbours = _neighbours(climb, best, favour, iteration)
         history.extend(neighbours)
-        if neighbours:
-            leader = min(neighbours, key=lambda candidate: candidate.score)
-            if leader.score < best.score:
-                best = leader
+        best = min([best, *neighbours], key=lambda candidate: candidate.score)
         progress.write(f"round {iteration}/{options.iterations} · best {best.score:.2f}")
     progress.finish(f"best {best.score:.2f} from {first.score:.2f}")
     return TuneResult(
@@ -681,6 +672,42 @@ def tune_content(
         files=content.files,
         played=evaluator.plays,
     )
+
+
+@dataclass(frozen=True)
+class Climb:
+    """What every round of the random phase needs, the way :class:`Pairing` bundles what a pair needs.
+
+    Everything here is fixed for the whole climb; what changes round to round -- the leader, the round
+    number -- is passed to :func:`_neighbours` instead.
+    """
+
+    evaluator: ContentEvaluator
+    objective: Objective
+    search: Search
+    rng: np.random.Generator
+
+
+def _neighbours(
+    climb: Climb,
+    best: Candidate,
+    favour: Collection[str],
+    iteration: int,
+) -> list[Candidate]:
+    """One round of the climb: neighbours of the best, played, in the order they were drawn.
+
+    A draw the constraints refuse returns nothing and is skipped rather than redrawn, so a round can be
+    shorter than ``options.neighbours`` -- which is also why the progress line counts what reached the
+    engine and not what was asked for.
+    """
+    played: list[Candidate] = []
+    for _ in range(climb.search.options.neighbours):  # reporting is the evaluator's: only a play counts
+        moves = propose(climb.rng, climb.search, best.moves, favour)
+        if moves is None:
+            continue
+        spells = apply_moves(climb.search.content.spells, moves)
+        played.append(_candidate(climb.evaluator, climb.objective, spells, moves, iteration))
+    return played
 
 
 def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[Candidate]:

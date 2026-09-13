@@ -337,6 +337,31 @@ def _as_weights(vector: np.ndarray) -> dict[str, float]:
     return {name: round(float(value), 6) for name, value in zip(WEIGHT_NAMES, vector, strict=True)}
 
 
+@dataclass(frozen=True)
+class Sampling:
+    """What every population needs and no population changes: who plays it, how many rounds there are, and
+    where it reports."""
+
+    evaluator: Evaluator
+    options: SearchOptions
+    progress: Progress
+
+
+def _population(sampling: Sampling, vectors: np.ndarray, iteration: int, best: Candidate) -> list[Candidate]:
+    """Play one population, reporting the leader as it stands rather than the one the last round ended on.
+
+    ``best`` only moves when a population is finished and ranked, so a line reading it would claim "best so
+    far" while naming a score already beaten earlier in this very round.
+    """
+    played: list[Candidate] = []
+    for vector in vectors:
+        weights = _as_weights(vector)
+        played.append(Candidate(iteration, weights, sampling.evaluator.evaluate(weights)))
+        leader = max(best.score.mean, *(candidate.score.mean for candidate in played))
+        sampling.progress.step(f"round {iteration}/{sampling.options.iterations} · best {leader:.4f}")
+    return played
+
+
 def search_weights(
     evaluator: Evaluator,
     options: SearchOptions | None = None,
@@ -355,6 +380,7 @@ def search_weights(
     if not 0.0 < options.elite_share <= 1.0:
         raise ValueError("The elite share must be above 0 and at most 1.")
     progress = progress or silent()
+    sampling = Sampling(evaluator, options, progress)
     rng = np.random.default_rng(options.seed)
     mean = _as_vector(initial)
     sigma = options.sigma * np.maximum(np.abs(mean), 0.5)
@@ -370,14 +396,7 @@ def search_weights(
     candidates: list[Candidate] = []
     for iteration in range(1, options.iterations + 1):
         vectors = np.vstack([mean, rng.normal(mean, sigma, size=(options.population - 1, len(mean)))])
-        evaluated = []
-        for vector in vectors:
-            candidate = Candidate(iteration, _as_weights(vector), evaluator.evaluate(_as_weights(vector)))
-            evaluated.append(candidate)
-            # Against the running leader, not `best`: that one only moves when the population is finished,
-            # so a line reading it would report a score already beaten for the rest of the iteration.
-            leader = max(best.score.mean, *(played.score.mean for played in evaluated))
-            progress.step(f"round {iteration}/{options.iterations} · best {leader:.4f}")
+        evaluated = _population(sampling, vectors, iteration, best)
         candidates.extend(evaluated)
         ranked = sorted(evaluated, key=lambda candidate: candidate.score.mean, reverse=True)
         elite = ranked[:elite_size]
