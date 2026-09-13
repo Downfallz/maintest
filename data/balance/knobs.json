@@ -626,11 +626,13 @@
     "spell:engulfing_flames": {
       "name": "Engulfing Flames",
       "class": "Wizard",
-      "intent": "Psycho Rush in a robe: as written today it carries the same cost, the same damage, the same critical chance and the same targeting. Two spells that identical cannot both be interesting, and no evaluation can attribute anything to either.",
+      "intent": "The clean nuke. The catalogue holds three big single-target hits at three energy and this is the only one that costs its caster nothing -- Psycho Rush leaves the Berserker open for a round, Hateful Sacrifice takes four of the Leech's own health, and the Wizard simply casts.",
       "keep": [
-        "Must stop being a copy of Psycho Rush",
+        "No caster effect: what separates it from Psycho Rush and Hateful Sacrifice is that it pays nothing",
+        "It pays for that once, in critical chance, and not twice",
         "The Wizard's single-target answer to its own sweep"
       ],
+      "note": "Its old intent read 'Psycho Rush in a robe: the same cost, the same damage, the same critical chance and the same targeting', and its first keep was 'must stop being a copy of Psycho Rush'. That was settled by the **Berserker** pass, not by this spell: Psycho Rush now carries 10 damage, a chance of 0.5 and a recoil on its own caster. The claim is withdrawn. What was left was a spell paying twice for the one thing that makes it itself -- 9 damage *and* a chance of 0.33 against the other two's 10 and 0.5, for the privilege of costing nothing. Damage goes to **10**, so the discount is taken once, in the chance alone: 7.98 a round to **8.87**, between Psycho Rush's 9.13 and Hateful Sacrifice's 7.33. The `check-knobs` finding against `ice_spear` stays and is **twice an artifact**: `cast_value` has no kill term, which is what a nuke is for, and prices `ice_spear`'s slow at 2.1 a point, which is 41% of that spell's reading. Measured, the two are 44.4% and 49.0% -- and this one does 1283 damage to its 553.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
@@ -646,11 +648,11 @@
         "Damage and slow in one cast",
         "A rate spell, not a nuke: it wins the next round, not this one"
       ],
+      "note": "Its bounds are narrowed, not its numbers. The slow could reach 3 points over 2 rounds, which at 2.1 a point is a tempo term of 12.60 against the 4.20 it carries today -- a ceiling of **20.60**, the third largest in the catalogue, on the one weight three entries in a row have now called suspect. The duration knob went first because it contradicts the second keep above: 'it wins the next round' is one round, and a knob that can spend two is not a bound on the spell but a way out of its own identity -- the same thing `tranquilizer_dart`'s duration knob was. The amount stops at 2, which is where the content sits. Ceiling 20.60 to **12.20**; nothing a build reads has moved. This spell is also the bar two others cannot clear (`engulfing_flames` at a ceiling of 10.00, `tranquilizer_dart` at 10.00, against its 10.20), and **41% of its 10.20 is that slow**. It reads 49.0% against `engulfing_flames`'s 44.4% while doing less than half the damage, so the gap the check reports is far larger than the gap that is there.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
