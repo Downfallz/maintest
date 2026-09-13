@@ -15,13 +15,11 @@
     {
       "kind": "Heal",
       "amount": 4
-    }
-  ],
-  "casterEffects": [
+    },
     {
-      "kind": "Bleed",
-      "amountPerRound": 1,
-      "durationRounds": 2
+      "kind": "InitiativeDebuff",
+      "amount": 2,
+      "durationRounds": 1
     }
   ],
   "enabled": true

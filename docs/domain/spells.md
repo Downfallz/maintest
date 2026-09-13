@@ -55,10 +55,9 @@ counterpart, so they were dropped or approximated; one has since been recovered.
 - **Debuffing a stat other than initiative.** There is no negative `DefenseBuff` and no energy drain: both
   factories refuse anything below 1. Dropped: Noxious Cure's -2 defense on the healed allies, Soul Devourer's
   -2 energy. Infectious Blast was *only* a defense shred, so it is approximated with the one stat debuff the
-  taxonomy has, -2 initiative for two rounds. Noxious Cure keeps its shred dropped but no longer loses the
-  *bargain*: the cost moved from the cured to the curer, as a bleed on its caster (ADR 0031). That is a
-  different spell from the prototype's and it is deliberate — what could not be said about an ally can be
-  said about whoever cast it.
+  taxonomy has, -2 initiative for two rounds. **Noxious Cure takes the same substitution**: its shred of the
+  healed allies is now an initiative debuff on those same allies, so the cure is noxious to the cured exactly
+  as it was, in the one stat the taxonomy can lower.
 - **Buffing initiative or critical chance.** Death Squad gave its team +10 initiative and +100% crit for a
   round; both are unrepresentable. It is approximated as the tempo it was meant to buy: 1 energy to each of
   up to three allies.
