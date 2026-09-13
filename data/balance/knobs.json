@@ -734,11 +734,13 @@
     "spell:restorative_burst": {
       "name": "Restorative Burst",
       "class": "Shaman",
-      "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only way a creature other than the caster gains energy on demand.",
+      "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only way a creature other than the caster gains energy on demand -- `wait` is the only other spell that hands energy out at all, and it hands it to itself.",
       "keep": [
         "Gives back at least the energy it costs",
-        "Single target"
+        "Single target",
+        "It trades heal for energy point for point against `restorative_gush`, whatever the weights say the trade is worth"
       ],
+      "note": "**2.80 a round against a tier-3 band of 8 to 14, with a ceiling of 3.80** -- the worst reading in the catalogue now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.2 a point, which is 0.40, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out is the same one that entry names: the **price of energy**, set by ADR 0020 and never swept. The heal goes 3 to **4**, the top of its box that keeps every clause above, so the trade against `restorative_gush` is 2 heal for 2 energy rather than 3 for 2: 2.80 to **3.60**, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.40 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
@@ -752,13 +754,14 @@
       "intent": "Bleed on a whole team: a hit now and a wound on every enemy for the rounds after. It is what makes a Shaman team win the rounds it did not act in.",
       "keep": [
         "Team-wide bleed",
-        "Costs more than Tornado because it keeps working"
+        "What it has over `tornado` is that it keeps working, not that it costs more"
       ],
+      "note": "Its second keep read 'costs more than Tornado because it keeps working', and it was **true until this refonte**: `tornado` cost 2 and this costs 3. The Berserker pass took `tornado` to 3 for its own reasons -- it was the second-largest reading in the catalogue and matches were ending at 6.4 rounds -- and falsified this clause on the way past, the same way it falsified `tranquilizer_dart`'s. The claim cannot be restored by price: 4 would tie `crushing_stomp`, whose own first keep is 'the most expensive cast in the catalogue' and whose entry says the price *is* the spell. So the clause is rewritten to what is true and was always the real point -- the lingering, not the receipt. The bleed duration knob drops from 3 rounds to 2: legacy carries `Length = 1` and so does the content, and a knob that triples a bleed across three targets took the ceiling to **26.40**, the second largest in the catalogue. Ceiling 26.40 to **21.60**; nothing a build reads moved.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]

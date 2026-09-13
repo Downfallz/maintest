@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Heal",
-      "amount": 3
+      "amount": 4
     },
     {
       "kind": "EnergyGain",
