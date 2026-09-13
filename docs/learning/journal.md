@@ -51,12 +51,22 @@ first.
   identical reading (49.25). So the two outcomes are selected by **whether the value is a multiple of three**,
   not by how large it is, which is a floating-point tie-break and not an effect: `risk x 1 / 3` is an exact
   integer there and lands on another candidate's score, and ties go to the first spell in ordinal id order.
-- **Why it is inert**: `weights.Risk` is read in two places, both inside `Score` — the `Fizzled` branch and
-  the dropped-target share. A decision goes through `Expected`, which scores a resolution simulated against
-  the **current** board, where nothing has fizzled and no target has dropped. `Best` only offers legal
-  targets. So the term is the same zero for every candidate and cancels in the argmax. The real fizzle rate
-  of 0.163 comes from targets dying between declaration and resolution — exactly what the bot cannot see
-  when it chooses. This is ADR 0020's shape again: a weight that is documented, priced and unreachable.
+- **Why it is inert**: `weights.Risk` is read in **three** places. Two are inside `Score` — the `Fizzled`
+  branch and the dropped-target share — and a decision goes through `Expected`, which scores a resolution
+  simulated against the **current** board, where nothing has fizzled and no target has dropped, while `Best`
+  only offers legal targets. So both are the same zero for every candidate and cancel in the argmax. The
+  real fizzle rate of 0.163 comes from targets dying between declaration and resolution — exactly what the
+  bot cannot see when it chooses. This is ADR 0020's shape again: a weight that is documented, priced and
+  unreachable.
+
+  **Correction, the same day**: this entry first said "two places, both inside `Score`", and that was wrong.
+  The third is `HeuristicAgent.DecideIntent`, which scores a castable spell with no legal target at
+  `-weights.Risk` against the other spells' scores. That one *is* on the decision path and can discriminate:
+  a spell whose best target set scores below `-risk` loses to a spell with no target at all at a low weight
+  and beats it at a high one. The sweep says it does not happen on these 400 seeds at any value from 0 to
+  100, so the measured conclusion stands unchanged — but the reason given for it was incomplete, and the
+  claim was published in this entry, in `agents.md` and in the pull request before it was checked against
+  a full search of the source.
 - **Open, and not decided here**: whether the bot should learn to see that risk (price the expected drop at
   declaration) or whether the term should go. That is a decision with an ADR, not a number to tune, and
   nothing in this entry changes the engine.
