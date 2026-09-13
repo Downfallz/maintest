@@ -83,3 +83,6 @@ coverage.xml
 # The default --out of `evaluate` and of `simulate`, run from the repository root.
 evaluation.json
 simulation.csv
+
+# scratch space for scripts/sweep-weight.py
+.sweep/
