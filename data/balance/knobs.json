@@ -589,14 +589,16 @@
     "spell:meteor": {
       "name": "Meteor",
       "class": "Wizard",
-      "intent": "The Wizard's sweep, and half of a balance question: Tornado hits the same three enemies for the same damage one energy cheaper with a worse critical. These two are priced against each other or one of them is dead content.",
+      "intent": "The Wizard's sweep, and the spell that says what reach costs: each enemy takes less than one of them would take from a single-target spell of the same depth, and the whole line is worth more than any of them. It opens the class whose three spells are all about reach, so it is the one that has to make the trade legible -- a sweep that hit as hard per target as a bolt would simply be a bolt that hits three.",
       "keep": [
         "Reaches three enemies",
-        "Its relation to Tornado is the decision, not its absolute numbers"
+        "Each of them takes less than a single-target spell of its tier deals: reach is paid for per target",
+        "The strongest thing in its tier, but by a step and not by half again"
       ],
+      "note": "Its bounds used to defer to Tornado -- 'these two are priced against each other or one of them is dead content' -- and Tornado is a tier deeper and disabled, so this spell was deferring its numbers to one nobody can cast while it became the ceiling of its own tier. Read per round, four damage on three targets was 12.00 against `enraged_charge`'s 8.40, 43% clear of everything; three is 9.00, a step ahead rather than a different game. The damage floor drops to 2 so a real per-target discount is reachable, and the cap to 4 so it can never hit as hard per target as `lightning_bolt` does on one. When Tornado is enabled the comparison comes back, and it is a comparison between two sweeps rather than a reason to leave this one unpriced.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
-        { "path": "/effects/0/amount", "min": 3, "max": 5, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
