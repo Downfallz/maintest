@@ -5,7 +5,7 @@
   "creatureClass": "Warlord",
   "initiative": 1,
   "energyCost": 4,
-  "criticalChance": 0.667,
+  "criticalChance": 0.8,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
@@ -14,11 +14,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 6
+      "amount": 7
     },
     {
       "kind": "Stun",
-      "durationRounds": 1
+      "durationRounds": 2
     }
   ],
   "enabled": true

@@ -300,7 +300,7 @@
         "Never free: a permanent effect nobody pays for has no brake but the round cap",
         "Cheap enough to cast in the rounds that decide the match, or it is not armour"
       ],
-      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit.",
+      "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit. It is also the Warlord's opener, so `restorative_gush` and `crushing_stomp` are only ever as reachable as it is. At 2 permanent it was declared by 5 sides of 400 on the mirrored run and both children were cast zero times -- a branch nobody walked, whose numbers could not be measured because nobody arrived to use them. At 3 it is declared by 34 and the two behind it are cast 26 and 55. Raising it was the only way to learn anything about the two spells this pass was about.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
@@ -315,10 +315,11 @@
         "Heals more in one cast than anything else",
         "Single target: the team heals belong to the Trickster and the Shaman"
       ],
-      "note": "Its critical chance became a live number with ADR 0033: the multiplier reaches a direct heal. The spell is disabled, so nothing measures it yet, and it carries no chance today -- the knob is here for the pass that enables it.",
+      "note": "Its critical chance became a live number with ADR 0033, and that ADR's follow-up said the knob was added here. It was not -- this entry carried three sentences that were false by the time anyone read them: that the knob existed, that the spell was disabled, and that it carried no chance. The knob is real now. The heal goes to 7 with a chance of 0.5, which is 5.62 a round to 8.40 and inside the 8-to-14 band tier 3 is aimed at; its own bounds could not reach the band on the heal alone, which is why the missing knob mattered rather than being a tidy-up.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
     },
@@ -330,6 +331,7 @@
         "The most expensive cast in the catalogue",
         "Damage and stun together, or it is just an expensive hit"
       ],
+      "note": "Raised inside its own bounds to reach its tier: damage 6 to 7, chance 0.667 to 0.8, and the stun from one round to two, all at the same price of 4. That is 6.50 a round to 9.30. The price did not move because the price is the spell -- it is the most expensive cast in the catalogue and that is the first thing its entry keeps. Two rounds of a creature doing nothing is the harshest thing in the game, and it costs two rounds of income to say it.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },

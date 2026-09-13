@@ -5,7 +5,7 @@
   "creatureClass": "Warlord",
   "initiative": 2,
   "energyCost": 2,
-  "criticalChance": 0.17,
+  "criticalChance": 0.5,
   "targeting": {
     "origin": "Ally",
     "scope": "SingleTarget",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Heal",
-      "amount": 6
+      "amount": 7
     }
   ],
   "enabled": true
