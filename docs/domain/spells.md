@@ -61,9 +61,11 @@ counterpart, so they were dropped or approximated; one has since been recovered.
 - **Buffing initiative or critical chance.** Death Squad gave its team +10 initiative and +100% crit for a
   round; both are unrepresentable. It is approximated as the tempo it was meant to buy: 1 energy to each of
   up to three allies.
-- **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter.
-  Summon Minions is approximated as a resource the other two do use, energy (3 for a cost of 2); the minion
-  cost of the other two is dropped.
+- **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter, and the
+  minion cost of those two is dropped. Summon Minions was approximated as the resource they do use, energy,
+  which made it a spell that paid for casts nobody could make — its line is a tier deeper and disabled. It is
+  now **what minions are for rather than what they cost**: a few rounds of armour spread over the team, the
+  same idea `revenant_guards` finishes permanently and twice as large.
 - ~~**Healing over time.**~~ Recovered: `Regeneration` was added to the taxonomy (ADR 0019) and Healing
   Screech is the prototype's `Heal 2` plus `Regeneration 2` for a round again.
 - **Retaliate.** Thundering Seal's damage back on the attacker. Explicitly not carried over until a rule

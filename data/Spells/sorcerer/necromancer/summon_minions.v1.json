@@ -7,14 +7,15 @@
   "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Self",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "origin": "Ally",
+    "scope": "Multi",
+    "maxTargets": 3
   },
   "effects": [
     {
-      "kind": "EnergyGain",
-      "amount": 3
+      "kind": "DefenseBuff",
+      "amount": 1,
+      "durationRounds": 2
     }
   ],
   "enabled": true

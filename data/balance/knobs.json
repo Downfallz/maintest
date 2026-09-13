@@ -638,14 +638,17 @@
     "spell:summon_minions": {
       "name": "Summon Minions",
       "class": "Necromancer",
-      "intent": "The minions became energy: the only spell that pays for itself. It decides how long the Necromancer's expensive line takes to come online, so its net gain is the class's whole tempo curve.",
+      "intent": "The dead stand in front of the living: the minions are summoned to take blows the team would otherwise take, so the spell is a few rounds of armour spread over everyone. It opens the line `revenant_guards` finishes -- the same idea, permanent and twice the size, a tier deeper -- so the class reads as one thought from its first pick to its last.",
       "keep": [
-        "Gives back more than it costs, or it has no reason to exist",
-        "Self only"
+        "It guards the team, not its caster: a Necromancer that summons for itself is a Warlord",
+        "Its armour runs out: permanence belongs to `revenant_guards`, which is what makes that spell the reward",
+        "Smaller than what it opens: it is the first of the line and never the best of it"
       ],
+      "note": "It used to be `EnergyGain 3` for 2, an approximation of the minions the two spells behind it spent -- and ADR 0020 named it as one of the two candidates for `EnergyRegeneration`. That nomination is declined here, with a measurement: energy is 0.2 a point, so an energy spell tops out around 1.60 an activation against an attack's 6 and up, and `momentum` was measured cast 0 times at `explore:0.2` and 8 at `explore:0.5` after being given exactly that treatment. Two energy openers would have been two dead openers. Its old intent also said it 'decides how long the Necromancer's expensive line takes to come online' -- a line that is a tier deeper and disabled, so the spell was paying for casts nobody can make.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
