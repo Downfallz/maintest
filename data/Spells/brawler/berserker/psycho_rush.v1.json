@@ -17,5 +17,12 @@
       "amount": 10
     }
   ],
-  "enabled": true
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "DefenseDebuff",
+      "amount": 2,
+      "durationRounds": 1
+    }
+  ]
 }

@@ -112,10 +112,19 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
             EnergyRegeneration energyRegeneration => energyRegeneration.AmountPerRound,
             Stun => 1f,
             DefenseBuff buff => buff.Amount,
+            DefenseDebuff debuff => debuff.Amount,
             InitiativeDebuff debuff => debuff.Amount,
-            _ => throw Unpublished(effect),
+            _ => throw Unpriced(effect),
         };
 
     private static InvalidOperationException Unpublished(LastingEffect effect) =>
         new($"Condition kind '{effect.GetType().Name}' is not in feature schema {FeatureSchema.CurrentVersion}; publish a new version.");
+
+    /// <summary>
+    /// A kind the schema publishes and this switch has no amount for. Two lists that must move together, and
+    /// the schema is the one a new kind is added to first -- so this says that rather than that the kind is
+    /// unpublished, which is the message that sent the last reader looking in the wrong file.
+    /// </summary>
+    private static InvalidOperationException Unpriced(LastingEffect effect) =>
+        new($"Condition kind '{effect.GetType().Name}' is in feature schema {FeatureSchema.CurrentVersion} but '{nameof(ObservationBuilder)}' has no amount for it.");
 }

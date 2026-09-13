@@ -59,6 +59,12 @@ public sealed record SpellOutcome
     /// <summary>Energy its casts handed back, which a spell that restores energy is otherwise silent about.</summary>
     public int Energy { get; init; }
 
+    /// <summary>
+    /// Energy its casts took away, kept apart from <see cref="Energy"/> rather than netted against it: one
+    /// field for both would make a spell that gives two and a spell that takes two read the same (ADR 0035).
+    /// </summary>
+    public int EnergyDrained { get; init; }
+
     public int Stuns { get; init; }
 
     /// <summary>Bleeds applied, not the damage they go on to deal.</summary>
@@ -75,6 +81,9 @@ public sealed record SpellOutcome
 
     /// <summary>Initiative debuffs applied.</summary>
     public int InitiativeDebuffs { get; init; }
+
+    /// <summary>Defense debuffs applied (ADR 0035). Kept apart from the buffs: one raises, one lowers.</summary>
+    public int DefenseDebuffs { get; init; }
 
     /// <summary>Casts that landed on a side that went on to win.</summary>
     public int ResolvedWhenWon { get; init; }

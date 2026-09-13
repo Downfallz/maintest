@@ -46,7 +46,7 @@ FRIENDLY_ORIGINS = frozenset({"Ally", "Self"})
 
 #: The effect kinds that hurt whoever they land on. On a target that is the point of the spell; on the caster
 #: it is the price, so every reading of a caster effect turns on this set.
-HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff"})
+HARMFUL = frozenset({DAMAGE, "Bleed", "Stun", "InitiativeDebuff", "DefenseDebuff", "EnergyDrain"})
 
 #: The pointer that names a spell's critical chance bonus.
 CRITICAL_CHANCE = "/criticalChance"
@@ -819,7 +819,9 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
       1.01 of their one. Before the target count was read at all, the same spell read a third of what it
       plays, which is how the strongest spell in the catalogue passed every check;
     - no threat reading behind a defensive effect (ADR 0022), so a `DefenseBuff` is priced here as
-      ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one;
+      ``defense x amount x rounds``, which is a stand-in and not what `ActionScorer` does with one. A
+      `DefenseDebuff` is the same stand-in the other way, and wrong the same way: it does not read the damage
+      the shred lets through (ADR 0035);
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
       bigger average one in a way nothing here can see;
     - no energy cost and no Spell initiative, both of which `ActionScorer` prices when it picks an unlock,
@@ -854,11 +856,13 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             DAMAGE: weights.get("damage", 0) * amount * crit_factor,
             HEAL: weights.get("heal", 0) * amount * crit_factor,
             "EnergyGain": weights.get("energy", 0) * amount,
+            "EnergyDrain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
             "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
+            "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(kind, 0.0)
     # The target half is worth what it does to every target it reaches; the caster half is worth what it does
@@ -897,11 +901,13 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
             DAMAGE: weights.get("damage", 0) * amount,
             HEAL: weights.get("heal", 0) * amount,
             "EnergyGain": weights.get("energy", 0) * amount,
+            "EnergyDrain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
             "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
+            "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(kind, 0.0)
         total += -value if kind in HARMFUL else value

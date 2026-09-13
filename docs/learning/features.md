@@ -33,7 +33,32 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 
 ## Versions
 
-### features:v3 (published, ADR 0020)
+### features:v4 (published, ADR 0035)
+
+`features:v3` with one more condition pair. Adding `DefenseDebuff` to the closed taxonomy adds a kind to every
+creature block, so a creature block becomes `C = 6 + 2 x 7 + S + N` and the condition pairs run in the order
+`Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`, `DefenseDebuff`, `InitiativeDebuff` — the new
+kind sits beside `DefenseBuff` so the two effects that move the same stat in opposite directions are read together:
+
+| Offset in block | Name | Value |
+| --- | --- | --- |
+| +6, +7 | `Bleed_amount`, `Bleed_remaining` | as in v3 |
+| +8, +9 | `Regeneration_amount`, `Regeneration_remaining` | as in v3 |
+| +10, +11 | `EnergyRegeneration_amount`, `EnergyRegeneration_remaining` | as in v3 |
+| +12, +13 | `Stun_amount`, `Stun_remaining` | as in v3 |
+| +14, +15 | `DefenseBuff_amount`, `DefenseBuff_remaining` | as in v3 |
+| +16, +17 | `DefenseDebuff_amount`, `DefenseDebuff_remaining` | `amount` is the defense taken away, summed over the creature's shreds; a permanent shred has no `remaining` |
+| +18, +19 | `InitiativeDebuff_amount`, `InitiativeDebuff_remaining` | as in v3 |
+| +20 to +20+S-1 | `knows_<spell id>` | as in v3 |
+| +20+S to +20+S+N-1 | `node_<tree id>/<node code>` | as in v3 |
+
+Everything else — the global block, the board slot rule, the naming, the fingerprint — is v1 unchanged. No run
+recorded under v3 is comparable to one under v4 without re-recording: the vectors differ in length and in what
+sits at every index from +16 on. `defense` in the creature block is the total, so it already carries the shred;
+the pair is what says how much of it is a condition and for how long. The Python side reads v1 through v4, so an
+older dataset stays analysable; the engine plays only a policy trained on the version it reads.
+
+### features:v3 (superseded by v4, ADR 0020)
 
 `features:v2` with one more condition pair. Adding `EnergyRegeneration` to the closed taxonomy adds a kind to every
 creature block, so a creature block becomes `C = 6 + 2 x 6 + S + N` and the condition pairs run in the order

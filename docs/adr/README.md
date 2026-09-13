@@ -40,3 +40,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0032](0032-measure-the-initiative-weight.md) | Measure the initiative weight, and move it from 0.5 to 2.1 | Accepted |
 | [0033](0033-a-critical-cast-multiplies-a-direct-heal.md) | A critical cast multiplies a direct heal | Accepted |
 | [0034](0034-a-tier-is-a-depth-a-player-climbs.md) | A tier is a depth a player climbs, not a node in the file | Accepted |
+| [0035](0035-lowering-defense-and-taking-energy.md) | Lowering defense and taking energy | Accepted |

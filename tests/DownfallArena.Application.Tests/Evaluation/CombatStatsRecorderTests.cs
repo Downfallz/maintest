@@ -124,6 +124,24 @@ public sealed class CombatStatsRecorderTests
         Recorder.SpellsOf(match.Id, actor.Owner)[TestContent.Strike.Value].Energy.ShouldBe(3);
     }
 
+    /// <summary>
+    /// Energy taken has a total of its own (ADR 0035). Netted against the energy a spell hands back, a drain
+    /// of two and a gain of two would cancel and both spells would read as doing nothing with energy at all.
+    /// </summary>
+    [Fact]
+    public async Task Energy_a_spell_takes_is_counted_apart_from_the_energy_it_hands_back()
+    {
+        var match = _store.Started();
+        var actor = match.Creatures[0];
+        var enemy = match.Creatures.First(creature => creature.Owner != actor.Owner);
+
+        await RecordAsync(match, actor.Id, aimed: [new EnergyDrainOutcome(enemy.Id, 3)], landed: [new EnergyDrainOutcome(enemy.Id, 2)]);
+
+        var effects = Recorder.SpellsOf(match.Id, actor.Owner)[TestContent.Strike.Value];
+        effects.EnergyDrained.ShouldBe(2, "what the board gave up, not what the cast asked for");
+        effects.Energy.ShouldBe(0);
+    }
+
     [Fact]
     public void A_match_nothing_was_recorded_for_reports_no_spells_rather_than_failing()
     {

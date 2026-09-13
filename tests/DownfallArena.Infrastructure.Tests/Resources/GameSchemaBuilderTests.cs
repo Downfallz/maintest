@@ -73,6 +73,37 @@ public sealed class GameSchemaBuilderTests
         resources.GetTalentTree(TalentTreeId.Parse("talent-tree:base:v1")).Spells.Count().ShouldBe(2);
     }
 
+    /// <summary>
+    /// The two kinds ADR 0035 added, authored the way the table in <c>data/README.md</c> says: a drain takes an
+    /// amount like any instant effect, a debuff a duration like the buff it mirrors, permanent included.
+    /// </summary>
+    [Fact]
+    public void A_drain_and_a_defense_debuff_are_authored_like_the_kinds_they_mirror()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/strike.v1.json", """
+                {
+                  "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
+                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget" },
+                  "effects": [
+                    { "kind": "EnergyDrain", "amount": 2 },
+                    { "kind": "DefenseDebuff", "amount": 1, "permanent": true },
+                    { "kind": "DefenseDebuff", "amount": 3, "durationRounds": 1 }
+                  ]
+                }
+                """);
+
+        var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path));
+
+        resources.GetSpell(SpellId.Parse("spell:strike:v1")).Effects.ShouldBe(
+        [
+            EnergyDrain.Of(2),
+            DefenseDebuff.Of(1, Duration.Permanent),
+            DefenseDebuff.Of(3, Duration.OfRounds(1)),
+        ]);
+    }
+
     [Fact]
     public void A_tampered_schema_is_rejected_on_load()
     {

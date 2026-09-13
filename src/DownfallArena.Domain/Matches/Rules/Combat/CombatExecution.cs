@@ -67,6 +67,10 @@ public static class CombatExecution
                 var gained = target.GainEnergy(energy.Amount);
                 landed = gained > 0 ? energy with { Amount = gained } : null;
                 break;
+            case EnergyDrainOutcome drain:
+                var taken = target.LoseEnergy(drain.Amount);
+                landed = taken > 0 ? drain with { Amount = taken } : null;
+                break;
             case ConditionOutcome condition:
                 landed = target.Apply(condition.Effect, source) is null ? null : condition;
                 break;

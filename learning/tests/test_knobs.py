@@ -726,6 +726,37 @@ def test_a_harmful_effect_aimed_at_a_friend_is_a_price_and_not_a_gift() -> None:
     assert cast_value(heal_and_slow, WEIGHTS) == pytest.approx(((0.8 * 4) - (0.5 * 2 * 1)) * 3)
 
 
+def test_a_drain_and_a_shred_are_harmful_and_priced_by_the_weight_of_what_they_move() -> None:
+    """ADR 0035 prices the two new kinds with the weights that already exist: the shred like the buff it
+    mirrors, and the drain like the gain. On a friend both are a price, the same as any other harmful kind."""
+    draining = spell(criticalChance=0, effects=[{"kind": "EnergyDrain", "amount": 2}])
+    shredding = spell(criticalChance=0, effects=[{"kind": "DefenseDebuff", "amount": 2, "durationRounds": 3}])
+    healing_and_shredding = spell(
+        criticalChance=0,
+        targeting=ALLY,
+        effects=[
+            {"kind": "Heal", "amount": 4},
+            {"kind": "DefenseDebuff", "amount": 2, "durationRounds": 1},
+        ],
+    )
+
+    assert cast_value(draining, WEIGHTS) == pytest.approx(0.2 * 2)
+    assert cast_value(shredding, WEIGHTS) == pytest.approx(0.5 * 2 * 3)
+    assert cast_value(healing_and_shredding, WEIGHTS) == pytest.approx(((0.8 * 4) - (0.5 * 2 * 1)) * 3)
+
+
+def test_a_critical_chance_does_not_reach_a_drain_or_a_shred() -> None:
+    """Neither is health on a target now, so neither takes the roll (ADR 0033, ADR 0035)."""
+    draining = {"criticalChance": 1.0, "effects": [{"kind": "EnergyDrain", "amount": 2}]}
+    shredding = {
+        "criticalChance": 1.0,
+        "effects": [{"kind": "DefenseDebuff", "amount": 2, "durationRounds": 1}],
+    }
+
+    assert cast_value(draining, WEIGHTS) == pytest.approx(0.2 * 2)
+    assert cast_value(shredding, WEIGHTS) == pytest.approx(0.5 * 2 * 1)
+
+
 def test_a_harmful_effect_aimed_at_an_enemy_is_still_the_point_of_the_spell() -> None:
     """The other side of the rule: on an enemy the same debuff is what the spell is for."""
     hit = spell(criticalChance=0, effects=[{"kind": "Damage", "amount": 3}])

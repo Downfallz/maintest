@@ -122,17 +122,19 @@ public static class GameSchemaMapper
             "DAMAGE" => Instant(dto.Amount, AmountField, effectContext, problems, Damage.Of),
             "HEAL" => Instant(dto.Amount, AmountField, effectContext, problems, Heal.Of),
             "ENERGYGAIN" => Instant(dto.Amount, AmountField, effectContext, problems, EnergyGain.Of),
+            "ENERGYDRAIN" => Instant(dto.Amount, AmountField, effectContext, problems, EnergyDrain.Of),
             "BLEED" => PerRound(dto, effectContext, problems, Bleed.Of),
             "REGENERATION" => PerRound(dto, effectContext, problems, Regeneration.Of),
             "ENERGYREGENERATION" => PerRound(dto, effectContext, problems, EnergyRegeneration.Of),
             "STUN" => ForRounds(dto, effectContext, problems, Stun.For),
             "DEFENSEBUFF" => WhileLasting(dto, effectContext, problems, DefenseBuff.Of),
+            "DEFENSEDEBUFF" => WhileLasting(dto, effectContext, problems, DefenseDebuff.Of),
             "INITIATIVEDEBUFF" => WhileLasting(dto, effectContext, problems, InitiativeDebuff.Of),
             _ => Problem<Effect>(problems, $"{context}: unknown effect kind '{dto.Kind}'. See data/README.md for the supported kinds."),
         };
     }
 
-    /// <summary>Damage, Heal, EnergyGain: an amount, applied once.</summary>
+    /// <summary>Damage, Heal, EnergyGain, EnergyDrain: an amount, applied once.</summary>
     private static Effect? Instant(int? amount, string field, string context, List<string> problems, Func<int, Effect> create) =>
         Require(amount, field, context, problems) is { } value ? Guard(() => create(value), context, problems) : null;
 

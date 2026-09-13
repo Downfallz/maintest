@@ -37,13 +37,13 @@ public sealed class ResolutionRulesTests
 
     /// <summary>
     /// ADR 0033: one roll multiplies what the cast puts on a target's health now -- the damage and the direct
-    /// heal -- and nothing else. The energy and the bleed in this spell are the boundary: a condition pays out
-    /// at each upkeep, and one roll at the cast should not decide several rounds of it.
+    /// heal -- and nothing else. The two energy effects, the bleed and the debuff in this spell are the boundary:
+    /// energy is another economy, and a condition pays out at each upkeep, which one roll should not decide.
     /// </summary>
     [Fact]
     public void A_critical_roll_multiplies_the_damage_and_the_direct_heal_and_nothing_else()
     {
-        var spell = Content.Spell("spell:mixed:v1", TargetingSpec.SingleTarget(TargetOrigin.Any), cost: 1, criticalChance: 0.5, Damage.Of(3), Heal.Of(2), EnergyGain.Of(1), Bleed.Of(1, 2));
+        var spell = Content.Spell("spell:mixed:v1", TargetingSpec.SingleTarget(TargetOrigin.Any), cost: 1, criticalChance: 0.5, Damage.Of(3), Heal.Of(2), EnergyGain.Of(1), EnergyDrain.Of(2), Bleed.Of(1, 2), DefenseDebuff.Of(1, Duration.OfRounds(1)));
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
@@ -62,7 +62,9 @@ public sealed class ResolutionRulesTests
             new DamageOutcome(Arena.Ghoul, 5, true),
             new HealOutcome(Arena.Ghoul, 4),
             new EnergyOutcome(Arena.Ghoul, 1),
+            new EnergyDrainOutcome(Arena.Ghoul, 2),
             new ConditionOutcome(Arena.Ghoul, Bleed.Of(1, 2)),
+            new ConditionOutcome(Arena.Ghoul, DefenseDebuff.Of(1, Duration.OfRounds(1))),
         ]);
     }
 

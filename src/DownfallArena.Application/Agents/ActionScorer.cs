@@ -136,6 +136,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             {
                 HealOutcome heal => HealScore(actor, Target(heal.Target, creatures), heal.Amount, remaining[heal.Target]),
                 EnergyOutcome energy => EnergyScore(actor, Target(energy.Target, creatures), energy.Amount, remaining[energy.Target]),
+                EnergyDrainOutcome drain => EnergyDrainScore(actor, Target(drain.Target, creatures), drain.Amount, remaining[drain.Target]),
                 ConditionOutcome condition => ConditionScore(actor, Target(condition.Target, creatures), condition.Effect, remaining[condition.Target]),
                 _ => 0,
             };
@@ -196,6 +197,15 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     private double EnergyScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
         remainingHealth == 0 ? 0 : -Sign(actor, target) * weights.Energy * amount;
 
+    /// <summary>
+    /// Energy taken is energy given with the sign turned over, clamped to what the target has because
+    /// <c>Creature.LoseEnergy</c> takes no more than that (ADR 0035) -- the same reason <see cref="HealScore"/>
+    /// clamps to the health that is missing, and the same reason the damage path reads the health that is left:
+    /// a resolution is priced before it is applied, so what the board can actually give up is read here.
+    /// </summary>
+    private double EnergyDrainScore(CreatureSnapshot actor, CreatureSnapshot target, int amount, int remainingHealth) =>
+        -EnergyScore(actor, target, Math.Min(amount, target.Energy.Value), remainingHealth);
+
     private double ConditionScore(CreatureSnapshot actor, CreatureSnapshot target, LastingEffect effect, int remainingHealth)
     {
         if (remainingHealth == 0)
@@ -213,6 +223,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
             DefenseBuff => 0,  // priced per target, with the rest of what the cast defends: see DefensiveScore
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount * rounds,
+            // A stand-in, and the same one `cast_value` uses for a buff: it does not read the damage the
+            // debuff actually lets through, the way `DefensiveScore` reads what a buff prevents (ADR 0035).
+            DefenseDebuff debuff => sign * weights.Defense * debuff.Amount * rounds,
             _ => 0,
         };
     }

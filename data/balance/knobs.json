@@ -377,15 +377,16 @@
     "spell:psycho_rush": {
       "name": "Psycho Rush",
       "class": "Berserker",
-      "intent": "The Berserker's all-in: close to half a creature in a single cast. The two points of defense it used to cost its caster are not in the taxonomy, so it is a nuke with no downside and its price is doing all the work.",
+      "intent": "The Berserker's all-in: close to half a creature in a single cast, and the caster stands there open for a round afterwards. It throws itself at one target and the recoil is the spell -- swing that hard and you are not covering yourself.",
       "keep": [
         "The line's gamble: big, single target, expensive",
-        "Priced as if the recoil existed, because one day it will"
+        "It costs its caster defense, not health: the Berserker is not hurt by its own swing, it is exposed by it"
       ],
-      "note": "The Berserker is the class whose point is the roll -- `enraged_charge` carries the highest critical chance in the catalogue and says so in its own first line -- and neither spell behind it gambled at all: both sat at 0.33, below the opener. This one now takes 0.5, the top of its own bounds, with the damage at 10: 7.98 a round to 10.00, inside the tier-3 band, and 'the line's gamble' becomes true of the numbers and not only of the sentence. Measured, 6 casts to 53.",
+      "note": "The Berserker is the class whose point is the roll -- `enraged_charge` carries the highest critical chance in the catalogue and says so in its own first line -- and neither spell behind it gambled at all: both sat at 0.33, below the opener. This one now takes 0.5, the top of its own bounds, with the damage at 10: 7.98 a round to 10.00, inside the tier-3 band. Measured, 6 casts to 53. Its second keep used to read 'priced as if the recoil existed, because one day it will'; that day is ADR 0035, and the recoil is on the spell -- 2 defense off its own caster for a round, which is what legacy wrote and what `casterEffects` was built to carry (ADR 0031). It costs 1.30 of the reading, 10.00 a round to 9.13, and the spell stopped reading as strictly better than `engulfing_flames`: the finding was the missing half, not a bound.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
@@ -459,15 +460,17 @@
     "spell:soul_devourer": {
       "name": "Soul Devourer",
       "class": "Leech",
-      "intent": "Parasite Jab grown up: the Leech takes what it hits, and this one takes enough to matter. The legacy prototype drained 2 energy from the target, which the taxonomy cannot say -- there is no negative `EnergyGain` -- so the theft keeps its meaning and changes its currency, the way `infectious_blast` traded a defense shred for tempo. What it steals is health.",
+      "intent": "Parasite Jab grown up: the Leech takes what it hits, and this one takes two things. The health it drinks is the class signature the opener already has; the energy it tears out is this spell's own, the half the port dropped and ADR 0035 gave back.",
       "keep": [
         "It takes from what it hits: the Leech's whole line does, and this is the large version",
+        "It takes energy, not only health: that is what makes it a Soul Devourer and not a bigger `parasite_jab`",
         "Dearer and heavier than `parasite_jab`, or the opener is the better spell"
       ],
-      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. Draining energy was not available and would not have helped if it were: energy is 0.2 a point, which is what killed `momentum` and what made ADR 0020's nomination of `summon_minions` decline itself. So the drain became a caster heal of 5 beside a hit of 5, at a price of 2: 2.00 a round to 9.00, and 0 casts to 343. The alternative measured -- 7 and 7 at a price of 3 -- reads 626 casts and takes the line over from `hateful_sacrifice`, which is one spell replacing another rather than a class with three.",
+      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. A caster heal of 5 stood in for that half and got it to 9.00 a round and 343 casts. The drain is now expressible (ADR 0035) and it is back where legacy had it, 2 energy off the target, with the caster heal down from 5 to 4: the heal no longer has to carry a theft it was never about. The drain is worth 0.40 in `cast_value` and that reading is wrong in a way worth saying out loud -- energy is priced at 0.2 a point, and taking two off a creature does not cost it two points of anything, it costs it the cast it was saving for. Nothing in the scorers reads a cast denied, so what this spell is worth will read low here until something does.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
@@ -522,15 +525,15 @@
     "spell:noxious_cure": {
       "name": "Noxious Cure",
       "class": "Trickster",
-      "intent": "The cure is noxious to the cured: the whole team is mended and the whole team is slowed for having drunk it. Legacy stripped 2 defense from the allies it healed, which the taxonomy cannot say -- `DefenseBuff.Of` refuses anything below 1, so there is no negative buff -- and the substitution is the one `infectious_blast` already uses, a defense shred rendered as the single stat debuff that exists. The bargain is the spell: without a cost it is a free team heal, and the Trickster is the class that makes you pay for things.",
+      "intent": "The cure is noxious to the cured: the whole team is mended and the whole team is left open for having drunk it. Legacy stripped 2 defense from the allies it healed and ADR 0035 gave that stat back, so the bargain is now written in the currency it was written in. The bargain is the spell: without a cost it is a free team heal, and the Trickster is the class that makes you pay for things.",
       "keep": [
         "Team-wide heal: it reaches the team or it is Rejuvenate",
-        "It always slows the allies it heals: the price is paid by the cured, which is what makes it noxious",
-        "Never enough slow to be worth casting on an enemy: this is a cure, not a weapon"
+        "It always shreds the allies it heals: the price is paid by the cured, which is what makes it noxious",
+        "The shred runs out: a cure that costs the team its armour for good is not a cure"
       ],
-      "note": "The bargain was sized against an initiative weight of 0.5 and ADR 0032 measured it at 2.1, which broke the spell rather than bending it: a slow of 2 costs 4.2 an ally where the heal of 4 is worth 3.2, so the cast read **-3.00 a round** -- worth less than doing nothing -- and its own bounds could not reach better than 3.30. The price is now a slow of **1**, the smallest the taxonomy can say, and the bounds are rebuilt around a heal that has room to pay for it: the heal reaches 5 instead of 4, the slow stops at 2 because 3 is unaffordable at any heal in this box, and the critical chance is a knob for the first time (ADR 0033 made the multiplier reach a direct heal). Two readings the numbers still hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, slowing the allies you heal made this spell read as strictly better than a plain heal of the same size.",
+      "note": "Sized against an initiative weight of 0.5, the bargain broke when ADR 0032 measured that weight at 2.1: a slow of 2 cost 4.2 an ally where the heal of 4 is worth 3.2, the cast read **-3.00 a round** -- worse than doing nothing -- and the price had to come down to a slow of 1 to be payable at all. The cost is now the shred legacy wrote, 2 defense for one round, and it is affordable in a way the substitution never was: defense is 0.65 a point, so the price is 1.30 an ally against a heal worth 3.20. That is the ADR's point in one line -- the spell did not need smaller numbers, it needed the right stat. The bounds stay where they were rebuilt, and the amount reaches 3 because the shred has room the slow did not. Two readings the numbers still hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, shredding the allies you heal makes this spell read as strictly better than a plain heal of the same size.",
       "knobs": [
-        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 5, "step": 1 },
@@ -556,15 +559,16 @@
     "spell:infectious_blast": {
       "name": "Infectious Blast",
       "class": "Trickster",
-      "intent": "The only spell that neither damages nor heals: one energy to slow the whole enemy team. It was a defense shred and is approximated with the one debuff the taxonomy has, which makes it the game's only pure tempo play.",
+      "intent": "The only spell that neither damages nor heals: one energy to strip the armour off the whole enemy team, and it never grows back. It is what the rest of the board hits through, so what it is worth depends on who is casting beside it.",
       "keep": [
         "No damage: it is control or it is nothing",
-        "The cheapest thing that touches all three enemies"
+        "The cheapest thing that touches all three enemies",
+        "The shred is permanent: the Trickster takes something off the board rather than borrowing it"
       ],
+      "note": "It carried the substitution ADR 0035 removed, and it carried it at the wrong price: rendered as tempo it read **25.20 a round**, the largest number in the catalogue, and `revenant_guards` and `death_squad` were both reported as having no bounds that could make them a choice beside it. As the defense debuff it always was it reads 11.70, inside the tier-3 band. The `revenant_guards` finding went away without either spell moving; `death_squad` is still reported, now against `revenant_guards` at 15.60, which is its own bounds and not this spell's. The duration knob went with the substitution -- the debuff is permanent, and a permanent duration is not a number the tuner can turn.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/durationRounds", "min": 1, "max": 3, "step": 1 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
     },

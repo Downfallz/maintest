@@ -10,10 +10,12 @@ public sealed class EffectTests
         Damage.Of(3).Amount.ShouldBe(3);
         Heal.Of(2).Amount.ShouldBe(2);
         EnergyGain.Of(1).Amount.ShouldBe(1);
+        EnergyDrain.Of(2).Amount.ShouldBe(2);
 
         Should.Throw<ArgumentOutOfRangeException>(() => Damage.Of(0));
         Should.Throw<ArgumentOutOfRangeException>(() => Heal.Of(-1));
         Should.Throw<ArgumentOutOfRangeException>(() => EnergyGain.Of(0));
+        Should.Throw<ArgumentOutOfRangeException>(() => EnergyDrain.Of(0));
     }
 
     [Fact]
@@ -69,15 +71,20 @@ public sealed class EffectTests
     {
         var buff = DefenseBuff.Of(2, Duration.Permanent);
         var debuff = InitiativeDebuff.Of(1, Duration.OfRounds(2), StackingPolicy.Ignore);
+        var defenseDebuff = DefenseDebuff.Of(2, Duration.Permanent);
 
         buff.Amount.ShouldBe(2);
         buff.Duration.IsPermanent.ShouldBeTrue();
         buff.Stacking.ShouldBe(StackingPolicy.Stack);
         debuff.Duration.IsPermanent.ShouldBeFalse();
         debuff.Stacking.ShouldBe(StackingPolicy.Ignore);
+        defenseDebuff.Amount.ShouldBe(2);
+        defenseDebuff.Duration.IsPermanent.ShouldBeTrue();
+        defenseDebuff.Stacking.ShouldBe(StackingPolicy.Stack);
 
         Should.Throw<ArgumentOutOfRangeException>(() => DefenseBuff.Of(0, Duration.Permanent));
         Should.Throw<ArgumentOutOfRangeException>(() => InitiativeDebuff.Of(0, Duration.Permanent));
+        Should.Throw<ArgumentOutOfRangeException>(() => DefenseDebuff.Of(0, Duration.Permanent));
     }
 
     [Fact]

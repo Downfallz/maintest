@@ -24,17 +24,19 @@ public sealed record SpellEffects(
     int Damage,
     int Healing,
     int Energy,
+    int EnergyDrained,
     int Stuns,
     int Bleeds,
     int Regens,
     int EnergyRegenerations,
     int DefenseBuffs,
     int InitiativeDebuffs,
+    int DefenseDebuffs,
     int ConditionDamage = 0,
     int ConditionHealing = 0,
     int ConditionEnergy = 0)
 {
-    public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public static SpellEffects None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     /// <summary>Everything a spell's casts took off an enemy, on the spot and at upkeep (ADR 0027).</summary>
     public int TotalDamage => Damage + ConditionDamage;
@@ -55,12 +57,14 @@ public sealed record SpellEffects(
             Damage + other.Damage,
             Healing + other.Healing,
             Energy + other.Energy,
+            EnergyDrained + other.EnergyDrained,
             Stuns + other.Stuns,
             Bleeds + other.Bleeds,
             Regens + other.Regens,
             EnergyRegenerations + other.EnergyRegenerations,
             DefenseBuffs + other.DefenseBuffs,
             InitiativeDebuffs + other.InitiativeDebuffs,
+            DefenseDebuffs + other.DefenseDebuffs,
             ConditionDamage + other.ConditionDamage,
             ConditionHealing + other.ConditionHealing,
             ConditionEnergy + other.ConditionEnergy);

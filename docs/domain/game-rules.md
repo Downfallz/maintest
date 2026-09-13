@@ -105,7 +105,9 @@ listed in [spells.md](spells.md).
       - the energy cost is spent;
       - a critical roll (creature chance plus Spell chance) multiplies a target's damage and direct heal by
         the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
-      - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy);
+      - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy given,
+        or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs
+        less its defense debuffs, floored at zero (ADR 0035);
       - lasting effects attach as Conditions per their stacking policy.
 4. **End of round**
    1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an

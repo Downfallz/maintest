@@ -55,7 +55,9 @@ public sealed class Creature : Entity<CreatureId>
 
     public bool IsStunned => IsAlive && _conditions.Has<Stun>();
 
-    public Defense TotalDefense => BaseStats.Defense.Plus(_conditions.Sum<DefenseBuff>(buff => buff.Amount));
+    public Defense TotalDefense => BaseStats.Defense
+        .Plus(_conditions.Sum<DefenseBuff>(buff => buff.Amount))
+        .Minus(_conditions.Sum<DefenseDebuff>(debuff => debuff.Amount));
 
     /// <summary>
     /// The creature's own initiative, before any condition: the definition's, raised for good by the Spell
@@ -147,6 +149,23 @@ public sealed class Creature : Entity<CreatureId>
 
         Energy = Energy.Plus(amount);
         return amount;
+    }
+
+    /// <summary>
+    /// Returns the energy actually taken, which is at most what the creature had; a dead creature loses none.
+    /// </summary>
+    internal int LoseEnergy(int amount)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(amount);
+
+        if (IsDead)
+        {
+            return 0;
+        }
+
+        var taken = Math.Min(amount, Energy.Value);
+        Energy = Energy.Minus(taken);
+        return taken;
     }
 
     internal Result SpendEnergy(Energy cost)
