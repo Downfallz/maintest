@@ -47,12 +47,15 @@ The score of one resolution, with the weights `w`:
 | `w.initiative` x amount x rounds | an InitiativeDebuff (a permanent condition counts three) | a debuff on an enemy counts for, on an ally against |
 | `w.initiative` x amount x rounds | an InitiativeBuff (a permanent condition counts three). The same price as the debuff above: one price for one point whether it is given or taken (ADR 0036) | a buff on an ally counts for, on an enemy against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
-| `-w.risk` | a fizzle, or the share of targets dropped at resolution | always |
+| `-w.risk` | a fizzle, or the share of targets dropped at resolution. Reaches a decision only in principle: `Expected` resolves against the current board, where neither has happened yet, so this term is the same zero for every candidate and cancels. See the `risk` row under **Built-in weights** | always |
 
 Decisions:
 
 - **Intent**: for each castable spell, the best target set by expected score; the spell with the best
-  score. Ties go to the first spell in ordinal id order.
+  score. Ties go to the first spell in ordinal id order. That tie-break is on an exact `double` comparison,
+  and it is load-bearing more often than it looks: sweeping `risk` moves one decision at 3, 6 and 9 and at
+  no other value tried, because `risk x 1 / 3` is an exact integer there and lands on another candidate's
+  score. Two weight values that differ can therefore play identically while a third between them does not.
 - **Targets**: the best target set of the declared spell on the board at reveal time; no target when the
   spell is no longer castable.
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
@@ -83,7 +86,7 @@ damage spread elsewhere.
 | bleed | 0.8 | Damage over time is discounted against damage now: the target may die first, and the bot only counts the health it could still reach. |
 | defense | 0.65 | Two thirds of a point per point of damage the buff actually takes off the hits the creature is expected to face. Defense subtracts from every incoming hit, so the same buff is worth more to the last creature standing than to a full team. **Not read against `damage` point for point**, whatever the shared unit suggests: an attack is paid once, this is paid for every round the buff holds, so it compounds where `damage` does not. That is why it sits below one. Measured rather than felt (ADR 0028): the play moves in steps as this price rises, 0.65 sits in the middle of the step that puts matches inside the 8..16 round band, and at 1.5 every match runs out of rounds and no attack is ever cast. |
 | energy | 0.3 | Just under a third of a damage per point of energy — kept for the next round, handed to an ally, regenerated over rounds, or taken off an enemy. It was hand-set at 0.2 in phase L5, when the only thing it priced was energy *kept* and it was meant as no more than a tie-breaker towards the cheaper spell. ADR 0020, 0026 and 0035 gave it three more jobs without ever re-measuring it, and ADR 0037 swept it: at 0.0 the first mover wins 0.720 of the mirror, so the term was never a tie-breaker at all. 0.3 is the middle of the step 0.2..0.4, whose right edge breaks hard (0.5 reads 108.33 on the objective with the exploiter at 0.790). Read what it buys precisely: **the mirror's first-mover share, not a stronger agent** — `player1WinShare` goes 0.575 to 0.510, and a 0.3 agent against a 0.2 one is a dead heat. |
-| risk | 2.0 | A wasted action (a fizzle, or the share of targets that vanished before the spell resolved) costs two damage. Roughly one average hit thrown away. |
+| risk | 2.0 | Meant as: a wasted action — a fizzle, or the share of targets that vanished before the spell resolved — costs two damage, roughly one average hit thrown away. **Measured as: nothing.** Swept at 0, 1, 2, 4, 20 and 100 on content `91da955c`, every value plays out identically, column for column, over 400 seeds; 3, 6 and 9 all give one other identical reading, so what separates the two is whether the value is a multiple of three and not how large it is. The decision path explains it: `Expected` scores a resolution simulated against the **current** board, where nothing has fizzled and no target has dropped yet, so the term contributes the same zero to every candidate and cancels in the argmax. The real fizzle rate of about 0.16 comes from targets dying between declaration and resolution, which is exactly what the bot cannot see when it chooses. Leaving it at 2.0 is therefore free and so is any other value; what it should be is a question for the decision that fixes the term, not for this table. |
 | initiative | 2.1 | Two and a bit per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. ADR 0018 set it to 0.5 on the reasoning that initiative is indirect the way defense is, and said in the same breath that it was a guess. ADR 0032 measured it instead, by sweeping it alone on fixed content, and the reasoning was backwards: a point of initiative is bought once and kept for the match, in a game the first mover was winning 64 % of. At 2.1 that reading is 0.500. The sweep is in that ADR; 2.1 sits in the middle of its step rather than on an edge. Since ADR 0026 a debuff also multiplies by the rounds it lasts while the unlock's permanent gain does not, so a two-round debuff outvalues a permanent gain of the same size; the tension is recorded in that ADR and is now four times larger. |
 
 To feel out what one of them does, the content studio's run panel can play a heuristic agent from nine boxes
@@ -95,10 +98,14 @@ to tune — tuning is `search-weights` below.
 
 They were **hand-set as a starting point**, in the commit that introduced the agents (phase L5), from the
 readings above: pick damage as the unit, then say what a kill, a stun and a wasted turn are worth in damage.
-They are **not** the output of a search. Three have since been measured one at a time, by sweeping that one
-weight on fixed content and playing every value: `defense` (ADR 0028), `initiative` (ADR 0032) and `energy`
-(ADR 0037). `scripts/sweep-weight.py` is that method written down, and the six that remain are still the
-starting point. `ScoringWeights.Default` is the single source;
+They are **not** the output of a search. Three were then measured one at a time, by sweeping that one weight
+on fixed content and playing every value, and moved: `defense` (ADR 0028), `initiative` (ADR 0032) and
+`energy` (ADR 0037). `scripts/sweep-weight.py` is that method written down. The five that were left —
+`kill`, `stun`, `heal`, `bleed` and `risk` — have since been swept the same way on content `91da955c`, and
+**none of them moved**: each hand-set value sits inside the step the sweep found, so the starting guesses
+were good and are now measured rather than assumed. `damage` is not swept, because it is the unit: moving it
+alone is the same experiment as scaling the other eight the other way. The one thing those five sweeps did
+turn up is that `risk` does not reach a decision at all, which the row above records. `ScoringWeights.Default` is the single source;
 `learning/weights/greedy.json` holds the same nine numbers so `heuristic:<file>` and `greedy` start from the
 same place, and a test on each side of the repository pins the two together.
 
