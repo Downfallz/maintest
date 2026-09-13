@@ -166,7 +166,7 @@ The terms below are the authoritative entries of the "Learning" section of
   `ResolutionRules.Resolve` (a forced crit and a forced miss) and weight the two scores by the actor's
   critical chance for the spell, so the expected damage includes the critical contribution; score damage
   dealt (capped at the target's health), kills, healing (capped at what was missing), stuns, bleeds as future
-  damage, buffs, energy kept, and a risk penalty for a fizzle or dropped targets.
+  damage, buffs, energy kept, and a fizzle penalty for an action that came to nothing (ADR 0038).
 - `HeuristicAgent`: the lookahead with explicit weights (`damage`, `kill`, `heal`, `stun`, `bleed`, `defense`,
   `energy`, `fizzle`, `initiative`). Intent: the castable spell whose best target set scores best. Targets: the
   best set for the declared spell at reveal time. Speed: Quick when a kill is on the table, Standard

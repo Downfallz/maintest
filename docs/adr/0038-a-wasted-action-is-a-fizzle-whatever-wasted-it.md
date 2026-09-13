@@ -26,8 +26,8 @@ contain.
 We will rename the weight `risk` to **`fizzle`**, everywhere and at once, and we will **change no behaviour**.
 The three readers stay exactly where they are, because none of them is wrong: `Score` prices a resolution,
 and a real resolution can fizzle and can lose targets. What is missing is a reading at *declaration* time,
-and adding one is a separate decision ([ADR 0039](0039-the-bot-cannot-see-the-waste-it-is-about-to-cause.md)),
-taken separately so that the digest moves once and it is known which change moved it.
+and adding one is a separate decision, still to be written as ADR 0039 and taken separately so that the
+digest moves once and it is known which change moved it.
 
 The same rename fixes a claim this project published and got wrong. ADR 0037's journal entry said the weight
 is read in two places, both inside `ActionScorer.Score`. It is read in three: `HeuristicAgent.DecideIntent`
@@ -78,4 +78,4 @@ number does not have to rediscover it.
 - `learning/weights/greedy.json`, `learning/weights/search-2.json`,
   `learning/src/downfall_learning/export.py`'s `WEIGHT_NAMES` and `DEFAULT_WEIGHTS`.
 - `docs/learning/agents.md`: the term table, the weights table and the provenance section.
-- ADR 0039: the declaration-time reading, which is what actually fixes the blind spot.
+- The declaration-time reading, which is what actually fixes the blind spot: ADR 0039, not yet written.
