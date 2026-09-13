@@ -9,6 +9,11 @@ namespace DownfallArena.Domain.Matches.Rules.Combat;
 /// <summary>
 /// Computes what an action does when its slot comes up, without touching the creatures: fizzles, dropped targets,
 /// the critical roll, the energy cost, and one outcome per effect and target.
+/// <para>
+/// One roll decides the cast, and it multiplies what the cast puts on a target's health *now*: `Damage` and
+/// `Heal` (ADR 0033). Not a lasting effect, whose payout is spread over rounds the one roll should not decide;
+/// not an effect on the caster (ADR 0031); and not energy, which is another economy.
+/// </para>
 /// </summary>
 public static class ResolutionRules
 {
@@ -66,7 +71,7 @@ public static class ResolutionRules
         effect switch
         {
             Damage damage => new DamageOutcome(target.Id, Math.Max(0, Multiplied(damage.Amount, multiplier) - target.TotalDefense.Value), isCritical),
-            Heal heal => new HealOutcome(target.Id, heal.Amount),
+            Heal heal => new HealOutcome(target.Id, Multiplied(heal.Amount, multiplier)),
             EnergyGain energy => new EnergyOutcome(target.Id, energy.Amount),
             LastingEffect lasting => new ConditionOutcome(target.Id, lasting),
             _ => throw new InvalidOperationException($"Effect '{effect.GetType().Name}' has no resolution rule."),

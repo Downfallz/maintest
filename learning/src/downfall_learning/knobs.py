@@ -27,8 +27,11 @@ PRECISION = 3
 #: Magnitude fields an effect may carry, in the order they are compared.
 MAGNITUDES = ("amount", "amountPerRound", "durationRounds")
 
-#: The one effect kind the critical multiplier applies to (``ResolutionRules``).
+#: The effect kinds the critical multiplier applies to: what a cast puts on a target's health now, and
+#: nothing lasting, on the caster or in another currency (ADR 0033, ``ResolutionRules``).
 DAMAGE = "Damage"
+HEAL = "Heal"
+CRITTABLE = frozenset({DAMAGE, HEAL})
 
 #: What a spell does to whoever cast it (ADR 0031), and the pointer prefix a knob addresses it by.
 CASTER_EFFECTS = "casterEffects"
@@ -375,8 +378,12 @@ def validate(knobs: Knobs, content: Content, root: Path | None = None) -> list[s
 
 
 def _inert_critical(knob: Knob, document: Mapping[str, object]) -> bool:
-    """A critical chance on a spell with no damage: the multiplier reaches ``Damage`` and nothing else."""
-    return knob.path == CRITICAL_CHANCE and DAMAGE not in _effects(document)
+    """A critical chance on a spell that neither damages nor heals a target: the multiplier reaches nothing.
+
+    Both kinds, since ADR 0033. A caster effect is not read here even when it is one of them: the roll stops
+    at the targets, so a chance on a spell whose only damage is its own recoil still moves nothing.
+    """
+    return knob.path == CRITICAL_CHANCE and not (CRITTABLE & set(_effects(document)))
 
 
 def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[str]:
@@ -402,8 +409,8 @@ def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[st
             )
         if _inert_critical(knob, document):
             problems.append(
-                f"{knob.key}: the critical multiplier applies to damage only, and this spell deals "
-                "none, so this knob cannot move anything."
+                f"{knob.key}: the critical multiplier reaches a target's damage and direct heal, and this "
+                "spell does neither, so this knob cannot move anything."
             )
     return problems
 
@@ -771,9 +778,10 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
     - the caster's own critical chance, which belongs to a creature and not to a spell.
 
     What it is good for is one question: roughly how much is this spell worth next to the one offered beside
-    it. Only `Damage` takes the critical multiplier, the same as `ResolutionRules`.
+    it. `Damage` and a direct `Heal` take the critical multiplier, the same as `ResolutionRules` (ADR 0033).
     """
     critical = float(document.get("criticalChance", 0) or 0)
+    crit_factor = 1 + critical * (CRITICAL_MULTIPLIER - 1)
     effects = document.get("effects", [])
     friendly = _friendly(document)
     total = 0.0
@@ -792,8 +800,8 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
         # the team it heals, and counting that as upside prices the cost as a gift.
         sign = -1.0 if friendly and kind in HARMFUL else 1.0
         total += sign * {
-            DAMAGE: weights.get("damage", 0) * amount * (1 + critical * (CRITICAL_MULTIPLIER - 1)),
-            "Heal": weights.get("heal", 0) * amount,
+            DAMAGE: weights.get("damage", 0) * amount * crit_factor,
+            HEAL: weights.get("heal", 0) * amount * crit_factor,
             "EnergyGain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,
@@ -833,9 +841,10 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
             if effect.get("permanent")
             else float(effect.get("durationRounds", 0) or 0)
         )
+        # No critical factor on either crittable kind: the roll stops at the targets (ADR 0031, ADR 0033).
         value = {
             DAMAGE: weights.get("damage", 0) * amount,
-            "Heal": weights.get("heal", 0) * amount,
+            HEAL: weights.get("heal", 0) * amount,
             "EnergyGain": weights.get("energy", 0) * amount,
             "Bleed": weights.get("bleed", 0) * per_round * rounds,
             "Regeneration": weights.get("heal", 0) * per_round * rounds,

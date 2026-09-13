@@ -313,7 +313,7 @@
         "Heals more in one cast than anything else",
         "Single target: the team heals belong to the Trickster and the Shaman"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance became a live number with ADR 0033: the multiplier reaches a direct heal. The spell is disabled, so nothing measures it yet, and it carries no chance today -- the knob is here for the pass that enables it.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
@@ -517,12 +517,13 @@
         "It always slows the allies it heals: the price is paid by the cured, which is what makes it noxious",
         "Never enough slow to be worth casting on an enemy: this is a cure, not a weapon"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only and this spell deals none. Two readings the numbers hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, slowing the allies you heal made this spell read as strictly better than a plain heal of the same size.",
+      "note": "The bargain was sized against an initiative weight of 0.5 and ADR 0032 measured it at 2.1, which broke the spell rather than bending it: a slow of 2 costs 4.2 an ally where the heal of 4 is worth 3.2, so the cast read **-3.00 a round** -- worth less than doing nothing -- and its own bounds could not reach better than 3.30. The price is now a slow of **1**, the smallest the taxonomy can say, and the bounds are rebuilt around a heal that has room to pay for it: the heal reaches 5 instead of 4, the slow stops at 2 because 3 is unaffordable at any heal in this box, and the critical chance is a knob for the first time (ADR 0033 made the multiplier reach a direct heal). Two readings the numbers still hide. `HealScore` counts only the health an ally is missing, so on a whole team this is worth nothing and it is never a free cast. And the debuff is a **cost** although it is written like any other effect -- the targeting origin is what says so, and both `cast_value` and `dominates` had to be taught it: read unsigned, slowing the allies you heal made this spell read as strictly better than a plain heal of the same size.",
       "knobs": [
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 1, "max": 5, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
@@ -579,10 +580,11 @@
         "The cheapest heal",
         "Single target"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance became a live number with ADR 0033 -- the multiplier reaches a direct heal -- so the 0.17 it had been carrying as decoration is now worth 0.68 of expected healing, and it is a knob. The cheapest heal setting the price of the line is exactly the spell whose expected size should be tunable without moving the number a reader sees.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
@@ -661,7 +663,7 @@
         "Team-wide and permanent: the strongest defensive cast in the game",
         "Priced above the single-target version or it simply replaces it"
       ],
-      "note": "Its critical chance is not a knob: the multiplier applies to damage only, and this spell deals none.",
+      "note": "Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
@@ -694,12 +696,13 @@
         "The anticipation heal, not the emergency one: on a creature dying this round it does 2",
         "Worth more than a tier-1 heal, or the Shaman's first pick buys nothing"
       ],
-      "note": "Its critical chance is not a knob and is now authored at 0: the multiplier reaches `Damage` and nothing else, so the 0.5 it carried was decoration. Removing it changes no score -- but it does change the match, because the crit roll draws from the shared random source: the same content with the crit at 0 reads 12.93 against 12.95 and moves this spell's own mirror casts 12 to 7. That pair is this pass's noise floor, measured rather than asserted, and it is why a per-spell reading off twenty or thirty declaring sides is not evidence. `noxious_cure` (0.33) and `rejuvenate` (0.17) still carry the same decoration.",
+      "note": "Its critical chance of 0.5 was dropped to 0 as decoration and then restored: ADR 0033 made the multiplier reach a direct heal, so it is a live number and a knob like an attacker's. It reaches the instant half only -- a regeneration pays out at each upkeep and one roll at the cast does not decide several rounds of it -- which is a second reason the split between the two halves is the spell: the instant half is the half that can have a good round. The measurement taken while it was 0 is still worth keeping: removing a chance that provably could not change a score still moved the objective 12.95 to 12.93 and this spell's own mirror casts 12 to 7, because the roll draws from the shared random source. That pair is the pass's noise floor, and it is why a per-spell reading off twenty or thirty declaring sides is not evidence.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },

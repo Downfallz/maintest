@@ -490,8 +490,52 @@ def test_two_hits_of_three_are_not_one_hit_of_six() -> None:
     assert twins(content(**{"spell:twice": twice, "spell:once": once})) == []
 
 
-def test_a_critical_chance_on_a_spell_that_deals_no_damage_is_refused(tmp_path: Path) -> None:
+def test_a_critical_chance_on_a_spell_that_neither_damages_nor_heals_is_refused(tmp_path: Path) -> None:
     """The multiplier reaches Damage and nothing else, so the knob could only waste the search's budget."""
+    guard = {
+        "id": "spell:guard:v1",
+        "initiative": 1,
+        "energyCost": 2,
+        "criticalChance": 0.5,
+        "targeting": {"origin": "Ally", "scope": "SingleTarget", "maxTargets": 1},
+        "effects": [{"kind": "DefenseBuff", "amount": 2, "durationRounds": 2}],
+    }
+    document = knobs_json(
+        spells={
+            "spell:guard": {
+                "name": "Guard",
+                "intent": "The armour.",
+                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
+            }
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:guard": guard}))
+
+    assert problems == [
+        "spell:guard/criticalChance: the critical multiplier reaches a target's damage and direct heal, "
+        "and this spell does neither, so this knob cannot move anything."
+    ]
+
+
+def test_a_critical_chance_on_a_spell_that_deals_damage_is_a_knob_like_any_other(tmp_path: Path) -> None:
+    document = knobs_json(
+        spells={
+            "spell:attack": {
+                "name": "Attack",
+                "intent": "The yardstick.",
+                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
+            }
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    assert validate(knobs, content(**{"spell:attack": ATTACK})) == []
+
+
+def test_a_critical_chance_on_a_spell_that_only_heals_is_a_knob_like_any_other(tmp_path: Path) -> None:
+    """ADR 0033: the multiplier reaches a direct heal, so a healer carries the same dial an attacker does."""
     heal = {
         "id": "spell:heal:v1",
         "initiative": 1,
@@ -511,27 +555,20 @@ def test_a_critical_chance_on_a_spell_that_deals_no_damage_is_refused(tmp_path: 
     )
     knobs = load_knobs(write_knobs(tmp_path, document))
 
-    problems = validate(knobs, content(**{"spell:heal": heal}))
-
-    assert problems == [
-        "spell:heal/criticalChance: the critical multiplier applies to damage only, and this spell "
-        "deals none, so this knob cannot move anything."
-    ]
+    assert validate(knobs, content(**{"spell:heal": heal})) == []
 
 
-def test_a_critical_chance_on_a_spell_that_deals_damage_is_a_knob_like_any_other(tmp_path: Path) -> None:
-    document = knobs_json(
-        spells={
-            "spell:attack": {
-                "name": "Attack",
-                "intent": "The yardstick.",
-                "knobs": [{"path": "/criticalChance", "min": 0.0, "max": 0.6, "step": 0.05}],
-            }
-        }
-    )
-    knobs = load_knobs(write_knobs(tmp_path, document))
+def test_a_critical_chance_is_priced_into_a_direct_heal_but_not_a_regeneration(tmp_path: Path) -> None:
+    """The same boundary the engine draws: what lands on health now takes the roll, what lasts does not."""
+    weights = {"heal": 1.0}
+    instant = {"criticalChance": 0.5, "effects": [{"kind": "Heal", "amount": 4}]}
+    lasting = {
+        "criticalChance": 0.5,
+        "effects": [{"kind": "Regeneration", "amountPerRound": 2, "durationRounds": 2}],
+    }
 
-    assert validate(knobs, content(**{"spell:attack": ATTACK})) == []
+    assert cast_value(instant, weights) == pytest.approx(4 * 1.5)
+    assert cast_value(lasting, weights) == pytest.approx(4.0)
 
 
 def tiered(**tiers: int) -> Content:
