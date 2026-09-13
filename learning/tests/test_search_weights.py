@@ -25,7 +25,7 @@ from downfall_learning.search_weights import (
     win_rate_lines,
 )
 
-TARGET = {**DEFAULT_WEIGHTS, "kill": 8.0, "risk": 1.0}
+TARGET = {**DEFAULT_WEIGHTS, "kill": 8.0, "fizzle": 1.0}
 
 
 class BowlEvaluator:

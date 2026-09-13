@@ -119,7 +119,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
         if (resolution.Fizzled)
         {
-            return -weights.Risk;
+            return -weights.Fizzle;
         }
 
         var actor = creatures.First(creature => creature.Id == resolution.Action.Actor);
@@ -147,7 +147,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);  // what the actor keeps; what a spell hands out is priced per outcome above
         if (resolution.Action.Targets.Count > 0)
         {
-            score -= weights.Risk * resolution.DroppedTargets.Count / resolution.Action.Targets.Count;
+            score -= weights.Fizzle * resolution.DroppedTargets.Count / resolution.Action.Targets.Count;
         }
 
         return score;

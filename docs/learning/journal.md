@@ -4,6 +4,40 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-13. `risk` becomes `fizzle`, and nothing else changes
+
+- **What changed**: the scoring weight `risk` is renamed **`fizzle`** (ADR 0038). No behaviour, no value, no
+  reader moved. The benchmark digest verifies unchanged and the weights fingerprint stays **`1933f3ae`** —
+  it hashes values, not names, so every stamp already written still matches.
+- **Why the name was wrong**: "risk" promises a reading of probability the term has never computed. What it
+  counts is actions that came to nothing, and there are three ways that happens — a castable spell with no
+  legal target, a resolution that fizzled, targets gone before it resolved. `fizzle` wins over `waste` and
+  `forfeit` because the engine already uses it: `CombatResolution.Fizzled`, the `fizzleRateA` objective
+  metric, the `fizzles` count in every evaluation report. A weight named after something the engine already
+  counts needs no glossary entry of its own.
+- **The correction that came with it.** The entry below says `weights.Risk` is read in two places, both
+  inside `Score`. **It is read in three.** The third is `HeuristicAgent.DecideIntent`, which scores a
+  castable spell with no legal target at `-weights.Fizzle` against the other spells' scores — and that one
+  *is* on the decision path: a spell whose best target set scores below the weight loses to a spell with no
+  target at all at a low value and beats it at a high one. The measured conclusion does not move, because no
+  value from 0 to 100 changes an outcome on the 400 seeds, but the reason published for it was incomplete.
+  It was written from a grep of `ActionScorer.cs` instead of a search of the whole source, and it went out in
+  the journal, in `agents.md`, in a commit message and in a merged pull request before being checked.
+- **What was *not* done, and why.** The first plan was to delete the two readers inside `Score`. Reading the
+  code killed it: they are unreachable from a decision, not wrong. `Score` documents itself as the score of
+  one resolution, and a resolution really can have fizzled or lost targets — `Score` simply has no production
+  caller other than `Expected`, which resolves against the board as it stands. Deleting them would hide the
+  defect rather than fix it, and leave `Score` wrong for its own stated job.
+- **The cost, checked rather than assumed**: a weights file still saying `"risk"` now fails to load, loudly
+  on both sides — `.NET` answers "The JSON property 'risk' could not be mapped", Python answers "Unknown
+  weight names: risk". That is the behaviour we want over a silently defaulted weight, and it is why
+  `greedy.json` and `search-2.json` are converted in the same change.
+- **Still open**: the bot cannot see the waste it is about to cause. ADR 0039 is that decision, and it is the
+  one that moves the digest. A fourth way an action comes to nothing belongs in it, named by the maintainer
+  and not in this pass: **the actor stunned between declaring and acting**.
+- **Verified**: build (0 warnings), 757 .NET tests, 304 pytest, `dotnet format`, ruff check and format, 117
+  studio tests, benchmark digest verified unchanged, and both loaders checked against an old-format file.
+
 ## 2026-09-13. The five remaining weights, none of which moves, and a sixth that does nothing
 
 - **What changed**: nothing in the engine. `kill`, `stun`, `heal`, `bleed` and `risk` were swept one at a
@@ -51,12 +85,22 @@ first.
   identical reading (49.25). So the two outcomes are selected by **whether the value is a multiple of three**,
   not by how large it is, which is a floating-point tie-break and not an effect: `risk x 1 / 3` is an exact
   integer there and lands on another candidate's score, and ties go to the first spell in ordinal id order.
-- **Why it is inert**: `weights.Risk` is read in two places, both inside `Score` — the `Fizzled` branch and
-  the dropped-target share. A decision goes through `Expected`, which scores a resolution simulated against
-  the **current** board, where nothing has fizzled and no target has dropped. `Best` only offers legal
-  targets. So the term is the same zero for every candidate and cancels in the argmax. The real fizzle rate
-  of 0.163 comes from targets dying between declaration and resolution — exactly what the bot cannot see
-  when it chooses. This is ADR 0020's shape again: a weight that is documented, priced and unreachable.
+- **Why it is inert**: `weights.Risk` is read in **three** places. Two are inside `Score` — the `Fizzled`
+  branch and the dropped-target share — and a decision goes through `Expected`, which scores a resolution
+  simulated against the **current** board, where nothing has fizzled and no target has dropped, while `Best`
+  only offers legal targets. So both are the same zero for every candidate and cancel in the argmax. The
+  real fizzle rate of 0.163 comes from targets dying between declaration and resolution — exactly what the
+  bot cannot see when it chooses. This is ADR 0020's shape again: a weight that is documented, priced and
+  unreachable.
+
+  **Correction, the same day**: this entry first said "two places, both inside `Score`", and that was wrong.
+  The third is `HeuristicAgent.DecideIntent`, which scores a castable spell with no legal target at
+  `-weights.Risk` against the other spells' scores. That one *is* on the decision path and can discriminate:
+  a spell whose best target set scores below `-risk` loses to a spell with no target at all at a low weight
+  and beats it at a high one. The sweep says it does not happen on these 400 seeds at any value from 0 to
+  100, so the measured conclusion stands unchanged — but the reason given for it was incomplete, and the
+  claim was published in this entry, in `agents.md` and in the pull request before it was checked against
+  a full search of the source.
 - **Open, and not decided here**: whether the bot should learn to see that risk (price the expected drop at
   declaration) or whether the term should go. That is a decision with an ADR, not a number to tune, and
   nothing in this entry changes the engine.

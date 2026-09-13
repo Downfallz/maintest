@@ -60,7 +60,7 @@ public sealed class AgentSpecTests
     {
         ScoringWeights.Default.Fingerprint.ShouldMatch("^[0-9a-f]{8}$");
         ScoringWeights.Default.Fingerprint.ShouldBe(ScoringWeights.Default.Fingerprint);
-        (ScoringWeights.Default with { Risk = 2.5 }).Fingerprint.ShouldNotBe(ScoringWeights.Default.Fingerprint);
+        (ScoringWeights.Default with { Fizzle = 2.5 }).Fingerprint.ShouldNotBe(ScoringWeights.Default.Fingerprint);
     }
 
     [Fact]
@@ -99,6 +99,6 @@ public sealed class AgentSpecTests
     {
         ScoringWeights.Default.Validated().ShouldBe(ScoringWeights.Default);
         Should.Throw<ArgumentException>(() => (ScoringWeights.Default with { Kill = double.NaN }).Validated()).Message.ShouldContain("kill");
-        Should.Throw<ArgumentException>(() => (ScoringWeights.Default with { Risk = double.PositiveInfinity }).Validated()).Message.ShouldContain("risk");
+        Should.Throw<ArgumentException>(() => (ScoringWeights.Default with { Fizzle = double.PositiveInfinity }).Validated()).Message.ShouldContain("fizzle");
     }
 }
