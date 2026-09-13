@@ -17,5 +17,12 @@
       "amount": 6
     }
   ],
-  "enabled": true
+  "enabled": true,
+  "casterEffects": [
+    {
+      "kind": "Bleed",
+      "amountPerRound": 4,
+      "durationRounds": 1
+    }
+  ]
 }

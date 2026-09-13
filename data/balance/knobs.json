@@ -546,11 +546,12 @@
     "spell:tranquilizer_dart": {
       "name": "Tranquilizer Dart",
       "class": "Trickster",
-      "intent": "The cheap stun: a modest hit and a stolen activation for less than Crushing Stomp asks. The Trickster buys the tempo the Warlord pays full price for, and pays for it in damage.",
+      "intent": "The cheap stun: a stolen activation for half what Crushing Stomp asks, and almost nothing else. The Trickster buys the tempo the Warlord pays full price for, and pays for it in damage.",
       "keep": [
         "Cheaper than Crushing Stomp and weaker for it",
-        "The stun is the spell"
+        "The stun is the spell: the damage is a rounding error, not a second half"
       ],
+      "note": "It was **1 declaration in 400 matches** -- and legacy is not what went wrong with it. The port is faithful (3 energy, 3 damage, a one-round stun) and so was the relationship it was built on: legacy Crushing Stomp is 4 energy, 6 damage, and a stun of **one round**. The second round is this catalogue's, added in the Warlord pass along with damage 6 to 7 and a critical chance of 0.75, and it turned the cheap stun into a strictly worse expensive one -- 75% of the price for 44% of the reading. Nothing caught it: `outclassed` compares a spell's *ceiling* against a rival's *current* value, and this spell's ceiling sat just under `ice_spear`'s, so the check named the Wizard and never mentioned the Warlord. The fix is this spell's own intent, applied: price **2**, damage 3 to **2**, stun to **2 rounds**. 4.00 a round to 8.00, inside the band and still under `crushing_stomp`'s 9.12 -- cheaper and weaker, which is the first keep, while buying tempo at half the Warlord's price, which is the sentence the intent has always carried. Measured: 1 declaration to **78**, 72 stuns landed, and `crushing_stomp` unmoved at 93.1% over 99. Greedy wins 0.387 of the sides that declare it against the exploring agent's **0.659 over 44** -- greedy under-plays it, which is `death_squad`'s split read the other way round. The `check-knobs` finding stays: its ceiling of 10.00 is held down by a damage bound its own identity requires, and the rival is `ice_spear` at 10.20, so the bounds that need to move are the Wizard's.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
@@ -625,11 +626,13 @@
     "spell:engulfing_flames": {
       "name": "Engulfing Flames",
       "class": "Wizard",
-      "intent": "Psycho Rush in a robe: as written today it carries the same cost, the same damage, the same critical chance and the same targeting. Two spells that identical cannot both be interesting, and no evaluation can attribute anything to either.",
+      "intent": "The clean nuke. The catalogue holds three big single-target hits at three energy and this is the only one that costs its caster nothing -- Psycho Rush leaves the Berserker open for a round, Hateful Sacrifice takes four of the Leech's own health, and the Wizard simply casts.",
       "keep": [
-        "Must stop being a copy of Psycho Rush",
+        "No caster effect: what separates it from Psycho Rush and Hateful Sacrifice is that it pays nothing",
+        "It pays for that once, in critical chance, and not twice",
         "The Wizard's single-target answer to its own sweep"
       ],
+      "note": "Its old intent read 'Psycho Rush in a robe: the same cost, the same damage, the same critical chance and the same targeting', and its first keep was 'must stop being a copy of Psycho Rush'. That was settled by the **Berserker** pass, not by this spell: Psycho Rush now carries 10 damage, a chance of 0.5 and a recoil on its own caster. The claim is withdrawn. What was left was a spell paying twice for the one thing that makes it itself -- 9 damage *and* a chance of 0.33 against the other two's 10 and 0.5, for the privilege of costing nothing. Damage goes to **10**, so the discount is taken once, in the chance alone: 7.98 a round to **8.87**, between Psycho Rush's 9.13 and Hateful Sacrifice's 7.33. The `check-knobs` finding against `ice_spear` stays and is **twice an artifact**: `cast_value` has no kill term, which is what a nuke is for, and prices `ice_spear`'s slow at 2.1 a point, which is 41% of that spell's reading. Measured, the two are 44.4% and 49.0% -- and this one does 1283 damage to its 553.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
@@ -645,11 +648,11 @@
         "Damage and slow in one cast",
         "A rate spell, not a nuke: it wins the next round, not this one"
       ],
+      "note": "Its bounds are narrowed, not its numbers. The slow could reach 3 points over 2 rounds, which at 2.1 a point is a tempo term of 12.60 against the 4.20 it carries today -- a ceiling of **20.60**, the third largest in the catalogue, on the one weight three entries in a row have now called suspect. The duration knob went first because it contradicts the second keep above: 'it wins the next round' is one round, and a knob that can spend two is not a bound on the spell but a way out of its own identity -- the same thing `tranquilizer_dart`'s duration knob was. The amount stops at 2, which is where the content sits. Ceiling 20.60 to **12.20**; nothing a build reads has moved. This spell is also the bar two others cannot clear (`engulfing_flames` at a ceiling of 10.00, `tranquilizer_dart` at 10.00, against its 10.20), and **41% of its 10.20 is that slow**. It reads 49.0% against `engulfing_flames`'s 44.4% while doing less than half the damage, so the gap the check reports is far larger than the gap that is there.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
@@ -675,31 +678,36 @@
     "spell:revenant_guards": {
       "name": "Revenant Guards",
       "class": "Necromancer",
-      "intent": "Thundering Seal for the whole team at the same price: permanent defense on three allies at once. Cast every round it makes a team unkillable, which makes it the clearest thing in this catalogue that needs a rule rather than a number.",
+      "intent": "Thundering Seal for the whole team, paid in the Necromancer's own blood: permanent defense on three allies at once, and three health off whoever raised them. It is the willingness to pay its parent names, spent on the team instead of on the enemy.",
       "keep": [
         "Team-wide and permanent: the strongest defensive cast in the game",
-        "Priced above the single-target version or it simply replaces it"
+        "Priced above the single-target version or it simply replaces it -- and the price is health, not energy",
+        "The caster pays: a Necromancer never gets a cast for nothing"
       ],
-      "note": "Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
+      "note": "Its second keep was **false**. It asks to be priced above `thundering_seal` and both cost two energy, so the team-wide version simply replaced the single-target one -- 15.60 a round against 9.75, the second-largest reading in the catalogue and above a tier-3 band of 8 to 14. Legacy says why: `MinionsCost = 1`, a second currency the port dropped for this spell and for `crazed_specter` (`docs/domain/spells.md`, 'Minions'). `summon_minions` already settled what a minion costs when it charged the summoner's own health, so spending one costs the same: **4 health on the caster**, as a one-round `Bleed` (ADR 0031). 15.60 to **12.40**, inside the band, and the keep is true in the currency that matters -- `thundering_seal` costs two energy and nothing else, this costs two energy *and* four health. No energy price moved. The price is a bleed and not a `Damage` because **this spell would otherwise pay its own price down**: `Ally` targeting includes the caster (`TargetingRules`), so every cast permanently armours the summoner, and `ResolutionRules` reduces a caster `Damage` by that armour -- 3 health on the first cast, 1 on the second, 0 on the third. A bleed tick ignores defense (ADR 0019), so the toll is the same every time. `ResolutionRulesTests` pins the difference. Its critical chance is still not a knob after ADR 0033: the multiplier reaches a target's damage and direct heal, and this spell does neither -- it is the one shape the rule leaves out.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
     },
     "spell:crazed_specter": {
       "name": "Crazed Specter",
       "class": "Necromancer",
-      "intent": "The heaviest sweep in the game: against a whole team it is the single biggest swing anywhere. The minion it used to cost is gone, so the energy price is all that stands between it and matches ending in three rounds.",
+      "intent": "The heaviest sweep in the game, and the Necromancer bleeds for it: against a whole team it is the single biggest swing anywhere, and three health off the caster every time it is thrown. Reach is what this class inherits from its opener; paying for it is the other half.",
       "keep": [
         "The heaviest sweep",
-        "Its price stands in for the missing minion cost"
+        "The minion it costs is paid in the summoner's health, the currency `summon_minions` set",
+        "It hits harder than `tornado` and pays something `tornado` does not, or the two are one spell"
       ],
+      "note": "It was `tornado` with more damage and nothing else -- same energy, same critical chance, same Spell initiative, same three enemies, 6 against 4 -- so `check-knobs` reported it as strictly better, correctly, and the pair was one spell written twice. Its own second keep said 'its price stands in for the missing minion cost' while its price was `tornado`'s exactly, standing in for nothing. Legacy carries `MinionsCost = 1` on it, dropped at the port, and `summon_minions` already fixed what a minion costs by charging the summoner's health. So the specter costs **4 health**, as a one-round `Bleed` (ADR 0031): 15.96 a round to **13.83**, inside the band from above it, and the domination is gone because more damage now comes with a price `tornado` does not pay. The energy cost did not move -- it was never what was missing. The toll is a bleed rather than a `Damage` so that armour cannot soften it, which is what makes it a minion's due and not a wound: its sibling `revenant_guards` proved the point by armouring its own caster and paying its price down to nothing in three casts.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
+        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
       ]
@@ -726,11 +734,13 @@
     "spell:restorative_burst": {
       "name": "Restorative Burst",
       "class": "Shaman",
-      "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only way a creature other than the caster gains energy on demand.",
+      "intent": "Health and energy in one cast on one ally: the Shaman's tempo spell and the only way a creature other than the caster gains energy on demand -- `wait` is the only other spell that hands energy out at all, and it hands it to itself.",
       "keep": [
         "Gives back at least the energy it costs",
-        "Single target"
+        "Single target",
+        "It trades heal for energy point for point against `restorative_gush`, whatever the weights say the trade is worth"
       ],
+      "note": "**2.80 a round against a tier-3 band of 8 to 14, with a ceiling of 3.80** -- the worst reading in the catalogue now that `death_squad` is fixed, and its bounds cannot reach the band. Do not read them as a route to one: half the spell is 2 energy at 0.2 a point, which is 0.40, and to clear 8 on the heal alone it would need to heal 10 -- more than `restorative_gush`, the pure heal it is supposed to be a choice beside. This is `momentum`'s situation exactly, and the way out is the same one that entry names: the **price of energy**, set by ADR 0020 and never swept. The heal goes 3 to **4**, the top of its box that keeps every clause above, so the trade against `restorative_gush` is 2 heal for 2 energy rather than 3 for 2: 2.80 to **3.60**, which fixes nothing structural and is said here so nobody reads it as a fix. And the argument is `soul_devourer`'s drain read from the other side -- giving an ally two energy does not give it 0.40 of anything, it buys it the cast it was saving for, and nothing in the scorers reads a cast bought any more than it reads a cast denied.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
@@ -744,13 +754,14 @@
       "intent": "Bleed on a whole team: a hit now and a wound on every enemy for the rounds after. It is what makes a Shaman team win the rounds it did not act in.",
       "keep": [
         "Team-wide bleed",
-        "Costs more than Tornado because it keeps working"
+        "What it has over `tornado` is that it keeps working, not that it costs more"
       ],
+      "note": "Its second keep read 'costs more than Tornado because it keeps working', and it was **true until this refonte**: `tornado` cost 2 and this costs 3. The Berserker pass took `tornado` to 3 for its own reasons -- it was the second-largest reading in the catalogue and matches were ending at 6.4 rounds -- and falsified this clause on the way past, the same way it falsified `tranquilizer_dart`'s. The claim cannot be restored by price: 4 would tie `crushing_stomp`, whose own first keep is 'the most expensive cast in the catalogue' and whose entry says the price *is* the spell. So the clause is rewritten to what is true and was always the real point -- the lingering, not the receipt. The bleed duration knob drops from 3 rounds to 2: legacy carries `Length = 1` and so does the content, and a knob that triples a bleed across three targets took the ceiling to **26.40**, the second largest in the catalogue. Ceiling 26.40 to **21.60**; nothing a build reads moved.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]

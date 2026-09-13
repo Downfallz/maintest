@@ -4,6 +4,178 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-13. The minion price paid its own way down, and a review caught it
+
+- **What changed**: `revenant_guards` and `crazed_specter` charge their caster a one-round **`Bleed 4`**
+  instead of a `Damage 3`. Content `afc1bee2` to **`91da955c`**. Found by the Codex review on PR #70, verified
+  before acting on it.
+- **The defect**: `TargetOrigin.Ally` selects every living creature of the caster's team, the caster included
+  (`TargetingRules`), so every `revenant_guards` cast permanently armours its own summoner. `ResolutionRules`
+  reduces a `Damage` outcome by the armour of whoever it lands on, and a caster effect goes through that same
+  rule. So the price I added one entry ago read **3 health on the first cast, 1 on the second, and 0 on the
+  third** — a spell paying its own price down to nothing. The entry claimed a flat 3, and the band placement
+  of 12.60 was computed from a 3 that did not exist after two casts.
+- **The engine is not wrong here.** `docs/domain/spells.md` has always said a self-damage is reduced by the
+  caster's own defense, and that is the rule `hateful_sacrifice` and `summon_minions` are priced under too.
+  What is wrong is choosing that kind for a spell that hands its caster armour.
+- **A bleed tick ignores defense** (ADR 0019, `UpkeepRules`), so the toll is the same every cast. That is also
+  the better fiction: a minion's due is not a wound, and armour does not stop what is already collecting.
+  `summon_minions` keeps its `Damage 2` — raising minions *is* a wound, and it buffs nobody, so it does not
+  decay.
+- **4 rather than 3, and the band chose again.** Bleed is priced at 0.8 against damage's 1.0, so a toll of 3
+  would leave `crazed_specter` at 14.36, back outside. At 4 the two read **12.40** and **13.83**, both inside,
+  and the real cost is 4 unmitigated where it was 3 mitigated — dearer in every state of the board.
+- **`ResolutionRulesTests` now pins the difference** between a caster `Damage` and a caster `Bleed` behind the
+  same armour: 3 becomes 1, 3 stays 3. The choice of kind is load-bearing content, so a test says why.
+- **The shape of the catch is worth keeping.** Nothing in `check-knobs` could have found it: it reads a
+  spell's numbers, not how its own effects interact with its own price across casts. The reviewer read the
+  resolution rule against the targeting rule against the content, which is three files none of which is wrong
+  on its own.
+
+## 2026-09-13. Shaman, 9 of 9: the class the numbers could not reach
+
+- **What changed**: `restorative_burst`'s heal 3 to **4**, `toxic_waves`' bleed duration bound 3 rounds to
+  **2**, and two keep clauses rewritten. Content `a940c07c` to **`afc1bee2`**. All three Shaman spells are
+  faithful ports; nothing was dropped at the translation.
+- **A third price keep that this refonte falsified, and again it was my own pass.** `toxic_waves` kept "costs
+  more than Tornado because it keeps working" — true until the Berserker pass took `tornado` from 2 to 3 for
+  its own good reasons, leaving both at 3. It is the second clause that pass invalidated on its way past;
+  `tranquilizer_dart`'s was the first. **The claim cannot be restored by price**: 4 would tie
+  `crushing_stomp`, whose first keep is "the most expensive cast in the catalogue" and whose entry says the
+  price *is* the spell. So the clause is rewritten to what was always the real point — the lingering, not the
+  receipt.
+- **And a bound that tripled a bleed across three targets.** `toxic_waves` could reach 3 rounds where legacy
+  carries `Length = 1` and so does the content, which put its ceiling at **26.40**, the second largest in the
+  catalogue. Narrowed to 2: ceiling **21.60**, nothing a build reads moved. Third box narrowed this way after
+  `ice_spear`'s and `tranquilizer_dart`'s.
+- **`restorative_burst` cannot reach its tier and its entry now says so.** 2.80 a round against a band of 8 to
+  14, with a **ceiling of 3.80** — the worst reading in the catalogue now that `death_squad` is fixed. Half
+  the spell is 2 energy at 0.2 a point, which is 0.40; to clear 8 on the heal alone it would need to heal 10,
+  more than `restorative_gush`, the pure heal it is meant to be a choice beside. The heal goes to 4 — the top
+  of its box that keeps every clause — so its trade against the gush is 2 heal for 2 energy instead of 3 for
+  2. **2.80 to 3.60, which fixes nothing structural**, and the entry says that so nobody reads it as a fix.
+- **It is the only spell that hands energy to another creature.** `wait` is the only other spell that hands
+  energy out at all and it hands it to itself. So the argument is `soul_devourer`'s drain read from the other
+  side: giving an ally two energy does not give it 0.40 of anything, it buys it the cast it was saving for,
+  and nothing in the scorers reads a cast bought any more than it reads a cast denied.
+- **Both of this class's tier-3 spells are unplayed, and the numbers did not move it.** At `explore:0.2`,
+  `restorative_burst` goes 1 declaration to **4** and `toxic_waves` stays at **3** — against every other
+  class's tier-3 children at 23 to 161. `healing_screech` above them is declared 52 times, and the tree shape
+  is the standard one every class has, so the branch is walked and its far end is not taken. I could not close
+  that from this class's bounds and it is handed to the larger pass rather than guessed at.
+- **Nine of nine classes.** Four of the five weights-and-rules findings this refonte produced are now pointing
+  at two unswept numbers: the **energy** weight (`momentum`, `restorative_burst`, `soul_devourer`'s drain) and
+  the **initiative** weight (`death_squad`, `ice_spear` and the three spells that cannot clear it). Neither is
+  a content problem, and both are measurements someone can run the way ADR 0032 ran the first one.
+
+## 2026-09-13. Necromancer, 8 of 9: a currency the port dropped, and two keeps that were false because of it
+
+- **What changed**: `revenant_guards` and `crazed_specter` each gain **`casterEffects: Damage 3`** — the minion
+  they spend, paid in the summoner's health. No energy price moved. Content `bbe0b48e` to **`a940c07c`**.
+- **Both tier-3 spells sat above the band, and both said in their own entries why.** `revenant_guards` keeps
+  "priced above the single-target version or it simply replaces it" — and it cost the same two energy as
+  `thundering_seal` while reaching three allies instead of one, so it simply replaced it: **15.60 a round
+  against 9.75**. `crazed_specter` keeps "its price stands in for the missing minion cost" — and its price was
+  `tornado`'s exactly, so it stood in for nothing: same energy, same chance, same Spell initiative, same three
+  enemies, **6 damage against 4**. `check-knobs` called that one strictly better, correctly. Two keeps that
+  named a price, and neither price existed.
+- **Legacy says what was missing, and it is not a number.** Both carry **`MinionsCost = 1`**, a second currency
+  the port dropped — `docs/domain/spells.md` has recorded it under "Minions" since the translation. So this is
+  a restoration, like Soul Devourer's drain and Psycho Rush's recoil, not a balance move.
+- **`summon_minions` had already set the exchange rate.** It was re-authored to charge the summoner's own
+  health for *raising* minions, so *spending* one costs the same currency: 3 health on each child (ADR 0031).
+  The class becomes one idea — a Necromancer never gets a cast for nothing — which is what the opener's own
+  intent promises its children inherit: "`crazed_specter`'s reach and `revenant_guards`' willingness to pay".
+- **Both come inside the band from above it**: `revenant_guards` 15.60 to **12.60**, `crazed_specter` 15.96 to
+  **13.96**. The two largest readings in the catalogue are now its two largest *inside* the band, and the
+  `crazed_specter`/`tornado` domination is gone — more damage now comes with a price `tornado` does not pay.
+  11 findings to 10.
+- **The band chose the number, not taste.** At 2 health the specter reads 14.63, back outside; at 3 it reads
+  13.96. `summon_minions` charges 2 for raising and the children charge 3 for spending, which is the one place
+  the arithmetic and the fiction disagree — a bank would settle it, and there is no bank.
+- **Measured, and the sample is thin.** Under greedy `crazed_specter` falls from ~12 declarations to **5**: the
+  bot prices the health honestly and stops throwing it. Neither Necromancer spell reaches the eight sides the
+  table calls readable there. At `explore:0.2` the shares are `tornado` 50.0% over 22 sides,
+  `revenant_guards` 46.7% over 15, `crazed_specter` 38.9% over 18 — small samples, reported as such and not
+  read as a verdict.
+- **And three more false claims in `docs/domain/spells.md`, two of them older than this pass.** Its "Minions"
+  bullet said `summon_minions` takes **3** health (the content says 2), that the Necromancer line is
+  **disabled** (it is enabled), and that it is **the only** spell charged to its caster's health — which
+  `hateful_sacrifice` has made false at 4 health since the Leech pass.
+
+## 2026-09-13. Wizard, 7 of 9: one spell is the bar three classes cannot clear
+
+- **What changed**: `engulfing_flames` damage 9 to **10**, and `ice_spear` loses its duration knob and has its
+  slow capped at 2 — a bounds change, not a numbers one. Content `3762ee24` to **`bbe0b48e`**. Both Wizard
+  spells are faithful ports; nothing was dropped at the translation, so this is balance and nothing else.
+- **The clean nuke was paying twice.** The catalogue holds three big single-target hits at three energy.
+  `psycho_rush` deals 10 at a chance of 0.5 and leaves its caster open for a round; `hateful_sacrifice` deals
+  10 at 0.5 and takes four of its own health; `engulfing_flames` dealt **9** at **0.33** and cost its caster
+  nothing. It was discounted on damage *and* on chance for the one thing that makes it itself. The damage goes
+  to 10 so the discount is taken once, in the chance alone: **7.98 a round to 8.87**, between the two spells
+  that pay a price, and inside the band rather than just under it.
+- **And it changed no outcome at all.** 44.4% over 99 sides before and 44.4% over the same 99 after. Casts
+  118 to 127 and damage 1283 to 1461, and not one match in the benchmark turned on the extra point. The
+  argument for the change is that three spells of one shape should not price the same privilege twice; the
+  measurement is that it bought nothing, and both belong in the entry.
+- **Its old intent was a claim the Berserker pass had already settled.** It read "Psycho Rush in a robe: the
+  same cost, the same damage, the same critical chance and the same targeting", and its first keep was "must
+  stop being a copy of Psycho Rush". `psycho_rush` moved to 10 damage, 0.5 and a recoil four entries ago, so
+  the copy was gone and the keep had been true without anyone noticing. Withdrawn — the fourth keep clause
+  this pass has found outliving its own reason.
+- **`ice_spear` keeps its numbers and loses a third of its box.** Its slow could reach 3 points over 2 rounds,
+  which at 2.1 a point is a tempo term of 12.60 against the 4.20 it carries — a ceiling of **20.60**, the
+  third largest in the catalogue, on the weight three entries in a row have called suspect. The duration knob
+  went because it contradicts the spell's own second keep, "it wins the next round, not this one": one round
+  is the identity and a knob that can spend two is a way out of it, exactly what `tranquilizer_dart`'s
+  duration knob was last entry. Ceiling **20.60 to 12.20**; nothing a build reads moved.
+- **Three spells, three classes, one bar.** `check-knobs` now reports `engulfing_flames` (Wizard),
+  `psycho_rush` (Berserker) and `tranquilizer_dart` (Trickster) as spells no move inside their bounds makes a
+  choice beside `ice_spear` at 10.20 — and **41% of that 10.20 is the slow**, at 2.1 a point. Measured,
+  `ice_spear` reads 50.0% against `engulfing_flames`'s 44.4% while doing less than half its damage, so the gap
+  the check reports is far larger than the gap that is there.
+- **`cast_value` is wrong in both directions at once here**, which is why this pair is the clearest case in
+  the catalogue: it has **no kill term** — the largest weight the bot actually uses, and exactly what a nuke
+  is for — and it prices a slow at the initiative weight nobody has swept for a buff or against a second
+  target. One error understates the nuke and the other overstates its rival.
+- **And greedy under-plays the nuke, as it under-played the dart.** The exploring agent wins **58.6% over 70
+  sides** with `engulfing_flames` against greedy's 44.4%. Two entries running, the spell whose worth sits in
+  terms `cast_value` cannot see is the spell greedy leaves on the table.
+
+## 2026-09-13. Trickster, 6 of 9: the pass that broke a spell was mine
+
+- **What changed**: `tranquilizer_dart` alone — price 3 to **2**, damage 3 to **2**, stun one round to
+  **two**. Every move is inside bounds already declared; no knob was widened. Content `25d0aed7` to
+  **`3762ee24`**. Two of the class's three spells were re-authored under ADR 0035 and are left alone.
+- **Legacy is not what went wrong with it.** The port is faithful — 3 energy, 3 damage, a one-round stun — and
+  so was the relationship it was built on: legacy Crushing Stomp is 4 energy, 6 damage and a stun of **one
+  round**. Pay 4 for a big hit and a stolen activation, or 3 for a small hit and the same stolen activation.
+  That is a choice.
+- **The second round is mine.** The Warlord pass, four entries down, took `crushing_stomp` to damage 7, a
+  critical chance of 0.75 **and a two-round stun**. The Warlord entry justifies all three and none of it is
+  wrong on its own; what it did to the Trickster is that the cheap stun became a strictly worse expensive one
+  — **75% of the price for 44% of the reading** — and it was declared **1 time in 400 matches**.
+- **Nothing caught it, and the reason is worth keeping.** `outclassed` compares a spell's *ceiling* against a
+  rival's *current* value. This spell's ceiling is 10.00 and `ice_spear` carries 10.20, so the check has been
+  reporting the pair for entries — and it never once named `crushing_stomp`, because the stomp's 9.12 sits
+  *below* that ceiling. The check was right and pointing at the wrong spell.
+- **The fix is the spell's own intent, applied.** It has always read "the Trickster buys the tempo the Warlord
+  pays full price for, and pays for it in damage". At 2 energy for a two-round stun and a damage of 2 it does
+  exactly that: **4.00 a round to 8.00**, inside the band, still under `crushing_stomp`'s 9.12 — cheaper and
+  weaker, which is its first keep — while buying the tempo at half the Warlord's price.
+- **Measured: 1 declaration to 78**, 72 stuns landed, and `crushing_stomp` unmoved at 93.1% over 99
+  declarations. The dart does not cannibalise it; it is a second way to spend a turn.
+- **And the split reads the other way round from `death_squad`'s.** Greedy wins **0.387** of the sides that
+  declare the dart; the exploring agent wins **0.659 over 44**. Last entry greedy over-cast a spell and lost
+  with it; here greedy under-plays one that wins comfortably in varied play. Both are the same fact about the
+  scorer, seen from two sides.
+- **The finding stays, and it is not this class's to clear.** The dart's ceiling is held down by a damage bound
+  its own identity requires — "the damage is a rounding error, not a second half". The rival is `ice_spear` at
+  10.20, a Wizard spell, so the bounds that need to move are the Wizard's.
+- **`crushing_stomp` at 93.1% over 58 sides is the strongest reading in the catalogue** and is written down
+  here rather than acted on: it belongs to a class already passed, and the larger tuning pass is where a
+  number like that gets arbitrated against everything else.
+
 ## 2026-09-13. Assassin, 5 of 9: the class that names both untuned weights
 
 - **What changed**: one effect kind, `InitiativeBuff` (ADR 0036), the mirror `InitiativeDebuff` never had, and

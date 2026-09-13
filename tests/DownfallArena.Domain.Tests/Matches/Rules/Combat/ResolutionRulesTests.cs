@@ -213,6 +213,38 @@ public sealed class ResolutionRulesTests
     }
 
     /// <summary>
+    /// A caster `Damage` goes through the same rule as any other: it is reduced by the armour of whoever it
+    /// lands on, which here is the caster (`docs/domain/spells.md`). A caster `Bleed` is not -- a bleed tick
+    /// ignores defense (ADR 0019, `UpkeepRules`) -- so the two kinds are not interchangeable as a price.
+    /// <para>
+    /// Content depends on the difference. A spell that both armours its caster and charges it damage pays its
+    /// own price down: `revenant_guards` buffs every ally permanently, and `Ally` includes the caster, so a
+    /// price written as damage fell 3, 1, 0 over three casts. Written as a bleed it does not move.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void A_caster_damage_is_reduced_by_the_casters_own_armour_and_a_caster_bleed_is_not()
+    {
+        var bleeding = Content.SpellWithCasterEffects("spell:toll:v1", [Damage.Of(1)], Bleed.Of(3, rounds: 1));
+        var wounding = Content.SpellWithCasterEffects("spell:wound:v1", [Damage.Of(1)], Damage.Of(3));
+        var resources = Resources(bleeding, wounding);
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.UnlockSpell(bleeding);
+        knight.UnlockSpell(wounding);
+        knight.Apply(DefenseBuff.Of(2, Duration.Permanent));
+        var creatures = Arena.Snapshots(living);
+
+        var tolled = ResolutionRules.Resolve(CombatAction.Bind(new CombatIntent(Arena.Knight, bleeding.Id), [Arena.Ghoul]), creatures, resources, RuleSet.Default, NoCrit);
+        var wounded = ResolutionRules.Resolve(CombatAction.Bind(new CombatIntent(Arena.Knight, wounding.Id), [Arena.Ghoul]), creatures, resources, RuleSet.Default, NoCrit);
+
+        tolled.Outcomes.OfType<ConditionOutcome>().ShouldHaveSingleItem()
+            .Effect.ShouldBe(Bleed.Of(3, rounds: 1), "a bleed carries its full amount past the armour");
+        wounded.Outcomes.OfType<DamageOutcome>().Last(outcome => outcome.OnCaster)
+            .Amount.ShouldBe(1, "two of the three were stopped by the caster's own armour");
+    }
+
+    /// <summary>
     /// ADR 0031: once per cast, however many targets the cast reached. A sweep whose caster effect landed once
     /// per target would make the reward scale with the board, which is what the target count already does to
     /// the damage.
@@ -314,6 +346,6 @@ public sealed class ResolutionRulesTests
     private static CombatResolution Resolve(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, FixedRandom random) =>
         ResolutionRules.Resolve(action, creatures, Arena.Resources, RuleSet.Default, random);
 
-    private static GameResources Resources(Spell extra) =>
-        GameResources.Create("test", [.. Arena.Resources.Creatures], [.. Arena.Resources.Spells, extra], [.. Arena.Resources.TalentTrees]);
+    private static GameResources Resources(params Spell[] extra) =>
+        GameResources.Create("test", [.. Arena.Resources.Creatures], [.. Arena.Resources.Spells, .. extra], [.. Arena.Resources.TalentTrees]);
 }
