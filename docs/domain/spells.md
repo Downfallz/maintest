@@ -46,15 +46,19 @@ The effect taxonomy is closed and every effect applies to the spell's targets. S
 counterpart, so they were dropped or approximated; one has since been recovered. Each is a rule to decide, not an oversight:
 
 - ~~**Effects on the caster**~~ (`SelfDirect`, `SelfTemporary`). Recovered: a spell may carry `casterEffects`,
-  resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself,
-  Psycho Rush's -2 defense recoil and Hateful Sacrifice's 4 self-damage are all expressible. **Parasite Jab's
-  lifesteal is not**: a share of the damage dealt depends on the resolution rather than on the spell, which
-  is a new kind of effect and not a new place to put one. It carries a **flat heal of 3 on its caster**
-  instead, which is the approximation and the first content to use the mechanism. Psycho Rush and Hateful
-  Sacrifice are still halves of themselves, and are re-authored when their tier is opened.
+  resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself and
+  Hateful Sacrifice's 4 self-damage are expressible — and Hateful Sacrifice now carries it, re-authored when
+  its tier opened. **Two are still not**, for the same reason and it is not the place: a caster effect is a
+  new *place* to put an effect, never a new *kind*. Parasite Jab's lifesteal is a share of the damage dealt,
+  which depends on the resolution rather than on the spell; it carries a **flat heal of 3 on its caster**
+  instead, the approximation and the first content to use the mechanism. Psycho Rush's recoil is **-2
+  defense**, and `DefenseBuff.Of` refuses anything below 1, so there is no negative buff to put anywhere. It
+  is still half of itself and its knob entry says so.
 - **Debuffing a stat other than initiative.** There is no negative `DefenseBuff` and no energy drain: both
-  factories refuse anything below 1. Dropped: Noxious Cure's -2 defense on the healed allies, Soul Devourer's
-  -2 energy. Infectious Blast was *only* a defense shred, so it is approximated with the one stat debuff the
+  factories refuse anything below 1. Dropped: Noxious Cure's -2 defense on the healed allies. **Soul
+  Devourer's -2 energy takes a substitution instead**, now that its tier is open: the theft keeps its meaning
+  and changes its currency to one the taxonomy can price, a caster heal beside the hit. Draining energy would
+  not have helped even if it could be said — energy is 0.2 a point, which is what killed Momentum. Infectious Blast was *only* a defense shred, so it is approximated with the one stat debuff the
   taxonomy has, -2 initiative for two rounds. **Noxious Cure takes the same substitution**: its shred of the
   healed allies is now an initiative debuff on those same allies, so the cure is noxious to the cured exactly
   as it was, in the one stat the taxonomy can lower.

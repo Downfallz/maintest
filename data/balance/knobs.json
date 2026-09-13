@@ -442,14 +442,16 @@
     "spell:hateful_sacrifice": {
       "name": "Hateful Sacrifice",
       "class": "Leech",
-      "intent": "The largest single hit in the game, and it was meant to cost the caster four health. Without that self-damage the energy price is the only thing paying for it.",
+      "intent": "The largest single hit in the game, and it costs the caster four health to throw. The sacrifice is the name of the spell and it is finally in it (ADR 0031): the legacy prototype paired a hit of 10 with `SelfDirect Health -4`, and only the first half survived the port.",
       "keep": [
         "The heaviest single-target hit",
-        "Its price stands in for the missing self-damage"
+        "It is paid in the caster's own health: that is the sacrifice the name promises"
       ],
+      "note": "The self-damage was restored when its tier opened, which `docs/domain/spells.md` said would happen -- 'Psycho Rush and Hateful Sacrifice are still halves of themselves, and are re-authored when their tier is opened'. Its old second keep said the energy price stood in for the missing recoil; the recoil is here, so the stand-in is gone. It reads 10.00 a round to 7.33, just under the tier-3 band of 8 to 14, and that is accepted rather than compensated: `cast_value` charges the four health in full, where a bot pays it only in the rounds where four health is what it had left. Measured, 621 casts to 420.",
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 7, "max": 11, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 2, "max": 6, "step": 1 },
         { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
@@ -457,14 +459,16 @@
     "spell:soul_devourer": {
       "name": "Soul Devourer",
       "class": "Leech",
-      "intent": "The worst rate in the catalogue, because the energy it used to drain from the target was dropped. It exists as a node on the Leech line rather than as a spell anyone should want, and fixing the price comes before making it hit harder.",
+      "intent": "Parasite Jab grown up: the Leech takes what it hits, and this one takes enough to matter. The legacy prototype drained 2 energy from the target, which the taxonomy cannot say -- there is no negative `EnergyGain` -- so the theft keeps its meaning and changes its currency, the way `infectious_blast` traded a defense shred for tempo. What it steals is health.",
       "keep": [
-        "Waiting on an energy-drain effect",
-        "Cheaper before it is stronger"
+        "It takes from what it hits: the Leech's whole line does, and this is the large version",
+        "Dearer and heavier than `parasite_jab`, or the opener is the better spell"
       ],
+      "note": "It was the worst rate in the catalogue at 2.00 a round and cast zero times -- a node on the line rather than a spell, because the half that made it a Soul Devourer was dropped at the port. Draining energy was not available and would not have helped if it were: energy is 0.2 a point, which is what killed `momentum` and what made ADR 0020's nomination of `summon_minions` decline itself. So the drain became a caster heal of 5 beside a hit of 5, at a price of 2: 2.00 a round to 9.00, and 0 casts to 343. The alternative measured -- 7 and 7 at a price of 3 -- reads 626 casts and takes the line over from `hateful_sacrifice`, which is one spell replacing another rather than a class with three.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
+        { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 },
         { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
       ]
     },
