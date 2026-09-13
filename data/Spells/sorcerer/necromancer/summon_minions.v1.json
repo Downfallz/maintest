@@ -21,7 +21,7 @@
   "casterEffects": [
     {
       "kind": "Damage",
-      "amount": 3
+      "amount": 2
     }
   ],
   "enabled": true

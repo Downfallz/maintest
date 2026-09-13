@@ -5,7 +5,7 @@
   "creatureClass": "Sorcerer",
   "initiative": 1,
   "energyCost": 2,
-  "criticalChance": 0.17,
+  "criticalChance": 0.22,
   "targeting": {
     "origin": "Ally",
     "scope": "SingleTarget",
