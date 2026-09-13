@@ -72,7 +72,8 @@ Each is a rule to decide, not an oversight:
   `InitiativeDebuff` never had, so Death Squad's team haste is back — **+2 initiative for a round** on up to
   three allies rather than legacy's +10, because our creatures start at 5 and a point of initiative is priced
   at 2.1 (ADR 0032). It had been approximated as the tempo it was meant to *buy*, 1 energy an ally, and energy
-  is 0.2 a point: the substitution read 0.60 a round and the spell was cast 0 times in 400 matches. **The
+  was 0.2 a point at the time: the substitution read 0.60 a round and the spell was cast 0 times in 400
+  matches. Energy is 0.3 a point since ADR 0037, which would have read 0.90 — the same dead spell. **The
   critical half is still out**, and is the one thing here that is not a mirror: `CriticalChance` belongs to a
   creature and a spell, is read once at resolution, and is a probability rather than a quantity. A condition
   that changes it is a new shape, and so a decision of its own.
@@ -104,8 +105,9 @@ Two more places where the model forced a hand:
   `EnergyRegeneration`** — the first spell to use the kind ADR 0020 added and deliberately left unused, which
   named it as one of the two candidates. It is Wait's opposite trade: Wait hands energy over now, Momentum
   builds it over the next few rounds. Summon Minions was the other candidate and declines the nomination: at
-  0.2 a point an energy spell tops out around 1.60 an activation, and two energy openers would have been two
-  dead openers.
+  0.3 a point an energy spell tops out around 2.40 an activation, and two energy openers would have been two
+  dead openers. ADR 0037 raised the price from 0.2 and that ceiling moved 1.60 to 2.40, which changes nothing
+  here: the bar an opener has to clear is an attack's 6 and up.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive
   yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,
   because free plus permanent plus re-castable is bounded by nothing but the round cap (`check-knobs` reports

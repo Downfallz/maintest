@@ -22,6 +22,14 @@ public sealed class ActionScorerTests
     /// (ADR 0018 set 0.5, ADR 0032 swept it to 2.1). <c>AgentSpecTests</c> is where the value is pinned.
     /// </summary>
     private static readonly double Tempo = ScoringWeights.Default.Initiative;
+
+    /// <summary>
+    /// The energy weight, for the same reason as <see cref="Tempo"/> and with four terms rather than two:
+    /// energy kept, given, regenerated over rounds and drained. What these tests pin is that all four read
+    /// the same price; the number is a measurement and has moved once (phase L5 hand-set 0.2, ADR 0037 swept
+    /// it to 0.3). <c>AgentSpecTests</c> is where the value is pinned.
+    /// </summary>
+    private static readonly double PerEnergy = ScoringWeights.Default.Energy;
     private static readonly CreatureId One = CreatureId.From(1);
     private static readonly CreatureId Two = CreatureId.From(2);
     private static readonly CreatureId Three = CreatureId.From(3);
@@ -88,7 +96,7 @@ public sealed class ActionScorerTests
         var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
         var action = Strike(One, Three);
 
-        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new EnergyOutcome(ally.Id, 3)]), creatures).ShouldBe(0.2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new EnergyOutcome(ally.Id, 3)]), creatures).ShouldBe(PerEnergy * 3, 1e-9);
     }
 
     [Fact]
@@ -97,7 +105,7 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20);
         var action = Strike(One, Three);
 
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyOutcome(Three, 3)]), board).ShouldBe(-0.2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyOutcome(Three, 3)]), board).ShouldBe(-PerEnergy * 3, 1e-9);
     }
 
     /// <summary>
@@ -136,8 +144,8 @@ public sealed class ActionScorerTests
         var poor = board.Select(creature => creature.Id == Three ? creature with { Energy = Energy.Of(1) } : creature).ToList();
         var action = Strike(One, Three);
 
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), rich).ShouldBe(0.2 * 3, 1e-9);
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), poor).ShouldBe(0.2 * 1, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), rich).ShouldBe(PerEnergy * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new EnergyDrainOutcome(Three, 3)]), poor).ShouldBe(PerEnergy * 1, 1e-9);
     }
 
     /// <summary>
@@ -165,9 +173,9 @@ public sealed class ActionScorerTests
         var creatures = new List<CreatureSnapshot> { board[0], ally, board[1], board[2] };
         var action = Strike(One, Three);
 
-        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(0.2 * 2 * 3, 1e-9);
-        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 1))]), creatures).ShouldBe(0.2 * 2, 1e-9);
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new ConditionOutcome(Three, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(-0.2 * 2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(PerEnergy * 2 * 3, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [ally.Id], [], false, Energy.Of(0), [new ConditionOutcome(ally.Id, EnergyRegeneration.Of(2, rounds: 1))]), creatures).ShouldBe(PerEnergy * 2, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), [new ConditionOutcome(Three, EnergyRegeneration.Of(2, rounds: 3))]), creatures).ShouldBe(-PerEnergy * 2 * 3, 1e-9);
     }
 
     /// <summary>
@@ -283,8 +291,8 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20, actorEnergy: 2);
         var action = Strike(One, Three);
 
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), []), board).ShouldBe(0.2 * 2, 1e-9);
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [new TargetingFailure(Four, CombatErrors.NoTargets)], false, Energy.Of(0), []), board).ShouldBe((0.2 * 2) - 2, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), []), board).ShouldBe(PerEnergy * 2, 1e-9);
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [new TargetingFailure(Four, CombatErrors.NoTargets)], false, Energy.Of(0), []), board).ShouldBe((PerEnergy * 2) - 2, 1e-9);
     }
 
     [Fact]
@@ -295,7 +303,7 @@ public sealed class ActionScorerTests
 
         var strike = Scorer.Best(board[0], TestContent.Strike, board).ShouldNotBeNull();
         strike.Targets.ShouldBe([Three]);
-        strike.Score.ShouldBe(3 + 5 + (0.2 * 2), 1e-9);
+        strike.Score.ShouldBe(3 + 5 + (PerEnergy * 2), 1e-9);
 
         var slam = Scorer.Best(board[0], TestContent.Slam, board).ShouldNotBeNull();
         slam.Targets.ShouldBe([Three, Four]);
@@ -324,11 +332,11 @@ public sealed class ActionScorerTests
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
 
-        // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. Energy is 0.2 a
-        // point, so the three costs -- Strike 0, Guard 1, Slam 2 -- price at 0, 0.2 and 0.4.
-        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe((0.65 * 2 * 2) + (Tempo * 6) - 0.2, 1e-9);
+        // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. The three costs
+        // -- Strike 0, Guard 1, Slam 2 -- price at nothing, one point of energy and two.
+        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe((0.65 * 2 * 2) + (Tempo * 6) - PerEnergy, 1e-9);
         scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
-        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - 0.4, 1e-9);
+        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - (PerEnergy * 2), 1e-9);
     }
 
     /// <summary>
@@ -355,7 +363,7 @@ public sealed class ActionScorerTests
         var indifferent = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Initiative = 0 });
 
         indifferent.UnlockValue(board[0], TestContent.Guard, board)
-            .ShouldBe(indifferent.Estimate(board[0], TestContent.Guard, board) - 0.2, 1e-9);
+            .ShouldBe(indifferent.Estimate(board[0], TestContent.Guard, board) - PerEnergy, 1e-9);
     }
 
     /// <summary>
@@ -391,7 +399,7 @@ public sealed class ActionScorerTests
         var paid = scorer.UnlockValue(board[0], TestContent.Slam, board);
 
         (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(Tempo, 1e-9);
-        (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(Tempo - 0.4, 1e-9);
+        (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(Tempo - (PerEnergy * 2), 1e-9);
     }
 
     /// <summary>
@@ -424,7 +432,7 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20, actorEnergy: 1);
 
         (scorer.UnlockValue(board[0], TestContent.Slam, board) - scorer.Estimate(board[0], TestContent.Slam, board))
-            .ShouldBe(Tempo - 0.2, 1e-9);
+            .ShouldBe(Tempo - PerEnergy, 1e-9);
     }
 
     /// <summary>
