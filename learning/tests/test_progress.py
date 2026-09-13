@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from downfall_learning.progress import Progress, humanize
+from downfall_learning.progress import Progress, humanize, silent
 
 
 class Clock:
@@ -116,3 +116,18 @@ def test_progress_defaults_to_stderr_so_it_never_lands_in_the_report() -> None:
     capture, a notebook -- gets the stream it installed and not the one that existed first.
     """
     assert Progress(label="tune").stream is sys.stderr
+
+
+def test_a_silent_reporter_counts_and_says_nothing(capsys: pytest.CaptureFixture[str]) -> None:
+    """The default a command gets when its caller passes none, so a loop can report unconditionally.
+
+    Guarding each call with `if progress is not None` put a branch inside two hill climbs for the sake of a
+    caller that does not exist, and took both of them over the cognitive complexity the quality gate allows.
+    """
+    progress = silent()
+
+    progress.step("ignored")
+    progress.finish("ignored")
+
+    assert progress.done == 1
+    assert capsys.readouterr() == ("", "")

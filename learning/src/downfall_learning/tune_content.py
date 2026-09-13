@@ -41,7 +41,7 @@ from downfall_learning.knobs import (
     read_value,
     with_value,
 )
-from downfall_learning.progress import Progress
+from downfall_learning.progress import Progress, silent
 from downfall_learning.search_weights import EngineCommand, EvaluationError
 
 #: The data builder, as the assembly the build produced rather than through `dotnet run --no-build`, for the
@@ -600,7 +600,7 @@ class MemoizingEvaluator:
         self.hits = 0
         #: Counted here because this is the one place that knows a catalogue reached the engine: a replay
         #: served from the cache is not work, and a heartbeat for it would overstate how far the run is.
-        self._progress = progress
+        self._progress = progress or silent()
 
     @property
     def plays(self) -> int:
@@ -615,8 +615,7 @@ class MemoizingEvaluator:
             return cached
         measured = self._inner.evaluate(spells)
         self._seen[key] = measured
-        if self._progress is not None:
-            self._progress.step(f"{self.hits} replay(s) skipped" if self.hits else "")
+        self._progress.step(f"{self.hits} replay(s) skipped" if self.hits else "")
         return measured
 
 
@@ -633,6 +632,7 @@ def tune_content(
     engine ever sees it — so the budget is spent on content worth playing.
     """
     options = options or TuneOptions()
+    progress = progress or silent()
     if options.iterations < 1 or options.neighbours < 1:
         raise ValueError("The search needs at least one iteration and one neighbour per iteration.")
     # Wrapped here rather than by the caller, so every search gets it and none of them has to remember.
@@ -655,10 +655,9 @@ def tune_content(
             for move in candidate.moves
         }
         best = min([first, *swept], key=lambda candidate: candidate.score)
-        _milestone(progress, f"opening pass done · best {best.score:.2f} from {first.score:.2f}")
-    if progress is not None:
-        # Only now: the opening's size is not knowable before it runs, and the climb's is exact.
-        progress.total = progress.done + (options.iterations * options.neighbours)
+        progress.write(f"opening pass done · best {best.score:.2f} from {first.score:.2f}")
+    # Only now: the opening's size is not knowable before it runs, and the climb's is exact.
+    progress.total = progress.done + (options.iterations * options.neighbours)
     for iteration in range(1, options.iterations + 1):
         neighbours = []
         for _ in range(options.neighbours):
@@ -672,9 +671,8 @@ def tune_content(
             leader = min(neighbours, key=lambda candidate: candidate.score)
             if leader.score < best.score:
                 best = leader
-        _milestone(progress, f"round {iteration}/{options.iterations} · best {best.score:.2f}")
-    if progress is not None:
-        progress.finish(f"best {best.score:.2f} from {first.score:.2f}")
+        progress.write(f"round {iteration}/{options.iterations} · best {best.score:.2f}")
+    progress.finish(f"best {best.score:.2f} from {first.score:.2f}")
     return TuneResult(
         best=best,
         initial=first,
@@ -683,12 +681,6 @@ def tune_content(
         files=content.files,
         played=evaluator.plays,
     )
-
-
-def _milestone(progress: Progress | None, note: str) -> None:
-    """A line at the end of a phase, carrying the one number a watcher actually wants: the best score."""
-    if progress is not None:
-        progress.write(note)
 
 
 def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[Candidate]:

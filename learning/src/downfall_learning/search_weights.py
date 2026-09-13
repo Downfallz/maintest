@@ -18,7 +18,7 @@ import numpy as np
 
 from downfall_learning.artifacts import Evaluation, load_evaluation
 from downfall_learning.export import DEFAULT_WEIGHTS, WEIGHT_NAMES, write_weights
-from downfall_learning.progress import Progress
+from downfall_learning.progress import Progress, silent
 from downfall_learning.report import TrainingLog, TrainingRow
 from downfall_learning.stamps import RunStamp
 
@@ -354,16 +354,16 @@ def search_weights(
         raise ValueError("The search needs at least two candidates per iteration and one iteration.")
     if not 0.0 < options.elite_share <= 1.0:
         raise ValueError("The elite share must be above 0 and at most 1.")
+    progress = progress or silent()
     rng = np.random.default_rng(options.seed)
     mean = _as_vector(initial)
     sigma = options.sigma * np.maximum(np.abs(mean), 0.5)
     elite_size = max(2, round(options.elite_share * options.population))
 
-    if progress is not None:
-        # Exact, unlike the tuner's: the population is fixed and nothing here is skipped or memoized.
-        progress.total = 1 + options.iterations * options.population
+    # Exact, unlike the tuner's: the population is fixed and nothing here is skipped or memoized.
+    progress.total = 1 + options.iterations * options.population
     first = Candidate(0, _as_weights(mean), evaluator.evaluate(_as_weights(mean)))
-    _step(progress, f"baseline {first.score.mean:.4f}")
+    progress.step(f"baseline {first.score.mean:.4f}")
     if log is not None and log.stamp is None:
         log.stamp = stamp_of(first.score)
     best = first
@@ -376,8 +376,8 @@ def search_weights(
             evaluated.append(candidate)
             # Against the running leader, not `best`: that one only moves when the population is finished,
             # so a line reading it would report a score already beaten for the rest of the iteration.
-            leader = max(candidate.score.mean, best.score.mean, *(c.score.mean for c in evaluated))
-            _step(progress, f"round {iteration}/{options.iterations} · best {leader:.4f}")
+            leader = max(best.score.mean, *(played.score.mean for played in evaluated))
+            progress.step(f"round {iteration}/{options.iterations} · best {leader:.4f}")
         candidates.extend(evaluated)
         ranked = sorted(evaluated, key=lambda candidate: candidate.score.mean, reverse=True)
         elite = ranked[:elite_size]
@@ -402,14 +402,8 @@ def search_weights(
             )
     if log is not None and best.iteration > 0:
         log.mark_best(best.iteration)
-    if progress is not None:
-        progress.finish(f"best {best.score.mean:.4f} from {first.score.mean:.4f}")
+    progress.finish(f"best {best.score.mean:.4f} from {first.score.mean:.4f}")
     return SearchResult(best=best, candidates=tuple(candidates), initial=first)
-
-
-def _step(progress: Progress | None, note: str) -> None:
-    if progress is not None:
-        progress.step(note)
 
 
 def stamp_of(score: Score) -> RunStamp | None:

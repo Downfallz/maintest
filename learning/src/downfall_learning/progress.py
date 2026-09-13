@@ -21,6 +21,17 @@ from typing import TextIO
 UNKNOWN_TOTAL = None
 
 
+def silent() -> Progress:
+    """A reporter that counts and prints nothing.
+
+    The default every command gets when its caller passes none, so the loops that report can call it
+    unconditionally. Guarding each call with ``if progress is not None`` put a branch inside two hill
+    climbs for the sake of a caller that does not exist, which is how both of them went over the cognitive
+    complexity the quality gate allows.
+    """
+    return Progress(label="", quiet=True)
+
+
 def humanize(seconds: float) -> str:
     """``4m21s``, ``1h04m``, ``12s``. Two units at most: the third never changed a decision."""
     span = max(0.0, seconds)
