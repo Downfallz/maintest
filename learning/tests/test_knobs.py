@@ -785,6 +785,59 @@ def test_a_drain_and_a_shred_are_harmful_and_priced_by_the_weight_of_what_they_m
     assert cast_value(healing_and_shredding, WEIGHTS) == pytest.approx(((0.8 * 4) - (0.5 * 2 * 1)) * 3)
 
 
+def _authored_kinds() -> list[str]:
+    """Every effect kind `data/README.md` tells an author they may write, read out of its own table.
+
+    The table is the contract the content is authored against, so it is the list to check against rather
+    than a copy kept here -- a copy would need the same update the code needs, which is the failure this
+    guards.
+    """
+    rows = (REPO_ROOT / "data" / "README.md").read_text(encoding="utf-8").splitlines()
+    kinds = []
+    for row in rows:
+        if row.startswith("| `") and "`" in row[3:]:
+            kind = row[3:].split("`", 1)[0]
+            if kind not in {"kind", "stacking"}:
+                kinds.append(kind)
+    return kinds
+
+
+@pytest.mark.parametrize("kind", _authored_kinds())
+def test_every_authored_effect_kind_is_priced_by_cast_value(kind: str) -> None:
+    """Both pricing tables end in `.get(kind, 0.0)`, so a kind nobody adds there is worth **zero** and every
+    knob note, `check-knobs` finding and `tune-content` score silently misvalues the spell that uses it. The
+    C# side has two reflection guards for exactly this (`FeatureSchemaTests`, the scorer's duration sweep);
+    this is the one on this side."""
+    hit = {"kind": "Damage", "amount": 3}
+    effect = {"kind": kind, "amount": 3, "amountPerRound": 3, "durationRounds": 2}
+
+    on_target = cast_value({"criticalChance": 0, "effects": [effect]}, WEIGHTS)
+    on_caster = cast_value({"criticalChance": 0, "effects": [hit], "casterEffects": [effect]}, WEIGHTS)
+    plain = cast_value({"criticalChance": 0, "effects": [hit]}, WEIGHTS)
+
+    assert on_target != 0, f"'{kind}' prices zero as a target effect"
+    assert on_caster != plain, f"'{kind}' prices zero as a caster effect (ADR 0031)"
+
+
+def test_an_initiative_buff_is_priced_like_the_debuff_it_mirrors() -> None:
+    """One price for one point whether it is given or taken (ADR 0032, ADR 0036). Both spells reach three, so
+    the only thing left between them is the direction, and the reading is the same either way."""
+    enemies = {"origin": "Enemy", "scope": "Multi", "maxTargets": 3}
+    hasting = spell(
+        criticalChance=0,
+        targeting=ALLY,
+        effects=[{"kind": "InitiativeBuff", "amount": 2, "durationRounds": 1}],
+    )
+    slowing = spell(
+        criticalChance=0,
+        targeting=enemies,
+        effects=[{"kind": "InitiativeDebuff", "amount": 2, "durationRounds": 1}],
+    )
+
+    assert cast_value(hasting, WEIGHTS) == pytest.approx(0.5 * 2 * 1 * 3)
+    assert cast_value(slowing, WEIGHTS) == pytest.approx(cast_value(hasting, WEIGHTS))
+
+
 def test_a_critical_chance_does_not_reach_a_drain_or_a_shred() -> None:
     """Neither is health on a target now, so neither takes the roll (ADR 0033, ADR 0035)."""
     draining = {"criticalChance": 1.0, "effects": [{"kind": "EnergyDrain", "amount": 2}]}

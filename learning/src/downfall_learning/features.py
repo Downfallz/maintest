@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-SUPPORTED_VERSIONS = frozenset({"features:v1", "features:v2", "features:v3", "features:v4"})
+SUPPORTED_VERSIONS = frozenset({"features:v1", "features:v2", "features:v3", "features:v4", "features:v5"})
 
 
 class SchemaError(ValueError):

@@ -644,7 +644,7 @@ def _has_permanent(document: Mapping[str, object]) -> bool:
 def _stacks(effect: Mapping[str, object]) -> bool:
     """Whether an effect's stacking policy piles a second application on the first.
 
-    `Stack` is the default the mapper gives the two kinds that can be permanent (`data/README.md`), so an
+    `Stack` is the default the mapper gives the lasting kinds that can be permanent (`data/README.md`), so an
     effect that says nothing stacks.
     """
     return str(effect.get("stacking", "Stack") or "Stack") == "Stack"
@@ -906,6 +906,7 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
+            "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(kind, 0.0)
     # The target half is worth what it does to every target it reaches; the caster half is worth what it does
@@ -951,6 +952,7 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
             "Stun": weights.get("stun", 0) * rounds,
             "DefenseBuff": weights.get("defense", 0) * amount * rounds,
             "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
+            "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
             "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
         }.get(kind, 0.0)
         total += -value if kind in HARMFUL else value

@@ -4,8 +4,9 @@ using DownfallArena.Infrastructure.Learning;
 namespace DownfallArena.Cli.Tests;
 
 /// <summary>
-/// A creature card shows "I 4 of 8" when a debuff pulls a creature off its base initiative and "I 8" when it
-/// does not, which means reading two fields the engine serializes on a <see cref="CreatureSnapshot"/>. Renaming
+/// A creature card shows "I 4 (-4)" when a debuff pulls a creature off its base initiative, "I 7 (+2)" when a
+/// buff pushes it past (ADR 0036), and "I 8" when neither does — which means reading two fields the engine
+/// serializes on a <see cref="CreatureSnapshot"/>. Renaming
 /// either would leave the tag reading a base of <c>undefined</c> for good — the viewer treats a missing base as
 /// "whole", by design, so older traces still render — and nothing would fail. This holds the two together
 /// against the real <c>viewer/index.html</c>.

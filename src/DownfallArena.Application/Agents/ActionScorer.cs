@@ -228,6 +228,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             Regeneration regeneration => -sign * weights.Heal * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth),
             EnergyRegeneration energyRegeneration => -sign * weights.Energy * energyRegeneration.AmountPerRound * rounds,
             DefenseBuff => 0,  // priced per target, with the rest of what the cast defends: see DefensiveScore
+            InitiativeBuff buff => -sign * weights.Initiative * buff.Amount * rounds,
             InitiativeDebuff debuff => sign * weights.Initiative * debuff.Amount * rounds,
             // A stand-in, and the same one `cast_value` uses for a buff: it does not read the damage the
             // debuff actually lets through, the way `DefensiveScore` reads what a buff prevents (ADR 0035).

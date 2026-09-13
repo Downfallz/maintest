@@ -419,7 +419,7 @@
       return describer ? describer(event, names) : event.kind;
     }
 
-    const CHIP_CLASSES = { Stun: 'chip stun', DefenseBuff: 'chip buff', Regeneration: 'chip buff', DefenseDebuff: 'chip stun' };
+    const CHIP_CLASSES = { Stun: 'chip stun', DefenseBuff: 'chip buff', Regeneration: 'chip buff', DefenseDebuff: 'chip stun', InitiativeBuff: 'chip buff' };
 
     function conditionChip(condition) {
       const effect = condition.effect;
@@ -429,13 +429,15 @@
       return el('span', { class: kindClass }, `${effect.kind} ${amount} (${remaining})`);
     }
 
-    // The base is shown only when a debuff pulls the current one off it: "I 4 of 8" reads as debuffed,
-    // "I 8" as whole. Traces from before the base was recorded have no baseInitiative, and read as whole.
+    // The base is shown only when a Condition moves the current one off it, and the sign says which way:
+    // "I 4 (-4)" reads as debuffed, "I 7 (+2)" as hasted (ADR 0036), "I 8" as whole. It used to render the
+    // base as "I 4 of 8", which reads as seven out of five the moment a buff exists. Traces from before the
+    // base was recorded have no baseInitiative, and read as whole.
     function initiativeTag(creature) {
       const base = creature.baseInitiative;
-      return base === undefined || base === creature.currentInitiative
-        ? `I ${creature.currentInitiative}`
-        : `I ${creature.currentInitiative} of ${base}`;
+      if (base === undefined || base === creature.currentInitiative) return `I ${creature.currentInitiative}`;
+      const delta = creature.currentInitiative - base;
+      return `I ${creature.currentInitiative} (${delta > 0 ? '+' : ''}${delta})`;
     }
 
     function creatureCard(creature, intent) {
@@ -705,7 +707,7 @@
     /** The tally of one spell for one side, made when that side first casts it. */
     function spellTally(spells, spell, side) {
       const key = `${spell}\u0000${side}`;
-      const tally = spells.get(key) || { spell, side, casts: 0, fizzles: 0, crits: 0, damage: 0, overTime: 0, healing: 0, energy: 0, energyDrained: 0, stuns: 0, bleeds: 0, regens: 0, energyRegenerations: 0, defenseBuffs: 0, defenseDebuffs: 0, initiativeDebuffs: 0 };
+      const tally = spells.get(key) || { spell, side, casts: 0, fizzles: 0, crits: 0, damage: 0, overTime: 0, healing: 0, energy: 0, energyDrained: 0, stuns: 0, bleeds: 0, regens: 0, energyRegenerations: 0, defenseBuffs: 0, defenseDebuffs: 0, initiativeBuffs: 0, initiativeDebuffs: 0 };
       spells.set(key, tally);
       return tally;
     }
@@ -717,6 +719,28 @@
      */
     function landed(entry) {
       return entry.appliedOutcomes || entry.resolution.outcomes || [];
+    }
+
+    // What each outcome adds to its spell's tally: an amount for the instant kinds, one application for a
+    // condition. A lookup rather than a chain, for the reason CONDITION_SLOTS is one -- and because the chain
+    // was what tipped creditResolution past the complexity the build allows.
+    const OUTCOME_SLOTS = {
+      DamageOutcome: 'damage',
+      HealOutcome: 'healing',
+      EnergyOutcome: 'energy',
+      EnergyDrainOutcome: 'energyDrained',
+    };
+
+    function creditTally(tally, outcome) {
+      if (outcome.kind === 'ConditionOutcome') {
+        const slot = conditionSlot(outcome);
+        if (slot) tally[slot] += 1;
+        else console.warn('Unknown condition kind, not counted:', outcome.effect?.kind);
+        return;
+      }
+
+      const slot = OUTCOME_SLOTS[outcome.kind];
+      if (slot) tally[slot] += outcome.amount || 0;
     }
 
     function creditResolution(rows, spells, actor, entry) {
@@ -738,26 +762,30 @@
 
       for (const outcome of landed(entry)) {
         creditOutcome(rows, actor, outcome);
-        if (outcome.kind === 'DamageOutcome') tally.damage += outcome.amount || 0;
-        else if (outcome.kind === 'HealOutcome') tally.healing += outcome.amount || 0;
-        else if (outcome.kind === 'EnergyOutcome') tally.energy += outcome.amount || 0;
-        else if (outcome.kind === 'EnergyDrainOutcome') tally.energyDrained += outcome.amount || 0;
-        else if (outcome.kind === 'ConditionOutcome') tally[conditionSlot(outcome)] += 1;
+        creditTally(tally, outcome);
       }
     }
 
-    // The effect taxonomy is closed (ADR 0012, extended by ADR 0019, ADR 0020 and ADR 0035). Each stat gets
-    // its own slot, and the defense buff and the defense debuff two of their own: they move the same stat
-    // opposite ways, so one column would net them against each other.
+    // The effect taxonomy is closed (ADR 0012, extended by ADR 0019, ADR 0020, ADR 0035 and ADR 0036). Each
+    // stat gets its own slot, and each buff and debuff one of their own: they move one stat opposite ways, so
+    // a shared column would net them against each other.
+    //
+    // A kind that is not here returns null and the caller skips it. It used to fall through to 'defenseBuffs',
+    // which counted an unknown kind in the wrong column with every test green -- the defect this map exists
+    // to make impossible, left armed in the one place that still had it.
+    const CONDITION_SLOTS = {
+      Stun: 'stuns',
+      Bleed: 'bleeds',
+      Regeneration: 'regens',
+      EnergyRegeneration: 'energyRegenerations',
+      DefenseBuff: 'defenseBuffs',
+      DefenseDebuff: 'defenseDebuffs',
+      InitiativeBuff: 'initiativeBuffs',
+      InitiativeDebuff: 'initiativeDebuffs',
+    };
+
     function conditionSlot(outcome) {
-      const kind = String(outcome.effect?.kind || '');
-      if (kind === 'Stun') return 'stuns';
-      if (kind === 'Bleed') return 'bleeds';
-      if (kind === 'Regeneration') return 'regens';
-      if (kind === 'EnergyRegeneration') return 'energyRegenerations';
-      if (kind === 'DefenseDebuff') return 'defenseDebuffs';
-      if (kind === 'InitiativeDebuff') return 'initiativeDebuffs';
-      return 'defenseBuffs';
+      return CONDITION_SLOTS[String(outcome.effect?.kind || '')] || null;
     }
 
     /**
@@ -909,7 +937,7 @@
       const rows = [...spells].sort((one, other) => (other.damage + other.overTime) - (one.damage + one.overTime) || other.casts - one.casts || one.spell.localeCompare(other.spell));
       if (!rows.length) return null;
       const table = el('table');
-      table.append(el('tr', {}, ['Spell', 'Side', 'Cast', 'Fizzled', 'Resolve', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init', 'Crits']
+      table.append(el('tr', {}, ['Spell', 'Side', 'Cast', 'Fizzled', 'Resolve', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init+', 'Init-', 'Crits']
         .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
       for (const row of rows) {
         const declared = row.casts + row.fizzles;
@@ -930,6 +958,7 @@
           el('td', { class: 'num' }, row.energyRegenerations),
           el('td', { class: 'num' }, row.defenseBuffs),
           el('td', { class: 'num' }, row.defenseDebuffs),
+          el('td', { class: 'num' }, row.initiativeBuffs),
           el('td', { class: 'num' }, row.initiativeDebuffs),
           el('td', { class: 'num' }, row.crits),
         ]));
@@ -1117,7 +1146,7 @@
 
     function spellOutcomeTable(outcomes) {
       const table = el('table');
-      table.append(el('tr', {}, ['Spell', 'Won by the side that used it', 'Sides', 'Cast', 'Resolve', 'Won-cast', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init', 'Casts/side']
+      table.append(el('tr', {}, ['Spell', 'Won by the side that used it', 'Sides', 'Cast', 'Resolve', 'Won-cast', 'Damage', 'Over time', 'Heal', 'Energy', 'Drain', 'Stun', 'Bleed', 'Regen', 'EnRegen', 'Def+', 'Def-', 'Init+', 'Init-', 'Casts/side']
         .map((text, index) => el('th', { class: index >= 2 ? 'num' : '' }, text))));
       for (const outcome of outcomes) {
         const thin = outcome.sides < ENOUGH_SIDES;
@@ -1139,6 +1168,7 @@
           el('td', { class: 'num' }, outcome.energyRegenerations ?? '-'),
           el('td', { class: 'num' }, outcome.defenseBuffs ?? '-'),
           el('td', { class: 'num' }, outcome.defenseDebuffs ?? '-'),
+          el('td', { class: 'num' }, outcome.initiativeBuffs ?? '-'),
           el('td', { class: 'num' }, outcome.initiativeDebuffs ?? '-'),
           el('td', { class: 'num' }, fixed(outcome.intentsPerSide, 1)),
         ]));
@@ -1420,7 +1450,7 @@
         row.fizzled += outcome.fizzled || 0;
         row.damage += outcome.damage || 0;
         row.healing += outcome.healing || 0;
-        row.conditions += (outcome.stuns || 0) + (outcome.bleeds || 0) + (outcome.regens || 0) + (outcome.energyRegenerations || 0) + (outcome.defenseBuffs || 0) + (outcome.defenseDebuffs || 0) + (outcome.initiativeDebuffs || 0);
+        row.conditions += (outcome.stuns || 0) + (outcome.bleeds || 0) + (outcome.regens || 0) + (outcome.energyRegenerations || 0) + (outcome.defenseBuffs || 0) + (outcome.defenseDebuffs || 0) + (outcome.initiativeBuffs || 0) + (outcome.initiativeDebuffs || 0);
         totals.set(name, row);
       }
       for (const row of totals.values()) {

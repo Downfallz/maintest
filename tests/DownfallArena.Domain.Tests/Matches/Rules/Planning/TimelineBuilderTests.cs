@@ -31,6 +31,30 @@ public sealed class TimelineBuilderTests
         timeline[3].Speed.ShouldBe(Speed.Standard);
     }
 
+    /// <summary>
+    /// The other direction, and the reason `InitiativeBuff` exists (ADR 0036): a haste moves its creature *up*
+    /// the order. All four are Quick and tie on base initiative, so nothing but the buff can separate them --
+    /// without it the order is by player slot and then by creature id, which is what the assertion inverts.
+    /// </summary>
+    [Fact]
+    public void An_initiative_buff_moves_its_creature_up_the_timeline()
+    {
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Wraith).Apply(InitiativeBuff.Of(3, Duration.OfRounds(1)));
+        var creatures = Arena.Snapshots(living);
+
+        var timeline = TimelineBuilder.Build(creatures,
+        [
+            new SpeedChoice(Arena.Knight, Speed.Quick),
+            new SpeedChoice(Arena.Archer, Speed.Quick),
+            new SpeedChoice(Arena.Ghoul, Speed.Quick),
+            new SpeedChoice(Arena.Wraith, Speed.Quick),
+        ]);
+
+        timeline.Slots.Select(slot => slot.Creature).ShouldBe([Arena.Wraith, Arena.Knight, Arena.Archer, Arena.Ghoul]);
+        timeline[0].Initiative.Value.ShouldBe(8, "the last creature by every other rule goes first on the buff alone");
+    }
+
     [Fact]
     public void Creatures_without_a_choice_are_left_out()
     {

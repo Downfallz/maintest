@@ -45,6 +45,7 @@ The score of one resolution, with the weights `w`:
 | `w.defense` x amount x rounds | a DefenseDebuff (a permanent condition counts three). A stand-in, not the reading above: it does not know what the debuff lets through, and it never reaches the threat term, so the bot cannot see that lowering a defense raises what the next hit takes (ADR 0035) | on an enemy counts for, on an ally against |
 | `w.energy` x energy taken | an EnergyDrain, capped at what the target holds, which is all `Creature.LoseEnergy` takes (ADR 0035) | on an enemy counts for, on an ally against |
 | `w.initiative` x amount x rounds | an InitiativeDebuff (a permanent condition counts three) | a debuff on an enemy counts for, on an ally against |
+| `w.initiative` x amount x rounds | an InitiativeBuff (a permanent condition counts three). The same price as the debuff above: one price for one point whether it is given or taken (ADR 0036) | a buff on an ally counts for, on an enemy against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
 | `-w.risk` | a fizzle, or the share of targets dropped at resolution | always |
 

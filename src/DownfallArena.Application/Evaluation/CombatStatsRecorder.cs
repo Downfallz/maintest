@@ -156,7 +156,8 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             EnergyRegenerations: Conditions<EnergyRegeneration>(onTargets),
             DefenseBuffs: Conditions<DefenseBuff>(onTargets),
             InitiativeDebuffs: Conditions<InitiativeDebuff>(onTargets),
-            DefenseDebuffs: Conditions<DefenseDebuff>(onTargets));
+            DefenseDebuffs: Conditions<DefenseDebuff>(onTargets),
+            InitiativeBuffs: Conditions<InitiativeBuff>(onTargets));
     }
 
     private static int Conditions<TEffect>(IReadOnlyList<EffectOutcome> applied)

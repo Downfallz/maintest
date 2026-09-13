@@ -2,9 +2,11 @@
 
 The 36 spells of `data/Spells`, carried over from the legacy prototype. Vocabulary is defined in
 [glossary.md](glossary.md); the effect taxonomy they are written in is
-[ADR 0012](../adr/0012-effect-taxonomy.md), extended by [ADR 0019](../adr/0019-regeneration-the-healing-counterpart-of-bleed.md),
-[ADR 0020](../adr/0020-energy-regeneration-and-the-price-of-energy.md) and
-[ADR 0035](../adr/0035-lowering-defense-and-taking-energy.md); the authoring format is `data/README.md`.
+[ADR 0012](../adr/0012-effect-taxonomy.md), extended by
+[ADR 0019](../adr/0019-regeneration-the-healing-counterpart-of-bleed.md),
+[ADR 0020](../adr/0020-energy-regeneration-and-the-price-of-energy.md),
+[ADR 0035](../adr/0035-lowering-defense-and-taking-energy.md) and
+[ADR 0036](../adr/0036-raising-initiative-the-mirror-that-was-left-out.md); the authoring format is `data/README.md`.
 
 Status: **inherited**. The numbers below are the prototype's, not a balance pass. They exist so the engine,
 the agents, and the learning loop run on content with some variety instead of 36 copies of the same
@@ -33,6 +35,7 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Temporary` + `Stats.Defense`, `Length` | raise it for a few rounds | `DefenseBuff` with `durationRounds` |
 | `EffectType.Direct` or `Temporary` + `Stats.Defense`, negative | lower it, for good or for a few rounds | `DefenseDebuff`, `permanent: true` or `durationRounds` (ADR 0035) |
 | `EffectType.Direct` + `Stats.Stun` | stun the targets | `Stun` |
+| `EffectType.Temporary` + `Stats.Initiative` | speed the targets up | `InitiativeBuff` with `durationRounds` (ADR 0036) |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
 | `SpellType`, `CharacterClass`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
 | `Initiative` | summed over a character's unlocked spells to *be* its initiative | Spell initiative: what the Creature's base gains, once, on unlocking it (ADR 0017) |
@@ -46,7 +49,8 @@ that took no target at all.
 ## What did not survive the translation
 
 The effect taxonomy is closed and every effect applies to the spell's targets. Six legacy ideas had no
-counterpart, so they were dropped or approximated; two have since been recovered. Each is a rule to decide, not an oversight:
+counterpart, so they were dropped or approximated; two have since been recovered and one half-recovered.
+Each is a rule to decide, not an oversight:
 
 - ~~**Effects on the caster**~~ (`SelfDirect`, `SelfTemporary`). Recovered: a spell may carry `casterEffects`,
   resolved once per cast against whoever cast it (ADR 0031), so Protective Slam's +1 defense on itself and
@@ -64,9 +68,14 @@ counterpart, so they were dropped or approximated; two have since been recovered
   Psycho Rush is the fourth, above. The substitution they shared — whatever a spell meant to take, it took
   tempo instead — had been used three times, and once ADR 0032 priced a point of initiative at 2.1 it was not
   a neutral translation: Infectious Blast read 25.20 a round on that stand-in and 11.70 on its own.
-- **Buffing initiative or critical chance.** Death Squad gave its team +10 initiative and +100% crit for a
-  round; both are unrepresentable. It is approximated as the tempo it was meant to buy: 1 energy to each of
-  up to three allies.
+- **Buffing initiative**, ~~or critical chance~~. Half recovered: ADR 0036 added `InitiativeBuff`, the mirror
+  `InitiativeDebuff` never had, so Death Squad's team haste is back — **+2 initiative for a round** on up to
+  three allies rather than legacy's +10, because our creatures start at 5 and a point of initiative is priced
+  at 2.1 (ADR 0032). It had been approximated as the tempo it was meant to *buy*, 1 energy an ally, and energy
+  is 0.2 a point: the substitution read 0.60 a round and the spell was cast 0 times in 400 matches. **The
+  critical half is still out**, and is the one thing here that is not a mirror: `CriticalChance` belongs to a
+  creature and a spell, is read once at resolution, and is a probability rather than a quantity. A condition
+  that changes it is a new shape, and so a decision of its own.
 - **Minions.** The Necromancer banked minions and spent them on Revenant Guards and Crazed Specter, and the
   minion cost of those two is dropped. Summon Minions was approximated as the resource they do use, energy,
   which made it a spell that paid for casts nobody could make — its line is a tier deeper and disabled. Armour

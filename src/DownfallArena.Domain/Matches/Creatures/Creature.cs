@@ -66,8 +66,14 @@ public sealed class Creature : Entity<CreatureId>
     /// </summary>
     public Initiative BaseInitiative { get; private set; }
 
-    /// <summary>The base initiative less the active initiative debuffs, which is what orders the timeline.</summary>
-    public Initiative CurrentInitiative => BaseInitiative.Minus(_conditions.Sum<InitiativeDebuff>(debuff => debuff.Amount));
+    /// <summary>
+    /// The base initiative plus the active initiative buffs and less the debuffs, which is what orders the
+    /// timeline. Buffs are added first so the floor at zero applies to the total, not to an intermediate
+    /// (ADR 0036) -- the same order <see cref="TotalDefense"/> uses.
+    /// </summary>
+    public Initiative CurrentInitiative => BaseInitiative
+        .Plus(_conditions.Sum<InitiativeBuff>(buff => buff.Amount))
+        .Minus(_conditions.Sum<InitiativeDebuff>(debuff => debuff.Amount));
 
     public CriticalChance CriticalChance => BaseStats.CriticalChance;
 

@@ -65,7 +65,7 @@ internal static class EvaluationConsole
         }
 
         writer.WriteLine($"Spells by the outcome of the sides that declared them ({EnoughSides} sides or more; one half is no signal):");
-        writer.WriteLine($"{"Spell",-30} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"OverTime",9} {"Heal",5} {"Energy",7} {"Drain",6} {"Stun",5} {"Bleed",6} {"Regen",6} {"EnRegen",7} {"Def+",5} {"Def-",5} {"Init",5}");
+        writer.WriteLine($"{"Spell",-30} {"Share",7} {"Sides",6} {"Cast",6} {"Resolve",8} {"Won-cast",9} {"Damage",7} {"OverTime",9} {"Heal",5} {"Energy",7} {"Drain",6} {"Stun",5} {"Bleed",6} {"Regen",6} {"EnRegen",7} {"Def+",5} {"Def-",5} {"Init+",6} {"Init-",6}");
         foreach (var outcome in ranked)
         {
             writer.WriteLine(string.Join(
@@ -87,12 +87,13 @@ internal static class EvaluationConsole
                 outcome.EnergyRegenerations.ToString(CultureInfo.InvariantCulture).PadLeft(7),
                 outcome.DefenseBuffs.ToString(CultureInfo.InvariantCulture).PadLeft(5),
                 outcome.DefenseDebuffs.ToString(CultureInfo.InvariantCulture).PadLeft(5),
-                outcome.InitiativeDebuffs.ToString(CultureInfo.InvariantCulture).PadLeft(5)));
+                outcome.InitiativeBuffs.ToString(CultureInfo.InvariantCulture).PadLeft(6),
+                outcome.InitiativeDebuffs.ToString(CultureInfo.InvariantCulture).PadLeft(6)));
         }
 
         var landed = evaluation.SpellOutcomes.Sum(outcome => outcome.Resolved);
         var landedByWinners = evaluation.SpellOutcomes.Sum(outcome => outcome.ResolvedWhenWon);
-        writer.WriteLine("Cast is what landed; Resolve the share of declarations that landed rather than fizzling, which is what a cost change moves. Damage is what a cast took on the spot and OverTime what its bleeds went on to take at upkeep, counted against the spell because a condition remembers its cast (ADR 0027) -- a spell whose hits are absorbed and whose bleed is not can read zero Damage and a large OverTime. Energy is what a cast handed back and Drain what it tore out, kept apart so a spell that gives and a spell that takes do not read alike. Bleed, Regen and EnRegen count applications, not what they did. Def+, Def- and Init count the defense buffs, the defense debuffs and the initiative debuffs a spell applied *to its targets*: a caster effect is a cost and is never counted here, so a spell whose only debuff is on its own caster reads zero. The first two sit side by side and are never summed: they move the same stat in opposite directions.");
+        writer.WriteLine("Cast is what landed; Resolve the share of declarations that landed rather than fizzling, which is what a cost change moves. Damage is what a cast took on the spot and OverTime what its bleeds went on to take at upkeep, counted against the spell because a condition remembers its cast (ADR 0027) -- a spell whose hits are absorbed and whose bleed is not can read zero Damage and a large OverTime. Energy is what a cast handed back and Drain what it tore out, kept apart so a spell that gives and a spell that takes do not read alike. Bleed, Regen and EnRegen count applications, not what they did. Def+, Def-, Init+ and Init- count the defense and initiative conditions a spell applied *to its targets*: a caster effect is a cost and is never counted here, so a spell whose only debuff is on its own caster reads zero. Each pair sits side by side and is never summed: the two halves move one stat in opposite directions.");
         if (landed > 0)
         {
             // Winners survive longer and so act more: every spell's winner share sits above one half, and the

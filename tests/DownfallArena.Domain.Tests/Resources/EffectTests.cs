@@ -72,6 +72,7 @@ public sealed class EffectTests
         var buff = DefenseBuff.Of(2, Duration.Permanent);
         var debuff = InitiativeDebuff.Of(1, Duration.OfRounds(2), StackingPolicy.Ignore);
         var defenseDebuff = DefenseDebuff.Of(2, Duration.Permanent);
+        var initiativeBuff = InitiativeBuff.Of(3, Duration.OfRounds(1));
 
         buff.Amount.ShouldBe(2);
         buff.Duration.IsPermanent.ShouldBeTrue();
@@ -81,10 +82,13 @@ public sealed class EffectTests
         defenseDebuff.Amount.ShouldBe(2);
         defenseDebuff.Duration.IsPermanent.ShouldBeTrue();
         defenseDebuff.Stacking.ShouldBe(StackingPolicy.Stack);
+        initiativeBuff.Amount.ShouldBe(3);
+        initiativeBuff.Duration.ShouldBe(Duration.OfRounds(1));
 
         Should.Throw<ArgumentOutOfRangeException>(() => DefenseBuff.Of(0, Duration.Permanent));
         Should.Throw<ArgumentOutOfRangeException>(() => InitiativeDebuff.Of(0, Duration.Permanent));
         Should.Throw<ArgumentOutOfRangeException>(() => DefenseDebuff.Of(0, Duration.Permanent));
+        Should.Throw<ArgumentOutOfRangeException>(() => InitiativeBuff.Of(0, Duration.Permanent));
     }
 
     [Fact]

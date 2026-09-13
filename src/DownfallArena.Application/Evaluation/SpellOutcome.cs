@@ -85,6 +85,9 @@ public sealed record SpellOutcome
     /// <summary>Defense debuffs applied (ADR 0035). Kept apart from the buffs: one raises, one lowers.</summary>
     public int DefenseDebuffs { get; init; }
 
+    /// <summary>InitiativeBuffs applied, kept apart from the debuffs: they move the same stat opposite ways.</summary>
+    public int InitiativeBuffs { get; init; }
+
     /// <summary>Casts that landed on a side that went on to win.</summary>
     public int ResolvedWhenWon { get; init; }
 
@@ -128,7 +131,7 @@ public sealed record SpellOutcome
     /// <summary>
     /// Everything <see cref="SpellEffects"/> counted, copied onto this outcome field by field.
     /// <para>
-    /// It lives here rather than inline in the caller because it is seventeen lines of the same shape, each one
+    /// It lives here rather than inline in the caller because it is eighteen lines of the same shape, each one
     /// a chance to name the wrong source field -- a mistake that compiles, passes every test that reads a total
     /// rather than a particular column, and quietly moves a number balance is judged on.
     /// <c>EvaluationRunnerTests</c> pins it by giving every count a value of its own.
@@ -152,6 +155,7 @@ public sealed record SpellOutcome
             EnergyRegenerations = effects.EnergyRegenerations,
             DefenseBuffs = effects.DefenseBuffs,
             DefenseDebuffs = effects.DefenseDebuffs,
+            InitiativeBuffs = effects.InitiativeBuffs,
             InitiativeDebuffs = effects.InitiativeDebuffs,
             ConditionDamage = effects.ConditionDamage,
             ConditionHealing = effects.ConditionHealing,

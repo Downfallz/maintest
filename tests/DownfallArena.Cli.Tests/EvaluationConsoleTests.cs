@@ -46,7 +46,7 @@ public sealed class EvaluationConsoleTests
     [Fact]
     public void The_spell_table_has_a_column_for_every_lasting_effect_the_recorder_counts()
     {
-        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def+", "Def-", "Init"];
+        string[] columns = ["Stun", "Bleed", "Regen", "EnRegen", "Def+", "Def-", "Init+", "Init-"];
         var kinds = typeof(LastingEffect).Assembly.GetTypes()
             .Count(type => type.IsSubclassOf(typeof(LastingEffect)) && !type.IsAbstract);
 
@@ -98,21 +98,21 @@ public sealed class EvaluationConsoleTests
     }
 
     /// <summary>
-    /// Defense and initiative are different stats: one column for both cannot say which one a spell moved. The
-    /// defense debuff is a third, and it needs its own column most of all -- it moves the same stat as the
-    /// buff, the other way, so folding the two together would net one spell's debuff against another's buff.
+    /// Defense and initiative are different stats, and each is raised and lowered by a kind of its own. Four
+    /// columns, never summed: folding a pair together would net one spell's buff against another's debuff, and
+    /// folding the pairs together would lose which stat moved at all.
     /// </summary>
     [Fact]
-    public void The_two_defense_conditions_and_the_initiative_one_are_counted_apart()
+    public void Each_stat_condition_is_counted_in_a_column_of_its_own()
     {
         var printed = Print(Outcome("spell:ice_spear:v1", sides: 10, wins: 6, resolved: 20, fizzled: 0, damage: 80, resolvedWhenWon: 12)
             with
-        { DefenseBuffs = 4, DefenseDebuffs = 9, InitiativeDebuffs = 17 });
+        { DefenseBuffs = 4, DefenseDebuffs = 9, InitiativeBuffs = 11, InitiativeDebuffs = 17 });
 
         var rows = printed.Split('\n').Where(line => line.Contains("spell:ice_spear:v1", StringComparison.Ordinal)).ToList();
 
         rows.Count.ShouldBe(1);
-        rows[0].ShouldEndWith("    4     9    17", Case.Sensitive, "the three stat conditions are three columns, not one sum");
+        rows[0].ShouldEndWith("    4     9     11     17", Case.Sensitive, "the four stat conditions are four columns, not two sums");
     }
 
     [Fact]

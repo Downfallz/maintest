@@ -14,8 +14,8 @@ public sealed class FeatureSchemaTests
     [Fact]
     public void The_schema_is_the_published_version()
     {
-        Schema.Version.ShouldBe("features:v4");
-        FeatureSchema.CurrentVersion.ShouldBe("features:v4");
+        Schema.Version.ShouldBe("features:v5");
+        FeatureSchema.CurrentVersion.ShouldBe("features:v5");
         Schema.TeamSize.ShouldBe(2);
         Schema.RoundCap.ShouldBe(30);
     }
@@ -29,7 +29,7 @@ public sealed class FeatureSchemaTests
         var otherContent = FeatureSchema.Build(GameResources.Create("other", [], [], []), MatchStore.TwoOnTwo());
 
         Schema.Id.ShouldBe(same.Id);
-        Schema.Id.ShouldMatch("^features:v4\\+[0-9a-f]{12}$");
+        Schema.Id.ShouldMatch("^features:v5\\+[0-9a-f]{12}$");
         new[] { Schema.Id, otherTeamSize.Id, otherRoundCap.Id, otherContent.Id }.Distinct(StringComparer.Ordinal).Count().ShouldBe(4);
         FeatureSchema.Build(TestContent.Resources, RuleSet.Create(2, 9, 9, 30, 9.0)).Id.ShouldBe(Schema.Id);
     }
@@ -37,8 +37,8 @@ public sealed class FeatureSchemaTests
     [Fact]
     public void The_length_is_the_globals_plus_one_block_per_board_slot()
     {
-        // 6 creature features, 7 condition pairs, 4 spells, 2 talent nodes.
-        Schema.CreatureLength.ShouldBe(6 + (2 * 7) + 4 + 2);
+        // 6 creature features, 8 condition pairs, 4 spells, 2 talent nodes.
+        Schema.CreatureLength.ShouldBe(6 + (2 * 8) + 4 + 2);
         Schema.Length.ShouldBe(5 + (2 * 2 * Schema.CreatureLength));
         Schema.FeatureNames.Count.ShouldBe(Schema.Length);
         Schema.FeatureNames.Distinct(StringComparer.Ordinal).Count().ShouldBe(Schema.Length);
@@ -58,15 +58,16 @@ public sealed class FeatureSchemaTests
         Schema.IndexOf("own0_Regeneration_amount").ShouldBe(13);
         Schema.IndexOf("own0_EnergyRegeneration_amount").ShouldBe(15);
         Schema.IndexOf("own0_DefenseDebuff_amount").ShouldBe(21);
-        Schema.IndexOf("own0_InitiativeDebuff_remaining").ShouldBe(24);
-        Schema.IndexOf("own0_knows_spell:guard:v1").ShouldBe(25);
-        Schema.IndexOf("own0_knows_spell:strike:v1").ShouldBe(28);
-        Schema.IndexOf("own0_node_talent-tree:base:v1/brawler").ShouldBe(29);
-        Schema.IndexOf("own0_node_talent-tree:base:v1/root").ShouldBe(30);
-        Schema.IndexOf("own1_alive").ShouldBe(31);
-        Schema.IndexOf("enemy0_alive").ShouldBe(57);
-        Schema.IndexOf("enemy1_alive").ShouldBe(83);
-        Schema.IndexOf("enemy1_node_talent-tree:base:v1/root").ShouldBe(108);
+        Schema.IndexOf("own0_InitiativeBuff_amount").ShouldBe(23);
+        Schema.IndexOf("own0_InitiativeDebuff_remaining").ShouldBe(26);
+        Schema.IndexOf("own0_knows_spell:guard:v1").ShouldBe(27);
+        Schema.IndexOf("own0_knows_spell:strike:v1").ShouldBe(30);
+        Schema.IndexOf("own0_node_talent-tree:base:v1/brawler").ShouldBe(31);
+        Schema.IndexOf("own0_node_talent-tree:base:v1/root").ShouldBe(32);
+        Schema.IndexOf("own1_alive").ShouldBe(33);
+        Schema.IndexOf("enemy0_alive").ShouldBe(61);
+        Schema.IndexOf("enemy1_alive").ShouldBe(89);
+        Schema.IndexOf("enemy1_node_talent-tree:base:v1/root").ShouldBe(116);
         Should.Throw<ArgumentOutOfRangeException>(() => Schema.IndexOf("own2_alive"));
     }
 
@@ -105,7 +106,7 @@ public sealed class FeatureSchemaTests
             .Order(StringComparer.Ordinal);
 
         FeatureSchema.ConditionKinds.Order(StringComparer.Ordinal).ShouldBe(domainKinds);
-        FeatureSchema.ConditionKinds.ShouldBe(["Bleed", "Regeneration", "EnergyRegeneration", "Stun", "DefenseBuff", "DefenseDebuff", "InitiativeDebuff"]);
+        FeatureSchema.ConditionKinds.ShouldBe(["Bleed", "Regeneration", "EnergyRegeneration", "Stun", "DefenseBuff", "DefenseDebuff", "InitiativeBuff", "InitiativeDebuff"]);
         FeatureSchema.ConditionKindIndex("Stun").ShouldBe(3);
         FeatureSchema.ConditionKindIndex("Poison").ShouldBe(-1);
     }
