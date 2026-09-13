@@ -635,6 +635,66 @@ def test_the_repository_tiers_come_from_the_tree_the_creature_is_on() -> None:
     assert spells.tiers["spell:lightning_bolt"] == 1
 
 
+def test_a_spell_sits_below_what_it_requires_even_in_the_same_node() -> None:
+    """ADR 0034: a class node holds its opener and both spells behind it, so the node alone is not a tier."""
+    spells = load_content(REPO_ROOT / "data")
+
+    assert spells.tiers["spell:summon_minions"] == 2
+    assert spells.tiers["spell:revenant_guards"] == 3
+    assert spells.tiers["spell:crazed_specter"] == 3
+
+
+def test_a_prerequisite_raises_a_spell_the_node_depth_would_leave_shallow(tmp_path: Path) -> None:
+    """The reading, without the repository: two spells in one node, one behind the other."""
+    _write_tree(
+        tmp_path,
+        [
+            {"id": "spell:opener:v1"},
+            {"id": "spell:behind:v1", "prerequisites": {"allOf": ["spell:opener"]}},
+        ],
+    )
+
+    tiers = load_content(tmp_path).tiers
+
+    assert tiers["spell:opener"] == 0
+    assert tiers["spell:behind"] == 1
+
+
+def test_a_chain_of_prerequisites_settles_at_its_own_length(tmp_path: Path) -> None:
+    """Three deep in one node, declared in the order that makes a single pass insufficient."""
+    _write_tree(
+        tmp_path,
+        [
+            {"id": "spell:third:v1", "prerequisites": {"allOf": ["spell:second"]}},
+            {"id": "spell:second:v1", "prerequisites": {"allOf": ["spell:first"]}},
+            {"id": "spell:first:v1"},
+        ],
+    )
+
+    tiers = load_content(tmp_path).tiers
+
+    assert [tiers["spell:first"], tiers["spell:second"], tiers["spell:third"]] == [0, 1, 2]
+
+
+def _write_tree(root: Path, entries: list[dict]) -> None:
+    """A data directory holding one talent tree of one node, and the spells that node offers."""
+    (root / "TalentTrees").mkdir(parents=True)
+    (root / "Spells").mkdir(parents=True)
+    aliases = {}
+    for entry in entries:
+        identifier = str(entry["id"])
+        alias = identifier.rsplit(":", 1)[0]
+        aliases[alias] = identifier
+        (root / "Spells" / f"{alias.split(':')[1]}.json").write_text(
+            json.dumps({**spell(id=identifier), "enabled": True}), encoding="utf-8"
+        )
+    (root / "aliases.json").write_text(json.dumps(aliases), encoding="utf-8")
+    (root / "TalentTrees" / "tree.json").write_text(
+        json.dumps({"id": "talent-tree:test:v1", "root": {"name": "Root", "spells": entries}}),
+        encoding="utf-8",
+    )
+
+
 WEIGHTS = {
     "damage": 1.0,
     "heal": 0.8,

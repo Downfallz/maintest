@@ -93,7 +93,10 @@ of them are `report.json` metrics under their own names, so a tuning run and a n
 way. Six the tuner derives from `spellOutcomes`, because they need the catalogue as well as the evaluation:
 `spellUsageShare`, `spellsNeverCast` and `spellsBarelyCast` over the whole catalogue, and three over a
 **tier** — the spells
-offered at one depth of the talent tree, which is the set a player chooses between. `tierUsageShare` asks
+offered at one depth of the talent tree, which is the set a player chooses between. Depth is what a spell
+requires as well as where it is written (ADR 0034): a class node holds its opener and both spells behind it,
+so reading the node alone would call all three one tier. Reading the prerequisites gives the shape a player
+climbs, 3 / 6 / 9 / 18 on today's content. `tierUsageShare` asks
 whether one of them owns the tier, `tierDamageSpread` whether they hit comparably hard per landed cast, and
 `tierWinSpread` whether they win comparably often. Each reports its worst tier, and each skips what it
 cannot read: a tier nobody cast, a spell with no `Damage` effect, a spell too few sides declared for its

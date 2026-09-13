@@ -8,7 +8,7 @@ an evaluation already reports. Everything here reads the authored content in ``d
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
@@ -284,16 +284,29 @@ def load_content(data_directory: Path) -> Content:
 
 
 def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
-    """How deep each spell sits: 0 for a starting spell or a root node, one more per talent node below.
+    """How deep each spell sits: what it requires as well as where it is written (ADR 0034).
 
-    A spell taught in two places takes the shallowest, which is how soon a creature can actually have it.
+    A node's depth is where a spell is *offered*; a prerequisite is how deep it is *reachable*. A class node
+    holds its opener and both spells that require it, so reading the node alone puts all three at one depth
+    and calls a set a player never chooses between a tier.
+
+    A spell taught in two places takes the shallowest, which is how soon a creature can actually have it. The
+    prerequisite raise applies after that: a prerequisite is a floor, not a choice.
     """
     depths: dict[str, int] = {}
+    required: dict[str, list[str]] = {}
 
-    def note(reference: str, depth: int) -> None:
-        alias = reference if reference in by_id.values() else by_id.get(reference)
-        if alias is not None:
-            depths[alias] = min(depth, depths.get(alias, depth))
+    def alias_of(reference: str) -> str | None:
+        return reference if reference in by_id.values() else by_id.get(reference)
+
+    def note(reference: str, depth: int, prerequisites: Sequence[str] = ()) -> None:
+        alias = alias_of(reference)
+        if alias is None:
+            return
+        depths[alias] = min(depth, depths.get(alias, depth))
+        behind = [found for found in map(alias_of, prerequisites) if found is not None]
+        if behind:
+            required.setdefault(alias, []).extend(behind)
 
     for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
         creature = _read_json(file)
@@ -305,14 +318,51 @@ def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
         tree = _read_json(file)
         if tree.get("enabled", True) and isinstance(tree.get("root"), Mapping):
             _walk(tree["root"], 0, note)
+    return _behind(depths, required)
+
+
+def _behind(depths: dict[str, int], required: Mapping[str, Sequence[str]]) -> dict[str, int]:
+    """Raise every spell to one below the deepest thing it requires, until nothing moves.
+
+    A pass at a time rather than a recursion, so a prerequisite chain of any length settles and a cycle --
+    which a talent tree should never carry and this must not hang on -- stops at the number of spells.
+    """
+    for _ in range(len(depths)):
+        moved = False
+        for alias, behind in required.items():
+            if alias not in depths:
+                continue
+            deepest = max((depths[found] for found in behind if found in depths), default=None)
+            if deepest is not None and depths[alias] < deepest + 1:
+                depths[alias] = deepest + 1
+                moved = True
+        if not moved:
+            break
     return depths
 
 
-def _walk(node: Mapping[str, object], depth: int, note: Callable[[str, int], None]) -> None:
+#: What `_walk` hands back for each spell: its id, the depth of the node offering it, and what it requires.
+_Note = Callable[[str, int, Sequence[str]], None]
+
+
+def _required_by(spell: Mapping[str, object]) -> list[str]:
+    """The spells a talent-tree entry names as prerequisites. ``anyOf`` counts: one of them still gates it."""
+    prerequisites = spell.get("prerequisites")
+    if not isinstance(prerequisites, Mapping):
+        return []
+    names: list[str] = []
+    for key in ("allOf", "anyOf"):
+        listed = prerequisites.get(key)
+        if isinstance(listed, list):
+            names.extend(str(entry) for entry in listed if isinstance(entry, str))
+    return names
+
+
+def _walk(node: Mapping[str, object], depth: int, note: _Note) -> None:
     spells = node.get("spells", [])
     for spell in spells if isinstance(spells, list) else []:
         if isinstance(spell, Mapping) and "id" in spell:
-            note(str(spell["id"]), depth)
+            note(str(spell["id"]), depth, _required_by(spell))
     children = node.get("children", [])
     for child in children if isinstance(children, list) else []:
         if isinstance(child, Mapping):
