@@ -73,7 +73,15 @@ COLUMNS = (
 
 @contextmanager
 def patched(name: str, value: float):
-    """Set one weight in the C# default and in the weights file `cast_value` reads, then put both back."""
+    """Set one weight in the C# default and in the weights file `cast_value` reads, then put both back.
+
+    The three `# NOSONAR` below are pythonsecurity:S2083, "path traversal via unsanitized user input", and
+    they are false positives with a readable signature: the line that writes content built from the command
+    line is *not* flagged, and the three that are flagged write bytes this function read back off the disk.
+    The analyser treats `read_text` as a source of user input and `write_text` as a sink. No argument
+    chooses a path here -- `WEIGHTS` and `GREEDY_JSON` are module constants -- so there is nothing to
+    traverse, and the name that does come from the command line is checked against `WEIGHT_NAMES` first.
+    """
     source, weights = WEIGHTS.read_text(), GREEDY_JSON.read_text()
     try:
         field = name.capitalize()
@@ -83,12 +91,12 @@ def patched(name: str, value: float):
         WEIGHTS.write_text(patched_source)
         document = json.loads(weights)
         document[name] = value
-        GREEDY_JSON.write_text(json.dumps(document, indent=2) + "\n")
+        GREEDY_JSON.write_text(json.dumps(document, indent=2) + "\n")  # NOSONAR
         build()
         yield
     finally:
-        WEIGHTS.write_text(source)
-        GREEDY_JSON.write_text(weights)
+        WEIGHTS.write_text(source)  # NOSONAR
+        GREEDY_JSON.write_text(weights)  # NOSONAR
 
 
 @contextmanager
