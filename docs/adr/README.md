@@ -37,3 +37,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0029](0029-read-variety-on-an-exploring-run.md) | Read variety on an exploring run, not on the greedy mirror | Accepted |
 | [0030](0030-play-the-matches-of-a-batch-at-the-same-time.md) | Play the matches of a batch at the same time | Accepted |
 | [0031](0031-an-effect-that-lands-on-the-caster.md) | An effect that lands on the caster | Accepted |
+| [0032](0032-measure-the-initiative-weight.md) | Measure the initiative weight, and move it from 0.5 to 2.1 | Accepted |

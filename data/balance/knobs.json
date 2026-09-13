@@ -248,7 +248,7 @@
         "Reads as a trade, not a nuke",
         "The stagger is the point; the damage only has to be worth the activation"
       ],
-      "note": "Most of its value is damage on purpose. The initiative weight is 0.5 on reasoning alone (ADR 0018) and `search-weights` has never tuned it, so a version built mainly on the debuff would rest on an unmeasured number: at Damage 4 and a debuff of 2 over two rounds, 27% of the cast value rides on that weight instead of 43%. The bounds still reach the other shape if a pass finds it better.",
+      "note": "Most of its value was damage on purpose, because the initiative weight was 0.5 on reasoning alone (ADR 0018) and a version built mainly on the debuff would have rested on an unmeasured number. That objection is now spent: ADR 0032 swept the weight alone and moved it to 2.1, and the debuff half of this spell is what moved with it -- 1.6% of the mirror's casts to 7.0%, without a number here changing. The shape is worth revisiting deliberately rather than by default: at 2.1 the debuff is no longer the cheap half.",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },

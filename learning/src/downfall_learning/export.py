@@ -21,7 +21,7 @@ DEFAULT_WEIGHTS: Mapping[str, float] = {
     "defense": 0.65,
     "energy": 0.2,
     "risk": 2.0,
-    "initiative": 0.5,
+    "initiative": 2.1,
 }
 
 
