@@ -67,7 +67,7 @@ const TEMPLATES = {
     baseEnergy: 0,
     baseDefense: 0,
     baseInitiative: 5,
-    baseCriticalChance: 0.05,
+    baseCriticalChance: 0,
     talentTreeId: '',
     startingSpellIds: [],
   }),
