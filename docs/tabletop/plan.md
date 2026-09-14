@@ -59,7 +59,7 @@ Read as the source of truth, in this order: `docs/domain/game-rules.md`, `docs/d
 These are the translation questions that will cost the most. The audit (phase 1) answers them with evidence;
 they are listed here so the plan is honest about where the work is.
 
-1. **Length.** A 30-round cap with nine sub-phases is a simulator's number, not an evening's. A table round
+1. **Length.** A 30-round cap with ten sub-phases is a simulator's number, not an evening's. A table round
    is roughly 2 evolutions + 6 speed choices + 6 intents + 6 reveals + 6 resolutions. The tabletop rule set
    needs a round cap, a health scale, and an energy rate that land the median match in a target duration.
    This is measurable today: `simulate` and `evaluate` already report rounds and remaining health per match.
