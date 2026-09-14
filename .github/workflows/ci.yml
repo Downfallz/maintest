@@ -93,6 +93,19 @@ jobs:
       # static pages (ADR 0013 decision J, ADR 0015). The studio's modules do have tests now, run by the step
       # above, but Node's coverage does not reach Sonar (ADR 0024); the viewer still has no runner at all.
       # Sonar analyses all of them for bugs and code smells either way.
+      #
+      # The one suppression, and why it is one rather than a fix. `python:S1244` ("do not perform equality
+      # checks with floating point values") is typed as a *bug*, so it drives `new_reliability_rating`, and
+      # it fired eighteen times in `learning/tests/`. Every one of them compares a value whose exactness is
+      # the specification: a fixture literal (0.75, 0.5, 9.5, 8.0 -- several of them exactly representable in
+      # binary and incapable of carrying representation error), a number round-tripped through JSON, or
+      # `Knob.moved`, whose documented contract is to round to three decimals. Rewriting those to
+      # `pytest.approx` would delete what the assertion is for. Scoped to the test suite alone on purpose:
+      # production code under `learning/src` still gets the rule, where a computed float really is a hazard.
+      #
+      # This is what had `main` red on every push since 2026-09-13 while every pull request was green: a PR
+      # analysis reads only its own diff, a branch analysis reads the whole new-code period, and nobody reads
+      # push runs.
       - name: Begin SonarCloud analysis
         if: env.SONAR_TOKEN != ''
         run: >
@@ -106,6 +119,9 @@ jobs:
           /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,viewer/**,scripts/**"
           /d:sonar.python.version="3.11,3.12,3.13"
           /d:sonar.python.coverage.reportPaths="$RUNNER_TEMP/learning-coverage.xml"
+          /d:sonar.issue.ignore.multicriteria="e1"
+          /d:sonar.issue.ignore.multicriteria.e1.ruleKey="python:S1244"
+          /d:sonar.issue.ignore.multicriteria.e1.resourceKey="learning/tests/**/*.py"
 
       - name: Build (warnings are errors)
         run: dotnet build --no-restore --configuration Release

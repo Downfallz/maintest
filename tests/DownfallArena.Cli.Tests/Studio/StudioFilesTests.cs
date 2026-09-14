@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Infrastructure.Resources;
@@ -11,7 +12,7 @@ namespace DownfallArena.Cli.Tests.Studio;
 /// what makes them catch a module the page imports and the table does not serve: the page is a blank screen
 /// then, and nothing else would say so.
 /// </summary>
-public sealed class StudioFilesTests
+public sealed partial class StudioFilesTests
 {
     private static StudioFiles Files => new(
         Path.Combine(AppContext.BaseDirectory, "studio"),
@@ -72,8 +73,8 @@ public sealed class StudioFilesTests
     public void The_stacking_the_page_seeds_is_the_one_the_engine_falls_back_to()
     {
         var page = System.Text.Encoding.UTF8.GetString(Files.Get("/studio.js").Body);
-        var seeded = System.Text.RegularExpressions.Regex
-            .Matches(page, @"^\s*(?<kind>\w+): \{[^}]*stacking: '(?<policy>\w+)'", System.Text.RegularExpressions.RegexOptions.Multiline)
+        var seeded = SeededStacking()
+            .Matches(page)
             .ToDictionary(match => match.Groups["kind"].Value, match => match.Groups["policy"].Value, StringComparer.Ordinal);
 
         seeded.Count.ShouldBe(8, "the page seeds a policy for every lasting kind; a new one needs a row here too");
@@ -82,6 +83,10 @@ public sealed class StudioFilesTests
             FallbackFor(kind).ToString().ShouldBe(policy, $"the page seeds {kind} at {policy} and the engine falls back to something else");
         }
     }
+
+    /// <summary>One row of the page's <c>EFFECTS</c> table: the kind, and the stacking policy it seeds.</summary>
+    [GeneratedRegex(@"^\s*(?<kind>\w+): \{[^}]*stacking: '(?<policy>\w+)'", RegexOptions.Multiline)]
+    private static partial Regex SeededStacking();
 
     /// <summary>What the mapper makes of one effect of this kind that says nothing about stacking.</summary>
     private static StackingPolicy FallbackFor(string kind)
