@@ -60,14 +60,14 @@ Totals first, then the derivation of each line.
 | --- | --- |
 | Spell cards | 216 |
 | Boards and mats | 6 creature boards, 2 player mats, 2 talent tree mats, 1 initiative track, 1 round track |
-| Condition tokens | 120 in 8 kinds |
+| Condition tokens | 138 in 8 kinds |
 | Markers and chits | 36 stat markers, 6 initiative markers, 6 speed tokens, 4 pick tokens, 2 round markers, 18 target markers, 82 talent pips, 18 overflow chits, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 (recommended: d20) |
 | Paper | about 35 A4 or Letter sheets |
 
 The paper: 24 sheets of cards (9 a sheet), 3 of creature boards (2 a sheet), 2 player mats, 2 talent tree
-mats, 1 for the initiative and round tracks, 2 of tokens (312 pieces at 15 mm, about 185 to a sheet), 1 of player aids. 35.
+mats, 1 for the initiative and round tracks, 2 of tokens (330 pieces at 15 mm, about 185 to a sheet), 1 of player aids. 35.
 Card backs would add 24 more; see Part 6, question 8.
 
 ### 1.1 Spell cards
@@ -109,7 +109,7 @@ counts and the ends.
 | Defense buffs | 6 | 0 to 20. See [3.3](#33-defense-two-rails-because-the-floor-is-applied-once). | **VALUE** (the largest Damage, the critical multiplier) |
 | Defense debuffs | 6 | 0 to 20, the same reason mirrored. | **VALUE** |
 | Base initiative, units | 6 | 0 to 9. | **RULE** (a decimal rail) |
-| Base initiative, tens | 6 | 0 to 5. Together the two rails read 0 to 59, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Current initiative of 59. | **VALUE** (the catalogue's Spell initiative, the picks a Round) |
+| Base initiative, tens | 6 | 0 to 5. Together the two rails read 0 to 59, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Current initiative of 58. | **VALUE** (the catalogue's Spell initiative, the picks a Round) |
 
 **36 stat markers**, six of each of the six rails above. Print them as 10mm discs in six Creature colours.
 
@@ -138,7 +138,8 @@ for s in S:
 
 | Token | Face | Supply | The rule beside the count | Follows |
 | --- | --- | --- | --- | --- |
-| Bleed | 2 a Round | 18 | `summon_minions` and `toxic_waves` place one on each of up to 3 targets; 6 slots x 3 = 18 | **VALUE** (content) |
+| Bleed | 1 a Round | 18 | `toxic_waves` places one on each of up to 3 targets; 6 slots x 3 = 18 | **VALUE** (content) |
+| Bleed | 2 a Round | 18 | `summon_minions`, up to 3 targets; 6 slots x 3 = 18 | **VALUE** (content) |
 | Bleed | 3 a Round | 6 | `poison_slash`, one target; 6 slots x 1 | **VALUE** |
 | Bleed | 4 a Round | 6 | `mortal_wound` on a target, `crazed_specter` and `revenant_guards` on their own caster; one each; 6 slots x 1 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
@@ -150,9 +151,9 @@ for s in S:
 | Defense debuff | -2 | 18 | `noxious_cure` on up to 3 allies; 6 x 3. `psycho_rush`'s caster debuff is the same face. | **VALUE** |
 | Initiative buff | +2 | 18 | `death_squad`, up to 3 allies; 6 x 3 | **VALUE** |
 | Initiative debuff | -2 | 6 | `ice_spear` and `protective_slam`, one enemy; 6 x 1 | **VALUE** |
-| **Total** | | **120** | | |
+| **Total** | | **138** | | |
 
-Every amount in the catalogue is on this list and no other: Bleed is 2, 3 or 4; Regeneration is 3; Energy
+Every amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 3; Energy
 regeneration is 2; timed Defense is 1, 2 or 3; every Initiative change is 2; every Defense debuff is 2. That
 is why a token set this small covers a 36-Spell catalogue.
 
@@ -192,11 +193,12 @@ python3 -c "
 import json,glob,collections
 v=collections.Counter(json.load(open(p))['criticalChance'] for p in glob.glob('data/Spells/**/*.json',recursive=True))
 print(sorted(v.items()))"
-# [(0, 15), (0.22, 1), (0.28, 1), (0.33, 5), (0.333, 1), (0.5, 9), (0.617, 1), (0.717, 1), (0.75, 1), (0.8, 1)]
+# [(0, 15), (0.22, 1), (0.28, 1), (0.283, 1), (0.33, 4), (0.38, 1), (0.45, 2), (0.5, 7), (0.617, 1), (0.75, 1),
+#  (0.767, 1), (0.8, 1)]
 ```
 
-**21 of 36 Spells roll. 15 never touch a die.** Ten distinct chances are printed today, and the die's grid has
-to carry them. What each candidate costs, snapping each of the 21 to the nearest face:
+**21 of 36 Spells roll. 15 never touch a die.** Eleven distinct chances are printed today, and the die's grid
+has to carry them. What each candidate costs, snapping each of the 21 to the nearest face:
 
 ```bash
 python3 -c "
@@ -210,18 +212,21 @@ for d in (6,8,10,12,20,100):
 
 | Die | Spells whose chance moves | Worst move | Mean move | On the declared knob grid (step 0.05)? | What else it costs |
 | --- | --- | --- | --- | --- | --- |
-| d6 | 12 of 21 | 0.0833 (`crushing_stomp` 0.75 to 0.667) | 0.0162 | **No.** 1/6 is not a multiple of 0.05 | Six faces for ten distinct chances; the finest distinction is 16.7 points |
-| d8 | 11 | 0.05 (`enraged_charge` 0.8 to 0.75) | 0.0199 | **No** | The largest mean error of the five, and a die many households do not have |
-| d10 | 11 | 0.05 (`crushing_stomp` 0.75 to 0.8) | 0.0146 | **Yes**, 0.1 is a multiple of 0.05 | Ten faces for ten chances, but it cannot express 0.75, where `crushing_stomp` sits today |
-| d12 | 11 | 0.0337 (`lightning_bolt` 0.617 to 0.583) | **0.0084** | **No** | The smallest mean error, bought with values no declared knob can reach |
-| **d20** | **10** | **0.02** (`rejuvenate` 0.22 to 0.20) | 0.0091 | **Yes**, exactly the declared step | One die, one reading, thresholds in whole numbers |
+| d6 | 14 of 21 | 0.0833 (`crushing_stomp` 0.75 to 0.667) | 0.0262 | **No.** 1/6 is not a multiple of 0.05 | Six faces for eleven distinct chances, the largest mean error of the five, and a finest distinction of 16.7 points |
+| d8 | 13 | 0.05 (`enraged_charge` 0.8 to 0.75) | 0.0216 | **No** | Dominated by the d10 - the same 13 moves and the same worst move, at a larger mean error - and a die many households do not have |
+| d10 | 13 | 0.05 (`crushing_stomp` 0.75 to 0.8) | 0.0189 | **Yes**, 0.1 is a multiple of 0.05 | Ten faces for eleven chances, and it cannot express 0.75, where `crushing_stomp` sits today |
+| d12 | 13 | 0.0367 (`crazed_specter` 0.38 to 0.417) | 0.0140 | **No** | Values no declared knob can reach, and since tune run 8 it no longer buys the smallest mean error either |
+| **d20** | **10** | **0.02** (`rejuvenate` 0.22 to 0.20) | **0.0091** | **Yes**, exactly the declared step | One die, one reading, thresholds in whole numbers |
 | d100 (2 dice) | 3 | 0.003 | 0.0004 | No, 0.01 | Two dice and a percentile read per cast, and it keeps the arbitrary precision fork B exists to remove |
 
 **Recommendation: a d20, and the card prints both the chance and the threshold** ("Critical 50% - d20: 11+",
-which is nine Spells as the catalogue stands).
-The reason is not the error, which d12 wins: it is that `data/balance/knobs.json` already declares
-`/criticalChance` a knob with a **step of 0.05 on 20 Spells**, so a d20 snap is inside the search space a
-tuning pass already has, and d6, d8, d12 and d100 are not.
+which is seven Spells as the catalogue stands). The recommendation survives tune run 8, and on better terms
+than it was made: the d20 now wins the error as well. It moves the fewest Spells (10 of 21), has the smallest
+worst move (0.02) and, since run 8 pulled `crazed_specter` and `protective_slam` off the d12 grid, the
+smallest mean error of the five single dice. The load-bearing reason is still the grid rather than the error,
+because the error moves with every tuning pass and the grid does not: `data/balance/knobs.json` already
+declares `/criticalChance` a knob with a **step of 0.05 on 20 Spells**, so a d20 snap is inside the search
+space a tuning pass already has, and d6, d8, d12 and d100 are not.
 
 ```bash
 python3 -c "
@@ -235,11 +240,13 @@ Two findings the maintainer owns before the snap is authored, neither of them th
 
 - **One Spell that prints a chance has no critical chance knob**: `revenant_guards` (0.33). A snap would move
   a number no declared knob covers.
-- **Nine of the 20 knobbed Spells are already off their own declared grid**, because their band's `min` is not
-  a multiple of the step: `pummel` 0.717, `protective_slam` 0.333, `tornado`, `engulfing_flames`,
-  `crazed_specter` and `toxic_waves` at 0.33, `noxious_cure` 0.28, `rejuvenate` 0.22, `lightning_bolt` 0.617
-  in a band of `[0.17, 0.8]`. Snapping to a d20 fixes eight of them and leaves `lightning_bolt`'s band itself
-  to be moved, because 0.17 plus multiples of 0.05 never lands on a multiple of 0.05.
+- **Nine of the 20 knobbed Spells are already off their own declared grid**: their printed value is not their
+  band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `crazed_specter` 0.38,
+  `tornado`, `engulfing_flames` and `toxic_waves` at 0.33, `noxious_cure` 0.28, `rejuvenate` 0.22, and
+  `lightning_bolt` 0.617 in a band of `[0.17, 0.8]`. Eight of the nine sit on a band whose `min` **is** a
+  multiple of 0.05, so a d20 snap fixes them outright. The ninth is `lightning_bolt`, whose band floor 0.17 is
+  the only knob band off its own grid, and it leaves the band itself to be moved: 0.17 plus multiples of 0.05
+  never lands on a multiple of 0.05.
 
 ### 1.7 The energy track: what ends it
 
@@ -388,7 +395,7 @@ Spells carry a Caster effect and are not in the seven because their statline is 
 
 ### 2.5 Three card faces, written out
 
-Real Spells, generated from `data/`. `[ ]` marks a printed zone. `91da95` is the first six characters of
+Real Spells, generated from `data/`. `[ ]` marks a printed zone. `938bef` is the first six characters of
 the content hash this working tree builds (`cat data/dst/game.schema.sha256`); the generator prints
 whatever the build it was handed says, and refuses to print when there is nothing to say.
 
@@ -409,7 +416,7 @@ whatever the build it was handed says, and refuses to print when there is nothin
 | Unlock: +1 initiative                |
 | Requires: any of Lightning Bolt,     |
 |   Rejuvenate; Summon Minions         |
-| spell:revenant_guards:v1     91da95  |   versioned id, content hash prefix
+| spell:revenant_guards:v1     938bef  |   versioned id, content hash prefix
 +--------------------------------------+
 ```
 
@@ -432,7 +439,7 @@ case the generator exists for: the card is reprinted from the build, not correct
 | Unlock: +1 initiative                |
 | Requires: any of Pummel, Guard;      |
 |   Full Plate                         |
-| spell:crushing_stomp:v1      91da95  |
+| spell:crushing_stomp:v1      938bef  |
 +--------------------------------------+
 ```
 
@@ -451,7 +458,7 @@ over.
 | No critical roll                     |
 | Unlock: +1 initiative                |
 | Starting spell                       |
-| spell:wait:v1                91da95  |
+| spell:wait:v1                938bef  |
 +--------------------------------------+
 ```
 
@@ -561,18 +568,18 @@ S={json.load(open(p))['id'].split(':')[1]:json.load(open(p)) for p in glob.glob(
 start={'basic_attack','heavy_strike','wait'}
 v=sorted((s['initiative'] for k,s in S.items() if k not in start),reverse=True)
 print(len(v),'unlockable, spell initiative sum',sum(v),'best 32 picks',sum(v[:32]))"
-# 33 unlockable, spell initiative sum 48, best 32 picks 48
+# 33 unlockable, spell initiative sum 47, best 32 picks 47
 ```
 
 A Player makes 2 picks a Round for at most 16 Rounds: **32 unlocks**, all of them possible on one Creature.
-33 Spells are unlockable and their Spell initiative sums to 48; three of them are worth 0, so 32 picks still
-reach 48. **Base initiative tops out at 5 + 48 = 53.** Add the largest Initiative buff a Creature can carry -
+33 Spells are unlockable and their Spell initiative sums to 47; three of them are worth 0, so 32 picks still
+reach 47. **Base initiative tops out at 5 + 47 = 52.** Add the largest Initiative buff a Creature can carry -
 `death_squad` is +2 for a Round on up to 3 allies, it stacks, and all three of a Team can cast it in the same
-Round, so +6 - and **Current initiative tops out at 59**.
+Round, so +6 - and **Current initiative tops out at 58**.
 
-A 60-cell rail is 300 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 5 and units 0
-to 9, are 16 cells** and read as one two-digit number. The print constraint is the board's 95 mm of usable
-width; the rule is the ceiling of 59.
+A rail to 58 is 59 cells and 295 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 5
+and units 0 to 9, are 16 cells** and read as one two-digit number. The print constraint is the board's 95 mm
+of usable width; the rule is the ceiling of 58.
 
 Current initiative is **not** on a rail. It is Base plus the dock's Initiative buff tokens less its Initiative
 debuff tokens, floored at zero, and it is read **once a Round**, when the timeline is built. That is the
@@ -841,7 +848,7 @@ Each one is a count or a choice this document cannot derive. None is answered he
 
 Recommended: **d20**, for the reason in [1.6](#16-dice) - two candidate grids sit inside the 0.05 step
 `knobs.json` already declares on 20 Spells, d10 and d20, and the d20 is the finer of the two: it moves 10 of
-the 21 Spells rather than 11, its worst move is 0.02 rather than 0.05, and it can still express the 0.75
+the 21 Spells rather than 13, its worst move is 0.02 rather than 0.05, and it can still express the 0.75
 `crushing_stomp` is on. Alternatives and their
 costs are the table in 1.6. Two things come with the answer, whichever it is: `revenant_guards` prints a
 chance and has **no critical chance knob**, and `lightning_bolt`'s knob band starts at 0.17, so its own grid
@@ -874,7 +881,7 @@ should the box carry the theoretical rate (14 a Round, so 7 chits a Creature) an
 The supplies in [1.4](#14-condition-tokens) are **one Round at the maximum rate**. The rule's own ceiling is up
 to three times that for the Durations over one Round - 54 Bleed-2 tokens - which the Health scale makes
 unreachable but the rules do not forbid. Three answers: print one Round's worth and carry the blank-token
-escape (this manifest); print the rule's ceiling, which is roughly 240 condition tokens and one more sheet;
+escape (this manifest); print the rule's ceiling - each face's supply times its longest Duration, which is 216 condition tokens - and one more sheet;
 or bound the rule, which is an engine change and belongs to ADR candidates 2 and 3, not here.
 
 ### 6. Where the rule set comes from
@@ -920,7 +927,7 @@ Every **needs a component** verdict in [translation.md](translation.md), and wha
 | 1.7 Reveal in timeline order, bind targets at reveal | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
 | 1.8 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.8 Total Defense | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.8 A lasting Effect attaches as a Condition | The 120 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.8 A lasting Effect attaches as a Condition | The 138 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.8 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.9 Every Condition counts one Round down | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 
@@ -928,7 +935,7 @@ Every **needs a component** verdict in [translation.md](translation.md), and wha
 
 | Effect kind | Token, and its supply |
 | --- | --- |
-| `Bleed` | 30 tokens: 18 at 2, 6 at 3, 6 at 4 |
+| `Bleed` | 48 tokens: 18 at 1, 18 at 2, 6 at 3, 6 at 4 |
 | `Regeneration` | 6 tokens at 3 |
 | `EnergyRegeneration` | 6 tokens at 2 |
 | `Stun` | 6 tokens, one a Creature, because a Stun refreshes |
@@ -962,7 +969,7 @@ move a rail and place nothing.
 | `revenant_guards` | Up to 3 Defense buffs +2 (1 round) and 1 Bleed 4 on its own caster; +2 on up to 3 rails, permanent. The heaviest cast: 4 tokens and 3 rail moves |
 | `noxious_cure` | Up to 3 Defense debuffs -2 |
 | `crazed_specter` | 1 Bleed 4 on its own caster |
-| `toxic_waves` | Up to 3 Bleeds 2 |
+| `toxic_waves` | Up to 3 Bleeds 1 |
 
 ---
 
