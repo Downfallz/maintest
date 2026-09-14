@@ -149,7 +149,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
         if (resolution.Fizzled)
         {
-            return -weights.Fizzle;
+            return 0;  // an action that came to nothing is worth nothing (ADR 0040)
         }
 
         gone ??= NoneGone;
@@ -176,13 +176,6 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         score += DefensiveScore(actor, resolution, creatures, remaining);
 
         score += weights.Energy * (actor.Energy.Value - resolution.EnergySpent.Value);  // what the actor keeps; what a spell hands out is priced per outcome above
-        if (resolution.Action.Targets.Count > 0)
-        {
-            // Targets already lost when this was scored, and targets expected to be lost before it lands. A
-            // dropped target cannot also be in `gone`: it is not on the board this resolution was built from.
-            var wasted = resolution.DroppedTargets.Count + resolution.Action.Targets.Count(gone.Contains);
-            score -= weights.Fizzle * wasted / resolution.Action.Targets.Count;
-        }
 
         return score;
     }
