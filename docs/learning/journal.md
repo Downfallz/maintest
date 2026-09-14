@@ -29,6 +29,13 @@ first.
   the first collision compares both patched files against `HEAD` and these differed. First time it fired on
   a legitimate change rather than a mistake, and it was right to: measuring an uncommitted tree is how the
   first table of this whole arc got thrown away.
+- **A rule that fell out of the review, and is worth keeping**: regenerate a provenance-bearing artifact
+  *after* the tree is clean, never before. The first digest here recorded `962cd78f4c6a-dirty` because it was
+  written while the docs and tests of the same change were still uncommitted, so the one field kept as
+  experiment provenance named a base commit plus an unknown working tree. Nothing local would have caught it:
+  `BenchmarkDigest.DifferencesFrom` ignores `EngineVersion` on purpose, so `benchmark` verified green either
+  way. Regenerated clean it reads `48779f902d7b`, and exactly one line of the file differs — all 400 outcomes
+  identical, which is what says it was a traceability defect and not a measurement one.
 - **Verified**: build, 761 .NET tests, 304 pytest, format, ruff, studio tests, digest regenerated and
   re-verified.
 
