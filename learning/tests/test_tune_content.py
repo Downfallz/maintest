@@ -653,14 +653,21 @@ def test_a_candidate_is_judged_with_the_tiers_of_the_content_it_came_from(tmp_pa
     assert violations(base, candidate, knobs) == ["spell:jab would become strictly better than spell:attack."]
 
 
-def outcome(spell_id: str, resolved: int, sides: int, damage: int) -> dict:
-    """One row of the engine's spell table, with the fields the tier readings use."""
+def outcome(spell_id: str, resolved: int, sides: int, damage: int, hits: int | None = None) -> dict:
+    """One row of the engine's spell table, with the fields the tier readings use.
+
+    ``hits`` is the targets its casts actually landed damage on, which the engine counts and
+    ``tierDamageSpread`` divides by (ADR 0043); it defaults to one a cast, a single-target spell that always
+    found someone.
+    """
+    landed = resolved if hits is None else hits
     return {
         "spell": spell_id,
         "resolved": resolved,
         "sides": sides,
         "damage": damage,
         "damagePerCast": damage / resolved if resolved else 0,
+        "damagePerTarget": damage / landed if landed else 0,
         "score": 0.5,
     }
 
@@ -752,7 +759,7 @@ def test_a_sweep_is_compared_by_what_it_does_to_one_target_not_by_what_a_cast_to
         outcome("spell:starter:v1", 100, 100, 100),
         outcome("spell:filler:v1", 100, 100, 100),
         outcome("spell:unlocked:v1", 100, 100, 300),
-        outcome("spell:extra:v1", 100, 100, 900),
+        outcome("spell:extra:v1", 100, 100, 900, hits=300),
     ]
 
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", tier_with(sweep))
@@ -760,6 +767,30 @@ def test_a_sweep_is_compared_by_what_it_does_to_one_target_not_by_what_a_cast_to
     # Tier 1: the sweep totals 9.00 a cast against `unlocked`'s 3.00, which per cast reads 3.0. Over the
     # three targets it may reach it is 3.00 a target, the same punch, and the tier reads 1.0 -- so tier 0's
     # own 1.0 is the worst, and nothing is charged for reach.
+    assert metrics["tierDamageSpread"] == pytest.approx(1.0)
+
+
+def test_a_sweep_that_found_fewer_targets_than_it_may_reach_is_not_read_as_weaker_for_it() -> None:
+    """The reach a spell is *allowed* is an overstatement that grows with the spell: casts find fewer
+    creatures as they die, and an exploring agent may pick a smaller legal set. `meteor` lands 1.79 of its
+    three. Dividing by three would read it a third weaker than it hits, so the engine counts the targets a
+    cast actually landed on and this divides by those."""
+    sweep = json.loads(json.dumps(ATTACK)) | {
+        "id": "spell:extra:v1",
+        "targeting": {"origin": "Enemy", "scope": "Multi", "maxTargets": 3},
+    }
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [
+        outcome("spell:starter:v1", 100, 100, 300),
+        outcome("spell:filler:v1", 100, 100, 300),
+        # Allowed three targets, found one: 300 damage over 100 casts and 100 hits is 3.00 a target, the
+        # same punch as the single-target spells. Divided by the three it may reach it would read 1.00.
+        outcome("spell:unlocked:v1", 100, 100, 300),
+        outcome("spell:extra:v1", 100, 100, 300, hits=100),
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", tier_with(sweep))
+
     assert metrics["tierDamageSpread"] == pytest.approx(1.0)
 
 

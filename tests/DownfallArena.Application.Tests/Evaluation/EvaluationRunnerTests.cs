@@ -257,6 +257,17 @@ public sealed class EvaluationRunnerTests
         foreach (var outcome in evaluation.SpellOutcomes.Where(outcome => outcome.Resolved > 0))
         {
             outcome.DamagePerCast.ShouldBe((double)outcome.Damage / outcome.Resolved, 1e-9);
+
+            // ADR 0043. Every landed cast of a damaging spell puts damage on at least one target, and a
+            // single-target one on exactly its casts, so the per-target reading is never the softer of the
+            // two: dividing by the reach a spell is *allowed* would make a sweep read weaker the more
+            // targets it may have found.
+            if (outcome.Damage > 0)
+            {
+                outcome.Hits.ShouldBeGreaterThanOrEqualTo(outcome.Resolved);
+                outcome.DamagePerTarget.ShouldBe((double)outcome.Damage / outcome.Hits, 1e-9);
+                outcome.DamagePerTarget.ShouldBeLessThanOrEqualTo(outcome.DamagePerCast);
+            }
         }
 
         evaluation.SpellOutcomes.ShouldAllBe(outcome => outcome.Damage >= 0 && outcome.Healing >= 0);

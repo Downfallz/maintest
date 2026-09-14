@@ -41,6 +41,10 @@ public sealed record SpellOutcome
     /// </summary>
     public int Damage { get; init; }
 
+    /// <summary>How many times a landed cast put damage on a target: the reach it found, not the reach it
+    /// is allowed. The denominator of <see cref="DamagePerTarget"/> (ADR 0043).</summary>
+    public int Hits { get; init; }
+
     /// <summary>
     /// Damage its bleeds took at upkeep, rounds after the cast, counted against this spell because a condition
     /// remembers the cast it came from (ADR 0027). Capped the same way: a bleed that finishes a creature counts
@@ -117,6 +121,19 @@ public sealed record SpellOutcome
     public double DamagePerCast => Resolved == 0 ? 0 : (double)(Damage + ConditionDamage) / Resolved;
 
     /// <summary>
+    /// The same damage over the targets it actually landed on rather than over the casts, so a sweep and a
+    /// single-target spell of the same punch read alike and reach is not mistaken for force (ADR 0043).
+    /// <para>
+    /// Divided by <see cref="Hits"/> and never by the spell's `maxTargets`: a cast reaches fewer creatures as
+    /// they die, and an exploring agent may choose a smaller legal set, so the allowed reach is an
+    /// overstatement that grows with the spell. `meteor` lands 1.79 of its three targets across the benchmark
+    /// seeds where a single-target spell lands 0.88 to 1.01 of its one, so dividing by three would read it a
+    /// third weaker than it hits.
+    /// </para>
+    /// </summary>
+    public double DamagePerTarget => Hits == 0 ? 0 : (double)(Damage + ConditionDamage) / Hits;
+
+    /// <summary>
     /// The share of its landed casts made by a side that won: <see cref="Score"/> weighed by use rather than by
     /// side, so a spell leaned on by winners reads differently from one they merely held.
     /// <para>
@@ -146,6 +163,7 @@ public sealed record SpellOutcome
             Fizzled = effects.Fizzled,
             Criticals = effects.Criticals,
             Damage = effects.Damage,
+            Hits = effects.Hits,
             Healing = effects.Healing,
             Energy = effects.Energy,
             EnergyDrained = effects.EnergyDrained,

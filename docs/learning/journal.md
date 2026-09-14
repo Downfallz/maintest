@@ -9,8 +9,8 @@ first.
 - **What changed**: `tierDamageSpread` compares attacks per target instead of every `Damage`-carrying spell
   per cast (ADR 0043), and `soul_devourer` goes back to 5 damage. Content hash **`b7c3e4c5` to `938bef5e`**,
   digest regenerated. No agent weight moves; fingerprint stays `362b0496`.
-- **The objective reads 42.673 to 27.014**, and the term is **live**: `tierDamageSpread` **5.000 to 4.150**,
-  penalty 36.00 to **18.49**. It had read exactly `MOST_LOPSIDED` on every candidate any pass could build.
+- **The objective reads 42.673 to 18.594**, and the term is **live**: `tierDamageSpread` **5.000 to 3.587**,
+  penalty 36.00 to **10.08**. It had read exactly `MOST_LOPSIDED` on every candidate any pass could build.
 - **Why it was pinned**, uncapped 37.85, and neither reason was about hitting hard:
   - carrying a `Damage` effect made a spell an attack, so `tranquilizer_dart` — two damage and a two-round
     stun, whose own `keep` calls the damage "a rounding error, not a second half" — anchored tier 3 at
@@ -26,14 +26,23 @@ first.
   | before tune 8 (`eca50723`) | **3.82** | 13.18 |
   | after tune 8 (`b7c3e4c5`) | **5.87** | 36.00 (pinned) |
 
-- **Neither half of the fix works alone**, which is why both shipped together:
+- **What each half is worth**, measured:
 
   | | objective | `tierDamageSpread` |
   | --- | --- | --- |
   | tune 8 as merged | 42.67 | 5.000 (pinned) |
-  | new reading only | 42.67 | 5.87 → still 5.000 (pinned) |
-  | revert only | 44.52 | 5.000 (pinned) |
-  | **both** | **27.01** | **4.150** |
+  | the new reading alone | 32.76 | 4.554 |
+  | the revert alone, old reading | 44.52 | 5.000 (pinned) |
+  | **both** | **18.59** | **3.587** |
+
+- **A claim this entry first made and had to withdraw**: that neither half worked alone. It held only for a
+  first version of the per-target reading that divided by the spell's `maxTargets`. A review caught that: a
+  cast finds fewer creatures as they die and an exploring agent may pick a smaller legal set, so the allowed
+  reach is an overstatement that grows with the spell — `meteor` lands **1.79 of its three** where a
+  single-target spell lands 0.88 to 1.01 of its one. The engine now counts the targets a cast actually hit.
+  Correcting it was worth **8.4 points** on its own and moved the reading 4.150 to 3.587, and with it the
+  conclusion: the new reading carries 9.91 alone, the revert adds 14.17. A measurement of a fix is only as
+  good as the fix.
 
 - **Every escape inside the content was measured first, and there is none**: the dart at its authored maximum
   damage *and* `crazed_specter` at its minimum still reads the cap; dropping the dart entirely reads 5.03;
@@ -50,8 +59,9 @@ first.
 - **One duplication removed on the way**: `cast_value` and `_caster_value` each carried a copy of the effect
   pricing table, and the new reading wanted a third. There is now one `_effect_value` — the same lesson as
   the studio's `EFFECTS` table in ADR 0041, which seeded a stacking policy the engine had stopped using.
-- **Verified**: build, 763 .NET tests, 306 pytest (two new, each checked to fail on the old reading before
-  being kept), format, ruff, studio tests, `check-knobs`, digest regenerated from a clean tree.
+- **Verified**: build, 763 .NET tests, 307 pytest (three new, each checked to fail on the reading it is
+  about before being kept), format, ruff, studio tests, `check-knobs`, digest regenerated from a clean tree
+  and re-verified after the engine gained the new field — no match outcome moves.
 
 ## 2026-09-14. A tuning pass at four times the budget, and what its eleven moves actually cost
 

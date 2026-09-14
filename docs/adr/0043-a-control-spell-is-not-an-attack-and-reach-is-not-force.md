@@ -31,6 +31,14 @@ its cast puts on a board** (`damage_is_the_point`, priced with the agents' own w
 `check-knobs`' ceiling report already reads), and the comparison is **damage per target** rather than per
 cast.
 
+Per target means **the targets a cast actually landed damage on**, which the engine now counts as `hits` and
+reports as `damagePerTarget` — never the `maxTargets` the spell is allowed. The allowed reach is an
+overstatement that grows with the spell: a cast finds fewer creatures as they die, and an exploring agent may
+choose a smaller legal set. `meteor` lands **1.79 of its three** across the benchmark seeds where a
+single-target spell lands 0.88 to 1.01 of its one, so dividing by three would read it a third weaker than it
+hits and systematically make sweeps look feeble. That is a review finding on this change, and it was worth
+**8.4 points** of the objective on its own.
+
 Both are still read from the **content** and never from what a run landed, which is the rule that already
 governed this metric: reading it from the result would let a candidate lower an attack until every hit is
 absorbed, drop it out of the comparison, and *improve* the number.
@@ -40,16 +48,26 @@ more bleed than hit — stays an attack while a rider on a control spell does no
 one spell changes side: `tranquilizer_dart`.
 
 We also **restore `soul_devourer` to 5 damage**, undoing tune run 8's nerf. That move was bought under the
-blind metric and is the reason the corrected reading would still have been pinned.
+blind metric, and it is worth 14.17 of what this change buys back.
 
 ## Consequences
 
-- Good: **the term is live.** `tierDamageSpread` reads **4.150**, penalty 36.00 to **18.49**, and the whole
-  objective **42.67 to 27.01** on content `938bef5e`. It can now go up as well as down, so a search has a
+- Good: **the term is live.** `tierDamageSpread` reads **3.587**, penalty 36.00 to **10.08**, and the whole
+  objective **42.67 to 18.59** on content `938bef5e`. It can now go up as well as down, so a search has a
   gradient where it had a wall.
-- Good: **neither half works alone, and that is the finding.** The definition fix on tune 8's content still
-  reads 5.87 and stays pinned; the revert alone reads 44.52, worse. Together they are worth 15.66. A
-  measurement blind to a thing and a change that damaged that thing have to be undone together.
+- Good: **the reading alone unpins it, and the revert is what makes it worth having.** Measured:
+
+  | | objective | `tierDamageSpread` |
+  | --- | --- | --- |
+  | tune 8 as merged | 42.67 | 5.000 (pinned) |
+  | the new reading alone | 32.76 | 4.554 |
+  | the revert alone, old reading | 44.52 | 5.000 (pinned) |
+  | **both** | **18.59** | **3.587** |
+
+  An earlier draft of this ADR said neither half worked alone. That was true only of a first version of the
+  per-target reading that divided by `maxTargets`; corrected to divide by the targets a cast found, the
+  reading carries 9.91 on its own and the revert adds 14.17 more. The claim is recorded here because it was
+  wrong for a reason worth keeping: a measurement of a fix is only as good as the fix.
 - Good: `spellsBarelyCast` 3 to 2, back inside its band, because `soul_devourer` is cast again.
 - Neutral: `tranquilizer_dart` is the only spell whose classification changes. The crit multiplier is part of
   the pricing, which keeps `protective_slam` and `mortal_wound` on the attack side where a cruder reading
@@ -70,24 +88,27 @@ blind metric and is the reason the corrected reading would still have been pinne
   rider damage, just further from the ceiling.
 - **Only exclude control spells, keeping damage per cast.** Measured: 37.85 to 8.53, still pinned, so it buys
   nothing today. Half the defect.
-- **Only compare per target, keeping any `Damage` effect.** Measured: 37.85 to 26.04, still pinned. The dart
-  is still the floor.
+- **Only compare per target, keeping any `Damage` effect.** The dart is still the floor, so the ratio is
+  still its 0.27 against the tier's hardest hit. Half the defect, the other half.
 - **Drop the metric, as [ADR 0040](0040-remove-the-fizzle-weight.md) dropped the fizzle weight.** That weight
   priced nothing in four measurements. This one measures something real the moment the reading is corrected,
   which is the opposite case.
-- **Fix the metric and leave `soul_devourer` where tune 8 put it.** Leaves the corrected metric pinned at
-  5.87, which is the whole problem again, and keeps a nerf that was only affordable because the metric was
-  blind.
+- **Fix the metric and leave `soul_devourer` where tune 8 put it.** Legitimate, and measured at 32.76: the
+  term is live either way. It keeps a nerf that was only affordable because the metric was blind, and leaves
+  the reading 0.97 worse for it, so the revert ships with the fix rather than after it.
 
 ## Follow-up
 
-- `knobs.py`: `damage_is_the_point`, `DAMAGE_IS_THE_POINT`, `_effect_value`, `max_targets` (was private).
+- `knobs.py`: `damage_is_the_point`, `DAMAGE_IS_THE_POINT`, `_effect_value`.
 - `tune_content.py`: `_damage_spread`, `_tier_metrics`, `metrics_of`.
+- `SpellEffects.Hits`, `SpellOutcome.Hits` and `SpellOutcome.DamagePerTarget`, counted in
+  `CombatStatsRecorder`; `docs/learning/artifacts.md` and `viewer/samples/evaluation.json`, whose shape
+  `ViewerSamplesTests` holds to what the engine records.
 - `data/Spells/scoundrel/leech/soul_devourer.v1.json`, and its `knobs.json` entry if the pass that nerfed it
   is ever replayed.
 - `data/balance/README.md`, which describes what the three tier readings compare.
 - The benchmark digest for `938bef5e`, and a journal entry naming both scores.
-- Open: `tierUsageShare` is now the largest live term at 6.42, and `tierDamageSpread` at 18.49 is still the
-  largest of all. Neither is pinned any more, so both are a tuning pass's to work on.
+- Open: `tierDamageSpread` at 10.08 is still the largest term and `tierUsageShare` at 6.42 the next. Neither
+  is pinned any more, so both are a tuning pass's to work on, which was the point.
 - Open: the threshold is one number chosen for one catalogue. If a spell is ever authored at close to a
   third, it should be measured rather than argued about.
