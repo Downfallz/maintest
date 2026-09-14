@@ -44,3 +44,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0036](0036-raising-initiative-the-mirror-that-was-left-out.md) | Raising initiative, the mirror that was left out | Accepted |
 | [0037](0037-measure-the-energy-weight-and-move-it-from-0-2-to-0-3.md) | Measure the energy weight, and move it from 0.2 to 0.3 | Accepted |
 | [0038](0038-a-wasted-action-is-a-fizzle-whatever-wasted-it.md) | A wasted action is a fizzle, whatever wasted it | Accepted |
+| [0039](0039-the-bot-binds-its-targets-on-a-board-that-has-not-happened-yet.md) | The bot binds its targets on a board that has not happened yet | Accepted |

@@ -4,6 +4,46 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-14. The bot stopped aiming at creatures that will already be dead
+
+- **What changed**: the agent writes off a target it expects to be dead before its action lands (ADR 0039).
+  Benchmark digest regenerated on content `91da955c`; **the weights fingerprint does not move** (`1933f3ae`),
+  because no weight value changed.
+- **Where the waste actually was, measured before anything was written.** 200 greedy mirror matches, 5796
+  resolutions, **1017 fizzled**: `ActorDead` 490 (48.2 %), `AllTargetsInvalid` 464 (45.6 %), `ActorStunned`
+  51, `NotEnoughEnergy` 12. `ActorDead` is not a decision — every spell is lost alike. `AllTargetsInvalid`
+  is, and it happens because **`RevealAndTarget` is a whole sub-phase before `ActionResolution`**: every
+  creature binds its targets on the board as it stood before combat, and then everything resolves.
+- **The reading**: `RevealedActions` holds the slots ahead of this one, in timeline order, with targets
+  bound, for **both** teams — binding order is timeline order, and a revealed action is public. The agent
+  replays them against a board it carries forward, on the plain roll, and writes off who does not survive.
+- **Result**: `AllTargetsInvalid` **464 to 268**, fizzle rate **0.175 to 0.124**. `exploit` — the searched
+  agent `search-2`, external and unchanged — falls **0.198 to 0.128**, which is the independent confirmation
+  that the baseline really is stronger. `skill` holds at 0.985.
+- **And the content reads much worse against it.** Objective **49.32 to 77.25**, almost all of it two content
+  targets: `tierWinSpread` 0.397 to 0.643 (24 points) and `player1WinShare` 0.510 to 0.640 (10). A bot that
+  wastes fewer actions makes combat more efficient, matches end sooner, and going first decides more. That is
+  a bill the next content pass inherits, as ADR 0032 left one, and scores either side do not compare.
+- **Raising `initiative` does not buy the share back**, which was the obvious lever since ADR 0032 used it
+  for this exact reading: 3.0 gives 0.525 and collapses the agent (`skill` 0.985 to 0.730, `exploit` 0.128 to
+  0.525); 4.0 runs matches to the round cap. No price fixes the share and keeps the agent.
+- **Four wrong guesses, each killed by a measurement and not by a re-read**, which is the part worth keeping:
+  1. *The reading belongs at declaration.* It does not: an intent carries no targets. Measured 51.15 against
+     a baseline of 49.32, with the fizzle rate unmoved at 0.161.
+  2. *It rarely fires because an earlier ally has not declared yet.* False — `IntentRules.Evaluate` already
+     builds its list from `Timeline.Slots`. The "fix" for it was a no-op that re-sorted a sorted list, caught
+     by a measurement identical to three decimals, and reverted.
+  3. *The declaration reading is dead weight now and should go.* Measured the other way: reveal-time alone
+     reads **96.73** with `player1WinShare` at **0.725**, worse than the two together. The weak reading is
+     what pulls it back to 0.640. It stays.
+  4. *The enemy's plans are hidden, so only our own team can be read.* True at declaration, false at binding:
+     by then the earlier actions are revealed, targets and all.
+- **Still open**: `fizzle` is **still not measurable** — swept at 0, 1, 2, 3, 5 against the new agent it reads
+  78.44, 77.84, 77.25, 79.52, 77.25, a spread of 2.3 and not monotonic. The fix works by scoring a doomed
+  target at nothing, not by charging the weight. And `NotEnoughEnergy` rose 12 to 30, small against a fall of
+  161, and not understood.
+- **Verified**: build, tests, format, ruff, pytest, studio tests, digest regenerated and re-verified.
+
 ## 2026-09-13. `risk` becomes `fizzle`, and nothing else changes
 
 - **What changed**: the scoring weight `risk` is renamed **`fizzle`** (ADR 0038). No behaviour, no value, no
