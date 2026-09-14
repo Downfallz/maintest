@@ -5,6 +5,7 @@ using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Application.Agents;
 
@@ -157,7 +158,59 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == options.Actor);
-        return _scorer.Best(actor, options.Spell, creatures)?.Targets ?? [];
+        return _scorer.Best(actor, options.Spell, creatures, GoneBeforeThisSlot(board, creatures))?.Targets ?? [];
+    }
+
+    /// <summary>
+    /// The creatures the actions already revealed this round will kill before this one resolves (ADR 0039).
+    /// <para>
+    /// Targets are bound in <c>RevealAndTarget</c>, a whole sub-phase before <c>ActionResolution</c>, so a
+    /// creature choosing targets is looking at the board as it stood before combat: nothing has resolved yet,
+    /// and every creature that dies during combat invalidates a target bound on it. That is 45.6 % of every
+    /// fizzle in a greedy mirror, second only to the actor dying first, which no choice of target can help.
+    /// </para>
+    /// <para>
+    /// What makes it readable is that <c>RevealedActions</c> holds the slots before this one, in timeline
+    /// order and with their targets already bound — <em>both</em> teams, because a revealed action is public.
+    /// So this is not a guess about a hidden choice: it replays what has been declared, in order, against a
+    /// board it carries forward, and reports who does not survive it.
+    /// </para>
+    /// <para>
+    /// On the plain roll, not the critical one: a target that only a critical would kill is not one to write
+    /// off. Healing is ignored, which under-counts nobody — it can only keep a creature alive, and a creature
+    /// this reading wrongly writes off is one the actor merely declines to aim at.
+    /// </para>
+    /// </summary>
+    private IReadOnlySet<CreatureId> GoneBeforeThisSlot(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        if (board.RevealedActions.Count == 0)
+        {
+            return ActionScorer.NoneGone;
+        }
+
+        var ahead = creatures.ToList();
+        var dead = new HashSet<CreatureId>();
+        foreach (var action in board.RevealedActions)
+        {
+            var resolution = ResolutionRules.Resolve(action, ahead, resources, rules, ForcedRandom.NotCritical);
+            if (resolution.Fizzled)
+            {
+                continue;
+            }
+
+            foreach (var hit in resolution.Outcomes.OfType<DamageOutcome>().GroupBy(outcome => outcome.Target))
+            {
+                var index = ahead.FindIndex(creature => creature.Id == hit.Key);
+                var left = Math.Max(0, ahead[index].Health.Value - hit.Sum(outcome => outcome.Amount));
+                ahead[index] = ahead[index] with { Health = Health.Of(left) };
+                if (left == 0)
+                {
+                    dead.Add(hit.Key);
+                }
+            }
+        }
+
+        return dead;
     }
 
     private static List<CreatureSnapshot> Creatures(PlayerBoardState board) => [.. board.Allies, .. board.Enemies];
