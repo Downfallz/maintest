@@ -147,6 +147,12 @@ public sealed class CombatStatsRecorder(IMatchRepository matches) : DomainEventL
             Fizzled: 0,
             Criticals: resolution.IsCritical ? 1 : 0,
             Damage: onTargets.OfType<DamageOutcome>().Sum(outcome => outcome.Amount),
+            // One per target this cast actually put damage on, which is not the spell's `maxTargets`: a
+            // sweep finds fewer creatures as they die, and an exploring agent may pick a smaller legal set.
+            // `tierDamageSpread` divides by this rather than by the reach the spell is allowed (ADR 0043) --
+            // `meteor` lands 1.79 of its three on the benchmark seeds, so assuming three understates it by
+            // two thirds.
+            Hits: onTargets.OfType<DamageOutcome>().Count(),
             Healing: onTargets.OfType<HealOutcome>().Sum(outcome => outcome.Amount),
             Energy: onTargets.OfType<EnergyOutcome>().Sum(outcome => outcome.Amount),
             EnergyDrained: onTargets.OfType<EnergyDrainOutcome>().Sum(outcome => outcome.Amount),

@@ -110,17 +110,28 @@ because otherwise the engine fails one candidate at a time, once a search has al
 
 Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
 of the talent tree, which is the set a player is choosing between at that moment — and report the worst
-tier: `tierUsageShare` (does one spell own its tier), `tierDamageSpread` (do its damaging spells hit
-comparably hard per landed cast) and `tierWinSpread` (do they win comparably often). They exist because the
+tier: `tierUsageShare` (does one spell own its tier), `tierDamageSpread` (do its attacks hit comparably
+hard, per target of a landed cast) and `tierWinSpread` (do they win comparably often). They exist because the
 catalogue-wide reading hides a monopolised tier: on the nine-spell core content `spellUsageShare` reads
 0.855 while `tierUsageShare` reads 1.000, because `heavy_strike` takes every landed cast of tier 0 and the
 starting kit is not a choice at all.
 
 Each skips what it cannot read rather than guessing: a tier nobody cast (that is `spellsNeverCast`), a spell
-with no `Damage` effect at all (a heal and an attack share no unit), and a spell too few sides declared for
-its own number to be anything but noise. Whether a spell is a damaging one is read from the content, never
-from what its casts landed: otherwise lowering an attack until its hits are all absorbed would drop it out
-of the comparison and *improve* the reading, paying the search to break spells.
+that is not an attack (a heal and an attack share no unit), and a spell too few sides declared for its own
+number to be anything but noise. Whether a spell is an attack is read from the content, never from what its
+casts landed: otherwise lowering an attack until its hits are all absorbed would drop it out of the
+comparison and *improve* the reading, paying the search to break spells.
+
+An **attack** is a spell whose `Damage` is at least a third of what its cast puts on a board, priced with the
+agents' own weights, and its hits are compared **per target** rather than per cast
+([ADR 0043](../../docs/adr/0043-a-control-spell-is-not-an-attack-and-reach-is-not-force.md)). Both readings
+were cruder until that ADR, and between them they held this metric at its cap of 5.000 for every candidate a
+search could build — 36 of an objective of 42.67, flat. Carrying a `Damage` effect at all was the test, so
+`tranquilizer_dart` (two damage and a two-round stun, whose own `keep` calls the damage a rounding error)
+anchored tier 3 at 0.27 against the heaviest sweep in the game at 18.92; and reading per cast asked a
+three-target spell to total what a single-target one totals, charging it for reach rather than for force. A
+term at its cap is worse than useless: a search cannot be graded on it, so it may freely damage the thing the
+term names, which is what happened to `soul_devourer` in tune run 8.
 
 A run explains its own score rather than leaving it to be reconstructed: `tune-content` reports what it
 changed in the content's own words, which measurement the gain came from, what that gain cost elsewhere, and
