@@ -60,8 +60,16 @@ first.
   constant no candidate could move**, which does not break a hill climb but gives that term no gradient.
   Still true at 53.87; left open deliberately, because changing what `tierDamageSpread` compares is a change
   to what "balanced" means and belongs to whoever owns that definition.
-- **Verified**: build, 762 .NET tests, 304 pytest, format, ruff, studio tests, `check-knobs`, digest
-  regenerated on a clean tree and re-verified.
+- **The provenance rule from the last entry was not quite enough, and this caught it.** "Regenerate a
+  provenance-bearing artifact after the tree is clean" is what was written down; the first digest here was
+  regenerated on a clean tree and still recorded **`bb9f9c8b3197-dirty`** — the *previous* commit, plus dirty.
+  The engine version is stamped at **build** time, not read at run time, and the Release assembly had been
+  built before the commit. So the rule is **rebuild and regenerate after the tree is clean**: a clean tree at
+  the moment of writing says nothing about the build doing the writing. Rebuilt, it reads `b0deb207957d`, the
+  commit that carries the change. As last time, nothing local would have caught it —
+  `BenchmarkDigest.DifferencesFrom` ignores `EngineVersion` on purpose, so both files verified green.
+- **Verified**: build, 762 .NET tests, 304 pytest, format, ruff, studio tests, `check-knobs`, digest rebuilt
+  and regenerated from the clean tree and re-verified.
 
 ## 2026-09-14. The weight that priced nothing, removed
 
