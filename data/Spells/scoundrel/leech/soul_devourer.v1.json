@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 5
+      "amount": 4
     },
     {
       "kind": "EnergyDrain",
