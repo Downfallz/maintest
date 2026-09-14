@@ -4,7 +4,7 @@
   "spellType": "Defensive",
   "creatureClass": "Shaman",
   "initiative": 2,
-  "energyCost": 2,
+  "energyCost": 3,
   "criticalChance": 0,
   "targeting": {
     "origin": "Ally",

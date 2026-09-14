@@ -5,7 +5,7 @@
   "creatureClass": "Brawler",
   "initiative": 0,
   "energyCost": 1,
-  "criticalChance": 0.717,
+  "criticalChance": 0.767,
   "targeting": {
     "origin": "Enemy",
     "scope": "SingleTarget",
