@@ -68,8 +68,8 @@ they are listed here so the plan is honest about where the work is.
    20. Token counts and stat ranges must keep it to one.
 3. **Probability on a table.** Crit chances in `data/` are continuous (0.05, 0.17, 0.33, 0.5, 0.667, 0.717).
    A die has faces. Either the catalogue is snapped to a die's grid (a content change, `data/balance/knobs.json`
-   already says which numbers a pass may move), or crits leave the tabletop rule set, or they become a card
-   flip. This is fork **B** below and it changes the feel of the game.
+   already says which numbers a pass may move). Settled: **a die, and the catalogue snapped to its grid**
+   (decision B below). What remains is which die, and what each snap costs.
 4. **Bookkeeping the engine does for free.** Condition sources (ADR 0027), bleed shares, "the first countdown
    after an application does not count", energy with no maximum, permanent buffs that stack forever. Each is
    either restated as a teachable rule, given a component that tracks it, or dropped.
@@ -96,9 +96,10 @@ Done when a newcomer can read this file and know what is coming and what is unde
 ### Phase 1. Translation audit (`docs/tabletop/translation.md`)
 
 One row per engine mechanic: what the engine does, what tracking it by hand costs (how many tokens, how many
-lookups, how many numbers held in the head), and a verdict — **keep as is**, **restate**, **needs a
-component**, **simplify (ADR)**, **cut from the tabletop rule set**. No design decisions in this document:
-it is the evidence the decisions are made from. Every row cites the rule in `docs/domain/game-rules.md` or
+lookups, how many numbers held in the head), and a verdict - **keep as is**, **restate**, **needs a
+component**, or **simplify (ADR)**. Under decision A the board game is a faithful port, so no verdict drops
+a rule: **simplify** means the rule is wrong in the engine too and moves in both places at once (decision C).
+No design decisions in this document: it is the evidence the decisions are made from. Every row cites the rule in `docs/domain/game-rules.md` or
 the code that enforces it.
 
 Done when every sub-phase of ADR 0010, every effect kind of ADR 0012 and its extensions, and every spell in
@@ -106,7 +107,9 @@ Done when every sub-phase of ADR 0010, every effect kind of ADR 0012 and its ext
 
 ### Phase 2. The tabletop rule set (`docs/tabletop/ruleset.md` + ADRs)
 
-Turn the audit's verdicts into numbers and settle the forks. Everything here is measured, not asserted:
+Turn the audit's verdicts into numbers, and settle what decisions A to C left to measurement: the rule set's
+values (team size, energy, picks, round cap, crit multiplier), which die a crit is rolled on, and the snapped
+critical chance of every spell with the error it introduces. Everything here is measured, not asserted:
 a candidate rule set is run through `simulate`, `evaluate` and the benchmark seeds, and reported as median
 rounds, decision count per match, win rate of greedy over random (the game still rewards playing well) and
 of the exploring agents (the content still offers a choice) — the four readings `data/balance/knobs.json`
@@ -171,17 +174,47 @@ In `.claude/agents/`, each with a written brief, used for its purpose instead of
 
 The existing `domain-reviewer` and `code-reviewer` keep their jobs for anything that lands in `src/`.
 
-## Open decisions
+## Decisions
 
-These are the forks. Each one changes what the phases below it produce, so they are settled before phase 2
-ends, as ADRs.
+Three of the four forks are settled (2026-09-14, by the maintainer). Each becomes an ADR before the rule it
+governs is written down anywhere else.
 
-- **A. Fidelity.** Is the board game a faithful port of the engine (every rule survives, the table pays the
-  bookkeeping), or is it a table-first design that keeps the engine's *shape* (hidden simultaneous intents,
-  an initiative timeline, an evolution arc) and simplifies whatever costs more than it gives?
-- **B. Randomness at the table.** Dice for crits (needs the catalogue snapped to a die's grid), a crit deck,
-  or no crits in the tabletop rule set (the game becomes deterministic with hidden information).
-- **C. Where divergences live.** Prefer changing the engine when the table is right (one game, ADRs, tests),
-  or prefer a declared tabletop rule set that leaves the engine alone (two configurations, one model)?
+### A. Fidelity: a faithful port
+
+Every rule of the engine survives on the table. The board game does not drop a mechanic because tracking it
+costs tokens; it gets a component instead. The audit's verdicts are therefore weighted: **cut from the
+tabletop rule set** is not available to it, and **simplify (ADR)** means the rule is wrong *in the engine
+too* and changes in both places at once (decision C), never that the table quietly does something else.
+
+One thing this does **not** decide, because it is not a rule: the values in `RuleSet` (team size, energy per
+round, evolution picks, round cap, critical multiplier) are parameters the engine already takes. A tabletop
+rule set that caps the match at ten rounds instead of thirty is not a divergence and costs no fidelity: it is
+the same rules with different numbers, and the engine plays it unchanged. Length is settled by measurement in
+phase 2, not by dropping rules.
+
+### B. Randomness: a die, and the catalogue snapped to its grid
+
+A crit is a die roll per cast. The critical chances in `data/` are continuous (0.05, 0.17, 0.33, 0.5, 0.667,
+0.717) and become values on the die's grid, which is a **content change** — `data/balance/knobs.json` already
+governs which numbers a pass may move, and the four readings already say whether a move was good.
+
+Phase 2 therefore owes: which die (the grid's resolution against the number of rolls per round), the snapped
+value for every spell, the error each snap introduces, and what that error is worth in the currency ADR 0032
+and ADR 0037 established. A snapped catalogue is a tuning pass with a journal entry
+(`docs/learning/journal.md`) and a new content hash, like any other.
+
+### C. Divergences: the engine changes, with an ADR
+
+When the table is right and the engine is wrong, the engine moves. One game, one truth, and the app playtests
+exactly what would be printed. The first candidates are already known and are the engine's own open questions:
+permanent defense buffs stacking without a bound, energy with no maximum, and the round cap's interaction with
+both. The audit raises them; each gets an ADR with tests, not a footnote in the rulebook.
+
+The cost is accepted: a tabletop finding can now change `main`, so every such change ships through the usual
+gate (`domain-reviewer`, tests, the benchmark digest, the journal).
+
+## Still open
+
 - **D. The first app target.** Hotseat on one device (two players, one screen, closest to the table), or two
-  devices from the start (needs the transport and the hidden-information boundary on day one)?
+  devices from the start (needs the transport and the hidden-information boundary on day one). Settled before
+  phase 5 writes the ADR; it changes nothing in phases 1 to 4.
