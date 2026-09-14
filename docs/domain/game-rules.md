@@ -109,7 +109,8 @@ listed in [spells.md](spells.md).
       - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy given,
         or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs
         less its defense debuffs, floored at zero (ADR 0035);
-      - lasting effects attach as Conditions per their stacking policy.
+      - lasting effects attach as Conditions per their stacking policy: another one beside the ones already
+        there, except a Stun, which restarts the Stun the target carries (ADR 0041).
 4. **End of round**
    1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an
       application does not count.

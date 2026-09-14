@@ -1,4 +1,8 @@
+using System.Text.RegularExpressions;
 using DownfallArena.Cli.Studio;
+using DownfallArena.Domain.Resources.Effects;
+using DownfallArena.Infrastructure.Resources;
+using DownfallArena.Infrastructure.Resources.Schema;
 
 namespace DownfallArena.Cli.Tests.Studio;
 
@@ -8,7 +12,7 @@ namespace DownfallArena.Cli.Tests.Studio;
 /// what makes them catch a module the page imports and the table does not serve: the page is a blank screen
 /// then, and nothing else would say so.
 /// </summary>
-public sealed class StudioFilesTests
+public sealed partial class StudioFilesTests
 {
     private static StudioFiles Files => new(
         Path.Combine(AppContext.BaseDirectory, "studio"),
@@ -51,6 +55,61 @@ public sealed class StudioFilesTests
             Files.Get($"/{module}").Status.ShouldBe(200, $"{module} sits beside the page but the host does not serve it");
             workflow.ShouldContain($"studio/{module}", Case.Sensitive, $"{module} is served but pages.yml never copies it");
         }
+    }
+
+    /// <summary>
+    /// The page writes an effect's stacking policy explicitly, from its own <c>EFFECTS</c> table, so that table
+    /// holds a copy of a default that lives in <see cref="GameSchemaMapper"/>. A copy drifts: ADR 0041 moved the
+    /// per-round family to <c>Stack</c> and the page went on seeding <c>Refresh</c>, which would have made every
+    /// studio-authored bleed pin the old behaviour while the 36 authored by hand followed the new rule.
+    ///
+    /// So this asserts the two against each other rather than against a literal: for each kind the page seeds, it
+    /// maps that effect through the engine with no <c>stacking</c> field and compares what the engine chose with
+    /// what the page would have written. It is a text read of <c>studio.js</c> because the table is in the page
+    /// script, which has no export seam (ADR 0024) -- but the value it is held to is the engine's own, computed by
+    /// running it.
+    /// </summary>
+    [Fact]
+    public void The_stacking_the_page_seeds_is_the_one_the_engine_falls_back_to()
+    {
+        var page = System.Text.Encoding.UTF8.GetString(Files.Get("/studio.js").Body);
+        var seeded = SeededStacking()
+            .Matches(page)
+            .ToDictionary(match => match.Groups["kind"].Value, match => match.Groups["policy"].Value, StringComparer.Ordinal);
+
+        seeded.Count.ShouldBe(8, "the page seeds a policy for every lasting kind; a new one needs a row here too");
+        foreach (var (kind, policy) in seeded)
+        {
+            FallbackFor(kind).ToString().ShouldBe(policy, $"the page seeds {kind} at {policy} and the engine falls back to something else");
+        }
+    }
+
+    /// <summary>One row of the page's <c>EFFECTS</c> table: the kind, and the stacking policy it seeds.</summary>
+    [GeneratedRegex(@"^\s*(?<kind>\w+): \{[^}]*stacking: '(?<policy>\w+)'", RegexOptions.Multiline)]
+    private static partial Regex SeededStacking();
+
+    /// <summary>What the mapper makes of one effect of this kind that says nothing about stacking.</summary>
+    private static StackingPolicy FallbackFor(string kind)
+    {
+        var effect = new EffectDto { Kind = kind, Amount = 1, AmountPerRound = 1, DurationRounds = 1 };
+        var schema = new GameSchema
+        {
+            Spells =
+            [
+                new SpellDto
+                {
+                    Id = "spell:probe:v1",
+                    Name = "Probe",
+                    SpellType = "Offensive",
+                    CreatureClass = "Creature",
+                    Targeting = new TargetingDto { Origin = "Enemy", Scope = "SingleTarget" },
+                    Effects = [effect],
+                },
+            ],
+        };
+
+        var spell = GameSchemaMapper.ToGameResources(schema).Spells.ShouldHaveSingleItem();
+        return spell.Effects.ShouldHaveSingleItem().ShouldBeAssignableTo<LastingEffect>()!.Stacking;
     }
 
     /// <summary>The browser asks for an icon the studio does not ship; a 404 would be a console error on every load.</summary>

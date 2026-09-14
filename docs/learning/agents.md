@@ -23,7 +23,7 @@ dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 heuristi
 it resolves the action with the domain's own `ResolutionRules` on the snapshots twice, once with a forced
 critical roll and once with a forced miss, and weighs the two scores by the actor's critical chance for that
 spell. So the expected damage includes the critical contribution, and a spell that fizzles (not known, not
-affordable, no legal target) scores as a wasted action.
+affordable, no legal target) scores nothing — which still loses to anything that does something (ADR 0040).
 
 A defensive term is priced by the damage it prevents, which needs a reading of the **threat** on a creature:
 what the living, unstunned enemies could deal it in one round with the damaging spells they know and can
@@ -47,15 +47,15 @@ The score of one resolution, with the weights `w`:
 | `w.initiative` x amount x rounds | an InitiativeDebuff (a permanent condition counts three) | a debuff on an enemy counts for, on an ally against |
 | `w.initiative` x amount x rounds | an InitiativeBuff (a permanent condition counts three). The same price as the debuff above: one price for one point whether it is given or taken (ADR 0036) | a buff on an ally counts for, on an enemy against |
 | `w.energy` x energy kept | the actor's energy after the cost | always |
-| `-w.fizzle` | a resolution that fizzled, or the share of targets already gone **or expected to be gone** before it lands (ADR 0039). A creature in that set scores nothing at all: its remaining health is read as zero, which silences every per-target term, and the damage path skips it | always |
 
 Decisions:
 
 - **Intent**: for each castable spell, the best target set by expected score; the spell with the best
   score. Ties go to the first spell in ordinal id order. That tie-break is on an exact `double` comparison,
-  and it is load-bearing more often than it looks: sweeping `fizzle` moves one decision at 3, 6 and 9 and at
-  no other value tried, because `fizzle x 1 / 3` is an exact integer there and lands on another candidate's
-  score. Two weight values that differ can therefore play identically while a third between them does not.
+  and it is load-bearing more often than it looks: the weight ADR 0040 removed used to move one decision at
+  3, 6 and 9 and at no other value tried, because its share term landed on an exact integer there and so on
+  another candidate's score. Two weight values that differ can play identically while a third between them
+  does not.
 - **Targets**: the best target set of the declared spell, on the board at reveal time **minus the creatures
   the actions already revealed will kill first**; no target when the spell is no longer castable. Targets are
   bound in `RevealAndTarget`, a whole sub-phase before anything resolves, so the board a creature binds on is
@@ -92,11 +92,10 @@ damage spread elsewhere.
 | bleed | 0.8 | Damage over time is discounted against damage now: the target may die first, and the bot only counts the health it could still reach. |
 | defense | 0.65 | Two thirds of a point per point of damage the buff actually takes off the hits the creature is expected to face. Defense subtracts from every incoming hit, so the same buff is worth more to the last creature standing than to a full team. **Not read against `damage` point for point**, whatever the shared unit suggests: an attack is paid once, this is paid for every round the buff holds, so it compounds where `damage` does not. That is why it sits below one. Measured rather than felt (ADR 0028): the play moves in steps as this price rises, 0.65 sits in the middle of the step that puts matches inside the 8..16 round band, and at 1.5 every match runs out of rounds and no attack is ever cast. |
 | energy | 0.3 | Just under a third of a damage per point of energy — kept for the next round, handed to an ally, regenerated over rounds, or taken off an enemy. It was hand-set at 0.2 in phase L5, when the only thing it priced was energy *kept* and it was meant as no more than a tie-breaker towards the cheaper spell. ADR 0020, 0026 and 0035 gave it three more jobs without ever re-measuring it, and ADR 0037 swept it: at 0.0 the first mover wins 0.720 of the mirror, so the term was never a tie-breaker at all. 0.3 is the middle of the step 0.2..0.4, whose right edge breaks hard (0.5 reads 108.33 on the objective with the exploiter at 0.790). Read what it buys precisely: **the mirror's first-mover share, not a stronger agent** — `player1WinShare` goes 0.575 to 0.510, and a 0.3 agent against a 0.2 one is a dead heat. |
-| fizzle | 2.0 | What an action that came to nothing costs. Called `risk` until ADR 0038. **Its value is still not measurable, and that survived the fix.** ADR 0037 swept it 0 to 100 and every value played the 400 benchmark seeds identically, because the term reached no decision at all. ADR 0039 gave it one — the agent writes off a target it expects dead before its action lands, and `Combat.AllTargetsInvalid` falls 464 to 206 over 200 mirror matches — and a fresh sweep at 0, 1, 2, 3 and 5 reads 78.44, 77.84, 77.25, 79.52, 77.25: a spread of 2.3, not monotonic. The fix works by scoring a doomed target at **nothing**, not by charging this weight for it, so the weight still prices almost nothing. 2.0 is kept because no value is better than another. |
 | initiative | 2.1 | Two and a bit per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. ADR 0018 set it to 0.5 on the reasoning that initiative is indirect the way defense is, and said in the same breath that it was a guess. ADR 0032 measured it instead, by sweeping it alone on fixed content, and the reasoning was backwards: a point of initiative is bought once and kept for the match, in a game the first mover was winning 64 % of. At 2.1 that reading is 0.500. The sweep is in that ADR; 2.1 sits in the middle of its step rather than on an edge. Since ADR 0026 a debuff also multiplies by the rounds it lasts while the unlock's permanent gain does not, so a two-round debuff outvalues a permanent gain of the same size; the tension is recorded in that ADR and is now four times larger. |
 
-To feel out what one of them does, the content studio's run panel can play a heuristic agent from nine boxes
-instead of a file: it writes what you set as `weights.json` next to the run, so the result keeps the weights it
+To feel out what one of them does, the content studio's run panel can play a heuristic agent from a box per
+weight instead of a file: it writes what you set as `weights.json` next to the run, so the result keeps the weights it
 was played with, and two such runs compare side by side (`studio/README.md`). That is a way to look, not a way
 to tune — tuning is `search-weights` below.
 
@@ -107,23 +106,28 @@ readings above: pick damage as the unit, then say what a kill, a stun and a wast
 They are **not** the output of a search. Three were then measured one at a time, by sweeping that one weight
 on fixed content and playing every value, and moved: `defense` (ADR 0028), `initiative` (ADR 0032) and
 `energy` (ADR 0037). `scripts/sweep-weight.py` is that method written down. The five that were left —
-`kill`, `stun`, `heal`, `bleed` and `fizzle` (then called `risk`) — have since been swept the same way on content `91da955c`, and
+`kill`, `stun`, `heal`, `bleed` and the one ADR 0040 removed — have since been swept the same way on content `91da955c`, and
 **none of them moved**: each hand-set value sits inside the step the sweep found, so the starting guesses
 were good and are now measured rather than assumed. `damage` is not swept, because it is the unit: moving it
 alone is the same experiment as scaling the other eight the other way. The one thing those five sweeps did
-turn up is that `fizzle` does not reach a decision at all, which the row above records and ADR 0039 sets
-out to fix. `ScoringWeights.Default` is the single source;
-`learning/weights/greedy.json` holds the same nine numbers so `heuristic:<file>` and `greedy` start from the
+turn up is that one of the five priced nothing at all: ADR 0039 gave it a decision to reach and it still
+priced nothing, so ADR 0040 removed it and the table is eight. `ScoringWeights.Default` is the single source;
+`learning/weights/greedy.json` holds the same eight numbers so `heuristic:<file>` and `greedy` start from the
 same place, and a test on each side of the repository pins the two together.
 
 To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
 candidate set against a fixed opponent on the benchmark seeds and keeps what wins, and leave the result next
-to `greedy.json` under its own name. `search-2.json` is the first of those: a searched set that beats `Greedy`
+to `greedy.json` under its own name. `search-2.json` was the first of those: a searched set that beats `Greedy`
 on seeds it never saw, committed to be played and compared, not to be the baseline (the 2026-09-12 journal
-entry says what it buys and what it costs). Changing `greedy.json` itself changes nothing for `greedy`, which reads
+entry says what it buys and what it costs). **`search-3.json` is the current one**, searched on content
+`938bef5e`, and it is what the balance objective's `exploit` evaluation plays. That evaluation names a file,
+so it is the one reading that goes stale on its own: a tuning pass changes what there is to exploit, and an
+agent searched against a catalogue that no longer exists understates the gap rather than overstating it.
+`search-2` had gone four content changes without a refresh and read 0.182 where `search-3` reads 0.745.
+Refresh it from the newest search rather than keeping the old file. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
-only moves when the new values actually change a decision: scaling all nine by the same positive factor
+only moves when the new values actually change a decision: scaling all eight by the same positive factor
 leaves every ranking, and the digest, untouched. A change that does move an outcome fails the benchmark check
 until `benchmark --write` regenerates the digest.
 
@@ -131,5 +135,5 @@ A heuristic agent is stamped as `Heuristic:<path>@<fingerprint>`, the fingerprin
 weights the file held when the run started, so two runs on different weights at the same path never share a
 stamp.
 
-A weights file lists any subset of these names in camelCase (`{ "kill": 8, "fizzle": 1 }`); a missing name
+A weights file lists any subset of these names in camelCase (`{ "kill": 8, "stun": 4 }`); a missing name
 keeps the built-in value, an unknown one is an error, every value must be a finite number.

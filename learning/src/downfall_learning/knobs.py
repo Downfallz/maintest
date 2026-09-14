@@ -62,6 +62,11 @@ WEIGHTS_FILE = Path(__file__).resolve().parents[2] / "weights" / "greedy.json"
 #: What a permanent condition is worth in rounds, as `ActionScorer.PermanentConditionRounds` prices it.
 PERMANENT_CONDITION_ROUNDS = 3
 
+#: The share of a cast's magnitude that has to be `Damage` before the spell is compared as an attack
+#: (ADR 0043). A third rather than a half on purpose: it excludes a rider on a control spell without
+#: excluding the damaging half of a two-part spell that means both halves.
+DAMAGE_IS_THE_POINT = 1 / 3
+
 #: What a critical hit multiplies damage by, as `RuleSet.Default` sets it. Configurable there and mirrored
 #: here, so a rule set that changes it leaves this reading behind until someone changes it too.
 CRITICAL_MULTIPLIER = 2.0
@@ -799,6 +804,62 @@ def deals_damage(document: Mapping[str, object]) -> bool:
     return DAMAGE in _effects(document)
 
 
+def damage_is_the_point(document: Mapping[str, object], weights: Mapping[str, float]) -> bool:
+    """Whether `Damage` is at least :data:`DAMAGE_IS_THE_POINT` of what a cast does to its targets.
+
+    `deals_damage` asks whether the spell carries the effect at all, which is the right question for a
+    dominance comparison and the wrong one for "do these hit comparably hard". A control spell with a rider
+    -- `tranquilizer_dart`, two damage and a two-round stun, whose own `keep` calls the damage "a rounding
+    error, not a second half" -- carries `Damage` and is not an attack, and comparing its damage per cast
+    against the heaviest sweep in the game says nothing about either (ADR 0043).
+
+    Priced with the agents' own weights and :func:`_effect_value`, unsigned and for one target, so the
+    threshold means "damage is a third of the magnitude this spell puts on a board" rather than a third of
+    some signed total a defensive spell could make negative. A spell with no priced effects at all is not
+    an attack.
+    """
+    crit_factor = 1 + float(document.get("criticalChance", 0) or 0) * (CRITICAL_MULTIPLIER - 1)
+    effects = document.get("effects", [])
+    magnitudes = {
+        str(effect.get("kind")): abs(_effect_value(effect, weights, crit_factor))
+        for effect in effects
+        if isinstance(effect, Mapping)
+    }
+    total = sum(magnitudes.values())
+    return bool(total) and magnitudes.get(DAMAGE, 0.0) / total >= DAMAGE_IS_THE_POINT
+
+
+def _effect_value(effect: Mapping[str, object], weights: Mapping[str, float], crit_factor: float) -> float:
+    """What one authored effect is worth in damage-equivalents, unsigned and for a single target.
+
+    One table, read by every caller that prices an effect: the target half of :func:`cast_value`, the caster
+    half of :func:`_caster_value` (which passes a factor of one, because the roll stops at the targets --
+    ADR 0031, ADR 0033), and :func:`damage_is_the_point`. It was two copies of the same dictionary until the
+    third caller wanted it, and two copies of a table is how the content studio came to seed a stacking
+    policy the engine had stopped using.
+    """
+    kind = str(effect.get("kind"))
+    amount = float(effect.get("amount", 0) or 0)
+    per_round = float(effect.get("amountPerRound", 0) or 0)
+    rounds = (
+        PERMANENT_CONDITION_ROUNDS if effect.get("permanent") else float(effect.get("durationRounds", 0) or 0)
+    )
+    return {
+        DAMAGE: weights.get("damage", 0) * amount * crit_factor,
+        HEAL: weights.get("heal", 0) * amount * crit_factor,
+        "EnergyGain": weights.get("energy", 0) * amount,
+        "EnergyDrain": weights.get("energy", 0) * amount,
+        "Bleed": weights.get("bleed", 0) * per_round * rounds,
+        "Regeneration": weights.get("heal", 0) * per_round * rounds,
+        "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
+        "Stun": weights.get("stun", 0) * rounds,
+        "DefenseBuff": weights.get("defense", 0) * amount * rounds,
+        "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
+        "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
+        "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
+    }.get(kind, 0.0)
+
+
 def _rounds_a_cast(cost: float) -> float:
     """How many rounds of income one cast of a spell at ``cost`` takes to pay for.
 
@@ -821,7 +882,7 @@ def _energy_cost(document: Mapping[str, object]) -> int:
         return 0
 
 
-def _max_targets(document: Mapping[str, object]) -> int:
+def max_targets(document: Mapping[str, object]) -> int:
     """How many creatures one cast is allowed to reach. One when the spell says nothing readable."""
     targeting = document.get("targeting", {})
     if not isinstance(targeting, Mapping):
@@ -833,7 +894,7 @@ def _max_targets(document: Mapping[str, object]) -> int:
 
 
 def load_weights(path: Path | None = None) -> dict[str, float]:
-    """The nine agent weights. Unreadable or missing, the reading that needs them is skipped, not guessed."""
+    """The agent weights. Unreadable or missing, the reading that needs them is skipped, not guessed."""
     try:
         body = json.loads(Path(path or WEIGHTS_FILE).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
@@ -885,33 +946,13 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
         if not isinstance(effect, Mapping):
             continue
         kind = str(effect.get("kind"))
-        amount = float(effect.get("amount", 0) or 0)
-        per_round = float(effect.get("amountPerRound", 0) or 0)
-        rounds = (
-            PERMANENT_CONDITION_ROUNDS
-            if effect.get("permanent")
-            else float(effect.get("durationRounds", 0) or 0)
-        )
         # A harmful kind aimed at a friend is a price, the same way it is on the caster: `noxious_cure` slows
         # the team it heals, and counting that as upside prices the cost as a gift.
         sign = -1.0 if friendly and kind in HARMFUL else 1.0
-        total += sign * {
-            DAMAGE: weights.get("damage", 0) * amount * crit_factor,
-            HEAL: weights.get("heal", 0) * amount * crit_factor,
-            "EnergyGain": weights.get("energy", 0) * amount,
-            "EnergyDrain": weights.get("energy", 0) * amount,
-            "Bleed": weights.get("bleed", 0) * per_round * rounds,
-            "Regeneration": weights.get("heal", 0) * per_round * rounds,
-            "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
-            "Stun": weights.get("stun", 0) * rounds,
-            "DefenseBuff": weights.get("defense", 0) * amount * rounds,
-            "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
-            "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
-            "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
-        }.get(kind, 0.0)
+        total += sign * _effect_value(effect, weights, crit_factor)
     # The target half is worth what it does to every target it reaches; the caster half is worth what it does
     # once, so it is added after the count and never inside it (ADR 0031).
-    return (total * _max_targets(document)) + _caster_value(document, weights)
+    return (total * max_targets(document)) + _caster_value(document, weights)
 
 
 def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) -> float:
@@ -933,28 +974,8 @@ def _caster_value(document: Mapping[str, object], weights: Mapping[str, float]) 
         if not isinstance(effect, Mapping):
             continue
         kind = str(effect.get("kind"))
-        amount = float(effect.get("amount", 0) or 0)
-        per_round = float(effect.get("amountPerRound", 0) or 0)
-        rounds = (
-            PERMANENT_CONDITION_ROUNDS
-            if effect.get("permanent")
-            else float(effect.get("durationRounds", 0) or 0)
-        )
         # No critical factor on either crittable kind: the roll stops at the targets (ADR 0031, ADR 0033).
-        value = {
-            DAMAGE: weights.get("damage", 0) * amount,
-            HEAL: weights.get("heal", 0) * amount,
-            "EnergyGain": weights.get("energy", 0) * amount,
-            "EnergyDrain": weights.get("energy", 0) * amount,
-            "Bleed": weights.get("bleed", 0) * per_round * rounds,
-            "Regeneration": weights.get("heal", 0) * per_round * rounds,
-            "EnergyRegeneration": weights.get("energy", 0) * per_round * rounds,
-            "Stun": weights.get("stun", 0) * rounds,
-            "DefenseBuff": weights.get("defense", 0) * amount * rounds,
-            "DefenseDebuff": weights.get("defense", 0) * amount * rounds,
-            "InitiativeBuff": weights.get("initiative", 0) * amount * rounds,
-            "InitiativeDebuff": weights.get("initiative", 0) * amount * rounds,
-        }.get(kind, 0.0)
+        value = _effect_value(effect, weights, crit_factor=1.0)
         total += -value if kind in HARMFUL else value
     return total
 
@@ -1085,13 +1106,13 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
         tier = content.tiers.get(alias)
         if document is None or tier is None:
             continue
-        reach, attacks = _max_targets(document), deals_damage(document)
+        reach, attacks = max_targets(document), deals_damage(document)
         rivals = {
             other: value
             for other, value in current.items()
             if other != alias
             and content.tiers.get(other, tier + 1) <= tier
-            and _max_targets(content.spells[other]) <= reach
+            and max_targets(content.spells[other]) <= reach
             and deals_damage(content.spells[other]) == attacks
         }
         if not rivals:

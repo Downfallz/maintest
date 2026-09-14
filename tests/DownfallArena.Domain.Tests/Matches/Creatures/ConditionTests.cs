@@ -43,6 +43,24 @@ public sealed class ConditionTests
         condition.RemainingRounds.ShouldBe(1);
     }
 
+    /// <summary>
+    /// ADR 0041. Two bleeds are two conditions, each with its own amount, duration and source, so a second
+    /// cast adds to what the first is still doing instead of replacing it. Before that ADR this was one
+    /// condition dealing 1 a round: a second attacker's bleed was the first one's refresh.
+    /// </summary>
+    [Fact]
+    public void A_second_bleed_stacks_beside_the_first_instead_of_refreshing_it()
+    {
+        var creature = Spawn();
+
+        var first = creature.Apply(Bleed.Of(1, rounds: 3)).ShouldNotBeNull();
+        var second = creature.Apply(Bleed.Of(4, rounds: 2)).ShouldNotBeNull();
+
+        second.ShouldNotBeSameAs(first);
+        creature.Conditions.Count.ShouldBe(2);
+        creature.Conditions.Sum(condition => ((Bleed)condition.Effect).AmountPerRound).ShouldBe(5);
+    }
+
     [Fact]
     public void Stacking_effects_add_up()
     {
@@ -55,16 +73,21 @@ public sealed class ConditionTests
         creature.TotalDefense.ShouldBe(Defense.Of(5));
     }
 
+    /// <summary>
+    /// Asked for explicitly: since ADR 0041 a Bleed stacks unless the content says otherwise, so a test of
+    /// what Refresh does has to name the policy. Stun is the kind that refreshes by default, but it carries
+    /// no amount, and keeping the first application's amount is half of what this pins down.
+    /// </summary>
     [Fact]
     public void Refreshing_effects_restart_the_existing_duration_and_keep_its_amount()
     {
         var creature = Spawn();
-        var first = creature.Apply(Bleed.Of(1, rounds: 2)).ShouldNotBeNull();
+        var first = creature.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Refresh)).ShouldNotBeNull();
         creature.TickConditions();
         creature.TickConditions();
         first.RemainingRounds.ShouldBe(1);
 
-        var refreshed = creature.Apply(Bleed.Of(5, rounds: 2));
+        var refreshed = creature.Apply(Bleed.Of(5, rounds: 2, StackingPolicy.Refresh));
 
         refreshed.ShouldBeSameAs(first);
         creature.Conditions.ShouldHaveSingleItem().RemainingRounds.ShouldBe(2);

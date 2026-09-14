@@ -144,9 +144,12 @@ Worth knowing rather than assuming the net is still there.
 ## A field that is a bonus, not a chance
 
 A spell's **critical chance bonus** is added to the creature's own before the roll, not used in place of it
-(`ResolutionRules`), so a spell at `0` still crits at whatever its creature crits at. The field alone reads as
-"never crits", which is why the editor prints the chance it actually gives next to it — with the content as it
-stands, `0` and a creature at 5% means a cast crits at 5%.
+(`ResolutionRules`), so a spell at `0` crits at whatever its creature crits at. The field alone reads as
+"never crits", which is why the editor prints the chance it actually gives next to it rather than the field —
+the two agree only while every creature sits at zero. With the content as it stands they do agree: since
+[ADR 0042](../docs/adr/0042-a-creature-has-no-base-critical-chance.md) the one creature is at `0`, so a spell
+at `0` really never crits and a spell decides its own crit entirely. Author a creature with a base and the
+distinction is live again, which is why the editor reads it from the content instead of restating a number.
 
 ## The balance knobs
 

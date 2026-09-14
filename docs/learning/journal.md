@@ -4,6 +4,251 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-14. The exploiter had gone stale through four catalogues, and was reading the content safe
+
+- **What changed**: `learning/weights/search-3.json`, from
+  [search run 3](https://github.com/Downfallz/maintest/actions/runs/34871307156) on content `938bef5e`, and
+  the balance objective's `exploit` evaluation now plays it instead of `search-2.json`. No content moves, no
+  agent default moves: `ScoringWeights.Default` and `greedy.json` are untouched, the content hash stays
+  `938bef5e` and the benchmark digest is unchanged.
+- **`exploit` reads 0.182 to 0.745**, penalty 0.00 to **30.42**, and the objective **18.59 to 49.01**.
+- **Nothing about the content got worse. The measurement stopped lying.** `exploit` is the one target that
+  names a file, and `data/balance/knobs.json` has always said why: *"Agent A goes stale when the content
+  moves — a tuning pass changes what there is to exploit — so it is refreshed from the next search run, not
+  kept."* It had not been refreshed through **four** content changes in one day —
+  `91da955c → eca50723 → b7c3e4c5 → 938bef5e` — and an agent searched against a catalogue that no longer
+  exists understates the gap.
+- **This is `tierDamageSpread`'s blind spot in the opposite direction, and the more dangerous one.** That
+  term sat at its *cap*: maximum penalty, visibly wrong, and a search could not move it. This one sat at
+  *zero*: it read as nothing to fix. A target pinned at its worst is an eyesore; a target pinned at its best
+  is a lie, and it is the one nobody goes looking at.
+- **The weights** — searched 10 rounds of 16, seed 0, against `greedy` on the benchmark seeds:
+  `stun` 3.000 to **5.456**, `initiative` 2.100 to **1.040**, `kill` 5.000 to 5.483, `heal` 0.800 to 0.546,
+  `damage` 1.000 to 1.092, `energy` 0.300 to 0.383, `bleed` 0.800 to 0.734, `defense` 0.650 to 0.690.
+  The two that move far are worth reading together: an exploiter of this catalogue prices a stun at nearly
+  twice what the baseline does and initiative at half. ADR 0032 measured `initiative` to 2.1 and ADR 0018
+  priced it; a player who only wants to win disagrees, and the objective now has to carry that disagreement
+  rather than be spared it.
+- **What it does not say.** The search picked these for scoring best out of 161 candidates on one fixed seed
+  file, so its own interval is the winner's and not a fair one. The reading that counts is the hold-out in
+  the proposal: **0.8075 against `greedy` on seeds no candidate saw**, where the baseline scores 0.5.
+- **What follows**: `exploit` at 30.42 is now the largest term in the objective, ahead of `tierDamageSpread`
+  at 10.08. A tuning pass run after this chases a different thing than one run before it, and scores either
+  side do not compare — the same warning `data/balance/README.md` gives for any change to a target.
+
+## 2026-09-14. The term that was pinned at its cap was not just useless, it was licence
+
+- **What changed**: `tierDamageSpread` compares attacks per target instead of every `Damage`-carrying spell
+  per cast (ADR 0043), and `soul_devourer` goes back to 5 damage. Content hash **`b7c3e4c5` to `938bef5e`**,
+  digest regenerated. No agent weight moves; fingerprint stays `362b0496`.
+- **The objective reads 42.673 to 18.594**, and the term is **live**: `tierDamageSpread` **5.000 to 3.587**,
+  penalty 36.00 to **10.08**. It had read exactly `MOST_LOPSIDED` on every candidate any pass could build.
+- **Why it was pinned**, uncapped 37.85, and neither reason was about hitting hard:
+  - carrying a `Damage` effect made a spell an attack, so `tranquilizer_dart` — two damage and a two-round
+    stun, whose own `keep` calls the damage "a rounding error, not a second half" — anchored tier 3 at
+    **0.27** against `crazed_specter`'s 18.92;
+  - damage was read per **cast**, so a three-target sweep was charged for reach rather than force.
+- **The finding worth keeping: a flat term is licence, not just dead weight.** A search cannot be graded on
+  it, so it may degrade the thing the term names for free. Tune run 8 did: `soul_devourer` 5 damage to 4,
+  which took it **3.56 to 2.22 a target**, and the pinned metric could not object. Measured on the corrected
+  reading, that one nerf is the difference between a term that scores and a term that does not:
+
+  | | corrected `tierDamageSpread` | penalty |
+  | --- | --- | --- |
+  | before tune 8 (`eca50723`) | **3.82** | 13.18 |
+  | after tune 8 (`b7c3e4c5`) | **5.87** | 36.00 (pinned) |
+
+- **What each half is worth**, measured:
+
+  | | objective | `tierDamageSpread` |
+  | --- | --- | --- |
+  | tune 8 as merged | 42.67 | 5.000 (pinned) |
+  | the new reading alone | 32.76 | 4.554 |
+  | the revert alone, old reading | 44.52 | 5.000 (pinned) |
+  | **both** | **18.59** | **3.587** |
+
+- **A claim this entry first made and had to withdraw**: that neither half worked alone. It held only for a
+  first version of the per-target reading that divided by the spell's `maxTargets`. A review caught that: a
+  cast finds fewer creatures as they die and an exploring agent may pick a smaller legal set, so the allowed
+  reach is an overstatement that grows with the spell — `meteor` lands **1.79 of its three** where a
+  single-target spell lands 0.88 to 1.01 of its one. The engine now counts the targets a cast actually hit.
+  Correcting it was worth **8.4 points** on its own and moved the reading 4.150 to 3.587, and with it the
+  conclusion: the new reading carries 9.91 alone, the revert adds 14.17. A measurement of a fix is only as
+  good as the fix.
+
+- **Every escape inside the content was measured first, and there is none**: the dart at its authored maximum
+  damage *and* `crazed_specter` at its minimum still reads the cap; dropping the dart entirely reads 5.03;
+  per target alone reads 26.04. The definition had to move.
+- **Exactly one spell changes side**: `tranquilizer_dart`. The pricing includes the critical multiplier,
+  which keeps `protective_slam` (0.38 of its cast) and `mortal_wound` (0.38) on the attack side where a
+  cruder reading dropped them — a difference I got wrong in a scratch calculation and only caught by running
+  the real pricing.
+- **What the revert costs, stated rather than buried**: `player1WinShare` 0.505 to **0.440**, just outside
+  its band for 0.12, and `tierWinSpread` 0.183 to 0.290. `spellsBarelyCast` 3 to **2** the other way, because
+  `soul_devourer` is cast again. `averageRounds` 9.14 to 7.92, still effectively in band.
+- **Scores before this do not compare with scores after**, as `data/balance/README.md` warns of any change to
+  a target. This entry names both readings on the one content that straddles it.
+- **One duplication removed on the way**: `cast_value` and `_caster_value` each carried a copy of the effect
+  pricing table, and the new reading wanted a third. There is now one `_effect_value` — the same lesson as
+  the studio's `EFFECTS` table in ADR 0041, which seeded a stacking policy the engine had stopped using.
+- **Verified**: build, 763 .NET tests, 307 pytest (three new, each checked to fail on the reading it is
+  about before being kept), format, ruff, studio tests, `check-knobs`, digest regenerated from a clean tree
+  and re-verified after the engine gained the new field — no match outcome moves.
+
+## 2026-09-14. A tuning pass at four times the budget, and what its eleven moves actually cost
+
+- **What changed**: the catalogue, by [tune run 8](https://github.com/Downfallz/maintest/actions/runs/34800374940)
+  (ADR 0021) — seed 666, 24 rounds of 16, at most 20 knobs, 641 versions played over 4 h 44. Eleven moves on
+  nine spells, merged as proposed. Content hash **`eca50723` to `b7c3e4c5`**, digest regenerated and verified.
+  No agent weight moves, so the fingerprint stays `362b0496`.
+- **The objective reads 53.868 to 42.673**, the best measured on this content, and every watched column
+  improves or holds:
+
+  | Target | Before | After | Band |
+  | --- | --- | --- | --- |
+  | `player1WinShare` | 0.475 | **0.505** | 0.45..0.55 |
+  | `averageRounds` | 7.480 | **9.140** | 8..16 |
+  | `tierWinSpread` | 0.445 | **0.183** | ..0.15 |
+  | `tierUsageShare` | 0.713 | 0.678 | ..0.5 |
+  | `spellEntropyA` | 4.089 | 4.140 | 2.5.. |
+  | `spellsNeverCast` | 1 | **2** | ..2 |
+  | `spellsBarelyCast` | 1 | **3** | ..2 |
+  | `tierDamageSpread` | 5.000 | 5.000 | ..2 |
+
+  `averageRounds` is inside its band for the first time since the agent change of ADR 0039 pushed it out.
+- **The win spread narrowed from both ends, which is the good kind.** Tier 3's floor went 0.267 to 0.457 and
+  its ceiling 0.712 to 0.636; tier 2's floor 0.240 to 0.403. Weak spells got better rather than the strong
+  one getting worse.
+- **Leave-one-out and solo are different measurements, and here they disagree.** Removing `meteor`'s damage
+  move leaves 53.74, so leave-one-out says it is the whole gain; measured *alone* on the baseline it is worth
+  **5.94**, and the other ten alone are worth **0.13**. Together they are worth 11.19. The moves are
+  multiplicative — the rest only pay off once the sweep is slowed — and neither half "does the work".
+- **One move is measurably worth nothing**: `restorative_burst` energy cost 2 to 3. The objective reads 42.67
+  with it and 42.67 without, to three decimals, because the spell has **zero landed casts either side**. It
+  also breaks that spell's own first `keep` — *"gives back at least the energy it costs"* — which now grants 2
+  and costs 3.
+- **And the load-bearing move breaks a `keep` too**: `meteor` damage 3 to 2. It reads 6.00 a landed cast
+  against `enraged_charge`'s 10.35, so it is no longer *"the strongest thing in its tier"*, and it goes 56
+  landed casts to **4**.
+- **There is no gentler instrument inside meteor's box**, measured across all four of its knobs: cost 3→4
+  (48.91), cost 3→5 (49.37), crit .5→.35 (49.11), crit .5→.30 (50.42), cost 4 + crit .40 (47.40). Every one
+  that buys more than a point demotes meteor below `enraged_charge`, because it led its tier by **0.41** —
+  a rounding margin, not a step. The only variant that keeps it on top, `initiative 1→0`, is worth 0.6.
+  So the keep is claiming a lead the content never gave it, and that is a design question rather than a knob.
+- **A hypothesis this killed**: that meteor's sweep was what kept matches short. `averageRounds` sits at
+  7.46–7.55 in *every* meteor variant and never enters the band; run 8 reached 9.14 from somewhere else in
+  the eleven. Whatever moves match length, it is not this spell.
+- **What it cost in spells**: `ice_spear` 127 landed casts to **0**, `meteor` 56 to **4**, `engulfing_flames`
+  77 to **17**, `toxic_waves` 5 to **1**. Five spells now dead or near-dead against two before. Both searches
+  run against this content — seed 11 at a small budget and seed 666 at a large one — independently raised
+  `ice_spear`'s cost, which with `check-knobs` calling it a bar it cannot clear and play giving it 0.441 makes
+  three readings saying that spell is wrong. None of them says its cost is the fix.
+- **`check-knobs` findings fall 10 to 6**, and it still exits 0.
+- **Verified**: build, 763 .NET tests, 304 pytest, format, ruff, studio tests, `check-knobs`, digest verified
+  on `b7c3e4c5`.
+
+## 2026-09-14. One authored field was setting the first-mover share
+
+- **What changed**: two rules decisions, measured separately. `baseCriticalChance` on the creature goes
+  0.05 to **0** (ADR 0042), and every lasting effect now **stacks by default except `Stun`** (ADR 0041).
+  Content hash **`91da955c` to `eca50723`**, digest regenerated. No agent weight moved, so the fingerprint
+  stays `362b0496`.
+- **The headline**: the objective reads **85.68 to 53.87**, and `player1WinShare` **0.695 to 0.475** —
+  from well outside its 0.45..0.55 band to the middle of it. That is the reading ADR 0039 broke and recorded
+  as *"a content pass is owed, and agent weights cannot fix them"*. It was not a content-pass problem. It was
+  one field.
+- **Decomposed, because a pair of changes measured together says nothing about either**:
+
+  | | objective | `player1WinShare` | `tierWinSpread` | `averageRounds` | `skill` |
+  | --- | --- | --- | --- | --- | --- |
+  | baseline (`91da955c`) | 85.68 | 0.695 | 0.558 | 6.405 | 0.988 |
+  | stacking only | **85.76** | 0.695 | 0.558 | 6.405 | 0.985 |
+  | base crit only | **57.57** | 0.490 | 0.502 | 7.470 | 0.973 |
+  | both (`eca50723`) | **53.87** | 0.475 | 0.445 | 7.480 | 0.975 |
+
+- **The stacking change moves nothing on its own**, and the entry says so rather than letting the pair's gain
+  cover for it: `player1WinShare`, `averageRounds`, `fizzleRateA` and `drawRate` are identical to three
+  decimals against the baseline. Matches last 6.4 rounds and a target is rarely bled twice, so the case the
+  old `Refresh` default got wrong barely arises. It is fixed because it was wrong — a second bleed used to
+  throw its own amount away and steal the first one's source (ADR 0027) — not because it was costing
+  anything.
+- **It is not free once the board changes, though.** Beside the crit removal the pair reads 53.87 where the
+  crit removal alone reads 57.57: the same change is worth 3.7 points on a longer board, through
+  `tierWinSpread` 0.502 to 0.445. Two changes that each look inert can still interact.
+- **`exploit` 0.203 to 0.080 is not evidence and is not read as any.** Its attacker is a `HeuristicAgent`, so
+  a rules change moves both sides — the correction ADR 0039 had to make, applying again. `skill`, against
+  `random`, is the opponent that does not move: 0.988 to 0.975, flat. Nothing here was bought by flattening
+  the game.
+- **What the pass was actually looking at.** Measuring the baseline before searching turned up that the
+  follow-up note named two targets out of band and there were **five**, and that the largest of them was not
+  movable at all:
+
+  | metric | baseline | band | penalty |
+  | --- | --- | --- | --- |
+  | `tierDamageSpread` | **5.000** | ..2.0 | **36.00** |
+  | `player1WinShare` | 0.695 | 0.45..0.55 | 25.23 |
+  | `tierWinSpread` | 0.558 | ..0.15 | 16.68 |
+  | `tierUsageShare` | 0.690 | ..0.5 | 7.20 |
+  | `averageRounds` | 6.405 | 8..16 | 0.57 |
+
+- **`tierDamageSpread` reads exactly `MOST_LOPSIDED`**, its cap. Uncapped it is **38.64**, on tier 3, and the
+  floor of the ratio is `tranquilizer_dart` at **0.385** damage per landed cast against `crazed_specter` at
+  19.32. The dart is a 2-damage stun whose own `keep` in `knobs.json` reads *"the damage is a rounding error,
+  not a second half"* — it carries a `Damage` effect, so `deals_damage` compares it as an attack against the
+  heaviest sweep in the game.
+- **Probed rather than assumed**: dart damage at its authored maximum (4) *and* `crazed_specter` at its
+  minimum (4) still reads 5.000 — the dart only reaches 1.81 and `hateful_sacrifice` becomes the ceiling at
+  13.45, ratio 7.42. Dropping the dart from the comparison entirely gives 5.03, still over the cap. Per
+  target instead of per cast gives 27.07, so target count is not the driver either. **36 of the 85.68 was a
+  constant no candidate could move**, which does not break a hill climb but gives that term no gradient.
+  Still true at 53.87; left open deliberately, because changing what `tierDamageSpread` compares is a change
+  to what "balanced" means and belongs to whoever owns that definition.
+- **The provenance rule from the last entry was not quite enough, and this caught it.** "Regenerate a
+  provenance-bearing artifact after the tree is clean" is what was written down; the first digest here was
+  regenerated on a clean tree and still recorded **`bb9f9c8b3197-dirty`** — the *previous* commit, plus dirty.
+  The engine version is stamped at **build** time, not read at run time, and the Release assembly had been
+  built before the commit. So the rule is **rebuild and regenerate after the tree is clean**: a clean tree at
+  the moment of writing says nothing about the build doing the writing. Rebuilt, it reads `b0deb207957d`, the
+  commit that carries the change. As last time, nothing local would have caught it —
+  `BenchmarkDigest.DifferencesFrom` ignores `EngineVersion` on purpose, so both files verified green.
+- **Verified**: build, 762 .NET tests, 304 pytest, format, ruff, studio tests, `check-knobs`, digest rebuilt
+  and regenerated from the clean tree and re-verified.
+
+## 2026-09-14. The weight that priced nothing, removed
+
+- **What changed**: the `fizzle` scoring weight is gone (ADR 0040). Eight weights, not nine. Fingerprint
+  **`1933f3ae` to `362b0496`** — the first move caused by the list getting *shorter* rather than a number
+  changing. Benchmark digest regenerated on content `91da955c`.
+- **Why, in one line**: four measurements across three ADRs, and it priced nothing in all four.
+  - ADR 0037 swept it 0 to 100: every value played the 400 seeds identically, column for column.
+  - ADR 0038 renamed it and found a third reader nobody had noticed. Still nothing.
+  - ADR 0039 gave it a real decision to reach. A fresh sweep at 0, 1, 2, 3, 5 read 78.44, 77.84, 77.25,
+    79.52, 77.25 — spread 2.3 and not monotonic.
+- **What removing it costs**: the objective reads **85.68 against 83.77** with the weight kept at 2.0. That
+  is 1.9 points, *inside* the 2.3 spread the weight itself showed across 0 to 5 — so indistinguishable from
+  any value it could have had, which is the whole point. `spellsNeverCast` 2 to 1 and `spellsBarelyCast` 3 to
+  2; every other column identical to three decimals.
+- **One site where removal is not neutral, and is better.** `HeuristicAgent.DecideIntent` scored a castable
+  spell with no legal target at `-fizzle`. At zero, the bot now prefers doing nothing to an action whose
+  expected score is negative — before, a spell that hurt an ally could beat a spell with nothing to hit.
+  Argued for rather than inherited.
+- **The double-count that justified the rest.** ADR 0039 already prices a wasted target as the value the
+  action no longer earns. Charging a penalty on top priced the same loss twice, which is why the
+  wasted-share term goes rather than being kept at a smaller number.
+- **The sweep script refused to measure this one until it was committed**, because the guard it grew after
+  the first collision compares both patched files against `HEAD` and these differed. First time it fired on
+  a legitimate change rather than a mistake, and it was right to: measuring an uncommitted tree is how the
+  first table of this whole arc got thrown away.
+- **A rule that fell out of the review, and is worth keeping**: regenerate a provenance-bearing artifact
+  *after* the tree is clean, never before. The first digest here recorded `962cd78f4c6a-dirty` because it was
+  written while the docs and tests of the same change were still uncommitted, so the one field kept as
+  experiment provenance named a base commit plus an unknown working tree. Nothing local would have caught it:
+  `BenchmarkDigest.DifferencesFrom` ignores `EngineVersion` on purpose, so `benchmark` verified green either
+  way. Regenerated clean it reads `48779f902d7b`, and exactly one line of the file differs — all 400 outcomes
+  identical, which is what says it was a traceability defect and not a measurement one.
+- **Verified**: build, 761 .NET tests, 304 pytest, format, ruff, studio tests, digest regenerated and
+  re-verified.
+
 ## 2026-09-14. The bot stopped aiming at creatures that will already be dead
 
 - **What changed**: the agent writes off a target it expects to be dead before its action lands (ADR 0039).

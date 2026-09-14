@@ -34,8 +34,9 @@ from downfall_learning.knobs import (
     Knobs,
     Objective,
     Target,
-    deals_damage,
+    damage_is_the_point,
     dominates,
+    load_weights,
     new_dominance,
     new_indistinguishable,
     read_value,
@@ -297,8 +298,8 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     Two are about the catalogue as a whole: ``spellUsageShare``, the largest share of landed casts any one
     spell took, and ``spellsNeverCast``, the spells no declaration ever landed. Three are about a tier —
     spells offered at the same depth of the talent tree, which is the set a player actually chooses between:
-    how concentrated its casts are, how far apart its damage per cast is, and how far apart the win share of
-    the sides that declared it is. Each reports its worst tier.
+    how concentrated its casts are, how far apart its attacks hit per target, and how far apart the win
+    share of the sides that declared it is. Each reports its worst tier.
 
     All of it reads ``spellOutcomes``, which the engine fills with what the casts did rather than with what
     the agents declared.
@@ -315,7 +316,16 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     barely = _barely_cast(landed, by_alias, content.tiers)
     if barely is not None:
         measured["spellsBarelyCast"] = barely
-    damaging = {identifier for identifier, alias in by_alias.items() if deals_damage(content.spells[alias])}
+    # Which spells are compared as attacks, read from the content and never from what a run happened to
+    # land, for the reason `_damage_spread` gives (ADR 0043). How far each one reached is the opposite: that
+    # is a fact about the run, and the engine counts it as `damagePerTarget`. The weights are the agents'
+    # own, so the answer moves when their prices do rather than on a number restated here.
+    weights = load_weights()
+    damaging = {
+        identifier
+        for identifier, alias in by_alias.items()
+        if damage_is_the_point(content.spells[alias], weights)
+    }
     measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
     return measured
 
@@ -400,20 +410,37 @@ def _usage_share(members: Sequence[Mapping[str, object]]) -> float | None:
     return max(landed) / sum(landed) if sum(landed) > 0 else None
 
 
-def _damage_spread(members: Sequence[Mapping[str, object]], damaging: Collection[str]) -> float | None:
-    """How many times harder the best damaging spell of a tier hits per landed cast than the worst.
+def _damage_spread(
+    members: Sequence[Mapping[str, object]],
+    damaging: Collection[str],
+) -> float | None:
+    """How many times harder the best attack of a tier hits **one target** than the worst (ADR 0043).
 
-    Which spells count is read from the content — does the spell carry a `Damage` effect — and never from
+    Which spells count is read from the content — is `Damage` most of what this spell does — and never from
     what its casts happened to do. Reading it from the result would let a candidate that lowers an attack
     until every hit is absorbed drop that attack out of the comparison and *improve* this number, which is
     the opposite of what it is for. A spell whose hits all land on armour keeps its zero and the ratio is
     floored at :data:`MIN_DAMAGE_PER_CAST` and capped at :data:`MOST_LOPSIDED`.
 
-    A heal has no `Damage` effect and is not compared: it shares no unit with an attack. Only spells with
-    enough landed casts for their own rate to mean anything are read at all.
+    Two readings this does not make, both of which it made until ADR 0043, and both of which pinned it at
+    that cap for every candidate a tuning pass could build:
+
+    - **A control spell is not an attack.** Carrying a `Damage` effect at all was the old test, so
+      `tranquilizer_dart` — two damage and a two-round stun — anchored tier 3 against the heaviest sweep in
+      the game at 0.27 against 18.92. `damage_is_the_point` asks instead whether damage is most of what the
+      cast does, priced with the agents' own weights.
+    - **Reach is not force.** Damage per *cast* asks a three-target sweep and a single-target spell to read
+      alike, so a spell is penalised for the targets it reaches rather than for how hard it hits.
+      ``damagePerTarget`` divides by the targets a cast actually landed on, which the engine counts. Never
+      by the spell's `maxTargets`: a cast finds fewer creatures as they die and an exploring agent may pick
+      a smaller legal set, so the allowed reach is an overstatement that grows with the spell -- `meteor`
+      lands 1.79 of its three where a single-target spell lands 0.88 to 1.01 of its one.
+
+    A heal is not compared with an attack: they share no unit. Only spells with enough landed casts for
+    their own rate to mean anything are read at all.
     """
     rates = [
-        float(member["damagePerCast"])
+        float(member["damagePerTarget"])
         for member in members
         if str(member["spell"]) in damaging and int(member.get("resolved", 0)) >= ENOUGH_SIDES
     ]

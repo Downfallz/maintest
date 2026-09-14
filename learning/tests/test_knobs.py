@@ -1273,7 +1273,7 @@ def test_without_the_agent_weights_the_reading_is_skipped_rather_than_guessed() 
     assert outclassed(content, knobs, {}) == []
 
 
-def test_the_repository_weights_are_the_nine_the_agents_score_with() -> None:
+def test_the_repository_weights_are_the_eight_the_agents_score_with() -> None:
     """Read rather than restated, so this reading cannot drift from `ScoringWeights.Default`."""
     assert set(load_weights()) == {
         "damage",
@@ -1283,7 +1283,6 @@ def test_the_repository_weights_are_the_nine_the_agents_score_with() -> None:
         "bleed",
         "defense",
         "energy",
-        "fizzle",
         "initiative",
     }
 

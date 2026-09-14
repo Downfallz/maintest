@@ -166,9 +166,9 @@ The terms below are the authoritative entries of the "Learning" section of
   `ResolutionRules.Resolve` (a forced crit and a forced miss) and weight the two scores by the actor's
   critical chance for the spell, so the expected damage includes the critical contribution; score damage
   dealt (capped at the target's health), kills, healing (capped at what was missing), stuns, bleeds as future
-  damage, buffs, energy kept, and a fizzle penalty for an action that came to nothing (ADR 0038).
+  damage, buffs, and energy kept. An action that comes to nothing scores nothing and is not charged on top (ADR 0040).
 - `HeuristicAgent`: the lookahead with explicit weights (`damage`, `kill`, `heal`, `stun`, `bleed`, `defense`,
-  `energy`, `fizzle`, `initiative`). Intent: the castable spell whose best target set scores best. Targets: the
+  `energy`, `initiative`). Intent: the castable spell whose best target set scores best. Targets: the
   best set for the declared spell at reveal time. Speed: Quick when a kill is on the table, Standard
   otherwise. Evolution: the unlockable spell worth the most as if known and affordable, plus the base
   initiative the unlock buys (ADR 0017), priced by the initiative weight (ADR 0018); pass only when nothing
@@ -191,7 +191,7 @@ The terms below are the authoritative entries of the "Learning" section of
   schema versions this side reads), `policy.py`, `report.py` (`training.jsonl`), `export.py` (weights files,
   the wide CSV projection), `train_clone.py`, `train_value.py`, `search_weights.py`, `cli.py`.
 - Three learners, in order of cost:
-  1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the nine weights,
+  1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the eight weights,
      each candidate evaluated by the engine's `evaluate` as `heuristic:<file>` against an opponent on the
      benchmark seeds, the mean score as fitness. No dataset needed.
   2. **Behaviour cloning** (`train-clone`): a linear classifier from observation to action key on a

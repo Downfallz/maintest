@@ -5,7 +5,7 @@
   "creatureClass": "Wizard",
   "initiative": 1,
   "energyCost": 3,
-  "criticalChance": 0.5,
+  "criticalChance": 0.45,
   "targeting": {
     "origin": "Enemy",
     "scope": "Multi",
@@ -14,7 +14,7 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 3
+      "amount": 2
     }
   ],
   "enabled": true

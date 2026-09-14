@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Wizard",
   "initiative": 2,
-  "energyCost": 2,
+  "energyCost": 3,
   "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",

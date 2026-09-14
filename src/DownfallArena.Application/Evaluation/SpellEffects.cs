@@ -34,6 +34,7 @@ public sealed record SpellEffects(
     int DefenseDebuffs,
     int InitiativeBuffs,
     int ConditionDamage = 0,
+    int Hits = 0,
     int ConditionHealing = 0,
     int ConditionEnergy = 0)
 {
@@ -68,6 +69,7 @@ public sealed record SpellEffects(
             DefenseDebuffs + other.DefenseDebuffs,
             InitiativeBuffs + other.InitiativeBuffs,
             ConditionDamage + other.ConditionDamage,
+            Hits + other.Hits,
             ConditionHealing + other.ConditionHealing,
             ConditionEnergy + other.ConditionEnergy);
     }
