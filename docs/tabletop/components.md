@@ -12,9 +12,12 @@ not a guess.
 
 Two facts about the sources. `docs/domain/spells.md` is a historical record and has drifted from `data/`
 (translation.md says 30 of 36 rows differ), so **every number here is computed from `data/` or from the code
-that enforces the rule**, with the command beside it. ADR 0041 and ADR 0042 are referenced by the plan as
-shipped in PR #76; they are not files in this branch, so what this document takes from them is what the plan
-states: the Creature's base Critical chance is zero, and a Condition stacks except a Stun, which refreshes.
+that enforces the rule**, with the command beside it.
+[ADR 0041](../adr/0041-a-condition-stacks-unless-it-is-a-stun.md) and
+[ADR 0042](../adr/0042-a-creature-has-no-base-critical-chance.md) shipped in PR #76 and are now files here;
+they say what the plan said they would, and what this document takes from them is unchanged: the Creature's
+base Critical chance is zero (`data/Creatures/main.v1.json` reads `baseCriticalChance: 0`), and a Condition
+stacks except a Stun, which refreshes.
 
 ### How a count is marked
 
@@ -881,8 +884,9 @@ should the box carry the theoretical rate (14 a Round, so 7 chits a Creature) an
 The supplies in [1.4](#14-condition-tokens) are **one Round at the maximum rate**. The rule's own ceiling is up
 to three times that for the Durations over one Round - 54 Bleed-2 tokens - which the Health scale makes
 unreachable but the rules do not forbid. Three answers: print one Round's worth and carry the blank-token
-escape (this manifest); print the rule's ceiling - each face's supply times its longest Duration, which is 216 condition tokens - and one more sheet;
-or bound the rule, which is an engine change and belongs to ADR candidates 2 and 3, not here.
+escape (this manifest); print the rule's ceiling - each face's supply times its own longest Duration, which
+is 216 condition tokens - and one more sheet; or bound the rule, which is an engine change and belongs to ADR
+candidates 2 and 3, not here.
 
 ### 6. Where the rule set comes from
 
