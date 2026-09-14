@@ -342,11 +342,20 @@ The card is a **standard poker card, 63.5 x 88.9 mm**. Which print constraint ea
 - **4 lines of body text**, 14 mm, which is what is left after the head, the foot and the rule above the
   caster line.
 
-Measured against the real catalogue, rendering every card face from `data/`:
+Measured against the real catalogue, rendering every card face from `data/`. Two of the four readings measure
+a **joined string**, so the join is part of the measurement and is stated here rather than left to a reader to
+guess. The **body** is the body lines of [2.1](#21-what-is-printed-and-where-it-comes-from) - the targeting
+line, one line per effect, one `Caster:` line per caster effect - joined by ` / `, the same separator
+[2.4](#24-the-seven-that-need-a-second-sentence) writes them with. The **statline** was never a defined
+string, so it is defined here: it is that body with the cost line in front of it and the critical and unlock
+lines behind it, joined the same way. Neither carries the Spell's name, its prerequisites or the content
+hash: the name is the head, and the other two gate a pick rather than resolve a cast. The command prints all
+four readings:
 
 ```bash
 python3 -c "
-import json,glob,statistics
+import json,glob,statistics,collections
+SEP=' / '   # the one separator both joined figures use
 def dur(e): return 'permanent' if e.get('permanent') else str(e['durationRounds'])+' round'+('s' if e['durationRounds']!=1 else '')
 def eff(e):
   k,a,ap=e['kind'],e.get('amount'),e.get('amountPerRound')
@@ -355,21 +364,28 @@ def eff(e):
    'EnergyRegeneration':f'Energy regeneration {ap} a round, {dur(e)}','Stun':f'Stun, {dur(e)}',
    'DefenseBuff':f'Defense +{a}, {dur(e)}','DefenseDebuff':f'Defense -{a}, {dur(e)}',
    'InitiativeBuff':f'Initiative +{a}, {dur(e)}','InitiativeDebuff':f'Initiative -{a}, {dur(e)}'}[k]
-W=[];L=[]
+W=[];L=[];B=[];S=[]
 for p in glob.glob('data/Spells/**/*.json',recursive=True):
-  d=json.load(open(p));t=d['targeting'];o,m=t['origin'],t['maxTargets']
-  lines=['Self' if o=='Self' else (f'One {o.lower()}' if m==1 else f\"Up to {m} {'enemies' if o=='Enemy' else 'allies'}\")]
-  lines+=[eff(e) for e in d['effects']]+['Caster: '+eff(e) for e in d.get('casterEffects',[])]
-  W.append((max(len(x) for x in lines),d['id']));L.append(len(lines))
-print('widest line',max(W),'lines per card',sorted(set(L)),'max lines',max(L))"
+  d=json.load(open(p));t=d['targeting'];o,m=t['origin'],t['maxTargets'];n=d['id'].split(':')[1];c=d['criticalChance']
+  body=['Self' if o=='Self' else (f'One {o.lower()}' if m==1 else f\"Up to {m} {'enemies' if o=='Enemy' else 'allies'}\")]
+  body+=[eff(e) for e in d['effects']]+['Caster: '+eff(e) for e in d.get('casterEffects',[])]
+  stat=[f\"Cost {d['energyCost']}\"]+body+[f'Critical {round(c*100)}%' if c else 'No critical roll',f\"Unlock: +{d['initiative']} initiative\"]
+  W.append((max(len(x) for x in body),n));L.append(len(body))
+  B.append((len(SEP.join(body)),n));S.append((len(SEP.join(stat)),n))
+def r(t,v): print(t,'max',max(v),'median',statistics.median(x[0] for x in v),'min',min(v))
+print('widest line',max(W),' lines per card',sorted(collections.Counter(L).items()))
+r('body    ',B);r('statline',S)"
+# widest line (39, 'momentum')  lines per card [(2, 17), (3, 17), (4, 2)]
+# body     max (95, 'revenant_guards') median 38.0 min (16, 'wait')
+# statline max (143, 'revenant_guards') median 88.5 min (65, 'rejuvenate')
 ```
 
 | Reading | Value | What it means for the layout |
 | --- | --- | --- |
 | Body lines per card | 2, 3 or 4 | 17 cards at 2, 17 at 3, 2 at 4. The 4-line box is enough for every card in the catalogue. |
 | Widest single line | **39 characters** (`momentum`: `Energy regeneration 2 a round, 3 rounds`) | One character over the 38 a line holds. It wraps to a second line with a 3 mm hanging indent, and `momentum` has only 2 lines, so the card has the room. Nothing else in the catalogue wraps. |
-| Whole body, one string | max **99** characters (`revenant_guards`), median 38.5, min 15 (`wait`) | 99 characters is under three full lines. No card is tight on the body alone. |
-| Whole statline (cost, targeting, effects, caster, critical, unlock) | max **148**, median **85.5**, min **61** | The audit measured 153 / 90 / 66 on its own rendering; this face is five characters shorter because it writes `2 rounds` rather than `for 2 rounds`. The conclusion is the audit's: nothing overflows. |
+| Whole body, one string | max **95** characters (`revenant_guards`), median **38**, min **16** (`wait`) | 95 characters is under three full lines. No card is tight on the body alone. |
+| Whole statline (cost, targeting, effects, caster, critical, unlock) | max **143** (`revenant_guards`), median **88.5**, min **65** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 143 characters over a head, four body lines and a foot. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows. |
 
 ### 2.4 The seven that need a second sentence
 
