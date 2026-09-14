@@ -69,7 +69,7 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var bestScore = double.NegativeInfinity;
         foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
-            var score = _scorer.Best(actor, spell, creatures, gone)?.Score ?? -weights.Fizzle;
+            var score = _scorer.Best(actor, spell, creatures, gone)?.Score ?? 0;  // nothing to hit is worth nothing (ADR 0040)
             if (score > bestScore)
             {
                 best = spell;

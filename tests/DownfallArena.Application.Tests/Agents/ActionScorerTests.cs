@@ -62,11 +62,18 @@ public sealed class ActionScorerTests
         Scorer.Expected(Action(One, TestContent.Rend, Three), low).ShouldBe((0.95 * (1 + (0.8 * 2))) + (0.05 * (2 + (0.8 * 1))), 1e-9);
     }
 
+    /// <summary>
+    /// An action that comes to nothing is worth nothing, and is not charged on top of that (ADR 0040). It
+    /// still loses to anything that does something, which is what the weight was there for.
+    /// </summary>
     [Fact]
-    public void A_fizzle_costs_the_risk_weight()
+    public void A_fizzle_is_worth_nothing_and_loses_to_any_action_that_does_something()
     {
+        var board = Board(enemyHealth: 20);
+
         // Slam is not known: the resolution fizzles in both branches.
-        Scorer.Expected(Action(One, TestContent.Slam, Three), Board(enemyHealth: 20)).ShouldBe(-2, 1e-9);
+        Scorer.Expected(Action(One, TestContent.Slam, Three), board).ShouldBe(0, 1e-9);
+        Scorer.Expected(Strike(One, Three), board).ShouldBeGreaterThan(0);
     }
 
     [Fact]
@@ -295,11 +302,12 @@ public sealed class ActionScorerTests
 
     /// <summary>
     /// ADR 0039: a creature the actor's own team is already committed to killing before this action lands is
-    /// worth nothing to hit, and the action pays the fizzle weight for aiming at it. Without this the bot
-    /// counted the kill twice — once for the ally that takes it, once for itself.
+    /// worth nothing to hit. Without this the bot counted the kill twice — once for the ally that takes it,
+    /// once for itself. Since ADR 0040 that is the whole of it: the waste is priced by the value the action
+    /// no longer earns, and there is no separate penalty on top.
     /// </summary>
     [Fact]
-    public void A_target_expected_to_be_dead_before_the_action_lands_is_worth_nothing_and_costs_the_fizzle_weight()
+    public void A_target_expected_to_be_dead_before_the_action_lands_is_worth_nothing()
     {
         var board = Board(enemyHealth: 3);
         var action = Strike(One, Three);
@@ -308,16 +316,16 @@ public sealed class ActionScorerTests
         // Three has 3 health, so Strike kills it: three damage and the kill weight.
         Scorer.Expected(action, board).ShouldBe(3 + 5, 1e-9);
 
-        // Expected dead first, the same action is worth nothing at all and costs its whole target set.
-        Scorer.Expected(action, board, doomed).ShouldBe(-ScoringWeights.Default.Fizzle, 1e-9);
+        // Expected dead first, the same action earns none of that.
+        Scorer.Expected(action, board, doomed).ShouldBe(0, 1e-9);
     }
 
     /// <summary>
-    /// Only the share aimed at the dead is wasted: a sweep that catches one living enemy and one already
-    /// spoken for keeps what it does to the living one and pays half the weight.
+    /// Only what is aimed at the dead is lost: a sweep catching one living enemy and one already spoken for
+    /// keeps what it does to the living one, and loses exactly the other half.
     /// </summary>
     [Fact]
-    public void Only_the_share_of_targets_expected_to_be_gone_is_wasted()
+    public void Only_the_share_of_targets_expected_to_be_gone_is_lost()
     {
         var board = Board(enemyHealth: 20);
         var action = CombatAction.Bind(new CombatIntent(One, TestContent.Strike), [Three, Four]);
@@ -331,7 +339,7 @@ public sealed class ActionScorerTests
             [new DamageOutcome(Three, 3, Critical: false), new DamageOutcome(Four, 3, Critical: false)]), board, doomed);
 
         whole.ShouldBe(3 + 3, 1e-9);
-        half.ShouldBe(3 - (ScoringWeights.Default.Fizzle / 2), 1e-9, "the hit on Three stands, the hit on Four does not, and half the set is wasted");
+        half.ShouldBe(3, 1e-9, "the hit on Three stands and the hit on Four does not");
     }
 
     /// <summary>
@@ -354,13 +362,15 @@ public sealed class ActionScorerTests
         CombatResolution.Resolved(action, [target], [], false, Energy.Of(0), [new ConditionOutcome(target, effect)]);
 
     [Fact]
-    public void Energy_kept_counts_a_little_and_dropped_targets_cost_risk()
+    public void Energy_kept_counts_a_little_and_a_dropped_target_costs_only_what_it_would_have_earned()
     {
         var board = Board(enemyHealth: 20, actorEnergy: 2);
         var action = Strike(One, Three);
 
         Scorer.Score(CombatResolution.Resolved(action, [Three], [], false, Energy.Of(0), []), board).ShouldBe(PerEnergy * 2, 1e-9);
-        Scorer.Score(CombatResolution.Resolved(action, [Three], [new TargetingFailure(Four, CombatErrors.NoTargets)], false, Energy.Of(0), []), board).ShouldBe((PerEnergy * 2) - 2, 1e-9);
+
+        // A target that fell away earns nothing and, since ADR 0040, is charged nothing on top.
+        Scorer.Score(CombatResolution.Resolved(action, [Three], [new TargetingFailure(Four, CombatErrors.NoTargets)], false, Energy.Of(0), []), board).ShouldBe(PerEnergy * 2, 1e-9);
     }
 
     [Fact]
