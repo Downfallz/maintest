@@ -211,14 +211,15 @@ all six activations and becomes something only the Spells that print it do.
 over; the change itself is made where engine changes are made, with its own ADR and its own measurement. The
 plan's job is to be the input those changes and the app are built from.
 
-A crit is a die roll per cast. The critical chances in `data/` are continuous (0.05, 0.17, 0.33, 0.5, 0.667,
-0.717) and become values on the die's grid, which is a **content change** — `data/balance/knobs.json` already
-governs which numbers a pass may move, and the four readings already say whether a move was good.
+A crit is a die roll per cast. The critical chances in `data/` are continuous and become values on the die's
+grid, which is a **content change** — `data/balance/knobs.json` already governs which numbers a pass may move,
+and the four readings already say whether a move was good.
 
-Phase 2 therefore owes: which die (the grid's resolution against the number of rolls per round), the snapped
-value for every spell, the error each snap introduces, and what that error is worth in the currency ADR 0032
-and ADR 0037 established. A snapped catalogue is a tuning pass with a journal entry
-(`docs/learning/journal.md`) and a new content hash, like any other.
+**Who owes what**, now that phase 2 is retired: the maintainer chooses the die and authors every chance onto
+its grid, as a tuning pass with a journal entry and a new content hash like any other. What this plan owes is
+the evidence for the choice, and `components.md` §1.6 carries it — the error each candidate die introduces,
+measured over the spells that roll, and why the d20 is recommended. A tuning pass moves those numbers, so they
+are re-measured rather than quoted from here.
 
 ### C. Divergences: the engine changes, with an ADR
 

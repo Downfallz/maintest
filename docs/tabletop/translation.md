@@ -159,7 +159,7 @@ exactly one sub-phase, filed where it is enforced.
 | --- | --- | --- | --- | --- |
 | A defeated Team loses at the end of a Round | `WinCondition.Evaluate` (`Rules/WinCondition.cs:17-19`, ADR 0011) | 1 lookup per Team | **keep as is** | Nothing. |
 | Both Teams defeated in the same Round is a draw | `WinCondition.cs:31-38` | 1 comparison | **keep as is** | Nothing. A Caster effect can kill its own caster (ADR 0031), so this is reachable, not theoretical. |
-| The Round cap ends the Match on total remaining Health | `completedRound >= rules.RoundCap` (`WinCondition.cs:23-26`) | 2 sums of 3 numbers, once, at the end | **keep as is** | Nothing. The cap's *value* is a `RuleSet` parameter, so a shorter table Match costs no fidelity; which number lands the median Match in an evening is a phase-2 measurement, not a rule change. |
+| The Round cap ends the Match on total remaining Health | `completedRound >= rules.RoundCap` (`WinCondition.cs:23-26`) | 2 sums of 3 numbers, once, at the end | **keep as is** | Nothing. The cap's *value* is a `RuleSet` parameter, so a shorter table Match costs no fidelity; the number is the maintainer's, set at 8 to 16 Rounds for a 15 to 30 minute Match ([plan.md](plan.md)), not a rule change. |
 | Equal Health at the cap is a draw | `WinCondition.cs:41-48` | 1 comparison | **keep as is** | Nothing. |
 
 ---
@@ -223,12 +223,14 @@ authored: 0 (15 Spells), 0.22, 0.28, 0.283, 0.33 (4 Spells), 0.38, 0.45 (2 Spell
 (0.45, 0.5, 0.75, 0.8) and one on a 1-in-6 grid (0.5); three of them (0.283, 0.617, 0.767) are not even
 multiples of 0.05. `data/balance/knobs.json` still declares `/criticalChance` a knob on 20 Spells with a step
 of 0.05, so a d20 snap is inside the declared search space and a d6 snap is not. Which die, the per-Spell
-snapped value and the error each snap costs are phase 2's, measured.
+snapped value is the maintainer's, and the error each candidate die costs is measured in components.md §1.6.
 
 **Card text.** The statline every card must carry — cost, targets, effects with amounts and Durations,
-caster effects, critical chance, unlock initiative — was generated for all 36 and measured. The longest is
-`revenant_guards` at 153 characters; the median is 90 and the shortest is 66; nothing exceeds 160. No Spell
-overflows a card on its statline alone. The flag below marks the seven whose statline is over 110 characters
+caster effects, critical chance, unlock initiative — was generated for all 36 and measured. `revenant_guards`
+is the longest and no Spell overflows a card on its statline alone. The figures this row once printed are not
+repeated: they came from a rendering whose join was never defined, so they could not be reproduced.
+[components.md](components.md) §2.3 defines both strings, measures them with a command that prints what it
+measures, and is the number to quote. The flag below marks the seven whose statline is over 110 characters
 *and* which need a second sentence the rulebook cannot carry for them (a Caster effect line, or two
 Conditions of the same kind on one target): `revenant_guards`, `crazed_specter`, `psycho_rush`,
 `summon_minions`, `soul_devourer`, `thundering_seal`, `guard`. Those counts were measured on the previous
@@ -282,7 +284,7 @@ type size; this document only reports the character counts and which rows carry 
 | Spell | Tier | Targets | Ops | Tokens | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- | --- | --- |
 | `chain_slash` | 3 | 2 enemies | 8 | 0 | **restate** | Nothing; 2 targets, 3 operations each. |
-| `revenant_guards` | 3 | 3 allies | 9 | 7 | **needs a component** | Six Defense tokens on the Team plus a Bleed on the caster, from one cast at cost 2. The heaviest cast in the catalogue and the longest card text (153 characters). Flagged. |
+| `revenant_guards` | 3 | 3 allies | 9 | 7 | **needs a component** | Six Defense tokens on the Team plus a Bleed on the caster, from one cast at cost 2. The heaviest cast in the catalogue and the longest card text (components.md §2.3). Flagged. |
 | `meteor` | 2 | 3 enemies | 11 | 0 | **restate** | Nothing; 9 operations of damage arithmetic in one Activation slot. |
 | `tornado` | 3 | 3 enemies | 11 | 0 | **restate** | The same. |
 | `noxious_cure` | 2 | 3 allies | 11 | 3 | **needs a component** | Three Heals and three Defense debuff tokens; the cure shreds the cured. |
@@ -358,8 +360,9 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
 > and Evolution picks inside a Round are sequential, so the two picks of Round 1 buy `pummel` then
 > `full_plate`, which the Creature's 2 Energy affords. What this row left out is the price: casting it every
 > Round spends that Creature's activation every Round, so it never attacks. Whether the line is degenerate is
-> therefore a measurement (phase 2), not the proof this row claimed. What is not in doubt: nothing bounds the
-> total, so the table needs an unbounded supply of Defense tokens until something does.
+> therefore still a measurement, not the proof this row claimed — and phase 2 having been dropped as a
+> measurement exercise, who makes it is open. What is not in doubt: nothing bounds the total, so the table
+> needs an unbounded supply of Defense tokens until something does.
 >
 > Re-read at content `938bef5e`: the tree, the cost and the amounts are all unchanged, so the reading below
 > stands word for word, and ADR 0041 does not touch it — `DefenseBuff` already defaulted to `Stack`.
@@ -429,9 +432,10 @@ Rounds; a 1-Round Bleed ticks once. The table needs no flag, only the sentence.
 
 - **The 30-Round cap.** It is a `RuleSet` parameter (`RuleSet.cs:20,31`), and the engine plays any value
   unchanged. A shorter table Match is the same rules with a different number, so it costs no fidelity and
-  needs no ADR. Which number lands the median Match in an evening is a phase-2 measurement.
+  needs no ADR. The number is the maintainer's, set at 8 to 16 Rounds for a 15 to 30 minute Match
+  ([plan.md](plan.md)).
 - **Continuous critical chances.** Settled by fork B: a die, and the catalogue snapped to its grid. Part 3
-  reports what the snap has to cover; the die and the per-Spell values are phase 2's.
+  reports what the snap has to cover; the die and the per-Spell values are the maintainer's.
 - **Team size, Energy per Round, Evolution picks, the critical multiplier.** The same as the Round cap:
   parameters, not rules.
 
