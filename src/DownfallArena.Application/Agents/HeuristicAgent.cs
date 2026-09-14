@@ -177,8 +177,15 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
     /// </para>
     /// <para>
     /// On the plain roll, not the critical one: a target that only a critical would kill is not one to write
-    /// off. Healing is ignored, which under-counts nobody — it can only keep a creature alive, and a creature
-    /// this reading wrongly writes off is one the actor merely declines to aim at.
+    /// off. The replay carries health forward and nothing else, which is enough for the case it exists for --
+    /// attacks piling onto the same creature -- and not enough for anything that changes whether a later
+    /// action happens or lands: a stun on its actor, a drain that takes it below its cost, a heal or a
+    /// defense buff on its target. Rather than re-implement the whole of <c>CombatExecution</c> against
+    /// snapshots, the replay **stops as soon as it would have to guess**: a creature touched by an outcome
+    /// this reading does not model becomes uncertain, and the first action whose actor or targets are
+    /// uncertain ends the replay. What comes back is therefore sound but incomplete, which is the safe
+    /// direction — a creature wrongly left out is an opportunity missed, while a creature wrongly written off
+    /// makes the actor pick a worse target on purpose.
     /// </para>
     /// </summary>
     private IReadOnlySet<CreatureId> GoneBeforeThisSlot(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> creatures)
@@ -190,8 +197,14 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
         var ahead = creatures.ToList();
         var dead = new HashSet<CreatureId>();
+        var uncertain = new HashSet<CreatureId>();
         foreach (var action in board.RevealedActions)
         {
+            if (uncertain.Contains(action.Actor) || action.Targets.Any(uncertain.Contains))
+            {
+                break;
+            }
+
             var resolution = ResolutionRules.Resolve(action, ahead, resources, rules, ForcedRandom.NotCritical);
             if (resolution.Fizzled)
             {
@@ -207,6 +220,13 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
                 {
                     dead.Add(hit.Key);
                 }
+            }
+
+            // Everything else -- a stun, a heal, an energy move, any condition -- is not carried forward, so
+            // whoever it touched can no longer be read.
+            foreach (var outcome in resolution.Outcomes.Where(outcome => outcome is not DamageOutcome))
+            {
+                uncertain.Add(outcome.Target);
             }
         }
 
