@@ -47,14 +47,13 @@ public sealed record ScoringWeights(
     /// <c>Fizzle</c> was called <c>Risk</c> until ADR 0038, which renamed it because the old name promised a
     /// reading of probability the term has never had: it counts actions that came to nothing, and the three
     /// ways that happens — a spell with no legal target, a resolution that fizzled, targets gone before it
-    /// resolved — are all one thing. Its value is **not measured and cannot be**: ADR 0037's sweep found every
-    /// value from 0 to 100 plays the 400 benchmark seeds identically. Two of its three readers sit inside
-    /// <see cref="ActionScorer.Score"/>, which a decision reaches only through <c>Expected</c>, and
-    /// <c>Expected</c> resolves against the board as it stands — where nothing has fizzled and no target has
-    /// dropped — so both are the same zero for every candidate and cancel. The third,
-    /// <c>HeuristicAgent.DecideIntent</c>, is on the decision path but has never been observed to change an
-    /// outcome. Teaching the agent to see the waste at declaration time is ADR 0039's job, and the value is
-    /// worth measuring only after that.
+    /// resolved — are all one thing. **Its value is still not measurable, and that survived the fix.** ADR 0037
+    /// swept it from 0 to 100 and found every value plays the 400 benchmark seeds identically, because the term
+    /// reached no decision. ADR 0039 gave it one — the agent now writes off a target it expects to be dead
+    /// before its action lands, and the waste it avoids falls 42 % — and a fresh sweep at 0, 1, 2, 3 and 5
+    /// reads 78.44, 77.84, 77.25, 79.52 and 77.25: a spread of 2.3, and not monotonic. The reason is that the
+    /// fix works by scoring a doomed target at nothing, not by charging this weight for it, so the weight is
+    /// still paying for almost nothing. 2.0 is kept because no value is better than another.
     /// </para>
     /// </summary>
     public static ScoringWeights Default { get; } = new(Damage: 1.0, Kill: 5.0, Heal: 0.8, Stun: 3.0, Bleed: 0.8, Defense: 0.65, Energy: 0.3, Fizzle: 2.0, Initiative: 2.1);

@@ -294,6 +294,47 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
+    /// ADR 0039: a creature the actor's own team is already committed to killing before this action lands is
+    /// worth nothing to hit, and the action pays the fizzle weight for aiming at it. Without this the bot
+    /// counted the kill twice — once for the ally that takes it, once for itself.
+    /// </summary>
+    [Fact]
+    public void A_target_expected_to_be_dead_before_the_action_lands_is_worth_nothing_and_costs_the_fizzle_weight()
+    {
+        var board = Board(enemyHealth: 3);
+        var action = Strike(One, Three);
+        var doomed = new HashSet<CreatureId> { Three };
+
+        // Three has 3 health, so Strike kills it: three damage and the kill weight.
+        Scorer.Expected(action, board).ShouldBe(3 + 5, 1e-9);
+
+        // Expected dead first, the same action is worth nothing at all and costs its whole target set.
+        Scorer.Expected(action, board, doomed).ShouldBe(-ScoringWeights.Default.Fizzle, 1e-9);
+    }
+
+    /// <summary>
+    /// Only the share aimed at the dead is wasted: a sweep that catches one living enemy and one already
+    /// spoken for keeps what it does to the living one and pays half the weight.
+    /// </summary>
+    [Fact]
+    public void Only_the_share_of_targets_expected_to_be_gone_is_wasted()
+    {
+        var board = Board(enemyHealth: 20);
+        var action = CombatAction.Bind(new CombatIntent(One, TestContent.Strike), [Three, Four]);
+        var doomed = new HashSet<CreatureId> { Four };
+
+        var whole = Scorer.Score(CombatResolution.Resolved(
+            action, [Three, Four], [], false, Energy.Of(0),
+            [new DamageOutcome(Three, 3, Critical: false), new DamageOutcome(Four, 3, Critical: false)]), board);
+        var half = Scorer.Score(CombatResolution.Resolved(
+            action, [Three, Four], [], false, Energy.Of(0),
+            [new DamageOutcome(Three, 3, Critical: false), new DamageOutcome(Four, 3, Critical: false)]), board, doomed);
+
+        whole.ShouldBe(3 + 3, 1e-9);
+        half.ShouldBe(3 - (ScoringWeights.Default.Fizzle / 2), 1e-9, "the hit on Three stands, the hit on Four does not, and half the set is wasted");
+    }
+
+    /// <summary>
     /// A defense debuff is priced like the buff it mirrors — <c>defense x amount x rounds</c> — and not through
     /// <see cref="ActionScorer"/>'s reading of damage prevented (ADR 0035). A permanent one is priced over the
     /// same horizon every permanent condition is, not forever.

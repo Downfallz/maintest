@@ -69,9 +69,19 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
 
                 return true;
             case PlayerOptionsKind.Intent:
+                // Re-read the board for each creature, because the previous one's intent is on it. A player
+                // declares in sequence and knows what they have already declared; the projection has carried
+                // those intents all along (`PlayerBoardState.Intents`) and this loop used to hand every
+                // creature the same board from before the first of them chose (ADR 0039).
                 foreach (var option in Section(options.Intent).Creatures)
                 {
-                    Accept(await commands.SubmitIntent.HandleAsync(new SubmitIntent(matchId, slot, option.Creature, agent.DecideIntent(board, option)), cancellationToken));
+                    var current = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(matchId, slot), cancellationToken);
+                    if (current.IsFailure)
+                    {
+                        return false;
+                    }
+
+                    Accept(await commands.SubmitIntent.HandleAsync(new SubmitIntent(matchId, slot, option.Creature, agent.DecideIntent(current.Value, option)), cancellationToken));
                 }
 
                 return true;
