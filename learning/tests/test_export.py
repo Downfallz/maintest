@@ -10,10 +10,10 @@ from downfall_learning.export import DEFAULT_WEIGHTS, export_wide_csv, read_weig
 
 
 def test_weights_are_written_as_the_engine_reads_them(tmp_path: Path) -> None:
-    path = write_weights(tmp_path / "w" / "weights.json", {"kill": 8, "fizzle": 1.5})
+    path = write_weights(tmp_path / "w" / "weights.json", {"kill": 8, "stun": 1.5})
 
-    assert json.loads(path.read_text()) == {"kill": 8.0, "fizzle": 1.5}
-    assert read_weights(path) == {**DEFAULT_WEIGHTS, "kill": 8.0, "fizzle": 1.5}
+    assert json.loads(path.read_text()) == {"kill": 8.0, "stun": 1.5}
+    assert read_weights(path) == {**DEFAULT_WEIGHTS, "kill": 8.0, "stun": 1.5}
 
 
 def test_the_built_in_weights_file_matches_the_defaults() -> None:

@@ -21,7 +21,9 @@ public sealed record ScoringWeights(
 {
     /// <summary>
     /// The greedy agent's weights: a kill is worth five damage, a stun three, energy kept, two thirds of a
-    /// point per point of damage prevented, two and a bit per point of initiative, a wasted action costs two.
+    /// point per point of damage prevented, two and a bit per point of initiative. There is no term for a
+    /// wasted action: ADR 0040 removed it after four measurements found it priced nothing, and an action that
+    /// comes to nothing now scores nothing rather than being charged on top.
     /// <para>
     /// <c>Defense</c> is not read against <c>Damage</c> point for point, whatever the shared unit suggests:
     /// an attack is paid once and a defensive effect is paid for every round it holds
