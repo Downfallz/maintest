@@ -191,7 +191,7 @@ The terms below are the authoritative entries of the "Learning" section of
   schema versions this side reads), `policy.py`, `report.py` (`training.jsonl`), `export.py` (weights files,
   the wide CSV projection), `train_clone.py`, `train_value.py`, `search_weights.py`, `cli.py`.
 - Three learners, in order of cost:
-  1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the nine weights,
+  1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the eight weights,
      each candidate evaluated by the engine's `evaluate` as `heuristic:<file>` against an opponent on the
      benchmark seeds, the mean score as fitness. No dataset needed.
   2. **Behaviour cloning** (`train-clone`): a linear classifier from observation to action key on a

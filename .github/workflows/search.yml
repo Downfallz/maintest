@@ -1,6 +1,6 @@
 name: Search the agent weights
 
-# One cross-entropy search of the heuristic agent's nine scoring weights on the CI runners
+# One cross-entropy search of the heuristic agent's eight scoring weights on the CI runners
 # (docs/learning/training.md). Ask for a run from a phone; read the table in the run summary.
 #
 # What `apply` does, and what it deliberately does not do. The weights of `Greedy` are the benchmark baseline
