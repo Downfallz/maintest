@@ -1,6 +1,6 @@
 {
   "contentHash": "91da955ca421f913eb0d4168e50480b7f1f574d6cf7440e55470c09eb8d0cd67",
-  "engineVersion": "7aaeb4dab4b3",
+  "engineVersion": "9a3631743306",
   "agentA": "Greedy",
   "agentB": "Greedy",
   "entries": [
@@ -659,7 +659,7 @@
       "reason": "RoundCap",
       "rounds": 30,
       "player1Health": 20,
-      "player2Health": 14
+      "player2Health": 19
     },
     {
       "seed": 192899,
@@ -668,7 +668,7 @@
       "reason": "RoundCap",
       "rounds": 30,
       "player1Health": 20,
-      "player2Health": 14
+      "player2Health": 19
     },
     {
       "seed": 193087,

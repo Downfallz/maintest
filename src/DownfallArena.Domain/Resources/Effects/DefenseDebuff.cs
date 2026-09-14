@@ -14,7 +14,7 @@ public sealed record DefenseDebuff : LastingEffect
 
     public int Amount { get; }
 
-    public static DefenseDebuff Of(int amount, Duration duration, StackingPolicy stacking = WhileLastingDefault)
+    public static DefenseDebuff Of(int amount, Duration duration, StackingPolicy stacking = StackingPolicy.Stack)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(amount, 1);
         return new DefenseDebuff(amount, duration, stacking);

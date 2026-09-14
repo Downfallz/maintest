@@ -280,11 +280,6 @@ each is framed as a change to the engine and its tests, never as a table-only ex
 
 ### Candidate 1. A refreshing Condition discards the new amount
 
-> **Settled (2026-09-14) by [ADR 0040](../adr/0040-a-condition-stacks-except-a-stun.md).** The per-round
-> family stacks; `Stun` keeps `Refresh`, because its only payload is a duration. One application, one token.
-> Measured before and after on the benchmark seeds: the four readings barely move, and the digest changes in
-> one mirrored pair out of 400 matches.
-
 **What the table shows.** `ConditionSet.Apply` finds an existing Condition by effect *type* only
 (`ConditionSet.cs:28`), and `Refresh` restarts the *existing* Effect's Duration and keeps its amount
 (`Condition.cs:46-51`), pinned by `ConditionTests.cs:57-73`. Six Spells in `data/` carry a Bleed and share
@@ -306,11 +301,6 @@ amount and which Duration survive?
 
 ### Candidate 2. Energy has no maximum
 
-> **Settled (2026-09-14) by the maintainer: the engine does not change.** A track that ends is a component
-> problem, not a rule problem — a die, or tokens stacked in a space on the board. What phase 2 owes is the
-> number: the highest Energy actually banked over the benchmark seeds, so the component is sized by evidence
-> rather than by a guess.
-
 **What the table shows.** `Energy` is a `NonNegativeStat` with no ceiling (`Energy.cs:3`) and `GainEnergy`
 never clamps (`Creature.cs:147-160`). A Creature gains 2 a Round from the Rule set, 2 more from `wait`, and
 2 more a Round from `momentum` for 3 Rounds. Nothing spends what it does not need. Over a 30-Round Match a
@@ -327,15 +317,6 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
   hash; it lets Creature kinds differ in how much they can bank, which nothing else in the model does yet.
 
 ### Candidate 3. Permanent stat buffs stack without a bound
-
-> **Open, and this row overstated its case.** The maintainer holds that the line is balanced and that
-> `full_plate` is not available in Round 1. The tree says it is reachable in Round 1 — `Brawler` asks for the
-> three starting Spells, `Warlord` asks for any of `pummel`/`guard`, `full_plate` asks for nothing of its own,
-> and Evolution picks inside a Round are sequential, so the two picks of Round 1 buy `pummel` then
-> `full_plate`, which the Creature's 2 Energy affords. What this row left out is the price: casting it every
-> Round spends that Creature's activation every Round, so it never attacks. Whether the line is degenerate is
-> therefore a measurement (phase 2), not the proof this row claimed. What is not in doubt: nothing bounds the
-> total, so the table needs an unbounded supply of Defense tokens until something does.
 
 **What the table shows.** `DefenseBuff` defaults to `Stack` (`Resources/Effects/DefenseBuff.cs:13`), a
 permanent Duration never counts down (`Condition.cs:34-36`), and nothing caps total Defense above

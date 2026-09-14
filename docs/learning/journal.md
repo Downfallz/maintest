@@ -4,39 +4,6 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-14. A condition stacks, except a stun
-
-- **What changed**: the per-round family (`Bleed`, `Regeneration`, `EnergyRegeneration`) defaults to `Stack`
-  instead of `Refresh` (ADR 0040); `Stun` still refreshes. Engine only: the authored content is untouched and
-  the content hash stays `91da955c`. The benchmark digest is regenerated here.
-- **Why it was wrong**: a refresh kept the *existing* effect and restarted its duration, so the amount that
-  arrived was discarded. `mortal_wound`'s Bleed 4 landing on a creature already carrying `toxic_waves`'
-  Bleed 2 left it bleeding 2, credited to `mortal_wound`. Six of the thirty-six spells carry a Bleed and
-  shared one slot per creature.
-- **Numbers**, 200 benchmark seeds, mirrored, before and after the change, one variable moved:
-
-  | Reading | Before | After |
-  | --- | --- | --- |
-  | Greedy vs Greedy | 49.5 %, 6.3 rounds, entropy 3.29, 13.5 % fizzles, 17.0 % crits | the same, crits 16.9 % |
-  | Greedy vs Random | 98.8 % (97.7 to 99.8), 6.2 rounds | 98.5 % (97.3 to 99.7), 6.1 rounds |
-  | Explore:0.2 mirror | 12.4 health, entropy 4.06, 11.8 % fizzles | the same, entropy 4.05 |
-  | `search-2` vs Greedy | 20.0 % (15.7 to 24.3), 10.0 rounds, 12.8 % by the cap | 20.7 % (16.3 to 25.2), 10.5 rounds, 15.2 % by the cap |
-
-- **Digest**: `benchmarks/91da955ca421f913eb0d4168e50480b7f1f574d6cf7440e55470c09eb8d0cd67.json`, greedy
-  against greedy on the 200 seeds, mirrored, under the default rule set. It moves in exactly one mirrored
-  pair out of 400 matches: seed 192899 still ends at the round cap for player 1, with the loser at 14 health
-  instead of 19 — two bleeds that used to collapse into one.
-- **What else moved one version behind**: the policies under `models/` and their `evaluation.json` were
-  measured on the pre-0040 engine. Their numbers still stand for the engine they were played on; comparing
-  one of them against a run made after this entry compares two axes at once (ADR 0013). Re-evaluate before
-  reading such a pair.
-- **Why it matters**: the bots barely notice, which is the point. The correctness of the rule was not visible
-  in the win rates, and it cost the catalogue's strongest bleed most of its damage. The one reading that
-  moves, the tuned heuristic against greedy, moves because regenerations stack too: the side that heals
-  survives longer, so more matches reach the cap. The change came from the board game translation
-  (`docs/tabletop/plan.md`), where a condition is a token and the cheapest rule is that an effect you apply
-  is a token you place.
-
 ## 2026-09-14. The bot stopped aiming at creatures that will already be dead
 
 - **What changed**: the agent writes off a target it expects to be dead before its action lands (ADR 0039).

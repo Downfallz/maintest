@@ -59,23 +59,16 @@ including the content hash.
 | `Heal` | `amount` | instant |
 | `EnergyGain` | `amount` | instant |
 | `EnergyDrain` | `amount` | instant; takes at most the energy the target has |
-| `Bleed` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Stack` |
-| `Regeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Stack`; heals before bleeds tick |
-| `EnergyRegeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Stack`; gives energy at the start of each round, on top of the round's own gain |
+| `Bleed` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
+| `Regeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh`; heals before bleeds tick |
+| `EnergyRegeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh`; gives energy at the start of each round, on top of the round's own gain |
 | `Stun` | `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
 | `DefenseBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 | `DefenseDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; subtracts from the same total the buff adds to, floored at zero |
 | `InitiativeBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; adds to the same total the debuff subtracts from, floored at zero |
 | `InitiativeDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 
-`stacking` is one of `Stack`, `Refresh`, `Ignore`. Leave it out and the family default above applies, which
-is what every spell in `data/` does today (ADR 0040). A `Refresh` restarts the condition of its kind that is
-closest to expiring, and a permanent one only when there is nothing else — a creature can carry several of a
-kind once something stacked them.
-
-The content studio writes `stacking` explicitly on every lasting effect it authors, so a spell written there
-says today's default out loud and keeps it if the default ever moves. Remove the key by hand to follow the
-family instead.
+`stacking` is one of `Stack`, `Refresh`, `Ignore`.
 
 ## Effects on the caster
 

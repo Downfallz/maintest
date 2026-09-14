@@ -19,15 +19,14 @@ public sealed class EffectTests
     }
 
     [Fact]
-    public void A_bleed_stacks_by_default_and_a_stun_refreshes()
+    public void Bleed_and_stun_last_a_number_of_rounds_and_refresh_by_default()
     {
         var bleed = Bleed.Of(2, rounds: 3);
         var stun = Stun.For(1);
 
         bleed.AmountPerRound.ShouldBe(2);
         bleed.Duration.ShouldBe(Duration.OfRounds(3));
-        bleed.Stacking.ShouldBe(StackingPolicy.Stack);
-        Bleed.Of(1, 2, StackingPolicy.Refresh).Stacking.ShouldBe(StackingPolicy.Refresh);
+        bleed.Stacking.ShouldBe(StackingPolicy.Refresh);
         stun.Duration.Rounds.ShouldBe(1);
         stun.Stacking.ShouldBe(StackingPolicy.Refresh);
 
@@ -38,14 +37,14 @@ public sealed class EffectTests
 
     /// <summary>ADR 0019: the healing counterpart of a bleed, and the same shape.</summary>
     [Fact]
-    public void Regeneration_lasts_a_number_of_rounds_and_stacks_by_default()
+    public void Regeneration_lasts_a_number_of_rounds_and_refreshes_by_default()
     {
         var regeneration = Regeneration.Of(2, rounds: 3);
 
         regeneration.AmountPerRound.ShouldBe(2);
         regeneration.Duration.ShouldBe(Duration.OfRounds(3));
-        regeneration.Stacking.ShouldBe(StackingPolicy.Stack);
-        Regeneration.Of(1, 2, StackingPolicy.Refresh).Stacking.ShouldBe(StackingPolicy.Refresh);
+        regeneration.Stacking.ShouldBe(StackingPolicy.Refresh);
+        Regeneration.Of(1, 2, StackingPolicy.Stack).Stacking.ShouldBe(StackingPolicy.Stack);
 
         Should.Throw<ArgumentOutOfRangeException>(() => Regeneration.Of(0, 3));
         Should.Throw<ArgumentOutOfRangeException>(() => Regeneration.Of(1, 0));
@@ -53,14 +52,14 @@ public sealed class EffectTests
 
     /// <summary>ADR 0020: the energy counterpart of a regeneration, and the same shape as one.</summary>
     [Fact]
-    public void Energy_regeneration_lasts_a_number_of_rounds_and_stacks_by_default()
+    public void Energy_regeneration_lasts_a_number_of_rounds_and_refreshes_by_default()
     {
         var energyRegeneration = EnergyRegeneration.Of(2, rounds: 3);
 
         energyRegeneration.AmountPerRound.ShouldBe(2);
         energyRegeneration.Duration.ShouldBe(Duration.OfRounds(3));
-        energyRegeneration.Stacking.ShouldBe(StackingPolicy.Stack);
-        EnergyRegeneration.Of(1, 2, StackingPolicy.Refresh).Stacking.ShouldBe(StackingPolicy.Refresh);
+        energyRegeneration.Stacking.ShouldBe(StackingPolicy.Refresh);
+        EnergyRegeneration.Of(1, 2, StackingPolicy.Stack).Stacking.ShouldBe(StackingPolicy.Stack);
 
         Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(0, 3));
         Should.Throw<ArgumentOutOfRangeException>(() => EnergyRegeneration.Of(-1, 3));

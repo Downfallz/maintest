@@ -58,7 +58,7 @@ public sealed class ArtifactJsonTests
         bleed.GetProperty("kind").GetString().ShouldBe("Bleed");
         bleed.GetProperty("amountPerRound").GetInt32().ShouldBe(2);
         bleed.GetProperty("duration").GetProperty("rounds").GetInt32().ShouldBe(3);
-        bleed.GetProperty("stacking").GetString().ShouldBe("Stack");
+        bleed.GetProperty("stacking").GetString().ShouldBe("Refresh");
         effect.RootElement.GetProperty("remainingRounds").GetInt32().ShouldBe(3);
 
         using var list = JsonDocument.Parse(JsonSerializer.Serialize(outcomes, ArtifactJson.LineOptions));

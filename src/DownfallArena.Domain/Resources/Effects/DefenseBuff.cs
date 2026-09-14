@@ -10,7 +10,7 @@ public sealed record DefenseBuff : LastingEffect
 
     public int Amount { get; }
 
-    public static DefenseBuff Of(int amount, Duration duration, StackingPolicy stacking = WhileLastingDefault)
+    public static DefenseBuff Of(int amount, Duration duration, StackingPolicy stacking = StackingPolicy.Stack)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(amount, 1);
         return new DefenseBuff(amount, duration, stacking);

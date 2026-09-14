@@ -56,7 +56,7 @@ public sealed class ConditionTests
     }
 
     [Fact]
-    public void A_second_bleed_runs_beside_the_first_instead_of_replacing_it()
+    public void Refreshing_effects_restart_the_existing_duration_and_keep_its_amount()
     {
         var creature = Spawn();
         var first = creature.Apply(Bleed.Of(1, rounds: 2)).ShouldNotBeNull();
@@ -64,61 +64,13 @@ public sealed class ConditionTests
         creature.TickConditions();
         first.RemainingRounds.ShouldBe(1);
 
-        var second = creature.Apply(Bleed.Of(5, rounds: 2)).ShouldNotBeNull();
-
-        second.ShouldNotBeSameAs(first);
-        creature.Conditions.Count.ShouldBe(2);
-        first.RemainingRounds.ShouldBe(1);
-        second.RemainingRounds.ShouldBe(2);
-    }
-
-    [Fact]
-    public void Refreshing_effects_restart_the_existing_duration()
-    {
-        var creature = Spawn();
-        var first = creature.Apply(Stun.For(2)).ShouldNotBeNull();
-        creature.TickConditions();
-        creature.TickConditions();
-        first.RemainingRounds.ShouldBe(1);
-
-        var refreshed = creature.Apply(Stun.For(2));
+        var refreshed = creature.Apply(Bleed.Of(5, rounds: 2));
 
         refreshed.ShouldBeSameAs(first);
         creature.Conditions.ShouldHaveSingleItem().RemainingRounds.ShouldBe(2);
+        ((Bleed)creature.Conditions[0].Effect).AmountPerRound.ShouldBe(1);
         creature.TickConditions();
         first.RemainingRounds.ShouldBe(2);
-    }
-
-    [Fact]
-    public void A_refresh_keeps_the_amount_that_is_there_and_takes_the_new_cast_as_its_source()
-    {
-        var creature = Spawn();
-        var source = new ConditionSource(CreatureId.From(2), SpellId.Parse("spell:toxic_waves:v1"));
-        var first = creature.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Refresh), source).ShouldNotBeNull();
-
-        var refreshed = creature.Apply(Bleed.Of(5, rounds: 2, StackingPolicy.Refresh), new ConditionSource(CreatureId.From(3), SpellId.Parse("spell:mortal_wound:v1")));
-
-        refreshed.ShouldBeSameAs(first);
-        creature.Conditions.ShouldHaveSingleItem();
-        ((Bleed)first.Effect).AmountPerRound.ShouldBe(1, "a refresh restarts what is there rather than replacing it");
-        first.Source?.Spell.ShouldBe(SpellId.Parse("spell:mortal_wound:v1"), "the cast that decided how long it runs owns what it does (ADR 0027)");
-    }
-
-    [Fact]
-    public void A_refresh_restarts_the_condition_of_its_kind_closest_to_expiring()
-    {
-        var creature = Spawn();
-        var longer = creature.Apply(Bleed.Of(1, rounds: 3)).ShouldNotBeNull();
-        var shorter = creature.Apply(Bleed.Of(1, rounds: 2)).ShouldNotBeNull();
-        creature.TickConditions();
-        creature.TickConditions();
-
-        var refreshed = creature.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Refresh));
-
-        refreshed.ShouldBeSameAs(shorter);
-        shorter.RemainingRounds.ShouldBe(2);
-        longer.RemainingRounds.ShouldBe(2);
-        creature.Conditions.Count.ShouldBe(2);
     }
 
     [Fact]

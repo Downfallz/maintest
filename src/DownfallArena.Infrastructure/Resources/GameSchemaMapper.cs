@@ -142,7 +142,7 @@ public static class GameSchemaMapper
     /// <summary>Bleed and Regeneration: an amount every round, for a number of rounds.</summary>
     private static Effect? PerRound(EffectDto dto, string context, List<string> problems, Func<int, int, StackingPolicy, Effect> create)
     {
-        var stacking = Stacking(dto, context, problems, LastingEffect.PerRoundDefault);
+        var stacking = Stacking(dto, context, problems, StackingPolicy.Refresh);
         if (Rounds(dto, context, problems) is not { } rounds || Require(dto.AmountPerRound, "amountPerRound", context, problems) is not { } amount)
         {
             return null;
@@ -154,14 +154,14 @@ public static class GameSchemaMapper
     /// <summary>Stun: a number of rounds and nothing else.</summary>
     private static Effect? ForRounds(EffectDto dto, string context, List<string> problems, Func<int, StackingPolicy, Effect> create)
     {
-        var stacking = Stacking(dto, context, problems, LastingEffect.ForRoundsDefault);
+        var stacking = Stacking(dto, context, problems, StackingPolicy.Refresh);
         return Rounds(dto, context, problems) is { } rounds ? Guard(() => create(rounds, stacking), context, problems) : null;
     }
 
     /// <summary>DefenseBuff, DefenseDebuff, InitiativeBuff and InitiativeDebuff: an amount for a duration, which may be permanent.</summary>
     private static Effect? WhileLasting(EffectDto dto, string context, List<string> problems, Func<int, Duration, StackingPolicy, Effect> create)
     {
-        var stacking = Stacking(dto, context, problems, LastingEffect.WhileLastingDefault);
+        var stacking = Stacking(dto, context, problems, StackingPolicy.Stack);
         if (Lasting(dto, context, problems) is not { } duration || Require(dto.Amount, AmountField, context, problems) is not { } amount)
         {
             return null;
