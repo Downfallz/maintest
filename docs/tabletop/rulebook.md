@@ -97,7 +97,8 @@ one of them in a sentence.
 
 Three numbers come from the Creature definition rather than the Rule set, and are printed on the Creature
 board: starting Health, starting Energy, starting Base initiative. The reference Creature definition
-(`data/Creatures/main.v1.json`) is Health 20, Energy 0, Defense 0, Base initiative 5.
+(`data/Creatures/main.v1.json`) is Health 20, Energy 0, Defense 0, Base initiative 5. Its own Critical
+chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's chance off the card alone.
 
 **Every worked example in this book uses the reference column and the reference Creature definition.**
 
@@ -210,11 +211,11 @@ A Creature carrying two Conditions of the same kind takes both: add them up and 
 Healing goes before bleeding on purpose: a Regeneration can carry a Creature through a Bleed that would
 otherwise have killed it. Doing it the other way round kills Creatures the rules keep alive.
 
-> **Example.** Creature 5 is at 2 Health, carries a Regeneration 3 a Round from **Healing Screech**, and a
-> Bleed 2 a Round from **Toxic Waves**. Its Defense rails read buffs 3, debuffs 0.
-> Energy regeneration: none. Regeneration: heal 3, to 5 Health. Bleed: 2 damage, and its Defense of 3 does
+> **Example.** Creature 5 is at 1 Health, carries a Regeneration 3 a Round from **Healing Screech**, and a
+> Bleed 1 a Round from **Toxic Waves**. Its Defense rails read buffs 3, debuffs 0.
+> Energy regeneration: none. Regeneration: heal 3, to 4 Health. Bleed: 1 damage, and its Defense of 3 does
 > not apply, to 3 Health. Creature 5 survives the Round.
-> In the other order it would have taken 2 from 2 Health, died at 0, and never been healed.
+> In the other order it would have taken 1 from 1 Health, died at 0, and never been healed.
 
 ### 5.3 Evolution
 
@@ -342,7 +343,7 @@ markers stay there until that cast resolves.
 **A Spell with no legal target at all is revealed with no target markers.** It fizzles later. The timeline
 always moves on.
 
-> **Example.** Creature 3 reveals **Meteor**: `Up to 3 enemies`, `Damage 3`. All three enemies are alive.
+> **Example.** Creature 3 reveals **Meteor**: `Up to 3 enemies`, `Damage 2`. All three enemies are alive.
 > Creature 3 may place one, two or three markers. Placing one is legal and sometimes right: Meteor's damage is
 > small, and a target already carrying a Defense buff will take nothing from it.
 > Creature 6 then reveals **Guard**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2 rounds`. Ally
@@ -469,7 +470,7 @@ with this content and these components.
 still paid. The action Fizzles only when **no** target remains.
 
 > **Example.** Creature 2 revealed **Toxic Waves** on Creatures 4, 5 and 6: cost 3, `Damage 3` and
-> `Bleed 2 a round, 1 round` on each. Before its slot resolves, Creature 1 kills Creature 6.
+> `Bleed 1 a round, 1 round` on each. Before its slot resolves, Creature 1 kills Creature 6.
 > At resolution, Creature 6's marker comes off. Creature 2 still pays 3 Energy, and Creatures 4 and 5 each
 > take the damage and each get a Bleed token in their `new` lane.
 > If Creatures 4 and 5 had also died first, the action would have Fizzled and Creature 2 would have paid
@@ -550,8 +551,9 @@ does not reshuffle the Round it landed in.
 **Result.** Roll the die named in the setup table, **once for the whole cast**, and compare it to the
 threshold the card prints for that die. On a hit, the cast is critical.
 
-**A Creature's own Critical chance is zero.** The chance printed on the card is the chance rolled: you add
-nothing to it. A Spell printed at zero never rolls at all — fifteen of the thirty-six never touch the die.
+**A Creature's own Critical chance is zero** (ADR 0042). The chance printed on the card is the chance
+rolled: you add nothing to it. A Spell printed at zero never rolls at all — fifteen of the thirty-six never
+touch the die.
 
 A critical multiplies, by the setup table's critical multiplier, dropping any fraction:
 
@@ -569,7 +571,7 @@ target's total Defense, then floor at zero. Doing it the other way round gives a
 the example in [5.8](#58-action-resolution).
 
 > **Example, a Heal.** Creature 2 casts **Restorative Gush** on Creature 3: `One ally`, `Heal 7`,
-> `Critical 50%`. Creature 3 is at 6 of 20 Health. The roll hits: 7 x 2 = 14, and Creature 3 goes to 20. Two
+> `Critical 50%`. Creature 3 is at 8 of 20 Health. The roll hits: 7 x 2 = 14, and Creature 3 goes to 20. Two
 > of the fourteen are wasted, because a Heal is capped by the Health missing.
 > **Example, what is not multiplied.** Creature 5 casts **Hateful Sacrifice** on Creature 1: `Damage 10` and
 > `Caster: Damage 4`, `Critical 50%`. The roll hits. Creature 1 takes 10 x 2 = 20, less its total Defense.
@@ -595,9 +597,9 @@ A **Condition** is a lasting Effect attached to a Creature, with an amount and a
 counts down at Cleanup, and the first countdown after it is applied does not count
 ([6.5](#65-the-first-countdown-after-an-application-does-not-count)).
 
-**A Condition stacks. One application is one token.** The only exception is a Stun, which **refreshes**: a
-second Stun adds no token and restarts the one already there, because a Stun's only payload is time and a
-Creature cannot lose the same Round twice.
+**A Condition stacks. One application is one token** (ADR 0041). The only exception is a Stun, which
+**refreshes**: a second Stun adds no token and restarts the one already there, because a Stun's only payload
+is time and a Creature cannot lose the same Round twice.
 
 | Condition | What it does | When it does it | Second one on the same Creature | Where the token sits |
 | --- | --- | --- | --- | --- |
@@ -680,6 +682,11 @@ Every rule in this book is one of two things: a rule in
 [`docs/domain/game-rules.md`](../domain/game-rules.md), or a value in the setup table. There is no third
 category, and no rule here is new.
 
+The trace was re-run against the specification and `data/` on 2026-09-14, after ADR 0041 and ADR 0042 landed.
+Every row below now names the specification or a declared tabletop entry; none of them is owed to a rule the
+plan had only announced. **Phase 4's done-condition — every rule traces to `docs/domain/game-rules.md` or to a
+declared tabletop entry — is therefore checkable line by line, and it checks out.**
+
 | This book | The specification |
 | --- | --- |
 | [Part 1](#part-1-what-you-are-trying-to-do), the Win condition | "Match lifecycle", ADR 0011 |
@@ -697,8 +704,8 @@ category, and no rule here is new.
 | [5.8](#58-action-resolution) step 6, the `Caster:` line, and its Damage against the **caster's own** total Defense | ADR 0031. `game-rules.md` states the once-per-cast and the never-multiplied halves but is silent on the Defense; ADR 0031's "the outcome goes through the same rules as any other" is where that comes from |
 | [5.9](#59-cleanup), [6.5](#65-the-first-countdown-after-an-application-does-not-count) | "End of round", 1: `Cleanup` |
 | [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`, ADR 0011 |
-| [7.1](#71-the-eight-conditions-and-their-timing), the stacking column | ADR 0041, as given by [plan.md](plan.md) phase 2 |
-| [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, as given by [plan.md](plan.md) phase 2 |
+| [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 3: `ActionResolution`, the lasting-effect bullet; ADR 0041 |
+| [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 3 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
 
 Four presentation rules are the table's and are declared as such, per
 [plan.md](plan.md)'s "one engine, one truth":

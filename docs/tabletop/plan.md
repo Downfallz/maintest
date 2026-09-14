@@ -5,7 +5,7 @@ becomes an ADR before any component or rule text depends on it.
 
 ## Why
 
-The engine in `src/` is a complete, deterministic implementation of a two-player tactical game: nine
+The engine in `src/` is a complete, deterministic implementation of a two-player tactical game: ten
 sub-phases per round (ADR 0010), a closed effect taxonomy (ADR 0012), a talent tree, hidden intents, and a
 win condition (ADR 0011). The rules are written down twice already, in `docs/domain/game-rules.md` and in the
 code that enforces them.
