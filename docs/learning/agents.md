@@ -94,8 +94,8 @@ damage spread elsewhere.
 | energy | 0.3 | Just under a third of a damage per point of energy — kept for the next round, handed to an ally, regenerated over rounds, or taken off an enemy. It was hand-set at 0.2 in phase L5, when the only thing it priced was energy *kept* and it was meant as no more than a tie-breaker towards the cheaper spell. ADR 0020, 0026 and 0035 gave it three more jobs without ever re-measuring it, and ADR 0037 swept it: at 0.0 the first mover wins 0.720 of the mirror, so the term was never a tie-breaker at all. 0.3 is the middle of the step 0.2..0.4, whose right edge breaks hard (0.5 reads 108.33 on the objective with the exploiter at 0.790). Read what it buys precisely: **the mirror's first-mover share, not a stronger agent** — `player1WinShare` goes 0.575 to 0.510, and a 0.3 agent against a 0.2 one is a dead heat. |
 | initiative | 2.1 | Two and a bit per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. ADR 0018 set it to 0.5 on the reasoning that initiative is indirect the way defense is, and said in the same breath that it was a guess. ADR 0032 measured it instead, by sweeping it alone on fixed content, and the reasoning was backwards: a point of initiative is bought once and kept for the match, in a game the first mover was winning 64 % of. At 2.1 that reading is 0.500. The sweep is in that ADR; 2.1 sits in the middle of its step rather than on an edge. Since ADR 0026 a debuff also multiplies by the rounds it lasts while the unlock's permanent gain does not, so a two-round debuff outvalues a permanent gain of the same size; the tension is recorded in that ADR and is now four times larger. |
 
-To feel out what one of them does, the content studio's run panel can play a heuristic agent from nine boxes
-instead of a file: it writes what you set as `weights.json` next to the run, so the result keeps the weights it
+To feel out what one of them does, the content studio's run panel can play a heuristic agent from a box per
+weight instead of a file: it writes what you set as `weights.json` next to the run, so the result keeps the weights it
 was played with, and two such runs compare side by side (`studio/README.md`). That is a way to look, not a way
 to tune — tuning is `search-weights` below.
 
@@ -112,7 +112,7 @@ were good and are now measured rather than assumed. `damage` is not swept, becau
 alone is the same experiment as scaling the other eight the other way. The one thing those five sweeps did
 turn up is that one of the five priced nothing at all: ADR 0039 gave it a decision to reach and it still
 priced nothing, so ADR 0040 removed it and the table is eight. `ScoringWeights.Default` is the single source;
-`learning/weights/greedy.json` holds the same nine numbers so `heuristic:<file>` and `greedy` start from the
+`learning/weights/greedy.json` holds the same eight numbers so `heuristic:<file>` and `greedy` start from the
 same place, and a test on each side of the repository pins the two together.
 
 To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
@@ -122,7 +122,7 @@ on seeds it never saw, committed to be played and compared, not to be the baseli
 entry says what it buys and what it costs). Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
-only moves when the new values actually change a decision: scaling all nine by the same positive factor
+only moves when the new values actually change a decision: scaling all eight by the same positive factor
 leaves every ranking, and the digest, untouched. A change that does move an outcome fails the benchmark check
 until `benchmark --write` regenerates the digest.
 

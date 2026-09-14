@@ -833,7 +833,7 @@ def _max_targets(document: Mapping[str, object]) -> int:
 
 
 def load_weights(path: Path | None = None) -> dict[str, float]:
-    """The nine agent weights. Unreadable or missing, the reading that needs them is skipped, not guessed."""
+    """The agent weights. Unreadable or missing, the reading that needs them is skipped, not guessed."""
     try:
         body = json.loads(Path(path or WEIGHTS_FILE).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):

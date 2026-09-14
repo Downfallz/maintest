@@ -172,10 +172,10 @@ def _engine():
 
 
 def weight_named(argument: str) -> str:
-    """The weight this argument names, as :data:`WEIGHT_NAMES` spells it, or a refusal listing the nine.
+    """The weight this argument names, as :data:`WEIGHT_NAMES` spells it, or a refusal listing them all.
 
     The name reaches a regular expression and a JSON key, so what travels on is the project's own constant
-    rather than the string that was typed: an argument that is not one of the nine never gets that far. It
+    rather than the string that was typed: an argument that is not one of those names never gets that far. It
     also turns `sweep-weight.py enrgy 0.3` into an answer instead of "'Enrgy:' appears 0 times".
     """
     for known in WEIGHT_NAMES:

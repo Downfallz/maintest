@@ -33,8 +33,8 @@ public sealed class HeuristicAgentTests
 
     /// <summary>
     /// ADR 0039. Creature Two acts first on the timeline and has already declared Strike, which kills the one
-    /// enemy left. Hitting a corpse is worth nothing and costs the fizzle weight, so One spends its round on
-    /// itself instead. Both readings this needs are public and were already on the board state: the timeline
+    /// enemy left. Hitting a corpse scores nothing at all (ADR 0040), so Guard wins and One spends its round
+    /// on itself instead. Both readings this needs are public and were already on the board state: the timeline
     /// says who acts first, and the player's own intents say what it has declared.
     /// </summary>
     [Fact]
