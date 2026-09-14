@@ -46,3 +46,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0038](0038-a-wasted-action-is-a-fizzle-whatever-wasted-it.md) | A wasted action is a fizzle, whatever wasted it | Accepted |
 | [0039](0039-the-bot-binds-its-targets-on-a-board-that-has-not-happened-yet.md) | The bot binds its targets on a board that has not happened yet | Accepted |
 | [0040](0040-remove-the-fizzle-weight.md) | Remove the fizzle weight | Accepted |
+| [0041](0041-a-condition-stacks-unless-it-is-a-stun.md) | A Condition stacks unless it is a Stun | Accepted |
+| [0042](0042-a-creature-has-no-base-critical-chance.md) | A Creature has no base critical chance | Accepted |

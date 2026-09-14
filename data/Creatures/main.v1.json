@@ -6,7 +6,7 @@
   "baseEnergy": 0,
   "baseDefense": 0,
   "baseInitiative": 5,
-  "baseCriticalChance": 0.05,
+  "baseCriticalChance": 0,
   "talentTreeId": "talent-tree:base_creature:v1",
   "startingSpellIds": [
     "spell:basic_attack",

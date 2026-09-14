@@ -59,10 +59,10 @@ including the content hash.
 | `Heal` | `amount` | instant |
 | `EnergyGain` | `amount` | instant |
 | `EnergyDrain` | `amount` | instant; takes at most the energy the target has |
-| `Bleed` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
-| `Regeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh`; heals before bleeds tick |
-| `EnergyRegeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Refresh`; gives energy at the start of each round, on top of the round's own gain |
-| `Stun` | `durationRounds`, `stacking?` | lasting, default stacking `Refresh` |
+| `Bleed` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Stack` |
+| `Regeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Stack`; heals before bleeds tick |
+| `EnergyRegeneration` | `amountPerRound`, `durationRounds`, `stacking?` | lasting, default stacking `Stack`; gives energy at the start of each round, on top of the round's own gain |
+| `Stun` | `durationRounds`, `stacking?` | lasting, default stacking `Refresh` — the one kind that does not stack (ADR 0041) |
 | `DefenseBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 | `DefenseDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; subtracts from the same total the buff adds to, floored at zero |
 | `InitiativeBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; adds to the same total the debuff subtracts from, floored at zero |
