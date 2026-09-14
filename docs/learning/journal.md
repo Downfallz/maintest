@@ -17,13 +17,18 @@ first.
 - **The reading**: `RevealedActions` holds the slots ahead of this one, in timeline order, with targets
   bound, for **both** teams — binding order is timeline order, and a revealed action is public. The agent
   replays them against a board it carries forward, on the plain roll, and writes off who does not survive.
-- **Result**: `AllTargetsInvalid` **464 to 268**, fizzle rate **0.175 to 0.124**. `exploit` — the searched
-  agent `search-2`, external and unchanged — falls **0.198 to 0.128**, which is the independent confirmation
-  that the baseline really is stronger. `skill` holds at 0.985.
-- **And the content reads much worse against it.** Objective **49.32 to 77.25**, almost all of it two content
-  targets: `tierWinSpread` 0.397 to 0.643 (24 points) and `player1WinShare` 0.510 to 0.640 (10). A bot that
-  wastes fewer actions makes combat more efficient, matches end sooner, and going first decides more. That is
-  a bill the next content pass inherits, as ADR 0032 left one, and scores either side do not compare.
+- **Result**: `AllTargetsInvalid` **464 to 206**, total fizzles 1017 to 816. **And it does not play better.**
+  Against `random` — the one opponent a code change does not move — `skill` reads 0.985 to **0.988**, flat.
+- **A claim this entry first made and had to withdraw**: that `exploit` falling 0.198 to 0.128 proved the
+  baseline stronger. It does not. `exploit`'s attacker is `heuristic:search-2.json`, whose *weights file* is
+  unchanged but which is still a `HeuristicAgent`, so a **code** change moves both sides of that evaluation.
+  It is an independent reading for a weight change, which is how ADR 0032 used it, and not for this one.
+  Once the over-prediction below was fixed it read 0.200 anyway.
+- **And the content reads much worse against it.** Objective **49.32 to 83.77** and `player1WinShare` 0.510
+  to **0.690**, from the centre of its band to well outside. Matches end sooner (7.8 rounds to 6.3) and going
+  first decides more. Scores either side do not compare.
+- **The assumption that broke**: the fizzle rate is not a measure of playing well. It falls by a quarter and
+  nothing that measures strength moves with it.
 - **Raising `initiative` does not buy the share back**, which was the obvious lever since ADR 0032 used it
   for this exact reading: 3.0 gives 0.525 and collapses the agent (`skill` 0.985 to 0.730, `exploit` 0.128 to
   0.525); 4.0 runs matches to the round cap. No price fixes the share and keeps the agent.
@@ -42,6 +47,12 @@ first.
   78.44, 77.84, 77.25, 79.52, 77.25, a spread of 2.3 and not monotonic. The fix works by scoring a doomed
   target at nothing, not by charging the weight. And `NotEnoughEnergy` rose 12 to 30, small against a fall of
   161, and not understood.
+- **The review caught the reason it looked better than it was.** The replay carried health forward and
+  nothing else, while `ResolutionRules.Resolve` rechecks stun, energy and defense: it resolved actions that
+  would not have happened and killed creatures a heal or a defense buff would have saved, so the actor wrote
+  off living creatures and picked worse targets on purpose. The doc comment asserted the heal case was
+  harmless — "it can only keep a creature alive" — which is exactly the wrong direction. Fixed by stopping
+  the replay where it would have to guess, and **that is what removed the apparent gain**.
 - **Verified**: build, tests, format, ruff, pytest, studio tests, digest regenerated and re-verified.
 
 ## 2026-09-13. `risk` becomes `fizzle`, and nothing else changes
