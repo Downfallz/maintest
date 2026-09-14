@@ -90,6 +90,38 @@ public sealed class ConditionTests
     }
 
     [Fact]
+    public void A_refresh_keeps_the_amount_that_is_there_and_takes_the_new_cast_as_its_source()
+    {
+        var creature = Spawn();
+        var source = new ConditionSource(CreatureId.From(2), SpellId.Parse("spell:toxic_waves:v1"));
+        var first = creature.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Refresh), source).ShouldNotBeNull();
+
+        var refreshed = creature.Apply(Bleed.Of(5, rounds: 2, StackingPolicy.Refresh), new ConditionSource(CreatureId.From(3), SpellId.Parse("spell:mortal_wound:v1")));
+
+        refreshed.ShouldBeSameAs(first);
+        creature.Conditions.ShouldHaveSingleItem();
+        ((Bleed)first.Effect).AmountPerRound.ShouldBe(1, "a refresh restarts what is there rather than replacing it");
+        first.Source?.Spell.ShouldBe(SpellId.Parse("spell:mortal_wound:v1"), "the cast that decided how long it runs owns what it does (ADR 0027)");
+    }
+
+    [Fact]
+    public void A_refresh_restarts_the_condition_of_its_kind_closest_to_expiring()
+    {
+        var creature = Spawn();
+        var longer = creature.Apply(Bleed.Of(1, rounds: 3)).ShouldNotBeNull();
+        var shorter = creature.Apply(Bleed.Of(1, rounds: 2)).ShouldNotBeNull();
+        creature.TickConditions();
+        creature.TickConditions();
+
+        var refreshed = creature.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Refresh));
+
+        refreshed.ShouldBeSameAs(shorter);
+        shorter.RemainingRounds.ShouldBe(2);
+        longer.RemainingRounds.ShouldBe(2);
+        creature.Conditions.Count.ShouldBe(2);
+    }
+
+    [Fact]
     public void Ignored_effects_do_not_apply_while_one_is_active()
     {
         var creature = Spawn();

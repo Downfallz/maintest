@@ -28,7 +28,7 @@ public sealed class UpkeepRulesTests
         var creatures = Arena.FourCreatures();
         var knight = Arena.Find(creatures, Arena.Knight);
         knight.Apply(Bleed.Of(2, rounds: 2));
-        knight.Apply(Bleed.Of(3, rounds: 2, StackingPolicy.Stack));
+        knight.Apply(Bleed.Of(3, rounds: 2));
         knight.Apply(DefenseBuff.Of(10, Duration.OfRounds(2)));
         var ghoul = Arena.Find(creatures, Arena.Ghoul);
         ghoul.Apply(Bleed.Of(1, rounds: 1));
@@ -49,7 +49,7 @@ public sealed class UpkeepRulesTests
         var knight = Arena.Find(creatures, Arena.Knight);
         knight.TakeDamage(10);
         knight.Apply(Regeneration.Of(2, rounds: 2));
-        knight.Apply(Regeneration.Of(3, rounds: 2, StackingPolicy.Stack));
+        knight.Apply(Regeneration.Of(3, rounds: 2));
         var archer = Arena.Find(creatures, Arena.Archer);
         archer.TakeDamage(1);
         archer.Apply(Regeneration.Of(9, rounds: 1));
@@ -115,7 +115,7 @@ public sealed class UpkeepRulesTests
         var creatures = Arena.FourCreatures();
         var knight = Arena.Find(creatures, Arena.Knight);
         knight.Apply(EnergyRegeneration.Of(2, rounds: 2));
-        knight.Apply(EnergyRegeneration.Of(3, rounds: 2, StackingPolicy.Stack));
+        knight.Apply(EnergyRegeneration.Of(3, rounds: 2));
         var wraith = Arena.Find(creatures, Arena.Wraith);
         wraith.Apply(EnergyRegeneration.Of(1, rounds: 2));
 
@@ -239,7 +239,7 @@ public sealed class UpkeepRulesTests
         var creatures = Arena.FourCreatures();
         var ghoul = Arena.Find(creatures, Arena.Ghoul);
         ghoul.Apply(Bleed.Of(1, rounds: 2), new ConditionSource(Arena.Knight, Arena.Guard));
-        ghoul.Apply(Bleed.Of(2, rounds: 2, StackingPolicy.Stack), new ConditionSource(Arena.Archer, Arena.Strike));
+        ghoul.Apply(Bleed.Of(2, rounds: 2), new ConditionSource(Arena.Archer, Arena.Strike));
         ghoul.TakeDamage(ghoul.Health.Value - 1);
 
         var ticks = UpkeepRules.OngoingEffects(creatures);
@@ -275,7 +275,7 @@ public sealed class UpkeepRulesTests
         var ghoul = Arena.Find(creatures, Arena.Ghoul);
         var source = new ConditionSource(Arena.Knight, Arena.Guard);
         ghoul.Apply(Bleed.Of(1, rounds: 2), source);
-        ghoul.Apply(Bleed.Of(1, rounds: 2, StackingPolicy.Stack), source);
+        ghoul.Apply(Bleed.Of(1, rounds: 2), source);
         ghoul.TakeDamage(ghoul.Health.Value - 1);
 
         var ticks = UpkeepRules.OngoingEffects(creatures);
@@ -296,7 +296,7 @@ public sealed class UpkeepRulesTests
         var creatures = Arena.FourCreatures();
         var ghoul = Arena.Find(creatures, Arena.Ghoul);
         ghoul.Apply(Bleed.Of(1, rounds: 2), new ConditionSource(Arena.Knight, Arena.Guard));
-        ghoul.Apply(Bleed.Of(3, rounds: 2, StackingPolicy.Stack));
+        ghoul.Apply(Bleed.Of(3, rounds: 2));
         ghoul.TakeDamage(ghoul.Health.Value - 1);
 
         var ticks = UpkeepRules.OngoingEffects(creatures);

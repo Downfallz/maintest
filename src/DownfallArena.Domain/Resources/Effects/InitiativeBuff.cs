@@ -14,7 +14,7 @@ public sealed record InitiativeBuff : LastingEffect
 
     public int Amount { get; }
 
-    public static InitiativeBuff Of(int amount, Duration duration, StackingPolicy stacking = StackingPolicy.Stack)
+    public static InitiativeBuff Of(int amount, Duration duration, StackingPolicy stacking = WhileLastingDefault)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(amount, 1);
         return new InitiativeBuff(amount, duration, stacking);

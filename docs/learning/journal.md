@@ -26,6 +26,10 @@ first.
   against greedy on the 200 seeds, mirrored, under the default rule set. It moves in exactly one mirrored
   pair out of 400 matches: seed 192899 still ends at the round cap for player 1, with the loser at 14 health
   instead of 19 — two bleeds that used to collapse into one.
+- **What else moved one version behind**: the policies under `models/` and their `evaluation.json` were
+  measured on the pre-0040 engine. Their numbers still stand for the engine they were played on; comparing
+  one of them against a run made after this entry compares two axes at once (ADR 0013). Re-evaluate before
+  reading such a pair.
 - **Why it matters**: the bots barely notice, which is the point. The correctness of the rule was not visible
   in the win rates, and it cost the catalogue's strongest bleed most of its damage. The one reading that
   moves, the tuned heuristic against greedy, moves because regenerations stack too: the side that heals

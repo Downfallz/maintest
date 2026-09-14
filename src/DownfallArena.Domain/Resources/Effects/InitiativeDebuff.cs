@@ -10,7 +10,7 @@ public sealed record InitiativeDebuff : LastingEffect
 
     public int Amount { get; }
 
-    public static InitiativeDebuff Of(int amount, Duration duration, StackingPolicy stacking = StackingPolicy.Stack)
+    public static InitiativeDebuff Of(int amount, Duration duration, StackingPolicy stacking = WhileLastingDefault)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(amount, 1);
         return new InitiativeDebuff(amount, duration, stacking);

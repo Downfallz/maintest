@@ -15,7 +15,7 @@ public sealed record EnergyRegeneration : LastingEffect
 
     public int AmountPerRound { get; }
 
-    public static EnergyRegeneration Of(int amountPerRound, int rounds, StackingPolicy stacking = StackingPolicy.Stack)
+    public static EnergyRegeneration Of(int amountPerRound, int rounds, StackingPolicy stacking = PerRoundDefault)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(amountPerRound, 1);
         return new EnergyRegeneration(amountPerRound, Duration.OfRounds(rounds), stacking);

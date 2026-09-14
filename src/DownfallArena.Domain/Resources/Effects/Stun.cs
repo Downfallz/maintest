@@ -10,6 +10,6 @@ public sealed record Stun : LastingEffect
     {
     }
 
-    public static Stun For(int rounds, StackingPolicy stacking = StackingPolicy.Refresh) =>
+    public static Stun For(int rounds, StackingPolicy stacking = ForRoundsDefault) =>
         new(Duration.OfRounds(rounds), stacking);
 }

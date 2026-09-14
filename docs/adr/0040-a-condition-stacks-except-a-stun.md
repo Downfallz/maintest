@@ -23,9 +23,14 @@ the token that is already there, compare two amounts, keep the wrong one, and re
 The per-round family — `Bleed`, `Regeneration`, `EnergyRegeneration` — defaults to `Stack`: a second
 application runs beside the first, with its own amount, its own duration, and its own source. `Stun` keeps
 `Refresh`, because a stun has no amount to lose (its only payload is a duration) and stacking it would let two
-casts take two rounds away from one creature. The buffs and debuffs are unchanged. The default lives in two
-places that must agree: the effect factories in the domain, and `GameSchemaMapper`, which resolves what
-authored content did not say. Content may still ask for any policy with `stacking`.
+casts take two rounds away from one creature. The buffs and debuffs are unchanged. Content may still ask for
+any policy with `stacking`, and a `Refresh` now has to say *which* condition it restarts, because there can be
+several of a kind: it restarts the one closest to expiring, and a permanent one only when there is nothing
+else. The order conditions were applied in decides nothing — it is not a rule a player could read off the
+board. The default itself is written once, as `LastingEffect.PerRoundDefault`, `ForRoundsDefault` and
+`WhileLastingDefault`, which both the effect factories and `GameSchemaMapper` (what authored content did not
+say) read. The studio's authoring page carries its own copy of that table in JavaScript and has to be moved
+with them.
 
 ## Consequences
 
@@ -35,6 +40,9 @@ authored content did not say. Content may still ask for any policy with `stackin
   accounting of ADR 0027 now matches what a player sees, one token per cast.
 - Bad: more conditions on a creature, so more tokens in the box and a longer upkeep at the table. Bleeds are
   unbounded in principle; nothing in the catalogue applies one often enough for that to bite yet.
+- Bad: the default is in one place in C# and in a second, unguarded one in `studio/studio.js`, which the
+  studio also writes into every effect it authors — so a spell written in the studio pins today's policy in
+  its file and would not follow a later change of default. `data/README.md` says so.
 - Neutral: measured on the 200 benchmark seeds, mirrored, before and after. Greedy mirror: unchanged but for
   crits, 17.0 % to 16.9 %. Greedy against Random: 98.8 % to 98.5 %, inside the interval. Exploring pair:
   unchanged, entropy 4.06 to 4.05. Tuned heuristic against Greedy: 20.0 % to 20.7 %, with matches running
@@ -57,7 +65,8 @@ authored content did not say. Content may still ask for any policy with `stackin
 
 ## Follow-up
 
-- `data/README.md`: the default per family.
+- `data/README.md`: the default per family, and that studio-authored effects carry `stacking` explicitly.
+- `studio/studio.js`: the same table, by hand. Nothing tests it; a change to the defaults must move it too.
 - `docs/tabletop/translation.md`: candidate 1 is settled by this ADR.
 - ADR 0012, ADR 0019 and ADR 0020 state the old defaults. They are not edited; this ADR supersedes that
   sentence in each.

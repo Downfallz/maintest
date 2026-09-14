@@ -68,7 +68,14 @@ including the content hash.
 | `InitiativeBuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack`; adds to the same total the debuff subtracts from, floored at zero |
 | `InitiativeDebuff` | `amount`, `durationRounds` or `permanent: true`, `stacking?` | lasting, default stacking `Stack` |
 
-`stacking` is one of `Stack`, `Refresh`, `Ignore`.
+`stacking` is one of `Stack`, `Refresh`, `Ignore`. Leave it out and the family default above applies, which
+is what every spell in `data/` does today (ADR 0040). A `Refresh` restarts the condition of its kind that is
+closest to expiring, and a permanent one only when there is nothing else — a creature can carry several of a
+kind once something stacked them.
+
+The content studio writes `stacking` explicitly on every lasting effect it authors, so a spell written there
+says today's default out loud and keeps it if the default ever moves. Remove the key by hand to follow the
+family instead.
 
 ## Effects on the caster
 

@@ -21,12 +21,15 @@ internal sealed class ConditionSet
 
     /// <summary>
     /// Applies an effect and returns the resulting condition: a new one, the refreshed existing one, or
-    /// <c>null</c> when the stacking policy ignores the application.
+    /// <c>null</c> when the stacking policy ignores the application. A refresh restarts the one of its kind
+    /// that is closest to expiring, and a permanent one only when there is nothing else: stacking made
+    /// several of a kind possible (ADR 0040), and the order they were applied in is not a rule a player
+    /// could read off the board.
     /// </summary>
     public Condition? Apply(LastingEffect effect, ConditionSource? source)
     {
-        var existing = _conditions.Find(condition => condition.Effect.GetType() == effect.GetType());
-        if (existing is null || effect.Stacking == StackingPolicy.Stack)
+        var ofItsKind = _conditions.FindAll(condition => condition.Effect.GetType() == effect.GetType());
+        if (ofItsKind.Count == 0 || effect.Stacking == StackingPolicy.Stack)
         {
             var condition = new Condition(effect, source);
             _conditions.Add(condition);
@@ -35,8 +38,9 @@ internal sealed class ConditionSet
 
         if (effect.Stacking == StackingPolicy.Refresh)
         {
-            existing.Refresh(source);
-            return existing;
+            var closest = ofItsKind.MinBy(condition => condition.RemainingRounds ?? int.MaxValue)!;
+            closest.Refresh(source);
+            return closest;
         }
 
         return null;
