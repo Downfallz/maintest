@@ -56,7 +56,7 @@ public sealed class ConditionTests
     }
 
     [Fact]
-    public void Refreshing_effects_restart_the_existing_duration_and_keep_its_amount()
+    public void A_second_bleed_runs_beside_the_first_instead_of_replacing_it()
     {
         var creature = Spawn();
         var first = creature.Apply(Bleed.Of(1, rounds: 2)).ShouldNotBeNull();
@@ -64,11 +64,27 @@ public sealed class ConditionTests
         creature.TickConditions();
         first.RemainingRounds.ShouldBe(1);
 
-        var refreshed = creature.Apply(Bleed.Of(5, rounds: 2));
+        var second = creature.Apply(Bleed.Of(5, rounds: 2)).ShouldNotBeNull();
+
+        second.ShouldNotBeSameAs(first);
+        creature.Conditions.Count.ShouldBe(2);
+        first.RemainingRounds.ShouldBe(1);
+        second.RemainingRounds.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Refreshing_effects_restart_the_existing_duration()
+    {
+        var creature = Spawn();
+        var first = creature.Apply(Stun.For(2)).ShouldNotBeNull();
+        creature.TickConditions();
+        creature.TickConditions();
+        first.RemainingRounds.ShouldBe(1);
+
+        var refreshed = creature.Apply(Stun.For(2));
 
         refreshed.ShouldBeSameAs(first);
         creature.Conditions.ShouldHaveSingleItem().RemainingRounds.ShouldBe(2);
-        ((Bleed)creature.Conditions[0].Effect).AmountPerRound.ShouldBe(1);
         creature.TickConditions();
         first.RemainingRounds.ShouldBe(2);
     }

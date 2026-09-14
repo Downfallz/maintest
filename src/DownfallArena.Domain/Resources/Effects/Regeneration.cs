@@ -14,7 +14,7 @@ public sealed record Regeneration : LastingEffect
 
     public int AmountPerRound { get; }
 
-    public static Regeneration Of(int amountPerRound, int rounds, StackingPolicy stacking = StackingPolicy.Refresh)
+    public static Regeneration Of(int amountPerRound, int rounds, StackingPolicy stacking = StackingPolicy.Stack)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(amountPerRound, 1);
         return new Regeneration(amountPerRound, Duration.OfRounds(rounds), stacking);

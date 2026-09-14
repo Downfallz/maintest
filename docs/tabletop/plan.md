@@ -194,6 +194,13 @@ phase 2, not by dropping rules.
 
 ### B. Randomness: a die, and the catalogue snapped to its grid
 
+**Two moves the maintainer owns and phases 2 to 4 assume as done**: the Creature's own Critical chance goes to
+zero, and every Spell's Critical chance bonus is authored to land exactly on the die's grid. Together they
+settle more than the die: the chance on the card *is* the chance rolled, so a table adds nothing before
+rolling, and the fifteen Spells whose bonus is zero never roll at all — the crit stops being a per-cast tax on
+all six activations and becomes something only the Spells that print it do. Both are content changes, so they
+carry a content hash and a journal entry like any other.
+
 A crit is a die roll per cast. The critical chances in `data/` are continuous (0.05, 0.17, 0.33, 0.5, 0.667,
 0.717) and become values on the die's grid, which is a **content change** — `data/balance/knobs.json` already
 governs which numbers a pass may move, and the four readings already say whether a move was good.
