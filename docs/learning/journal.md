@@ -4,6 +4,38 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-14. The exploiter had gone stale through four catalogues, and was reading the content safe
+
+- **What changed**: `learning/weights/search-3.json`, from
+  [search run 3](https://github.com/Downfallz/maintest/actions/runs/34871307156) on content `938bef5e`, and
+  the balance objective's `exploit` evaluation now plays it instead of `search-2.json`. No content moves, no
+  agent default moves: `ScoringWeights.Default` and `greedy.json` are untouched, the content hash stays
+  `938bef5e` and the benchmark digest is unchanged.
+- **`exploit` reads 0.182 to 0.745**, penalty 0.00 to **30.42**, and the objective **18.59 to 49.01**.
+- **Nothing about the content got worse. The measurement stopped lying.** `exploit` is the one target that
+  names a file, and `data/balance/knobs.json` has always said why: *"Agent A goes stale when the content
+  moves — a tuning pass changes what there is to exploit — so it is refreshed from the next search run, not
+  kept."* It had not been refreshed through **four** content changes in one day —
+  `91da955c → eca50723 → b7c3e4c5 → 938bef5e` — and an agent searched against a catalogue that no longer
+  exists understates the gap.
+- **This is `tierDamageSpread`'s blind spot in the opposite direction, and the more dangerous one.** That
+  term sat at its *cap*: maximum penalty, visibly wrong, and a search could not move it. This one sat at
+  *zero*: it read as nothing to fix. A target pinned at its worst is an eyesore; a target pinned at its best
+  is a lie, and it is the one nobody goes looking at.
+- **The weights** — searched 10 rounds of 16, seed 0, against `greedy` on the benchmark seeds:
+  `stun` 3.000 to **5.456**, `initiative` 2.100 to **1.040**, `kill` 5.000 to 5.483, `heal` 0.800 to 0.546,
+  `damage` 1.000 to 1.092, `energy` 0.300 to 0.383, `bleed` 0.800 to 0.734, `defense` 0.650 to 0.690.
+  The two that move far are worth reading together: an exploiter of this catalogue prices a stun at nearly
+  twice what the baseline does and initiative at half. ADR 0032 measured `initiative` to 2.1 and ADR 0018
+  priced it; a player who only wants to win disagrees, and the objective now has to carry that disagreement
+  rather than be spared it.
+- **What it does not say.** The search picked these for scoring best out of 161 candidates on one fixed seed
+  file, so its own interval is the winner's and not a fair one. The reading that counts is the hold-out in
+  the proposal: **0.8075 against `greedy` on seeds no candidate saw**, where the baseline scores 0.5.
+- **What follows**: `exploit` at 30.42 is now the largest term in the objective, ahead of `tierDamageSpread`
+  at 10.08. A tuning pass run after this chases a different thing than one run before it, and scores either
+  side do not compare — the same warning `data/balance/README.md` gives for any change to a target.
+
 ## 2026-09-14. The term that was pinned at its cap was not just useless, it was licence
 
 - **What changed**: `tierDamageSpread` compares attacks per target instead of every `Damage`-carrying spell

@@ -117,9 +117,14 @@ same place, and a test on each side of the repository pins the two together.
 
 To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
 candidate set against a fixed opponent on the benchmark seeds and keeps what wins, and leave the result next
-to `greedy.json` under its own name. `search-2.json` is the first of those: a searched set that beats `Greedy`
+to `greedy.json` under its own name. `search-2.json` was the first of those: a searched set that beats `Greedy`
 on seeds it never saw, committed to be played and compared, not to be the baseline (the 2026-09-12 journal
-entry says what it buys and what it costs). Changing `greedy.json` itself changes nothing for `greedy`, which reads
+entry says what it buys and what it costs). **`search-3.json` is the current one**, searched on content
+`938bef5e`, and it is what the balance objective's `exploit` evaluation plays. That evaluation names a file,
+so it is the one reading that goes stale on its own: a tuning pass changes what there is to exploit, and an
+agent searched against a catalogue that no longer exists understates the gap rather than overstating it.
+`search-2` had gone four content changes without a refresh and read 0.182 where `search-3` reads 0.745.
+Refresh it from the newest search rather than keeping the old file. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all eight by the same positive factor
