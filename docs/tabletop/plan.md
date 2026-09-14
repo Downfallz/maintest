@@ -230,8 +230,19 @@ both. The audit raises them; each gets an ADR with tests, not a footnote in the 
 The cost is accepted: a tabletop finding can now change `main`, so every such change ships through the usual
 gate (`domain-reviewer`, tests, the benchmark digest, the journal).
 
+### D. The first app target: hotseat, one screen
+
+The playtest app seats both players at one screen, passed between them, and two devices is a later step. What
+is being tested is a board game: two people at one table arguing about one board is the experiment, and a
+second screen changes it before the first session.
+
+The decision is cheap to reverse and the specification keeps it that way — the API is per seat from day one
+even though one combined payload would have done, so two devices is a transport and token-distribution change
+rather than a redesign. It is also honest about what it is: both seat tokens live in one browser, so the fence
+around a hidden Intent is the pass-the-device screen and two people agreeing to use it — exactly the fence the
+cardboard has. The real boundary arrives with the second device.
+
 ## Still open
 
-- **D. The first app target.** Hotseat on one device (two players, one screen, closest to the table), or two
-  devices from the start (needs the transport and the hidden-information boundary on day one). Settled before
-  phase 5 writes the ADR; it changes nothing in phases 1 to 4.
+Nothing in the plan. What is left is the maintainer's: which die, the deck's copy count, and the six other
+questions of `components.md`.

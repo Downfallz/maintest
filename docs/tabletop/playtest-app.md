@@ -21,7 +21,8 @@ What this document takes as given, from [plan.md](plan.md) and [components.md](c
 - The components of phase 3 are the screen layout. The initiative track, the creature board, the condition
   dock, the player area and the talent mat are specified in components.md:465-739, and the app renders those
   objects rather than inventing a second visual language for the same game.
-- **Decision D is open** (plan.md:233-237). Part 4 recommends one and leaves the call.
+- **Decision D is settled** (2026-09-14): hotseat, one screen, to start. Part 4 says what it buys and what it
+  leaves for later.
 
 ---
 
@@ -243,9 +244,10 @@ The target is a 360 to 400 pixel wide screen held in one hand.
 
 ---
 
-## Part 4. Hotseat, or two devices
+## Part 4. Hotseat, one screen
 
-**Decision D of plan.md:233-237 is the maintainer's.** What follows is a recommendation and the bill for each.
+**Settled by the maintainer (2026-09-14): hotseat, one screen, to start.** The bill for each option is kept
+below, because two devices is the next step and this is what it will cost when it is taken.
 
 One fact reframes the choice, and it is worth stating before the table: **if the app is played on a phone, the
 host must be reachable from that phone in both designs.** A loopback host is only enough when both players use
@@ -261,12 +263,12 @@ the browser on the machine running the engine. So the LAN bind is not what separ
 | Closest failure | A player glances while the other chooses | A phone locks in the middle of a Round and the session waits |
 | Closeness to the cardboard | High. One table, one shared board, one device passed | Lower. Two people looking down at their own screens |
 
-**Recommended: hotseat.** The thing being playtested is a board game. Its components put one shared board on
+**Why it is the right first target.** The thing being playtested is a board game. Its components put one shared board on
 the table and a mat in front of each player (components.md:582-654), and the reading we want — is this
 teachable, is this 15 to 30 minutes, does the tenth Round still make sense — comes from two people at one
 table arguing about one board. A second screen changes the experiment before the first session.
 
-Two things make this cheap to reverse, and they are part of the recommendation:
+Two things keep the door open to two devices, and they are part of the decision:
 
 - The API is **per seat from day one** (Part 2.3), even though hotseat could have been served one combined
   payload. Two devices is then a transport and a token-distribution change, not a redesign.
@@ -399,7 +401,7 @@ Stated, not implied.
 
 | Not in v1 | Why, and what it would cost later |
 | --- | --- |
-| **Two devices** (if hotseat is chosen) | Part 4. A transport and token-distribution change, on an API that is already per seat. |
+| **Two devices** | Part 4. A transport and token-distribution change, on an API that is already per seat. |
 | **Undo and rewind** | A `Match` has no undo, and `InMemoryMatchRepository` keeps no history. The way it would be done is a replay: a match is deterministic given its seed and its decision sequence, and `steps.jsonl` is that sequence, so an undo rebuilds the match and replays every step but the last. That is a decision of its own. In v1 a misplay stays on the board and becomes a `Misplay` note — which is what happened at the table, and therefore the truth. |
 | **A session that survives a host restart** | The match lives in `InMemoryMatchRepository`. A restart abandons the session; the checkpointed trace (5.1) is what is left. A file-backed adapter for the existing `IMatchRepository` would fix it. |
 | **A push transport** | Part 2.3. |
