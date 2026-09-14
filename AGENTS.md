@@ -45,6 +45,7 @@ docs/
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
   domain/       Glossary (ubiquitous language), game rules, and the spell catalogue.
+  tabletop/     The board game translation: the plan, and what it produces (plan, audit, rule set, components, rulebook).
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
 .claude/        Claude Code configuration: rules, agents, skills, hooks.
 .github/        CI, issue and PR templates, Dependabot, CODEOWNERS.

@@ -14,6 +14,7 @@
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |
 | [domain/game-rules.md](domain/game-rules.md) | The rules of the game as implemented or decided, plus open questions. |
+| [tabletop/plan.md](tabletop/plan.md) | The plan for the board game and the playtest app: what is translated, in which order, and what is still open. |
 | [../studio/README.md](../studio/README.md) | The content studio: browse, edit, version and try the game content. |
 | [../viewer/README.md](../viewer/README.md) | The viewer: traces, batches, evaluations, training runs and comparisons. |
 
