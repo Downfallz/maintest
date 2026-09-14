@@ -105,28 +105,34 @@ the code that enforces it.
 Done when every sub-phase of ADR 0010, every effect kind of ADR 0012 and its extensions, and every spell in
 `docs/domain/spells.md` appears in exactly one row.
 
-### Phase 2. The tabletop rule set (`docs/tabletop/ruleset.md` + ADRs)
+### Phase 2. The tabletop rule set — **the maintainer's, not this plan's** (2026-09-14)
 
-Turn the audit's verdicts into numbers, and settle what decisions A to C left to measurement: the rule set's
-values (team size, energy, picks, round cap, crit multiplier), which die a crit is rolled on, and the snapped
-critical chance of every spell with the error it introduces. Everything here is measured, not asserted:
-a candidate rule set is run through `simulate`, `evaluate` and the benchmark seeds, and reported as median
-rounds, decision count per match, win rate of greedy over random (the game still rewards playing well) and
-of the exploring agents (the content still offers a choice) — the four readings `data/balance/knobs.json`
-already defines.
+Dropped as a measurement exercise. The maintainer balances the game directly, to **8 to 16 Rounds for a
+15 to 30 minute match**, and owns the `RuleSet` values that get it there. The maximum Energy a Creature can
+bank, which this phase was going to measure to size a track, is not worth the pass: the component answers it
+(see `components.md`).
 
-Done when the tabletop rule set is a named `RuleSet` the CLI can run, its numbers have a journal entry
-(`docs/learning/journal.md`), and each divergence from the engine is an ADR or a declared entry.
+What the rest of the plan therefore takes as given, and what it must not hard-code:
+
+- **A match is 8 to 16 Rounds.** Every component sized per Round — the Round track, the token supplies a
+  Round consumes — is built for 16 and says so.
+- **The numbers on a Creature are still moving.** Health 20, Energy 2 a Round, 3 Creatures a side, the
+  critical multiplier: these are `RuleSet` and content values a balancing pass moves. Components state which
+  of their counts follow a value and which follow a rule, so a rebalanced game reprints rather than redesigns.
+- **The Creature's base Critical chance is zero** (ADR 0042): a Spell's printed chance is the chance rolled,
+  and the fifteen Spells at zero never roll.
+- **A Condition stacks, except a Stun** (ADR 0041): one application is one token.
 
 ### Phase 3. Components and print-and-play (`docs/tabletop/components.md` + a generator)
 
 - A component manifest: every card, board, token, marker and die, with counts derived from the rule set
   (a creature can hold N energy, a bleed can reach M, six creatures need six initiative markers).
 - A card face specification: what is printed on a spell card so it is playable without the rulebook.
-- **A generator**, so the cards are the content and not a copy of it: it reads `data/dst/game.schema.json`
-  (ADR 0009) and writes print-ready card faces, each stamped with the content hash, exactly as a match is.
+- **A generator, specified and not written here**: cards are built from `data/dst/game.schema.json` (ADR 0009)
+  rather than transcribed, and every sheet carries the content hash it was built from, exactly as a match is.
   A studio tuning pass then reprints the deck instead of invalidating it. Shape follows the studio
-  (ADR 0023/0024): a static page plus files, tested with `node --test`.
+  (ADR 0023/0024): a static page plus files, tested with `node --test`. This plan writes the specification;
+  the code is built where code is built.
 
 Done when a print-and-play PDF can be produced from a clean checkout with one command and the deck it prints
 matches the hash of the content it was built from.
