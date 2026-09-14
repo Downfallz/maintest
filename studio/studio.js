@@ -37,9 +37,13 @@ const EFFECTS = {
   Heal: { amounts: ['amount'] },
   EnergyGain: { amounts: ['amount'] },
   EnergyDrain: { amounts: ['amount'] },
-  Bleed: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
-  Regeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
-  EnergyRegeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Refresh' },
+  // `stacking` here is two things: the kinds that get a stacking picker, and the value a new effect starts
+  // at. That value has to be the engine's own fallback for the kind (`GameSchemaMapper`), because the page
+  // writes it explicitly -- a studio-authored effect that started at the wrong one would pin the old
+  // behaviour rather than follow the rule. Everything stacks except Stun (ADR 0041).
+  Bleed: { amounts: ['amountPerRound'], rounds: true, stacking: 'Stack' },
+  Regeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Stack' },
+  EnergyRegeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Stack' },
   Stun: { amounts: [], rounds: true, stacking: 'Refresh' },
   DefenseBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   DefenseDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
