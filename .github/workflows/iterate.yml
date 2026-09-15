@@ -13,33 +13,33 @@ on:
         description: "Matches recorded in the dataset (empty: what learning/experiments/next.json says)"
         default: ""
       explore:
-        description: "Share of decisions taken at random in the value dataset, or 'off' (ADR 0014)"
+        description: "Share of decisions taken at random in the value dataset, or 'off' (ADR 0014) (empty: what learning/experiments/next.json says)"
         default: ""
       seed:
-        description: "Base seed of the recorded dataset"
+        description: "Base seed of the recorded dataset (empty: what learning/experiments/next.json says)"
         default: ""
       traces:
-        description: "Match traces kept per dataset (0 keeps none; they are the viewer's, not a learner's)"
+        description: "Match traces kept per dataset, 0 for none; they are the viewer's, not a learner's (empty: what learning/experiments/next.json says)"
         default: ""
       teacher:
-        description: "The agent whose play is recorded, e.g. heuristic:learning/weights/search-4.json"
+        description: "The agent whose play is recorded, e.g. heuristic:learning/weights/search-4.json (empty: what learning/experiments/next.json says)"
         default: ""
       value_share:
-        description: "What a value row is fitted on: 'action' or 'kind' (ADR 0045)"
+        description: "What a value row is fitted on: 'action' or 'kind' (ADR 0045) (empty: what learning/experiments/next.json says)"
+        default: ""
+      value_alpha:
+        description: "How strongly the value fit is pulled toward zero (empty: what learning/experiments/next.json says)"
+        default: ""
+      value_min_samples:
+        description: "Examples an action needs before it gets its own fit (empty: what learning/experiments/next.json says)"
         default: ""
       commit:
-        description: "Commit a policy that clears the bar under models/ on a branch, or only report it"
+        description: "Commit a policy that clears the bar under models/ on a branch, or only report it. This field only: the experiment file does not carry it"
         type: boolean
         default: false
       commit_above:
-        description: "Score against greedy a policy must reach to be committed (0.5 is even with greedy)"
+        description: "Score against greedy a policy must reach to be committed, 0.5 being even with it. This field only, like commit"
         default: "0.5"
-      value_alpha:
-        description: "How strongly the value fit is pulled toward zero"
-        default: ""
-      value_min_samples:
-        description: "Examples an action needs before it gets its own fit"
-        default: ""
   schedule:
     # Monday morning UTC: one report on whatever landed during the week, even a week with no engine change.
     - cron: "0 6 * * 1"
