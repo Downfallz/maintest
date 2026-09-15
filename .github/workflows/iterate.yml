@@ -278,6 +278,12 @@ jobs:
             cp "runs/$RUN_ID/$model/training.jsonl" "$destination/training.jsonl"
             cp "runs/$RUN_ID/evaluations/$model-vs-greedy.json" "$destination/evaluation.json"
             cp "runs/$RUN_ID/evaluations/$model-vs-random.json" "$destination/evaluation-vs-random.json"
+            # The third bar of the gate, when the turn named a baseline. A policy is committed partly because
+            # of that number, so the file carrying its interval, stamp and seeds belongs beside the policy:
+            # the run artifact expires in thirty days and the committed model must not outlive its evidence.
+            if [[ -f "runs/$RUN_ID/evaluations/$model-vs-baseline.json" ]]; then
+              cp "runs/$RUN_ID/evaluations/$model-vs-baseline.json" "$destination/evaluation-vs-baseline.json"
+            fi
           done
           dotnet build --no-restore --configuration Release
           dotnet test --no-build --configuration Release

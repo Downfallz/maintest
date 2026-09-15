@@ -19,11 +19,12 @@ one.
 - **Seed**: one whole number that fully decides a match's randomness (who crits, which random agent picks
   what). Same seed, same rules, same content, same agents → the exact same match, replayed identically. This
   is what makes any of the rest possible: without seeds, "the same match" would not mean anything.
-- **Exploring**: `explore:<rate>` plays the greedy move except for that share of decisions, taken at random.
-  It exists for one reason: a bot that always plays its best move never shows what the other moves would have
-  given, and a learner that has to compare moves cannot learn that from games where the comparison never
-  happened. Recording with `--explore 0.2` mixes in enough other moves for the comparison to exist. It is a
-  recording tool, never a baseline, since it is only reproducible for a given seed.
+- **Exploring**: `explore:<rate>` plays the greedy move except for that share of decisions, taken at random,
+  and `explore:<rate>:<agent>` deviates from the agent named instead — a searched weight set, or a trained
+  policy. It exists for one reason: a bot that always plays its best move never shows what the other moves
+  would have given, and a learner that has to compare moves cannot learn that from games where the comparison
+  never happened. Recording with `--explore 0.2` mixes in enough other moves for the comparison to exist. It
+  is a recording tool, never a baseline, since it is only reproducible for a given seed.
 - **Simulate**: play a batch of matches (`simulate --matches 200 --seed 1`, match *i* uses seed `1 + i`) and
   print a one-line summary (win rates, average rounds). Nothing is written to disk unless you ask.
 - **Record**: `simulate --record <dir>` does the same, and *also* writes every decision and every match's
@@ -208,7 +209,7 @@ editing in a file, and `scripts/iterate.sh --help` repeats this list. In plain w
 | --- | --- | --- | --- |
 | `--matches` | 200 | how many greedy self-play matches are recorded as the dataset | first thing to raise when a policy learns something odd from too few examples of a rare move |
 | `--seed` | 1 | which matches get recorded (the base seed) | to record different matches with the same size |
-| `--explore` | none | also records a second dataset where that share of decisions is taken at random, and trains the value policy on it (ADR 0014) | whenever you train a value policy; greedy's own games never show what another move would have given. Doubles the recording time |
+| `--explore` | none | also records a second dataset where that share of decisions is taken at random, and trains the value policy on it (ADR 0014) | whenever you train a value policy; a deterministic teacher's own games never show what another move would have given. It deviates from the `--teacher`, not from Greedy. Doubles the recording time |
 | `--value-alpha` | 1.0 | how strongly the value model's fit is pulled toward "no effect". A model with 383 numbers per action and few examples can fit noise; a higher pull makes it more cautious | raise (10, 100) when the value policy trusts a handful of examples too much (a huge weight on one action) |
 | `--value-min-samples` | 5 | how many examples an action needs before it gets its own fit; below that it keeps the dataset's average return | raise (50) so a rare move cannot be scored on almost nothing |
 | `--clone-epochs` | 20 | how many passes the clone makes over the dataset; the best pass on held-out matches is kept | raise if the accuracy is still climbing at the last pass |
@@ -278,7 +279,8 @@ Everything in that block is yours to set, and none of it is code.
 - **"I want matches around 12 rounds."** Set the band to `11..13`. Tighten `scale` to `1` so a round out
   costs a whole unit, and raise `weight` if you want length to win arguments against the other targets.
 - **"Balance it for my bot, not the built-in one."** The `evaluations` block names who plays: `p1` and `p2`
-  take `random`, `greedy`, `heuristic:<weights file>`, `policy:<policy file>` or `explore:<rate>`. Point them
+  take `random`, `greedy`, `heuristic:<weights file>`, `policy:<policy file>` or `explore:<rate>[:<agent>]`.
+  Point them
   at your agent and every number is measured against it. Add a third match-up with its own targets if you
   want two opinions.
 - **"No spell should own its level."** `tierUsageShare` watches the spells offered at the same depth of the

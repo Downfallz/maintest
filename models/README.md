@@ -2,7 +2,9 @@
 
 Trained policies, one directory per model and version: `models/<name>/<version>/policy.json` with its
 `training.jsonl`, the `evaluation.json` that earned it a place (against `Greedy`, the agent every number in
-the journal is measured against) and `evaluation-vs-random.json` beside it. The format is in
+the journal is measured against), `evaluation-vs-random.json` beside it, and `evaluation-vs-baseline.json`
+when the turn named a baseline. Every bar the gate applied is kept as a file: the run artifact expires in
+thirty days and a committed policy must not outlive the evidence for it. The format is in
 `docs/learning/training.md`; the Python side writes them (`train-clone`, `train-value`), the engine's policy
 agent reads them (L7).
 
