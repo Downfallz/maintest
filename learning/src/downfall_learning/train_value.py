@@ -53,6 +53,13 @@ class ValueOptions:
     share: str = "action"
     discount: float = 1.0
     gae_lambda: float = 1.0
+    # The baseline and the action rows want different amounts of pull toward zero and were sharing
+    # one number (ADR 0048). None keeps them shared, which is what every run before this did.
+    baseline_alpha: float | None = None
+
+    @property
+    def alpha_of_the_baseline(self) -> float:
+        return self.alpha if self.baseline_alpha is None else self.baseline_alpha
 
 
 def _episodes(dataset: Dataset) -> list[np.ndarray]:
@@ -100,6 +107,23 @@ def _baseline(scaled: np.ndarray, returns: np.ndarray, scaling: Scaling, alpha: 
     model = Ridge(alpha=alpha).fit(scaled, returns)
     weights, offset = scaling.fold(np.asarray(model.coef_), np.array([model.intercept_]))
     return Baseline(weights, float(offset[0]))
+
+
+def _reachable(values: np.ndarray, returns: np.ndarray) -> np.ndarray:
+    """
+    The state value held inside the range a return can actually take (ADR 0048).
+
+    ``Returns.Of`` pays a win, a loss or a draw plus a tenth of the health margin, so the target is
+    bounded; the linear fit is not, and on this catalogue it predicts from -1.78 to +2.19 where no
+    return is outside 1.05 either way. A prediction the target cannot take is wrong by construction, and in
+    rounds 15 and beyond it was wrong enough to make the baseline **worse than a constant**
+    (r2 -0.2179, against -0.0014 for predicting the training mean).
+
+    The bound comes from the training returns rather than from a constant copied out of
+    ``Returns.Of``: it cannot drift from the engine, and it follows the return definition if that
+    ever moves. It is only ever a clip -- nothing is rescaled -- so a well-behaved fit is untouched.
+    """
+    return np.clip(values, float(returns.min()), float(returns.max()))
 
 
 @dataclass(frozen=True)
@@ -220,8 +244,14 @@ def train_value(
     # the outcome of a whole match, so it measures the position far more than the move; fitted on all the
     # steps at once it is the best-determined part of the model, and every action row is then fitted on what
     # it leaves behind, which is the part that action is responsible for.
-    baseline = _baseline(scaled[split.train], dataset.returns[split.train], scaling, options.alpha)
-    advantages = _advantages(dataset, baseline.values(dataset.observations), options)
+    baseline = _baseline(
+        scaled[split.train], dataset.returns[split.train], scaling, options.alpha_of_the_baseline
+    )
+    # Held inside the range a return can take, everywhere the baseline is used as a value (ADR 0048).
+    # The written `baseline` stays the bare fit: a reader adds it to every candidate of a decision
+    # alike, so it can never change which one wins, and clipping it there would change nothing.
+    values = _reachable(baseline.values(dataset.observations), dataset.returns[split.train])
+    advantages = _advantages(dataset, values, options)
     fallback = float(advantages[split.train].mean())
 
     if options.share not in SHARES:
@@ -254,7 +284,7 @@ def train_value(
     accuracy = legal_accuracy(scorer, dataset, scored)
     # What the position alone explains, on the same held-out steps: the share of the return no action row
     # ever had to account for, and the number that says whether the baseline is doing its job.
-    baseline_residuals = dataset.returns[scored] - baseline.values(dataset.observations[scored])
+    baseline_residuals = dataset.returns[scored] - values[scored]
     baseline_r2 = 1.0 - float(np.mean(baseline_residuals**2)) / variance if variance > 0 else float("nan")
     if log is not None:
         log.append(TrainingRow(1, loss, best=True, extra={"r2": r2, "accuracy": accuracy}))
@@ -283,6 +313,7 @@ def train_value(
             # under "kind". Read with fittedActions and trainingSteps it says how thin each one was fitted,
             # which is the whole question ADR 0045 asks.
             "regressions": float(groups),
+            "baselineAlpha": options.alpha_of_the_baseline,
             "discount": options.discount,
             "gaeLambda": options.gae_lambda,
             # The spread of what the action rows are fitted on. At lambda 1 it is the spread of the episode

@@ -8,7 +8,13 @@ from conftest import SPELL_A, SPELL_B, write_run
 from downfall_learning.artifacts import build_dataset, load_run
 from downfall_learning.policy import LinearScorer
 from downfall_learning.report import TrainingLog
-from downfall_learning.train_value import ValueOptions, _advantages, _episodes, train_value
+from downfall_learning.train_value import (
+    ValueOptions,
+    _advantages,
+    _episodes,
+    _reachable,
+    train_value,
+)
 from downfall_learning.training import TrainingError
 
 
@@ -164,3 +170,41 @@ def test_a_lambda_or_a_discount_outside_its_range_is_refused(tmp_path: Path, opt
 
     with pytest.raises(TrainingError, match="between 0 and 1"):
         train_value(dataset, options)
+
+
+def test_the_baseline_can_be_pulled_toward_zero_harder_than_the_action_rows(tmp_path: Path) -> None:
+    """They were sharing one number and want very different ones (ADR 0048)."""
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=80))], kinds=["Intent"])
+
+    shared = train_value(dataset, ValueOptions(alpha=0.01, seed=2))
+    apart = train_value(dataset, ValueOptions(alpha=0.01, seed=2, baseline_alpha=1000.0))
+
+    assert shared.metrics["baselineAlpha"] == 0.01, "none means the baseline keeps sharing --alpha"
+    assert apart.metrics["baselineAlpha"] == 1000.0
+    assert apart.baseline is not None and shared.baseline is not None
+    pulled = np.abs(apart.baseline.weights).sum()
+    assert pulled < np.abs(shared.baseline.weights).sum(), "a harder pull means smaller weights"
+
+
+def test_the_baseline_is_never_used_outside_the_range_a_return_can_take(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=20))])
+    low, high = dataset.returns.min(), dataset.returns.max()
+    inside = (low + high) / 2
+    values = np.array([-99.0, low - 1.0, inside, high + 1.0, 99.0])
+
+    held = _reachable(values, dataset.returns)
+
+    assert held.min() >= low and held.max() <= high
+    assert held[2] == inside, "a value already inside the range is left alone"
+
+
+def test_a_baseline_that_cannot_overshoot_leaves_a_smaller_advantage(tmp_path: Path) -> None:
+    """What the clip buys: the advantage stops carrying the baseline's impossible predictions."""
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=80))], kinds=["Intent"])
+    values = np.full(len(dataset), dataset.returns.max() + 5.0)
+
+    wild = _advantages(dataset, values, ValueOptions())
+    held = _advantages(dataset, _reachable(values, dataset.returns), ValueOptions())
+
+    assert np.std(held) <= np.std(wild)
+    assert np.abs(held).max() < np.abs(wild).max()

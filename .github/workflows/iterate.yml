@@ -33,6 +33,9 @@ on:
       value_min_samples:
         description: "Examples an action needs before it gets its own fit (empty: what learning/experiments/next.json says)"
         default: ""
+      value_baseline_alpha:
+        description: "How strongly the state baseline alone is pulled toward zero, apart from the action rows (ADR 0048) (empty: what learning/experiments/next.json says)"
+        default: ""
       value_lambda:
         description: "How far an advantage looks ahead, 1.0 the whole match and 0.0 one step (ADR 0046) (empty: what learning/experiments/next.json says)"
         default: ""
@@ -137,6 +140,7 @@ jobs:
           VALUE_SHARE: ${{ inputs.value_share }}
           VALUE_ALPHA: ${{ inputs.value_alpha }}
           VALUE_MIN_SAMPLES: ${{ inputs.value_min_samples }}
+          VALUE_BASELINE_ALPHA: ${{ inputs.value_baseline_alpha }}
           VALUE_LAMBDA: ${{ inputs.value_lambda }}
           VALUE_DISCOUNT: ${{ inputs.value_discount }}
           BASELINE: ${{ inputs.baseline }}
@@ -159,16 +163,20 @@ jobs:
           value_share="${VALUE_SHARE:-$(knob value_share action)}"
           value_alpha="${VALUE_ALPHA:-$(knob value_alpha 1.0)}"
           value_min_samples="${VALUE_MIN_SAMPLES:-$(knob value_min_samples 5)}"
+          value_baseline_alpha="${VALUE_BASELINE_ALPHA:-$(knob value_baseline_alpha '')}"
           value_lambda="${VALUE_LAMBDA:-$(knob value_lambda 1.0)}"
           value_discount="${VALUE_DISCOUNT:-$(knob value_discount 1.0)}"
           baseline="${BASELINE:-$(knob baseline '')}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seed $seed, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline ${baseline:-none}"
+          echo "Knobs: matches $matches, seed $seed, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
           arguments=(--run "$RUN_ID" --matches "$matches" --seed "$seed" --traces "$traces"
             --teacher "$teacher" --value-share "$value_share"
             --value-alpha "$value_alpha" --value-min-samples "$value_min_samples"
             --value-lambda "$value_lambda" --value-discount "$value_discount")
+          if [[ -n "$value_baseline_alpha" ]]; then
+            arguments+=(--value-baseline-alpha "$value_baseline_alpha")
+          fi
           if [[ "$explore" != "off" ]]; then
             arguments+=(--explore "$explore")
           fi

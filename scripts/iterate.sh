@@ -59,6 +59,13 @@ The value policy (train-value: predicts the return of an action, plays the best 
   --value-min-samples <n> examples an action needs before it gets its own fit (default 5); below that, it
                          keeps the average return of the whole dataset. Raise it (50) so a rare move cannot
                          be scored on almost nothing.
+  --value-baseline-alpha <x>
+                         how strongly the state baseline alone is pulled toward zero (ADR 0048).
+                         Empty means it shares --value-alpha, which is what every run before this
+                         did. They want very different numbers: on the 1000-match exploring dataset
+                         the baseline's held-out r2 rises from 0.0705 at 10 to 0.1021 at 10000,
+                         while the action rows are fitted on sixty examples each and want the small
+                         one. Sharing one number served neither.
   --value-lambda <x>     how far an advantage looks ahead along its own trajectory (ADR 0046). 1.0, the
                          default, labels every decision of a match with the match's own outcome, which is
                          what every run before this did and carries no credit assignment at all. 0.0 keeps
@@ -98,6 +105,7 @@ value_min_samples=5
 value_share=action
 value_lambda=1.0
 value_discount=1.0
+value_baseline_alpha=
 clone_epochs=20
 clone_alpha=0.0001
 validation=0.2
@@ -116,6 +124,7 @@ while [[ $# -gt 0 ]]; do
     --value-min-samples) value_min_samples="$2"; shift 2 ;;
     --value-share) value_share="$2"; shift 2 ;;
     --value-lambda) value_lambda="$2"; shift 2 ;;
+    --value-baseline-alpha) value_baseline_alpha="$2"; shift 2 ;;
     --value-discount) value_discount="$2"; shift 2 ;;
     --clone-epochs) clone_epochs="$2"; shift 2 ;;
     --clone-alpha) clone_alpha="$2"; shift 2 ;;
@@ -194,8 +203,8 @@ if [[ -n "$explore" ]]; then
   value_dataset="$run/dataset-explore"
 fi
 
-step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount; epochs $clone_epochs, alpha $clone_alpha)"
-"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation"
+step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}; epochs $clone_epochs, alpha $clone_alpha)"
+"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation" ${value_baseline_alpha:+--baseline-alpha "$value_baseline_alpha"}
 "${learning[@]}" train-clone "$run/dataset" -o "$run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
 step "6. Evaluate the policies against the baselines"

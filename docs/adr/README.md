@@ -53,3 +53,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0045](0045-a-better-fit-is-not-a-better-player.md) | A better fit is not a better player | Accepted |
 | [0046](0046-credit-a-move-along-its-trajectory-not-from-the-end-of-the-match.md) | Credit a move along its trajectory, not from the end of the match | Accepted |
 | [0047](0047-a-lookahead-agent-needs-a-hypothetical-board.md) | A lookahead agent needs a hypothetical board | Proposed |
+| [0048](0048-the-baseline-is-a-training-time-device-and-was-fitted-as-if-it-were-not.md) | The baseline is a training-time device, and was fitted as if it were not | Accepted |
