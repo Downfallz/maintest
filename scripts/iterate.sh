@@ -155,11 +155,20 @@ step "4. Record a $teacher self-play dataset ($matches matches from seed $seed, 
 value_dataset="$run/dataset"
 if [[ -n "$explore" ]]; then
   # The exploring agent deviates from the teacher, not from Greedy: `explore:<rate>` alone wraps Greedy, and
-  # `explore:<rate>:<weights>` wraps those weights. A teacher that is not a weights file leaves it at Greedy,
-  # which is what `greedy` means anyway.
+  # `explore:<rate>:<weights>` wraps those weights. Those are the only two ExploringAgent can be given, so a
+  # teacher it cannot follow stops the run rather than recording the pure dataset against one player and the
+  # exploring one against another -- silently training the two policies of a turn on different players is the
+  # exact thing --teacher exists to prevent. The kind is matched case-insensitively because the engine parses
+  # it that way, so `Heuristic:...` is a valid spec and must not fall through to Greedy.
   explorer="explore:$explore"
-  case "$teacher" in
-    heuristic:*) explorer="explore:$explore:${teacher#heuristic:}" ;;
+  case "${teacher,,}" in
+    greedy) ;;
+    heuristic:*) explorer="explore:$explore:${teacher#*:}" ;;
+    *)
+      echo "Teacher '$teacher' cannot be explored: only 'greedy' and 'heuristic:<weights>' can." >&2
+      echo "Run without --explore to record a pure dataset against it." >&2
+      exit 2
+      ;;
   esac
   step "4b. Record an exploring self-play dataset ($explorer)"
   "${cli[@]}" simulate --p1 "$explorer" --p2 "$explorer" --matches "$matches" --seed "$seed" \

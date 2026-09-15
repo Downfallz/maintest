@@ -86,7 +86,7 @@ class _Fitted:
     regressions: int
 
 
-def _fit(fitting: _Fitting, rows: np.ndarray):
+def _fit(fitting: _Fitting, rows: np.ndarray) -> tuple[Ridge, np.ndarray, float]:
     """One ridge over the rows given: the model itself, and its coefficients folded onto raw features."""
     model = Ridge(alpha=fitting.options.alpha).fit(fitting.scaled[rows], fitting.advantages[rows])
     row, offset = fitting.scaling.fold(np.asarray(model.coef_), np.array([model.intercept_]))

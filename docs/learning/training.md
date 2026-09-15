@@ -192,9 +192,9 @@ those rows at one position compares models calibrated on different worlds. Three
 losing all 400 mirrored matches against `Greedy` while behaviour cloning on the same data reached `Greedy`'s
 own strength (`docs/learning/journal.md`, ADR 0014).
 
-The `explore:<rate>` agent is the fix: it plays `Greedy`'s move except for the given share of decisions, which
-it takes uniformly at random. The states stay the ones a strong policy reaches, and every action key now
-appears in some of them, so the rows become comparable.
+The `explore:<rate>` agent is the fix: it plays its inner agent's move except for the given share of
+decisions, which it takes uniformly at random. The states stay the ones a strong policy reaches, and every
+action key now appears in some of them, so the rows become comparable.
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- simulate --p1 explore:0.2 --p2 explore:0.2 --matches 200 --seed 1 --record runs/<id>/dataset-explore
@@ -202,8 +202,29 @@ scripts/iterate.sh --explore 0.2      # the same, inside the loop, keeping a pur
 ```
 
 It draws from the seeded random source, so a recorded run replays exactly, but it never plays a baseline: the
-benchmark digest is defined by agents that draw nothing. Behaviour cloning keeps the pure `Greedy` dataset,
-since imitating a bot that is wrong on purpose part of the time is not what the clone is for.
+benchmark digest is defined by agents that draw nothing. Behaviour cloning keeps the pure dataset, since
+imitating a bot that is wrong on purpose part of the time is not what the clone is for.
+
+### Who the loop records, and why it is not always `Greedy`
+
+`explore:<rate>` alone wraps `Greedy`, and `explore:<rate>:<weights>` wraps those weights instead. The loop's
+`--teacher` sets both datasets at once: the pure one is recorded against that agent and the exploring one
+deviates from the same agent, because the two policies of one turn learning from two different players is the
+inconsistency this exists to prevent. `--teacher greedy` is the default and the original behaviour.
+
+It matters more than the plumbing suggests. A clone can only be as good as what it imitates, and on
+`7e199df4` `Greedy` is beaten 92.75% by a searched weight set, so cloning `Greedy` caps the clone below
+`Greedy` by construction. Recording against `search-4` instead took the clone from **32.0% to 71.0%** against
+`Greedy` and from 94.0% to 99.25% against `Random`, which made it the first learned agent here to beat the
+baseline (`docs/learning/journal.md`, 2026-09-15).
+
+```bash
+scripts/iterate.sh --teacher heuristic:learning/weights/search-4.json --explore 0.2
+```
+
+Only `greedy` and `heuristic:<weights>` can be taught this way today, because those are the agents
+`ExploringAgent` can be given to deviate from; the loop refuses any other teacher rather than recording the
+two datasets against different players.
 
 ## Playing a policy
 
