@@ -204,7 +204,14 @@ if [[ -n "$explore" ]]; then
 fi
 
 step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}; epochs $clone_epochs, alpha $clone_alpha)"
-"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation" ${value_baseline_alpha:+--baseline-alpha "$value_baseline_alpha"}
+# An array rather than an unquoted ${x:+...}, which is how the rest of this file passes optional
+# arguments: the expansion has to stay unquoted to vanish when empty, and unquoted is exactly what
+# word-splits a value with a space in it.
+baseline_alpha_arguments=()
+if [[ -n "$value_baseline_alpha" ]]; then
+  baseline_alpha_arguments=(--baseline-alpha "$value_baseline_alpha")
+fi
+"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation" "${baseline_alpha_arguments[@]}"
 "${learning[@]}" train-clone "$run/dataset" -o "$run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
 step "6. Evaluate the policies against the baselines"
