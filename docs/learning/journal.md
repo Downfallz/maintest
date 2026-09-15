@@ -51,9 +51,30 @@ first.
   not build on run *n*. The hold-out control moves with it: it replays what the search started from, not
   `greedy`, since comparing found weights against an agent the search was never about says nothing.
 
-- **What is not claimed.** Nothing here has yet produced an agent stronger than `search-4`. Four mechanisms
-  that were blocked are unblocked, and one number that had never been measured now is. `learning/experiments/next.json`
-  asks for lambda 0.95 with `search-4` as both teacher and baseline; that run is the first evidence.
+- **The first evidence, `ci-72`, ran on the pull request that carries this entry** — changing
+  `learning/experiments/next.json` is what asks for a run, so the loop played lambda 0.95 with `search-4` as
+  both teacher and baseline before the change merged. One knob moved against the previous turn on the same
+  teacher, same 1000 matches, same seed, same alpha and min samples, and `baselineR2` reads **0.07054**
+  against the previous **0.0705** — the same data and the same baseline fit, so the advantage estimate is the
+  only thing that changed.
+
+  | value policy | lambda 1.0 | lambda 0.95 (`ci-72`) |
+  | --- | --- | --- |
+  | `r2` | −0.3457 | **−0.0135** |
+  | against `Greedy` | 1 win in 400 | **0.10125** |
+  | against `search-4` | — | 0.210 |
+  | `advantageStd` | — | 0.4071 |
+
+  `r2` gained 0.33 and the win rate moved with it, which is worth noticing precisely because ADR 0045 is the
+  standing case that the two can move in opposite directions. **The policy is still bad**: 0.10 against
+  `Greedy` where the clone of the same turn plays 0.725, and 0.210 against the teacher. What changed is that
+  it stopped playing the starting kit — an argmax over 588 keys with no signal — and started ranking
+  something. 423 of the 588 keys now get a regression of their own.
+
+- **What is not claimed.** Nothing here has produced an agent stronger than `search-4`. The clone of `ci-72`
+  reproduces `ci-69` exactly (0.725, 0.9925, 0.5325), as it should: nothing in this change touches the clone.
+  The lambda is one point on a curve nobody has walked — 0.5 and 0.0 are untried, and whether the gain
+  continues or reverses is the next measurement, not a prediction.
 
 ## 2026-09-15. A policy keeps six decimals, and the saving is in what git stores rather than on disk
 
