@@ -207,7 +207,9 @@ imitating a bot that is wrong on purpose part of the time is not what the clone 
 
 ### Who the loop records, and why it is not always `Greedy`
 
-`explore:<rate>` alone wraps `Greedy`, and `explore:<rate>:<weights>` wraps those weights instead. The loop's
+`explore:<rate>` alone wraps `Greedy`, and whatever follows the rate is read as a whole agent spec that it
+wraps instead — `explore:0.2:heuristic:<weights>`, `explore:0.2:policy:<file>`. A bare path after the rate
+stays the shorthand for a weights file that every journal entry before 2026-09-15 uses. The loop's
 `--teacher` sets both datasets at once: the pure one is recorded against that agent and the exploring one
 deviates from the same agent, because the two policies of one turn learning from two different players is the
 inconsistency this exists to prevent. `--teacher greedy` is the default and the original behaviour.
@@ -222,9 +224,16 @@ baseline (`docs/learning/journal.md`, 2026-09-15).
 scripts/iterate.sh --teacher heuristic:learning/weights/search-4.json --explore 0.2
 ```
 
-Only `greedy` and `heuristic:<weights>` can be taught this way today, because those are the agents
-`ExploringAgent` can be given to deviate from; the loop refuses any other teacher rather than recording the
-two datasets against different players.
+Any agent spec can be the teacher, a trained policy included, because `ExploringAgent` now wraps whatever the
+spec after the rate names. That is what closes the loop: the policy a turn trains can record the dataset of
+the next one, which is policy iteration rather than one isolated fit per turn.
+
+```bash
+scripts/iterate.sh --teacher policy:runs/<previous>/value/policy.json --explore 0.2
+```
+
+A clone of a policy is still capped by that policy, so this is worth doing with `train-value`, whose target is
+the return rather than the teacher's choice, and not as a way to distil a clone into a better clone.
 
 ## Playing a policy
 

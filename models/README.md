@@ -8,7 +8,11 @@ agent reads them (L7).
 
 A policy lands here by a decision, never by a run finishing. The "Learning loop" workflow proposes one on a
 branch when `commit` is asked for and the policy scores at least `commit_above` against `Greedy` (0.5 is even
-with it) *and* beats `Random` — an agent that cannot beat `Random` is not a model whatever the bar says. The
+with it), beats `Random` — an agent that cannot beat `Random` is not a model whatever the bar says — and,
+when the turn names a `baseline`, reaches `commit_above_baseline` against it too. That third bar exists
+because **the matchups here are not transitive**: `ci-69` is at parity with `search-4` head to head (0.5325,
+an interval that includes one half) and twenty points behind it against `Greedy` (0.725 against 0.930), so
+one number can call the same agent a champion or a failure depending which opponent it names. The
 branch is a proposal: a human opens the pull request, and ADR 0013 still wants a journal entry saying why this
 one is worth keeping. Its version is the workflow run (`ci-<n>`), so two runs never land on one directory and
 the name says which run to open.

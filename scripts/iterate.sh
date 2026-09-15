@@ -17,6 +17,14 @@ Where things go
   --run <id>             name of the run directory under runs/ (default: a UTC timestamp)
   --against <id>         a previous run to compare with; its value policy is replayed on this content
   --open                 try to open runs/<id>/report.html in a browser at the end (best effort)
+  --baseline <agent>     a third opponent every policy of the turn is also played against, on top of Greedy
+                         and Random: the current champion, usually `heuristic:learning/weights/search-4.json`.
+                         Greedy is a solved opponent and beating it stopped saying much, but the reason to
+                         read more than one is stronger than that: the matchups here are **not transitive**.
+                         Measured on `7e199df4` (journal, 2026-09-15), `ci-69` scores 0.5325 against
+                         `search-4` and 0.725 against Greedy, where `search-4` itself scores 0.930 against
+                         Greedy -- a clone at parity with its teacher and 20 points behind it against a third
+                         agent. One number never describes an agent here; the panel does.
 
 How much data
   --matches <n>          matches of the recorded greedy self-play dataset (default 200). More matches means
@@ -26,9 +34,11 @@ How much data
   --teacher <agent>      the agent whose play is recorded (default greedy). A clone can only be as good as
                          what it imitates, and Greedy is beaten 92.75% by a searched set on this catalogue
                          (journal, 2026-09-15), so a stronger teacher raises the ceiling and visits positions
-                         Greedy never reaches. Takes any agent spec: `heuristic:learning/weights/search-4.json`.
-                         The exploring dataset deviates from the same agent rather than from Greedy, so the
-                         two policies of one turn learn from one player.
+                         Greedy never reaches. Takes any agent spec: `heuristic:learning/weights/search-4.json`,
+                         or `policy:runs/<previous>/value/policy.json` to record the next dataset with what the
+                         previous turn trained, which is what makes the turns policy iteration rather than one
+                         isolated fit each. The exploring dataset deviates from the same agent rather than from
+                         Greedy, so the two policies of one turn learn from one player.
   --traces <n>           match traces kept per recorded dataset (default 4). A trace is the viewer's
                          artifact, not a learner's: nothing here trains on one, and at about twenty times
                          the disk of the steps from the same match, one per match is what stops a dataset
@@ -49,6 +59,12 @@ The value policy (train-value: predicts the return of an action, plays the best 
   --value-min-samples <n> examples an action needs before it gets its own fit (default 5); below that, it
                          keeps the average return of the whole dataset. Raise it (50) so a rare move cannot
                          be scored on almost nothing.
+  --value-lambda <x>     how far an advantage looks ahead along its own trajectory (ADR 0046). 1.0, the
+                         default, labels every decision of a match with the match's own outcome, which is
+                         what every run before this did and carries no credit assignment at all. 0.0 keeps
+                         only how much the state value moved in one step: far less variance, and only as
+                         good as the baseline. Try 0.95, then 0.5.
+  --value-discount <x>   how much a later step is worth (default 1.0, no discounting)
   --value-share <what>   what an action row is fitted on (ADR 0045). `action` is one regression per action
                          key over the whole observation: 431 weights from the steps of that one key, which on
                          a 1000-match dataset is a median of 60. `kind` fits one regression per decision kind
@@ -70,6 +86,7 @@ USAGE
 
 run_id="$(date -u +%Y%m%d-%H%M%S)"
 against=""
+baseline=""
 open_page=false
 matches=200
 traces=4
@@ -79,6 +96,8 @@ seed=1
 value_alpha=1.0
 value_min_samples=5
 value_share=action
+value_lambda=1.0
+value_discount=1.0
 clone_epochs=20
 clone_alpha=0.0001
 validation=0.2
@@ -86,6 +105,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --run) run_id="$2"; shift 2 ;;
     --against) against="$2"; shift 2 ;;
+    --baseline) baseline="$2"; shift 2 ;;
     --open) open_page=true; shift ;;
     --matches) matches="$2"; shift 2 ;;
     --traces) traces="$2"; shift 2 ;;
@@ -95,6 +115,8 @@ while [[ $# -gt 0 ]]; do
     --value-alpha) value_alpha="$2"; shift 2 ;;
     --value-min-samples) value_min_samples="$2"; shift 2 ;;
     --value-share) value_share="$2"; shift 2 ;;
+    --value-lambda) value_lambda="$2"; shift 2 ;;
+    --value-discount) value_discount="$2"; shift 2 ;;
     --clone-epochs) clone_epochs="$2"; shift 2 ;;
     --clone-alpha) clone_alpha="$2"; shift 2 ;;
     --validation) validation="$2"; shift 2 ;;
@@ -146,6 +168,9 @@ step "3. Baselines"
 evaluate random-vs-random random random
 evaluate greedy-vs-greedy greedy greedy
 evaluate greedy-vs-random greedy random
+if [[ -n "$baseline" ]]; then
+  evaluate baseline-vs-greedy "$baseline" greedy
+fi
 
 step "4. Record a $teacher self-play dataset ($matches matches from seed $seed, $traces trace(s))"
 "${cli[@]}" simulate --p1 "$teacher" --p2 "$teacher" --matches "$matches" --seed "$seed" --traces "$traces" --record "$run/dataset" --out "$run/dataset.csv"
@@ -154,36 +179,32 @@ step "4. Record a $teacher self-play dataset ($matches matches from seed $seed, 
 # of a bot that is wrong on purpose part of the time is not the baseline the report compares run to run.
 value_dataset="$run/dataset"
 if [[ -n "$explore" ]]; then
-  # The exploring agent deviates from the teacher, not from Greedy: `explore:<rate>` alone wraps Greedy, and
-  # `explore:<rate>:<weights>` wraps those weights. Those are the only two ExploringAgent can be given, so a
-  # teacher it cannot follow stops the run rather than recording the pure dataset against one player and the
-  # exploring one against another -- silently training the two policies of a turn on different players is the
-  # exact thing --teacher exists to prevent. The kind is matched case-insensitively because the engine parses
-  # it that way, so `Heuristic:...` is a valid spec and must not fall through to Greedy.
+  # The exploring agent deviates from the teacher, not from Greedy: whatever follows the rate is read as a
+  # whole agent spec, so any teacher can be explored -- including a policy, which is what lets a turn record
+  # its next dataset with what the previous one trained. `explore:<rate>` alone already means Greedy and is
+  # left exactly as it was, so a greedy turn stamps the way every earlier one did. The kind is matched
+  # case-insensitively because the engine parses it that way.
   explorer="explore:$explore"
-  case "${teacher,,}" in
-    greedy) ;;
-    heuristic:*) explorer="explore:$explore:${teacher#*:}" ;;
-    *)
-      echo "Teacher '$teacher' cannot be explored: only 'greedy' and 'heuristic:<weights>' can." >&2
-      echo "Run without --explore to record a pure dataset against it." >&2
-      exit 2
-      ;;
-  esac
+  if [[ "${teacher,,}" != greedy ]]; then
+    explorer="explore:$explore:$teacher"
+  fi
   step "4b. Record an exploring self-play dataset ($explorer)"
   "${cli[@]}" simulate --p1 "$explorer" --p2 "$explorer" --matches "$matches" --seed "$seed" \
     --traces "$traces" --record "$run/dataset-explore" --out "$run/dataset-explore.csv"
   value_dataset="$run/dataset-explore"
 fi
 
-step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share; epochs $clone_epochs, alpha $clone_alpha)"
-"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --validation "$validation"
+step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount; epochs $clone_epochs, alpha $clone_alpha)"
+"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation"
 "${learning[@]}" train-clone "$run/dataset" -o "$run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
 step "6. Evaluate the policies against the baselines"
 for model in value clone; do
   evaluate_policy "$run/$model" greedy "$run/evaluations/$model-vs-greedy.json"
   evaluate_policy "$run/$model" random "$run/evaluations/$model-vs-random.json" --no-log
+  if [[ -n "$baseline" ]]; then
+    evaluate_policy "$run/$model" "$baseline" "$run/evaluations/$model-vs-baseline.json" --no-log
+  fi
 done
 
 if [[ -n "$against" ]]; then

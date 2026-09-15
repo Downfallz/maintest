@@ -33,12 +33,24 @@ on:
       value_min_samples:
         description: "Examples an action needs before it gets its own fit (empty: what learning/experiments/next.json says)"
         default: ""
+      value_lambda:
+        description: "How far an advantage looks ahead, 1.0 the whole match and 0.0 one step (ADR 0046) (empty: what learning/experiments/next.json says)"
+        default: ""
+      value_discount:
+        description: "How much a later step is worth, 1.0 being no discounting (empty: what learning/experiments/next.json says)"
+        default: ""
+      baseline:
+        description: "A third opponent every policy is also played against, e.g. heuristic:learning/weights/search-4.json (empty: what learning/experiments/next.json says)"
+        default: ""
       commit:
         description: "Commit a policy that clears the bar under models/ on a branch, or only report it. This field only: the experiment file does not carry it"
         type: boolean
         default: false
       commit_above:
         description: "Score against greedy a policy must reach to be committed, 0.5 being even with it. This field only, like commit"
+        default: "0.5"
+      commit_above_baseline:
+        description: "Score against the baseline a policy must also reach, when a baseline is set. This field only, like commit"
         default: "0.5"
   schedule:
     # Monday morning UTC: one report on whatever landed during the week, even a week with no engine change.
@@ -125,6 +137,9 @@ jobs:
           VALUE_SHARE: ${{ inputs.value_share }}
           VALUE_ALPHA: ${{ inputs.value_alpha }}
           VALUE_MIN_SAMPLES: ${{ inputs.value_min_samples }}
+          VALUE_LAMBDA: ${{ inputs.value_lambda }}
+          VALUE_DISCOUNT: ${{ inputs.value_discount }}
+          BASELINE: ${{ inputs.baseline }}
         run: |
           plan=learning/experiments/next.json
           knob() {
@@ -144,14 +159,21 @@ jobs:
           value_share="${VALUE_SHARE:-$(knob value_share action)}"
           value_alpha="${VALUE_ALPHA:-$(knob value_alpha 1.0)}"
           value_min_samples="${VALUE_MIN_SAMPLES:-$(knob value_min_samples 5)}"
+          value_lambda="${VALUE_LAMBDA:-$(knob value_lambda 1.0)}"
+          value_discount="${VALUE_DISCOUNT:-$(knob value_discount 1.0)}"
+          baseline="${BASELINE:-$(knob baseline '')}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seed $seed, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share"
+          echo "Knobs: matches $matches, seed $seed, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline ${baseline:-none}"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
           arguments=(--run "$RUN_ID" --matches "$matches" --seed "$seed" --traces "$traces"
             --teacher "$teacher" --value-share "$value_share"
-            --value-alpha "$value_alpha" --value-min-samples "$value_min_samples")
+            --value-alpha "$value_alpha" --value-min-samples "$value_min_samples"
+            --value-lambda "$value_lambda" --value-discount "$value_discount")
           if [[ "$explore" != "off" ]]; then
             arguments+=(--explore "$explore")
+          fi
+          if [[ -n "$baseline" ]]; then
+            arguments+=(--baseline "$baseline")
           fi
           # The log stays out of the checkout: an untracked file there would make the build stamp the engine
           # version as dirty, and that stamp is what tells two runs apart.
@@ -186,29 +208,47 @@ jobs:
       # number in the journal is measured against; 0.5 is even with it. A policy that cannot beat Random is
       # refused whatever the bar says -- that is not a model, and a bar typed below one half is how a first
       # floor model gets committed on purpose rather than by accident.
+      #
+      # When the turn names a baseline, that evaluation is a bar too, and the reason is measured: the matchups
+      # here are not transitive. `ci-69` is at parity with `search-4` head to head (0.5325) and 20 points
+      # behind it against Greedy (0.725 against 0.930), so a run that reads one of those numbers alone can
+      # call the same agent a champion or a failure. Three opponents, three bars.
       - name: Which policies cleared the bar
         id: cleared
         if: always()
         env:
           COMMIT: ${{ inputs.commit }}
           ABOVE: ${{ inputs.commit_above }}
+          ABOVE_BASELINE: ${{ inputs.commit_above_baseline }}
         run: |
           above="${ABOVE:-0.5}"
+          above_baseline="${ABOVE_BASELINE:-0.5}"
           kept=()
           for model in value clone; do
             greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
             random="runs/$RUN_ID/evaluations/$model-vs-random.json"
+            baseline="runs/$RUN_ID/evaluations/$model-vs-baseline.json"
             [[ -f "$greedy" && -f "$random" ]] || continue
             score="$(jq -r '.agentA.score.mean // empty' "$greedy")"
             over_random="$(jq -r '.agentA.score.mean // empty' "$random")"
             [[ -n "$score" && -n "$over_random" ]] || continue
             size="$(du -h "runs/$RUN_ID/$model/policy.json" 2>/dev/null | cut -f1)"
-            if jq -e -n --argjson s "$score" --argjson a "$above" '$s >= $a' > /dev/null &&
+            # No baseline evaluation means the turn named none, so that bar does not apply and reads as met.
+            over_baseline="$(jq -r '.agentA.score.mean // empty' "$baseline" 2>/dev/null || true)"
+            against_baseline="not played"
+            clears_baseline=true
+            if [[ -n "$over_baseline" ]]; then
+              against_baseline="$over_baseline against the baseline"
+              jq -e -n --argjson b "$over_baseline" --argjson a "$above_baseline" '$b >= $a' > /dev/null ||
+                clears_baseline=false
+            fi
+            if [[ "$clears_baseline" == true ]] &&
+               jq -e -n --argjson s "$score" --argjson a "$above" '$s >= $a' > /dev/null &&
                jq -e -n --argjson r "$over_random" '$r > 0.5' > /dev/null; then
               kept+=("$model")
-              echo "$model: $score against greedy, $over_random against random, $size -- clears $above."
+              echo "$model: $score against greedy, $over_random against random, $against_baseline, $size -- clears $above."
             else
-              echo "$model: $score against greedy, $over_random against random, $size -- does not clear $above."
+              echo "$model: $score against greedy, $over_random against random, $against_baseline, $size -- does not clear $above / $above_baseline."
             fi
           done
           printf 'models=%s\n' "${kept[*]-}" >> "$GITHUB_OUTPUT"
@@ -282,8 +322,11 @@ jobs:
             for model in $MODELS; do
               greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
               random="runs/$RUN_ID/evaluations/$model-vs-random.json"
-              printf '  %-6s %s against greedy, %s against random\n' \
-                "$model" "$(jq -r '.agentA.score.mean' "$greedy")" "$(jq -r '.agentA.score.mean' "$random")"
+              baseline="runs/$RUN_ID/evaluations/$model-vs-baseline.json"
+              against_baseline="$(jq -r '"\(.agentA.score.mean) against \(.agentB.agent)"' "$baseline" 2>/dev/null || true)"
+              printf '  %-6s %s against greedy, %s against random%s\n' \
+                "$model" "$(jq -r '.agentA.score.mean' "$greedy")" "$(jq -r '.agentA.score.mean' "$random")" \
+                "${against_baseline:+, $against_baseline}"
             done
             echo
             echo "The evaluations that earned them a place are beside each policy. A journal entry is still"
