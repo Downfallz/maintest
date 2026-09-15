@@ -1,8 +1,9 @@
 {
-  "why": "Value regression is parked (journal, ci-9): the three starting spells cost the same, share an initiative and a targeting, and one of them strictly dominates, so there is no decision for a learner to find. The loop keeps running for its balance signals, so exploration is off: no second dataset, half the time, and the report still carries spell entropy, player 1 share, draws and round cap. Watch greedy's spell entropy, 0.23 today: it rises when the content finally offers a choice.",
-  "matches": 200,
+  "why": "Value regression is back on (journal, ci-10). ci-9 parked it when the same learner went 0 of 400 against Greedy on content whose three starting spells left nothing to choose between; on 7e199df4 it reads 43.5%, and the clone 32.0%. Note what did not improve: r2 is -0.2876 against a baselineR2 of 0.1355, worse than the 0.2225/0.2815 that ci-9 read the stop off. A policy only has to rank the actions of one position and r2 scores absolute prediction, so it was never the instrument -- watch the win rates against Greedy and Random, not the fit. Exploration is on because the value policy cannot compare moves it never saw Greedy refuse (ADR 0014): ci-10 fitted 600 action keys off the explored dataset against the clone's 202 off pure self-play. Open: value beats Random only 67.8% where Greedy beats it 97.8%, so it is much the weaker agent and still nearly even against Greedy -- and it drags 27% of those matches to the round cap, where it loses 80 and wins 7.",
+  "matches": 1000,
   "seed": 1,
-  "explore": "off",
+  "traces": 4,
+  "explore": 0.2,
   "value_alpha": 10,
   "value_min_samples": 10
 }

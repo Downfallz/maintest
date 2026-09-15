@@ -18,6 +18,16 @@ on:
       seed:
         description: "Base seed of the recorded dataset"
         default: ""
+      traces:
+        description: "Match traces kept per dataset (0 keeps none; they are the viewer's, not a learner's)"
+        default: ""
+      commit:
+        description: "Commit a policy that clears the bar under models/ on a branch, or only report it"
+        type: boolean
+        default: false
+      commit_above:
+        description: "Score against greedy a policy must reach to be committed (0.5 is even with greedy)"
+        default: "0.5"
       value_alpha:
         description: "How strongly the value fit is pulled toward zero"
         default: ""
@@ -41,8 +51,11 @@ on:
     paths:
       - "learning/experiments/**"
 
+# Pushing the proposal branch, and nothing else, the way search.yml does it. GitHub Actions permissions cannot
+# be conditional, so this is `write` even on a report-only run; the checkout below is what decides whether a
+# credential is on disk, and it only keeps one when `commit` is set.
 permissions:
-  contents: read
+  contents: write
 
 # One loop at a time per branch, and the newest push wins. A pull request's path filter matches the whole
 # diff, not the last commit, so every push to a branch that touches the experiment file starts a run; without
@@ -57,17 +70,23 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   RUN_ID: ci-${{ github.run_number }}
+  BRANCH: policy/${{ github.run_number }}
 
 jobs:
   iterate:
     name: One turn of the learning loop
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # The experiment file asks for 1000 matches and an exploring second dataset (ci-10), and the clone alone
+    # takes a quarter of an hour over that many steps. Ninety minutes was enough for the 200-match runs the
+    # parked experiment asked for and is not enough for these.
+    timeout-minutes: 150
     steps:
+      # A report-only run keeps no credential on disk, the way this workflow always did. A committing run keeps
+      # the one the checkout sets up and lets git use it, rather than a token inside a remote URL.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: ${{ inputs.commit }}
 
       - name: Set up .NET (version from global.json)
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -95,6 +114,7 @@ jobs:
           MATCHES: ${{ inputs.matches }}
           EXPLORE: ${{ inputs.explore }}
           SEED: ${{ inputs.seed }}
+          TRACES: ${{ inputs.traces }}
           VALUE_ALPHA: ${{ inputs.value_alpha }}
           VALUE_MIN_SAMPLES: ${{ inputs.value_min_samples }}
         run: |
@@ -111,12 +131,13 @@ jobs:
           matches="${MATCHES:-$(knob matches 200)}"
           explore="${EXPLORE:-$(knob explore 0.2)}"
           seed="${SEED:-$(knob seed 1)}"
+          traces="${TRACES:-$(knob traces 4)}"
           value_alpha="${VALUE_ALPHA:-$(knob value_alpha 1.0)}"
           value_min_samples="${VALUE_MIN_SAMPLES:-$(knob value_min_samples 5)}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seed $seed, explore $explore, value alpha $value_alpha, min samples $value_min_samples"
+          echo "Knobs: matches $matches, seed $seed, traces $traces, explore $explore, value alpha $value_alpha, min samples $value_min_samples"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
-          arguments=(--run "$RUN_ID" --matches "$matches" --seed "$seed"
+          arguments=(--run "$RUN_ID" --matches "$matches" --seed "$seed" --traces "$traces"
             --value-alpha "$value_alpha" --value-min-samples "$value_min_samples")
           if [[ "$explore" != "off" ]]; then
             arguments+=(--explore "$explore")
@@ -148,7 +169,126 @@ jobs:
             echo "The report page and the trained policies are in the artifact of this run."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # The datasets are deliberately left out: they are hundreds of megabytes and the seed reproduces them.
+      # Two separate questions, and reading one for the other is how a report-only run gets called a failure:
+      # `cleared` is which policies beat the bar, reported whether or not anything was asked to be committed;
+      # a branch is only pushed when it was. The bar is a score against Greedy because that is the agent every
+      # number in the journal is measured against; 0.5 is even with it. A policy that cannot beat Random is
+      # refused whatever the bar says -- that is not a model, and a bar typed below one half is how a first
+      # floor model gets committed on purpose rather than by accident.
+      - name: Which policies cleared the bar
+        id: cleared
+        if: always()
+        env:
+          COMMIT: ${{ inputs.commit }}
+          ABOVE: ${{ inputs.commit_above }}
+        run: |
+          above="${ABOVE:-0.5}"
+          kept=()
+          for model in value clone; do
+            greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
+            random="runs/$RUN_ID/evaluations/$model-vs-random.json"
+            [[ -f "$greedy" && -f "$random" ]] || continue
+            score="$(jq -r '.agentA.score.mean // empty' "$greedy")"
+            over_random="$(jq -r '.agentA.score.mean // empty' "$random")"
+            [[ -n "$score" && -n "$over_random" ]] || continue
+            size="$(du -h "runs/$RUN_ID/$model/policy.json" 2>/dev/null | cut -f1)"
+            if jq -e -n --argjson s "$score" --argjson a "$above" '$s >= $a' > /dev/null &&
+               jq -e -n --argjson r "$over_random" '$r > 0.5' > /dev/null; then
+              kept+=("$model")
+              echo "$model: $score against greedy, $over_random against random, $size -- clears $above."
+            else
+              echo "$model: $score against greedy, $over_random against random, $size -- does not clear $above."
+            fi
+          done
+          printf 'models=%s\n' "${kept[*]-}" >> "$GITHUB_OUTPUT"
+          if [[ ${#kept[@]} -eq 0 ]]; then
+            echo "Nothing to commit; the policies are in the artifact either way."
+          elif [[ "$COMMIT" != "true" ]]; then
+            echo "A policy cleared the bar and this run was asked not to commit it. It is in the artifact."
+          fi
+          if [[ ${#kept[@]} -gt 0 && "$COMMIT" == "true" ]]; then
+            echo "committing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "committing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # models/README.md: one directory per model and version, the policy with its training log and the
+      # evaluation that earned it a place. The version is this run, so two runs never land on one directory and
+      # the number in the name is the workflow run that can be opened and read.
+      - name: Add the policies and run the gate
+        if: steps.cleared.outputs.committing == 'true'
+        env:
+          MODELS: ${{ steps.cleared.outputs.models }}
+        run: |
+          for model in $MODELS; do
+            destination="models/$model/$RUN_ID"
+            mkdir -p "$destination"
+            cp "runs/$RUN_ID/$model/policy.json" "$destination/policy.json"
+            cp "runs/$RUN_ID/$model/training.jsonl" "$destination/training.jsonl"
+            cp "runs/$RUN_ID/evaluations/$model-vs-greedy.json" "$destination/evaluation.json"
+            cp "runs/$RUN_ID/evaluations/$model-vs-random.json" "$destination/evaluation-vs-random.json"
+          done
+          dotnet build --no-restore --configuration Release
+          dotnet test --no-build --configuration Release
+          dotnet format --verify-no-changes
+          uv run --project learning --locked --no-sync --no-build python -m ruff check learning
+          uv run --project learning --locked --no-sync --no-build python -m ruff format --check learning
+          uv run --project learning --locked --no-sync --no-build python -m pytest learning/tests -q
+
+      # The branch is pushed; the pull request is not opened here, for the reason search.yml gives: a pull
+      # request opened with GITHUB_TOKEN starts no `pull_request` workflow, so it would arrive with no CI and no
+      # SonarCloud quality gate, which AGENTS.md requires on every one. The link below is one tap.
+      - name: Push the policies and link the pull request
+        if: steps.cleared.outputs.committing == 'true'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+          RUN_ID_URL: ${{ github.run_id }}
+          BASE: ${{ github.ref_name }}
+          ABOVE: ${{ inputs.commit_above }}
+          MODELS: ${{ steps.cleared.outputs.models }}
+        run: |
+          hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add models
+
+          # Written to a file: a -m here would carry this file's YAML indentation into the message.
+          {
+            echo "Add the policies of learning loop $RUN_ID"
+            echo
+            echo "One turn of scripts/iterate.sh on the CI runners (learning phase L7), content $hash."
+            echo "Committed because they score at least ${ABOVE:-0.5} against greedy and beat random:"
+            echo
+            for model in $MODELS; do
+              greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
+              random="runs/$RUN_ID/evaluations/$model-vs-random.json"
+              printf '  %-6s %s against greedy, %s against random\n' \
+                "$model" "$(jq -r '.agentA.score.mean' "$greedy")" "$(jq -r '.agentA.score.mean' "$random")"
+            done
+            echo
+            echo "The evaluations that earned them a place are beside each policy. A journal entry is still"
+            echo "owed (ADR 0013): these are numbers, not a reason, and a search cannot write one."
+            echo
+            echo "Workflow run: $SERVER/$REPOSITORY/actions/runs/$RUN_ID_URL"
+          } > "$RUNNER_TEMP/message.txt"
+          git commit -F "$RUNNER_TEMP/message.txt"
+          git push origin "$BRANCH"
+
+          {
+            echo
+            echo "### The policies are on \`$BRANCH\`"
+            echo
+            echo "**[Open it as a pull request]($SERVER/$REPOSITORY/compare/$BASE...$BRANCH?expand=1)** — one tap,"
+            echo "and the repository's real checks run on it."
+            echo
+            echo "The build, the tests and the format check all passed on this branch before it was pushed."
+            echo "A journal entry is still owed: a committed policy is a decision, and the numbers above are not one."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The datasets are deliberately left out: with --traces they are a few hundred megabytes, and the seed
+      # reproduces them anyway.
       - name: Upload the run
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
