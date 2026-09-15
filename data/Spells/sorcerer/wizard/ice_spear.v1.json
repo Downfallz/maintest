@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Wizard",
   "initiative": 2,
-  "energyCost": 3,
+  "energyCost": 2,
   "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
@@ -18,7 +18,7 @@
     },
     {
       "kind": "InitiativeDebuff",
-      "amount": 2,
+      "amount": 1,
       "durationRounds": 1
     }
   ],

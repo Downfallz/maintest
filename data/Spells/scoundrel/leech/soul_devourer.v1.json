@@ -14,11 +14,11 @@
   "effects": [
     {
       "kind": "Damage",
-      "amount": 5
+      "amount": 6
     },
     {
       "kind": "EnergyDrain",
-      "amount": 2
+      "amount": 3
     }
   ],
   "enabled": true,
