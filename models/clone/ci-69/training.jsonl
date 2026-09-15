@@ -1,0 +1,20 @@
+{"iteration": 1, "loss": 4.997924338151818, "accuracy": 0.9422866129724062, "stamp": {"engineVersion": "c6e51aa156e4", "contentHash": "7e199df428bccfd0ea882e218ef225a5a3872b4122d0763e5583c44f581cd9ff", "ruleSet": {"teamSize": 3, "energyPerRound": 2, "evolutionPicksPerRound": 2, "roundCap": 30, "criticalMultiplier": 2}, "featureSchema": "features:v5+69ea1a69f9ac", "player1Agent": "Heuristic:learning/weights/search-4.json@74a15d71", "player2Agent": "Heuristic:learning/weights/search-4.json@74a15d71", "baseSeed": 1}}
+{"iteration": 2, "loss": 3.6745449046527017, "accuracy": 0.9471953486155459}
+{"iteration": 3, "loss": 3.203469299360818, "accuracy": 0.9468617452223228}
+{"iteration": 4, "loss": 2.8146664244120307, "accuracy": 0.9494829147405042}
+{"iteration": 5, "loss": 2.6706364753880245, "accuracy": 0.9495305723681076}
+{"iteration": 6, "loss": 2.582722717170938, "accuracy": 0.9505790401753801}
+{"iteration": 7, "loss": 2.4940871057548057, "accuracy": 0.9503884096649668}
+{"iteration": 8, "loss": 2.4358515257933084, "accuracy": 0.952008769003479}
+{"iteration": 9, "loss": 2.4040250286369553, "accuracy": 0.9509126435686032}
+{"iteration": 10, "loss": 2.3529221066134927, "accuracy": 0.9516275079826526}
+{"iteration": 11, "loss": 2.3286047804629035, "accuracy": 0.9519134537482724}
+{"iteration": 12, "loss": 2.291392974396935, "accuracy": 0.9527236334175285}
+{"iteration": 13, "loss": 2.243434631990419, "accuracy": 0.9534861554591813}
+{"iteration": 14, "loss": 2.246222576278496, "winRate": 0.71, "winRateLow": 0.6616902592742584, "winRateHigh": 0.7583097407257415, "matches": 400, "best": true, "accuracy": 0.955535433446123}
+{"iteration": 15, "loss": 2.224137393413736, "accuracy": 0.9552018300528999}
+{"iteration": 16, "loss": 2.183003475051405, "accuracy": 0.9554877758185197}
+{"iteration": 17, "loss": 2.177596697124009, "accuracy": 0.9554877758185197}
+{"iteration": 18, "loss": 2.1827706948961767, "accuracy": 0.9550111995424868}
+{"iteration": 19, "loss": 2.1673831764295017, "accuracy": 0.9548205690320736}
+{"iteration": 20, "loss": 2.138467813528825, "accuracy": 0.9552971453081066}
