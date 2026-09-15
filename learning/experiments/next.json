@@ -1,9 +1,11 @@
 {
-  "why": "Value regression is back on (journal, ci-10). ci-9 parked it when the same learner went 0 of 400 against Greedy on content whose three starting spells left nothing to choose between; on 7e199df4 it reads 43.5%, and the clone 32.0%. Note what did not improve: r2 is -0.2876 against a baselineR2 of 0.1355, worse than the 0.2225/0.2815 that ci-9 read the stop off. A policy only has to rank the actions of one position and r2 scores absolute prediction, so it was never the instrument -- watch the win rates against Greedy and Random, not the fit. Exploration is on because the value policy cannot compare moves it never saw Greedy refuse (ADR 0014): ci-10 fitted 600 action keys off the explored dataset against the clone's 202 off pure self-play. Open: value beats Random only 67.8% where Greedy beats it 97.8%, so it is much the weaker agent and still nearly even against Greedy -- and it drags 27% of those matches to the round cap, where it loses 80 and wins 7.",
+  "why": "The teacher is what moved (journal, 2026-09-15): cloning search-4 instead of Greedy takes the clone from 32.0% to 71.0% against Greedy and 94.0% to 99.25% against Random, so it is now the strongest agent here that is not a searched weight set, and it clears the commit bar. Run with commit=true to propose it. The value policy went the other way on the same data, 43.5% to 1 win in 400, and it is worth knowing why rather than only that: it plays heavy_strike, basic_attack, pummel and wait -- the starting kit -- because its r2 is -0.3457 against a baselineR2 of 0.0705, and an argmax over 588 keys with no signal is whatever order the noise gives. Sharing its rows by decision kind was measured and lost (ADR 0045): it fits far better and plays 11 points worse, so share stays action. Watch the clone's win rate against Greedy, not any fit. Open: the value policy ranks no better than chance on either dataset, and (kind, spell) sharing is the next thing to try on it.",
   "matches": 1000,
   "seed": 1,
   "traces": 4,
+  "teacher": "heuristic:learning/weights/search-4.json",
   "explore": 0.2,
   "value_alpha": 10,
-  "value_min_samples": 10
+  "value_min_samples": 10,
+  "value_share": "action"
 }

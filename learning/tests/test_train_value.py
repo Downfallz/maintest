@@ -79,3 +79,32 @@ def test_the_metrics_count_the_actions_that_got_a_regression_of_their_own(tmp_pa
     assert fitted.metrics["fittedActions"] > 0
     assert starved.metrics["actions"] == len(starved.action_keys)
     assert starved.metrics["fittedActions"] == 0
+
+
+def test_sharing_by_kind_fits_one_regression_per_kind_and_a_scalar_per_action(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=80))], kinds=["Intent"])
+
+    policy = train_value(dataset, ValueOptions(alpha=0.01, seed=2, share="kind"))
+
+    # One decision kind in this dataset, so one regression behind however many action keys it has.
+    assert policy.metrics["regressions"] == 1
+    assert policy.metrics["actions"] > 1
+    rows = {tuple(row) for row in policy.weights}
+    assert len(rows) == 1, "every key of one kind answers the board with the same row"
+    assert len(set(policy.bias)) > 1, "and only the scalar tells two of them apart"
+
+
+def test_sharing_by_action_keeps_a_row_of_its_own_for_every_action(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=80))], kinds=["Intent"])
+
+    policy = train_value(dataset, ValueOptions(alpha=0.01, seed=2, share="action"))
+
+    assert policy.metrics["regressions"] == policy.metrics["actions"]
+    assert len({tuple(row) for row in policy.weights}) > 1
+
+
+def test_an_unknown_sharing_is_refused(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=4))])
+
+    with pytest.raises(TrainingError, match="Unknown sharing"):
+        train_value(dataset, ValueOptions(share="spell"))
