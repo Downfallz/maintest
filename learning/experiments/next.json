@@ -1,5 +1,5 @@
 {
-  "why": "First turn with an advantage that is not the whole match (ADR 0046). Every run until now labelled each of a match's hundreds of decisions with that match's own outcome, so the pivotal cast and the forced one carried the same +-1 and no grouping of the action rows could recover a per-step signal that was never in the target. `value_lambda` 0.95 keeps almost all of the return's information and cuts the variance that comes from the tail of a 30-round match; watch `advantageStd` fall and then watch the win rate, never `r2`, which is expected to read worse by construction (ADR 0045 is the standing warning). The baseline is search-4, and it is a bar now rather than a remark: ci-69 scores 0.5325 against it with an interval that includes one half, and 0.725 against Greedy where search-4 scores 0.930, so the matchups are not transitive and one opponent does not describe an agent. Teacher stays search-4 until something beats it. Open: whether 0.95 is the right place on the lambda, whether the (kind, spell) middle of ADR 0045 behaves differently now that the target is not the whole match, and whether a discount below 1.0 adds anything the lambda has not.",
+  "why": "Second point on the lambda curve (ADR 0046). ci-72 moved it off 1.0 for the first time and both numbers went the right way at once: r2 -0.3457 to -0.0135 and 1 win in 400 to 0.10125 against Greedy, on a baselineR2 of 0.07054 against the previous 0.0705 -- the same data and the same baseline fit, so the advantage estimate was the only difference. 0.5 is the next point and it is a real step rather than another nudge: at 0.95 a step still sees most of the match, at 0.5 it sees about two decisions ahead, so this is where the trade the ADR names should start to bite. Watch advantageStd fall further, then watch the win rate against Greedy and against search-4 -- those two, not r2, which is expected to read worse by construction whatever the agent does. If 0.5 beats 0.10125 the curve keeps going and 0.0 is next; if it collapses, the useful lambda is between 0.5 and 1.0 and the answer is a finer sweep, not a lower one. Either way the value policy is still far from the clone, which plays 0.725 on the same turn without any of this. Teacher and baseline stay search-4 until something beats it. Open: whether the (kind, spell) middle of ADR 0045 behaves differently now that the target is not the whole match, and whether a discount below 1.0 adds anything the lambda has not.",
   "matches": 1000,
   "seed": 1,
   "traces": 4,
@@ -9,6 +9,6 @@
   "value_alpha": 10,
   "value_min_samples": 10,
   "value_share": "action",
-  "value_lambda": 0.95,
+  "value_lambda": 0.5,
   "value_discount": 1.0
 }
