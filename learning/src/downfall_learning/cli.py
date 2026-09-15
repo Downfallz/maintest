@@ -175,6 +175,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="what an action row is fitted on: 'kind' one regression per decision kind and a scalar per "
         "action, 'action' one regression per action over the whole observation (ADR 0045)",
     )
+    value.add_argument(
+        "--gae-lambda",
+        type=float,
+        default=1.0,
+        help="how far an advantage looks ahead along its own trajectory (ADR 0046): 1.0 the episode "
+        "return, which is the old behaviour, 0.0 the one-step difference in state value",
+    )
+    value.add_argument(
+        "--discount", type=float, default=1.0, help="how much a later step is worth (default 1.0, none)"
+    )
     value.set_defaults(handler=_train_value)
 
     _add_search_weights(commands)
@@ -261,7 +271,13 @@ def _train_value(arguments: argparse.Namespace) -> int:
     dataset = _dataset(arguments)
     log = TrainingLog(dataset.stamp, arguments.output / TRAINING_FILE)
     options = ValueOptions(
-        arguments.alpha, arguments.validation, arguments.seed, arguments.min_samples, arguments.share
+        arguments.alpha,
+        arguments.validation,
+        arguments.seed,
+        arguments.min_samples,
+        arguments.share,
+        arguments.discount,
+        arguments.gae_lambda,
     )
     _write_policy(train_value(dataset, options, log), arguments.output)
     return 0

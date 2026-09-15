@@ -4,6 +4,12 @@ The return is fitted in two parts (ADR 0016): one baseline over the observation 
 then what the baseline leaves. The baseline carries what the position is worth, so the rest carries only what
 an action adds to it, which is the quantity a policy compares.
 
+**How that rest is estimated is the choice ADR 0046 measures.** It used to be the episode return minus the
+state value, which labels every decision of a match with the match's own outcome and no credit assignment at
+all. ``--gae-lambda`` estimates it along the trajectory instead (``_advantages``), and 1.0 -- the default --
+is the old behaviour, up to the float accumulation of summing a 30-step episode backwards rather than
+subtracting once (measured at 2e-15, four orders below the rounding a policy is written with).
+
 **How the rest is split is the choice ADR 0045 measures.** ``share="action"`` is the original: one ridge
 regression per action key, each over the whole observation. That asks for 431 weights from the steps of one
 key, and on a 1000-match exploring dataset the median key has 60 of them -- only 63 of 612 keys have as many
@@ -45,6 +51,48 @@ class ValueOptions:
     seed: int = 0
     min_samples: int = 5
     share: str = "action"
+    discount: float = 1.0
+    gae_lambda: float = 1.0
+
+
+def _episodes(dataset: Dataset) -> list[np.ndarray]:
+    """The rows of each trajectory, in recorded order: one per (match, slot), both slots interleaved."""
+    order: dict[tuple[str, str], list[int]] = {}
+    for index, key in enumerate(zip(dataset.match_ids, dataset.slots, strict=True)):
+        order.setdefault(key, []).append(index)
+    return [np.asarray(rows, dtype=int) for rows in order.values()]
+
+
+def _advantages(dataset: Dataset, values: np.ndarray, options: ValueOptions) -> np.ndarray:
+    """
+    What an action added, estimated along its own trajectory rather than from the end of the match.
+
+    A match awards nothing until it ends: `Returns.Of` gives one scalar per (match, slot) and the dataset
+    joins that same scalar onto every step of it, so a 30-round match labels hundreds of decisions with one
+    +-1. Subtracting the state value removes what the position was worth but not the variance -- the pivotal
+    move and the forced one still carry the same number, and no grouping of the action rows can recover a
+    per-step signal that was never in the target.
+
+    Generalized advantage estimation puts it back. With no reward before the end, the temporal difference of
+    a step is ``discount * V(next) - V(here)`` -- how much the position improved, which is exactly the part
+    the move is responsible for -- and the last step of an episode takes the real return instead. ``lam``
+    then sets how far each step still looks ahead: **1.0 telescopes back to the episode return**, which is
+    what every run before this computed; 0.0 keeps only the one-step difference, lowest variance and most
+    dependent on the baseline being any good. Everything between trades one for the other.
+    """
+    advantages = np.zeros(len(values))
+    decay = options.discount * options.gae_lambda
+    for rows in _episodes(dataset):
+        running = 0.0
+        for position in range(len(rows) - 1, -1, -1):
+            row = rows[position]
+            if position == len(rows) - 1:
+                running = float(dataset.returns[row]) - values[row]
+            else:
+                delta = (options.discount * values[rows[position + 1]]) - values[row]
+                running = delta + (decay * running)
+            advantages[row] = running
+    return advantages
 
 
 def _baseline(scaled: np.ndarray, returns: np.ndarray, scaling: Scaling, alpha: float) -> Baseline:
@@ -156,6 +204,10 @@ def train_value(
     options = options or ValueOptions()
     if options.min_samples < 2:
         raise TrainingError("A regression needs at least two samples per action.")
+    if not 0.0 <= options.discount <= 1.0:
+        raise TrainingError("The discount is between 0 and 1.")
+    if not 0.0 <= options.gae_lambda <= 1.0:
+        raise TrainingError("The advantage lambda is between 0 and 1.")
     split = split_by_match(dataset, options.validation_share, options.seed)
     if len(split.train) == 0:
         raise TrainingError("No training step is left after the split.")
@@ -169,7 +221,7 @@ def train_value(
     # steps at once it is the best-determined part of the model, and every action row is then fitted on what
     # it leaves behind, which is the part that action is responsible for.
     baseline = _baseline(scaled[split.train], dataset.returns[split.train], scaling, options.alpha)
-    advantages = dataset.returns - baseline.values(dataset.observations)
+    advantages = _advantages(dataset, baseline.values(dataset.observations), options)
     fallback = float(advantages[split.train].mean())
 
     if options.share not in SHARES:
@@ -191,6 +243,10 @@ def train_value(
     scored = split.validation if len(split.validation) > 0 else split.train
     scorer = LinearScorer(keys, weights, bias, fallback, baseline)
     predictions = np.array([scorer.scores(dataset.observations[i], [dataset.actions[i]])[0] for i in scored])
+    # Still measured against the episode return, which is what it always measured. Below lambda 1 the action
+    # rows no longer target that quantity, so `loss` and `r2` are expected to read worse while the agent
+    # plays better: ADR 0045 measured 0.42 of r2 bought at the cost of 11 points of win rate. They stay
+    # because they say whether the fit is doing what it was asked, not whether the asking was right.
     residuals = dataset.returns[scored] - predictions
     loss = float(np.mean(residuals**2))
     variance = float(np.var(dataset.returns[scored]))
@@ -227,6 +283,12 @@ def train_value(
             # under "kind". Read with fittedActions and trainingSteps it says how thin each one was fitted,
             # which is the whole question ADR 0045 asks.
             "regressions": float(groups),
+            "discount": options.discount,
+            "gaeLambda": options.gae_lambda,
+            # The spread of what the action rows are fitted on. At lambda 1 it is the spread of the episode
+            # return around the state value, the quantity this whole change exists to cut: read it against
+            # the win rate, never on its own, since a target of all zeros would read best of all.
+            "advantageStd": float(np.std(advantages[split.train])),
             "trainingSteps": float(len(split.train)),
             "validationSteps": float(len(split.validation)),
         },

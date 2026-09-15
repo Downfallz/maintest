@@ -1,13 +1,14 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from conftest import SPELL_A, SPELL_B, write_run
 from downfall_learning.artifacts import build_dataset, load_run
 from downfall_learning.policy import LinearScorer
 from downfall_learning.report import TrainingLog
-from downfall_learning.train_value import ValueOptions, train_value
+from downfall_learning.train_value import ValueOptions, _advantages, _episodes, train_value
 from downfall_learning.training import TrainingError
 
 
@@ -108,3 +109,58 @@ def test_an_unknown_sharing_is_refused(tmp_path: Path) -> None:
 
     with pytest.raises(TrainingError, match="Unknown sharing"):
         train_value(dataset, ValueOptions(share="spell"))
+
+
+def test_a_trajectory_is_one_player_of_one_match(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=3, steps_per_episode=4))])
+
+    episodes = _episodes(dataset)
+
+    assert len(episodes) == 6, "three matches, two players each, interleaved in the arrays"
+    assert sum(len(episode) for episode in episodes) == len(dataset)
+    for episode in episodes:
+        assert len({dataset.match_ids[row] for row in episode}) == 1
+        assert len({dataset.slots[row] for row in episode}) == 1
+        assert list(episode) == sorted(episode), "in recorded order, which is the order they were played in"
+
+
+def test_at_lambda_one_an_advantage_is_the_episode_return_over_the_state_value(tmp_path: Path) -> None:
+    """The default, and the behaviour of every run before ADR 0046: the sum telescopes back to it."""
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=20))])
+    values = np.linspace(-1.0, 1.0, len(dataset))
+
+    advantages = _advantages(dataset, values, ValueOptions())
+
+    assert advantages == pytest.approx(dataset.returns - values)
+
+
+def test_at_lambda_zero_an_advantage_is_the_one_step_change_in_the_state_value(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=3, steps_per_episode=4))])
+    values = np.arange(len(dataset), dtype=float)
+
+    advantages = _advantages(dataset, values, ValueOptions(gae_lambda=0.0))
+
+    for episode in _episodes(dataset):
+        for position, row in enumerate(episode[:-1]):
+            assert advantages[row] == pytest.approx(values[episode[position + 1]] - values[row])
+        last = episode[-1]
+        assert advantages[last] == pytest.approx(dataset.returns[last] - values[last])
+
+
+def test_looking_less_far_ahead_cuts_the_spread_of_what_the_rows_are_fitted_on(tmp_path: Path) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=80))], kinds=["Intent"])
+
+    whole_match = train_value(dataset, ValueOptions(alpha=0.01, seed=2))
+    one_step = train_value(dataset, ValueOptions(alpha=0.01, seed=2, gae_lambda=0.0))
+
+    assert whole_match.metrics["gaeLambda"] == 1.0
+    assert one_step.metrics["gaeLambda"] == 0.0
+    assert one_step.metrics["advantageStd"] < whole_match.metrics["advantageStd"]
+
+
+@pytest.mark.parametrize("options", [ValueOptions(gae_lambda=1.5), ValueOptions(discount=-0.1)])
+def test_a_lambda_or_a_discount_outside_its_range_is_refused(tmp_path: Path, options: ValueOptions) -> None:
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=4))])
+
+    with pytest.raises(TrainingError, match="between 0 and 1"):
+        train_value(dataset, options)

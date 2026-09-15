@@ -51,3 +51,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0043](0043-a-control-spell-is-not-an-attack-and-reach-is-not-force.md) | A control spell is not an attack, and reach is not force | Accepted |
 | [0044](0044-the-exploit-target-compares-against-a-yardstick-that-does-not-hold.md) | The exploit target compares against a yardstick that does not hold | Proposed |
 | [0045](0045-a-better-fit-is-not-a-better-player.md) | A better fit is not a better player | Accepted |
+| [0046](0046-credit-a-move-along-its-trajectory-not-from-the-end-of-the-match.md) | Credit a move along its trajectory, not from the end of the match | Accepted |

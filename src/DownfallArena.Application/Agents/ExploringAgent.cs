@@ -6,13 +6,15 @@ using DownfallArena.SharedKernel.Randomness;
 namespace DownfallArena.Application.Agents;
 
 /// <summary>
-/// Plays the greedy choice most of the time and a uniformly chosen legal one the rest of the time (ADR 0014).
+/// Plays its inner agent's choice most of the time and a uniformly chosen legal one the rest of the time
+/// (ADR 0014). That inner agent is <c>Greedy</c> for a bare <c>explore:0.2</c>, and whatever a second colon
+/// names otherwise — a searched weight set, or a trained policy (<see cref="AgentFactory"/>).
 /// </summary>
 /// <remarks>
-/// Recording with it gives every action key states where it was taken although greedy would not have chosen
-/// it. That is what a value regression needs and what greedy self-play cannot give: under a deterministic
-/// policy every action key is fitted on its own distribution of states, so the observed return measures how
-/// good the situation was rather than how good the action is. The exploring branch draws uniformly over the
+/// Recording with it gives every action key states where it was taken although the inner agent would not
+/// have chosen it. That is what a value regression needs and what deterministic self-play cannot give: under
+/// a deterministic policy every action key is fitted on its own distribution of states, so the observed
+/// return measures how good the situation was rather than how good the action is. The exploring branch draws uniformly over the
 /// candidates the encoder lists for the decision, which is not what the random agent does: it never passes
 /// while an unlock is available, favours the creature with fewer unlockable spells, and draws a target count
 /// before the targets. An action the exploration cannot reach keeps the very defect this agent exists to
@@ -21,10 +23,10 @@ namespace DownfallArena.Application.Agents;
 /// </remarks>
 public sealed class ExploringAgent : IPlayerAgent
 {
-    private readonly IPlayerAgent _greedy;
+    private readonly IPlayerAgent _inner;
     private readonly IRandomSource _source;
 
-    public ExploringAgent(double rate, IPlayerAgent greedy, IRandomSource source)
+    public ExploringAgent(double rate, IPlayerAgent inner, IRandomSource source)
     {
         if (!double.IsFinite(rate) || rate <= 0 || rate > 1)
         {
@@ -32,11 +34,11 @@ public sealed class ExploringAgent : IPlayerAgent
         }
 
         Rate = rate;
-        _greedy = greedy ?? throw new ArgumentNullException(nameof(greedy));
+        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _source = source ?? throw new ArgumentNullException(nameof(source));
     }
 
-    /// <summary>The share of decisions taken at random rather than greedily.</summary>
+    /// <summary>The share of decisions taken at random rather than by the inner agent.</summary>
     public double Rate { get; }
 
     /// <summary>Every unlock, then passing, which stays legal while an unlock is available.</summary>
@@ -45,7 +47,7 @@ public sealed class ExploringAgent : IPlayerAgent
         ArgumentNullException.ThrowIfNull(options);
         if (!Explores())
         {
-            return _greedy.DecideEvolution(board, options);
+            return _inner.DecideEvolution(board, options);
         }
 
         var unlocks = options.Creatures
@@ -59,7 +61,7 @@ public sealed class ExploringAgent : IPlayerAgent
     {
         if (!Explores())
         {
-            return _greedy.DecideSpeed(board, creature);
+            return _inner.DecideSpeed(board, creature);
         }
 
         return _source.NextInt32(0, 2) == 0 ? Speed.Quick : Speed.Standard;
@@ -70,7 +72,7 @@ public sealed class ExploringAgent : IPlayerAgent
         ArgumentNullException.ThrowIfNull(intentOption);
         if (!Explores())
         {
-            return _greedy.DecideIntent(board, intentOption);
+            return _inner.DecideIntent(board, intentOption);
         }
 
         var spells = intentOption.CastableSpells;
@@ -85,7 +87,7 @@ public sealed class ExploringAgent : IPlayerAgent
         ArgumentNullException.ThrowIfNull(options);
         if (!Explores())
         {
-            return _greedy.DecideTargets(board, options);
+            return _inner.DecideTargets(board, options);
         }
 
         if (!options.LegalTargets.IsCastable)

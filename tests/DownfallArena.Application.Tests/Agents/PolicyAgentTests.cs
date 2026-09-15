@@ -100,6 +100,29 @@ public sealed class PolicyAgentTests
         Should.Throw<ArgumentException>(() => factory.Create(new AgentSpec(AgentKind.Policy), Rules, new TestRandom(1)));
     }
 
+    /// <summary>
+    /// What closes the loop: the policy a turn trained records the exploring dataset of the next one, so the
+    /// turns are policy iteration rather than one isolated fit each. Until this, the text after the second
+    /// colon was always read as a weights file, so a policy could not be the agent an exploring run deviates
+    /// from. The random source never draws below the rate here, so every decision is the inner agent's: the
+    /// policy's, not Greedy's, which is the whole point.
+    /// </summary>
+    [Fact]
+    public void An_exploring_spec_can_deviate_from_a_policy()
+    {
+        var source = Substitute.For<IPolicySource>();
+        source.Load("good.json").Returns(Policy((RendIntent, 2.0), (StrikeIntent, 1.0)));
+        var factory = Handlers.Agents(source);
+        var spec = AgentSpec.Parse("explore:0.2:policy:good.json");
+        var option = new IntentOption(Two, [TestContent.Rend, TestContent.Strike]);
+
+        var agent = factory.Create(spec, Rules, new ScriptedRandom(999));
+
+        agent.ShouldBeOfType<ExploringAgent>().Rate.ShouldBe(0.2);
+        agent.DecideIntent(Board(enemyHealth: 20), option).ShouldBe(TestContent.Rend);
+        factory.Resolve(spec).ToString().ShouldBe("Explore:0.2:policy:good.json@0123abcd", "the policy it explores is as much its identity as a policy agent's is");
+    }
+
     [Fact]
     public void A_policy_file_is_validated_against_the_contract()
     {

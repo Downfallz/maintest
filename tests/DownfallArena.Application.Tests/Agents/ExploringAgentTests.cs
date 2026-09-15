@@ -190,6 +190,25 @@ public sealed class ExploringAgentTests
         factory.Resolve(bare).ShouldBe(bare, "greedy is the whole identity, so there is no version to add");
     }
 
+    /// <summary>
+    /// The inner agent may be written as a full spec, which is what lets a policy be explored. A bare path
+    /// stays the weights shorthand every journal entry before this one uses, so the two forms have to reach
+    /// the same weights source with the same path.
+    /// </summary>
+    [Fact]
+    public void An_exploring_spec_reads_its_inner_agent_as_a_spec_or_as_the_weights_shorthand()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        factory.Create(AgentSpec.Parse("explore:0.2:heuristic:learning/weights/search-4.json"), Rules, new TestRandom(1))
+            .ShouldBeOfType<ExploringAgent>().Rate.ShouldBe(0.2);
+
+        weights.Received().Load("learning/weights/search-4.json");
+        factory.Resolve(AgentSpec.Parse("explore:0.2:greedy")).Version.ShouldBeNull("greedy reads no file, so it fingerprints nothing");
+    }
+
     [Theory]
     [InlineData("explore")]
     [InlineData("explore:0")]

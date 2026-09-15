@@ -1,11 +1,14 @@
 {
-  "why": "The teacher is what moved (journal, 2026-09-15): cloning search-4 instead of Greedy takes the clone from 32.0% to 71.0% against Greedy and 94.0% to 99.25% against Random, so it is now the strongest agent here that is not a searched weight set, and it clears the commit bar. Run with commit=true to propose it. The value policy went the other way on the same data, 43.5% to 1 win in 400, and it is worth knowing why rather than only that: it plays heavy_strike, basic_attack, pummel and wait -- the starting kit -- because its r2 is -0.3457 against a baselineR2 of 0.0705, and an argmax over 588 keys with no signal is whatever order the noise gives. Sharing its rows by decision kind was measured and lost (ADR 0045): it fits far better and plays 11 points worse, so share stays action. Watch the clone's win rate against Greedy, not any fit. Open: the value policy ranks no better than chance on either dataset, and (kind, spell) sharing is the next thing to try on it.",
+  "why": "Second point on the lambda curve (ADR 0046). ci-72 moved it off 1.0 for the first time and both numbers went the right way at once: r2 -0.3457 to -0.0135 and 1 win in 400 to 0.10125 against Greedy, on a baselineR2 of 0.07054 against the previous 0.0705 -- the same data and the same baseline fit, so the advantage estimate was the only difference. 0.5 is the next point and it is a real step rather than another nudge: at 0.95 a step still sees most of the match, at 0.5 it sees about two decisions ahead, so this is where the trade the ADR names should start to bite. Watch advantageStd fall further, then watch the win rate against Greedy and against search-4 -- those two, not r2, which is expected to read worse by construction whatever the agent does. If 0.5 beats 0.10125 the curve keeps going and 0.0 is next; if it collapses, the useful lambda is between 0.5 and 1.0 and the answer is a finer sweep, not a lower one. Either way the value policy is still far from the clone, which plays 0.725 on the same turn without any of this. Teacher and baseline stay search-4 until something beats it. Open: whether the (kind, spell) middle of ADR 0045 behaves differently now that the target is not the whole match, and whether a discount below 1.0 adds anything the lambda has not.",
   "matches": 1000,
   "seed": 1,
   "traces": 4,
   "teacher": "heuristic:learning/weights/search-4.json",
+  "baseline": "heuristic:learning/weights/search-4.json",
   "explore": 0.2,
   "value_alpha": 10,
   "value_min_samples": 10,
-  "value_share": "action"
+  "value_share": "action",
+  "value_lambda": 0.5,
+  "value_discount": 1.0
 }
