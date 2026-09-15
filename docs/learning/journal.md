@@ -4,6 +4,134 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-15. There is no best lambda: the two opponents peak in different places
+
+- **`ci-81` ran lambda 0.9 and broke the prediction `next.json` had written down before it.** That file said
+  to expect 0.9 to be indistinguishable from 0.95 against `Greedy`, and that if it were also
+  indistinguishable against `search-4` the sweep had hit the noise floor. Both halves are wrong, and wrong in
+  opposite directions.
+
+  | value policy | 1.0 | 0.95 | **0.9** | 0.8 | 0.5 |
+  | --- | --- | --- | --- | --- | --- |
+  | `advantageStd` | — | 0.4071 | **0.3017** | 0.226 | 0.1629 |
+  | `r2` | −0.3457 | −0.0135 | **+0.0299** | +0.0500 | +0.0586 |
+  | against `Greedy` | 0.0025 | **0.10125** | 0.035 | 0.0788 | 0.000 |
+  | against `search-4` | — | 0.210 | **0.355** | 0.1013 | 0.000 |
+
+- **The peaks are in different places, and both gaps are measurable.** Against `Greedy`, 0.9 scores 0.035
+  with an interval of 0.0160 to 0.0540 — the whole of it below 0.95's 0.10125, so 0.9 is measurably *worse*.
+  Against `search-4`, 0.9 scores 0.355 with an interval of 0.3237 to 0.3863 — the whole of it above 0.95's
+  0.210, so 0.9 is measurably *better*, and by the largest margin the value policy has ever managed against
+  anything but `Random`. **So the question "which lambda" has no answer until the opponent is named.** This
+  is the third non-transitivity recorded today and the sharpest: the first two were about ranking agents,
+  this one is about tuning one.
+
+- **`r2` is perfectly monotone in lambda across five points while the win rate is neither monotone nor even
+  single-peaked.** −0.3457, −0.0135, +0.0299, +0.0500, +0.0586 as lambda falls from 1.0 to 0.5 — every step
+  an improvement — against win rates of 0.0025, 0.10125, 0.035, 0.0788, 0.000 on one opponent and a
+  different shape on the other. ADR 0045 established that a better fit is not a better player. This is the
+  strongest form of it yet: the fit orders the five runs perfectly and tells you nothing about any of them.
+
+- **What correlates instead is the round cap.** Against `Greedy` the lambda 0.9 policy plays **19.1 rounds**
+  and reaches the cap in **46.2%** of matches, where `Greedy` against `Greedy` plays 7.8 and caps 0.5%. At
+  0.8 it is 11.9 rounds and 21.2%; at 0.5, 5.9 rounds and 0%. The high-lambda policies run the clock, and
+  at the cap the healthier team wins (ADR 0011). Against `search-4` that is apparently worth something —
+  16.5 rounds, 34.0% cap, its best score — and against `Greedy` it is worth almost nothing.
+  **This is a correlation, not a mechanism**: nothing here establishes *why* stalling pays against one and
+  not the other, and `ci-72` at lambda 0.95 already capped 49.0% against the baseline, so stalling is not
+  new at 0.9. The traces of `run-81` are where that would be settled.
+
+- **The sweep is closed rather than continued.** A sixth point buys another number on a curve that has been
+  shown to depend on who is asked. `next.json` settles at **0.95**, the best against `Greedy`, which is the
+  opponent every number in this journal is measured against — a default chosen on the stated reference, not
+  on the highest number available.
+
+- The champion bar blocked `ci-81`'s clone again, at `0.5 against models/clone/ci-69/policy.json
+  (interval from 0.5)`. Second production run, second correct refusal.
+
+## 2026-09-15. The lambda peaks at 0.95, and the fit rises all the way past it
+
+- **`ci-80` ran lambda 0.8**, the third point on the curve, on the pull request that asked for it. Same
+  teacher, 1000 matches, seed, alpha, min samples and share as the three before it, and `baselineR2` reads
+  **0.07054** for the fourth run running.
+
+  | value policy | lambda 1.0 | 0.95 (`ci-72`) | 0.8 (`ci-80`) | 0.5 (`ci-74`) |
+  | --- | --- | --- | --- | --- |
+  | `advantageStd` | — | 0.4071 | **0.226** | 0.1629 |
+  | `r2` | −0.3457 | −0.0135 | **+0.0500** | +0.0586 |
+  | against `Greedy` | 1 win in 400 | 0.10125 | **0.0788** | 0.000 |
+  | against `search-4` | — | 0.210 | **0.1013** | 0.000 |
+  | against `Random` | — | 0.6425 | 0.7462 | 0.70375 |
+
+- **The reading was pre-registered and it is followed here.** `next.json` said before the run: if 0.8 lands
+  between 0 and 0.10125 the peak is nearer 0.95 and the next point is 0.9. It landed there, so 0.9 it is —
+  even though the finer sweep is not where I would now spend the time (below).
+
+- **But against `Greedy` the two cannot be told apart.** `ci-80` scores 0.0788 with an interval of 0.0538 to
+  0.1037, and `ci-72`'s 0.10125 sits **inside** it. Four hundred matches cannot separate lambda 0.8 from
+  0.95 on that opponent. Against `search-4` they separate cleanly: 0.1013 with an interval of 0.0739 to
+  0.1286 against 0.210, which is well outside it. So the ordering rests on the `search-4` column, and this
+  is the second time in two days that the panel decided something one opponent could not.
+
+- **The fit rises monotonically across the whole sweep while the agent peaks in the middle.** `r2` goes
+  −0.3457, −0.0135, +0.0500, +0.0586 as lambda falls from 1.0 to 0.5 — every step an improvement, the last
+  two positive — and the win rate goes 0.0025, 0.10125, 0.0788, 0.000. ADR 0045 said a better fit is not a
+  better player on two points; this is the same lesson on four, in one controlled sweep, with `r2` still
+  under `baselineR2` at every one of them.
+
+- **The champion bar worked the first time it ran in production.** `ci-80`'s clone is `ci-69` again — the
+  lambda is read by `train-value` alone — and the gate said so in the words it was given:
+  `0.5 against models/clone/ci-69/policy.json (interval from 0.5) -- does not clear`. Where `ci-78` was
+  proposed and had to be caught by hand, this one was refused by the rule. The value policy printed
+  `no committed champion`, which is correct: there is no `models/value/` to be better than.
+
+- **What I would not do next.** Another lambda point buys a number that 400 matches may not resolve, on an
+  agent at 0.0788 against `Greedy` where the clone of the same turn plays 0.725 without any of this. The
+  sweep has found its answer — 0.95, or near it — and the binding constraint is visible in the table that
+  never moves: `baselineR2` 0.07054, four runs running. A low-lambda advantage is `V(next) - V(here)`, so
+  everything below 1.0 is built on a baseline that explains seven percent of the return. That is the number
+  to attack, not the lambda.
+
+## 2026-09-15. ci-78 proposed a model already committed, and the gate had no way to notice
+
+- **What happened**: a dispatched turn on `main` at `9f10d89` ran with `commit=true` and the merged
+  `value_lambda` 0.5. The value policy reproduced `ci-74` to the digit (0.000 against `Greedy`, 0.70375
+  against `Random`, 0.000 against `search-4`) and the clone cleared all three bars, so the workflow pushed
+  `policy/78` with `models/clone/ci-78/`.
+
+- **That clone is `models/clone/ci-69`.** Not similar to it — the same model:
+
+  | | `ci-69` | `ci-78` |
+  | --- | --- | --- |
+  | against `Greedy` | 0.725 | 0.725 |
+  | against `Random` | 0.9925 | 0.9925 |
+  | against `search-4` | 0.5325 | 0.5325 |
+  | epoch / loss / accuracy | 14 / 2.246 / 0.9555 | 14 / 2.246 / 0.9555 |
+
+  `value_lambda` is read by `train-value` and by nothing else, so the clone of that turn was determined to
+  be identical before the run started. Only the file fingerprint differs (`85a51347` against `4126ba18`),
+  because `trainedAt` is in the bytes. The branch was not merged, and `models/README.md` already said why:
+  "prefer raising the bar over filling the history with near-duplicates".
+
+- **The defect is in the gate, not in the run.** Its three bars ask *is this good* — at least
+  `commit_above` against `Greedy`, `commit_above_baseline` against the baseline, better than `Random`. None
+  asks *is this new*, and `ci-69` had cleared all three hours earlier, so every re-run of a config that once
+  passed proposes the same model again, forever, and the only thing stopping it is somebody reading the
+  numbers.
+
+- **What changed**: a fourth bar, the only one that is not a constant. The newest committed policy of the
+  same kind is played head to head on the benchmark seeds, and the new one must take the whole interval
+  above one half. Two identical policies score exactly 0.5 against each other, so anything less than
+  measurable is a duplicate: checked against the real numbers, 0.5 with interval [0.5, 0.5] is blocked, the
+  clone's parity result against `search-4` (0.5325, interval from 0.4981) is blocked, and 0.60 from 0.5556
+  passes. No committed policy of that kind, or one whose feature schema no longer applies, leaves nothing to
+  be better than and the bar does not apply. `evaluation-vs-champion.json` is kept beside the policy, for
+  the reason the Codex review gave for the baseline one: the artifact expires and the model must not outlive
+  its evidence.
+
+- **The Codex fix landed and worked first time.** `policy/78` carried `evaluation-vs-baseline.json`, the
+  first model proposal to keep the third bar's evidence — which is how the duplicate was caught quickly.
+
 ## 2026-09-15. Lambda 0.5 gives the best fit the value policy has ever had, and zero wins in 400
 
 - **What changed**: `learning/experiments/next.json` asked for `value_lambda` 0.5, one point further down the

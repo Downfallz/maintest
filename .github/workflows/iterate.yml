@@ -213,6 +213,14 @@ jobs:
       # here are not transitive. `ci-69` is at parity with `search-4` head to head (0.5325) and 20 points
       # behind it against Greedy (0.725 against 0.930), so a run that reads one of those numbers alone can
       # call the same agent a champion or a failure. Three opponents, three bars.
+      #
+      # And a fourth, which is the only one that is not a constant. The three above ask "is this good"; none
+      # asks "is this new", so a config that cleared them once proposes the same model on every re-run
+      # forever. ci-78 is the worked example: it proposed a clone scoring 0.725, 0.9925 and 0.5325 -- the
+      # committed ci-69 to the last digit, because only train-value reads the lambda that run was changing.
+      # So the newest committed policy of the same kind is played head to head, and the bar is the whole
+      # interval above one half: two identical policies score exactly one half against each other, and
+      # "beats it measurably" is the engine's own words for an interval that clears it.
       - name: Which policies cleared the bar
         id: cleared
         if: always()
@@ -228,6 +236,7 @@ jobs:
             greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
             random="runs/$RUN_ID/evaluations/$model-vs-random.json"
             baseline="runs/$RUN_ID/evaluations/$model-vs-baseline.json"
+            champion="$(find "models/$model" -mindepth 2 -maxdepth 2 -name policy.json 2>/dev/null | sort -V | tail -1)"
             [[ -f "$greedy" && -f "$random" ]] || continue
             score="$(jq -r '.agentA.score.mean // empty' "$greedy")"
             over_random="$(jq -r '.agentA.score.mean // empty' "$random")"
@@ -242,13 +251,49 @@ jobs:
               jq -e -n --argjson b "$over_baseline" --argjson a "$above_baseline" '$b >= $a' > /dev/null ||
                 clears_baseline=false
             fi
-            if [[ "$clears_baseline" == true ]] &&
+            # No committed policy of this kind yet, so there is nothing to be better than and the bar does
+            # not apply. A champion trained under another feature schema cannot play here either; the engine
+            # refuses it by design, and that reads as "cannot be compared" rather than as a pass or a fail.
+            against_champion="no committed champion"
+            clears_champion=true
+            versus=""
+            if [[ -n "$champion" ]]; then
+              versus="$RUNNER_TEMP/$model-vs-champion.json"
+              failure="$RUNNER_TEMP/$model-vs-champion.log"
+              if dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
+                   evaluate --p1 "policy:runs/$RUN_ID/$model/policy.json" --p2 "policy:$champion" \
+                   --seeds benchmarks/benchmark-seeds.json --out "$versus" > "$failure" 2>&1; then
+                read -r champion_mean champion_low <<< "$(jq -r '[.agentA.score.mean, .agentA.score.low] | @tsv' "$versus")"
+                against_champion="$champion_mean against $champion (interval from $champion_low)"
+                jq -e -n --argjson l "$champion_low" '$l > 0.5' > /dev/null || clears_champion=false
+              elif grep -q "feature schema" "$failure"; then
+                # The one waiver, and the only one. AgentFactory refuses a policy whose schema is not the
+                # one this content and rule set give, so a champion from before a content change cannot be
+                # played at all and there is no comparison to make.
+                against_champion="$champion was trained under another feature schema, so it cannot be compared"
+              else
+                # A gate that fails open is not a gate. Every other non-zero exit -- a crash, a full disk, a
+                # killed run -- leaves the comparison unmade, and waiving it there would let a policy be
+                # pushed without ever having been shown to beat the one it replaces.
+                clears_champion=false
+                against_champion="the comparison against $champion failed, so the bar could not be applied"
+                echo "::error::Evaluating $model against the champion $champion failed; it is refused rather than waived."
+                tail -n 20 "$failure"
+              fi
+            fi
+            if [[ "$clears_champion" == true && "$clears_baseline" == true ]] &&
                jq -e -n --argjson s "$score" --argjson a "$above" '$s >= $a' > /dev/null &&
                jq -e -n --argjson r "$over_random" '$r > 0.5' > /dev/null; then
               kept+=("$model")
-              echo "$model: $score against greedy, $over_random against random, $against_baseline, $size -- clears $above."
+              # An `if`, not a `&&`: under `bash -e` a false `[[ ]]` at the end of an `&&` chain is a
+              # non-zero statement and ends the step, which is what would happen on the first policy of a
+              # kind, the one case with no champion to copy.
+              if [[ -f "$versus" ]]; then
+                cp "$versus" "runs/$RUN_ID/evaluations/$model-vs-champion.json"
+              fi
+              echo "$model: $score against greedy, $over_random against random, $against_baseline, $against_champion, $size -- clears $above."
             else
-              echo "$model: $score against greedy, $over_random against random, $against_baseline, $size -- does not clear $above / $above_baseline."
+              echo "$model: $score against greedy, $over_random against random, $against_baseline, $against_champion, $size -- does not clear $above / $above_baseline, or does not measurably beat the champion."
             fi
           done
           printf 'models=%s\n' "${kept[*]-}" >> "$GITHUB_OUTPUT"
@@ -283,6 +328,10 @@ jobs:
             # the run artifact expires in thirty days and the committed model must not outlive its evidence.
             if [[ -f "runs/$RUN_ID/evaluations/$model-vs-baseline.json" ]]; then
               cp "runs/$RUN_ID/evaluations/$model-vs-baseline.json" "$destination/evaluation-vs-baseline.json"
+            fi
+            # The fourth bar, for the same reason: what this policy beat to take the champion's place.
+            if [[ -f "runs/$RUN_ID/evaluations/$model-vs-champion.json" ]]; then
+              cp "runs/$RUN_ID/evaluations/$model-vs-champion.json" "$destination/evaluation-vs-champion.json"
             fi
           done
           dotnet build --no-restore --configuration Release
@@ -323,7 +372,8 @@ jobs:
             echo "Add the policies of learning loop $RUN_ID"
             echo
             echo "One turn of scripts/iterate.sh on the CI runners (learning phase L7), content $hash."
-            echo "Committed because they score at least ${ABOVE:-0.5} against greedy and beat random:"
+            echo "Committed because they score at least ${ABOVE:-0.5} against greedy, beat random, and"
+            echo "measurably beat the committed policy of their kind where there was one:"
             echo
             for model in $MODELS; do
               greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
