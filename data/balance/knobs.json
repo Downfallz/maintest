@@ -20,7 +20,7 @@
         "reads": "Whether the content offers a choice, which is a different question from whether a greedy bot takes one. Both sides play greedily four decisions in five and draw uniformly the fifth (ADR 0014), so a spell the argmax always passes over still gets cast and can be read. Every target that needs a spell to be cast in order to mean anything is read here rather than on the mirrored run."
       },
       "exploit": {
-        "p1": "heuristic:learning/weights/search-3.json",
+        "p1": "heuristic:learning/weights/search-4.json",
         "p2": "greedy",
         "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A goes stale when the content moves — a tuning pass changes what there is to exploit — so it is refreshed from the next search run, not kept."
       }
@@ -139,7 +139,7 @@
         "max": 0.55,
         "scale": 0.05,
         "weight": 2,
-        "why": "A guard, not a push. It reads 0.55 today — 220 of 400 — and the 95% interval on 400 matches is about a twentieth either way, so asking for less than this would be asking the tuner to chase noise. What it stops is the tuner widening the gap, which nothing else here can see: every other target reads a mirrored run, where both sides play the same way and an exploit is invisible by construction. Read it with the skill target, which refuses the degenerate answer — flattening the game closes this gap and fails that one."
+        "why": "A guard, not a push. The band is one interval's width above even: the 95% interval on 400 matches is about a twentieth either way, so asking for less would be asking the tuner to chase noise. What it stops is the tuner widening the gap, which nothing else here can see: every other target reads a mirrored run, where both sides play the same way and an exploit is invisible by construction. Read it with the skill target, which refuses the degenerate answer — flattening the game closes this gap and fails that one. **This target is only as honest as the file it names**, and it has never once been inside its band when the file was fresh: measured with a search run against the catalogue it was actually pointed at, it reads 0.5875 on `d4a21a55`, 0.8075 on `938bef5e`, and **0.9275 on `7e199df4`**. Every low reading in the journal before this is a stale agent, not a safe catalogue — tune run 9 was credited 30.42 for taking it to 0.502 and a fresh search puts the same content at 0.9275. Refresh it from the next search run before reading it at all."
       }
     ]
   },
