@@ -254,7 +254,7 @@ A policy is a linear scorer over action keys, read without an ML runtime:
 | `schemaId`, `schemaVersion` | The feature schema of the observations (`docs/learning/features.md`); a reader refuses a version it does not know. |
 | `featureNames` | The feature names, in observation order; the width of every row. |
 | `actionKeys` | One entry per row, the action keys the policy knows (`docs/learning/features.md`, action encoding). |
-| `weights`, `bias` | One row and one bias per action key. |
+| `weights`, `bias` | One row and one bias per action key, written to six decimals (`WEIGHT_DECIMALS`). |
 | `fallback` | The score of a candidate action the policy never saw. |
 | `trainedAt`, `metrics` | When, and what the training measured (loss, accuracy, r2, step counts). |
 
@@ -262,6 +262,13 @@ To choose: for each candidate action the options offer, its row's dot product wi
 its bias, or `fallback` when the policy has no row for that key; the best-scoring candidate wins, the first
 on a tie. `Policy.choose` does it in Python; the engine's `PolicyAgent` (L7) will do the same, so a policy
 plays identically on both sides.
+
+A weight keeps six decimals because a committed policy is read back for the life of its catalogue and what
+git stores for one is what compounds: `ci-69` is 0.57 MB compressed at full precision and **0.30 MB** at six
+decimals. Writing the file without its indentation as well saves 0.03 MB more, which is not worth an artifact
+nobody can read. Six is chosen with room to spare, not at the edge: the same clone plays the benchmark seeds
+identically at six, four and three decimals, and over 5326 recorded steps not one argmax differs at any of
+them. The rounding happens on the way out, so a policy in memory is exact and only the file is short.
 
 ## Model files
 

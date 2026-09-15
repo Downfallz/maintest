@@ -25,8 +25,25 @@ from downfall_learning.features import SchemaError, check_schema
 from downfall_learning.stamps import RunStamp
 
 POLICY_FILE = "policy.json"
+
+#: Decimals a weight keeps on its way to `policy.json`. A policy is committed under `models/` and read back
+#: for the life of the catalogue it was trained on, so what git stores for one matters: at full precision
+#: `ci-69` is 0.57 MB compressed and at six decimals 0.30 MB, which is the whole saving -- writing the file
+#: without its indentation as well buys 0.03 MB more, because zlib already pays for the whitespace.
+#:
+#: Six is chosen with room to spare rather than at the edge. Rounding the committed `ci-69` clone and playing
+#: it on the benchmark seeds returns the same 0.710 at six, four and three decimals, and over 5326 recorded
+#: steps and 37886 candidate scorings not one argmax differs at any of the three. A score is a dot product of
+#: 431 terms, so a weight's last digits are far below the gap between two candidates; six leaves three orders
+#: of magnitude before the first precision that was even tested and found harmless.
+WEIGHT_DECIMALS = 6
 KINDS = ("clone", "value")
 UNSEEN_ACTION_SCORE = -1.0e9
+
+
+def _rounded(values: Sequence[float] | np.ndarray) -> list[float]:
+    """Weights as `policy.json` keeps them: rounded, and plain floats rather than numpy scalars."""
+    return [round(float(value), WEIGHT_DECIMALS) for value in values]
 
 
 @dataclass(frozen=True, eq=False)
@@ -48,7 +65,7 @@ class Baseline:
         return observations @ self.weights + self.bias
 
     def to_json(self) -> dict[str, Any]:
-        return {"weights": self.weights.tolist(), "bias": self.bias}
+        return {"weights": _rounded(self.weights), "bias": round(self.bias, WEIGHT_DECIMALS)}
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> Baseline:
@@ -153,8 +170,8 @@ class Policy:
             "schemaVersion": self.schema_version,
             "featureNames": list(self.feature_names),
             "actionKeys": list(self.action_keys),
-            "weights": self.weights.tolist(),
-            "bias": self.bias.tolist(),
+            "weights": [_rounded(row) for row in self.weights],
+            "bias": _rounded(self.bias),
             "fallback": self.fallback,
             "trainedAt": self.trained_at,
             "metrics": dict(self.metrics),
