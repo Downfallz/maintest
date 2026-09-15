@@ -23,6 +23,12 @@ How much data
                          rarer moves get enough examples; the first thing to raise when a policy learns
                          something odd from too few of them.
   --seed <n>             base seed of that dataset (default 1); change it to record different matches
+  --teacher <agent>      the agent whose play is recorded (default greedy). A clone can only be as good as
+                         what it imitates, and Greedy is beaten 92.75% by a searched set on this catalogue
+                         (journal, 2026-09-15), so a stronger teacher raises the ceiling and visits positions
+                         Greedy never reaches. Takes any agent spec: `heuristic:learning/weights/search-4.json`.
+                         The exploring dataset deviates from the same agent rather than from Greedy, so the
+                         two policies of one turn learn from one player.
   --traces <n>           match traces kept per recorded dataset (default 4). A trace is the viewer's
                          artifact, not a learner's: nothing here trains on one, and at about twenty times
                          the disk of the steps from the same match, one per match is what stops a dataset
@@ -43,6 +49,12 @@ The value policy (train-value: predicts the return of an action, plays the best 
   --value-min-samples <n> examples an action needs before it gets its own fit (default 5); below that, it
                          keeps the average return of the whole dataset. Raise it (50) so a rare move cannot
                          be scored on almost nothing.
+  --value-share <what>   what an action row is fitted on (ADR 0045). `action` is one regression per action
+                         key over the whole observation: 431 weights from the steps of that one key, which on
+                         a 1000-match dataset is a median of 60. `kind` fits one regression per decision kind
+                         over every step of that kind and leaves each action a scalar, so the board response
+                         is determined and only the scalar is thin. Default `action` until the two are
+                         measured on the same dataset.
 
 The clone policy (train-clone: imitates the recorded bot's choices)
   --clone-epochs <n>     passes over the dataset (default 20); the best pass on held-out matches is kept
@@ -61,10 +73,12 @@ against=""
 open_page=false
 matches=200
 traces=4
+teacher=greedy
 explore=
 seed=1
 value_alpha=1.0
 value_min_samples=5
+value_share=action
 clone_epochs=20
 clone_alpha=0.0001
 validation=0.2
@@ -77,8 +91,10 @@ while [[ $# -gt 0 ]]; do
     --traces) traces="$2"; shift 2 ;;
     --explore) explore="$2"; shift 2 ;;
     --seed) seed="$2"; shift 2 ;;
+    --teacher) teacher="$2"; shift 2 ;;
     --value-alpha) value_alpha="$2"; shift 2 ;;
     --value-min-samples) value_min_samples="$2"; shift 2 ;;
+    --value-share) value_share="$2"; shift 2 ;;
     --clone-epochs) clone_epochs="$2"; shift 2 ;;
     --clone-alpha) clone_alpha="$2"; shift 2 ;;
     --validation) validation="$2"; shift 2 ;;
@@ -131,21 +147,37 @@ evaluate random-vs-random random random
 evaluate greedy-vs-greedy greedy greedy
 evaluate greedy-vs-random greedy random
 
-step "4. Record a greedy self-play dataset ($matches matches from seed $seed, $traces trace(s))"
-"${cli[@]}" simulate --p1 greedy --p2 greedy --matches "$matches" --seed "$seed" --traces "$traces" --record "$run/dataset" --out "$run/dataset.csv"
+step "4. Record a $teacher self-play dataset ($matches matches from seed $seed, $traces trace(s))"
+"${cli[@]}" simulate --p1 "$teacher" --p2 "$teacher" --matches "$matches" --seed "$seed" --traces "$traces" --record "$run/dataset" --out "$run/dataset.csv"
 
 # The value policy trains on the explored dataset when there is one, the clone always on the pure one: a clone
 # of a bot that is wrong on purpose part of the time is not the baseline the report compares run to run.
 value_dataset="$run/dataset"
 if [[ -n "$explore" ]]; then
-  step "4b. Record an exploring self-play dataset (rate $explore)"
-  "${cli[@]}" simulate --p1 "explore:$explore" --p2 "explore:$explore" --matches "$matches" --seed "$seed" \
+  # The exploring agent deviates from the teacher, not from Greedy: `explore:<rate>` alone wraps Greedy, and
+  # `explore:<rate>:<weights>` wraps those weights. Those are the only two ExploringAgent can be given, so a
+  # teacher it cannot follow stops the run rather than recording the pure dataset against one player and the
+  # exploring one against another -- silently training the two policies of a turn on different players is the
+  # exact thing --teacher exists to prevent. The kind is matched case-insensitively because the engine parses
+  # it that way, so `Heuristic:...` is a valid spec and must not fall through to Greedy.
+  explorer="explore:$explore"
+  case "${teacher,,}" in
+    greedy) ;;
+    heuristic:*) explorer="explore:$explore:${teacher#*:}" ;;
+    *)
+      echo "Teacher '$teacher' cannot be explored: only 'greedy' and 'heuristic:<weights>' can." >&2
+      echo "Run without --explore to record a pure dataset against it." >&2
+      exit 2
+      ;;
+  esac
+  step "4b. Record an exploring self-play dataset ($explorer)"
+  "${cli[@]}" simulate --p1 "$explorer" --p2 "$explorer" --matches "$matches" --seed "$seed" \
     --traces "$traces" --record "$run/dataset-explore" --out "$run/dataset-explore.csv"
   value_dataset="$run/dataset-explore"
 fi
 
-step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples; epochs $clone_epochs, alpha $clone_alpha)"
-"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --validation "$validation"
+step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share; epochs $clone_epochs, alpha $clone_alpha)"
+"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --validation "$validation"
 "${learning[@]}" train-clone "$run/dataset" -o "$run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
 step "6. Evaluate the policies against the baselines"

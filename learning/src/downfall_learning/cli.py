@@ -35,7 +35,7 @@ from downfall_learning.search_weights import (
 )
 from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
-from downfall_learning.train_value import ValueOptions, train_value
+from downfall_learning.train_value import SHARES, ValueOptions, train_value
 from downfall_learning.tune_content import (
     PAIR_DEPTH,
     ContentEngine,
@@ -168,6 +168,13 @@ def build_parser() -> argparse.ArgumentParser:
     _add_dataset_arguments(value)
     value.add_argument("--alpha", type=float, default=1.0, help="ridge regularization strength")
     value.add_argument("--min-samples", type=int, default=5, help="steps an action needs to get its own row")
+    value.add_argument(
+        "--share",
+        choices=SHARES,
+        default="action",
+        help="what an action row is fitted on: 'kind' one regression per decision kind and a scalar per "
+        "action, 'action' one regression per action over the whole observation (ADR 0045)",
+    )
     value.set_defaults(handler=_train_value)
 
     _add_search_weights(commands)
@@ -253,7 +260,9 @@ def _train_clone(arguments: argparse.Namespace) -> int:
 def _train_value(arguments: argparse.Namespace) -> int:
     dataset = _dataset(arguments)
     log = TrainingLog(dataset.stamp, arguments.output / TRAINING_FILE)
-    options = ValueOptions(arguments.alpha, arguments.validation, arguments.seed, arguments.min_samples)
+    options = ValueOptions(
+        arguments.alpha, arguments.validation, arguments.seed, arguments.min_samples, arguments.share
+    )
     _write_policy(train_value(dataset, options, log), arguments.output)
     return 0
 

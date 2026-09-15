@@ -21,6 +21,12 @@ on:
       traces:
         description: "Match traces kept per dataset (0 keeps none; they are the viewer's, not a learner's)"
         default: ""
+      teacher:
+        description: "The agent whose play is recorded, e.g. heuristic:learning/weights/search-4.json"
+        default: ""
+      value_share:
+        description: "What a value row is fitted on: 'action' or 'kind' (ADR 0045)"
+        default: ""
       commit:
         description: "Commit a policy that clears the bar under models/ on a branch, or only report it"
         type: boolean
@@ -115,6 +121,8 @@ jobs:
           EXPLORE: ${{ inputs.explore }}
           SEED: ${{ inputs.seed }}
           TRACES: ${{ inputs.traces }}
+          TEACHER: ${{ inputs.teacher }}
+          VALUE_SHARE: ${{ inputs.value_share }}
           VALUE_ALPHA: ${{ inputs.value_alpha }}
           VALUE_MIN_SAMPLES: ${{ inputs.value_min_samples }}
         run: |
@@ -132,12 +140,15 @@ jobs:
           explore="${EXPLORE:-$(knob explore 0.2)}"
           seed="${SEED:-$(knob seed 1)}"
           traces="${TRACES:-$(knob traces 4)}"
+          teacher="${TEACHER:-$(knob teacher greedy)}"
+          value_share="${VALUE_SHARE:-$(knob value_share action)}"
           value_alpha="${VALUE_ALPHA:-$(knob value_alpha 1.0)}"
           value_min_samples="${VALUE_MIN_SAMPLES:-$(knob value_min_samples 5)}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seed $seed, traces $traces, explore $explore, value alpha $value_alpha, min samples $value_min_samples"
+          echo "Knobs: matches $matches, seed $seed, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
           arguments=(--run "$RUN_ID" --matches "$matches" --seed "$seed" --traces "$traces"
+            --teacher "$teacher" --value-share "$value_share"
             --value-alpha "$value_alpha" --value-min-samples "$value_min_samples")
           if [[ "$explore" != "off" ]]; then
             arguments+=(--explore "$explore")
