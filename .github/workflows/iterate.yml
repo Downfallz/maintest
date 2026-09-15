@@ -259,14 +259,26 @@ jobs:
             versus=""
             if [[ -n "$champion" ]]; then
               versus="$RUNNER_TEMP/$model-vs-champion.json"
+              failure="$RUNNER_TEMP/$model-vs-champion.log"
               if dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
                    evaluate --p1 "policy:runs/$RUN_ID/$model/policy.json" --p2 "policy:$champion" \
-                   --seeds benchmarks/benchmark-seeds.json --out "$versus" > /dev/null 2>&1; then
+                   --seeds benchmarks/benchmark-seeds.json --out "$versus" > "$failure" 2>&1; then
                 read -r champion_mean champion_low <<< "$(jq -r '[.agentA.score.mean, .agentA.score.low] | @tsv' "$versus")"
                 against_champion="$champion_mean against $champion (interval from $champion_low)"
                 jq -e -n --argjson l "$champion_low" '$l > 0.5' > /dev/null || clears_champion=false
+              elif grep -q "feature schema" "$failure"; then
+                # The one waiver, and the only one. AgentFactory refuses a policy whose schema is not the
+                # one this content and rule set give, so a champion from before a content change cannot be
+                # played at all and there is no comparison to make.
+                against_champion="$champion was trained under another feature schema, so it cannot be compared"
               else
-                against_champion="$champion cannot play on this content, so it cannot be compared"
+                # A gate that fails open is not a gate. Every other non-zero exit -- a crash, a full disk, a
+                # killed run -- leaves the comparison unmade, and waiving it there would let a policy be
+                # pushed without ever having been shown to beat the one it replaces.
+                clears_champion=false
+                against_champion="the comparison against $champion failed, so the bar could not be applied"
+                echo "::error::Evaluating $model against the champion $champion failed; it is refused rather than waived."
+                tail -n 20 "$failure"
               fi
             fi
             if [[ "$clears_champion" == true && "$clears_baseline" == true ]] &&
