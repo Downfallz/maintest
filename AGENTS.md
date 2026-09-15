@@ -63,7 +63,7 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # valida
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
-dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
+dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces (--traces N caps the traces; 0 keeps none)
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
 dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>, policy:<policy.json>, explore:<rate>
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
@@ -75,6 +75,7 @@ uv run --project learning check-knobs                                # the balan
 uv run --project learning tune-content -o runs/tune-1                # search those knobs for a better catalogue (ADR 0021); --apply writes it
 uv run --project learning python scripts/sweep-weight.py energy 0.2 0.3 0.4   # one scoring weight alone, on fixed content (ADR 0037); one sweep at a time
 # the same two searches run on GitHub Actions, each able to push a proposal branch: "Tune the catalogue" changes the content, "Search the agent weights" adds what it found next to greedy.json (docs/learning/training.md)
+# "Learning loop" runs scripts/iterate.sh there on learning/experiments/next.json, and with commit=true proposes a policy that clears its bar under models/ (models/README.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log
 scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/; --help lists every tuning flag

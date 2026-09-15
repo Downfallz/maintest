@@ -91,6 +91,7 @@ public sealed class RunRecorderTests
         recorder.Matches.ShouldBe(2);
         recorder.Steps.ShouldBe(steps.Count);
         recorder.Episodes.ShouldBe(4);
+        recorder.Traces.ShouldBe(2);
 
         foreach (var result in batch.Results)
         {
@@ -165,8 +166,54 @@ public sealed class RunRecorderTests
         Should.Throw<ArgumentNullException>(() => EpisodeRecord.Of(PlayerSlot.Player1, null!, 0, null));
     }
 
-    private static RunRecorder Recorder(MemoryArtifactWriter writer, MatchTraceRecorder? traces) =>
-        new(writer, Stamp, new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema), new FixedTimeProvider(FixedTimeProvider.Default), traces);
+    /// <summary>
+    /// The cap is what makes a dataset large enough to train on affordable: a trace is about twenty times the
+    /// disk of the steps recorded beside it, and no learner reads one. The matches past the cap must still be
+    /// completed, or the trace recorder holds every event of every match it ever saw.
+    /// </summary>
+    [Fact]
+    public async Task A_capped_recording_keeps_the_first_traces_and_still_forgets_the_rest()
+    {
+        var store = new MatchStore();
+        var tracer = new MatchTraceRecorder(store.Repository);
+        var writer = new MemoryArtifactWriter();
+        var recorder = Recorder(writer, tracer, traceLimit: 1);
+
+        var batch = await Handlers.Runner(store.WorkflowWith(tracer), new TestRandomFactory())
+            .RunAsync(Scenario(matches: 3), recorder, TestContext.Current.CancellationToken);
+        await recorder.FinishAsync(TestContext.Current.CancellationToken);
+
+        recorder.Matches.ShouldBe(3);
+        recorder.Traces.ShouldBe(1);
+        writer.Documents.Keys.Count(name => name.StartsWith(RunRecorder.TracesDirectory, StringComparison.Ordinal)).ShouldBe(1);
+        writer.Document<RunManifest>(RunRecorder.ManifestFile).Traces.ShouldBeTrue();
+        writer.LinesOf<EpisodeRecord>(RunRecorder.EpisodesFile).Count.ShouldBe(6);
+
+        // Every match, written or not: the events are the memory a long run would otherwise never give back.
+        batch.Results.ShouldAllBe(result => tracer.EntriesOf(result.MatchId).Count == 0);
+    }
+
+    /// <summary>Zero is the recording a learner wants, and it says so in the manifest the viewer reads.</summary>
+    [Fact]
+    public async Task A_recording_that_keeps_no_trace_says_so_even_with_a_recorder_attached()
+    {
+        var store = new MatchStore();
+        var tracer = new MatchTraceRecorder(store.Repository);
+        var writer = new MemoryArtifactWriter();
+        var recorder = Recorder(writer, tracer, traceLimit: 0);
+
+        await Handlers.Runner(store.WorkflowWith(tracer), new TestRandomFactory())
+            .RunAsync(Scenario(matches: 2), recorder, TestContext.Current.CancellationToken);
+        await recorder.FinishAsync(TestContext.Current.CancellationToken);
+
+        recorder.Traces.ShouldBe(0);
+        writer.Documents.Keys.ShouldBe([RunRecorder.ManifestFile]);
+        writer.Document<RunManifest>(RunRecorder.ManifestFile).Traces.ShouldBeFalse();
+        writer.LinesOf<EpisodeRecord>(RunRecorder.EpisodesFile).Count.ShouldBe(4);
+    }
+
+    private static RunRecorder Recorder(MemoryArtifactWriter writer, MatchTraceRecorder? traces, int traceLimit = int.MaxValue) =>
+        new(writer, Stamp, new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema), new FixedTimeProvider(FixedTimeProvider.Default), traces, traceLimit);
 
     private static SimulationScenario Scenario(int matches) => new()
     {

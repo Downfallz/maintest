@@ -23,6 +23,13 @@ How much data
                          rarer moves get enough examples; the first thing to raise when a policy learns
                          something odd from too few of them.
   --seed <n>             base seed of that dataset (default 1); change it to record different matches
+  --traces <n>           match traces kept per recorded dataset (default 4). A trace is the viewer's
+                         artifact, not a learner's: nothing here trains on one, and at about twenty times
+                         the disk of the steps from the same match, one per match is what stops a dataset
+                         from being large enough to fit rare actions. 1000 matches keep 70 MB of steps and
+                         would write 4.7 GB of traces. Use 0 for none. The viewer's fizzle and crit tiles
+                         count only the traces it was given and print their denominator; the rates the
+                         report quotes come from the evaluations, which read every match either way.
   --explore <rate>       also record a second dataset where that share of decisions is taken at random
                          instead of greedily (try 0.2), and train the value policy on it (ADR 0014). Greedy
                          always plays the same move in the same position, so its own games never show what a
@@ -53,6 +60,7 @@ run_id="$(date -u +%Y%m%d-%H%M%S)"
 against=""
 open_page=false
 matches=200
+traces=4
 explore=
 seed=1
 value_alpha=1.0
@@ -66,6 +74,7 @@ while [[ $# -gt 0 ]]; do
     --against) against="$2"; shift 2 ;;
     --open) open_page=true; shift ;;
     --matches) matches="$2"; shift 2 ;;
+    --traces) traces="$2"; shift 2 ;;
     --explore) explore="$2"; shift 2 ;;
     --seed) seed="$2"; shift 2 ;;
     --value-alpha) value_alpha="$2"; shift 2 ;;
@@ -122,8 +131,8 @@ evaluate random-vs-random random random
 evaluate greedy-vs-greedy greedy greedy
 evaluate greedy-vs-random greedy random
 
-step "4. Record a greedy self-play dataset ($matches matches from seed $seed)"
-"${cli[@]}" simulate --p1 greedy --p2 greedy --matches "$matches" --seed "$seed" --record "$run/dataset" --out "$run/dataset.csv"
+step "4. Record a greedy self-play dataset ($matches matches from seed $seed, $traces trace(s))"
+"${cli[@]}" simulate --p1 greedy --p2 greedy --matches "$matches" --seed "$seed" --traces "$traces" --record "$run/dataset" --out "$run/dataset.csv"
 
 # The value policy trains on the explored dataset when there is one, the clone always on the pure one: a clone
 # of a bot that is wrong on purpose part of the time is not the baseline the report compares run to run.
@@ -131,7 +140,7 @@ value_dataset="$run/dataset"
 if [[ -n "$explore" ]]; then
   step "4b. Record an exploring self-play dataset (rate $explore)"
   "${cli[@]}" simulate --p1 "explore:$explore" --p2 "explore:$explore" --matches "$matches" --seed "$seed" \
-    --record "$run/dataset-explore" --out "$run/dataset-explore.csv"
+    --traces "$traces" --record "$run/dataset-explore" --out "$run/dataset-explore.csv"
   value_dataset="$run/dataset-explore"
 fi
 

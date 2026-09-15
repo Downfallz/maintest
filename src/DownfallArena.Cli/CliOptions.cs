@@ -22,6 +22,13 @@ internal sealed record CliOptions
 
     public string? Trace { get; init; }
 
+    /// <summary>
+    /// How many match traces <c>--record</c> writes; null keeps one per match. Zero leaves the trace recorder
+    /// unregistered altogether, which is what a dataset large enough to train on wants: a trace costs two board
+    /// projections per event and about twenty times the disk of the steps it is recorded beside.
+    /// </summary>
+    public int? Traces { get; init; }
+
     public AgentSpec Player1 { get; init; } = AgentSpec.Random;
 
     public AgentSpec Player2 { get; init; } = AgentSpec.Random;
@@ -52,7 +59,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir]";
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -76,7 +83,7 @@ internal sealed record CliOptions
             index += 2;
         }
 
-        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export"], StringComparer.Ordinal).FirstOrDefault();
+        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export"], StringComparer.Ordinal).FirstOrDefault();
         if (unknown is not null)
         {
             throw new ArgumentException($"Unknown option '{unknown}'.");
@@ -91,6 +98,7 @@ internal sealed record CliOptions
             SchemaPath = values.GetValueOrDefault("--schema") ?? DefaultSchemaPath,
             Record = values.GetValueOrDefault("--record"),
             Trace = values.GetValueOrDefault("--trace"),
+            Traces = values.TryGetValue("--traces", out var traces) ? ParseTraces(traces) : null,
             Player1 = AgentSpec.Parse(values.GetValueOrDefault("--p1") ?? "random"),
             Player2 = AgentSpec.Parse(values.GetValueOrDefault("--p2") ?? "random"),
             Seeds = values.GetValueOrDefault("--seeds"),
@@ -100,6 +108,13 @@ internal sealed record CliOptions
             Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
             Export = values.GetValueOrDefault("--export"),
         };
+    }
+
+    /// <summary>A trace count, rejected here so a typo is one line rather than a run that keeps nothing.</summary>
+    private static int ParseTraces(string text)
+    {
+        var traces = int.Parse(text, CultureInfo.InvariantCulture);
+        return traces >= 0 ? traces : throw new ArgumentException($"'{traces}' traces is not a count.", nameof(text));
     }
 
     /// <summary>A port the studio host can actually bind, rejected here so a typo is one line, not a stack.</summary>
