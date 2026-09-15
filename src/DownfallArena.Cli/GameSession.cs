@@ -52,13 +52,20 @@ internal sealed class GameSession
 
     /// <summary>
     /// The trace recorder keeps every event of every match it sees, so it is only registered when something
-    /// reads it back: a trace file, or a recorded run that keeps at least one trace. <c>--traces 0</c> is the
-    /// case that matters for a large dataset: the projections are never built, rather than built and dropped.
-    /// The combat counters listen for the commands that report fizzle and crit rates.
+    /// will <em>drain</em> it: <c>play</c> and <c>human</c> hand one match to <c>WriteTraceAsync</c>, and a
+    /// recorded run hands every match to <see cref="MatchTraceRecorder.Complete"/> as long as it keeps at
+    /// least one trace. Registering it for anything else is a leak rather than a waste, because only those
+    /// two paths ever make it forget a match: <c>--trace</c> is read by <c>play</c> alone, so
+    /// <c>simulate --record … --traces 0 --trace f.json</c> would otherwise hold every event of every match
+    /// in the batch. <c>--traces 0</c> is the case that matters for a large dataset either way: the two board
+    /// projections per event are never built, rather than built and dropped. The combat counters listen for
+    /// the commands that report fizzle and crit rates.
     /// </summary>
     public static void AddListeners(IServiceCollection serviceCollection, CliOptions cliOptions)
     {
-        if (cliOptions.Trace is not null || (cliOptions.Record is not null && cliOptions.Traces != 0))
+        var tracesOneMatch = cliOptions.Command is "play" or "human" && cliOptions.Trace is not null;
+        var tracesARun = cliOptions.Command is "simulate" && cliOptions.Record is not null && cliOptions.Traces != 0;
+        if (tracesOneMatch || tracesARun)
         {
             serviceCollection.AddSingleton<MatchTraceRecorder>();
             serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());

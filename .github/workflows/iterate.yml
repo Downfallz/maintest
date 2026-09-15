@@ -247,11 +247,18 @@ jobs:
           BASE: ${{ github.ref_name }}
           ABOVE: ${{ inputs.commit_above }}
           MODELS: ${{ steps.cleared.outputs.models }}
+          ATTEMPT: ${{ github.run_attempt }}
         run: |
+          # A re-run keeps github.run_number and only increments the attempt, so re-running a run that already
+          # pushed would build a different commit on the same base and be refused as a non-fast-forward -- at
+          # the end of a loop that takes over an hour. Later attempts get their own branch; the first keeps the
+          # plain policy/<n> that matches search/<n> and tune/<n>.
+          branch="$BRANCH"
+          [[ "$ATTEMPT" == "1" ]] || branch="$BRANCH-$ATTEMPT"
           hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
+          git switch -c "$branch"
           git add models
 
           # Written to a file: a -m here would carry this file's YAML indentation into the message.
@@ -274,13 +281,13 @@ jobs:
             echo "Workflow run: $SERVER/$REPOSITORY/actions/runs/$RUN_ID_URL"
           } > "$RUNNER_TEMP/message.txt"
           git commit -F "$RUNNER_TEMP/message.txt"
-          git push origin "$BRANCH"
+          git push origin "$branch"
 
           {
             echo
-            echo "### The policies are on \`$BRANCH\`"
+            echo "### The policies are on \`$branch\`"
             echo
-            echo "**[Open it as a pull request]($SERVER/$REPOSITORY/compare/$BASE...$BRANCH?expand=1)** — one tap,"
+            echo "**[Open it as a pull request]($SERVER/$REPOSITORY/compare/$BASE...$branch?expand=1)** — one tap,"
             echo "and the repository's real checks run on it."
             echo
             echo "The build, the tests and the format check all passed on this branch before it was pushed."
