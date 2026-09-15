@@ -13,9 +13,10 @@ branch is a proposal: a human opens the pull request, and ADR 0013 still wants a
 one is worth keeping. Its version is the workflow run (`ci-<n>`), so two runs never land on one directory and
 the name says which run to open.
 
-Small JSON files only, and that is a real constraint rather than a preference: `ci-10`'s value policy is
-5.8 MB and its clone 1.8 MB, because a row of 383 weights per action key at full float precision adds up.
-Rounding the weights halves it. Read the size before committing one, and prefer raising the bar over filling
-the history with near-duplicates.
+Small JSON files only, and that is a real constraint rather than a preference: a row of weights per action
+key adds up, and `ci-69`'s clone is 1.36 MB for 90,948 lines of them. Weights are written to six decimals for
+that reason, which is what halves the 0.57 MB git would otherwise store for one to 0.30 MB
+(`WEIGHT_DECIMALS`, `docs/learning/training.md`). Read the size before committing one anyway, and prefer
+raising the bar over filling the history with near-duplicates: the rounding buys a factor, not a licence.
 
 Datasets are not models: they live under `runs/`, git-ignored, and are regenerated from seeds.
