@@ -49,6 +49,15 @@ first.
   be improved with no format change, no engine change and no feature schema. That also means the 0.1215 a
   nonlinear baseline reaches is **available**, and ADR 0048 leaves it open rather than taking it.
 
+- **A second defect in the same change, found by the Codex review.** Clipping the value the action rows are
+  fitted against, while reconstructing the reported score from the unclipped written baseline, mixes two
+  different values: the score is then wrong by exactly the overshoot, on the steps the clip exists for. The
+  metric now scores against the value actually fitted on, which on this dataset is `r2` 0.0237 → **0.0273**
+  and `loss` 1.0062 → 1.0024. `accuracy` cannot move either way, since a baseline adds one number to every
+  candidate of a decision. It has **no test**: the fixture's baseline predicts inside the return range at
+  every alpha, so the clip never bites there, and the test I first wrote passed with the bug still in. It was
+  removed rather than kept — a test that cannot fail claims a coverage it does not have.
+
 - **`baselineR2` is not comparable across this entry.** It is now measured on the values actually used, clip
   included. The step change on identical data is 0.0705 to 0.0806.
 

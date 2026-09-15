@@ -271,8 +271,16 @@ def train_value(
     weights, bias, fitted, groups = result.weights, result.bias, result.fitted, result.regressions
 
     scored = split.validation if len(split.validation) > 0 else split.train
-    scorer = LinearScorer(keys, weights, bias, fallback, baseline)
-    predictions = np.array([scorer.scores(dataset.observations[i], [dataset.actions[i]])[0] for i in scored])
+    # The action rows alone, plus the value they were actually fitted against. Reconstructing a score from
+    # the written `baseline` instead would add an unclipped value to rows fitted against a clipped one, and
+    # be wrong by exactly the overshoot -- on the steps the clip exists for, and nowhere else. `accuracy` is
+    # the same either way: a baseline adds one number to every candidate of a decision and cannot move an
+    # argmax, which is also why the file may keep carrying the bare fit.
+    scorer = LinearScorer(keys, weights, bias, fallback)
+    predictions = (
+        np.array([scorer.scores(dataset.observations[i], [dataset.actions[i]])[0] for i in scored])
+        + values[scored]
+    )
     # Still measured against the episode return, which is what it always measured. Below lambda 1 the action
     # rows no longer target that quantity, so `loss` and `r2` are expected to read worse while the agent
     # plays better: ADR 0045 measured 0.42 of r2 bought at the cost of 11 points of win rate. They stay

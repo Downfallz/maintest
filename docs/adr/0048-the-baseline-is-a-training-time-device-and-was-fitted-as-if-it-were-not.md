@@ -59,6 +59,13 @@ The written `baseline` in `policy.json` stays the bare fit. Clipping it there wo
 reader adds it to every candidate alike, and leaving it alone keeps the file exactly what ADR 0013's exchange
 format says it is.
 
+**The fit metrics score against the clipped value, not the written one.** The action rows are fitted against
+an advantage taken from the clipped value, so reconstructing a score from the unclipped baseline mixes two
+different values and is wrong by exactly the overshoot — on the steps the clip exists for, and nowhere else.
+On the 1000-match dataset that is `r2` 0.0237 against 0.0273 and `loss` 1.0062 against 1.0024. `accuracy` is
+unaffected either way, since a baseline adds one number to every candidate of a decision and cannot move an
+argmax. Found by the Codex review of `d71e565`.
+
 ## Consequences
 
 - Good: on the same dataset, `baselineR2` goes **0.0705 → 0.0806** from the clip alone and **→ 0.1053** with
@@ -94,6 +101,8 @@ format says it is.
 - `learning/src/downfall_learning/cli.py` (`--baseline-alpha`), `scripts/iterate.sh`
   (`--value-baseline-alpha`), `.github/workflows/iterate.yml` (`value_baseline_alpha`).
 - `learning/tests/test_train_value.py` pins the separate pull, the clip, and that the clip narrows the
-  advantage.
+  advantage. It does **not** pin the metric fix above: the test fixture's baseline predicts inside the
+  return range at every alpha, so the clip never bites there and no test written on it can tell the two
+  metrics apart. That one is verified on the real dataset instead, and the numbers are in the journal.
 - The journal entry of 2026-09-15 carries the measurements, including the interaction that failed.
 - Open: the nonlinear baseline above, and whether any of this moves a win rate — nothing here has been played.
