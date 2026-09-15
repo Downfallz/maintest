@@ -22,6 +22,9 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
         {
             AgentKind.Heuristic => spec with { Version = Weights(spec).Fingerprint },
             AgentKind.Policy => spec with { Version = Policy(spec).Fingerprint },
+            // An exploring agent that names weights is as much those weights as a heuristic agent is, so the
+            // stamp fingerprints them too: two runs on different weights at one path have to stamp apart.
+            AgentKind.Explore when Split(spec).Inner is { } path => spec with { Version = weights.Load(path).Fingerprint },
             _ => spec,
         };
     }
@@ -38,7 +41,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Greedy => new GreedyAgent(resources, rules),
             AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
             AgentKind.Policy => Trained(spec, rules),
-            AgentKind.Explore => new ExploringAgent(Rate(spec), new GreedyAgent(resources, rules), random),
+            AgentKind.Explore => new ExploringAgent(Rate(spec), Explored(spec, rules), random),
             _ => throw new InvalidOperationException($"Agent kind '{spec.Kind}' has no implementation."),
         };
     }
@@ -48,10 +51,32 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
 
     /// <summary>The exploration rate the spec carries after the colon: <c>explore:0.1</c>.</summary>
     private static double Rate(AgentSpec spec) =>
-        double.TryParse(spec.Path, NumberStyles.Float, CultureInfo.InvariantCulture, out var rate)
+        double.TryParse(RateText(spec), NumberStyles.Float, CultureInfo.InvariantCulture, out var rate)
         && double.IsFinite(rate) && rate > 0 && rate <= 1
             ? rate
             : throw new ArgumentException($"An exploring agent needs a rate above 0 and at most 1: 'explore:<rate>', not '{spec}'.", nameof(spec));
+
+    private static string RateText(AgentSpec spec) => Split(spec).Rate;
+
+    /// <summary>
+    /// The agent an exploring agent deviates from: <c>Greedy</c>, or the weights a second colon names
+    /// (<c>explore:0.2:learning/weights/search-4.json</c>). An exploring run is recorded so that a value
+    /// policy can see what a move other than the chosen one was worth (ADR 0014), so the agent it deviates
+    /// from is the one whose play is being learned. Leaving it at Greedy while the pure dataset is recorded
+    /// against someone else would train the two policies of one loop on two different players.
+    /// </summary>
+    private IPlayerAgent Explored(AgentSpec spec, RuleSet rules) =>
+        Split(spec).Inner is { } path
+            ? new HeuristicAgent(weights.Load(path), resources, rules)
+            : new GreedyAgent(resources, rules);
+
+    /// <summary>The rate and the optional inner weights path an exploring spec carries, split on the colon.</summary>
+    private static (string Rate, string? Inner) Split(AgentSpec spec)
+    {
+        var path = spec.Path ?? string.Empty;
+        var separator = path.IndexOf(':', StringComparison.Ordinal);
+        return separator < 0 ? (path, null) : (path[..separator], path[(separator + 1)..]);
+    }
 
     private PolicyFile Policy(AgentSpec spec) =>
         policies.Load(spec.Path ?? throw new ArgumentException("A policy agent needs a policy file: 'policy:<path>'.", nameof(spec)));
