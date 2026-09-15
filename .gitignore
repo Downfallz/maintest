@@ -80,9 +80,11 @@ coverage.xml
 # The content studio writes a document through a temporary file next to it.
 *.json.tmp
 
-# The default --out of `evaluate` and of `simulate`, run from the repository root.
-evaluation.json
-simulation.csv
+# The default --out of `evaluate` and of `simulate`, run from the repository root. Anchored: unanchored,
+# these match at any depth, and a policy is committed with the evaluation that earned it a place
+# (models/README.md) under exactly that name -- ci-69 landed without one because of it.
+/evaluation.json
+/simulation.csv
 
 # scratch space for scripts/sweep-weight.py
 .sweep/
