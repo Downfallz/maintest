@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 from conftest import evaluation_json
+from downfall_learning import cli
 from downfall_learning.artifacts import Evaluation
 from downfall_learning.knobs import Content, Knob, Knobs, Objective, Target, load_knobs
 from downfall_learning.search_weights import EngineCommand, EvaluationError
@@ -133,7 +134,9 @@ def test_scoring_a_catalogue_plays_it_once_and_keeps_the_numbers_behind_the_scor
 def test_a_score_names_the_seeds_it_was_played_on(tmp_path: Path) -> None:
     """The whole point of scoring a catalogue apart from the search is which seeds it was played on."""
     knobs = load(tmp_path)
-    objective = replace(knobs.objective, seeds="holdout-seeds.json")
+    objective = Objective(
+        seeds="holdout-seeds.json", evaluations=knobs.objective.evaluations, targets=knobs.objective.targets
+    )
 
     score = score_content(FakeEvaluator(), objective, catalogue(tmp_path))
 
@@ -167,12 +170,63 @@ def test_a_score_on_the_engine_plays_the_seeds_the_objective_names(
     engine_evaluator: tuple[EngineContentEvaluator, Content, Path],
 ) -> None:
     evaluator, content, _ = engine_evaluator
-    objective = replace(evaluator._objective, seeds="unseen.json")
+    objective = Objective(
+        seeds="unseen.json",
+        evaluations={"mirror": {"p1": "greedy", "p2": "greedy"}},
+        targets=(Target(metric="averageRounds", on="mirror", minimum=8, maximum=16, scale=3, weight=1),),
+    )
 
     score = score_content(evaluator, objective, content)
 
     assert score.seeds == "unseen.json"
     assert score.metrics["mirror"]["averageRounds"] == pytest.approx(32.0)
+
+
+def test_score_content_plays_the_content_on_the_seed_file_it_is_given(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The command end to end, on the fake builder and engine: the hold-out step of tune.yml is this call."""
+    builder = tmp_path / "fake_builder.py"
+    builder.write_text(FAKE_BUILDER, encoding="utf-8")
+    engine = tmp_path / "fake_engine.py"
+    engine.write_text(FAKE_ENGINE, encoding="utf-8")
+    (tmp_path / "template.json").write_text(json.dumps(evaluation_json(0.5, 0.5)), encoding="utf-8")
+    data = tmp_path / "data"
+    content_tree(data)
+    knobs = data / "balance" / "knobs.json"
+    knobs.parent.mkdir()
+    knobs.write_text(json.dumps(knobs_document()), encoding="utf-8")
+    unseen = tmp_path / "unseen.json"
+    unseen.write_text(json.dumps({"seeds": [1, 2, 3]}), encoding="utf-8")
+
+    code = cli.main(
+        [
+            "score-content",
+            "-o",
+            str(tmp_path / "out"),
+            "--seeds",
+            str(unseen),
+            "--knobs",
+            str(knobs),
+            "--data",
+            str(data),
+            "--repo",
+            str(tmp_path),
+            "--engine",
+            sys.executable,
+            str(engine),
+            "--builder",
+            sys.executable,
+            str(builder),
+        ]
+    )
+
+    assert code == 0
+    written = json.loads((tmp_path / "out" / "score.json").read_text(encoding="utf-8"))
+    assert written["seeds"] == str(unseen.resolve())
+    assert written["metrics"]["mirror"]["averageRounds"] == pytest.approx(32.0)
+    assert written["score"] == pytest.approx((16 / 3) ** 2)
+    assert "Scored on" in capsys.readouterr().out
 
 
 def test_a_catalogue_already_played_is_not_played_again(tmp_path: Path) -> None:

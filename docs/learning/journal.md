@@ -31,6 +31,16 @@ first.
   matches, which is what three matches look like and not a finding. The jq window against the real
   `benchmark-seeds.json` starts at 995317, one past its largest seed, and shares none of its 200 seeds.
 
+- **Two things the pull request's reviewers caught, both real.** Codex: the lower window was refused when
+  its start would be negative, copied from `search.yml`'s rule — but a seed is an `int` the engine adds to
+  unchecked, and the seed file loader refuses only an empty list and a repeat, so the floor is the signed
+  minimum and not zero. Checked at the edges: a top at `int.MaxValue` with a low of 100 now gives −100, a
+  low of 0 gives −200 where it used to give up, and one seed past the signed minimum still gives "none".
+  `search.yml` carries the same `>= 0` and is not touched here. Sonar: the new command duplicated
+  `tune-content`'s preflight line for line and had no test past that preflight, so both handlers now share
+  one, and `score-content` grew `--builder` so the whole command runs end to end on the fake builder and
+  engine in a test — the same call `tune.yml`'s hold-out step makes.
+
 - **What is not claimed.** No tuning pass has run under this yet, so no proposal has been checked by it. And
   it is a window of 200 seeds against a search that played 200: one hold-out, not a spread. The tuner's
   score is a sum over four evaluations of 200 matches each and is steadier than a single win rate, but how

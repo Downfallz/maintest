@@ -19,7 +19,17 @@ from downfall_learning.iteration import (
     load_report,
     write_report,
 )
-from downfall_learning.knobs import KNOBS_FILE, KnobsError, findings, load_content, load_knobs, validate
+from downfall_learning.knobs import (
+    KNOBS_FILE,
+    Content,
+    Knobs,
+    KnobsError,
+    Objective,
+    findings,
+    load_content,
+    load_knobs,
+    validate,
+)
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.progress import Progress
 from downfall_learning.report import TRAINING_FILE, TrainingLog
@@ -38,6 +48,7 @@ from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
 from downfall_learning.train_value import SHARES, ValueOptions, train_value
 from downfall_learning.tune_content import (
+    DATA_BUILDER_COMMAND,
     PAIR_DEPTH,
     ContentEngine,
     EngineContentEvaluator,
@@ -51,6 +62,7 @@ from downfall_learning.viewer import RUN_PAGE, write_run_page
 
 RUNS_HELP = "one or more run directories recorded by 'simulate --record'"
 REPO_HELP = "the engine repository root (default: cwd)"
+DATA_HELP = "the authored content directory"
 OUTPUT_HELP = "the directory the model is written to"
 
 
@@ -105,7 +117,7 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
     )
     tune.add_argument("-o", "--output", type=Path, required=True, help="the directory the proposal lands in")
     tune.add_argument("--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})")
-    tune.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    tune.add_argument("--data", type=Path, default=Path("data"), help=DATA_HELP)
     tune.add_argument("--iterations", type=int, default=8, help="rounds of neighbours (default 8)")
     tune.add_argument("--neighbours", type=int, default=4, help="candidates played per round (default 4)")
     tune.add_argument(
@@ -159,10 +171,13 @@ def _add_score_content(commands: argparse._SubParsersAction) -> None:
     score.add_argument(
         "--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})"
     )
-    score.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    score.add_argument("--data", type=Path, default=Path("data"), help=DATA_HELP)
     score.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     score.add_argument(
         "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
+    )
+    score.add_argument(
+        "--builder", nargs="+", help="the data builder command prefix (default: the built assembly)"
     )
     score.set_defaults(handler=_score_content)
 
@@ -172,7 +187,7 @@ def _add_check_knobs(commands: argparse._SubParsersAction) -> None:
     check.add_argument(
         "--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})"
     )
-    check.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    check.add_argument("--data", type=Path, default=Path("data"), help=DATA_HELP)
     check.add_argument(
         "--strict", action="store_true", help="fail on the content findings too, not only on the knobs file"
     )
@@ -405,25 +420,42 @@ def _check_knobs(arguments: argparse.Namespace) -> int:
     return 1 if reports and arguments.strict else 0
 
 
-def _tune_content(arguments: argparse.Namespace) -> int:
+def _content_evaluator(
+    arguments: argparse.Namespace, seeds: str | None = None
+) -> tuple[Knobs, Content, Objective, EngineContentEvaluator] | None:
+    """The knobs, the content, the objective and an evaluator on the engine, or ``None`` after saying why.
+
+    One preflight for ``tune-content`` and ``score-content``, so a hold-out cannot start on a knobs file the
+    search itself would have refused. ``seeds`` replaces the objective's seed file and nothing else about
+    it, which is how the hold-out points the same evaluations at seeds no candidate saw.
+    """
     try:
         knobs = load_knobs(arguments.knobs)
         content = load_content(arguments.data)
     except KnobsError as error:
         print(error, file=sys.stderr)
-        return 1
+        return None
 
     problems = validate(knobs, content, root=_repository_of(arguments.knobs))
     if problems:
         for problem in problems:
             print(f"problem: {problem}", file=sys.stderr)
-        print("The knobs and the content disagree; fix that before searching.", file=sys.stderr)
-        return 1
+        print("The knobs and the content disagree; fix that before playing anything.", file=sys.stderr)
+        return None
 
-    engine = EngineCommand(root=arguments.repo, seeds=knobs.objective.seeds or EngineCommand().seeds)
+    objective = knobs.objective
+    if seeds is not None:
+        objective = Objective(seeds=seeds, evaluations=objective.evaluations, targets=objective.targets)
+    engine = EngineCommand(root=arguments.repo, seeds=objective.seeds or EngineCommand().seeds)
     if arguments.engine:
         engine = replace(engine, command=tuple(arguments.engine))
-    host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
+    builder = getattr(arguments, "builder", None)
+    host = ContentEngine(
+        engine=engine,
+        data=arguments.data,
+        workdir=arguments.output / "work",
+        builder=tuple(builder) if builder else DATA_BUILDER_COMMAND,
+    )
     # Both, each against the trees it is built from. The comment here used to say the evaluator checked the
     # engine, which was true of `CliEvaluator` and never of `EngineContentEvaluator` -- so a run whose
     # builder happened to be fresh played every candidate on a stale CLI and said nothing.
@@ -431,8 +463,15 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         unreachable = missing_engine(command, engine.root, sources)
         if unreachable:
             print(unreachable, file=sys.stderr)
-            return 1
-    evaluator = EngineContentEvaluator(host, knobs.objective, content)
+            return None
+    return knobs, content, objective, EngineContentEvaluator(host, objective, content)
+
+
+def _tune_content(arguments: argparse.Namespace) -> int:
+    prepared = _content_evaluator(arguments)
+    if prepared is None:
+        return 1
+    knobs, content, _, evaluator = prepared
     options = TuneOptions(
         iterations=arguments.iterations,
         neighbours=arguments.neighbours,
@@ -458,34 +497,12 @@ def _tune_content(arguments: argparse.Namespace) -> int:
 
 
 def _score_content(arguments: argparse.Namespace) -> int:
-    try:
-        knobs = load_knobs(arguments.knobs)
-        content = load_content(arguments.data)
-    except KnobsError as error:
-        print(error, file=sys.stderr)
-        return 1
-
-    problems = validate(knobs, content, root=_repository_of(arguments.knobs))
-    if problems:
-        for problem in problems:
-            print(f"problem: {problem}", file=sys.stderr)
-        print("The knobs and the content disagree; fix that before scoring.", file=sys.stderr)
-        return 1
-
     # The engine runs in the repository root, so the seed file goes in absolute: a relative path would be
     # read from there, not from where this command was launched.
-    seeds = str(Path(arguments.seeds).resolve())
-    objective = replace(knobs.objective, seeds=seeds)
-    engine = EngineCommand(root=arguments.repo, seeds=seeds)
-    if arguments.engine:
-        engine = replace(engine, command=tuple(arguments.engine))
-    host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
-    for command, sources in ((host.builder, BUILDER_SOURCES), (engine.command, ENGINE_SOURCES)):
-        unreachable = missing_engine(command, engine.root, sources)
-        if unreachable:
-            print(unreachable, file=sys.stderr)
-            return 1
-    evaluator = EngineContentEvaluator(host, objective, content)
+    prepared = _content_evaluator(arguments, seeds=str(Path(arguments.seeds).resolve()))
+    if prepared is None:
+        return 1
+    _, content, objective, evaluator = prepared
     score = score_content(evaluator, objective, content)
     arguments.output.mkdir(parents=True, exist_ok=True)
     path = arguments.output / "score.json"

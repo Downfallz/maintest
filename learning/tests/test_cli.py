@@ -146,10 +146,8 @@ def test_evaluate_policy_drives_the_engine_and_updates_the_model(
     assert json.loads((tmp_path / "model" / "training.jsonl").read_text())["winRate"] == 0.75
 
 
-def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
-    tmp_path: Path, capsys: pytest.CaptureFixture
-) -> None:
-    """The preflight, not the engine. Without it the search starts and fails one candidate at a time."""
+def broken_objective(tmp_path: Path) -> Path:
+    """A knobs file whose objective names a weights file that is not there, in an empty content tree."""
     balance = tmp_path / "data" / "balance"
     balance.mkdir(parents=True)
     knobs = balance / "knobs.json"
@@ -170,6 +168,14 @@ def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
     )
     (tmp_path / "data" / "Spells").mkdir()
     (tmp_path / "data" / "aliases.json").write_text("{}", encoding="utf-8")
+    return knobs
+
+
+def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The preflight, not the engine. Without it the search starts and fails one candidate at a time."""
+    knobs = broken_objective(tmp_path)
 
     code = cli.main(
         [
@@ -195,26 +201,7 @@ def test_score_content_refuses_the_same_broken_objective_before_touching_the_eng
     tmp_path: Path, capsys: pytest.CaptureFixture
 ) -> None:
     """The same preflight as tune-content: a hold-out that starts and then fails is a workflow run wasted."""
-    balance = tmp_path / "data" / "balance"
-    balance.mkdir(parents=True)
-    knobs = balance / "knobs.json"
-    knobs.write_text(
-        json.dumps(
-            {
-                "version": "knobs:v1",
-                "objective": {
-                    "seeds": "seeds.json",
-                    "evaluations": {"mirror": {"p1": "heuristic:weights/gone.json", "p2": "greedy"}},
-                    "targets": [],
-                },
-                "constraints": {},
-                "spells": {},
-            }
-        ),
-        encoding="utf-8",
-    )
-    (tmp_path / "data" / "Spells").mkdir()
-    (tmp_path / "data" / "aliases.json").write_text("{}", encoding="utf-8")
+    knobs = broken_objective(tmp_path)
     (tmp_path / "unseen.json").write_text(json.dumps({"seeds": [1, 2, 3]}), encoding="utf-8")
 
     code = cli.main(

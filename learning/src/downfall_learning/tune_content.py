@@ -123,7 +123,7 @@ class Candidate:
 
 
 @dataclass(frozen=True)
-class Score:
+class CatalogueScore:
     """One catalogue played once on one seed set, and what the objective makes of it.
 
     The thing a tuning pass cannot produce for itself. Every candidate of a search is scored on the seed file
@@ -996,7 +996,7 @@ def _played_line(result: TuneResult) -> str:
     )
 
 
-def score_content(evaluator: ContentEvaluator, objective: Objective, content: Content) -> Score:
+def score_content(evaluator: ContentEvaluator, objective: Objective, content: Content) -> CatalogueScore:
     """Plays the catalogue as it stands, once, and scores it by the objective.
 
     No search and no neighbours: the point is the number a fixed catalogue gets on whatever seeds the
@@ -1004,7 +1004,7 @@ def score_content(evaluator: ContentEvaluator, objective: Objective, content: Co
     search that made the proposal never played.
     """
     metrics = evaluator.evaluate(content.spells)
-    return Score(objective.seeds, objective.score(metrics), objective.breakdown(metrics), metrics)
+    return CatalogueScore(objective.seeds, objective.score(metrics), objective.breakdown(metrics), metrics)
 
 
 def _bound(value: float | None) -> str:
@@ -1012,7 +1012,7 @@ def _bound(value: float | None) -> str:
     return "-" if value is None else f"{value:g}"
 
 
-def format_score(score: Score, objective: Objective) -> str:
+def format_score(score: CatalogueScore, objective: Objective) -> str:
     """The score with its parts, since on its own it is a weighted sum that means nothing."""
     lines = [
         f"Scored on '{score.seeds}': {score.score:.3f}, where 0 is every measurement inside its range.",

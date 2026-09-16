@@ -166,9 +166,10 @@ jobs:
       # there, so `improved` is the winner's number and not a fair one. Both catalogues -- the proposal now in
       # data/, and the copy taken before the search touched it -- are played again on seeds no candidate saw:
       # a window of consecutive integers clear of every seed in the file, placed above the largest when that
-      # fits in the signed range and below the smallest otherwise, since `--seed` is parsed as an `int` and
-      # the engine adds to it unchecked. The score is a penalty, so lower is better, and the summary says so
-      # rather than leaving a reader to guess which way the table reads.
+      # fits in the signed range and below the smallest otherwise, down to the signed minimum: a seed is an
+      # `int` the engine adds to unchecked, and a negative one is as good as any other -- the seed file
+      # loader refuses only an empty list and a repeat. The score is a penalty, so lower is better, and the
+      # summary says so rather than leaving a reader to guess which way the table reads.
       - name: Replay both catalogues on seeds the search never saw
         if: steps.found.outputs.applied == 'true'
         id: holdout
@@ -180,7 +181,7 @@ jobs:
             [.seeds[]] as $seeds
             | ($seeds | max) as $highest | ($seeds | min) as $lowest
             | if $highest + $n <= 2147483647 then $highest + 1
-              elif $lowest - $n >= 0 then $lowest - $n
+              elif $lowest - $n >= -2147483648 then $lowest - $n
               else "none" end' "$seeds")"
           if [[ "$start" == "none" ]]; then
             echo "No window of $matches seeds fits clear of '$seeds' in the seed space." >&2
