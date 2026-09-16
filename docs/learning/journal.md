@@ -14,7 +14,7 @@ first.
 
   | Lookahead against | win rate | 95 % interval | Greedy on the same seeds |
   | --- | --- | --- | --- |
-  | `Greedy` | **0.453** | 0.403 to 0.502 | 0.5 by definition |
+  | `Greedy` | **0.458** | 0.407 to 0.508 | 0.5 by definition |
   | `search-4` | 0.200 | 0.157 to 0.243 | 0.070 (`search-4` beats Greedy 0.930, ADR 0047) |
   | `Random` | 0.990 | 0.980 to 1.000 | — |
 
@@ -38,6 +38,9 @@ first.
      Summing the scorer's own scores of the round's actions instead, which keeps Greedy's calibration exactly
      and adds only the interactions: **0.453**. The weights were swept for the one-step reading (ADR 0028,
      0032, 0037), and a reading of the board is a different function of them.
+  5. An ally that has not declared yet was guessed by the scorer alone, without the team's declarations
+     the real heuristic agent reads (ADR 0039), the actor's candidate included. Codex caught it; guessed as
+     that agent would, with the candidate on the board: **0.458**, and the cost below.
 
 - **Where the parity comes from.** Two ablations split the agent: Greedy's intents with the lookahead's
   targets scored 0.507 against Greedy (0.468 to 0.547, no signal), and the lookahead's intents with Greedy's
@@ -48,10 +51,11 @@ first.
   own rule, and the reading still does not win; against `search-4` the guess is wrong in the way the weights
   differ.
 
-- **What it costs**: 400 matches in 10.2 s against 5.9 s for the Greedy mirror on the same machine, with
-  the evaluation's parallelism. A decision plays the round twice per candidate and asks the scorer for a
-  best target set at every slot, so per decision it is several times a one-step decision, but the wall
-  clock says cost is not what stands in the way of a search agent here.
+- **What it costs**: 400 matches in 16.0 s against 5.9 s for the Greedy mirror on the same machine, with
+  the evaluation's parallelism (10.2 s before the fifth correction, which asks the heuristic agent for every
+  undeclared ally once per candidate). A decision plays the round twice per candidate and asks the scorer
+  for a best target set at every slot, so per decision it is several times a one-step decision, but the
+  wall clock says cost is not what stands in the way of a search agent here.
 
 - **What is not claimed.** That lookahead cannot help. The agent reads the round through the weights of a
   one-step agent, and no weight search has been run for this reading: `search-weights` plays

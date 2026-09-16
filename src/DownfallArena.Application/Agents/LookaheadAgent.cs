@@ -55,11 +55,11 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
-        var declared = DeclaredSpells(board, creatures, intentOption.Creature);
         SpellId? best = null;
         var bestValue = (Round: double.NegativeInfinity, OneStep: double.NegativeInfinity);
         foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
+            var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
             var value = (
                 Round: PlayOut(board, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
                 OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0);
@@ -90,7 +90,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         }
 
         var beforeCombat = Creatures(board);
-        var declared = DeclaredSpells(board, beforeCombat, options.Actor);
+        var declared = DeclaredSpells(board, beforeCombat, options.Actor, options.Spell);
         IReadOnlyList<CreatureSnapshot> ahead = beforeCombat;
         foreach (var revealed in board.RevealedActions)
         {
@@ -205,11 +205,13 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>
-    /// What a match won on the spot is worth: every creature on the board at full health, the kill included.
-    /// Large enough that no round's play outweighs it, and in the unit of everything else.
+    /// What a match won on the spot is worth: every creature on the board at full health, the kill included,
+    /// and one more. Large enough that no round's play outweighs it, in the unit of everything else, and
+    /// positive whatever a weights file says: a file only has to be finite, so the magnitudes are read and
+    /// not the signs, and the one on top keeps a win worth something under weights that are all zero.
     /// </summary>
     private double WholeBoard(IReadOnlyList<CreatureSnapshot> board) =>
-        board.Sum(creature => weights.Kill + (weights.Damage * creature.MaxHealth.Value));
+        1 + board.Sum(creature => Math.Abs(weights.Kill) + (Math.Abs(weights.Damage) * creature.MaxHealth.Value));
 
     /// <summary>
     /// What a creature other than the actor plays at its slot: its spell on the best targets the board
@@ -232,12 +234,18 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>
-    /// The spell every creature but the actor is taken to have declared: the declared one for an ally that
-    /// has, the scorer's pick on the board before combat for everyone else, or nothing when it has no castable
-    /// spell with a legal target.
+    /// The spell every creature but the actor is taken to have declared, on the board before combat. An ally
+    /// that has declared: its declared spell. An ally that has not: what the heuristic agent would declare
+    /// for it once the actor's candidate is on the board too, since that ally will decide after this one and
+    /// reads the team's declarations (ADR 0039), so a target the candidate kills is one it will not aim at.
+    /// An enemy: the scorer's pick on the board before combat, its own declarations being hidden. Nothing
+    /// for a creature with no castable spell.
     /// </summary>
-    private Dictionary<CreatureId, SpellId?> DeclaredSpells(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> beforeCombat, CreatureId actor)
+    private Dictionary<CreatureId, SpellId?> DeclaredSpells(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> beforeCombat, CreatureId actor, SpellId candidate)
     {
+        var withCandidate = board.Intents.Any(intent => intent.Actor == actor)
+            ? board
+            : board with { Intents = [.. board.Intents, new CombatIntent(actor, candidate)] };
         var spells = new Dictionary<CreatureId, SpellId?>();
         foreach (var creature in board.Timeline.Select(slot => slot.Creature))
         {
@@ -246,13 +254,23 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
                 continue;
             }
 
-            var snapshot = beforeCombat.First(candidate => candidate.Id == creature);
-            spells[creature] = snapshot.Owner == board.Slot && board.Intents.FirstOrDefault(intent => intent.Actor == creature) is { } declared
-                ? declared.Spell
-                : GreedyIntent(snapshot, beforeCombat);
+            var snapshot = beforeCombat.First(other => other.Id == creature);
+            spells[creature] = snapshot.Owner != board.Slot
+                ? GreedyIntent(snapshot, beforeCombat)
+                : board.Intents.FirstOrDefault(intent => intent.Actor == creature)?.Spell ?? AllyIntent(withCandidate, snapshot);
         }
 
         return spells;
+    }
+
+    /// <summary>What the heuristic agent would declare for an ally that has not yet, given the team's declarations so far.</summary>
+    private SpellId? AllyIntent(PlayerBoardState board, CreatureSnapshot ally)
+    {
+        var castable = ally.KnownSpells
+            .Where(spell => resources.GetSpell(spell).Stats.Cost.Value <= ally.Energy.Value)
+            .OrderBy(spell => spell.Value, StringComparer.Ordinal)
+            .ToList();
+        return castable.Count == 0 ? null : _oneStep.DecideIntent(board, new IntentOption(ally.Id, castable));
     }
 
     /// <summary>The spell the scorer would declare for a creature on a board, as the greedy agent declares it.</summary>
