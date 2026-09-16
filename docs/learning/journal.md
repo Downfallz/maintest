@@ -59,10 +59,16 @@ first.
   the clone. The champion bar read `0.5 against models/clone/ci-69/policy.json (interval from 0.5)` and kept
   it out: third correct refusal, and the first one on a run where the other model moved.
 
+- **`ci-87` reproduced it on the same parameters**, deliberately, because the largest move a value policy
+  has made should not rest on one run: 0.29625, 0.6275, 0.4975 and the clone at 0.725 / 0.9925 / 0.5325,
+  refused again at 0.5 against `ci-69`. Every digit. So the numbers above are the pipeline, not a roll.
+
 - **What is not claimed.** Nothing here beats `search-4`. Neither policy was committed, and neither cleared
   0.5 against `Greedy`. What this run also does is **cast doubt on the lambda sweep**: 1.0, 0.95, 0.9, 0.8
   and 0.5 were all measured against the broken baseline, so 0.95 is the best point on a curve that no longer
-  exists. That curve is worth walking again before anything else is read into it.
+  exists. That curve is worth walking again before anything else is read into it, and `ci-88` takes its
+  first step at lambda 0.9 — the point that read 0.035 against `Greedy` where 0.95 read 0.10125. If the
+  whole curve lifted, 0.9 lifts too; if only 0.95 did, it was a spot rather than a shape.
 
 ## 2026-09-15. The baseline was capping the lambda, and one of my two guesses about why was wrong
 
