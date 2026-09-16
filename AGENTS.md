@@ -82,7 +82,7 @@ uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # 
 uv run --project learning spread runs/<id>                           # every win rate of a turn ranged across its dataset seeds (ADR 0049)
 uv run --project learning mean-policy runs/<id>/seeds/*/value -o runs/<id>/mean/value   # the seeds' value fits as one policy, scoring every candidate as their mean; what a turn plays as its last step
 scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/; --help lists every tuning flag
-scripts/iterate.sh --seeds "1 2 3"                                   # the default: a turn is three dataset seeds and reports the spread, because one seed is a sample (ADR 0049)
+scripts/iterate.sh --seeds "1 5001 10001"                            # the default at 5000 matches: three dataset seeds spaced by the match count, because closer seeds record the same matches shifted, and the turn reports the spread, because one seed is a sample (ADR 0049)
 scripts/iterate.sh --explore 0.2                                     # plus an exploring dataset for the value policy (ADR 0014)
 scripts/iterate.sh --teacher heuristic:learning/weights/search-4.json # record a stronger player than greedy; a clone is capped by what it imitates (journal, 2026-09-15)
 ```

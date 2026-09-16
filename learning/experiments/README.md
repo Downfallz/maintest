@@ -9,7 +9,8 @@ into a form.
 | --- | --- | --- |
 | `why` | one paragraph on what this run is meant to answer; it is printed in the run summary | nothing |
 | `matches` | matches recorded in the dataset | 200 |
-| `seed` | base seed of that dataset | 1 |
+| `seeds` | the dataset seeds of the turn, one dataset each (ADR 0049), spaced by at least `matches`: match `i` plays seed `s + i`, so closer seeds record the same matches shifted | three seeds spaced by `matches` |
+| `seed` | one base seed, the form the files before ADR 0049 carry; read as a one-entry list | — |
 | `explore` | share of decisions taken at random in the value dataset, or `"off"` (ADR 0014) | 0.2 |
 | `value_alpha` | how strongly the value fit is pulled toward zero | 1.0 |
 | `value_min_samples` | examples an action needs before it gets its own fit | 5 |
