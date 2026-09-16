@@ -96,7 +96,8 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
         "--opponent",
         default="greedy",
         help="agent B of every evaluation (default greedy), or several separated by commas: a candidate then"
-        " scores as its worst matchup among them, so it cannot win by learning one of them",
+        " scores the mean over them, and a candidate that falls below the start against any of them ranks"
+        " below every one that did not, so it cannot win by learning one of them",
     )
     search.add_argument(
         "--kind",
