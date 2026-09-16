@@ -4,6 +4,51 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-16. Under the floor of what it started from, the search finds no neighbour of `mixture-mean` at all: every gain against one opponent is paid to `search-4`
+
+- **The search**: `mixture-mean` as the start, the mean under the start's floor as fitness (the constrained
+  mean that replaced the worst matchup after the rung-2 entry of this day), against `greedy`,
+  `mixture-worst`, `search-4` and `random` at once, ten rounds of sixteen on the benchmark seeds, 644
+  evaluations in 55 minutes. The start on those seeds: 0.884 against Greedy, 0.4925 against `mixture-worst`,
+  0.705 against `search-4`, 0.9925 against Random, mean 0.7684; its floors, the low end of each interval:
+  0.853, 0.471, 0.664, 0.984.
+
+- **Not one of the 159 candidates held above all four floors.** The start is the only conforming set of the
+  run, so the best is the start and nothing was written. The shortfalls: the least 0.024, the median 0.129,
+  twelve within 0.05 of holding; the spread of the draw went from 0.67 of each weight in round 1 to 0.13 by
+  round 10, so the search narrowed around the least-falling sets, as it does, and found none that held
+  there either.
+
+- **Which floor, replayed.** The search keeps one score per candidate and not its parts, so the three
+  least-falling sets (rounds 6, 7 and 9; stun 5.1 to 5.3 against 4.06, bleed negative against 0.50, heal
+  0.22 to 0.26 against 0.53, the rest within a tenth) were replayed on the same seeds:
+
+  | on the searched seeds | `mixture-mean` (floor) | round 6 | round 7 | round 9 |
+  | --- | --- | --- | --- | --- |
+  | against Greedy | 0.884 (0.853) | 0.870 | 0.871 | 0.894 |
+  | against `mixture-worst` | 0.4925 (0.471) | **0.565** | **0.5475** | **0.5475** |
+  | against `search-4` | 0.705 (0.664) | *0.640* | *0.640* | *0.640* |
+  | against Random | 0.9925 (0.984) | 0.9925 | 0.9925 | 0.9925 |
+
+  All three fell against `search-4`, by the same 0.024 below its floor and 6.5 points below the start, and
+  all three gained 5.5 to 7 points against `mixture-worst`. Their mean is the start's to within a point: the
+  neighbourhood trades one strong opponent for the other, and the floor refused the trade, which is exactly
+  what it was built to refuse. The plain mean would have taken it, and the entry after would have read a set
+  that beats `mixture-worst` and lost a rung against `search-4`.
+
+- **What this says about the ladder.** From `search-4`, the plain mean found a set 25 points better against
+  `search-4` and 5 better against Greedy with nothing paid (the three-opponent entry). From `mixture-mean`,
+  within two thirds of each weight and then within an eighth, no set improves any opponent without paying
+  another beyond the noise of 400 matches. The eight scoring weights have a ridge at `mixture-mean` against
+  this panel, and the ladder does not have a third rung there: the rung-2 entry found the same from the
+  other side, where the worst matchup could only flatten. Two fitnesses, two searches, one answer.
+
+- **What this licenses.** The next gain for the heuristic is not in the eight weights. It is in what they
+  weigh: a feature the score does not see (the weakest enemy's distance to a kill, the opponent's energy,
+  initiative relative to the target), measured one at a time on fixed content with `sweep-weight.py` (ADR
+  0037) before any search sees it. The search itself should keep every candidate's parts in `search.json`,
+  so that the next entry can name the floor a search fell against without replaying its best fallers.
+
 ## 2026-09-16. A clone of the teacher that beats `search-4` plays at parity with `search-4`, 27 points below the clone of `search-4`: a clone is capped by what it can copy, not by what it imitates
 
 - **`ci-112` is `ci-106` with one knob moved**: the recorded agent is `mixture-mean` (0.746 against `search-4`
