@@ -129,31 +129,51 @@ class Score:
         )
 
     @classmethod
-    def mixture(cls, parts: Sequence[tuple[str, Score]]) -> Score:
-        """One score over several opponents: the candidate's worst matchup among them, with its interval.
+    def mixture(cls, parts: Sequence[tuple[str, Score]], floor: Mapping[str, float] | None = None) -> Score:
+        """One score over several opponents: the mean over them, under a floor no matchup may fall below.
 
         A search against one opponent finds the key to that lock: the lookahead weights of search run 5
         scored 0.84 against Greedy and 0.70 against Random where Greedy itself scores 0.99 (journal,
-        2026-09-16). The worst matchup rather than the mean, because a mean can still be won by learning one
-        opponent: 1.0, 0.5 and 0.5 average above 0.6, 0.6 and 0.6, and the first set has learned one lock and
-        lost two. Scored as its worst matchup, a candidate rises only by raising the opponent it is weakest
-        against, which is what "holds against all of them" means. The evaluation kept is the first
+        2026-09-16). A plain mean over several can still be won by learning one of them: 1.0, 0.5 and 0.5
+        average above 0.6, 0.6 and 0.6, and the first set has learned one lock and lost two. The worst
+        matchup cannot be won that way, and the search tried it twice from a set found by the mean: with the
+        start in the panel it wandered, with the start out it flattened every matchup to 0.55 and gave up 25
+        points against Greedy (journal, 2026-09-16). An optimised floor finds the set that loses to nobody
+        by much and beats nobody by much.
+
+        So the mean, which climbs, under the constraint that keeps it honest: ``floor`` names, per opponent,
+        the score a candidate may not fall below, and the search sets it from what it started from (the low
+        end of each of the start's intervals, so 400 matches of noise are not a violation). A candidate above
+        every floor scores its mean; a candidate below one scores its worst shortfall, a negative number, so
+        every violating candidate ranks below every conforming one and among themselves by how far they
+        fell. Without a floor, the plain mean: what the start itself is scored with, since it is its own
+        floor. The interval and win rate are the means of the parts'; the evaluation kept is the first
         opponent's, which is what stamps the training log; the matches are the total played.
         """
         if not parts:
             raise ValueError("A mixture needs at least one opponent.")
-        worst = min((score for _, score in parts), key=lambda score: score.mean)
+        scores = [score for _, score in parts]
+        shortfall = 0.0
+        if floor is not None:
+            shortfall = min(score.mean - floor.get(opponent, 0.0) for opponent, score in parts)
+        mean = float(np.mean([score.mean for score in scores])) if shortfall >= 0 else shortfall
         return cls(
-            mean=worst.mean,
-            low=worst.low,
-            high=worst.high,
-            win_rate=worst.win_rate,
-            win_rate_low=worst.win_rate_low,
-            win_rate_high=worst.win_rate_high,
-            matches=sum(score.matches for _, score in parts),
+            mean=mean,
+            low=float(np.mean([score.low for score in scores])),
+            high=float(np.mean([score.high for score in scores])),
+            win_rate=float(np.mean([score.win_rate for score in scores])),
+            win_rate_low=float(np.mean([score.win_rate_low for score in scores])),
+            win_rate_high=float(np.mean([score.win_rate_high for score in scores])),
+            matches=sum(score.matches for score in scores),
             evaluation=parts[0][1].evaluation,
             parts=tuple(parts),
         )
+
+    @property
+    def floor(self) -> dict[str, float]:
+        """What a candidate must not fall below to count as holding what this score holds: the low end of
+        each matchup's interval, so that a draw within the noise of the matches played is not a fall."""
+        return {opponent: part.low for opponent, part in self.parts}
 
 
 def reads_as_a_tie(low: float, high: float, even: float = 0.5) -> bool:
@@ -204,8 +224,9 @@ class EngineCommand:
 
     root: Path = field(default_factory=Path.cwd)
     command: Sequence[str] = ENGINE_COMMAND
-    #: Agent B of every evaluation, or several separated by commas: the score is then the candidate's worst
-    #: matchup among them (``Score.mixture``), so it cannot win by learning one opponent.
+    #: Agent B of every evaluation, or several separated by commas: the score is then the mean over them
+    #: under the floor the search anchors on its start (``Score.mixture``), so a candidate cannot win by
+    #: learning one opponent at the cost of another.
     opponent: str = "greedy"
     seeds: str = "benchmarks/benchmark-seeds.json"
     kind: str = "heuristic"
@@ -243,10 +264,20 @@ class CliEvaluator:
         self._workdir = Path(workdir).resolve()
         self._workdir.mkdir(parents=True, exist_ok=True)
         self.calls = 0
+        self._floor: dict[str, float] | None = None
 
     @property
     def opponent(self) -> str:
         return self._engine.opponent
+
+    @property
+    def floor(self) -> dict[str, float] | None:
+        """Per opponent, what a candidate must not fall below; ``None`` until the search anchors it."""
+        return self._floor
+
+    def anchor(self, score: Score) -> None:
+        """Sets the floor from a score's parts: every later mixture is read against what this one holds."""
+        self._floor = score.floor or None
 
     @property
     def kind(self) -> str:
@@ -263,7 +294,8 @@ class CliEvaluator:
         """Runs ``spec`` as agent A against every opponent and reads what the engine wrote.
 
         One opponent writes ``output``. Several write ``<output stem>-vs-<opponent>.json`` each and score as
-        the worst of them, the first opponent's evaluation standing for the whole where one is needed.
+        their mixture under the anchored floor, the first opponent's evaluation standing for the whole where
+        one is needed.
         """
         output = Path(output).resolve()
         opponents = self._engine.opponents
@@ -273,7 +305,7 @@ class CliEvaluator:
             (opponent, self._evaluate_against(spec, opponent, output.with_name(part_name(output, opponent))))
             for opponent in opponents
         ]
-        return Score.mixture(parts)
+        return Score.mixture(parts, self._floor)
 
     def _evaluate_against(self, spec: str, opponent: str, output: Path) -> Score:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -485,6 +517,11 @@ def search_weights(
     # Exact, unlike the tuner's: the population is fixed and nothing here is skipped or memoized.
     progress.total = 1 + options.iterations * options.population
     first = Candidate(0, _as_weights(mean), evaluator.evaluate(_as_weights(mean)))
+    # Against several opponents, what the search started from is the floor: a candidate that falls below it
+    # against any one of them has learned another, and ranks below every candidate that did not.
+    anchor = getattr(evaluator, "anchor", None)
+    if anchor is not None:
+        anchor(first.score)
     progress.step(f"baseline {first.score.mean:.4f}")
     if log is not None and log.stamp is None:
         log.stamp = stamp_of(first.score)
