@@ -16,7 +16,7 @@ on:
         description: "Share of decisions taken at random in the value dataset, or 'off' (ADR 0014) (empty: what learning/experiments/next.json says)"
         default: ""
       seeds:
-        description: "Dataset seeds to run the turn on, space or comma separated, e.g. '1 2 3'. One seed is a sample, not a measurement (ADR 0049) (empty: what learning/experiments/next.json says)"
+        description: "Dataset seeds to run the turn on, space or comma separated, spaced by at least the match count, e.g. '1 5001 10001' at 5000 matches: closer seeds record the same matches shifted. One seed is a sample, not a measurement (ADR 0049) (empty: what learning/experiments/next.json says, or three seeds spaced by the match count)"
         default: ""
       traces:
         description: "Match traces kept per dataset, 0 for none; they are the viewer's, not a learner's (empty: what learning/experiments/next.json says)"
@@ -169,8 +169,8 @@ jobs:
           }
           matches="${MATCHES:-$(knob matches 200)}"
           explore="${EXPLORE:-$(knob explore 0.2)}"
+          # Empty stays empty: the script then spaces three seeds by the match count itself.
           seeds="${SEEDS:-$(seeds_from_plan)}"
-          seeds="${seeds:-1 2 3}"
           traces="${TRACES:-$(knob traces 4)}"
           teacher="${TEACHER:-$(knob teacher greedy)}"
           value_share="${VALUE_SHARE:-$(knob value_share action)}"
@@ -181,12 +181,15 @@ jobs:
           value_discount="${VALUE_DISCOUNT:-$(knob value_discount 1.0)}"
           baseline="${BASELINE:-$(knob baseline '')}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seeds $seeds, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}"
+          echo "Knobs: matches $matches, seeds ${seeds:-spaced by the match count}, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
-          arguments=(--run "$RUN_ID" --matches "$matches" --seeds "$seeds" --traces "$traces"
+          arguments=(--run "$RUN_ID" --matches "$matches" --traces "$traces"
             --teacher "$teacher" --value-share "$value_share"
             --value-alpha "$value_alpha" --value-min-samples "$value_min_samples"
             --value-lambda "$value_lambda" --value-discount "$value_discount")
+          if [[ -n "$seeds" ]]; then
+            arguments+=(--seeds "$seeds")
+          fi
           if [[ -n "$value_baseline_alpha" ]]; then
             arguments+=(--value-baseline-alpha "$value_baseline_alpha")
           fi

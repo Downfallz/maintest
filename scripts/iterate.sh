@@ -33,7 +33,11 @@ How much data
   --matches <n>          matches of the recorded greedy self-play dataset (default 200). More matches means
                          rarer moves get enough examples; the first thing to raise when a policy learns
                          something odd from too few of them.
-  --seeds <list>         the dataset seeds to run the turn on, space or comma separated (default "1 2 3").
+  --seeds <list>         the dataset seeds to run the turn on, space or comma separated (default: three
+                         seeds spaced by the match count, "1 <1+matches> <1+2*matches>"). Match i of a
+                         dataset plays seed s+i, so seeds closer than the match count record the same
+                         matches shifted by a few: "1 2 3" at 5000 matches is one dataset three times
+                         (journal, 2026-09-16), and the turn refuses such a list.
                          **One seed is not a measurement** (ADR 0049). Three runs of one configuration --
                          lambda 0.9, the ADR 0048 baseline, `search-4` as teacher -- differing only in this
                          seed scored 0.6625, 0.0975 and 0.30375 against `search-4` (`ci-88`, `ci-90`,
@@ -111,7 +115,7 @@ matches=200
 traces=4
 teacher=greedy
 explore=
-seeds_requested="1 2 3"
+seeds_requested=""
 value_alpha=1.0
 value_min_samples=5
 value_share=action
@@ -161,11 +165,15 @@ if [[ -e "$run" ]]; then
   exit 1
 fi
 
+# The default is spaced by the match count, because the seeds of a list have to be (the check below says why).
+if [[ -z "$seeds_requested" ]]; then
+  seeds_requested="1 $((1 + matches)) $((1 + 2 * matches))"
+fi
 # The seeds are a list even when there is one of them, so there is a single code path and a single layout.
 # A comma is accepted because a workflow input is easier to type that way than with quoted spaces.
 read -r -a seed_list <<< "${seeds_requested//,/ }"
 if [[ ${#seed_list[@]} -eq 0 ]]; then
-  echo "No dataset seed given; --seeds takes a list such as \"1 2 3\"." >&2
+  echo "No dataset seed given; --seeds takes a list such as \"1 $((1 + matches)) $((1 + 2 * matches))\"." >&2
   exit 2
 fi
 # Canonicalised before anything else, because the engine reads a seed as a number and the uniqueness check
@@ -186,6 +194,22 @@ if [[ $(printf '%s\n' "${seed_list[@]}" | sort -u | wc -l) -ne ${#seed_list[@]} 
   echo "The seed list repeats a seed (${seed_list[*]}); the same seed twice is one sample, not two." >&2
   exit 2
 fi
+# Match i of a dataset recorded from seed s plays seed s+i (SimulationScenario.SeedOf), so two seeds closer
+# than the match count record the same matches shifted by their distance. Seeds 1, 2 and 3 at 5000 matches
+# shared 4999 of them, identical to the return, and the fifth each held out was the next one's training
+# matches, so the spread they reported was one dataset's fit under three splits and not three draws of the
+# data (journal, 2026-09-16). Refused here, before the first match is played.
+for ((i = 0; i < ${#seed_list[@]}; i++)); do
+  for ((j = i + 1; j < ${#seed_list[@]}; j++)); do
+    first=${seed_list[i]}
+    second=${seed_list[j]}
+    gap=$(( first > second ? first - second : second - first ))
+    if (( gap < matches )); then
+      echo "Seeds $first and $second are $gap apart, and a dataset of $matches matches plays seeds $first to $((first + matches - 1)): the two would share $((matches - gap)) of their $matches matches. Space the seeds by at least the match count, e.g. \"1 $((1 + matches)) $((1 + 2 * matches))\"." >&2
+      exit 2
+    fi
+  done
+done
 # Where a previous run keeps its artifacts depends on when it was produced: before ADR 0049 they sat at the
 # root of runs/<id>/, and since then there is one set per seed. Resolved once, here, rather than inside the
 # loop -- an unresolvable `--against` used to surface as an ArtifactError out of `report`, which under
