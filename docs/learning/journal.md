@@ -4,6 +4,63 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-16. A clone of the teacher that beats `search-4` plays at parity with `search-4`, 27 points below the clone of `search-4`: a clone is capped by what it can copy, not by what it imitates
+
+- **`ci-112` is `ci-106` with one knob moved**: the recorded agent is `mixture-mean` (0.746 against `search-4`
+  and 0.864 against Greedy on unseen seeds, the three-opponent entry of this day) instead of `search-4`, which
+  stays the baseline opponent so the clone rows read against the same bar as every turn since 2026-09-15.
+  Seeds 1, 5001 and 10001, 5000 matches, lambda 0.9, the ADR 0048 baseline, explore 0.2. The question written
+  before the run: does a clone of a teacher that beats `search-4` by 25 points beat `search-4`, where every
+  clone of `search-4` read at parity with it?
+
+- **Two seeds, not three, and read on purpose.** The run hit the workflow's 150-minute limit with its third
+  seed half trained, so there is no spread and no mean; the two seeds below are one sample each, under ADR
+  0049's bar, and the turn was not rerun because the two agree with each other and with the refutation the
+  experiment file wrote down. The reason for the overrun is the teacher and is measured below.
+
+  | one sample each | `ci-112` seed 1 | `ci-112` seed 5001 | `ci-106` (teacher `search-4`), by seed |
+  | --- | --- | --- | --- |
+  | clone against Greedy | 0.5125 | 0.5363 | 0.7863 / 0.8000 / 0.7425 |
+  | clone against `search-4` | 0.5150 | 0.4888 | 0.5513 / 0.6175 / 0.5625 |
+  | clone against Random | 0.9700 | 0.9750 | 0.9900 / 0.9888 / 0.9850 |
+  | clone accuracy, held out | 0.9228 | 0.9277 | 0.9632 / 0.9611 / 0.9642 |
+  | clone loss, held out | 4.71 | 4.71 | 2.06 / 2.24 / 2.15 |
+  | clone action keys | 285 | 280 | 220 / 216 / 220 |
+  | value against Greedy | 0.2338 | 0.2575 | 0.3475 / 0.0450 / 0.0788 |
+  | value against `search-4` | 0.0575 | 0.1938 | 0.1812 / 0.0025 / 0.0000 |
+  | value against Random | 0.8825 | 0.8438 | 0.7450 / 0.7425 / 0.8712 |
+  | value fit r2, held out | 0.1689 | 0.1601 | 0.1278 / 0.1393 / 0.1389 |
+
+- **The clone of the stronger teacher is the weaker clone.** At parity with `search-4` on both seeds, which
+  the clone of `search-4` also is; and 25 to 27 points behind the clone of `search-4` against Greedy, where its
+  teacher is 5 points ahead of `search-4`. The refutation the file wrote before the run: "a clone at parity
+  with `search-4` again would say the clone caps below its teacher, and the teacher's edge is in decisions a
+  linear clone cannot copy." The numbers say which decisions. `mixture-mean` plays a wider repertoire, 285
+  action keys against 220, and the linear clone copies it at 92.3 % where it copied `search-4` at 96.3 %,
+  with more than twice the held-out loss. The eight decisions in a hundred it misses are the ones the
+  teacher makes and `search-4` does not, since the rest is what the two teachers share; against Greedy
+  those eight cost 27 points, against `search-4` they cost the whole edge. A clone is capped by what it can
+  copy, and a stronger teacher whose strength is spread over more actions is copied worse, not better.
+
+- **The value fits did not collapse, twice.** 0.2338 and 0.2575 against Greedy, where `ci-106`'s three fits
+  gave 0.3475, 0.0450 and 0.0788; a better held-out r2 on both seeds (0.16 to 0.17 against 0.13 to 0.14).
+  Two samples of a row whose spread measured 0.30 the day before are a note, not a result; the note is that
+  the exploring dataset of a stronger teacher may be a steadier one to fit, and a turn with three seeds would
+  say so or not.
+
+- **What it costs, and why.** A match of `mixture-mean` self-play runs a third longer than one of `search-4`
+  (670 thousand steps in the 5000-match dataset against 510 thousand), and the clone fits a third more action
+  keys, so an epoch of the clone took 2 min 55 s against 1 min 01 s and a seed 68 minutes against 26. The
+  workflow's limit goes from 150 to 300 minutes with this entry, so a turn is never again lost to the
+  teacher it records.
+
+- **What this licenses.** The ladder's sets are agents in their own right, and cloning is not the way to carry
+  their edge into a policy: the clone side of the loop keeps `search-4` as its teacher, where the rows are
+  comparable turn to turn, and the champion decision does not move (no clone of either teacher beats
+  `ci-69` measurably on every seed; this turn did not reach that comparison). The lever on the clone is the
+  model's capacity for a wider repertoire, not the teacher; on the value side it is the mean of the fits
+  (the `ci-106` entry), which the five-seed turn measures next with its jackknife.
+
 ## 2026-09-16. Spaced seeds give the same widths, and the mean of three fits from different data plays at parity where every part collapses
 
 - **`ci-106` is `ci-100` on seeds 1, 5001 and 10001**, fifteen thousand distinct matches, every other knob
@@ -80,6 +137,54 @@ first.
 - **What this is a sample of.** These three fits are the overlapping ones that entry describes, one dataset
   under three splits, so this is the mean of three splits and not of three draws. The loop's own mean, on
   seeds spaced by the match count, is the version to read, and it comes with the next turn.
+
+## 2026-09-16. The second rung of the worst-matchup ladder does not exist: with its start in the panel the search wanders, and with it out the search flattens
+
+- **Two searches from `mixture-mean.json`**, the set that beats `search-4` by 25 points on unseen seeds, each
+  10 rounds of 16, seed 0, worst-matchup fitness, content `7e199df4`. The first against `greedy`,
+  `mixture-mean`, `search-4` and `random`: the start is in the panel, so its own fitness is 0.5 by
+  construction (it draws itself) and a candidate has to beat the set it came from. The second against
+  `greedy`, `mixture-worst`, `search-4` and `random`: the start out of the panel, so the baseline reads its
+  real worst matchup, 0.4925 against `mixture-worst`, and there is room above it.
+
+  | on the searched seeds | fitness, start | fitness, best (round) | best against Greedy | `search-4` | the fourth |
+  | --- | --- | --- | --- | --- | --- |
+  | start in the panel | 0.5000 | 0.5225 (3) | 0.8263 | 0.6713 | 0.5225 against `mixture-mean` |
+  | start out of the panel | 0.4925 | 0.5525 (9) | 0.6012 | 0.5525 | 0.5525 against `mixture-worst` |
+  | `mixture-mean` itself | | | 0.8838 | 0.7050 | |
+
+- **On 200 seeds no candidate saw** (995317 to 995516, mirrored), the best of each:
+
+  | agent A | against Greedy | against `mixture-mean` | against `mixture-worst` | against `search-4` |
+  | --- | --- | --- | --- | --- |
+  | best, start in the panel | 0.8187 | 0.4750 (0.436 to 0.514) | | 0.6850 |
+  | best, start out of the panel | 0.6138 (0.555 to 0.673) | 0.5250 (0.461 to 0.589) | 0.5625 (0.499 to 0.626) | 0.5525 (0.489 to 0.616) |
+  | `mixture-mean` | 0.8638 | 0.5 (itself) | 0.4725 | 0.7462 |
+
+- **With the start in the panel, the search wanders.** After round 3 every round's best sat between 0.47 and
+  0.49, below the start; the best it kept loses to `mixture-mean` on unseen seeds (0.475, the interval
+  through one half) and is worse than it against Greedy and `search-4`. A fitness that reads 0.5 for the
+  start and asks the elite to beat it is a fitness whose signal is the noise of 400 matches against oneself.
+
+- **With the start out of the panel, the search flattens.** The worst matchup rose, 0.49 to 0.55, and it rose
+  by bringing every matchup down to it: against Greedy 0.864 to 0.614, against `search-4` 0.746 to 0.553,
+  and on unseen seeds every one of its four intervals against a real opponent contains one half. It is an
+  equalizer, not a stronger player: `mixture-mean` is 25 points better against Greedy and 19 against
+  `search-4`, and the one thing this set does better, its matchup against `mixture-worst`, is 0.5625 with
+  0.499 at the bottom of the interval. The worst matchup, optimised, finds the set that loses to nobody by
+  much and beats nobody by much.
+
+- **So the worst-matchup ladder has one rung, and the mean found it.** The entry below reads the first
+  search: the mean fitness climbed every round and found `mixture-mean`, the worst matchup peaked at round
+  2 and found `mixture-worst`, and the change kept the worst matchup because a mean can be won by one
+  opponent. Both are true and the second is the one that matters for a ladder: a mean can climb, and it
+  did not learn one opponent when it was given three. What a second rung needs is a fitness that climbs
+  and cannot be won by one opponent, which is the mean under the constraint that no matchup falls below
+  the start's. That is a change to `Score.mixture`, and it is the next one. No weights file from either
+  search: neither is a better teacher than `mixture-mean`.
+
+- **One number kept.** The searches cost 45 and 85 minutes for 161 evaluations of three and four; the
+  hold-out five. The next rung is not a matter of budget.
 
 ## 2026-09-16. A search against three opponents finds two sets that beat `search-4` on unseen seeds, and the plain mean found the better one
 

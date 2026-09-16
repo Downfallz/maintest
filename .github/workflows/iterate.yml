@@ -101,10 +101,11 @@ jobs:
   iterate:
     name: One turn of the learning loop
     runs-on: ubuntu-latest
-    # A seed of the 5000-match experiment costs the runner around half an hour, so three seeds took an hour
-    # and a quarter to an hour and three quarters (ci-106 and its run on main, journal 2026-09-16) and five
-    # seeds take up to three. Ninety minutes was enough for the 200-match runs the parked experiment asked
-    # for, and 150 for three seeds; a turn that runs into this limit loses every seed it recorded.
+    # A seed of the 5000-match experiment costs the runner half an hour with search-4 as teacher and over an
+    # hour with mixture-mean, whose datasets run a third longer and whose clone fits a third more actions:
+    # three seeds took 79 minutes with the first and ran into 150 with the second (journal, 2026-09-16), and
+    # five seeds of the first take up to three hours. A turn that runs into this limit loses every seed it
+    # recorded.
     timeout-minutes: 300
     steps:
       # A report-only run keeps no credential on disk, the way this workflow always did. A committing run keeps
