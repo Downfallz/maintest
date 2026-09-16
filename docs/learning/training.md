@@ -126,6 +126,7 @@ replays. The report says how many the engine actually had to play.
 | --- | --- | --- | --- |
 | `search-weights -o <dir>` | the built engine and `data/dst`, no dataset | `weights.json`, `search.json`, `evaluation.json`, `training.jsonl` | Cross-entropy method over the eight scoring weights. Each candidate is a weights file evaluated by the engine's `evaluate` as `<kind>:<file>` against `--opponent` (default `greedy`) on `--seeds` (default the benchmark seeds), mirrored, where `--kind` is `heuristic` (the default, one step), `lookahead` or `minimax` (the round played out; ADR 0047): weights searched for one reading are only meaningful played by it, and `search.json` records the kind; the fitness is the mean score. The mean of the elite becomes the next mean, its spread the next spread; the current mean is always in the population, so the best is never lost. |
 | `train-clone <runs> -o <dir>` | a recorded run (`simulate --record`) | `policy.json`, `training.jsonl` | Behaviour cloning: a linear classifier from observation to action key (`SGDClassifier`, log loss), one epoch per iteration, keeping the epoch whose choice among the candidates matches the data best on held-out matches. |
+| `mean-policy <models...> -o <dir>` | two or more trained policies of one kind, schema and content | `policy.json` | A policy is linear, so the mean of several is exactly a policy that scores every candidate as the mean of their scores; a key one of them never saw counts as that one's `fallback`. Every policy given weighs the same, nothing is chosen, so it stays off the test set. The loop plays the mean of its seeds' value fits as its last step. |
 | `train-value <runs> -o <dir>` | a recorded run, ideally an explored one (below) | `policy.json`, `training.jsonl` | Value regression in two parts (ADR 0016): one baseline over the observation alone, fitted on every step, then one ridge regression per action key over what the baseline leaves. A score is the baseline plus the action's row, so it still predicts the return, and the agent takes the candidate that scores best. A key seen fewer than `--min-samples` times keeps its mean, and an unseen key the mean of the data — both on top of the baseline. |
 
 Matches are held out whole (`--validation`, default one in five), so a validation step never comes from a
@@ -303,6 +304,10 @@ leaves everything under `runs/<id>/`:
       `previous-value-vs-greedy.json`; when its feature schema no longer applies, say so and go on.
    5. Write that seed's `report.json` and `report.html`.
 4. Range every win rate across the seeds into `spread.json` (`spread`).
+5. With more than one seed, average the seeds' value fits into one policy (`mean-policy`), under `mean/value/`,
+   and play it against the same opponents into `mean/evaluations/`. It is not in the spread and not gated: it
+   is one policy, so its three numbers are one sample each, and the question they answer is whether the fits'
+   disagreement in play (journal, 2026-09-16) is variance a mean removes or a place the mean collapses too.
 
 **Read the spread, not a seed.** One seed is a sample: three runs of one configuration differing only in the
 dataset seed scored 0.6625, 0.0975 and 0.30375 against `search-4` (`ci-88`, `ci-90`, `ci-91`), a 56-point

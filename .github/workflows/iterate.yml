@@ -474,5 +474,6 @@ jobs:
             runs/ci-${{ github.run_number }}/seeds/*/evaluations
             runs/ci-${{ github.run_number }}/seeds/*/value
             runs/ci-${{ github.run_number }}/seeds/*/clone
+            runs/ci-${{ github.run_number }}/mean
           if-no-files-found: warn
           retention-days: 30
