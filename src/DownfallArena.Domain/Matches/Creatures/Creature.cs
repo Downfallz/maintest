@@ -1,5 +1,6 @@
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
+using DownfallArena.Domain.Resources.Talents;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 using DownfallArena.SharedKernel.Stats;
@@ -102,22 +103,37 @@ public sealed class Creature : Entity<CreatureId>
     /// conditions as they were, so the rules a match runs can be run on it. Internal on purpose, and the one
     /// door into a creature that did not spawn at full health: <see cref="Rules.Advance"/> uses it to answer
     /// what a board would be after a move a match has not played (ADR 0047), and nothing else does. A snapshot
-    /// is a copy of a real creature, so its health cannot exceed the definition's; a caller that hands one
-    /// where it does has a bug, not a rule violation.
+    /// is a copy of a real creature, so its health cannot exceed the definition's and it knows its starting
+    /// spells and nothing its talent tree does not offer; a caller that hands one where that fails has a
+    /// bug, not a rule violation.
     /// </summary>
-    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition)
+    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, TalentTree tree)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(tree);
 
         if (definition.Id != snapshot.DefinitionId)
         {
             throw new ArgumentException($"Creature {snapshot.Id} was spawned from '{snapshot.DefinitionId.Value}', not '{definition.Id.Value}'.", nameof(definition));
         }
 
+        if (tree.Id != definition.TalentTree)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} unlocks from '{definition.TalentTree.Value}', not '{tree.Id.Value}'.", nameof(tree));
+        }
+
         if (snapshot.Health > definition.BaseStats.Health)
         {
             throw new ArgumentException($"Creature {snapshot.Id} cannot have {snapshot.Health} health out of {definition.BaseStats.Health}.", nameof(snapshot));
+        }
+
+        // What a creature knows is what it spawned with plus what it unlocked, and an unlock comes from the
+        // tree: a spell from anywhere else would let the hypothetical board cast past the evolution rules.
+        if (!definition.StartingSpells.All(snapshot.KnownSpells.Contains)
+            || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell) || tree.Spells.Any(offered => offered.Id == spell)))
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} knows spells its definition and tree do not give it, or lacks a starting one.", nameof(snapshot));
         }
 
         // The rules that price an action read the snapshot's derived values; the rules that apply it read the

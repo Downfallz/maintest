@@ -63,7 +63,7 @@ public sealed class Condition
         var impossible = snapshot.RemainingRounds switch
         {
             null => !duration.IsPermanent,
-            0 => true,
+            <= 0 => true,
             var remaining => duration.IsPermanent || remaining > duration.Rounds || (snapshot.IsFresh && remaining != duration.Rounds),
         };
         if (impossible)
