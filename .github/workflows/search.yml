@@ -18,6 +18,11 @@ on:
       opponent:
         description: "Agent B of every evaluation"
         default: greedy
+      kind:
+        description: "The agent kind that plays each candidate: heuristic reads the weights one step, lookahead and minimax play the round out (docs/learning/agents.md)"
+        type: choice
+        options: [heuristic, lookahead, minimax]
+        default: heuristic
       initial:
         description: "Weights the search starts from (empty: the built-in ones, which greedy plays)"
         default: ""
@@ -53,8 +58,10 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   BRANCH: search/${{ github.run_number }}
-  # The searched set, under its own name next to greedy.json (docs/learning/agents.md).
-  FOUND: learning/weights/search-${{ github.run_number }}.json
+  # The searched set, under its own name next to greedy.json (docs/learning/agents.md). Weights searched for
+  # a reading other than the one-step one carry that reading's name, because they are only meaningful played
+  # by it: `lookahead-12.json` is for `lookahead:`, not for `heuristic:`.
+  FOUND: learning/weights/${{ inputs.kind == 'heuristic' && 'search' || inputs.kind }}-${{ github.run_number }}.json
   # Under runs/, which .gitignore covers: inside the workspace for the artifact, invisible to git.
   OUT: runs/search-${{ github.run_number }}
 
@@ -101,6 +108,7 @@ jobs:
       - name: Search
         env:
           OPPONENT: ${{ inputs.opponent }}
+          KIND: ${{ inputs.kind }}
           INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
           ITERATIONS: ${{ inputs.iterations }}
@@ -114,7 +122,7 @@ jobs:
           fi
           uv run --project learning --locked --no-sync --no-build \
             python -m downfall_learning.cli search-weights -o "$OUT" \
-            --opponent "$OPPONENT" "${start[@]}" --seeds "$SEEDS" \
+            --opponent "$OPPONENT" --kind "$KIND" "${start[@]}" --seeds "$SEEDS" \
             --iterations "$ITERATIONS" --population "$POPULATION" --seed "$SEED" \
             2>&1 | tee "$OUT/search.log"
 
@@ -199,6 +207,7 @@ jobs:
         id: holdout
         env:
           OPPONENT: ${{ inputs.opponent }}
+          KIND: ${{ inputs.kind }}
           INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
         run: |
@@ -222,11 +231,16 @@ jobs:
           # `initial` that is the built-in weights, and `greedy` plays exactly those. Replaying `greedy`
           # against a search that started somewhere else would compare the found weights with an agent
           # neither the search nor the question was about.
-          started_from=greedy
+          # Played by the kind the search played, so the control reads the same way as the found set: bare
+          # `greedy` is the one-step reading of the built-in weights, and `lookahead` or `minimax` bare is
+          # that reading of the same weights.
+          started_from="$KIND"
           if [[ -n "$INITIAL" ]]; then
-            started_from="heuristic:$INITIAL"
+            started_from="$KIND:$INITIAL"
+          elif [[ "$KIND" == "heuristic" ]]; then
+            started_from=greedy
           fi
-          replay "heuristic:$OUT/weights.json" found
+          replay "$KIND:$OUT/weights.json" found
           replay "$started_from" baseline
           # The same number the search optimized, so the two are on one scale: agent A's mean score.
           read -r found_score baseline_score <<< "$(jq -rs '[.[0].agentA.score.mean, .[1].agentA.score.mean] | @tsv' \
@@ -275,6 +289,7 @@ jobs:
           RUN_NUMBER: ${{ github.run_number }}
           BASE: ${{ github.ref_name }}
           OPPONENT: ${{ inputs.opponent }}
+          KIND: ${{ inputs.kind }}
           INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
           ITERATIONS: ${{ inputs.iterations }}
@@ -296,7 +311,8 @@ jobs:
             echo
             echo "One weight search from [workflow run $RUN_NUMBER]($SERVER/$REPOSITORY/actions/runs/$RUN_ID),"
             echo "against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`,"
-            echo "starting from \`${INITIAL:-the built-in weights}\`. Content hash \`$hash\`."
+            echo "starting from \`${INITIAL:-the built-in weights}\`, every candidate played as \`$KIND\`."
+            echo "Content hash \`$hash\`."
             echo
             echo '```'
             cat "$OUT/search.log"
@@ -308,7 +324,8 @@ jobs:
             echo
             echo "This adds \`$FOUND\`. It does **not** move the baseline: \`ScoringWeights.Default\` and"
             echo "\`learning/weights/greedy.json\` are untouched, so every benchmark and every journal entry stays"
-            echo "comparable. Play it with \`evaluate --p1 heuristic:$FOUND\`."
+            echo "comparable. Play it with \`evaluate --p1 $KIND:$FOUND\`: weights searched for one reading are"
+            echo "only meaningful played by it."
             echo
             echo "Before merging:"
             echo
@@ -321,7 +338,7 @@ jobs:
             echo
             echo "The search is deterministic: the same seed on the same content and the same engine returns the"
             echo "same weights, so this reproduces locally with \`search-weights --seed $SEED --iterations"
-            echo "$ITERATIONS --population $POPULATION --opponent $OPPONENT --seeds $SEEDS${INITIAL:+ --initial $INITIAL}\`."
+            echo "$ITERATIONS --population $POPULATION --opponent $OPPONENT --kind $KIND --seeds $SEEDS${INITIAL:+ --initial $INITIAL}\`."
           } > "$RUNNER_TEMP/message.txt"
           git commit -F "$RUNNER_TEMP/message.txt"
           git push origin "$BRANCH"
