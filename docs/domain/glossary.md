@@ -85,8 +85,9 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Snapshot | An immutable copy of a Creature's state (or of a Condition) used by Perspectives and projections. | decided |
 | Fresh | A Condition between its application and its first countdown, the one that does not count. Its Snapshot carries it, so a restored Condition expires when the original would (ADR 0047). | decided |
 | Restore | Building a Creature, or a Condition, back from its Snapshot at the state the Snapshot copied. Internal to the Domain: only Advance does it, and nothing a Match plays is restored. | decided |
-| Hypothetical board | The Snapshots of every Creature as they would stand after a step no Match has played (ADR 0047). What Advance answers with; unrelated to the open Board term, which is about positions. | decided |
+| Hypothetical board | The Snapshots of every Creature as they would stand after a step no Match has played (ADR 0047). What Advance answers with, and what its code calls `board`; unrelated to the open Board term, which is about positions. | decided |
 | Advance | The pure domain service that answers what a Hypothetical board would be after one Combat action, a Cleanup or an Upkeep, by restoring the Creatures from their Snapshots and running on them the rules a Match runs: one applier, not a second one (ADR 0047). | decided |
+| Advanced action | What Advance answers for one Combat action: its Resolution, its Applied outcomes and the Hypothetical board after them. A Combat step without the Round, because none was played. | decided |
 | Player slot | The seat a Player occupies in a Match (`Player1`, `Player2`). Creatures and choices are attributed to a slot. | decided |
 
 ## Learning

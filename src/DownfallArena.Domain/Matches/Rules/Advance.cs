@@ -16,7 +16,8 @@ namespace DownfallArena.Domain.Matches.Rules;
 /// <para>
 /// It is a hypothetical board and not a match: no round, no timeline, no win check, no event. Whether the
 /// match would have ended between a cleanup and the next upkeep is <see cref="WinCondition"/>'s question, and a
-/// caller that advances past a round asks it in between.
+/// caller that advances past a round asks it in between. Nor any evolution: a board advanced past a round
+/// assumes nobody unlocks a spell in it, which is the one creature-changing step of a round not offered here.
 /// </para>
 /// </summary>
 public static class Advance

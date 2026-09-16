@@ -284,6 +284,18 @@ public sealed class CreatureTests
     }
 
     [Fact]
+    public void A_creature_cannot_be_restored_from_a_snapshot_that_disagrees_with_its_conditions()
+    {
+        var creature = Spawn();
+        creature.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)));
+        var snapshot = creature.Snapshot();
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { TotalDefense = Defense.Of(0) }, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { IsStunned = true }, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { CurrentInitiative = Initiative.Of(9) }, Content.Creature()));
+    }
+
+    [Fact]
     public void A_creature_cannot_be_restored_above_its_maximum_health()
     {
         var snapshot = Spawn().Snapshot() with { Health = Health.Of(21) };

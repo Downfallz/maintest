@@ -110,7 +110,8 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 - Expected failures return `Result` / `Result<T>` with a `DomainError(Code, Message)`. Error codes are stable and
   namespaced by aggregate (`Match.AlreadyStarted`). Exceptions mean a bug or a broken invariant.
 - State changes go through aggregate methods that protect invariants. No public setters on domain types.
-  Entity mutators (`Creature`, `Round`) are `internal`: only `Match` and the rules it runs change them.
+  Entity mutators (`Creature`, `Round`) are `internal`: only `Match` and the rules it runs change them, and
+  `Advance`, on creatures it restores from snapshots and never hands out (ADR 0047).
   `DownfallArena.Domain.Tests` reaches them through `InternalsVisibleTo`.
 - Domain events are immutable records named in the past tense (`RoundEnded`), raised via `RaiseDomainEvent`.
 - Use the words in `docs/domain/glossary.md`. If you need a word that is not there, add it in the same change.

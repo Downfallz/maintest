@@ -48,7 +48,7 @@ public sealed class ArtifactJsonTests
     [Fact]
     public void Effects_outcomes_and_events_carry_their_kind_first()
     {
-        var condition = new ConditionSnapshot(Bleed.Of(2, rounds: 3), 3);
+        var condition = new ConditionSnapshot(Bleed.Of(2, rounds: 3), 3, IsFresh: true);
         IReadOnlyList<EffectOutcome> outcomes = [new DamageOutcome(CreatureId.From(1), 5, true), new HealOutcome(CreatureId.From(2), 4)];
         IDomainEvent started = new RoundStarted(Match, RoundId.First);
 
@@ -60,6 +60,7 @@ public sealed class ArtifactJsonTests
         bleed.GetProperty("duration").GetProperty("rounds").GetInt32().ShouldBe(3);
         bleed.GetProperty("stacking").GetString().ShouldBe("Stack");
         effect.RootElement.GetProperty("remainingRounds").GetInt32().ShouldBe(3);
+        effect.RootElement.GetProperty("isFresh").GetBoolean().ShouldBeTrue();
 
         using var list = JsonDocument.Parse(JsonSerializer.Serialize(outcomes, ArtifactJson.LineOptions));
         var items = list.RootElement.EnumerateArray().ToList();

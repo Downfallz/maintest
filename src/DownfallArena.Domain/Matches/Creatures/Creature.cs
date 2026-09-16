@@ -9,7 +9,8 @@ namespace DownfallArena.Domain.Matches.Creatures;
 /// <summary>
 /// A combat unit in a match, spawned from a creature definition. Every state change goes through a method that
 /// protects the invariants; derived values (stun, total defense, current initiative) come from the conditions.
-/// The mutators are internal: only the <see cref="Match"/> aggregate and the rules it runs may change a creature.
+/// The mutators are internal: only the <see cref="Match"/> aggregate and the rules it runs may change a creature,
+/// and <see cref="Rules.Advance"/>, on creatures it restores and never hands out (ADR 0047).
 /// </summary>
 public sealed class Creature : Entity<CreatureId>
 {
@@ -119,7 +120,20 @@ public sealed class Creature : Entity<CreatureId>
             throw new ArgumentException($"Creature {snapshot.Id} cannot have {snapshot.Health} health out of {definition.BaseStats.Health}.", nameof(snapshot));
         }
 
-        return new Creature(snapshot, definition);
+        // The rules that price an action read the snapshot's derived values; the rules that apply it read the
+        // restored creature's, recomputed from its conditions. A snapshot where the two disagree would be
+        // resolved on one board and applied to another.
+        var creature = new Creature(snapshot, definition);
+        if (creature.MaxHealth != snapshot.MaxHealth
+            || creature.TotalDefense != snapshot.TotalDefense
+            || creature.CurrentInitiative != snapshot.CurrentInitiative
+            || creature.CriticalChance != snapshot.CriticalChance
+            || creature.IsStunned != snapshot.IsStunned)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id}'s snapshot disagrees with the conditions it carries.", nameof(snapshot));
+        }
+
+        return creature;
     }
 
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
@@ -164,7 +178,7 @@ public sealed class Creature : Entity<CreatureId>
     }
 
     /// <summary>
-    /// Restores health up to the maximum. Returns the amount actually healed; a dead creature cannot be healed.
+    /// Gives health back up to the maximum. Returns the amount actually healed; a dead creature cannot be healed.
     /// </summary>
     internal int Heal(int amount)
     {

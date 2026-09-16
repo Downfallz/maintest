@@ -264,4 +264,37 @@ public sealed class ConditionTests
         restored.TickConditions().Count.ShouldBe(1);
         restored.IsStunned.ShouldBeFalse();
     }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(4, false)]
+    [InlineData(2, true)]
+    public void A_condition_no_creature_carries_cannot_be_restored(int remainingRounds, bool fresh)
+    {
+        var snapshot = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), remainingRounds, IsFresh: fresh)] };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+    }
+
+    [Fact]
+    public void A_permanent_condition_has_no_countdown_and_a_timed_one_has_one()
+    {
+        var timed = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), null)] };
+        var permanent = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(DefenseBuff.Of(1, Duration.Permanent), 2)] };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(timed, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(permanent, Content.Creature()));
+    }
+
+    [Fact]
+    public void A_kind_that_does_not_stack_cannot_be_restored_twice()
+    {
+        var snapshot = Spawn().Snapshot() with
+        {
+            IsStunned = true,
+            Conditions = [new ConditionSnapshot(Stun.For(1), 1), new ConditionSnapshot(Stun.For(1), 1)],
+        };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+    }
 }
