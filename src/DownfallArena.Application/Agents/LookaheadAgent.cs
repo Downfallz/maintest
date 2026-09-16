@@ -67,12 +67,12 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
         SpellId? best = null;
-        var bestValue = (Round: double.NegativeInfinity, OneStep: double.NegativeInfinity);
+        var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
         foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
             var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
             var value = (
-                Round: Value(board, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
+                Round: Value(board, creatures, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
                 OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0);
             if (Better(value, bestValue))
             {
@@ -110,12 +110,12 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         var intent = new CombatIntent(options.Actor, options.Spell);
         IReadOnlyList<CreatureId> best = [];
-        var bestValue = (Round: double.NegativeInfinity, OneStep: double.NegativeInfinity);
+        var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
         foreach (var targets in TargetSets.Of(options.LegalTargets))
         {
             var action = CombatAction.Bind(intent, targets);
             var value = (
-                Round: Value(board, ahead, board.RevealedActions.Count, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
+                Round: Value(board, ahead, beforeCombat, board.RevealedActions.Count, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
                 OneStep: _scorer.Expected(action, ahead));
             if (Better(value, bestValue))
             {
@@ -140,7 +140,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var declared = DeclaredSpells(board, creatures, actor, candidate);
-        Value(board, creatures, 0, actor, declared, ahead => BestTargets(ahead, actor, candidate));
+        Value(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(ahead, actor, candidate));
         return declared;
     }
 
@@ -151,10 +151,15 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// still at their guess: a joint worst case over every enemy would cost the product of their spell counts
     /// where this costs the sum, and the round is short enough that the difference between the two is rarely
     /// a different reply. The map is left holding what was settled, which is what <see cref="Replies"/> reads.
+    /// The replies an enemy can choose from are read on the board before combat, where it declared: the
+    /// round is played from <paramref name="start"/>, which at reveal time has the revealed actions on it,
+    /// and an energy one of those gave or drained changes what the enemy can cast now, not what it could
+    /// declare then.
     /// </summary>
-    private double Value(
+    private RoundValue Value(
         PlayerBoardState board,
         IReadOnlyList<CreatureSnapshot> start,
+        IReadOnlyList<CreatureSnapshot> beforeCombat,
         int fromSlot,
         CreatureId actor,
         Dictionary<CreatureId, SpellId?> declared,
@@ -168,7 +173,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         foreach (var enemy in board.Timeline.Skip(fromSlot).Select(slot => slot.Creature).Distinct())
         {
-            var snapshot = start.First(creature => creature.Id == enemy);
+            var snapshot = beforeCombat.First(creature => creature.Id == enemy);
             if (enemy == actor || snapshot.Owner == board.Slot)
             {
                 continue;
@@ -179,7 +184,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             {
                 declared[enemy] = spell;
                 var replied = PlayOut(board, start, fromSlot, actor, declared, candidate);
-                if (replied < value)
+                if (replied.CompareTo(value) < 0)
                 {
                     value = replied;
                     worst = spell;
@@ -201,7 +206,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// Without it the tie went to the first spell in id order, which is how the weakest spell in the
     /// catalogue came to be cast three times more often than the greedy agent casts it.
     /// </summary>
-    private static bool Better((double Round, double OneStep) candidate, (double Round, double OneStep) best)
+    private static bool Better((RoundValue Round, double OneStep) candidate, (RoundValue Round, double OneStep) best)
     {
         var round = candidate.Round.CompareTo(best.Round);
         return round > 0 || (round == 0 && candidate.OneStep > best.OneStep);
@@ -210,10 +215,10 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// <summary>
     /// What the round is worth when played out from a slot: the actor plays what the candidate says at its
     /// slot, every other creature plays what can be read of it, and every action is scored on the board it
-    /// lands on, the actor's team's for and the other's against, with a match the round ends worth the whole
-    /// board one way or the other.
+    /// lands on, the actor's team's for and the other's against, under the match the round ends, if it ends
+    /// one, which outranks the score.
     /// </summary>
-    private double PlayOut(
+    private RoundValue PlayOut(
         PlayerBoardState board,
         IReadOnlyList<CreatureSnapshot> start,
         int fromSlot,
@@ -223,10 +228,10 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     {
         var chance = CriticalChance(start, actor, candidate);
         var plain = PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.NotCritical);
-        return chance == 0 ? plain : (chance * PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.Critical)) + ((1 - chance) * plain);
+        return chance == 0 ? plain : RoundValue.Mix(chance, PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.Critical), plain);
     }
 
-    private double PlayOut(
+    private RoundValue PlayOut(
         PlayerBoardState board,
         IReadOnlyList<CreatureSnapshot> start,
         int fromSlot,
@@ -255,9 +260,9 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         var cleaned = Advance.Cleanup(ahead, resources);
         return Advance.Outcome(cleaned, resources, board.RoundNumber ?? 1, rules) switch
         {
-            null => value,
-            { Winner: null } => value,
-            { Winner: var winner } => value + (winner == board.Slot ? WholeBoard(cleaned) : -WholeBoard(cleaned)),
+            null => new RoundValue(0, value),
+            { Winner: null } => new RoundValue(0, value),
+            { Winner: var winner } => new RoundValue(winner == board.Slot ? 1 : -1, value),
         };
     }
 
@@ -281,13 +286,26 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>
-    /// What a match won on the spot is worth: every creature on the board at full health, the kill included,
-    /// and one more. Large enough that no round's play outweighs it, in the unit of everything else, and
-    /// positive whatever a weights file says: a file only has to be finite, so the magnitudes are read and
-    /// not the signs, and the one on top keeps a win worth something under weights that are all zero.
+    /// What a round played out is worth: the match it ends first, then the score of its actions. A win is
+    /// worth more than any score and a loss less than any, whatever a weights file says, because the two are
+    /// never added: a weights file only has to be finite, so no bound in its unit could be trusted to
+    /// dominate it, and a win an agent could be paid to decline is not a win it reads. Between two rolls,
+    /// the outcome mixes the way the score does, so a critical that wins on the spot three casts in four is
+    /// worth three quarters of a win.
     /// </summary>
-    private double WholeBoard(IReadOnlyList<CreatureSnapshot> board) =>
-        1 + board.Sum(creature => Math.Abs(weights.Kill) + (Math.Abs(weights.Damage) * creature.MaxHealth.Value));
+    private readonly record struct RoundValue(double Outcome, double Score) : IComparable<RoundValue>
+    {
+        public static RoundValue Lowest => new(double.NegativeInfinity, double.NegativeInfinity);
+
+        public static RoundValue Mix(double chance, RoundValue critical, RoundValue plain) =>
+            new((chance * critical.Outcome) + ((1 - chance) * plain.Outcome), (chance * critical.Score) + ((1 - chance) * plain.Score));
+
+        public int CompareTo(RoundValue other)
+        {
+            var outcome = Outcome.CompareTo(other.Outcome);
+            return outcome != 0 ? outcome : Score.CompareTo(other.Score);
+        }
+    }
 
     /// <summary>
     /// What a creature other than the actor plays at its slot: its spell on the best targets the board

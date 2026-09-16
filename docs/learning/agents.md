@@ -93,8 +93,8 @@ the match's own rules on them, so the agent can put a move on the board and keep
   aggressive move, which measured as the lookahead losing three matches in four. A dead or stunned creature
   plays nothing, as in the match. The round's worth is the **sum of what the scorer says of every action it
   holds**, the actor's team's for and the other's against, each scored on the board it lands on; a round
-  that ends the match adds or takes away the whole board at full health. The spell whose round is worth most
-  wins.
+  that ends the match outranks any round that does not, won above every score and lost below every score,
+  whatever the weights say, because the two are never added. The spell whose round is worth most wins.
 - **Targets**: the same, from the actor's slot on, starting from the board the **revealed actions** leave.
   They are public and bound in timeline order, so `Advance` replays them exactly where the one-step agent
   could only carry health forward and stop at the first stun, heal or buff (ADR 0039). No target when the
