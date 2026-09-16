@@ -47,10 +47,10 @@ def test_the_mean_scores_every_candidate_as_the_mean_of_the_policies() -> None:
     observation = [0.5, -2.0]
     expected = (one.scores(observation, ["A", "B"]) + two.scores(observation, ["A", "B"])) / 2
     np.testing.assert_allclose(mean.scores(observation, ["A", "B"]), expected)
-    assert mean.fallback == -2.0
+    assert mean.fallback == pytest.approx(-2.0)
     assert mean.baseline is not None
     np.testing.assert_allclose(mean.baseline.weights, [2.0, 1.0])
-    assert mean.baseline.bias == 1.0
+    assert mean.baseline.bias == pytest.approx(1.0)
 
 
 def test_a_key_one_policy_never_saw_counts_as_that_policy_s_fallback() -> None:
