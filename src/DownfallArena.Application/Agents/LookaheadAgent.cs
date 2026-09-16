@@ -28,16 +28,27 @@ namespace DownfallArena.Application.Agents;
 /// chance, not a reading.
 /// </para>
 /// <para>
+/// Adversarial, it is the minimax agent: an enemy slot that is still ahead is not guessed but played as the
+/// reply that costs the actor most among the spells that enemy can cast, one enemy at a time in timeline
+/// order, the others held at what was already taken for them. That reads the round against an opponent who
+/// sees the actor's move, which no opponent in this game does, since intents are simultaneous: it is the
+/// floor of what the move is worth, not its expectation, and whether a floor plays better than a guess is
+/// what the journal measures.
+/// </para>
+/// <para>
 /// Evolution and speed are the heuristic agent's: neither is a combat move, and the round they plan has no
 /// timeline yet to play out.
 /// </para>
 /// </summary>
-public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules) : IPlayerAgent
+public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, bool adversarial = false) : IPlayerAgent
 {
     private readonly HeuristicAgent _oneStep = new(weights, resources, rules);
     private readonly ActionScorer _scorer = new(resources, rules, weights);
 
     public ScoringWeights Weights => weights;
+
+    /// <summary>Whether enemy slots are played as the worst reply rather than as the guessed one: the minimax agent.</summary>
+    public bool IsAdversarial => adversarial;
 
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => _oneStep.DecideEvolution(board, options);
 
@@ -61,7 +72,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         {
             var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
             var value = (
-                Round: PlayOut(board, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
+                Round: Value(board, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
                 OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0);
             if (Better(value, bestValue))
             {
@@ -104,7 +115,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         {
             var action = CombatAction.Bind(intent, targets);
             var value = (
-                Round: PlayOut(board, ahead, board.RevealedActions.Count, options.Actor, declared, _ => action),
+                Round: Value(board, ahead, board.RevealedActions.Count, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
                 OneStep: _scorer.Expected(action, ahead));
             if (Better(value, bestValue))
             {
@@ -114,6 +125,71 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         }
 
         return best;
+    }
+
+    /// <summary>
+    /// What this agent takes every other creature on the timeline to play when the actor declares a candidate:
+    /// an ally's declared spell or the one the heuristic agent would declare for it, an enemy's guessed spell,
+    /// or, for the minimax agent, the reply that costs the actor most. A reading a test or a viewer can ask
+    /// for; the decisions above are made on it.
+    /// </summary>
+    public IReadOnlyDictionary<CreatureId, SpellId?> Replies(PlayerBoardState board, CreatureId actor, SpellId candidate)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        var creatures = Creatures(board);
+        var declared = DeclaredSpells(board, creatures, actor, candidate);
+        Value(board, creatures, 0, actor, declared, ahead => BestTargets(ahead, actor, candidate));
+        return declared;
+    }
+
+    /// <summary>
+    /// The round's worth for a candidate: played out on the replies as they stand, or, adversarially, with
+    /// each enemy slot still ahead settled at the reply that costs the actor most. One enemy at a time in
+    /// timeline order, each over the spells it can cast, the earlier ones already settled and the later ones
+    /// still at their guess: a joint worst case over every enemy would cost the product of their spell counts
+    /// where this costs the sum, and the round is short enough that the difference between the two is rarely
+    /// a different reply. The map is left holding what was settled, which is what <see cref="Replies"/> reads.
+    /// </summary>
+    private double Value(
+        PlayerBoardState board,
+        IReadOnlyList<CreatureSnapshot> start,
+        int fromSlot,
+        CreatureId actor,
+        Dictionary<CreatureId, SpellId?> declared,
+        Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
+    {
+        var value = PlayOut(board, start, fromSlot, actor, declared, candidate);
+        if (!adversarial)
+        {
+            return value;
+        }
+
+        foreach (var enemy in board.Timeline.Skip(fromSlot).Select(slot => slot.Creature).Distinct())
+        {
+            var snapshot = start.First(creature => creature.Id == enemy);
+            if (enemy == actor || snapshot.Owner == board.Slot)
+            {
+                continue;
+            }
+
+            var worst = declared[enemy];
+            foreach (var spell in Castable(snapshot))
+            {
+                declared[enemy] = spell;
+                var replied = PlayOut(board, start, fromSlot, actor, declared, candidate);
+                if (replied < value)
+                {
+                    value = replied;
+                    worst = spell;
+                }
+            }
+
+            declared[enemy] = worst;
+        }
+
+        return value;
     }
 
     /// <summary>
@@ -266,12 +342,15 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// <summary>What the heuristic agent would declare for an ally that has not yet, given the team's declarations so far.</summary>
     private SpellId? AllyIntent(PlayerBoardState board, CreatureSnapshot ally)
     {
-        var castable = ally.KnownSpells
-            .Where(spell => resources.GetSpell(spell).Stats.Cost.Value <= ally.Energy.Value)
-            .OrderBy(spell => spell.Value, StringComparer.Ordinal)
-            .ToList();
+        var castable = Castable(ally);
         return castable.Count == 0 ? null : _oneStep.DecideIntent(board, new IntentOption(ally.Id, castable));
     }
+
+    /// <summary>The spells a creature knows and can afford, in ordinal id order.</summary>
+    private List<SpellId> Castable(CreatureSnapshot creature) =>
+        [.. creature.KnownSpells
+            .Where(spell => resources.GetSpell(spell).Stats.Cost.Value <= creature.Energy.Value)
+            .OrderBy(spell => spell.Value, StringComparer.Ordinal)];
 
     /// <summary>The spell the scorer would declare for a creature on a board, as the greedy agent declares it.</summary>
     private SpellId? GreedyIntent(CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> creatures)
