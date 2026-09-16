@@ -289,8 +289,8 @@ reads, the searched ones next to the built-in `greedy.json`.
 
 ## The loop (L7)
 
-`scripts/iterate.sh [--run <id>] [--against <id>] [--matches N] [--seeds "1 2 3"]` runs one iteration and
-leaves everything under `runs/<id>/`:
+`scripts/iterate.sh [--run <id>] [--against <id>] [--matches N] [--seeds "1 5001 10001"]` runs one iteration
+and leaves everything under `runs/<id>/`:
 
 1. Build the engine and the content; check the benchmark digest (`benchmark`).
 2. Baselines on the benchmark seeds, mirrored: `random-vs-random`, `greedy-vs-greedy`, `greedy-vs-random`.
@@ -311,6 +311,13 @@ therefore costs about half an hour. `--seed S` still runs one, to reproduce an o
 width of zero and says, in as many words, that this is a sample. A gate reads the **minimum** across the
 seeds and never the maximum — the benchmark seeds are fixed, so choosing the dataset seed that scored best is
 selection on the test set.
+
+**Space the seeds by the match count.** Match `i` of a dataset recorded from seed `s` plays seed `s + i`, so
+seeds closer than the match count record the same matches shifted by their distance: `1 2 3` at 5000 matches
+is one dataset three times, sharing 4999 matches, and the fifth each holds out is the next one's training
+matches (journal, 2026-09-16). The three spreads above, and every one before that entry, were measured that
+way: they are the fit's sensitivity to which fifth was held out, not three draws of the data. The default is
+now `1`, `1 + matches`, `1 + 2 * matches`, and the script refuses a closer list before playing a match.
 
 `report`, at step 3.5 above, reads every `evaluations/*.json` of one seed, refuses to mix engines or
 contents, writes that seed's `report.json`, prints the table, and with `--against` the deltas and the stamp
