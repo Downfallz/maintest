@@ -78,13 +78,17 @@ on:
 permissions:
   contents: write
 
-# One loop at a time per branch, and the newest push wins. A pull request's path filter matches the whole
-# diff, not the last commit, so every push to a branch that touches the experiment file starts a run; without
-# this they would queue up behind each other, each holding a runner for a quarter of an hour to answer a
-# question a later commit has already changed.
+# One loop at a time per branch. On a pull request the newest push wins: its path filter matches the whole
+# diff, not the last commit, so every push to a branch that touches the experiment file starts a run, and
+# without the cancel they would queue up behind each other, each holding a runner to answer a question a
+# later commit has already changed. On main, and on a schedule or a dispatch, a run in progress finishes:
+# three merges in one morning cancelled three turns of the 5000-match experiment in a row (journal,
+# 2026-09-16), each an hour and three quarters in, and none of them had been made wrong by what landed. The
+# next one waits its turn instead; GitHub keeps one pending run per group, so a burst of merges still ends
+# in one run on the latest main rather than a queue of stale ones.
 concurrency:
   group: iterate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_NOLOGO: true
@@ -473,5 +477,6 @@ jobs:
             runs/ci-${{ github.run_number }}/seeds/*/evaluations
             runs/ci-${{ github.run_number }}/seeds/*/value
             runs/ci-${{ github.run_number }}/seeds/*/clone
+            runs/ci-${{ github.run_number }}/mean
           if-no-files-found: warn
           retention-days: 30

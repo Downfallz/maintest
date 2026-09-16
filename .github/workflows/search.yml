@@ -18,6 +18,9 @@ on:
       opponent:
         description: "Agent B of every evaluation"
         default: greedy
+      check_opponent:
+        description: "A second opponent the hold-out also replays both agents against, or empty for none. A set that beats the opponent it was searched against and falls against this one learned that opponent, not the game (journal, 2026-09-16)"
+        default: random
       kind:
         description: "The agent kind that plays each candidate: heuristic reads the weights one step, lookahead and minimax play the round out (docs/learning/agents.md)"
         type: choice
@@ -202,11 +205,19 @@ jobs:
       # it unchecked, so a window that ran past the maximum would fail the run, or wrap and land back on the
       # seeds it is supposed to avoid. The baseline is replayed on the same seeds as the control -- against
       # `greedy` it is even by construction, which is exactly what makes it a check on the seed set.
+      #
+      # Unseen seeds answer "did it fit the seed file" and cannot answer "did it fit the opponent", because
+      # the opponent is the same on both sides. So both agents are replayed a second time against another
+      # opponent, `random` by default: a set that beats the opponent it was searched against and scores below
+      # what it started from here has learned that opponent rather than the game. The lookahead weights of
+      # search run 5 were that set, 0.84 against Greedy and 0.70 against Random where Greedy itself scores
+      # 0.99 (journal, 2026-09-16), and this step would have said so in the run summary.
       - name: Replay on seeds the search never saw
         if: steps.found.outputs.applied == 'true'
         id: holdout
         env:
           OPPONENT: ${{ inputs.opponent }}
+          CHECK: ${{ inputs.check_opponent }}
           KIND: ${{ inputs.kind }}
           INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
@@ -224,8 +235,14 @@ jobs:
           fi
           replay() {
             dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
-              evaluate --p1 "$1" --p2 "$OPPONENT" --seed "$start" --matches "$matches" \
-              --out "$OUT/holdout-$2.json" > "$OUT/holdout-$2.log"
+              evaluate --p1 "$1" --p2 "$2" --seed "$start" --matches "$matches" \
+              --out "$OUT/holdout-$3.json" > "$OUT/holdout-$3.log"
+          }
+          # Agent A's mean score of two evaluations, the number the search optimized, so every column of the
+          # table below is on one scale.
+          scores() {
+            jq -rs '[.[0].agentA.score.mean, .[1].agentA.score.mean] | @tsv' \
+              "$OUT/holdout-$1.json" "$OUT/holdout-$2.json"
           }
           # The control is whatever the search started from, which is what "better" has to mean here: with no
           # `initial` that is the built-in weights, and `greedy` plays exactly those. Replaying `greedy`
@@ -240,25 +257,42 @@ jobs:
           elif [[ "$KIND" == "heuristic" ]]; then
             started_from=greedy
           fi
-          replay "$KIND:$OUT/weights.json" found
-          replay "$started_from" baseline
-          # The same number the search optimized, so the two are on one scale: agent A's mean score.
-          read -r found_score baseline_score <<< "$(jq -rs '[.[0].agentA.score.mean, .[1].agentA.score.mean] | @tsv' \
-            "$OUT/holdout-found.json" "$OUT/holdout-baseline.json")"
+          replay "$KIND:$OUT/weights.json" "$OPPONENT" found
+          replay "$started_from" "$OPPONENT" baseline
+          read -r found_score baseline_score <<< "$(scores found baseline)"
           echo "found=$found_score" >> "$GITHUB_OUTPUT"
           echo "baseline=$baseline_score" >> "$GITHUB_OUTPUT"
+          header="| Agent | Score against \`$OPPONENT\` |"
+          rule="| --- | --- |"
+          found_row="| The weights it found | $found_score |"
+          baseline_row="| What it started from (\`$started_from\`) | $baseline_score |"
+          check_note=""
+          # The same opponent twice would be the same number twice, so the check only runs against a
+          # different one.
+          if [[ -n "$CHECK" && "$CHECK" != "$OPPONENT" ]]; then
+            replay "$KIND:$OUT/weights.json" "$CHECK" found-check
+            replay "$started_from" "$CHECK" baseline-check
+            read -r found_check baseline_check <<< "$(scores found-check baseline-check)"
+            echo "check_found=$found_check" >> "$GITHUB_OUTPUT"
+            echo "check_baseline=$baseline_check" >> "$GITHUB_OUTPUT"
+            header="$header Score against \`$CHECK\` |"
+            rule="$rule --- |"
+            found_row="$found_row $found_check |"
+            baseline_row="$baseline_row $baseline_check |"
+            check_note="A found agent that beats \`$OPPONENT\` here and scores below what it started from against \`$CHECK\` has learned \`$OPPONENT\`, not the game."
+          fi
           {
             echo
             echo "### On $matches seeds no candidate saw ($start to $((start + matches - 1)), mirrored)"
             echo
-            echo "| Agent | Score against \`$OPPONENT\` |"
-            echo "| --- | --- |"
-            echo "| The weights it found | $found_score |"
-            echo "| What it started from (\`$started_from\`) | $baseline_score |"
+            echo "$header"
+            echo "$rule"
+            echo "$found_row"
+            echo "$baseline_row"
             echo
             echo "This is the comparison the search's own numbers cannot make. A found agent that does not beat"
             echo "what it started from here has not been shown to be better at anything but the seed file it"
-            echo "was searched on."
+            echo "was searched on. $check_note"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # The gate a contributor runs before pushing, and the one ci.yml runs. A weights file is content the test
@@ -289,6 +323,7 @@ jobs:
           RUN_NUMBER: ${{ github.run_number }}
           BASE: ${{ github.ref_name }}
           OPPONENT: ${{ inputs.opponent }}
+          CHECK: ${{ inputs.check_opponent }}
           KIND: ${{ inputs.kind }}
           INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
@@ -297,6 +332,8 @@ jobs:
           SEED: ${{ inputs.seed }}
           HOLDOUT_FOUND: ${{ steps.holdout.outputs.found }}
           HOLDOUT_BASELINE: ${{ steps.holdout.outputs.baseline }}
+          HOLDOUT_CHECK_FOUND: ${{ steps.holdout.outputs.check_found }}
+          HOLDOUT_CHECK_BASELINE: ${{ steps.holdout.outputs.check_baseline }}
         run: |
           hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
           git config user.name "github-actions[bot]"
@@ -321,6 +358,11 @@ jobs:
             echo "**On seeds no candidate saw**, which is the one comparison the run above cannot make:"
             echo "these weights score \`$HOLDOUT_FOUND\` against \`$OPPONENT\` where what the search started"
             echo "from scores \`$HOLDOUT_BASELINE\`."
+            if [[ -n "$HOLDOUT_CHECK_FOUND" ]]; then
+              echo "**Against \`$CHECK\`**, an opponent the search never played, they score"
+              echo "\`$HOLDOUT_CHECK_FOUND\` where what it started from scores \`$HOLDOUT_CHECK_BASELINE\`: a set"
+              echo "that wins the first comparison and loses this one learned \`$OPPONENT\`, not the game."
+            fi
             echo
             echo "This adds \`$FOUND\`. It does **not** move the baseline: \`ScoringWeights.Default\` and"
             echo "\`learning/weights/greedy.json\` are untouched, so every benchmark and every journal entry stays"
@@ -370,5 +412,7 @@ jobs:
             runs/search-${{ github.run_number }}/training.jsonl
             runs/search-${{ github.run_number }}/holdout-found.json
             runs/search-${{ github.run_number }}/holdout-baseline.json
+            runs/search-${{ github.run_number }}/holdout-found-check.json
+            runs/search-${{ github.run_number }}/holdout-baseline-check.json
           if-no-files-found: warn
           retention-days: 30

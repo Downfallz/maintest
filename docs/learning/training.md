@@ -126,6 +126,7 @@ replays. The report says how many the engine actually had to play.
 | --- | --- | --- | --- |
 | `search-weights -o <dir>` | the built engine and `data/dst`, no dataset | `weights.json`, `search.json`, `evaluation.json`, `training.jsonl` | Cross-entropy method over the eight scoring weights. Each candidate is a weights file evaluated by the engine's `evaluate` as `<kind>:<file>` against `--opponent` (default `greedy`) on `--seeds` (default the benchmark seeds), mirrored, where `--kind` is `heuristic` (the default, one step), `lookahead` or `minimax` (the round played out; ADR 0047): weights searched for one reading are only meaningful played by it, and `search.json` records the kind; the fitness is the mean score. The mean of the elite becomes the next mean, its spread the next spread; the current mean is always in the population, so the best is never lost. |
 | `train-clone <runs> -o <dir>` | a recorded run (`simulate --record`) | `policy.json`, `training.jsonl` | Behaviour cloning: a linear classifier from observation to action key (`SGDClassifier`, log loss), one epoch per iteration, keeping the epoch whose choice among the candidates matches the data best on held-out matches. |
+| `mean-policy <models...> -o <dir>` | two or more trained policies of one kind, schema and content | `policy.json` | A policy is linear, so the mean of several is exactly a policy that scores every candidate as the mean of their scores; a key one of them never saw counts as that one's `fallback`. Every policy given weighs the same, nothing is chosen, so it stays off the test set. The loop plays the mean of its seeds' value fits as its last step. |
 | `train-value <runs> -o <dir>` | a recorded run, ideally an explored one (below) | `policy.json`, `training.jsonl` | Value regression in two parts (ADR 0016): one baseline over the observation alone, fitted on every step, then one ridge regression per action key over what the baseline leaves. A score is the baseline plus the action's row, so it still predicts the return, and the agent takes the candidate that scores best. A key seen fewer than `--min-samples` times keeps its mean, and an unseen key the mean of the data — both on top of the baseline. |
 
 Matches are held out whole (`--validation`, default one in five), so a validation step never comes from a
@@ -303,6 +304,10 @@ and leaves everything under `runs/<id>/`:
       `previous-value-vs-greedy.json`; when its feature schema no longer applies, say so and go on.
    5. Write that seed's `report.json` and `report.html`.
 4. Range every win rate across the seeds into `spread.json` (`spread`).
+5. With more than one seed, average the seeds' value fits into one policy (`mean-policy`), under `mean/value/`,
+   and play it against the same opponents into `mean/evaluations/`. It is not in the spread and not gated: it
+   is one policy, so its three numbers are one sample each, and the question they answer is whether the fits'
+   disagreement in play (journal, 2026-09-16) is variance a mean removes or a place the mean collapses too.
 
 **Read the spread, not a seed.** One seed is a sample: three runs of one configuration differing only in the
 dataset seed scored 0.6625, 0.0975 and 0.30375 against `search-4` (`ci-88`, `ci-90`, `ci-91`), a 56-point
@@ -349,7 +354,9 @@ experiment is committed rather than typed; a workflow input, when a dispatch fil
 for that run, and `explore` set to `off` skips the exploring dataset. The report table goes in the run
 summary, under the file's `why`; `report.html`, `report.json`, the evaluations and the two policies are the
 run's artifact. The datasets are not uploaded: the seed reproduces them. A CI runner keeps nothing between
-runs, so `--against` stays a local comparison.
+runs, so `--against` stays a local comparison. A run on `main` finishes even when another push lands while it
+is running; the next one queues behind it, and only the newest of the queued ones survives. A run on a pull
+request is the opposite: a newer push cancels it, because the answer wanted is the one on the last commit.
 
 Two more turns of the same crank run on the runners and nowhere else in particular, so asking for one needs
 no local SDK and no machine left on:
@@ -357,7 +364,7 @@ no local SDK and no machine left on:
 | Workflow | Dispatch inputs | What comes back |
 | --- | --- | --- |
 | **Tune the catalogue** (`tune.yml`) | search seed, rounds, neighbours, knobs per proposal, and whether to apply | The proposal in the run summary, and, when it moved something, a **branch** carrying the changed spell files and a regenerated benchmark digest, with a link that opens it as a pull request. |
-| **Search the agent weights** (`search.yml`) | opponent, seed file, rounds, population, search seed, and whether to apply | The weights in the run summary, as ratios to `damage`, beside the baseline's, and, when asked and when a candidate beat the set it started from, a **branch** carrying them as `learning/weights/search-<run>.json`, with a link that opens it as a pull request. |
+| **Search the agent weights** (`search.yml`) | opponent, a check opponent for the hold-out, the agent kind, the weights to start from, seed file, rounds, population, search seed, and whether to apply | The weights in the run summary, as ratios to `damage`, beside the baseline's, and, when asked and when a candidate beat the set it started from, a **branch** carrying them as `learning/weights/search-<run>.json`, with a link that opens it as a pull request. |
 
 Both can propose a branch; what a branch may contain is where they differ. A tuning pass proposes content, and
 content is reviewed as a diff, so its branch changes the spell files themselves. A weight search proposes an
@@ -373,8 +380,12 @@ produced it cannot establish that. So an applying weight search makes the compar
 found weights *and* the baseline on seeds no candidate played — consecutive integers starting past the largest
 in the seed file, so they cannot overlap it — and puts both scores in the run summary and in the commit
 message. Against `greedy` the baseline's side of that is even by construction, which is what makes it a check
-on the seed set rather than a second opinion. Two evaluations, about fifteen seconds after a twenty-minute
-search, and it is the difference between a number and a claim. An applying tuning pass makes the same
+on the seed set rather than a second opinion. Unseen seeds answer "did it fit the seed file" and not "did it
+fit the opponent", since the opponent is the same on both sides, so the same two agents are replayed once more
+against a `check_opponent`, `random` unless the dispatch says otherwise: a set that beats the opponent it was
+searched against and scores below what it started from there has learned that opponent, not the game (the
+2026-09-16 entry on the searched lookahead weights is the case). Four evaluations, under a minute after a
+twenty-minute search, and it is the difference between a number and a claim. An applying tuning pass makes the same
 comparison with `score-content`: the proposal and the catalogue it started from, both played on a window of
 seeds clear of the objective's seed file, both scores in the run summary and the commit message. There the
 score is a penalty and lower is better.
