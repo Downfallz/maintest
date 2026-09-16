@@ -91,7 +91,12 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
     search.add_argument(
         "--initial", type=Path, help="a weights file to start from (default: the built-in weights)"
     )
-    search.add_argument("--opponent", default="greedy", help="agent B of every evaluation (default greedy)")
+    search.add_argument(
+        "--opponent",
+        default="greedy",
+        help="agent B of every evaluation (default greedy), or several separated by commas: a candidate then"
+        " scores as its worst matchup among them, so it cannot win by learning one of them",
+    )
     search.add_argument(
         "--kind",
         default="heuristic",
@@ -375,6 +380,11 @@ def _engine(arguments: argparse.Namespace) -> EngineCommand:
 
 
 def _evaluate_policy(arguments: argparse.Namespace) -> int:
+    if "," in arguments.opponent:
+        raise ValueError(
+            "evaluate-policy plays one opponent and writes one evaluation; a list of opponents is what "
+            "search-weights takes."
+        )
     evaluator = CliEvaluator(_engine(arguments), arguments.model / "work")
     score = evaluate_policy(arguments.model, evaluator, arguments.output, update_log=not arguments.no_log)
     lines = [

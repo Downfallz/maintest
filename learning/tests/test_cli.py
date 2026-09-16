@@ -99,6 +99,43 @@ def test_search_weights_can_play_every_candidate_as_the_lookahead(
         cli.main(["search-weights", "-o", str(tmp_path / "x"), "--kind", "policy"])
 
 
+def test_search_weights_plays_every_candidate_against_each_opponent_of_a_list(
+    tmp_path: Path, fake_engine: list[str], capsys: pytest.CaptureFixture
+) -> None:
+    code = cli.main(
+        [
+            "search-weights",
+            "-o",
+            str(tmp_path / "search"),
+            "--iterations",
+            "1",
+            "--population",
+            "2",
+            "--opponent",
+            "greedy,random",
+            "--repo",
+            str(tmp_path),
+            "--engine",
+            *fake_engine,
+        ]
+    )
+
+    assert code == 0
+    assert (tmp_path / "search" / "evaluation-vs-greedy.json").is_file()
+    assert (tmp_path / "search" / "evaluation-vs-random.json").is_file()
+    assert "even against greedy,random" in capsys.readouterr().out
+
+
+def test_evaluate_policy_refuses_a_list_of_opponents(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    run = write_run(tmp_path / "run", matches=10)
+    cli.main(["train-value", str(run), "-o", str(tmp_path / "model")])
+
+    code = cli.main(["evaluate-policy", str(tmp_path / "model"), "--opponent", "greedy,random"])
+
+    assert code == 1
+    assert "one opponent" in capsys.readouterr().err
+
+
 def test_export_csv_writes_the_projection(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
     run = write_run(tmp_path / "run", matches=3)
 
