@@ -125,8 +125,11 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// Without it the tie went to the first spell in id order, which is how the weakest spell in the
     /// catalogue came to be cast three times more often than the greedy agent casts it.
     /// </summary>
-    private static bool Better((double Round, double OneStep) candidate, (double Round, double OneStep) best) =>
-        candidate.Round > best.Round || (candidate.Round == best.Round && candidate.OneStep > best.OneStep);
+    private static bool Better((double Round, double OneStep) candidate, (double Round, double OneStep) best)
+    {
+        var round = candidate.Round.CompareTo(best.Round);
+        return round > 0 || (round == 0 && candidate.OneStep > best.OneStep);
+    }
 
     /// <summary>
     /// What the round is worth when played out from a slot: the actor plays what the candidate says at its
@@ -145,25 +148,6 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         var chance = CriticalChance(start, actor, candidate);
         var plain = PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.NotCritical);
         return chance == 0 ? plain : (chance * PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.Critical)) + ((1 - chance) * plain);
-    }
-
-    /// <summary>
-    /// The actor's chance of a critical on the candidate, read the way <see cref="ActionScorer.Expected"/>
-    /// reads it, so the rollout is weighted between its two rolls rather than taken on a miss: taken on a
-    /// miss, a spell that crits three casts in four is priced at half of what it does, and the agent stops
-    /// casting it. Only the actor's own roll is weighted; every other creature's stays a miss, which keeps
-    /// the cost at two rounds per candidate rather than two to the power of the slots left.
-    /// </summary>
-    private double CriticalChance(IReadOnlyList<CreatureSnapshot> start, CreatureId actor, Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
-    {
-        var action = candidate(start);
-        if (action is null)
-        {
-            return 0;
-        }
-
-        var snapshot = start.First(creature => creature.Id == actor);
-        return snapshot.CriticalChance.Plus(resources.GetSpell(action.Spell).Stats.CriticalChance.Value).Value;
     }
 
     private double PlayOut(
@@ -202,6 +186,25 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>
+    /// The actor's chance of a critical on the candidate, read the way <see cref="ActionScorer.Expected"/>
+    /// reads it, so the rollout is weighted between its two rolls rather than taken on a miss: taken on a
+    /// miss, a spell that crits three casts in four is priced at half of what it does, and the agent stops
+    /// casting it. Only the actor's own roll is weighted; every other creature's stays a miss, which keeps
+    /// the cost at two rounds per candidate rather than two to the power of the slots left.
+    /// </summary>
+    private double CriticalChance(IReadOnlyList<CreatureSnapshot> start, CreatureId actor, Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
+    {
+        var action = candidate(start);
+        if (action is null)
+        {
+            return 0;
+        }
+
+        var snapshot = start.First(creature => creature.Id == actor);
+        return snapshot.CriticalChance.Plus(resources.GetSpell(action.Spell).Stats.CriticalChance.Value).Value;
+    }
+
+    /// <summary>
     /// What a match won on the spot is worth: every creature on the board at full health, the kill included.
     /// Large enough that no round's play outweighs it, and in the unit of everything else.
     /// </summary>
@@ -236,15 +239,15 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     private Dictionary<CreatureId, SpellId?> DeclaredSpells(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> beforeCombat, CreatureId actor)
     {
         var spells = new Dictionary<CreatureId, SpellId?>();
-        foreach (var slot in board.Timeline)
+        foreach (var creature in board.Timeline.Select(slot => slot.Creature))
         {
-            if (slot.Creature == actor || spells.ContainsKey(slot.Creature))
+            if (creature == actor || spells.ContainsKey(creature))
             {
                 continue;
             }
 
-            var snapshot = beforeCombat.First(candidate => candidate.Id == slot.Creature);
-            spells[slot.Creature] = snapshot.Owner == board.Slot && board.Intents.FirstOrDefault(intent => intent.Actor == slot.Creature) is { } declared
+            var snapshot = beforeCombat.First(candidate => candidate.Id == creature);
+            spells[creature] = snapshot.Owner == board.Slot && board.Intents.FirstOrDefault(intent => intent.Actor == creature) is { } declared
                 ? declared.Spell
                 : GreedyIntent(snapshot, beforeCombat);
         }
