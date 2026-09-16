@@ -78,7 +78,9 @@ uv run --project learning python scripts/sweep-weight.py energy 0.2 0.3 0.4   # 
 # "Learning loop" runs scripts/iterate.sh there on learning/experiments/next.json, and with commit=true proposes a policy that clears its bar under models/ (models/README.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log
+uv run --project learning spread runs/<id>                           # every win rate of a turn ranged across its dataset seeds (ADR 0049)
 scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/; --help lists every tuning flag
+scripts/iterate.sh --seeds "1 2 3"                                   # the default: a turn is three dataset seeds and reports the spread, because one seed is a sample (ADR 0049)
 scripts/iterate.sh --explore 0.2                                     # plus an exploring dataset for the value policy (ADR 0014)
 scripts/iterate.sh --teacher heuristic:learning/weights/search-4.json # record a stronger player than greedy; a clone is capped by what it imitates (journal, 2026-09-15)
 ```
@@ -151,4 +153,7 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 - Do not suppress an analyzer warning to make a build pass. Fix the cause, or justify the suppression in
   `.editorconfig` with a comment.
 - Do not skip, disable, or delete tests to get green.
+- Do not report a learning-loop win rate from one dataset seed as a result, and never pick the seed that
+  scored best: the benchmark seeds are fixed, so that is selection on the test set. One seed is a sample
+  (ADR 0049) — a turn runs three, the journal reports the spread, and a gate reads the minimum.
 - Do not commit secrets, local settings (`.claude/settings.local.json`), or build output.

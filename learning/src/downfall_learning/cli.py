@@ -33,6 +33,7 @@ from downfall_learning.search_weights import (
     search_weights,
     win_rate_lines,
 )
+from downfall_learning.spread import build_spread, format_spread, write_spread
 from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
 from downfall_learning.train_value import SHARES, ValueOptions, train_value
@@ -220,6 +221,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report.set_defaults(handler=_report)
 
+    spread = commands.add_parser(
+        "spread", help="the spread of a turn's win rates across its dataset seeds (ADR 0049)"
+    )
+    spread.add_argument("run", type=Path, help="a run directory holding seeds/<seed>/ subdirectories")
+    spread.set_defaults(handler=_spread)
+
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
     csv.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
     csv.add_argument("-o", "--output", type=Path, required=True, help="the CSV file to write")
@@ -335,6 +342,14 @@ def _report(arguments: argparse.Namespace) -> int:
     if not arguments.no_html:
         page = write_run_page(arguments.run, arguments.viewer)
         print(f"\nOpen '{page}' in a browser: the viewer with this run already loaded.")
+    return 0
+
+
+def _spread(arguments: argparse.Namespace) -> int:
+    spread = build_spread(arguments.run)
+    path = write_spread(spread, arguments.run)
+    print(format_spread(spread))
+    print(f"\nWritten to '{path}'. A gate reads the min, never the max (ADR 0049).")
     return 0
 
 
@@ -485,6 +500,10 @@ def evaluate_policy_command() -> int:
 
 def report_command() -> int:
     return _run("report")
+
+
+def spread_command() -> int:
+    return _run("spread")
 
 
 def compare_stamps_command() -> int:

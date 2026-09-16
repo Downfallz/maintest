@@ -2,21 +2,24 @@
 # One iteration of the learning loop (learning phase L7, docs/learning/explained.md): rebuild the content,
 # check the benchmark digest, play the baselines, record a greedy self-play dataset, train the value and clone
 # policies, evaluate them against the baselines, replay the previous run's policy when its feature schema
-# still applies, and write runs/<run-id>/report.json and report.html with what moved since the previous run.
+# still applies, write a report per seed, and finish on runs/<run-id>/spread.json: the spread of every win
+# rate across the dataset seeds, which is what a turn of this loop actually measures (ADR 0049).
 set -euo pipefail
 
 usage() {
   cat <<'USAGE'
 Usage: scripts/iterate.sh [options]
 
-One turn of the learning loop into runs/<run-id>/: baselines, a recorded dataset, two trained policies, their
-evaluations, and the report. Needs the .NET SDK (global.json) and uv. Every evaluation plays the 200 benchmark
-seeds, mirrored. Around ten minutes.
+One turn of the learning loop into runs/<run-id>/: the baselines once, then per dataset seed a recorded
+dataset, two trained policies, their evaluations and a report, and finally the spread across the seeds. Needs
+the .NET SDK (global.json) and uv. Every evaluation plays the 200 benchmark seeds, mirrored. Around ten
+minutes per seed, so half an hour at the default three (ADR 0049).
 
 Where things go
   --run <id>             name of the run directory under runs/ (default: a UTC timestamp)
   --against <id>         a previous run to compare with; its value policy is replayed on this content
-  --open                 try to open runs/<id>/report.html in a browser at the end (best effort)
+  --open                 try to open the first seed's runs/<id>/seeds/<seed>/report.html at the end (best
+                         effort). The spread, not that page, is the result of the turn.
   --baseline <agent>     a third opponent every policy of the turn is also played against, on top of Greedy
                          and Random: the current champion, usually `heuristic:learning/weights/search-4.json`.
                          Greedy is a solved opponent and beating it stopped saying much, but the reason to
@@ -30,7 +33,16 @@ How much data
   --matches <n>          matches of the recorded greedy self-play dataset (default 200). More matches means
                          rarer moves get enough examples; the first thing to raise when a policy learns
                          something odd from too few of them.
-  --seed <n>             base seed of that dataset (default 1); change it to record different matches
+  --seeds <list>         the dataset seeds to run the turn on, space or comma separated (default "1 2 3").
+                         **One seed is not a measurement** (ADR 0049). Three runs of one configuration --
+                         lambda 0.9, the ADR 0048 baseline, `search-4` as teacher -- differing only in this
+                         seed scored 0.6625, 0.0975 and 0.30375 against `search-4` (`ci-88`, `ci-90`,
+                         `ci-91`). A 56-point spread from the seed alone is larger than every effect this
+                         project has measured, and each of those effects had been measured one seed against
+                         one seed. So the turn runs the whole of steps 4 to 8 once per seed, into
+                         runs/<id>/seeds/<seed>/, and reports the spread across them rather than a number.
+  --seed <n>             one seed, the same thing as --seeds with a single entry. Use it to reproduce an
+                         older single-seed run exactly; do not use it to make a claim.
   --teacher <agent>      the agent whose play is recorded (default greedy). A clone can only be as good as
                          what it imitates, and Greedy is beaten 92.75% by a searched set on this catalogue
                          (journal, 2026-09-15), so a stronger teacher raises the ceiling and visits positions
@@ -99,7 +111,7 @@ matches=200
 traces=4
 teacher=greedy
 explore=
-seed=1
+seeds_requested="1 2 3"
 value_alpha=1.0
 value_min_samples=5
 value_share=action
@@ -118,7 +130,8 @@ while [[ $# -gt 0 ]]; do
     --matches) matches="$2"; shift 2 ;;
     --traces) traces="$2"; shift 2 ;;
     --explore) explore="$2"; shift 2 ;;
-    --seed) seed="$2"; shift 2 ;;
+    --seed) seeds_requested="$2"; shift 2 ;;
+    --seeds) seeds_requested="$2"; shift 2 ;;
     --teacher) teacher="$2"; shift 2 ;;
     --value-alpha) value_alpha="$2"; shift 2 ;;
     --value-min-samples) value_min_samples="$2"; shift 2 ;;
@@ -137,7 +150,7 @@ done
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 run="runs/$run_id"
-seeds="benchmarks/benchmark-seeds.json"
+benchmark_seeds="benchmarks/benchmark-seeds.json"
 cli=(dotnet run --project src/DownfallArena.Cli --no-build --configuration Release --)
 # Called as a module rather than through the console scripts, so an environment that holds only the locked
 # dependencies of the project can run the loop (what CI does: nothing is built from source there).
@@ -147,23 +160,73 @@ if [[ -e "$run" ]]; then
   echo "Run directory '$run' exists; each iteration gets its own." >&2
   exit 1
 fi
-mkdir -p "$run/evaluations"
+
+# The seeds are a list even when there is one of them, so there is a single code path and a single layout.
+# A comma is accepted because a workflow input is easier to type that way than with quoted spaces.
+read -r -a seed_list <<< "${seeds_requested//,/ }"
+if [[ ${#seed_list[@]} -eq 0 ]]; then
+  echo "No dataset seed given; --seeds takes a list such as \"1 2 3\"." >&2
+  exit 2
+fi
+# Canonicalised before anything else, because the engine reads a seed as a number and the uniqueness check
+# below reads it as text. "1 01 001" is three different strings and one seed: it would record the same
+# dataset three times, land in three directories that `spread` reads back as the same integer, and print a
+# width of zero over three identical samples -- a fake three-seed measurement, which is the one thing this
+# file exists to prevent. `10#` forces base ten so that `08` is eight rather than a bad octal literal.
+canonical_seeds=()
+for one_seed in "${seed_list[@]}"; do
+  if ! [[ "$one_seed" =~ ^[0-9]+$ ]]; then
+    echo "Seed '$one_seed' is not a whole number." >&2
+    exit 2
+  fi
+  canonical_seeds+=("$((10#$one_seed))")
+done
+seed_list=("${canonical_seeds[@]}")
+if [[ $(printf '%s\n' "${seed_list[@]}" | sort -u | wc -l) -ne ${#seed_list[@]} ]]; then
+  echo "The seed list repeats a seed (${seed_list[*]}); the same seed twice is one sample, not two." >&2
+  exit 2
+fi
+# Where a previous run keeps its artifacts depends on when it was produced: before ADR 0049 they sat at the
+# root of runs/<id>/, and since then there is one set per seed. Resolved once, here, rather than inside the
+# loop -- an unresolvable `--against` used to surface as an ArtifactError out of `report`, which under
+# `set -e` killed the turn after every seed had already been recorded, trained and evaluated. The lowest
+# seed is taken, by position rather than by score, for the same reason the gate commits the first seed's
+# policy.
+previous=""
+if [[ -n "$against" ]]; then
+  # The `-d` guard is not decoration: this file runs under `set -o pipefail`, so a `find` over a directory
+  # that is not there fails the whole pipeline and kills the script before the message below can say why.
+  if [[ -d "runs/$against/evaluations" ]]; then
+    previous="runs/$against"
+  elif [[ -d "runs/$against/seeds" ]]; then
+    previous="$(find "runs/$against/seeds" -mindepth 1 -maxdepth 1 -type d | sort -V | head -1)"
+  fi
+  if [[ -z "$previous" || ! -d "$previous/evaluations" ]]; then
+    echo "'--against $against' names no run with evaluations, at 'runs/$against/' or under its seeds/." >&2
+    exit 2
+  fi
+  echo "Comparing against '$previous'."
+fi
+
+mkdir -p "$run/baselines"
 
 step() {
   printf '\n== %s\n' "$*"
 }
 
 evaluate() {
-  # evaluate <name> <agent A> <agent B>: one mirrored evaluation on the benchmark seeds into the run.
-  local name="$1" agent_a="$2" agent_b="$3"
-  "${cli[@]}" evaluate --p1 "$agent_a" --p2 "$agent_b" --seeds "$seeds" --out "$run/evaluations/$name.json"
+  # evaluate <directory> <name> <agent A> <agent B>: one mirrored evaluation on the benchmark seeds.
+  local directory="$1" name="$2" agent_a="$3" agent_b="$4"
+  "${cli[@]}" evaluate --p1 "$agent_a" --p2 "$agent_b" --seeds "$benchmark_seeds" \
+    --out "$directory/$name.json"
 }
 
 evaluate_policy() {
   # evaluate_policy <model dir> <opponent> <output> [extra args]: a trained policy against a baseline.
   local model="$1" opponent="$2" output="$3"
   shift 3
-  "${learning[@]}" evaluate-policy "$model" --opponent "$opponent" --seeds "$seeds" --output "$output" "$@"
+  "${learning[@]}" evaluate-policy "$model" --opponent "$opponent" --seeds "$benchmark_seeds" \
+    --output "$output" "$@"
 }
 
 step "1. Build the engine and the content"
@@ -173,37 +236,17 @@ dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration 
 step "2. Check the benchmark digest (engine change detector)"
 "${cli[@]}" benchmark
 
-step "3. Baselines"
-evaluate random-vs-random random random
-evaluate greedy-vs-greedy greedy greedy
-evaluate greedy-vs-random greedy random
+# The baselines do not read the dataset seed -- they are agents playing the fixed benchmark seeds -- so they
+# are evaluated once and copied into each seed's evaluations, where the per-seed report expects them. Running
+# them per seed would burn three times the wall clock to print the same four rows.
+step "3. Baselines (once, they do not depend on the dataset seed)"
+evaluate "$run/baselines" random-vs-random random random
+evaluate "$run/baselines" greedy-vs-greedy greedy greedy
+evaluate "$run/baselines" greedy-vs-random greedy random
 if [[ -n "$baseline" ]]; then
-  evaluate baseline-vs-greedy "$baseline" greedy
+  evaluate "$run/baselines" baseline-vs-greedy "$baseline" greedy
 fi
 
-step "4. Record a $teacher self-play dataset ($matches matches from seed $seed, $traces trace(s))"
-"${cli[@]}" simulate --p1 "$teacher" --p2 "$teacher" --matches "$matches" --seed "$seed" --traces "$traces" --record "$run/dataset" --out "$run/dataset.csv"
-
-# The value policy trains on the explored dataset when there is one, the clone always on the pure one: a clone
-# of a bot that is wrong on purpose part of the time is not the baseline the report compares run to run.
-value_dataset="$run/dataset"
-if [[ -n "$explore" ]]; then
-  # The exploring agent deviates from the teacher, not from Greedy: whatever follows the rate is read as a
-  # whole agent spec, so any teacher can be explored -- including a policy, which is what lets a turn record
-  # its next dataset with what the previous one trained. `explore:<rate>` alone already means Greedy and is
-  # left exactly as it was, so a greedy turn stamps the way every earlier one did. The kind is matched
-  # case-insensitively because the engine parses it that way.
-  explorer="explore:$explore"
-  if [[ "${teacher,,}" != greedy ]]; then
-    explorer="explore:$explore:$teacher"
-  fi
-  step "4b. Record an exploring self-play dataset ($explorer)"
-  "${cli[@]}" simulate --p1 "$explorer" --p2 "$explorer" --matches "$matches" --seed "$seed" \
-    --traces "$traces" --record "$run/dataset-explore" --out "$run/dataset-explore.csv"
-  value_dataset="$run/dataset-explore"
-fi
-
-step "5. Train the value policy on '$value_dataset' and the clone on '$run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}; epochs $clone_epochs, alpha $clone_alpha)"
 # An array rather than an unquoted ${x:+...}, which is how the rest of this file passes optional
 # arguments: the expansion has to stay unquoted to vanish when empty, and unquoted is exactly what
 # word-splits a value with a space in it.
@@ -211,41 +254,80 @@ baseline_alpha_arguments=()
 if [[ -n "$value_baseline_alpha" ]]; then
   baseline_alpha_arguments=(--baseline-alpha "$value_baseline_alpha")
 fi
-"${learning[@]}" train-value "$value_dataset" -o "$run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation" "${baseline_alpha_arguments[@]}"
-"${learning[@]}" train-clone "$run/dataset" -o "$run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
-step "6. Evaluate the policies against the baselines"
-for model in value clone; do
-  evaluate_policy "$run/$model" greedy "$run/evaluations/$model-vs-greedy.json"
-  evaluate_policy "$run/$model" random "$run/evaluations/$model-vs-random.json" --no-log
-  if [[ -n "$baseline" ]]; then
-    evaluate_policy "$run/$model" "$baseline" "$run/evaluations/$model-vs-baseline.json" --no-log
+for seed in "${seed_list[@]}"; do
+  seed_run="$run/seeds/$seed"
+  mkdir -p "$seed_run/evaluations"
+  cp "$run/baselines"/*.json "$seed_run/evaluations/"
+
+  step "4. [seed $seed] Record a $teacher self-play dataset ($matches matches from seed $seed, $traces trace(s))"
+  "${cli[@]}" simulate --p1 "$teacher" --p2 "$teacher" --matches "$matches" --seed "$seed" \
+    --traces "$traces" --record "$seed_run/dataset" --out "$seed_run/dataset.csv"
+
+  # The value policy trains on the explored dataset when there is one, the clone always on the pure one: a
+  # clone of a bot that is wrong on purpose part of the time is not the baseline the report compares run to
+  # run.
+  value_dataset="$seed_run/dataset"
+  if [[ -n "$explore" ]]; then
+    # The exploring agent deviates from the teacher, not from Greedy: whatever follows the rate is read as a
+    # whole agent spec, so any teacher can be explored -- including a policy, which is what lets a turn record
+    # its next dataset with what the previous one trained. `explore:<rate>` alone already means Greedy and is
+    # left exactly as it was, so a greedy turn stamps the way every earlier one did. The kind is matched
+    # case-insensitively because the engine parses it that way.
+    explorer="explore:$explore"
+    if [[ "${teacher,,}" != greedy ]]; then
+      explorer="explore:$explore:$teacher"
+    fi
+    step "4b. [seed $seed] Record an exploring self-play dataset ($explorer)"
+    "${cli[@]}" simulate --p1 "$explorer" --p2 "$explorer" --matches "$matches" --seed "$seed" \
+      --traces "$traces" --record "$seed_run/dataset-explore" --out "$seed_run/dataset-explore.csv"
+    value_dataset="$seed_run/dataset-explore"
+  fi
+
+  step "5. [seed $seed] Train the value policy on '$value_dataset' and the clone on '$seed_run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}; epochs $clone_epochs, alpha $clone_alpha)"
+  "${learning[@]}" train-value "$value_dataset" -o "$seed_run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation" "${baseline_alpha_arguments[@]}"
+  "${learning[@]}" train-clone "$seed_run/dataset" -o "$seed_run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
+
+  step "6. [seed $seed] Evaluate the policies against the baselines"
+  for model in value clone; do
+    evaluate_policy "$seed_run/$model" greedy "$seed_run/evaluations/$model-vs-greedy.json"
+    evaluate_policy "$seed_run/$model" random "$seed_run/evaluations/$model-vs-random.json" --no-log
+    if [[ -n "$baseline" ]]; then
+      evaluate_policy "$seed_run/$model" "$baseline" "$seed_run/evaluations/$model-vs-baseline.json" --no-log
+    fi
+  done
+
+  if [[ -n "$previous" ]]; then
+    step "7. [seed $seed] Replay the previous value policy of '$previous' on this content"
+    if [[ -f "$previous/value/policy.json" ]]; then
+      if ! evaluate_policy "$previous/value" greedy "$seed_run/evaluations/previous-value-vs-greedy.json" --no-log; then
+        echo "The previous policy could not run here (its feature schema no longer applies): only the baselines compare."
+        rm -f "$seed_run/evaluations/previous-value-vs-greedy.json"
+      fi
+    else
+      echo "No value policy under '$previous'; nothing to replay."
+    fi
+  fi
+
+  step "8. [seed $seed] Report"
+  if [[ -n "$previous" ]]; then
+    "${learning[@]}" report "$seed_run" --against "$previous"
+  else
+    "${learning[@]}" report "$seed_run"
   fi
 done
 
-if [[ -n "$against" ]]; then
-  step "7. Replay the previous value policy of '$against' on this content"
-  if [[ -f "runs/$against/value/policy.json" ]]; then
-    if ! evaluate_policy "runs/$against/value" greedy "$run/evaluations/previous-value-vs-greedy.json" --no-log; then
-      echo "The previous policy could not run here (its feature schema no longer applies): only the baselines compare."
-      rm -f "$run/evaluations/previous-value-vs-greedy.json"
-    fi
-  else
-    echo "No value policy under 'runs/$against'; nothing to replay."
-  fi
-fi
+# The point of the whole file (ADR 0049): what the turn says is the spread across the seeds, not any one of
+# the reports above. A single-seed list still comes through here, and the spread prints as a width of zero --
+# which is the honest rendering of one sample, not a licence to read it as a measurement.
+step "9. Spread across ${#seed_list[@]} seed(s)"
+"${learning[@]}" spread "$run"
 
-step "8. Report"
-if [[ -n "$against" ]]; then
-  "${learning[@]}" report "$run" --against "runs/$against"
-else
-  "${learning[@]}" report "$run"
-fi
-
-page="$root/$run/report.html"
+page="$root/$run/seeds/${seed_list[0]}/report.html"
 echo
-echo "Done. Open '$page' in a browser: the viewer with this run already loaded (report, evaluations, training curves)."
-echo "Add a journal entry (docs/learning/journal.md) if a number moved."
+echo "Done. Per-seed reports are under '$root/$run/seeds/<seed>/report.html'; the first is '$page'."
+echo "The spread across the seeds is '$root/$run/spread.json'. Read that one, not a single seed (ADR 0049)."
+echo "Add a journal entry (docs/learning/journal.md) if a spread moved."
 if [[ "$open_page" == true ]]; then
   if command -v xdg-open >/dev/null 2>&1; then xdg-open "$page" >/dev/null 2>&1 || true
   elif command -v open >/dev/null 2>&1; then open "$page" >/dev/null 2>&1 || true
