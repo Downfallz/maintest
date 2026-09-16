@@ -342,7 +342,9 @@ experiment is committed rather than typed; a workflow input, when a dispatch fil
 for that run, and `explore` set to `off` skips the exploring dataset. The report table goes in the run
 summary, under the file's `why`; `report.html`, `report.json`, the evaluations and the two policies are the
 run's artifact. The datasets are not uploaded: the seed reproduces them. A CI runner keeps nothing between
-runs, so `--against` stays a local comparison.
+runs, so `--against` stays a local comparison. A run on `main` finishes even when another push lands while it
+is running; the next one queues behind it, and only the newest of the queued ones survives. A run on a pull
+request is the opposite: a newer push cancels it, because the answer wanted is the one on the last commit.
 
 Two more turns of the same crank run on the runners and nowhere else in particular, so asking for one needs
 no local SDK and no machine left on:
