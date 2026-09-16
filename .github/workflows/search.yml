@@ -19,9 +19,9 @@ on:
         description: "Agent B of every evaluation"
         default: greedy
       kind:
-        description: "The agent kind that plays each candidate: heuristic reads the weights one step, lookahead plays the round out (docs/learning/agents.md)"
+        description: "The agent kind that plays each candidate: heuristic reads the weights one step, lookahead and minimax play the round out (docs/learning/agents.md)"
         type: choice
-        options: [heuristic, lookahead]
+        options: [heuristic, lookahead, minimax]
         default: heuristic
       initial:
         description: "Weights the search starts from (empty: the built-in ones, which greedy plays)"
@@ -232,8 +232,8 @@ jobs:
           # against a search that started somewhere else would compare the found weights with an agent
           # neither the search nor the question was about.
           # Played by the kind the search played, so the control reads the same way as the found set: bare
-          # `greedy` is the one-step reading of the built-in weights, and `lookahead` bare is that reading
-          # of the same weights.
+          # `greedy` is the one-step reading of the built-in weights, and `lookahead` or `minimax` bare is
+          # that reading of the same weights.
           started_from="$KIND"
           if [[ -n "$INITIAL" ]]; then
             started_from="$KIND:$INITIAL"
