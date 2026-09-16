@@ -223,7 +223,45 @@ public sealed class ConditionTests
 
         var snapshot = creature.Snapshot();
 
-        snapshot.Conditions.ShouldBe([new ConditionSnapshot(Bleed.Of(1, rounds: 3), 3)]);
+        snapshot.Conditions.ShouldBe([new ConditionSnapshot(Bleed.Of(1, rounds: 3), 3, IsFresh: true)]);
         snapshot.TotalDefense.ShouldBe(Defense.Of(0));
+    }
+
+    [Fact]
+    public void A_snapshot_says_whether_the_first_countdown_is_still_ahead()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+
+        creature.Snapshot().Conditions.ShouldBe([new ConditionSnapshot(Stun.For(1), 1, IsFresh: true)]);
+        creature.TickConditions();
+        creature.Snapshot().Conditions.ShouldBe([new ConditionSnapshot(Stun.For(1), 1)]);
+    }
+
+    [Fact]
+    public void A_restored_fresh_condition_still_skips_its_first_countdown()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature());
+
+        restored.TickConditions().ShouldBeEmpty();
+        restored.IsStunned.ShouldBeTrue();
+        restored.TickConditions().Count.ShouldBe(1);
+        restored.IsStunned.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_restored_condition_past_its_first_countdown_expires_at_the_next()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+        creature.TickConditions();
+
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature());
+
+        restored.TickConditions().Count.ShouldBe(1);
+        restored.IsStunned.ShouldBeFalse();
     }
 }

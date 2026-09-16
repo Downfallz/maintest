@@ -9,6 +9,19 @@ internal sealed class ConditionSet
 {
     private readonly List<Condition> _conditions = [];
 
+    public ConditionSet()
+    {
+    }
+
+    /// <summary>
+    /// The conditions a snapshot was taken of, in the order they were applied: the stacking policy reads the
+    /// first of a kind, so the order is part of the state.
+    /// </summary>
+    public ConditionSet(IEnumerable<ConditionSnapshot> snapshots)
+    {
+        _conditions.AddRange(snapshots.Select(Condition.Restore));
+    }
+
     public IReadOnlyList<Condition> Active => _conditions;
 
     public bool Has<TEffect>()

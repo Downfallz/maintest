@@ -14,7 +14,7 @@ namespace DownfallArena.Domain.Matches.Creatures;
 public sealed class Creature : Entity<CreatureId>
 {
     private readonly HashSet<SpellId> _knownSpells;
-    private readonly ConditionSet _conditions = new();
+    private readonly ConditionSet _conditions;
 
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
         : base(id)
@@ -25,6 +25,19 @@ public sealed class Creature : Entity<CreatureId>
         Energy = definition.BaseStats.Energy;
         BaseInitiative = definition.BaseStats.Initiative;
         _knownSpells = [.. definition.StartingSpells];
+        _conditions = new ConditionSet();
+    }
+
+    private Creature(CreatureSnapshot snapshot, CreatureDefinition definition)
+        : base(snapshot.Id)
+    {
+        Owner = snapshot.Owner;
+        Definition = definition;
+        Health = snapshot.Health;
+        Energy = snapshot.Energy;
+        BaseInitiative = snapshot.BaseInitiative;
+        _knownSpells = [.. snapshot.KnownSpells];
+        _conditions = new ConditionSet(snapshot.Conditions);
     }
 
     public PlayerSlot Owner { get; }
@@ -81,6 +94,32 @@ public sealed class Creature : Entity<CreatureId>
     {
         ArgumentNullException.ThrowIfNull(definition);
         return new Creature(id, owner, definition);
+    }
+
+    /// <summary>
+    /// The creature a snapshot was taken of, at that state: health, energy, base initiative, known spells and
+    /// conditions as they were, so the rules a match runs can be run on it. Internal on purpose, and the one
+    /// door into a creature that did not spawn at full health: <see cref="Rules.Advance"/> uses it to answer
+    /// what a board would be after a move a match has not played (ADR 0047), and nothing else does. A snapshot
+    /// is a copy of a real creature, so its health cannot exceed the definition's; a caller that hands one
+    /// where it does has a bug, not a rule violation.
+    /// </summary>
+    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(definition);
+
+        if (definition.Id != snapshot.DefinitionId)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} was spawned from '{snapshot.DefinitionId.Value}', not '{definition.Id.Value}'.", nameof(definition));
+        }
+
+        if (snapshot.Health > definition.BaseStats.Health)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} cannot have {snapshot.Health} health out of {definition.BaseStats.Health}.", nameof(snapshot));
+        }
+
+        return new Creature(snapshot, definition);
     }
 
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);

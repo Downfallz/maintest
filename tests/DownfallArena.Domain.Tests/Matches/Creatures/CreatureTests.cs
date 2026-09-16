@@ -236,4 +236,58 @@ public sealed class CreatureTests
         snapshot.KnowsSpell(SpellId.Parse("spell:strike:v1")).ShouldBeTrue();
         snapshot.Conditions.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void A_restored_creature_is_the_one_its_snapshot_was_taken_of()
+    {
+        var creature = Spawn();
+        creature.TakeDamage(4);
+        creature.GainEnergy(3);
+        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2)).IsSuccess.ShouldBeTrue();
+        creature.Apply(Stun.For(2));
+        creature.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)), new ConditionSource(CreatureId.From(3), SpellId.Parse("spell:guard:v1")));
+        var snapshot = creature.Snapshot();
+
+        var restored = Creature.Restore(snapshot, Content.Creature());
+
+        restored.Id.ShouldBe(creature.Id);
+        restored.Owner.ShouldBe(creature.Owner);
+        restored.Definition.Id.ShouldBe(creature.Definition.Id);
+        restored.Health.ShouldBe(Health.Of(16));
+        restored.Energy.ShouldBe(Energy.Of(3));
+        restored.BaseInitiative.ShouldBe(Initiative.Of(7));
+        restored.KnownSpells.ShouldBe(creature.KnownSpells, ignoreOrder: true);
+        restored.IsStunned.ShouldBeTrue();
+        restored.TotalDefense.ShouldBe(Defense.Of(2));
+        restored.Snapshot().Conditions.ShouldBe(snapshot.Conditions);
+    }
+
+    [Fact]
+    public void A_restored_creature_changes_on_its_own_and_not_the_original()
+    {
+        var creature = Spawn();
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature());
+
+        restored.TakeDamage(5);
+        restored.Apply(Stun.For(1));
+
+        creature.Health.ShouldBe(Health.Of(20));
+        creature.IsStunned.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_creature_cannot_be_restored_from_another_definitions_snapshot()
+    {
+        var snapshot = Spawn().Snapshot();
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature("creature:other:v1")));
+    }
+
+    [Fact]
+    public void A_creature_cannot_be_restored_above_its_maximum_health()
+    {
+        var snapshot = Spawn().Snapshot() with { Health = Health.Of(21) };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+    }
 }
