@@ -176,6 +176,12 @@ def build_parser() -> argparse.ArgumentParser:
         "action, 'action' one regression per action over the whole observation (ADR 0045)",
     )
     value.add_argument(
+        "--baseline-alpha",
+        type=float,
+        help="how strongly the state baseline alone is pulled toward zero (ADR 0048); it wants far "
+        "more than the action rows do. Default: whatever --alpha says, which is what they shared",
+    )
+    value.add_argument(
         "--gae-lambda",
         type=float,
         default=1.0,
@@ -278,6 +284,7 @@ def _train_value(arguments: argparse.Namespace) -> int:
         arguments.share,
         arguments.discount,
         arguments.gae_lambda,
+        arguments.baseline_alpha,
     )
     _write_policy(train_value(dataset, options, log), arguments.output)
     return 0

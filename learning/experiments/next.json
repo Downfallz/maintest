@@ -1,7 +1,7 @@
 {
-  "why": "The lambda sweep is closed and settles at 0.95 (ADR 0046). Five points measured on one dataset: 1.0, 0.95, 0.9, 0.8, 0.5. Against Greedy the win rate goes 0.0025, 0.10125, 0.035, 0.0788, 0.000; against search-4 it goes --, 0.210, 0.355, 0.1013, 0.000. The peaks are in different places and both gaps are measurable: at 0.9 the interval against Greedy is 0.0160 to 0.0540, entirely below 0.95's 0.10125, while against search-4 it is 0.3237 to 0.3863, entirely above 0.95's 0.210. So 'which lambda' has no answer until the opponent is named, and a sixth point would buy another number on a curve that depends on who is asked. 0.95 is chosen as the best against Greedy, the opponent every number in the journal is measured against -- the stated reference, not the highest number available. Do not read r2 here under any circumstances: it is perfectly monotone in lambda across all five runs (-0.3457, -0.0135, +0.0299, +0.0500, +0.0586) while the win rate is neither monotone nor single-peaked, which is ADR 0045's lesson in its strongest form yet. What correlates with the score instead is the round cap: the high-lambda policies play 16 to 19 rounds and reach the cap in a third to a half of matches, where the baselines play 7 and cap under 2%. That is a correlation and not a mechanism, and the traces of run-81 are where it would be settled. The constraint that has not moved in five runs is baselineR2 at 0.07054. Open: that baseline, why stalling pays against search-4 and not against Greedy, and the (kind, spell) middle of ADR 0045.",
+  "why": "A fourth sample of the same configuration, seed 4, and deliberately not a new experiment. ci-88, ci-90 and ci-91 ran lambda 0.9 with the ADR 0048 baseline on dataset seeds 1, 2 and 3, changing nothing else, and the value policy scored 0.6625, 0.0975 and 0.30375 against search-4. A 56-point spread from the seed alone is larger than every effect this project has measured, and each of those effects was measured one seed against one seed -- so ci-88 beating search-4 is inside the spread and is not a result, and neither is ADR 0048's 19-point win-rate gain, whose held-out fit improvement is real but whose win rate was a seed-1 sample. ADR 0049 proposes the fix: run a configuration on at least three seeds, report a spread, and have the gate require every seed. Until that lands, the loop still fires on every push, so this turn spends the slot widening the sample rather than making a new claim. The clone rows are the other lesson: ci-91's clone beats Greedy 0.82125, better than anything the loop has produced, and loses to the committed champion ci-69 at 0.42375 with an interval from 0.387, where ci-69 beats Greedy only 0.725. Being better against a third party does not make you better than the player you are replacing, and the champion bar refused it. What to read here: the value policy's numbers against Greedy and search-4 as a fourth point of the spread, not as a result on their own, and whether the clone against Greedy lands near seeds 2 and 3 (0.79875, 0.82125) or near seed 1 (0.725). Do not commit anything on a seed chosen for its score -- the benchmark seeds are fixed, so that is selection on the test set.",
   "matches": 1000,
-  "seed": 1,
+  "seed": 4,
   "traces": 4,
   "teacher": "heuristic:learning/weights/search-4.json",
   "baseline": "heuristic:learning/weights/search-4.json",
@@ -9,6 +9,7 @@
   "value_alpha": 10,
   "value_min_samples": 10,
   "value_share": "action",
-  "value_lambda": 0.95,
-  "value_discount": 1.0
+  "value_lambda": 0.9,
+  "value_discount": 1.0,
+  "value_baseline_alpha": 10000
 }

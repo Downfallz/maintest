@@ -4,6 +4,332 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-16. Three seeds of the same configuration disagree by 56 points, so most of this week is a sample
+
+`ci-91` took the third dataset draw, seed 3, chosen in advance and not for its score. With `ci-88` (seed 1)
+and `ci-90` (seed 2) that makes **three runs of one configuration** — lambda 0.9, the ADR 0048 baseline,
+`search-4` as teacher and baseline, 1000 matches — differing only in which matches were recorded. The
+evaluation is the fixed benchmark seeds every time.
+
+| at lambda 0.9, by dataset seed | 1 (`ci-88`) | 2 (`ci-90`) | 3 (`ci-91`) |
+| --- | --- | --- | --- |
+| value against `search-4` | **0.6625** | **0.0975** | 0.30375 |
+| value against `Greedy` | 0.0325 | 0.15375 | 0.03375 |
+| value against `Random` | 0.6925 | 0.6575 | 0.79 |
+| clone against `Greedy` | 0.725 | 0.79875 | **0.82125** |
+| clone against `search-4` | 0.5325 | **0.5775** | 0.52 |
+| clone against the champion `ci-69` | 0.5 (itself) | **+0.53625** | **−0.42375** |
+
+- **The spread from the seed alone is 56 points**, and every effect this project has measured is smaller
+  than that. Lambda, the baseline, the teacher — each was one seed against one seed. **`ci-88` beating
+  `search-4`, which I reported last night as the first agent ever to do it, is inside this spread and is not
+  a result.** ADR 0049 is the proposal that follows from it.
+
+- **This also takes back a headline I gave the user.** ADR 0048's win-rate claim — 0.10125 to 0.29625
+  against `Greedy` from fixing the baseline — is a seed-1 sample. The *fit* improvement is real and
+  held-out: `baselineR2` 0.0705 to 0.1053, rounds 15-30 from −0.2179 to +0.0685, measured on data, not on
+  matches. The **19-point win-rate gain is inside the seed spread** and I should not have called it a
+  tripling. ADR 0048 is Accepted and immutable, so the correction lives in ADR 0049 and here.
+
+- **The clone rows are the sharper lesson, because they contradict each other.** `ci-91`'s clone beats
+  `Greedy` **0.82125** — the best any policy has managed, against the committed champion's 0.725 — and loses
+  to that same champion head to head at **0.42375**, interval from 0.387. Being better against a third party
+  does not make you better than the player you are replacing. The champion bar refused it, its second
+  correct refusal in one night and its fourth overall.
+
+- **And `ci-90`'s clone looks thinner now.** It cleared every bar, including the champion at 0.53625 with an
+  interval from 0.51473. But `ci-91` shows the same quantity swinging to 0.42375 on a neighbouring draw, so
+  a margin of 0.036 over one seed is not much to commit a model on. Nothing was committed, which is the
+  right outcome for a reason that was not visible an hour ago.
+
+- **What survives all three seeds.** The clone beats `Greedy` more at seeds 2 and 3 (0.79875, 0.82125) than
+  at seed 1 (0.725), so seed 1 looks like the weak draw rather than seeds 2 and 3 being lucky — that one is
+  consistent across two independent draws and is the only claim here with more than one seed behind it. And
+  the value policy loses to `Greedy` on every seed, 0.0325, 0.15375, 0.03375, which is the clearest thing
+  the loop has said all week: **at lambda 0.9 it is simply not a good player**, whatever it does to the
+  teacher on any given draw.
+
+- **What happens next is a change to the loop, not a new claim from it.** ADR 0049 proposes that a
+  configuration be run on at least three seeds and reported as a spread, with the gate requiring every seed.
+  The loop fires on every push to the pull request whatever `next.json` says, so that slot goes to **seed 4
+  of the same configuration** — a fourth sample of the spread this entry is about, which is the one thing a
+  single-seed turn can still usefully contribute. It is not a new experiment and no new knob moves.
+
+## 2026-09-16. The spike was a lucky draw, and the clone quietly cleared every bar the project has
+
+`ci-90` moved one thing against `ci-88`: the **dataset seed, 1 to 2**. Same lambda 0.9, same teacher, same
+1000 matches, same alpha, min samples, discount and baseline alpha, and the evaluation still runs on the
+fixed benchmark seeds. Two things came back, and they point in opposite directions.
+
+- **The lambda 0.9 spike does not survive a different draw.** Against `search-4` the value policy goes
+  **0.6625 to 0.0975** — win rate 9.5%, interval 6.8% to 12.2%, measurably beaten. So `ci-88` beating
+  `search-4` was **one lucky fit**, not a property of that lambda against that teacher. Three runs had
+  pointed at it and the fourth took it away.
+
+  | value policy, lambda 0.9 | seed 1 (`ci-88`) | seed 2 (`ci-90`) |
+  | --- | --- | --- |
+  | against `search-4` | **0.6625** | **0.0975** |
+  | against `Greedy` | 0.0325 | 0.15375 |
+  | against `Random` | 0.6925 | 0.6575 |
+  | rounds / cap against `search-4` | 17.1 / 38.2% | 14.0 / 27.3% |
+
+  Changing which 1000 matches it fits on moves the result against the teacher by **56 points**. That is
+  larger than every lambda effect measured this week put together, and it means no single run of this
+  pipeline says anything about lambda at all.
+
+- **The clone cleared all four bars, and it is the first policy ever to do it.** Nothing about the clone
+  changed except the dataset it imitates.
+
+  | clone | seeds 1 (`ci-69`, `ci-86`..`ci-89`) | seed 2 (`ci-90`) |
+  | --- | --- | --- |
+  | against `Greedy` | 0.725 | **0.79875** (win 77.8%, 73.0 to 82.5) |
+  | against `Random` | 0.9925 | 0.9875 |
+  | against `search-4` | 0.5325 (cannot be told apart) | **0.5775 — win 57.2%, 53.0 to 61.5, measurably better** |
+  | against the champion `ci-69` | 0.5 (interval from 0.5) | **0.53625, interval from 0.51473** |
+
+  The gate said `clears 0.5` for the first time in the loop's history, and did not commit it only because
+  this run was not asked to.
+
+- **Why this is the opposite of `ci-88`, and why that matters.** `ci-88` beat `search-4` and lost to
+  `Greedy` 0.0325, which is what an exploit looks like. This clone beats `Greedy` **better than any policy
+  before it**, beats `Random`, beats `search-4`, and beats the committed champion — four opponents, no hole.
+  It is still not transitive with `search-4` (which beats `Greedy` 0.930 where this beats it 0.799), but
+  losing to nothing is a different object from losing to the weakest agent on the board.
+
+- **And the hazard, which is the reason this entry does not end in a commit.** The only thing that changed is
+  a seed, and the evaluation runs on **fixed** benchmark seeds. So "try dataset seeds until one scores well"
+  is selection on the test set, and it would manufacture exactly this result out of noise. The value policy
+  in this same run is the proof that a seed can swing a headline number by 56 points. **`ci-90`'s clone has
+  not been shown to be better; it has been shown to score better on one draw**, which is what `ci-88` also
+  looked like four hours ago.
+
+- **So `ci-91` takes a third draw, seed 3, and it is not chosen.** Whatever it says stands. If the clone is
+  near 0.8 against `Greedy` again, seed 1 was the unlucky one and the clone genuinely improved; if it falls
+  back near 0.725, both `ci-88` and `ci-90` were draws and the pipeline's run-to-run spread is simply wider
+  than anything it has been asked to measure. Either answer is worth more than a committed model.
+
+## 2026-09-16. The prediction was wrong in both directions, and lambda 0.9 is a spike rather than a trend
+
+- **I wrote the prediction down before the run and it was refused on both halves.** `next.json` said: if the
+  trend is monotone, lambda 0.8 is *worse* against `Greedy` than `ci-88`'s 0.0325 and *better* against
+  `search-4` than its 0.6625. `ci-89` came back better against `Greedy` and far worse against `search-4`.
+
+  | value policy, ADR 0048 baseline | lambda 0.95 (`ci-86`, `ci-87`) | lambda 0.9 (`ci-88`) | lambda 0.8 (`ci-89`) |
+  | --- | --- | --- | --- |
+  | against `search-4` | 0.4975 | **0.6625** | 0.27875 |
+  | against `Greedy` | **0.29625** | 0.0325 | 0.10375 |
+  | against `Random` | 0.6275 | 0.6925 | **0.75875** |
+
+  So the alternative the prediction offered is the one that happened: **lambda 0.9 is a peak against the
+  teacher, not a point on a trend.** Nothing monotone survives on either of the two agents that matter.
+
+- **One thing is monotone, and it is the opponent nobody is trying to beat.** Against `Random` the three
+  lambdas go 0.6275, 0.6925, 0.75875 — clean, in order, as lambda falls. Against `Greedy` and `search-4`
+  there is no order at all. A knob that sorts your results against `Random` and scrambles them against real
+  opponents is not a strength knob.
+
+- **The stalling story does not survive either, and it was mine.** `ci-88`'s entry read the 0.6625 as
+  dragging `search-4` to the round cap. But `ci-89` plays `search-4` almost as long — **16.7 rounds and 29.2%
+  capped**, against `ci-88`'s 17.1 and 38.2% — and scores 0.279 there instead of 0.6625. The long game is
+  present at both lambdas; only one of them converts it. Reaching the cap is not what wins those matches, so
+  "it stalls the teacher" explains less than I said it did. What separates them has to be *who is healthier*
+  when the cap arrives, and this run does not measure that.
+
+- **The other half of that reading also fails.** `ci-88` died against `Greedy` on the `Greedy` mirror's own
+  pace, 7.0 rounds and 0.0% capped, and I took that as the exploit having no grip outside the teacher.
+  `ci-89` against `Greedy` plays **13.9 rounds and caps 18.5%** — the long game does appear there — and still
+  only scores 0.10375. Two lambdas, two different failure shapes, no story that covers both.
+
+- **What stands.** `ci-88` beating `search-4` measurably is still the only time it has happened, and it is
+  still an exploit: it loses to `Greedy` 0.0325. The gate refused every policy of all three runs. The clone
+  is byte-for-byte the same player in `ci-86`, `ci-87`, `ci-88` and `ci-89` — 0.725 / 0.9925 / 0.5325, refused
+  each time at 0.5 against `ci-69` — and every fixed row of every report is identical to the digit, so the
+  four runs differ by exactly the knob each one moved.
+
+- **What to do about it.** The pipeline is deterministic, so re-running lambda 0.9 would return 0.6625 and
+  prove nothing. `ci-90` changes the **dataset seed to 2** at lambda 0.9 instead: same fixed benchmark seeds
+  for the evaluation, a different 1000 matches to fit on. If 0.6625 survives a different draw it is a
+  property of that lambda against that teacher; if it collapses, it was one lucky fit and the spike is noise
+  that three runs happened to point at. No prediction this time — the last one earned none.
+
+## 2026-09-16. Something finally beat `search-4`, and it is the wrong kind of win
+
+- **`ci-88` is the first agent in this project to beat `search-4` measurably.** Win rate **0.6550 over 400
+  matches, interval 0.5988 to 0.7112** — the whole of it above one half, so the evaluation says it in its own
+  words rather than leaving it to me. Score 0.6625. That is the standing goal of the last week, reached.
+
+- **It also loses to `Greedy` 0.0325**, interval 0.0154 to 0.0496. `Greedy` is the weaker agent by a distance:
+  `search-4` beats it 0.930. So the thing that beats `search-4` is destroyed by an opponent `search-4`
+  crushes. **This is not a better player. It is an exploit of one opponent**, and the run that produced it
+  says so on the next line.
+
+  | value policy, ADR 0048 baseline | lambda 0.95 (`ci-86`, `ci-87`) | lambda 0.9 (`ci-88`) |
+  | --- | --- | --- |
+  | against `search-4` | 0.4975 (cannot be told apart) | **0.6625 — beats it measurably** |
+  | against `Greedy` | 0.29625 | **0.0325** |
+  | against `Random` | 0.6275 | 0.6925 |
+  | rounds / cap against `search-4` | 23.8 / 56.0% | 17.1 / 38.2% |
+  | rounds / cap against `Greedy` | 17.3 / 35.8% | **7.0 / 0.0%** |
+
+- **One knob moved**: lambda 0.95 to 0.9. Same teacher, 1000 matches, seed, alpha, min samples, discount and
+  baseline alpha. The engine stamp reads `8517a75cb98d` against `ci-86`'s `dc80d1a32581`, but every fixed row
+  of the report is identical to the digit — `baseline-vs-greedy` 0.930 at 7.2 rounds, the `Greedy` mirror
+  0.500 at 7.8, `greedy-vs-random` 0.979, `random-vs-random` 0.500, and all three clone rows — so the engine
+  is behaviourally the same and the stamp is not.
+
+- **The two opponents order the two lambdas in opposite directions, and they do it hard.** 0.95 is better
+  against `Greedy` by 26 points; 0.9 is better against `search-4` by 17. Neither ordering is close enough to
+  be noise. `ci-81` saw the same sign with the broken baseline and it was small; fixing the baseline made it
+  large. So **the answer to what `ci-87` asked is no**: the curve did not lift as a shape. Lowering lambda
+  buys specialisation against the teacher and pays for it everywhere else.
+
+- **The round cap is where it does its work, and only against `search-4`.** 17.1 rounds and 38.2% of matches
+  capped against `search-4`; **7.0 rounds and 0.0% capped against `Greedy`**, which is the `Greedy` mirror's
+  own pace. It does not stall in general — it stalls *the teacher*, and ADR 0011 hands a capped match to the
+  healthier team. Against `Greedy` it never gets there: no draws, no capped matches, spell entropy 2.42
+  against the clone's 3.10, a 15.6% fizzle rate against `Greedy`'s 9.4%. It plays a narrow repertoire badly
+  and dies on schedule.
+
+- **The gate refused it, and that is the point.** Committing needs 0.5 against `Greedy`; it scored 0.0325.
+  Had "beats `search-4`" been the only bar, this would have been pushed as a champion. It is the case ADR
+  0044 named — a yardstick that does not hold — arriving on its own, and the `Greedy` bar caught it without
+  anyone deciding anything.
+
+- **What this costs us.** `search-4` is the teacher, the baseline opponent and the bar in one. An agent
+  trained on its self-play, scored against it, can learn its habits rather than the game; the further lambda
+  bootstraps through its own value function, the more room there is to do exactly that. Measuring against a
+  second independent opponent is not a nicety here, it is the only reason this was visible.
+
+- **A prediction, written before the run.** If this is monotone, lambda **0.8** should be worse still against
+  `Greedy` and better still against `search-4`. If instead 0.9 is a peak against `search-4`, it is a
+  resonance with the teacher rather than a trend. `next.json` asks for 0.8; the journal will say which.
+
+## 2026-09-16. The baseline fix tripled the value policy against `Greedy`, and made its score against `search-4` unreadable
+
+- **`ci-86` is the first run played with the baseline of ADR 0048**, and it is the first time a value policy
+  has moved a win rate by a lot. One thing changed against `ci-72`: the state baseline is pulled by its own
+  `--baseline-alpha 10000` instead of sharing the action rows' `10`, and it is clipped to the range a return
+  can take. Same teacher (`search-4`), same 1000 matches, same seed 1, same alpha, min samples, lambda 0.95
+  and discount 1.0. The recorded datasets are identical to `ci-72`'s (53.9% / 45.6% / 0.5%, 8.0 rounds).
+
+  | value policy | lambda 0.95, shared baseline (`ci-72`) | lambda 0.95, ADR 0048 baseline (`ci-86`) |
+  | --- | --- | --- |
+  | against `Greedy` | 0.10125 | **0.29625** (win rate 0.2625, 0.2278 to 0.2972) |
+  | against `search-4` | 0.210 | **0.4975** (win rate 0.4950, 0.4533 to 0.5367) |
+  | against `Random` | 0.6425 | 0.6275 |
+  | `baselineR2` | 0.07054 | **0.1053** |
+  | `advantageStd` | 0.4071 | 0.3852 |
+
+  `baselineR2` landed on the 0.1053 the ADR predicted for this dataset, so the fit did what the measurement
+  said it would. **It is not comparable with the five runs that read 0.07054**: it is now taken on the
+  clipped values actually used, and the step on identical data is 0.0705 to 0.0806. `r2` went −0.0135 to
+  0.02731, and that one is not a clean comparison either — the metric's definition moved in the same commit.
+
+- **The win rates are the comparable numbers, and they nearly tripled on one and doubled on the other.**
+  That is worth stating plainly because it is the first time: five turns of lambda work moved the value
+  policy between 0.000 and 0.10125 against `Greedy`, and fixing what the lambda takes its advantage *from*
+  moved it to 0.29625 in one step. The mechanism ADR 0046 built was being fed by a signal that was
+  anti-predictive exactly where the high-lambda policies play.
+
+- **`0.4975` against `search-4` is not parity with `search-4`, and the same run proves it.** `search-4` beats
+  `Greedy` 0.930. This policy loses to `Greedy` 0.29625, measurably — the whole interval is below one half.
+  An agent that were genuinely `search-4`'s equal would not do that. The evaluation says the honest thing
+  itself: over 400 matches the interval is 0.4533 to 0.5367, so this run *cannot tell them apart*, which is
+  not a claim that they are equal. **Fourth time these matchups have come out non-transitive**, and the
+  starkest.
+
+- **The reading the numbers support is that it stalls.** Against `search-4` it plays **23.8 rounds** and
+  reaches the round cap in **56.0%** of matches; against `Greedy`, 17.3 rounds and 35.8% capped with 6.8%
+  draws. `search-4` against `Greedy` plays 7.2 rounds and caps 1.5%; the `Greedy` mirror plays 7.8 and caps
+  0.5%. ADR 0011 gives a capped match to the healthier team, so more than half of its result against
+  `search-4` is decided by a health margin rather than by a kill. The same plan against `Greedy` caps less
+  often and loses anyway.
+
+  Two things would settle it and neither is done here: play the pair on enough matches to close an interval
+  eight points wide, and read the capped matches apart from the decided ones. Until then "it stalls to the
+  cap and splits on health" is the reading, not the measurement.
+
+- **One number I cannot explain and am not explaining away.** In `value-vs-baseline` the slot-1 player takes
+  only **25.5%** of the wins, and 17.0% in `value-vs-greedy`, against 46.5% in the `Greedy` mirror and 51.0%
+  in `baseline-vs-greedy`. Whatever seat advantage the content carries, these long matches amplify it far
+  past anything the short ones show. Recorded, not interpreted.
+
+- **The clone is untouched and was refused again.** 0.725 against `Greedy`, 0.9925 against `Random`, 0.5325
+  against `search-4` — `ci-69` and `ci-72` to the digit, as it must be, since nothing in ADR 0048 reaches
+  the clone. The champion bar read `0.5 against models/clone/ci-69/policy.json (interval from 0.5)` and kept
+  it out: third correct refusal, and the first one on a run where the other model moved.
+
+- **`ci-87` reproduced it on the same parameters**, deliberately, because the largest move a value policy
+  has made should not rest on one run: 0.29625, 0.6275, 0.4975 and the clone at 0.725 / 0.9925 / 0.5325,
+  refused again at 0.5 against `ci-69`. Every digit. So the numbers above are the pipeline, not a roll.
+
+- **What is not claimed.** Nothing here beats `search-4`. Neither policy was committed, and neither cleared
+  0.5 against `Greedy`. What this run also does is **cast doubt on the lambda sweep**: 1.0, 0.95, 0.9, 0.8
+  and 0.5 were all measured against the broken baseline, so 0.95 is the best point on a curve that no longer
+  exists. That curve is worth walking again before anything else is read into it, and `ci-88` takes its
+  first step at lambda 0.9 — the point that read 0.035 against `Greedy` where 0.95 read 0.10125. If the
+  whole curve lifted, 0.9 lifts too; if only 0.95 did, it was a spot rather than a shape.
+
+## 2026-09-15. The baseline was capping the lambda, and one of my two guesses about why was wrong
+
+- **`baselineR2` read 0.07054 on five consecutive runs** — `ci-72`, `ci-74`, `ci-78`, `ci-80`, `ci-81` —
+  while the lambda moved from 1.0 to 0.5 and back. Every lambda below 1.0 takes its advantage as
+  `V(next) - V(here)` (ADR 0046), so that number caps the mechanism. Measured on the exact 1000-match
+  exploring dataset those runs used, re-recorded locally and identical to them (53.9% / 45.6% / 0.5%, 8.0
+  rounds):
+
+  | | all held-out steps | rounds 15-30 |
+  | --- | --- | --- |
+  | as fitted, alpha 10 | +0.0705 | **-0.2179** |
+  | alpha 1000 | +0.0824 | -0.1383 |
+  | alpha 10000 | +0.1021 | +0.0200 |
+  | gradient boosting, same features | **+0.1215** | **+0.3760** |
+
+- **The first thing that was wrong: the alpha was shared and far too low.** Held-out `r2` rises monotonically
+  with it, but `--alpha` also sets the pull on the action rows, which are fitted on a median of sixty
+  examples each and want the small number. One knob served neither. `--baseline-alpha` separates them, and
+  its default keeps them shared, so every earlier run reproduces.
+
+- **The second: the fit predicted returns that cannot happen.** `Returns.Of` pays ±1 plus a tenth of the
+  health margin, so nothing here is outside 1.05; the linear fit predicts from **-1.78 to +2.19**. In rounds
+  15 and beyond that made the baseline **worse than predicting a constant** — `r2` -0.2179 against -0.0014
+  for the training mean — and the overshoot is half of it: clipping alone takes those rounds to -0.1110.
+  Clipping is not a knob. A prediction the target cannot take is wrong by construction.
+
+- **A guess of mine that the measurement refused.** The natural story was that the baseline cannot express
+  "health decides more as the cap approaches" (ADR 0011), because that is an interaction between
+  `round_fraction` — which *is* feature 0, the observation does carry it — and the health features, and the
+  model is linear. Adding those interaction terms made it **worse**: 0.0705 → 0.0574 overall, and
+  -0.2179 → -0.4375 in the late game. Recorded because it was wrong. What the late game actually wants is a
+  fit of its own: trained on late steps alone, the same features and the same model reach **+0.0625** there,
+  where the shared fit reaches -0.2179.
+
+- **What this is worth, end to end, on the same dataset**: `baselineR2` 0.0705 → **0.0806** from the clip
+  alone → **0.1053** with `--baseline-alpha 10000`, and rounds 15-30 from -0.2179 to **+0.0685**. That is
+  where the high-lambda policies live: `ci-81` played 19.1 rounds against `Greedy` and reached the cap in
+  46.2% of matches, taking its advantage from a signal that was anti-predictive exactly there.
+
+- **The fact that made all of it cheap.** The baseline never reaches the engine as anything that matters:
+  `LinearScorer.scores` adds it to every candidate of a decision alike, and the code says so — *"The same
+  number for every candidate, so it never changes the winner."* It is a **training-time device**, so it can
+  be improved with no format change, no engine change and no feature schema. That also means the 0.1215 a
+  nonlinear baseline reaches is **available**, and ADR 0048 leaves it open rather than taking it.
+
+- **A second defect in the same change, found by the Codex review.** Clipping the value the action rows are
+  fitted against, while reconstructing the reported score from the unclipped written baseline, mixes two
+  different values: the score is then wrong by exactly the overshoot, on the steps the clip exists for. The
+  metric now scores against the value actually fitted on, which on this dataset is `r2` 0.0237 → **0.0273**
+  and `loss` 1.0062 → 1.0024. `accuracy` cannot move either way, since a baseline adds one number to every
+  candidate of a decision. It has **no test**: the fixture's baseline predicts inside the return range at
+  every alpha, so the clip never bites there, and the test I first wrote passed with the bug still in. It was
+  removed rather than kept — a test that cannot fail claims a coverage it does not have.
+
+- **`baselineR2` is not comparable across this entry.** It is now measured on the values actually used, clip
+  included. The step change on identical data is 0.0705 to 0.0806.
+
+- **Nothing here has been played.** This is a fit that is less wrong, not an agent that is better. The
+  lambda sweep put the value policy near 0.10 against `Greedy` where the clone of the same turn plays 0.725.
+
 ## 2026-09-15. There is no best lambda: the two opponents peak in different places
 
 - **`ci-81` ran lambda 0.9 and broke the prediction `next.json` had written down before it.** That file said
