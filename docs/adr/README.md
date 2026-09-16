@@ -55,3 +55,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0047](0047-a-lookahead-agent-needs-a-hypothetical-board.md) | A lookahead agent needs a hypothetical board | Accepted |
 | [0048](0048-the-baseline-is-a-training-time-device-and-was-fitted-as-if-it-were-not.md) | The baseline is a training-time device, and was fitted as if it were not | Accepted |
 | [0049](0049-one-seed-is-not-a-measurement.md) | One seed is not a measurement | Accepted |
+| [0050](0050-price-how-close-a-hit-brings-its-target-to-a-kill.md) | Price how close a hit brings its target to a kill, and leave the baseline at zero | Accepted |
