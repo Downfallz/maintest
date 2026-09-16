@@ -22,7 +22,7 @@ public sealed class AdvanceTests
     /// lands. The script exercises everything the applier carries -- a stun and a defense buff applied in
     /// combat, the fizzles they cause, energy paid, damage through a buff, conditions counting down across two
     /// cleanups, one of them fresh and one not -- and then plays on to the elimination, so the last round's
-    /// cleanup without an upkeep after it is compared too.
+    /// cleanup, with an outcome and no start of round after it, is compared too.
     /// </summary>
     [Fact]
     public void A_board_advanced_through_every_step_of_a_match_lands_where_the_match_does()
@@ -72,6 +72,50 @@ public sealed class AdvanceTests
         }
 
         match.Outcome.ShouldNotBeNull().Reason.ShouldBe(MatchEndReason.Elimination);
+    }
+
+    [Fact]
+    public void The_cleanup_that_ends_the_match_has_no_start_of_round_after_it()
+    {
+        var match = Table.Started(Table.TwoOnTwo(roundCap: 1));
+        Table.PassEvolution(match);
+        Table.ChooseStandard(match);
+        Table.DeclareStrikes(match);
+        Table.HitFirstLivingEnemy(match);
+        for (var resolved = 0; resolved < 3; resolved++)
+        {
+            match.ResolveNextAction().Value.RoundCompleted.ShouldBeFalse();
+        }
+
+        var before = match.Snapshots();
+        var action = match.CurrentRound.ShouldNotBeNull().NextActionToResolve();
+
+        var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
+        var step = match.ResolveNextAction().Value;
+
+        step.MatchCompleted.ShouldBeTrue();
+        ShouldMatch(match.Snapshots(), Advance.Cleanup(advanced.Board, Arena.Resources));
+        match.Creatures.ShouldAllBe(creature => creature.Energy == Energy.Of(2));
+    }
+
+    [Fact]
+    public void The_outcome_of_a_board_at_the_round_cap_is_the_matchs()
+    {
+        var match = Table.Started(Table.TwoOnTwo(roundCap: 1));
+        Table.PlayRound(match);
+
+        var outcome = Advance.Outcome(match.Snapshots(), Arena.Resources, completedRound: 1, match.RuleSet);
+
+        match.Outcome.ShouldNotBeNull().Reason.ShouldBe(MatchEndReason.RoundCap);
+        outcome.ShouldBe(match.Outcome);
+    }
+
+    [Fact]
+    public void A_board_with_both_teams_standing_before_the_cap_has_no_outcome()
+    {
+        var board = Arena.Snapshots(Arena.FourCreatures());
+
+        Advance.Outcome(board, Arena.Resources, completedRound: 1, Table.TwoOnTwo()).ShouldBeNull();
     }
 
     [Fact]
@@ -136,17 +180,26 @@ public sealed class AdvanceTests
     }
 
     [Fact]
-    public void Upkeep_gives_the_energy_of_the_round_and_ticks_the_ongoing_effects()
+    public void The_start_of_a_round_gives_its_energy_and_ticks_the_ongoing_effects()
     {
         var creatures = Arena.FourCreatures();
         Arena.Find(creatures, Arena.Ghoul).Apply(Bleed.Of(4, rounds: 2)).ShouldNotBeNull();
-        Arena.Find(creatures, Arena.Wraith).TakeDamage(20);
 
-        var after = Advance.Upkeep(Arena.Snapshots(creatures), Arena.Resources, Table.TwoOnTwo());
+        var after = Advance.StartOfRound(Arena.Snapshots(creatures), Arena.Resources, Table.TwoOnTwo());
 
         after.Single(creature => creature.Id == Arena.Ghoul).Health.ShouldBe(Health.Of(16));
         after.Single(creature => creature.Id == Arena.Ghoul).Energy.ShouldBe(Energy.Of(2));
         after.Single(creature => creature.Id == Arena.Knight).Energy.ShouldBe(Energy.Of(2));
+    }
+
+    [Fact]
+    public void The_start_of_a_round_gives_a_dead_creature_nothing()
+    {
+        var creatures = Arena.FourCreatures();
+        Arena.Find(creatures, Arena.Wraith).TakeDamage(20);
+
+        var after = Advance.StartOfRound(Arena.Snapshots(creatures), Arena.Resources, Table.TwoOnTwo());
+
         after.Single(creature => creature.Id == Arena.Wraith).Energy.ShouldBe(Energy.Of(0));
     }
 
@@ -172,11 +225,16 @@ public sealed class AdvanceTests
         ResolveAndCompare(match);
     }
 
+    /// <summary>
+    /// Walks the match's own steps: an action, and when it was the round's last, the cleanup, the outcome, and
+    /// the start of the next round unless that outcome ended the match.
+    /// </summary>
     private static void ResolveAndCompare(Match match)
     {
         while (match.State == MatchState.InProgress && match.CurrentRound.ShouldNotBeNull().SubPhase == RoundSubPhase.ActionResolution)
         {
             var before = match.Snapshots();
+            var round = match.CurrentRound.Number;
             var action = match.CurrentRound.NextActionToResolve();
             var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
 
@@ -190,11 +248,12 @@ public sealed class AdvanceTests
             if (step.RoundCompleted)
             {
                 expected = Advance.Cleanup(expected, Arena.Resources);
-            }
-
-            if (step.RoundCompleted && !step.MatchCompleted)
-            {
-                expected = Advance.Upkeep(expected, Arena.Resources, match.RuleSet);
+                var outcome = Advance.Outcome(expected, Arena.Resources, round, match.RuleSet);
+                outcome.ShouldBe(match.Outcome);
+                if (outcome is null)
+                {
+                    expected = Advance.StartOfRound(expected, Arena.Resources, match.RuleSet);
+                }
             }
 
             ShouldMatch(match.Snapshots(), expected);

@@ -9,15 +9,16 @@ namespace DownfallArena.Domain.Matches.Rules;
 
 /// <summary>
 /// Answers what a board of snapshots would be after a step a match has not played: a combat action, the
-/// cleanup that ends a round, the upkeep that starts the next (ADR 0047). It restores the creatures from the
-/// snapshots and runs the very rules <see cref="Match"/> runs on them -- <see cref="CombatExecution"/>,
-/// <see cref="UpkeepRules"/> -- so there is one applier and not a second one to keep in agreement with it. The
-/// snapshots handed in are never changed; the creatures that were restored never leave.
+/// cleanup that ends a round, the start of the next (ADR 0047). It restores the creatures from the snapshots
+/// and runs the very rules <see cref="Match"/> runs on them -- <see cref="CombatExecution"/>,
+/// <see cref="UpkeepRules"/>, <see cref="WinCondition"/> -- so there is one applier and not a second one to
+/// keep in agreement with it. The snapshots handed in are never changed; the creatures that were restored
+/// never leave.
 /// <para>
-/// It is a hypothetical board and not a match: no round, no timeline, no win check, no event. Whether the
-/// match would have ended between a cleanup and the next upkeep is <see cref="WinCondition"/>'s question, and a
-/// caller that advances past a round asks it in between. Nor any evolution: a board advanced past a round
-/// assumes nobody unlocks a spell in it, which is the one creature-changing step of a round not offered here.
+/// It is a hypothetical board and not a match: no round, no timeline, no event. Whether the match would have
+/// ended after a cleanup is <see cref="Outcome"/>, asked before the start of the next round the way
+/// <see cref="Match"/> asks it. Nor any evolution: a board advanced past a round assumes nobody unlocks a
+/// spell in it, which is the one creature-changing step of a round not offered here.
 /// </para>
 /// </summary>
 public static class Advance
@@ -58,10 +59,24 @@ public static class Advance
     }
 
     /// <summary>
-    /// The board after the upkeep that starts a round: the energy gain, then the ongoing effects in the order
-    /// the match applies them.
+    /// How the match would end after the round this board closes, or <c>null</c> when it would go on: the win
+    /// condition the match checks after its cleanup, on the two teams the board's owners form.
     /// </summary>
-    public static IReadOnlyList<CreatureSnapshot> Upkeep(IReadOnlyList<CreatureSnapshot> board, IGameResources resources, RuleSet rules)
+    public static MatchOutcome? Outcome(IReadOnlyList<CreatureSnapshot> board, IGameResources resources, int completedRound, RuleSet rules)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(resources);
+        ArgumentNullException.ThrowIfNull(rules);
+
+        var creatures = Restore(board, resources);
+        return WinCondition.Evaluate(TeamOf(PlayerSlot.Player1, creatures), TeamOf(PlayerSlot.Player2, creatures), completedRound, rules);
+    }
+
+    /// <summary>
+    /// The board after the automatic steps that start a round: the energy gain, then the ongoing effects in
+    /// the order the match applies them.
+    /// </summary>
+    public static IReadOnlyList<CreatureSnapshot> StartOfRound(IReadOnlyList<CreatureSnapshot> board, IGameResources resources, RuleSet rules)
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(resources);
@@ -78,4 +93,7 @@ public static class Advance
 
     private static List<CreatureSnapshot> Snapshots(List<Creature> creatures) =>
         [.. creatures.Select(creature => creature.Snapshot())];
+
+    private static Team TeamOf(PlayerSlot owner, List<Creature> creatures) =>
+        Team.Form(owner, creatures.FindAll(creature => creature.Owner == owner));
 }

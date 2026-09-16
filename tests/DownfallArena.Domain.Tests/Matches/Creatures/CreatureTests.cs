@@ -284,15 +284,29 @@ public sealed class CreatureTests
     }
 
     [Fact]
-    public void A_creature_cannot_be_restored_from_a_snapshot_that_disagrees_with_its_conditions()
+    public void A_creature_cannot_be_restored_with_a_defense_its_conditions_do_not_give()
     {
         var creature = Spawn();
         creature.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)));
-        var snapshot = creature.Snapshot();
+        var snapshot = creature.Snapshot() with { TotalDefense = Defense.Of(0) };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { TotalDefense = Defense.Of(0) }, Content.Creature()));
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { IsStunned = true }, Content.Creature()));
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { CurrentInitiative = Initiative.Of(9) }, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+    }
+
+    [Fact]
+    public void A_creature_cannot_be_restored_stunned_without_a_stun()
+    {
+        var snapshot = Spawn().Snapshot() with { IsStunned = true };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+    }
+
+    [Fact]
+    public void A_creature_cannot_be_restored_with_an_initiative_its_conditions_do_not_give()
+    {
+        var snapshot = Spawn().Snapshot() with { CurrentInitiative = Initiative.Of(9) };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
     }
 
     [Fact]

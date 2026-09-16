@@ -277,13 +277,23 @@ public sealed class ConditionTests
     }
 
     [Fact]
-    public void A_permanent_condition_has_no_countdown_and_a_timed_one_has_one()
+    public void A_timed_condition_cannot_be_restored_without_its_countdown()
     {
-        var timed = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), null)] };
-        var permanent = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(DefenseBuff.Of(1, Duration.Permanent), 2)] };
+        var snapshot = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), null)] };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(timed, Content.Creature()));
-        Should.Throw<ArgumentException>(() => Creature.Restore(permanent, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+    }
+
+    [Fact]
+    public void A_permanent_condition_cannot_be_restored_with_a_countdown()
+    {
+        var snapshot = Spawn().Snapshot() with
+        {
+            TotalDefense = Defense.Of(1),
+            Conditions = [new ConditionSnapshot(DefenseBuff.Of(1, Duration.Permanent), 2)],
+        };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
     }
 
     [Fact]
