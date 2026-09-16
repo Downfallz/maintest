@@ -19,4 +19,7 @@ public enum AgentKind
 
     /// <summary>Another agent, but a share of decisions the spec names are taken at random, to record exploration (ADR 0014).</summary>
     Explore,
+
+    /// <summary>Plays the round out on a hypothetical board before choosing a combat move (ADR 0047); the built-in weights, or the file the spec names.</summary>
+    Lookahead,
 }
