@@ -168,16 +168,46 @@ if [[ ${#seed_list[@]} -eq 0 ]]; then
   echo "No dataset seed given; --seeds takes a list such as \"1 2 3\"." >&2
   exit 2
 fi
+# Canonicalised before anything else, because the engine reads a seed as a number and the uniqueness check
+# below reads it as text. "1 01 001" is three different strings and one seed: it would record the same
+# dataset three times, land in three directories that `spread` reads back as the same integer, and print a
+# width of zero over three identical samples -- a fake three-seed measurement, which is the one thing this
+# file exists to prevent. `10#` forces base ten so that `08` is eight rather than a bad octal literal.
+canonical_seeds=()
 for one_seed in "${seed_list[@]}"; do
   if ! [[ "$one_seed" =~ ^[0-9]+$ ]]; then
     echo "Seed '$one_seed' is not a whole number." >&2
     exit 2
   fi
+  canonical_seeds+=("$((10#$one_seed))")
 done
+seed_list=("${canonical_seeds[@]}")
 if [[ $(printf '%s\n' "${seed_list[@]}" | sort -u | wc -l) -ne ${#seed_list[@]} ]]; then
-  echo "The seed list repeats a seed; the same seed twice is one sample, not two." >&2
+  echo "The seed list repeats a seed (${seed_list[*]}); the same seed twice is one sample, not two." >&2
   exit 2
 fi
+# Where a previous run keeps its artifacts depends on when it was produced: before ADR 0049 they sat at the
+# root of runs/<id>/, and since then there is one set per seed. Resolved once, here, rather than inside the
+# loop -- an unresolvable `--against` used to surface as an ArtifactError out of `report`, which under
+# `set -e` killed the turn after every seed had already been recorded, trained and evaluated. The lowest
+# seed is taken, by position rather than by score, for the same reason the gate commits the first seed's
+# policy.
+previous=""
+if [[ -n "$against" ]]; then
+  # The `-d` guard is not decoration: this file runs under `set -o pipefail`, so a `find` over a directory
+  # that is not there fails the whole pipeline and kills the script before the message below can say why.
+  if [[ -d "runs/$against/evaluations" ]]; then
+    previous="runs/$against"
+  elif [[ -d "runs/$against/seeds" ]]; then
+    previous="$(find "runs/$against/seeds" -mindepth 1 -maxdepth 1 -type d | sort -V | head -1)"
+  fi
+  if [[ -z "$previous" || ! -d "$previous/evaluations" ]]; then
+    echo "'--against $against' names no run with evaluations, at 'runs/$against/' or under its seeds/." >&2
+    exit 2
+  fi
+  echo "Comparing against '$previous'."
+fi
+
 mkdir -p "$run/baselines"
 
 step() {
@@ -267,21 +297,21 @@ for seed in "${seed_list[@]}"; do
     fi
   done
 
-  if [[ -n "$against" ]]; then
-    step "7. [seed $seed] Replay the previous value policy of '$against' on this content"
-    if [[ -f "runs/$against/value/policy.json" ]]; then
-      if ! evaluate_policy "runs/$against/value" greedy "$seed_run/evaluations/previous-value-vs-greedy.json" --no-log; then
+  if [[ -n "$previous" ]]; then
+    step "7. [seed $seed] Replay the previous value policy of '$previous' on this content"
+    if [[ -f "$previous/value/policy.json" ]]; then
+      if ! evaluate_policy "$previous/value" greedy "$seed_run/evaluations/previous-value-vs-greedy.json" --no-log; then
         echo "The previous policy could not run here (its feature schema no longer applies): only the baselines compare."
         rm -f "$seed_run/evaluations/previous-value-vs-greedy.json"
       fi
     else
-      echo "No value policy under 'runs/$against'; nothing to replay."
+      echo "No value policy under '$previous'; nothing to replay."
     fi
   fi
 
   step "8. [seed $seed] Report"
-  if [[ -n "$against" ]]; then
-    "${learning[@]}" report "$seed_run" --against "runs/$against"
+  if [[ -n "$previous" ]]; then
+    "${learning[@]}" report "$seed_run" --against "$previous"
   else
     "${learning[@]}" report "$seed_run"
   fi
