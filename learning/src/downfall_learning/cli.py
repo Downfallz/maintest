@@ -30,6 +30,7 @@ from downfall_learning.knobs import (
     load_knobs,
     validate,
 )
+from downfall_learning.mean_policy import mean_policy
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.progress import Progress
 from downfall_learning.report import TRAINING_FILE, TrainingLog
@@ -281,6 +282,8 @@ def build_parser() -> argparse.ArgumentParser:
     spread.add_argument("run", type=Path, help="a run directory holding seeds/<seed>/ subdirectories")
     spread.set_defaults(handler=_spread)
 
+    _add_mean_policy(commands)
+
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
     csv.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
     csv.add_argument("-o", "--output", type=Path, required=True, help="the CSV file to write")
@@ -304,6 +307,18 @@ def build_parser() -> argparse.ArgumentParser:
 def _dataset(arguments: argparse.Namespace) -> Dataset:
     runs = load_runs(arguments.runs, allow_mixed=arguments.allow_mixed)
     return build_dataset(runs, kinds=getattr(arguments, "kinds", None))
+
+
+def _add_mean_policy(commands: argparse._SubParsersAction) -> None:
+    mean = commands.add_parser(
+        "mean-policy",
+        help="one policy scoring every candidate as the mean of several: the fits of a turn's seeds as one",
+    )
+    mean.add_argument(
+        "models", nargs="+", type=Path, help="two or more model directories holding policy.json, or the files"
+    )
+    mean.add_argument("-o", "--output", type=Path, required=True, help=OUTPUT_HELP)
+    mean.set_defaults(handler=_mean_policy)
 
 
 def _add_quiet(parser: argparse.ArgumentParser) -> None:
@@ -419,6 +434,17 @@ def _spread(arguments: argparse.Namespace) -> int:
     path = write_spread(spread, arguments.run)
     print(format_spread(spread))
     print(f"\nWritten to '{path}'. A gate reads the min, never the max (ADR 0049).")
+    return 0
+
+
+def _mean_policy(arguments: argparse.Namespace) -> int:
+    policies = [Policy.load(model / POLICY_FILE if model.is_dir() else model) for model in arguments.models]
+    mean = mean_policy(policies)
+    path = mean.save(arguments.output / POLICY_FILE)
+    print(
+        f"Policy ({mean.kind}, {len(mean.action_keys)} actions) written to '{path}': the mean of "
+        f"{len(policies)} policies, scoring every candidate as the mean of their scores."
+    )
     return 0
 
 
@@ -613,6 +639,10 @@ def report_command() -> int:
 
 def spread_command() -> int:
     return _run("spread")
+
+
+def mean_policy_command() -> int:
+    return _run("mean-policy")
 
 
 def compare_stamps_command() -> int:

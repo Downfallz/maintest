@@ -11,7 +11,8 @@ usage() {
 Usage: scripts/iterate.sh [options]
 
 One turn of the learning loop into runs/<run-id>/: the baselines once, then per dataset seed a recorded
-dataset, two trained policies, their evaluations and a report, and finally the spread across the seeds. Needs
+dataset, two trained policies, their evaluations and a report, then the spread across the seeds, and last the
+seeds' value fits averaged into one policy and played (runs/<id>/mean/, one sample, outside the spread). Needs
 the .NET SDK (global.json) and uv. Every evaluation plays the 200 benchmark seeds, mirrored. Around ten
 minutes per seed, so half an hour at the default three (ADR 0049).
 
@@ -363,6 +364,27 @@ done
 # which is the honest rendering of one sample, not a licence to read it as a measurement.
 step "9. Spread across ${#seed_list[@]} seed(s)"
 "${learning[@]}" spread "$run"
+
+# The seeds' value fits as one policy. A policy is linear, so the mean of several is exactly a policy that
+# scores every candidate as the mean of their scores; every seed weighs the same and nothing is chosen, which
+# is what keeps it off the test set. Three fits of one configuration read the same on every held-out number
+# and differed by 34 points in play (journal, 2026-09-16); whether their mean plays like the better ones or
+# collapses like the worst is what this measures. It is one policy, so its numbers are one sample each: it is
+# not in the spread, and no gate reads it.
+if (( ${#seed_list[@]} > 1 )); then
+  step "10. The mean of the ${#seed_list[@]} value fits, played as one policy"
+  value_fits=()
+  for seed in "${seed_list[@]}"; do
+    value_fits+=("$run/seeds/$seed/value")
+  done
+  mkdir -p "$run/mean/evaluations"
+  "${learning[@]}" mean-policy "${value_fits[@]}" -o "$run/mean/value"
+  evaluate_policy "$run/mean/value" greedy "$run/mean/evaluations/value-vs-greedy.json"
+  evaluate_policy "$run/mean/value" random "$run/mean/evaluations/value-vs-random.json" --no-log
+  if [[ -n "$baseline" ]]; then
+    evaluate_policy "$run/mean/value" "$baseline" "$run/mean/evaluations/value-vs-baseline.json" --no-log
+  fi
+fi
 
 page="$root/$run/seeds/${seed_list[0]}/report.html"
 echo
