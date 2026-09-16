@@ -19,6 +19,7 @@ from downfall_learning.iteration import (
     load_report,
     write_report,
 )
+from downfall_learning.jackknife import build_jackknife, format_jackknife, write_jackknife
 from downfall_learning.knobs import (
     KNOBS_FILE,
     Content,
@@ -283,6 +284,7 @@ def build_parser() -> argparse.ArgumentParser:
     spread.set_defaults(handler=_spread)
 
     _add_mean_policy(commands)
+    _add_jackknife(commands)
 
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
     csv.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
@@ -319,6 +321,15 @@ def _add_mean_policy(commands: argparse._SubParsersAction) -> None:
     )
     mean.add_argument("-o", "--output", type=Path, required=True, help=OUTPUT_HELP)
     mean.set_defaults(handler=_mean_policy)
+
+
+def _add_jackknife(commands: argparse._SubParsersAction) -> None:
+    jackknife = commands.add_parser(
+        "jackknife",
+        help="the spread of a turn's mean policy, from the means that leave one seed out",
+    )
+    jackknife.add_argument("run", type=Path, help="a run directory holding mean/ and mean/without-<seed>/")
+    jackknife.set_defaults(handler=_jackknife)
 
 
 def _add_quiet(parser: argparse.ArgumentParser) -> None:
@@ -434,6 +445,14 @@ def _spread(arguments: argparse.Namespace) -> int:
     path = write_spread(spread, arguments.run)
     print(format_spread(spread))
     print(f"\nWritten to '{path}'. A gate reads the min, never the max (ADR 0049).")
+    return 0
+
+
+def _jackknife(arguments: argparse.Namespace) -> int:
+    jackknife = build_jackknife(arguments.run)
+    path = write_jackknife(jackknife, arguments.run)
+    print(format_jackknife(jackknife))
+    print(f"\nWritten to '{path}'.")
     return 0
 
 
@@ -643,6 +662,10 @@ def spread_command() -> int:
 
 def mean_policy_command() -> int:
     return _run("mean-policy")
+
+
+def jackknife_command() -> int:
+    return _run("jackknife")
 
 
 def compare_stamps_command() -> int:
