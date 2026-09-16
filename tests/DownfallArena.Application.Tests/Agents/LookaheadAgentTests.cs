@@ -79,6 +79,27 @@ public sealed class LookaheadAgentTests
         new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules).DecideTargets(board, options).ShouldBe([Four], "the one-step replay does not carry the buff");
     }
 
+    /// <summary>
+    /// Under weights that price a kill at nothing, damage at next to nothing and energy at a thousand, Slam
+    /// costs two energy and Strike none. Slam kills both enemies and ends the match; Strike kills one. The
+    /// match won outranks the score whatever the weights, so the two thousand points of energy Strike keeps
+    /// do not buy off the win. (Damage is not zero because a stun on a target the same cast kills scores
+    /// nothing, and with nothing to tell them apart the scorer would aim Slam at one enemy only.)
+    /// </summary>
+    [Fact]
+    public void A_round_that_wins_the_match_outranks_any_score_whatever_the_weights()
+    {
+        var weights = ScoringWeights.Default with { Damage = 0.001, Kill = 0, Energy = 1000 };
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { Energy = Energy.Of(2), KnownSpells = new HashSet<SpellId> { TestContent.Slam, TestContent.Strike } };
+        var board = Boards.Board(PlayerSlot.Player1, [one], [Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(2) }, Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(2) }]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(One, PlayerSlot.Player1)],
+        };
+
+        new LookaheadAgent(weights, TestContent.Resources, Rules).DecideIntent(board, new IntentOption(One, [TestContent.Slam, TestContent.Strike])).ShouldBe(TestContent.Slam);
+    }
+
     [Fact]
     public void An_uncastable_spell_binds_no_target()
     {

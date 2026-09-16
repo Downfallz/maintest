@@ -65,7 +65,7 @@ dotnet run --project src/DownfallArena.Cli -- human                     # you ag
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces (--traces N caps the traces; 0 keeps none)
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
-dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, lookahead[:<weights.json>], heuristic:<weights.json>, policy:<policy.json>, explore:<rate>[:<agent>] (explore deviates from greedy, or from the agent named: heuristic:<weights.json>, policy:<policy.json>, or a bare path as the weights shorthand)
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, lookahead[:<weights.json>], minimax[:<weights.json>], heuristic:<weights.json>, policy:<policy.json>, explore:<rate>[:<agent>] (explore deviates from greedy, or from the agent named: heuristic:<weights.json>, policy:<policy.json>, or a bare path as the weights shorthand)
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
 dotnet run --project src/DownfallArena.Cli -- studio               # the content studio on http://127.0.0.1:5099 (studio/README.md)
 dotnet run --project src/DownfallArena.Cli -- studio --export site/data  # what the published studio reads, as files (ADR 0023)

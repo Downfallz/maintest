@@ -21,7 +21,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
         return spec.Kind switch
         {
             AgentKind.Heuristic => spec with { Version = Weights(spec).Fingerprint },
-            AgentKind.Lookahead when spec.Path is not null => spec with { Version = Weights(spec).Fingerprint },
+            AgentKind.Lookahead or AgentKind.Minimax when spec.Path is not null => spec with { Version = Weights(spec).Fingerprint },
             AgentKind.Policy => spec with { Version = Policy(spec).Fingerprint },
             // An exploring agent that names an inner agent is as much that agent as a heuristic or policy
             // agent is, so the stamp fingerprints what the inner one reads: two runs on different weights,
@@ -45,6 +45,7 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Policy => Trained(spec, rules),
             AgentKind.Explore => new ExploringAgent(Rate(spec), Explored(spec, rules, random), random),
             AgentKind.Lookahead => new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules),
+            AgentKind.Minimax => new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules, adversarial: true),
             _ => throw new InvalidOperationException($"Agent kind '{spec.Kind}' has no implementation."),
         };
     }
