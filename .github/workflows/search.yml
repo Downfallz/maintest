@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       opponent:
-        description: "Agent B of every evaluation"
+        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores the mean over them, so it cannot win by learning one of them (journal, 2026-09-16)"
         default: greedy
       check_opponent:
         description: "A second opponent the hold-out also replays both agents against, or empty for none. A set that beats the opponent it was searched against and falls against this one learned that opponent, not the game (journal, 2026-09-16)"
@@ -257,28 +257,45 @@ jobs:
           elif [[ "$KIND" == "heuristic" ]]; then
             started_from=greedy
           fi
-          replay "$KIND:$OUT/weights.json" "$OPPONENT" found
-          replay "$started_from" "$OPPONENT" baseline
-          read -r found_score baseline_score <<< "$(scores found baseline)"
+          header="| Agent |"
+          rule="| --- |"
+          found_row="| The weights it found |"
+          baseline_row="| What it started from (\`$started_from\`) |"
+          # column <opponent> <suffix>: both agents against one opponent, as one more column of the table.
+          column() {
+            replay "$KIND:$OUT/weights.json" "$1" "found$2"
+            replay "$started_from" "$1" "baseline$2"
+            read -r column_found column_baseline <<< "$(scores "found$2" "baseline$2")"
+            header="$header Score against \`$1\` |"
+            rule="$rule --- |"
+            found_row="$found_row $column_found |"
+            baseline_row="$baseline_row $column_baseline |"
+          }
+          # One column per opponent the search played, and the outputs are the mean over them, which is the
+          # number the search optimized. The first opponent keeps the plain file names every run so far wrote.
+          read -r -a opponents <<< "${OPPONENT//,/ }"
+          found_sum=0
+          baseline_sum=0
+          for index in "${!opponents[@]}"; do
+            suffix=""
+            if (( index > 0 )); then
+              suffix="-$index"
+            fi
+            column "${opponents[index]}" "$suffix"
+            found_sum="$(jq -n --argjson a "$found_sum" --argjson b "$column_found" '$a + $b')"
+            baseline_sum="$(jq -n --argjson a "$baseline_sum" --argjson b "$column_baseline" '$a + $b')"
+          done
+          found_score="$(jq -n --argjson s "$found_sum" --argjson n "${#opponents[@]}" '$s / $n')"
+          baseline_score="$(jq -n --argjson s "$baseline_sum" --argjson n "${#opponents[@]}" '$s / $n')"
           echo "found=$found_score" >> "$GITHUB_OUTPUT"
           echo "baseline=$baseline_score" >> "$GITHUB_OUTPUT"
-          header="| Agent | Score against \`$OPPONENT\` |"
-          rule="| --- | --- |"
-          found_row="| The weights it found | $found_score |"
-          baseline_row="| What it started from (\`$started_from\`) | $baseline_score |"
           check_note=""
-          # The same opponent twice would be the same number twice, so the check only runs against a
-          # different one.
-          if [[ -n "$CHECK" && "$CHECK" != "$OPPONENT" ]]; then
-            replay "$KIND:$OUT/weights.json" "$CHECK" found-check
-            replay "$started_from" "$CHECK" baseline-check
-            read -r found_check baseline_check <<< "$(scores found-check baseline-check)"
-            echo "check_found=$found_check" >> "$GITHUB_OUTPUT"
-            echo "check_baseline=$baseline_check" >> "$GITHUB_OUTPUT"
-            header="$header Score against \`$CHECK\` |"
-            rule="$rule --- |"
-            found_row="$found_row $found_check |"
-            baseline_row="$baseline_row $baseline_check |"
+          # An opponent the search already played would be the same column twice, so the check only runs
+          # against one it did not.
+          if [[ -n "$CHECK" ]] && ! printf '%s\n' "${opponents[@]}" | grep -qxF -- "$CHECK"; then
+            column "$CHECK" "-check"
+            echo "check_found=$column_found" >> "$GITHUB_OUTPUT"
+            echo "check_baseline=$column_baseline" >> "$GITHUB_OUTPUT"
             check_note="A found agent that beats \`$OPPONENT\` here and scores below what it started from against \`$CHECK\` has learned \`$OPPONENT\`, not the game."
           fi
           {
@@ -357,7 +374,7 @@ jobs:
             echo
             echo "**On seeds no candidate saw**, which is the one comparison the run above cannot make:"
             echo "these weights score \`$HOLDOUT_FOUND\` against \`$OPPONENT\` where what the search started"
-            echo "from scores \`$HOLDOUT_BASELINE\`."
+            echo "from scores \`$HOLDOUT_BASELINE\` (the mean over the opponents when there are several)."
             if [[ -n "$HOLDOUT_CHECK_FOUND" ]]; then
               echo "**Against \`$CHECK\`**, an opponent the search never played, they score"
               echo "\`$HOLDOUT_CHECK_FOUND\` where what it started from scores \`$HOLDOUT_CHECK_BASELINE\`: a set"
@@ -408,11 +425,8 @@ jobs:
             runs/search-${{ github.run_number }}/search.log
             runs/search-${{ github.run_number }}/weights.json
             runs/search-${{ github.run_number }}/search.json
-            runs/search-${{ github.run_number }}/evaluation.json
+            runs/search-${{ github.run_number }}/evaluation*.json
             runs/search-${{ github.run_number }}/training.jsonl
-            runs/search-${{ github.run_number }}/holdout-found.json
-            runs/search-${{ github.run_number }}/holdout-baseline.json
-            runs/search-${{ github.run_number }}/holdout-found-check.json
-            runs/search-${{ github.run_number }}/holdout-baseline-check.json
+            runs/search-${{ github.run_number }}/holdout-*.json
           if-no-files-found: warn
           retention-days: 30

@@ -111,6 +111,8 @@ class Score:
     win_rate_high: float
     matches: int
     evaluation: Evaluation | None = None
+    # One score per opponent when the candidate was played against several; empty for a single opponent.
+    parts: tuple[tuple[str, Score], ...] = ()
 
     @classmethod
     def of(cls, evaluation: Evaluation) -> Score:
@@ -124,6 +126,33 @@ class Score:
             win_rate_high=report.win_rate.high,
             matches=evaluation.matches,
             evaluation=evaluation,
+        )
+
+    @classmethod
+    def mixture(cls, parts: Sequence[tuple[str, Score]]) -> Score:
+        """One score over several opponents: the mean of the scores against each, every opponent weighing
+        the same.
+
+        A search against one opponent finds the key to that lock: the lookahead weights of search run 5
+        scored 0.84 against Greedy and 0.70 against Random where Greedy itself scores 0.99 (journal,
+        2026-09-16). A candidate scored on the mean over Greedy, a searched set and Random cannot win by
+        learning one of them. The interval is the mean of the intervals, which is wider than the mean's own
+        and so reads conservatively; the evaluation kept is the first opponent's, which is what stamps the
+        training log. The matches are the total played.
+        """
+        if not parts:
+            raise ValueError("A mixture needs at least one opponent.")
+        scores = [score for _, score in parts]
+        return cls(
+            mean=float(np.mean([score.mean for score in scores])),
+            low=float(np.mean([score.low for score in scores])),
+            high=float(np.mean([score.high for score in scores])),
+            win_rate=float(np.mean([score.win_rate for score in scores])),
+            win_rate_low=float(np.mean([score.win_rate_low for score in scores])),
+            win_rate_high=float(np.mean([score.win_rate_high for score in scores])),
+            matches=sum(score.matches for score in scores),
+            evaluation=scores[0].evaluation,
+            parts=tuple(parts),
         )
 
 
@@ -175,6 +204,8 @@ class EngineCommand:
 
     root: Path = field(default_factory=Path.cwd)
     command: Sequence[str] = ENGINE_COMMAND
+    #: Agent B of every evaluation, or several separated by commas: the score is then the mean over them
+    #: (``Score.mixture``), so a candidate cannot win by learning one opponent.
     opponent: str = "greedy"
     seeds: str = "benchmarks/benchmark-seeds.json"
     kind: str = "heuristic"
@@ -184,6 +215,13 @@ class EngineCommand:
             raise ValueError(
                 f"No agent kind '{self.kind}' plays a weights file; one of {', '.join(WEIGHT_KINDS)}."
             )
+        if not self.opponents:
+            raise ValueError("The opponent is empty; name one agent spec, or several separated by commas.")
+
+    @property
+    def opponents(self) -> tuple[str, ...]:
+        """The opponents of every evaluation, one or more, in the order given."""
+        return tuple(part.strip() for part in self.opponent.split(",") if part.strip())
 
 
 class CliEvaluator:
@@ -222,8 +260,22 @@ class CliEvaluator:
         )
 
     def evaluate_spec(self, spec: str, output: Path) -> Score:
-        """Runs one evaluation of ``spec`` as agent A and reads the evaluation it wrote to ``output``."""
+        """Runs ``spec`` as agent A against every opponent and reads what the engine wrote.
+
+        One opponent writes ``output``. Several write ``<output stem>-vs-<opponent>.json`` each and score as
+        their mixture, the first opponent's evaluation standing for the whole where one is needed.
+        """
         output = Path(output).resolve()
+        opponents = self._engine.opponents
+        if len(opponents) == 1:
+            return self._evaluate_against(spec, opponents[0], output)
+        parts = [
+            (opponent, self._evaluate_against(spec, opponent, output.with_name(part_name(output, opponent))))
+            for opponent in opponents
+        ]
+        return Score.mixture(parts)
+
+    def _evaluate_against(self, spec: str, opponent: str, output: Path) -> Score:
         output.parent.mkdir(parents=True, exist_ok=True)
         arguments = [
             *self._engine.command,
@@ -231,7 +283,7 @@ class CliEvaluator:
             "--p1",
             spec,
             "--p2",
-            self._engine.opponent,
+            opponent,
             "--seeds",
             self._engine.seeds,
             "--out",
@@ -299,7 +351,20 @@ class SearchResult:
         if self.best.score.evaluation is not None:
             raw = json.dumps(self.best.score.evaluation.raw, indent=2) + "\n"
             (directory / "evaluation.json").write_text(raw, encoding="utf-8")
+        # Against several opponents, the evaluation above is the first one's; the others land beside it.
+        for opponent, score in self.best.score.parts:
+            if score.evaluation is not None:
+                raw = json.dumps(score.evaluation.raw, indent=2) + "\n"
+                (directory / part_name(directory / "evaluation.json", opponent)).write_text(
+                    raw, encoding="utf-8"
+                )
         return directory
+
+
+def part_name(output: Path, opponent: str) -> str:
+    """``<output stem>-vs-<opponent>.json``, the opponent spelled with what a file name allows."""
+    safe = "".join(character if character.isalnum() else "-" for character in opponent).strip("-")
+    return f"{output.stem}-vs-{safe or 'opponent'}{output.suffix}"
 
 
 def format_search(
