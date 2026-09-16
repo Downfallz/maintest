@@ -1,6 +1,7 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Resources.Effects;
+using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.Domain.Tests.Resources.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -244,7 +245,7 @@ public sealed class ConditionTests
         var creature = Spawn();
         creature.Apply(Stun.For(1));
 
-        var restored = Creature.Restore(creature.Snapshot(), Content.Creature());
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature(), Arena.Tree);
 
         restored.TickConditions().ShouldBeEmpty();
         restored.IsStunned.ShouldBeTrue();
@@ -259,7 +260,7 @@ public sealed class ConditionTests
         creature.Apply(Stun.For(1));
         creature.TickConditions();
 
-        var restored = Creature.Restore(creature.Snapshot(), Content.Creature());
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature(), Arena.Tree);
 
         restored.TickConditions().Count.ShouldBe(1);
         restored.IsStunned.ShouldBeFalse();
@@ -267,13 +268,14 @@ public sealed class ConditionTests
 
     [Theory]
     [InlineData(0, false)]
+    [InlineData(-1, false)]
     [InlineData(4, false)]
     [InlineData(2, true)]
     public void A_condition_no_creature_carries_cannot_be_restored(int remainingRounds, bool fresh)
     {
         var snapshot = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), remainingRounds, IsFresh: fresh)] };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 
     [Fact]
@@ -281,7 +283,7 @@ public sealed class ConditionTests
     {
         var snapshot = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), null)] };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 
     [Fact]
@@ -293,7 +295,7 @@ public sealed class ConditionTests
             Conditions = [new ConditionSnapshot(DefenseBuff.Of(1, Duration.Permanent), 2)],
         };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 
     [Fact]
@@ -305,6 +307,6 @@ public sealed class ConditionTests
             Conditions = [new ConditionSnapshot(Stun.For(1), 1), new ConditionSnapshot(Stun.For(1), 1)],
         };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 }

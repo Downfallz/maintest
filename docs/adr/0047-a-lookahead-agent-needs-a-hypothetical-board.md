@@ -77,10 +77,12 @@ the aggregate's own assembly, which is what makes B acceptable rather than a hol
 - Bad: **B touches the Domain's invariant protection**, which is the thing this repository is most careful
   about. `internal` is not what protects it: `Advance` is public and a snapshot has `init` setters, so any
   caller can hand in a state no creature ever had. The checks inside `Restore` are the boundary, and they
-  refuse everything a match never produces: another definition's snapshot, a health above the maximum, an
-  expired condition, a countdown past the duration or missing, a fresh condition below its full duration, two
-  conditions of a kind that does not stack, and derived values that disagree with the conditions carried.
-  The change had a `domain-reviewer` pass, which is where that list came from.
+  refuse everything a match never produces: another definition's snapshot or talent tree, a health above the
+  maximum, a starting spell missing or a known spell the tree does not offer, a condition expired or with a
+  countdown at zero or below, a countdown past the duration or missing, a fresh condition below its full
+  duration, two conditions of a kind that does not stack, and derived values that disagree with the
+  conditions carried. The change had a `domain-reviewer` pass and a Codex review, which is where that list
+  came from.
 - Bad: the cost of one decision rises by the branching factor times the cost of a resolution. A two-ply
   search over intents and targets is not obviously affordable at 400 mirrored matches an evaluation; that
   has to be measured on a small run before the agent is worth finishing.

@@ -89,7 +89,13 @@ public static class Advance
     }
 
     private static List<Creature> Restore(IReadOnlyList<CreatureSnapshot> board, IGameResources resources) =>
-        [.. board.Select(snapshot => Creature.Restore(snapshot, resources.GetCreature(snapshot.DefinitionId)))];
+        [.. board.Select(snapshot => Restore(snapshot, resources))];
+
+    private static Creature Restore(CreatureSnapshot snapshot, IGameResources resources)
+    {
+        var definition = resources.GetCreature(snapshot.DefinitionId);
+        return Creature.Restore(snapshot, definition, resources.GetTalentTree(definition.TalentTree));
+    }
 
     private static List<CreatureSnapshot> Snapshots(List<Creature> creatures) =>
         [.. creatures.Select(creature => creature.Snapshot())];

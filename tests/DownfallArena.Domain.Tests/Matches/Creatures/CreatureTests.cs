@@ -1,6 +1,8 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Resources.Effects;
+using DownfallArena.Domain.Resources.Talents;
+using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.Domain.Tests.Resources.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -248,7 +250,7 @@ public sealed class CreatureTests
         creature.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)), new ConditionSource(CreatureId.From(3), SpellId.Parse("spell:guard:v1")));
         var snapshot = creature.Snapshot();
 
-        var restored = Creature.Restore(snapshot, Content.Creature());
+        var restored = Creature.Restore(snapshot, Content.Creature(), Arena.Tree);
 
         restored.Id.ShouldBe(creature.Id);
         restored.Owner.ShouldBe(creature.Owner);
@@ -266,7 +268,7 @@ public sealed class CreatureTests
     public void A_restored_creature_changes_on_its_own_and_not_the_original()
     {
         var creature = Spawn();
-        var restored = Creature.Restore(creature.Snapshot(), Content.Creature());
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature(), Arena.Tree);
 
         restored.TakeDamage(5);
         restored.Apply(Stun.For(1));
@@ -280,7 +282,7 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot();
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature("creature:other:v1")));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature("creature:other:v1"), Arena.Tree));
     }
 
     [Fact]
@@ -290,7 +292,7 @@ public sealed class CreatureTests
         creature.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)));
         var snapshot = creature.Snapshot() with { TotalDefense = Defense.Of(0) };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 
     [Fact]
@@ -298,7 +300,7 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot() with { IsStunned = true };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 
     [Fact]
@@ -306,7 +308,31 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot() with { CurrentInitiative = Initiative.Of(9) };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+    }
+
+    [Fact]
+    public void A_creature_cannot_be_restored_knowing_a_spell_its_tree_does_not_offer()
+    {
+        var snapshot = Spawn().Snapshot() with { KnownSpells = new HashSet<SpellId> { SpellId.Parse("spell:strike:v1"), SpellId.Parse("spell:forbidden:v1") } };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+    }
+
+    [Fact]
+    public void A_creature_cannot_be_restored_without_its_starting_spells()
+    {
+        var snapshot = Spawn().Snapshot() with { KnownSpells = new HashSet<SpellId> { SpellId.Parse("spell:guard:v1") } };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+    }
+
+    [Fact]
+    public void A_creature_cannot_be_restored_against_another_talent_tree()
+    {
+        var other = TalentTree.Create(TalentTreeId.Parse("talent-tree:other:v1"), "Other", Content.Node("root", Content.TalentSpell("spell:strike:v1")));
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(Spawn().Snapshot(), Content.Creature(), other));
     }
 
     [Fact]
@@ -314,6 +340,6 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot() with { Health = Health.Of(21) };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature()));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 }
