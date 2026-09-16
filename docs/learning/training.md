@@ -352,7 +352,7 @@ no local SDK and no machine left on:
 | Workflow | Dispatch inputs | What comes back |
 | --- | --- | --- |
 | **Tune the catalogue** (`tune.yml`) | search seed, rounds, neighbours, knobs per proposal, and whether to apply | The proposal in the run summary, and, when it moved something, a **branch** carrying the changed spell files and a regenerated benchmark digest, with a link that opens it as a pull request. |
-| **Search the agent weights** (`search.yml`) | opponent, seed file, rounds, population, search seed, and whether to apply | The weights in the run summary, as ratios to `damage`, beside the baseline's, and, when asked and when a candidate beat the set it started from, a **branch** carrying them as `learning/weights/search-<run>.json`, with a link that opens it as a pull request. |
+| **Search the agent weights** (`search.yml`) | opponent, a check opponent for the hold-out, the agent kind, the weights to start from, seed file, rounds, population, search seed, and whether to apply | The weights in the run summary, as ratios to `damage`, beside the baseline's, and, when asked and when a candidate beat the set it started from, a **branch** carrying them as `learning/weights/search-<run>.json`, with a link that opens it as a pull request. |
 
 Both can propose a branch; what a branch may contain is where they differ. A tuning pass proposes content, and
 content is reviewed as a diff, so its branch changes the spell files themselves. A weight search proposes an
@@ -368,8 +368,12 @@ produced it cannot establish that. So an applying weight search makes the compar
 found weights *and* the baseline on seeds no candidate played — consecutive integers starting past the largest
 in the seed file, so they cannot overlap it — and puts both scores in the run summary and in the commit
 message. Against `greedy` the baseline's side of that is even by construction, which is what makes it a check
-on the seed set rather than a second opinion. Two evaluations, about fifteen seconds after a twenty-minute
-search, and it is the difference between a number and a claim. An applying tuning pass makes the same
+on the seed set rather than a second opinion. Unseen seeds answer "did it fit the seed file" and not "did it
+fit the opponent", since the opponent is the same on both sides, so the same two agents are replayed once more
+against a `check_opponent`, `random` unless the dispatch says otherwise: a set that beats the opponent it was
+searched against and scores below what it started from there has learned that opponent, not the game (the
+2026-09-16 entry on the searched lookahead weights is the case). Four evaluations, under a minute after a
+twenty-minute search, and it is the difference between a number and a claim. An applying tuning pass makes the same
 comparison with `score-content`: the proposal and the catalogue it started from, both played on a window of
 seeds clear of the objective's seed file, both scores in the run summary and the commit message. There the
 score is a penalty and lower is better.
