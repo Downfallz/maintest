@@ -189,7 +189,10 @@ entry says what it buys and what it costs). **`search-3.json` is the current one
 so it is the one reading that goes stale on its own: a tuning pass changes what there is to exploit, and an
 agent searched against a catalogue that no longer exists understates the gap rather than overstating it.
 `search-2` had gone four content changes without a refresh and read 0.182 where `search-3` reads 0.745.
-Refresh it from the newest search rather than keeping the old file. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+Refresh it from the newest search rather than keeping the old file. `mixture-mean.json` and `mixture-worst.json`
+are the first sets searched against three opponents at once (`greedy`, `search-4` and `random`; journal,
+2026-09-16), and either beats `search-4` head to head on seeds the search never saw while beating Greedy and
+Random. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all eight by the same positive factor
