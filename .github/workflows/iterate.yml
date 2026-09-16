@@ -101,10 +101,11 @@ jobs:
   iterate:
     name: One turn of the learning loop
     runs-on: ubuntu-latest
-    # The experiment file asks for 1000 matches and an exploring second dataset (ci-10), and the clone alone
-    # takes a quarter of an hour over that many steps. Ninety minutes was enough for the 200-match runs the
-    # parked experiment asked for and is not enough for these.
-    timeout-minutes: 150
+    # A seed of the 5000-match experiment costs the runner around half an hour, so three seeds took an hour
+    # and a quarter to an hour and three quarters (ci-106 and its run on main, journal 2026-09-16) and five
+    # seeds take up to three. Ninety minutes was enough for the 200-match runs the parked experiment asked
+    # for, and 150 for three seeds; a turn that runs into this limit loses every seed it recorded.
+    timeout-minutes: 300
     steps:
       # A report-only run keeps no credential on disk, the way this workflow always did. A committing run keeps
       # the one the checkout sets up and lets git use it, rather than a token inside a remote URL.
