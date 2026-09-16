@@ -97,7 +97,7 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
         default="heuristic",
         choices=WEIGHT_KINDS,
         help="the agent kind that plays each candidate: heuristic reads the weights one step, lookahead"
-        " and minimax play the round out (default heuristic)",
+        " plays the round out (default heuristic)",
     )
     search.add_argument(
         "--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file of every evaluation"

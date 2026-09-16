@@ -161,15 +161,17 @@ class Evaluator(Protocol):
     def evaluate(self, weights: Mapping[str, float]) -> Score: ...
 
 
-WEIGHT_KINDS = ("heuristic", "lookahead", "minimax")
-"""The agent kinds that play a weights file, so a search can tune the weights for any of their readings."""
+WEIGHT_KINDS = ("heuristic", "lookahead")
+"""The agent kinds the engine ships that play a weights file, so a search can tune the weights for either
+reading. A kind listed here that the engine does not know would abort a search on its first evaluation, so
+the list follows the engine and not the other way round."""
 
 
 @dataclass(frozen=True)
 class EngineCommand:
     """How to reach the engine: the command prefix, the opponent, the seed file, the working directory, and
-    the agent kind a weights file is played by (``heuristic`` reads it one step, ``lookahead`` and
-    ``minimax`` play the round out; docs/learning/agents.md)."""
+    the agent kind a weights file is played by (``heuristic`` reads it one step, ``lookahead`` plays the
+    round out; docs/learning/agents.md)."""
 
     root: Path = field(default_factory=Path.cwd)
     command: Sequence[str] = ENGINE_COMMAND
