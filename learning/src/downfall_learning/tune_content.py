@@ -122,6 +122,29 @@ class Candidate:
         }
 
 
+@dataclass(frozen=True)
+class CatalogueScore:
+    """One catalogue played once on one seed set, and what the objective makes of it.
+
+    The thing a tuning pass cannot produce for itself. Every candidate of a search is scored on the seed file
+    the objective names and the winner is the one that scored best there, so its number is the winner's and
+    not a fair one. Played again on seeds no candidate saw, the same catalogue gets a number that is.
+    """
+
+    seeds: str
+    score: float
+    breakdown: Mapping[str, float]
+    metrics: Mapping[str, Mapping[str, float]]
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "seeds": self.seeds,
+            "score": round(self.score, 6),
+            "penalties": {name: round(value, 6) for name, value in self.breakdown.items()},
+            "metrics": {evaluation: dict(measured) for evaluation, measured in self.metrics.items()},
+        }
+
+
 class ContentEvaluator(Protocol):
     """Plays a whole catalogue and reports its metrics by evaluation name.
 
@@ -971,6 +994,50 @@ def _played_line(result: TuneResult) -> str:
         f"{handed - result.played} were catalogues it had already played, served from what they measured "
         f"the first time."
     )
+
+
+def score_content(evaluator: ContentEvaluator, objective: Objective, content: Content) -> CatalogueScore:
+    """Plays the catalogue as it stands, once, and scores it by the objective.
+
+    No search and no neighbours: the point is the number a fixed catalogue gets on whatever seeds the
+    evaluator was built with, which is how a proposal and the content it replaced are compared on seeds the
+    search that made the proposal never played.
+    """
+    metrics = evaluator.evaluate(content.spells)
+    return CatalogueScore(objective.seeds, objective.score(metrics), objective.breakdown(metrics), metrics)
+
+
+def _bound(value: float | None) -> str:
+    """``8`` rather than ``8.0``, and ``-`` for a band open on that side: the way a person writes a range."""
+    return "-" if value is None else f"{value:g}"
+
+
+def format_score(score: CatalogueScore, objective: Objective) -> str:
+    """The score with its parts, since on its own it is a weighted sum that means nothing."""
+    lines = [
+        f"Scored on '{score.seeds}': {score.score:.3f}, where 0 is every measurement inside its range.",
+    ]
+    outside = sorted(
+        (
+            (target, score.breakdown[target.key])
+            for target in objective.targets
+            if target.key in score.breakdown
+        ),
+        key=lambda pair: -pair[1],
+    )
+    outside = [(target, penalty) for target, penalty in outside if penalty > 0.0005]
+    if outside:
+        lines.append("")
+        lines.append("Outside its range")
+        for target, penalty in outside:
+            measured = score.metrics[target.on][target.metric]
+            band = f"{_bound(target.minimum)} to {_bound(target.maximum)}"
+            lines.append(f"  {penalty:8.2f}  {target.key}: reads {measured:.3f}, should be {band}")
+    missing = objective.missing(score.metrics)
+    if missing:
+        lines.append("")
+        lines.append(f"Not measured, so not scored: {', '.join(missing)}.")
+    return "\n".join(lines)
 
 
 def format_result(result: TuneResult, objective: Objective) -> str:

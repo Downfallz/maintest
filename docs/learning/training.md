@@ -59,6 +59,7 @@ words, and the objective as bands over the metrics `report.json` already publish
 | --- | --- | --- | --- |
 | `check-knobs` | the knobs file and `data/` | nothing | Fails when a spell has no entry, a pointer addresses nothing, or the authored value sits outside its own bounds. Lists the dominated and indistinguishable spells the catalogue already carries. |
 | `tune-content` | the same, plus a built engine | `tune.json` and the changed spell files under `content/` | Hill climbs: play the content, then play neighbours of the best, one knob at a time. A candidate that breaks a constraint is redrawn before the engine sees it. `--apply` writes the winning numbers into `data/`. |
+| `score-content` | the same, and a seed file | `score.json` | No search: plays the content as it stands on the seed file given and scores it by the objective. The check a proposal gets on seeds it was not searched on. |
 
 **And every one of them says where it is while it runs.** A tuning pass plays several hundred evaluations
 over several hours and a weight search is not far behind, so `tune-content`, `search-weights` and
@@ -366,7 +367,10 @@ found weights *and* the baseline on seeds no candidate played — consecutive in
 in the seed file, so they cannot overlap it — and puts both scores in the run summary and in the commit
 message. Against `greedy` the baseline's side of that is even by construction, which is what makes it a check
 on the seed set rather than a second opinion. Two evaluations, about fifteen seconds after a twenty-minute
-search, and it is the difference between a number and a claim.
+search, and it is the difference between a number and a claim. An applying tuning pass makes the same
+comparison with `score-content`: the proposal and the catalogue it started from, both played on a window of
+seeds clear of the objective's seed file, both scores in the run summary and the commit message. There the
+score is a penalty and lower is better.
 
 **Both workflows push the branch and stop there, on purpose.** A pull request opened by a workflow
 does not start the `pull_request` workflows, so it would arrive with no CI and no SonarCloud quality gate —

@@ -22,7 +22,13 @@ uv run --project learning check-knobs            # the file against the content 
 uv run --project learning check-knobs --strict   # and fail on the content findings too
 uv run --project learning tune-content -o runs/tune-1        # search it for a better catalogue
 uv run --project learning tune-content -o runs/tune-1 --apply  # and write the winning numbers into data/
+uv run --project learning score-content -o runs/score --seeds unseen.json   # score the content as it stands, no search
 ```
+
+`score-content` exists for one reason: a tuning pass picks the candidate that scored best on the seed file
+the objective names, so the winner's score is the winner's and not a fair one. Played again on a seed file no
+candidate saw, the same catalogue gets a number that is — and so does the catalogue it replaced, which is
+the comparison the `Tune the catalogue` workflow makes before it pushes a proposal.
 
 The decision behind all of this is [ADR 0021](../../docs/adr/0021-tune-the-catalogue-with-a-declared-search-space.md).
 
