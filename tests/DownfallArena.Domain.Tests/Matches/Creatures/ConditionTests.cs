@@ -1,6 +1,7 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Resources.Effects;
+using DownfallArena.Domain.Tests.Matches.Support;
 using DownfallArena.Domain.Tests.Resources.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -223,7 +224,89 @@ public sealed class ConditionTests
 
         var snapshot = creature.Snapshot();
 
-        snapshot.Conditions.ShouldBe([new ConditionSnapshot(Bleed.Of(1, rounds: 3), 3)]);
+        snapshot.Conditions.ShouldBe([new ConditionSnapshot(Bleed.Of(1, rounds: 3), 3, IsFresh: true)]);
         snapshot.TotalDefense.ShouldBe(Defense.Of(0));
+    }
+
+    [Fact]
+    public void A_snapshot_says_whether_the_first_countdown_is_still_ahead()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+
+        creature.Snapshot().Conditions.ShouldBe([new ConditionSnapshot(Stun.For(1), 1, IsFresh: true)]);
+        creature.TickConditions();
+        creature.Snapshot().Conditions.ShouldBe([new ConditionSnapshot(Stun.For(1), 1)]);
+    }
+
+    [Fact]
+    public void A_restored_fresh_condition_still_skips_its_first_countdown()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature(), Arena.Tree);
+
+        restored.TickConditions().ShouldBeEmpty();
+        restored.IsStunned.ShouldBeTrue();
+        restored.TickConditions().Count.ShouldBe(1);
+        restored.IsStunned.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_restored_condition_past_its_first_countdown_expires_at_the_next()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+        creature.TickConditions();
+
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature(), Arena.Tree);
+
+        restored.TickConditions().Count.ShouldBe(1);
+        restored.IsStunned.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    [InlineData(4, false)]
+    [InlineData(2, true)]
+    public void A_condition_no_creature_carries_cannot_be_restored(int remainingRounds, bool fresh)
+    {
+        var snapshot = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), remainingRounds, IsFresh: fresh)] };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+    }
+
+    [Fact]
+    public void A_timed_condition_cannot_be_restored_without_its_countdown()
+    {
+        var snapshot = Spawn().Snapshot() with { Conditions = [new ConditionSnapshot(Bleed.Of(1, rounds: 3), null)] };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+    }
+
+    [Fact]
+    public void A_permanent_condition_cannot_be_restored_with_a_countdown()
+    {
+        var snapshot = Spawn().Snapshot() with
+        {
+            TotalDefense = Defense.Of(1),
+            Conditions = [new ConditionSnapshot(DefenseBuff.Of(1, Duration.Permanent), 2)],
+        };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+    }
+
+    [Fact]
+    public void A_kind_that_does_not_stack_cannot_be_restored_twice()
+    {
+        var snapshot = Spawn().Snapshot() with
+        {
+            IsStunned = true,
+            Conditions = [new ConditionSnapshot(Stun.For(1), 1), new ConditionSnapshot(Stun.For(1), 1)],
+        };
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
     }
 }

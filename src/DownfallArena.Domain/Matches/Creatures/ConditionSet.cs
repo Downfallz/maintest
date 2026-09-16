@@ -9,6 +9,29 @@ internal sealed class ConditionSet
 {
     private readonly List<Condition> _conditions = [];
 
+    public ConditionSet()
+    {
+    }
+
+    /// <summary>
+    /// The conditions a snapshot was taken of, in the order they were applied: the stacking policy reads the
+    /// first of a kind, so the order is part of the state. A kind that refreshes or ignores is carried at most
+    /// once, because <see cref="Apply"/> never adds a second; two of them is a snapshot no creature took.
+    /// </summary>
+    public ConditionSet(IEnumerable<ConditionSnapshot> snapshots)
+    {
+        _conditions.AddRange(snapshots.Select(Condition.Restore));
+
+        var twice = _conditions
+            .Where(condition => condition.Effect.Stacking != StackingPolicy.Stack)
+            .GroupBy(condition => condition.Effect.GetType())
+            .FirstOrDefault(kind => kind.Count() > 1);
+        if (twice is not null)
+        {
+            throw new ArgumentException($"No creature carries two {twice.Key.Name} conditions: the kind does not stack.", nameof(snapshots));
+        }
+    }
+
     public IReadOnlyList<Condition> Active => _conditions;
 
     public bool Has<TEffect>()

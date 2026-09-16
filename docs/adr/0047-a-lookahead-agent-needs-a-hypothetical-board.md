@@ -1,7 +1,7 @@
 # 0047. A lookahead agent needs a hypothetical board
 
-Date: 2026-09-15
-Status: Proposed
+Date: 2026-09-16
+Status: Accepted
 
 ## Context
 
@@ -31,9 +31,24 @@ lookahead.
 
 ## Decision
 
-**Not yet taken.** This ADR exists to record that the estimate behind the work was wrong and to put the three
-shapes side by side before one is built. The estimate given when this was chosen was "a few days"; the
-investigation above says otherwise, and the cheapest of the three still changes the Domain.
+**B, built in two steps, the Domain first.** The Domain gains `Creature.Restore(snapshot, definition)` and a
+`Condition` restore path, both `internal`, and one public service, **`Advance`**, which restores the creatures
+of a board of snapshots and runs on them the rules `Match` runs: `Advance.Action` resolves and applies one
+combat action through `ResolutionRules` and `CombatExecution`, `Advance.Cleanup` counts the conditions down
+through `UpkeepRules.Cleanup`, `Advance.Outcome` asks `WinCondition` what the match would say after that
+cleanup, and `Advance.StartOfRound` gives the round's energy and ticks the ongoing effects through the same
+`UpkeepRules`. One applier, called from two places. The lookahead agent that consumes it is a second change,
+in Application, once the first has been reviewed on its own.
+
+Building it found one thing the investigation had missed: a snapshot did not say whether a condition still had
+its first countdown ahead of it, the one that does not count, so two conditions with the same remaining rounds
+could expire a round apart and a restored board would have been exact within a round and off by one across a
+cleanup. `ConditionSnapshot` now carries `IsFresh`, which is what makes a restored condition expire when the
+original would.
+
+This ADR was first written to record that the estimate behind the work was wrong and to put the three shapes
+side by side before one was built. The estimate given when this was chosen was "a few days"; the investigation
+above says otherwise, and the cheapest of the three still changes the Domain.
 
 | | What it adds | Rules duplicated? | Cost |
 | --- | --- | --- | --- |
@@ -41,7 +56,7 @@ investigation above says otherwise, and the cheapest of the three still changes 
 | **B. Reconstructible creature** | `Creature.Restore(snapshot, definition)` and a `Condition` restore path, so a board can be cloned and the **existing** `CombatExecution.Apply` run on the clones | **No** — one applier, the real one | A week, and it opens a door |
 | **C. Replay from the root** | Re-run the match from round one with forced decisions to reach the hypothetical state | No | Correct and far too slow to play 400 matches with |
 
-**B is the recommended shape**, for the reason A fails: two appliers that must agree about capping and
+**B is the shape chosen**, for the reason A fails: two appliers that must agree about capping and
 stacking is exactly the kind of duplication that reads fine on the day and drifts in six months, and this
 repository has already been bitten four times in two days by cross-references drifting (journal,
 2026-09-15). One applier or none.
@@ -54,18 +69,28 @@ the aggregate's own assembly, which is what makes B acceptable rather than a hol
 
 ## Consequences
 
-- Good: whichever shape lands, the engine gains the ability to answer "what would the board be", which is
-  the prerequisite for a lookahead agent, for a rollout agent, and for any future search.
+- Good: the engine can answer "what would the board be", which is the prerequisite for a lookahead agent,
+  for a rollout agent, and for any future search.
 - Good: a lookahead agent is **not capped by a teacher**, unlike every clone, and needs no training run, no
   dataset and no feature schema. It is the only route on the table that could beat `search-4` this week
   without a learning result.
 - Bad: **B touches the Domain's invariant protection**, which is the thing this repository is most careful
-  about. It needs a `domain-reviewer` pass and the architecture tests read again, not just a green build.
+  about. `internal` is not what protects it: `Advance` is public and a snapshot has `init` setters, so any
+  caller can hand in a state no creature ever had. The checks inside `Restore` are the boundary, and they
+  refuse everything a match never produces: another definition's snapshot or talent tree, a health above the
+  maximum, a starting spell missing or a known spell the tree does not offer, a condition expired or with a
+  countdown at zero or below, a countdown past the duration or missing, a fresh condition below its full
+  duration, two conditions of a kind that does not stack, and derived values that disagree with the
+  conditions carried. The change had a `domain-reviewer` pass and a Codex review, which is where that list
+  came from.
 - Bad: the cost of one decision rises by the branching factor times the cost of a resolution. A two-ply
   search over intents and targets is not obviously affordable at 400 mirrored matches an evaluation; that
   has to be measured on a small run before the agent is worth finishing.
 - Neutral: none of this changes the benchmark digest. A new agent kind plays nothing by default, and
   `Greedy` against `Greedy` stays what the digest is defined by (ADR 0013, decision I).
+- Neutral: every condition snapshot in a trace or a board state gains an `isFresh` field. It is additive: the
+  viewer reads remaining rounds and ignores what it does not know, and the Python side reads no condition
+  field at all.
 
 ## Alternatives considered
 
@@ -84,10 +109,10 @@ the aggregate's own assembly, which is what makes B acceptable rather than a hol
 
 ## Follow-up
 
-- Nothing is implemented. The decision to record next is which of A, B or C is built, or whether the week
-  goes elsewhere.
-- If B: `Creature.Restore`, a `Condition` restore path, a Domain-owned board-clone service, a new
-  `AgentKind`, and a test that a cloned board advanced by `CombatExecution.Apply` matches the same board
-  advanced inside a real `Match`.
-- Measure before finishing: the cost of one decision at two plies, on a twenty-match run, against the
+- Done with this decision, in the Domain: `Creature.Restore`, `Condition.Restore`, `ConditionSnapshot.IsFresh`,
+  `Advance`, and the test that a board advanced through every step of a scripted match -- every action, both
+  kinds of cleanup, the upkeeps in between -- lands where the match does.
+- Next, in Application: the lookahead agent, a new `AgentKind`, its factory entry and its page in
+  `docs/learning/agents.md`.
+- Measure before finishing it: the cost of one decision at two plies, on a twenty-match run, against the
   single-ply agents.

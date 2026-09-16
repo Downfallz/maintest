@@ -154,7 +154,8 @@ Fix: legacy never applied the crit multiplier nor spent the energy; both are cov
   `ActionRevealed`, `CombatActionResolved`, `ConditionsExpired`, `RoundEnded`, `MatchEnded`. Payloads carry the
   match id, the round id, and the domain object; no timestamps in the domain (the application layer stamps
   them). `MatchStarted` carries the content hash (ADR 0009).
-- `Round` and `Creature` mutators are internal: only the aggregate root and the rules it runs change them.
+- `Round` and `Creature` mutators are internal: only the aggregate root and the rules it runs change them, and
+  `Advance`, on creatures it restores and never hands out (ADR 0047).
 - `WinCondition` implements ADR 0011; the round cap comes from the rule set. Lifecycle violations throw.
 - A player may pass their remaining evolution picks, so the Evolution sub-phase never waits on a player who
   has nothing they want to unlock.

@@ -83,6 +83,11 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Applied outcome | What an Outcome actually did to a Creature: damage capped by the Health left, healing by the Health missing, nothing at all on a dead Creature, and no Condition the Stacking policy refused. An Outcome that changed nothing is not one. | decided |
 | Perspective | The read-only, actor-relative view of a Match (allies, enemies, phase, choices, timeline) handed to rules and projections instead of the aggregate. | decided |
 | Snapshot | An immutable copy of a Creature's state (or of a Condition) used by Perspectives and projections. | decided |
+| Fresh | A Condition between its application and its first countdown, the one that does not count. Its Snapshot carries it, so a restored Condition expires when the original would (ADR 0047). | decided |
+| Restore | Building a Creature, or a Condition, back from its Snapshot at the state the Snapshot copied. Internal to the Domain: only Advance does it, and nothing a Match plays is restored. | decided |
+| Hypothetical board | The Snapshots of every Creature as they would stand after a step no Match has played (ADR 0047). What Advance answers with, and what its code calls `board`; unrelated to the open Board term, which is about positions. | decided |
+| Advance | The pure domain service that answers what a Hypothetical board would be after one Combat action, a Cleanup or the automatic steps of a Start of round, and what the Win condition would say of it, by restoring the Creatures from their Snapshots and running on them the rules a Match runs: one applier, not a second one (ADR 0047). | decided |
+| Advanced action | What Advance answers for one Combat action: its Resolution, its Applied outcomes and the Hypothetical board after them. A Combat step without the Round, because none was played. | decided |
 | Player slot | The seat a Player occupies in a Match (`Player1`, `Player2`). Creatures and choices are attributed to a slot. | decided |
 
 ## Learning

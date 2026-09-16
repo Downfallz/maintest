@@ -18,6 +18,14 @@ public sealed class Condition
         RemainingRounds = effect.Duration.Rounds;
     }
 
+    private Condition(ConditionSnapshot snapshot)
+    {
+        Effect = snapshot.Effect;
+        Source = snapshot.Source;
+        RemainingRounds = snapshot.RemainingRounds;
+        _fresh = snapshot.IsFresh;
+    }
+
     public LastingEffect Effect { get; }
 
     /// <summary>
@@ -37,7 +45,34 @@ public sealed class Condition
 
     public bool IsExpired => RemainingRounds == 0;
 
-    public ConditionSnapshot Snapshot() => new(Effect, RemainingRounds, Source);
+    public ConditionSnapshot Snapshot() => new(Effect, RemainingRounds, Source, _fresh);
+
+    /// <summary>
+    /// The condition a snapshot was taken of, at the same point of its countdown: it expires at the cleanup the
+    /// original would. Only <see cref="Creature.Restore"/> builds a creature this way, for the hypothetical
+    /// board of ADR 0047; a condition a match plays is applied, never restored. A snapshot is a copy of a
+    /// condition a match carried, and a match never carries an expired one, a countdown past the duration, a
+    /// permanent effect with a countdown, or a fresh condition below its full duration; a caller that hands
+    /// one in has a bug, not a rule violation.
+    /// </summary>
+    internal static Condition Restore(ConditionSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var duration = snapshot.Effect.Duration;
+        var impossible = snapshot.RemainingRounds switch
+        {
+            null => !duration.IsPermanent,
+            <= 0 => true,
+            var remaining => duration.IsPermanent || remaining > duration.Rounds || (snapshot.IsFresh && remaining != duration.Rounds),
+        };
+        if (impossible)
+        {
+            throw new ArgumentException($"No creature a match plays carries a {snapshot.Effect.GetType().Name} in the state this snapshot describes.", nameof(snapshot));
+        }
+
+        return new Condition(snapshot);
+    }
 
     /// <summary>
     /// Restarts the duration, and hands the condition to the spell that did it: refreshing is what decides
