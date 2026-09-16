@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
@@ -42,6 +43,8 @@ from downfall_learning.tune_content import (
     EngineContentEvaluator,
     TuneOptions,
     format_result,
+    format_score,
+    score_content,
     tune_content,
 )
 from downfall_learning.viewer import RUN_PAGE, write_run_page
@@ -141,6 +144,29 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
     tune.set_defaults(handler=_tune_content)
 
 
+def _add_score_content(commands: argparse._SubParsersAction) -> None:
+    score = commands.add_parser(
+        "score-content",
+        help="play the content as it stands on a seed file and score it by the objective, with no search",
+    )
+    score.add_argument("-o", "--output", type=Path, required=True, help="the directory score.json lands in")
+    score.add_argument(
+        "--seeds",
+        type=Path,
+        required=True,
+        help="the seed file to play; the point is one the search that proposed this content never saw",
+    )
+    score.add_argument(
+        "--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})"
+    )
+    score.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    score.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
+    score.add_argument(
+        "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
+    )
+    score.set_defaults(handler=_score_content)
+
+
 def _add_check_knobs(commands: argparse._SubParsersAction) -> None:
     check = commands.add_parser("check-knobs", help="the balance knobs against the content they describe")
     check.add_argument(
@@ -228,6 +254,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     _add_check_knobs(commands)
     _add_tune_content(commands)
+    _add_score_content(commands)
 
     stamps = commands.add_parser(
         "compare-stamps",
@@ -430,6 +457,44 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _score_content(arguments: argparse.Namespace) -> int:
+    try:
+        knobs = load_knobs(arguments.knobs)
+        content = load_content(arguments.data)
+    except KnobsError as error:
+        print(error, file=sys.stderr)
+        return 1
+
+    problems = validate(knobs, content, root=_repository_of(arguments.knobs))
+    if problems:
+        for problem in problems:
+            print(f"problem: {problem}", file=sys.stderr)
+        print("The knobs and the content disagree; fix that before scoring.", file=sys.stderr)
+        return 1
+
+    # The engine runs in the repository root, so the seed file goes in absolute: a relative path would be
+    # read from there, not from where this command was launched.
+    seeds = str(Path(arguments.seeds).resolve())
+    objective = replace(knobs.objective, seeds=seeds)
+    engine = EngineCommand(root=arguments.repo, seeds=seeds)
+    if arguments.engine:
+        engine = replace(engine, command=tuple(arguments.engine))
+    host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
+    for command, sources in ((host.builder, BUILDER_SOURCES), (engine.command, ENGINE_SOURCES)):
+        unreachable = missing_engine(command, engine.root, sources)
+        if unreachable:
+            print(unreachable, file=sys.stderr)
+            return 1
+    evaluator = EngineContentEvaluator(host, objective, content)
+    score = score_content(evaluator, objective, content)
+    arguments.output.mkdir(parents=True, exist_ok=True)
+    path = arguments.output / "score.json"
+    path.write_text(json.dumps(score.to_json(), indent=2) + "\n", encoding="utf-8")
+    print(format_score(score, objective))
+    print(f"\nWritten to '{path}'.")
+    return 0
+
+
 def _stamp_of(path: Path) -> RunStamp:
     if path.name == POLICY_FILE:
         return Policy.load(path).stamp
@@ -497,6 +562,10 @@ def check_knobs_command() -> int:
 
 def tune_content_command() -> int:
     return _run("tune-content")
+
+
+def score_content_command() -> int:
+    return _run("score-content")
 
 
 if __name__ == "__main__":

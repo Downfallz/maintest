@@ -26,9 +26,11 @@ from downfall_learning.tune_content import (
     TuneResult,
     apply_moves,
     format_result,
+    format_score,
     metrics_of,
     playable,
     propose,
+    score_content,
     tune_content,
     violations,
 )
@@ -113,6 +115,64 @@ class FakeEvaluator:
         self.calls += 1
         damage = sum(spell["effects"][0]["amount"] for spell in spells.values())
         return {"mirror": {"averageRounds": 40.0 - 2.0 * damage}}
+
+
+def test_scoring_a_catalogue_plays_it_once_and_keeps_the_numbers_behind_the_score(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    evaluator = FakeEvaluator()
+
+    score = score_content(evaluator, knobs.objective, catalogue(tmp_path))
+
+    # 40 - 2 * (3 + 1) = 32 rounds, 16 over the top of the 8..16 band, scaled by 3: (16 / 3) ** 2.
+    assert evaluator.calls == 1
+    assert score.metrics == {"mirror": {"averageRounds": 32.0}}
+    assert score.breakdown == {"mirror.averageRounds": pytest.approx((16 / 3) ** 2)}
+    assert score.score == pytest.approx((16 / 3) ** 2)
+
+
+def test_a_score_names_the_seeds_it_was_played_on(tmp_path: Path) -> None:
+    """The whole point of scoring a catalogue apart from the search is which seeds it was played on."""
+    knobs = load(tmp_path)
+    objective = replace(knobs.objective, seeds="holdout-seeds.json")
+
+    score = score_content(FakeEvaluator(), objective, catalogue(tmp_path))
+
+    assert score.seeds == "holdout-seeds.json"
+    assert score.to_json()["seeds"] == "holdout-seeds.json"
+
+
+def test_a_score_reads_as_what_is_outside_its_range(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+
+    text = format_score(score_content(FakeEvaluator(), knobs.objective, catalogue(tmp_path)), knobs.objective)
+
+    assert "where 0 is every measurement inside its range" in text
+    assert "mirror.averageRounds: reads 32.000, should be 8 to 16" in text
+
+
+def test_a_catalogue_inside_every_band_scores_zero_and_lists_nothing(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+
+    class Balanced:
+        def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+            return {"mirror": {"averageRounds": 12.0}}
+
+    score = score_content(Balanced(), knobs.objective, catalogue(tmp_path))
+
+    assert score.score == 0.0
+    assert "Outside its range" not in format_score(score, knobs.objective)
+
+
+def test_a_score_on_the_engine_plays_the_seeds_the_objective_names(
+    engine_evaluator: tuple[EngineContentEvaluator, Content, Path],
+) -> None:
+    evaluator, content, _ = engine_evaluator
+    objective = replace(evaluator._objective, seeds="unseen.json")
+
+    score = score_content(evaluator, objective, content)
+
+    assert score.seeds == "unseen.json"
+    assert score.metrics["mirror"]["averageRounds"] == pytest.approx(32.0)
 
 
 def test_a_catalogue_already_played_is_not_played_again(tmp_path: Path) -> None:

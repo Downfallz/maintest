@@ -189,3 +189,51 @@ def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
     error = capsys.readouterr().err
     assert "weights/gone.json" in error
     assert "no-such-engine" not in error
+
+
+def test_score_content_refuses_the_same_broken_objective_before_touching_the_engine(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The same preflight as tune-content: a hold-out that starts and then fails is a workflow run wasted."""
+    balance = tmp_path / "data" / "balance"
+    balance.mkdir(parents=True)
+    knobs = balance / "knobs.json"
+    knobs.write_text(
+        json.dumps(
+            {
+                "version": "knobs:v1",
+                "objective": {
+                    "seeds": "seeds.json",
+                    "evaluations": {"mirror": {"p1": "heuristic:weights/gone.json", "p2": "greedy"}},
+                    "targets": [],
+                },
+                "constraints": {},
+                "spells": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "data" / "Spells").mkdir()
+    (tmp_path / "data" / "aliases.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "unseen.json").write_text(json.dumps({"seeds": [1, 2, 3]}), encoding="utf-8")
+
+    code = cli.main(
+        [
+            "score-content",
+            "-o",
+            str(tmp_path / "out"),
+            "--seeds",
+            str(tmp_path / "unseen.json"),
+            "--knobs",
+            str(knobs),
+            "--data",
+            str(tmp_path / "data"),
+            "--engine",
+            "no-such-engine",
+        ]
+    )
+
+    assert code == 1
+    error = capsys.readouterr().err
+    assert "weights/gone.json" in error
+    assert "no-such-engine" not in error
