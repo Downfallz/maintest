@@ -289,29 +289,46 @@ reads, the searched ones next to the built-in `greedy.json`.
 
 ## The loop (L7)
 
-`scripts/iterate.sh [--run <id>] [--against <id>] [--matches N] [--seed S]` runs one iteration and leaves
-everything under `runs/<id>/`:
+`scripts/iterate.sh [--run <id>] [--against <id>] [--matches N] [--seeds "1 2 3"]` runs one iteration and
+leaves everything under `runs/<id>/`:
 
 1. Build the engine and the content; check the benchmark digest (`benchmark`).
 2. Baselines on the benchmark seeds, mirrored: `random-vs-random`, `greedy-vs-greedy`, `greedy-vs-random`.
-3. Record a greedy self-play dataset (`simulate --record`).
-4. Train the value and clone policies on it (`train-value`, `train-clone`).
-5. Evaluate each policy against greedy and against random (`evaluate-policy`).
-6. With `--against`, replay the previous run's value policy on this content into
-   `previous-value-vs-greedy.json`; when its feature schema no longer applies, say so and go on.
-7. `report`: read every `evaluations/*.json`, refuse to mix engines or contents, write `report.json`, print
-   the table, and with `--against` the deltas and the stamp axis that moved. It also writes `report.html`
-   (unless `--no-html`): the viewer page with the stylesheet inlined and the run's `report.json`,
-   evaluations, and `training.jsonl` files embedded as one JSON block the page reads at start, so the file
-   opens on the report with nothing to drag in. `--viewer <dir>` points at another copy of the viewer.
+   Once for the whole turn, into `baselines/`: they never read the dataset seed.
+3. Then, **once per dataset seed**, into `seeds/<seed>/` (ADR 0049):
+   1. Record a self-play dataset from that seed (`simulate --record`).
+   2. Train the value and clone policies on it (`train-value`, `train-clone`).
+   3. Evaluate each policy against greedy and against random (`evaluate-policy`).
+   4. With `--against`, replay the previous run's value policy on this content into
+      `previous-value-vs-greedy.json`; when its feature schema no longer applies, say so and go on.
+   5. Write that seed's `report.json` and `report.html`.
+4. Range every win rate across the seeds into `spread.json` (`spread`).
+
+**Read the spread, not a seed.** One seed is a sample: three runs of one configuration differing only in the
+dataset seed scored 0.6625, 0.0975 and 0.30375 against `search-4` (`ci-88`, `ci-90`, `ci-91`), a 56-point
+spread that is wider than every effect this project has measured. The default is three seeds and a turn
+therefore costs about half an hour. `--seed S` still runs one, to reproduce an older run exactly; it prints a
+width of zero and says, in as many words, that this is a sample. A gate reads the **minimum** across the
+seeds and never the maximum — the benchmark seeds are fixed, so choosing the dataset seed that scored best is
+selection on the test set.
+
+`report`, at step 3.5 above, reads every `evaluations/*.json` of one seed, refuses to mix engines or
+contents, writes that seed's `report.json`, prints the table, and with `--against` the deltas and the stamp
+axis that moved. It also writes `report.html` (unless `--no-html`): the viewer page with the stylesheet
+inlined and the seed's `report.json`, evaluations, and `training.jsonl` files embedded as one JSON block the
+page reads at start, so the file opens on the report with nothing to drag in. `--viewer <dir>` points at
+another copy of the viewer.
 
 ```
 runs/<id>/
-  evaluations/*.json      one evaluation per pair of agents
-  dataset/, dataset.csv   the recorded run and its summary
-  value/, clone/          policy.json, training.jsonl, evaluation-vs-*.json
-  report.json             the summary below
-  report.html             the viewer, carrying this run: open it and it starts on the report
+  baselines/*.json          the agent-vs-agent baselines, once for the turn
+  seeds/<seed>/
+    evaluations/*.json      one evaluation per pair of agents, baselines copied in
+    dataset/, dataset.csv   the recorded run and its summary
+    value/, clone/          policy.json, training.jsonl, evaluation-vs-*.json
+    report.json             the summary below, for this seed alone
+    report.html             the viewer, carrying this seed: open it and it starts on the report
+  spread.json               every win rate ranged across the seeds -- the result of the turn
 ```
 
 The script takes every tuning knob as a flag (`--matches`, `--value-alpha`, `--value-min-samples`,

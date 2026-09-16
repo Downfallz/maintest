@@ -15,8 +15,8 @@ on:
       explore:
         description: "Share of decisions taken at random in the value dataset, or 'off' (ADR 0014) (empty: what learning/experiments/next.json says)"
         default: ""
-      seed:
-        description: "Base seed of the recorded dataset (empty: what learning/experiments/next.json says)"
+      seeds:
+        description: "Dataset seeds to run the turn on, space or comma separated, e.g. '1 2 3'. One seed is a sample, not a measurement (ADR 0049) (empty: what learning/experiments/next.json says)"
         default: ""
       traces:
         description: "Match traces kept per dataset, 0 for none; they are the viewer's, not a learner's (empty: what learning/experiments/next.json says)"
@@ -134,7 +134,7 @@ jobs:
         env:
           MATCHES: ${{ inputs.matches }}
           EXPLORE: ${{ inputs.explore }}
-          SEED: ${{ inputs.seed }}
+          SEEDS: ${{ inputs.seeds }}
           TRACES: ${{ inputs.traces }}
           TEACHER: ${{ inputs.teacher }}
           VALUE_SHARE: ${{ inputs.value_share }}
@@ -155,9 +155,22 @@ jobs:
               printf '%s' "$2"
             fi
           }
+          seeds_from_plan() {
+            # `seeds` as a list is what an experiment writes since ADR 0049; a scalar `seed` is what the
+            # files before it carry, and it still reads as a one-entry list so an old experiment reproduces
+            # rather than failing. Either key may be a list or a scalar, because a hand-edited file will be
+            # both at some point.
+            [[ -f "$plan" ]] || return 0
+            jq -r '
+              def flatten_seeds: if type == "array" then (map(tostring) | join(" ")) else tostring end;
+              if (has("seeds") and .seeds != null) then (.seeds | flatten_seeds)
+              elif (has("seed") and .seed != null) then (.seed | flatten_seeds)
+              else "" end' "$plan"
+          }
           matches="${MATCHES:-$(knob matches 200)}"
           explore="${EXPLORE:-$(knob explore 0.2)}"
-          seed="${SEED:-$(knob seed 1)}"
+          seeds="${SEEDS:-$(seeds_from_plan)}"
+          seeds="${seeds:-1 2 3}"
           traces="${TRACES:-$(knob traces 4)}"
           teacher="${TEACHER:-$(knob teacher greedy)}"
           value_share="${VALUE_SHARE:-$(knob value_share action)}"
@@ -168,9 +181,9 @@ jobs:
           value_discount="${VALUE_DISCOUNT:-$(knob value_discount 1.0)}"
           baseline="${BASELINE:-$(knob baseline '')}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seed $seed, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}"
+          echo "Knobs: matches $matches, seeds $seeds, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
-          arguments=(--run "$RUN_ID" --matches "$matches" --seed "$seed" --traces "$traces"
+          arguments=(--run "$RUN_ID" --matches "$matches" --seeds "$seeds" --traces "$traces"
             --teacher "$teacher" --value-share "$value_share"
             --value-alpha "$value_alpha" --value-min-samples "$value_min_samples"
             --value-lambda "$value_lambda" --value-discount "$value_discount")
@@ -192,7 +205,9 @@ jobs:
         run: |
           mkdir -p "runs/$RUN_ID"
           cp "$RUNNER_TEMP/iterate.log" "runs/$RUN_ID/iterate.log" 2>/dev/null || true
-          excerpt="$(sed -n '/^== 6\./,$p' "$RUNNER_TEMP/iterate.log" 2>/dev/null || true)"
+          # The spread is what the turn measured, so the summary opens on it rather than on the first seed's
+          # own evaluations, which are one sample each (ADR 0049).
+          excerpt="$(sed -n '/^== 9\./,$p' "$RUNNER_TEMP/iterate.log" 2>/dev/null || true)"
           if [[ -z "$excerpt" ]]; then
             excerpt="$(tail -n 60 "$RUNNER_TEMP/iterate.log" 2>/dev/null || echo 'The loop wrote nothing.')"
           fi
@@ -239,72 +254,84 @@ jobs:
         run: |
           above="${ABOVE:-0.5}"
           above_baseline="${ABOVE_BASELINE:-0.5}"
+          spread="runs/$RUN_ID/spread.json"
+          if [[ ! -f "$spread" ]]; then
+            echo "::error::'$spread' is missing, so no bar can be applied. The turn did not finish."
+            printf 'models=\ncommitting=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mapfile -t seed_list < <(jq -r '.seeds[]' "$spread")
+          # Chosen by position, never by score. Picking the best-scoring seed against fixed benchmark seeds
+          # is selection on the test set, and it would manufacture a champion out of the very spread this
+          # gate exists to read (ADR 0049).
+          first_seed="${seed_list[0]}"
+          echo "Seeds: ${seed_list[*]}. A bar is cleared when every seed clears it; the committed policy is the first seed's."
           kept=()
           for model in value clone; do
-            greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
-            random="runs/$RUN_ID/evaluations/$model-vs-random.json"
-            baseline="runs/$RUN_ID/evaluations/$model-vs-baseline.json"
-            champion="$(find "models/$model" -mindepth 2 -maxdepth 2 -name policy.json 2>/dev/null | sort -V | tail -1)"
-            [[ -f "$greedy" && -f "$random" ]] || continue
-            score="$(jq -r '.agentA.score.mean // empty' "$greedy")"
-            over_random="$(jq -r '.agentA.score.mean // empty' "$random")"
+            # The minimum across the seeds, which is the same thing as "every seed cleared it".
+            score="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-greedy"].scoreA.min // empty' "$spread")"
+            over_random="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-random"].scoreA.min // empty' "$spread")"
             [[ -n "$score" && -n "$over_random" ]] || continue
-            size="$(du -h "runs/$RUN_ID/$model/policy.json" 2>/dev/null | cut -f1)"
+            worst="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-greedy"].scoreA | "\(.min) to \(.max)"' "$spread")"
+            size="$(du -h "runs/$RUN_ID/seeds/$first_seed/$model/policy.json" 2>/dev/null | cut -f1)"
             # No baseline evaluation means the turn named none, so that bar does not apply and reads as met.
-            over_baseline="$(jq -r '.agentA.score.mean // empty' "$baseline" 2>/dev/null || true)"
+            over_baseline="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-baseline"].scoreA.min // empty' "$spread")"
             against_baseline="not played"
             clears_baseline=true
             if [[ -n "$over_baseline" ]]; then
-              against_baseline="$over_baseline against the baseline"
+              against_baseline="$over_baseline against the baseline at worst"
               jq -e -n --argjson b "$over_baseline" --argjson a "$above_baseline" '$b >= $a' > /dev/null ||
                 clears_baseline=false
             fi
             # No committed policy of this kind yet, so there is nothing to be better than and the bar does
             # not apply. A champion trained under another feature schema cannot play here either; the engine
             # refuses it by design, and that reads as "cannot be compared" rather than as a pass or a fail.
+            champion="$(find "models/$model" -mindepth 2 -maxdepth 2 -name policy.json 2>/dev/null | sort -V | tail -1)"
             against_champion="no committed champion"
             clears_champion=true
-            versus=""
             if [[ -n "$champion" ]]; then
-              versus="$RUNNER_TEMP/$model-vs-champion.json"
-              failure="$RUNNER_TEMP/$model-vs-champion.log"
-              if dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
-                   evaluate --p1 "policy:runs/$RUN_ID/$model/policy.json" --p2 "policy:$champion" \
-                   --seeds benchmarks/benchmark-seeds.json --out "$versus" > "$failure" 2>&1; then
-                read -r champion_mean champion_low <<< "$(jq -r '[.agentA.score.mean, .agentA.score.low] | @tsv' "$versus")"
-                against_champion="$champion_mean against $champion (interval from $champion_low)"
-                jq -e -n --argjson l "$champion_low" '$l > 0.5' > /dev/null || clears_champion=false
-              elif grep -q "feature schema" "$failure"; then
-                # The one waiver, and the only one. AgentFactory refuses a policy whose schema is not the
-                # one this content and rule set give, so a champion from before a content change cannot be
-                # played at all and there is no comparison to make.
-                against_champion="$champion was trained under another feature schema, so it cannot be compared"
-              else
-                # A gate that fails open is not a gate. Every other non-zero exit -- a crash, a full disk, a
-                # killed run -- leaves the comparison unmade, and waiving it there would let a policy be
-                # pushed without ever having been shown to beat the one it replaces.
-                clears_champion=false
-                against_champion="the comparison against $champion failed, so the bar could not be applied"
-                echo "::error::Evaluating $model against the champion $champion failed; it is refused rather than waived."
-                tail -n 20 "$failure"
-              fi
+              # Every seed plays the champion, and every seed has to beat it. ci-90 and ci-91 are why: two
+              # neighbouring draws of one configuration scored +0.53625 and -0.42375 against the same
+              # champion, so one seed's head-to-head decides nothing.
+              margins=()
+              for seed in "${seed_list[@]}"; do
+                versus="$RUNNER_TEMP/$model-$seed-vs-champion.json"
+                failure="$RUNNER_TEMP/$model-$seed-vs-champion.log"
+                if dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
+                     evaluate --p1 "policy:runs/$RUN_ID/seeds/$seed/$model/policy.json" --p2 "policy:$champion" \
+                     --seeds benchmarks/benchmark-seeds.json --out "$versus" > "$failure" 2>&1; then
+                  read -r champion_mean champion_low <<< "$(jq -r '[.agentA.score.mean, .agentA.score.low] | @tsv' "$versus")"
+                  margins+=("seed $seed: $champion_mean from $champion_low")
+                  jq -e -n --argjson l "$champion_low" '$l > 0.5' > /dev/null || clears_champion=false
+                  cp "$versus" "runs/$RUN_ID/seeds/$seed/evaluations/$model-vs-champion.json"
+                elif grep -q "feature schema" "$failure"; then
+                  # The one waiver, and the only one. AgentFactory refuses a policy whose schema is not the
+                  # one this content and rule set give, so a champion from before a content change cannot be
+                  # played at all and there is no comparison to make.
+                  margins+=("seed $seed: another feature schema, cannot be compared")
+                else
+                  # A gate that fails open is not a gate. Every other non-zero exit -- a crash, a full disk,
+                  # a killed run -- leaves the comparison unmade, and waiving it there would let a policy be
+                  # pushed without ever having been shown to beat the one it replaces.
+                  clears_champion=false
+                  margins+=("seed $seed: the comparison failed")
+                  echo "::error::Evaluating $model seed $seed against the champion $champion failed; it is refused rather than waived."
+                  tail -n 20 "$failure"
+                fi
+              done
+              against_champion="against $champion -- ${margins[*]}"
             fi
             if [[ "$clears_champion" == true && "$clears_baseline" == true ]] &&
                jq -e -n --argjson s "$score" --argjson a "$above" '$s >= $a' > /dev/null &&
                jq -e -n --argjson r "$over_random" '$r > 0.5' > /dev/null; then
               kept+=("$model")
-              # An `if`, not a `&&`: under `bash -e` a false `[[ ]]` at the end of an `&&` chain is a
-              # non-zero statement and ends the step, which is what would happen on the first policy of a
-              # kind, the one case with no champion to copy.
-              if [[ -f "$versus" ]]; then
-                cp "$versus" "runs/$RUN_ID/evaluations/$model-vs-champion.json"
-              fi
-              echo "$model: $score against greedy, $over_random against random, $against_baseline, $against_champion, $size -- clears $above."
+              echo "$model: $worst against greedy over ${#seed_list[@]} seeds, $over_random against random at worst, $against_baseline, $against_champion, $size -- every seed clears $above."
             else
-              echo "$model: $score against greedy, $over_random against random, $against_baseline, $against_champion, $size -- does not clear $above / $above_baseline, or does not measurably beat the champion."
+              echo "$model: $worst against greedy over ${#seed_list[@]} seeds, $over_random against random at worst, $against_baseline, $against_champion, $size -- some seed does not clear $above / $above_baseline, or does not measurably beat the champion on every seed."
             fi
           done
           printf 'models=%s\n' "${kept[*]-}" >> "$GITHUB_OUTPUT"
+          printf 'first_seed=%s\n' "$first_seed" >> "$GITHUB_OUTPUT"
           if [[ ${#kept[@]} -eq 0 ]]; then
             echo "Nothing to commit; the policies are in the artifact either way."
           elif [[ "$COMMIT" != "true" ]]; then
@@ -323,23 +350,28 @@ jobs:
         if: steps.cleared.outputs.committing == 'true'
         env:
           MODELS: ${{ steps.cleared.outputs.models }}
+          FIRST_SEED: ${{ steps.cleared.outputs.first_seed }}
         run: |
+          # The committed policy is the first seed's, picked by position. Its own evaluations travel with it,
+          # and so does spread.json: the policy cleared the bar because *every* seed did, and the file that
+          # says so is the evidence. The run artifact expires in thirty days and a committed model must not
+          # outlive the numbers that earned it a place (ADR 0049).
+          source="runs/$RUN_ID/seeds/$FIRST_SEED"
           for model in $MODELS; do
             destination="models/$model/$RUN_ID"
             mkdir -p "$destination"
-            cp "runs/$RUN_ID/$model/policy.json" "$destination/policy.json"
-            cp "runs/$RUN_ID/$model/training.jsonl" "$destination/training.jsonl"
-            cp "runs/$RUN_ID/evaluations/$model-vs-greedy.json" "$destination/evaluation.json"
-            cp "runs/$RUN_ID/evaluations/$model-vs-random.json" "$destination/evaluation-vs-random.json"
-            # The third bar of the gate, when the turn named a baseline. A policy is committed partly because
-            # of that number, so the file carrying its interval, stamp and seeds belongs beside the policy:
-            # the run artifact expires in thirty days and the committed model must not outlive its evidence.
-            if [[ -f "runs/$RUN_ID/evaluations/$model-vs-baseline.json" ]]; then
-              cp "runs/$RUN_ID/evaluations/$model-vs-baseline.json" "$destination/evaluation-vs-baseline.json"
+            cp "$source/$model/policy.json" "$destination/policy.json"
+            cp "$source/$model/training.jsonl" "$destination/training.jsonl"
+            cp "$source/evaluations/$model-vs-greedy.json" "$destination/evaluation.json"
+            cp "$source/evaluations/$model-vs-random.json" "$destination/evaluation-vs-random.json"
+            cp "runs/$RUN_ID/spread.json" "$destination/spread.json"
+            # The third bar of the gate, when the turn named a baseline.
+            if [[ -f "$source/evaluations/$model-vs-baseline.json" ]]; then
+              cp "$source/evaluations/$model-vs-baseline.json" "$destination/evaluation-vs-baseline.json"
             fi
             # The fourth bar, for the same reason: what this policy beat to take the champion's place.
-            if [[ -f "runs/$RUN_ID/evaluations/$model-vs-champion.json" ]]; then
-              cp "runs/$RUN_ID/evaluations/$model-vs-champion.json" "$destination/evaluation-vs-champion.json"
+            if [[ -f "$source/evaluations/$model-vs-champion.json" ]]; then
+              cp "$source/evaluations/$model-vs-champion.json" "$destination/evaluation-vs-champion.json"
             fi
           done
           dotnet build --no-restore --configuration Release
@@ -380,17 +412,25 @@ jobs:
             echo "Add the policies of learning loop $RUN_ID"
             echo
             echo "One turn of scripts/iterate.sh on the CI runners (learning phase L7), content $hash."
-            echo "Committed because they score at least ${ABOVE:-0.5} against greedy, beat random, and"
-            echo "measurably beat the committed policy of their kind where there was one:"
+            echo "Committed because on EVERY dataset seed of the turn they score at least ${ABOVE:-0.5}"
+            echo "against greedy, beat random, and measurably beat the committed policy of their kind"
+            echo "where there was one (ADR 0049). The range below is over those seeds; the committed file"
+            echo "is the first seed's, chosen by position and never by score:"
             echo
+            spread="runs/$RUN_ID/spread.json"
+            echo "  seeds: $(jq -r '.seeds | join(", ")' "$spread")"
+            # `empty` rather than a null run through the interpolation: a turn that named no baseline has no
+            # such evaluation, and "null to null" is not a range.
+            span() {
+              jq -r --arg m "$2" --arg o "$1" \
+                '.evaluations[$m + "-vs-" + $o].scoreA
+                 | if . == null then empty else "\(.min) to \(.max)" end' "$spread"
+            }
             for model in $MODELS; do
-              greedy="runs/$RUN_ID/evaluations/$model-vs-greedy.json"
-              random="runs/$RUN_ID/evaluations/$model-vs-random.json"
-              baseline="runs/$RUN_ID/evaluations/$model-vs-baseline.json"
-              against_baseline="$(jq -r '"\(.agentA.score.mean) against \(.agentB.agent)"' "$baseline" 2>/dev/null || true)"
+              against_baseline="$(span baseline "$model")"
               printf '  %-6s %s against greedy, %s against random%s\n' \
-                "$model" "$(jq -r '.agentA.score.mean' "$greedy")" "$(jq -r '.agentA.score.mean' "$random")" \
-                "${against_baseline:+, $against_baseline}"
+                "$model" "$(span greedy "$model")" "$(span random "$model")" \
+                "${against_baseline:+, $against_baseline against the baseline}"
             done
             echo
             echo "The evaluations that earned them a place are beside each policy. A journal entry is still"
@@ -419,12 +459,16 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: run-${{ github.run_number }}
+          # The datasets are left out on purpose, as they always were: they are the large part and the run
+          # reproduces them anyway. Everything else of every seed travels, plus the spread over them.
           path: |
             runs/ci-${{ github.run_number }}/iterate.log
-            runs/ci-${{ github.run_number }}/report.html
-            runs/ci-${{ github.run_number }}/report.json
-            runs/ci-${{ github.run_number }}/evaluations
-            runs/ci-${{ github.run_number }}/value
-            runs/ci-${{ github.run_number }}/clone
+            runs/ci-${{ github.run_number }}/spread.json
+            runs/ci-${{ github.run_number }}/baselines
+            runs/ci-${{ github.run_number }}/seeds/*/report.html
+            runs/ci-${{ github.run_number }}/seeds/*/report.json
+            runs/ci-${{ github.run_number }}/seeds/*/evaluations
+            runs/ci-${{ github.run_number }}/seeds/*/value
+            runs/ci-${{ github.run_number }}/seeds/*/clone
           if-no-files-found: warn
           retention-days: 30
