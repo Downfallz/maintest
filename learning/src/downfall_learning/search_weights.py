@@ -161,14 +161,27 @@ class Evaluator(Protocol):
     def evaluate(self, weights: Mapping[str, float]) -> Score: ...
 
 
+WEIGHT_KINDS = ("heuristic", "lookahead", "minimax")
+"""The agent kinds that play a weights file, so a search can tune the weights for any of their readings."""
+
+
 @dataclass(frozen=True)
 class EngineCommand:
-    """How to reach the engine: the command prefix, the opponent, the seed file, and the working directory."""
+    """How to reach the engine: the command prefix, the opponent, the seed file, the working directory, and
+    the agent kind a weights file is played by (``heuristic`` reads it one step, ``lookahead`` and
+    ``minimax`` play the round out; docs/learning/agents.md)."""
 
     root: Path = field(default_factory=Path.cwd)
     command: Sequence[str] = ENGINE_COMMAND
     opponent: str = "greedy"
     seeds: str = "benchmarks/benchmark-seeds.json"
+    kind: str = "heuristic"
+
+    def __post_init__(self) -> None:
+        if self.kind not in WEIGHT_KINDS:
+            raise ValueError(
+                f"No agent kind '{self.kind}' plays a weights file; one of {', '.join(WEIGHT_KINDS)}."
+            )
 
 
 class CliEvaluator:
@@ -195,9 +208,16 @@ class CliEvaluator:
     def opponent(self) -> str:
         return self._engine.opponent
 
+    @property
+    def kind(self) -> str:
+        """The agent kind every candidate weights file is played by."""
+        return self._engine.kind
+
     def evaluate(self, weights: Mapping[str, float]) -> Score:
         weights_path = write_weights(self._workdir / "candidate-weights.json", weights)
-        return self.evaluate_spec(f"heuristic:{weights_path}", self._workdir / "candidate-evaluation.json")
+        return self.evaluate_spec(
+            f"{self._engine.kind}:{weights_path}", self._workdir / "candidate-evaluation.json"
+        )
 
     def evaluate_spec(self, spec: str, output: Path) -> Score:
         """Runs one evaluation of ``spec`` as agent A and reads the evaluation it wrote to ``output``."""
@@ -260,12 +280,15 @@ class SearchResult:
     candidates: tuple[Candidate, ...]
     initial: Candidate
 
-    def write(self, directory: Path) -> Path:
-        """Writes ``weights.json`` (the best), ``search.json`` (every candidate), the best evaluation."""
+    def write(self, directory: Path, kind: str = "heuristic") -> Path:
+        """Writes ``weights.json`` (the best), ``search.json`` (every candidate, and the agent kind that
+        played them: weights searched for one reading are only meaningful played by it), the best
+        evaluation."""
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         write_weights(directory / "weights.json", self.best.weights)
         summary = {
+            "kind": kind,
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "candidates": [candidate.to_json() for candidate in self.candidates],
@@ -277,7 +300,9 @@ class SearchResult:
         return directory
 
 
-def format_search(result: SearchResult, opponent: str, evaluations: int, output: Path) -> str:
+def format_search(
+    result: SearchResult, opponent: str, evaluations: int, output: Path, kind: str = "heuristic"
+) -> str:
     """What a weight search found, and — plainly — what it did not establish.
 
     The line this replaced printed the best score, the initial score and a win rate, which reads as a verdict
@@ -291,7 +316,11 @@ def format_search(result: SearchResult, opponent: str, evaluations: int, output:
         before = result.initial.weights.get(name)
         (moved if before is None or abs(after - before) > 5e-4 else still).append((name, before, after))
 
-    lines = [f"The search played {evaluations} evaluation(s) and kept the best weights it found.", ""]
+    lines = [
+        f"The search played {evaluations} evaluation(s) as `{kind}:<weights>` and kept the best weights"
+        " it found.",
+        "",
+    ]
     lines.append("What it changed")
     if moved:
         width = max(len(name) for name, _, _ in moved)

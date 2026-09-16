@@ -36,6 +36,7 @@ from downfall_learning.report import TRAINING_FILE, TrainingLog
 from downfall_learning.search_weights import (
     BUILDER_SOURCES,
     ENGINE_SOURCES,
+    WEIGHT_KINDS,
     CliEvaluator,
     EngineCommand,
     SearchOptions,
@@ -91,6 +92,13 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
         "--initial", type=Path, help="a weights file to start from (default: the built-in weights)"
     )
     search.add_argument("--opponent", default="greedy", help="agent B of every evaluation (default greedy)")
+    search.add_argument(
+        "--kind",
+        default="heuristic",
+        choices=WEIGHT_KINDS,
+        help="the agent kind that plays each candidate: heuristic reads the weights one step, lookahead"
+        " and minimax play the round out (default heuristic)",
+    )
     search.add_argument(
         "--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file of every evaluation"
     )
@@ -347,13 +355,22 @@ def _search_weights(arguments: argparse.Namespace) -> int:
     evaluator = CliEvaluator(_engine(arguments), arguments.output / "work")
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
     result = search_weights(evaluator, options, initial, log, _progress(arguments, "search-weights"))
-    result.write(arguments.output)
-    print(format_search(result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json"))
+    result.write(arguments.output, evaluator.kind)
+    print(
+        format_search(
+            result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json", evaluator.kind
+        )
+    )
     return 0
 
 
 def _engine(arguments: argparse.Namespace) -> EngineCommand:
-    engine = EngineCommand(root=arguments.repo, opponent=arguments.opponent, seeds=arguments.seeds)
+    engine = EngineCommand(
+        root=arguments.repo,
+        opponent=arguments.opponent,
+        seeds=arguments.seeds,
+        kind=getattr(arguments, "kind", "heuristic"),
+    )
     return replace(engine, command=tuple(arguments.engine)) if arguments.engine else engine
 
 

@@ -111,6 +111,25 @@ def test_the_cli_evaluator_runs_the_engine_and_reads_its_evaluation(
     assert json.loads((tmp_path / "work" / "candidate-weights.json").read_text())["kill"] == 8.0
 
 
+def test_the_cli_evaluator_plays_each_candidate_as_the_kind_it_was_given(
+    tmp_path: Path, fake_engine: list[str]
+) -> None:
+    engine = EngineCommand(root=tmp_path, command=tuple(fake_engine), kind="lookahead")
+    evaluator = CliEvaluator(engine, tmp_path / "work")
+
+    score = evaluator.evaluate(TARGET)
+
+    assert evaluator.kind == "lookahead"
+    assert score.evaluation is not None
+    assert score.evaluation.stamp.player1_agent.startswith("lookahead:")
+    assert score.evaluation.stamp.player1_agent.endswith("candidate-weights.json")
+
+
+def test_only_a_kind_that_plays_a_weights_file_is_accepted() -> None:
+    with pytest.raises(ValueError, match="policy"):
+        EngineCommand(kind="policy")
+
+
 def test_the_cli_evaluator_reports_an_engine_failure(tmp_path: Path, fake_engine: list[str]) -> None:
     evaluator = CliEvaluator(EngineCommand(root=tmp_path, command=tuple(fake_engine)), tmp_path / "work")
 

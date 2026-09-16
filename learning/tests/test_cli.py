@@ -69,6 +69,36 @@ def test_search_weights_drives_the_engine_command(
     assert "this run cannot say" in printed
 
 
+def test_search_weights_can_play_every_candidate_as_the_lookahead(
+    tmp_path: Path, fake_engine: list[str], capsys: pytest.CaptureFixture
+) -> None:
+    code = cli.main(
+        [
+            "search-weights",
+            "-o",
+            str(tmp_path / "search"),
+            "--kind",
+            "lookahead",
+            "--iterations",
+            "1",
+            "--population",
+            "2",
+            "--repo",
+            str(tmp_path),
+            "--engine",
+            *fake_engine,
+        ]
+    )
+
+    assert code == 0
+    assert json.loads((tmp_path / "search" / "search.json").read_text())["kind"] == "lookahead"
+    stamp = json.loads((tmp_path / "search" / "evaluation.json").read_text())["stamp"]
+    assert stamp["player1Agent"].startswith("lookahead:")
+    assert "as `lookahead:<weights>`" in capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        cli.main(["search-weights", "-o", str(tmp_path / "x"), "--kind", "policy"])
+
+
 def test_export_csv_writes_the_projection(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
     run = write_run(tmp_path / "run", matches=3)
 
