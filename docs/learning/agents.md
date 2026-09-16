@@ -8,6 +8,7 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
 | Lookahead | `lookahead[:<weights file>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. Deterministic. Evolution and speed are Greedy's. See [the round played out](#the-round-played-out). |
+| Minimax | `minimax[:<weights file>]` | The lookahead with every enemy slot still ahead played as the reply that costs the actor most, rather than as the guessed one: the floor of a move's worth. Deterministic. See [the worst reply](#the-worst-reply). |
 | Policy | `policy:<policy.json>` | A trained policy (`docs/learning/training.md`): scores the candidate actions with one weight row per action key and takes the best. Refused when its feature schema is not the current one. |
 | Exploring | `explore:<rate>[:<agent>]` | Another agent, except that the given share of decisions is taken uniformly at random (ADR 0014). Bare, it wraps Greedy; a second colon names the agent it deviates from instead — `explore:0.2:heuristic:<weights>`, `explore:0.2:policy:<file>`, or a bare path as the shorthand for a weights file. For recording datasets a value regression can learn from, never for a baseline: it draws from a random source, so it is deterministic for a seed but not for the digest. |
 
@@ -92,8 +93,8 @@ the match's own rules on them, so the agent can put a move on the board and keep
   aggressive move, which measured as the lookahead losing three matches in four. A dead or stunned creature
   plays nothing, as in the match. The round's worth is the **sum of what the scorer says of every action it
   holds**, the actor's team's for and the other's against, each scored on the board it lands on; a round
-  that ends the match adds or takes away the whole board at full health. The spell whose round is worth most
-  wins.
+  that ends the match outranks any round that does not, won above every score and lost below every score,
+  whatever the weights say, because the two are never added. The spell whose round is worth most wins.
 - **Targets**: the same, from the actor's slot on, starting from the board the **revealed actions** leave.
   They are public and bound in timeline order, so `Advance` replays them exactly where the one-step agent
   could only carry health forward and stop at the first stun, heal or buff (ADR 0039). No target when the
@@ -125,6 +126,20 @@ The cost is the branching: one decision plays the rest of the round twice per ca
 plays asks the scorer for a best target set, so a decision costs on the order of the timeline length times
 what a one-step decision costs. The journal entry that introduced it carries the measurement, and the
 measurement is the thing to read before playing it: on the catalogue of that day it does **not** beat Greedy.
+
+## The worst reply
+
+The minimax agent is the lookahead agent with one change: an enemy slot still ahead is not played as the
+guessed spell but as the **reply that costs the actor most** among the spells that enemy can cast. One enemy
+at a time in timeline order, each over its castable spells with the earlier enemies already settled and the
+later ones still at their guess: a joint worst case over every enemy would cost the product of their spell
+counts where this costs the sum, and the round is short enough that the two rarely disagree on a reply. The
+value of a candidate is therefore a **floor**: what the round is worth against an opponent who sees the
+actor's move and answers it. No opponent in this game sees it, since intents are simultaneous, so the floor
+is not the expectation, and the question the journal answers is whether a floor plays better than a guess.
+Allies and the actor's own targets are read exactly as the lookahead reads them. `Replies` on the agent hands
+out, for a board, an actor and a candidate, the spell each other creature was taken to play, which is how a
+test or a viewer sees the difference between the two.
 
 ## Built-in weights
 

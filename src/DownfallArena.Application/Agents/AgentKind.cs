@@ -22,4 +22,7 @@ public enum AgentKind
 
     /// <summary>Plays the round out on a hypothetical board before choosing a combat move (ADR 0047); the built-in weights, or the file the spec names.</summary>
     Lookahead,
+
+    /// <summary>The lookahead agent with every enemy slot played as the reply that costs the actor most; the built-in weights, or the file the spec names.</summary>
+    Minimax,
 }
