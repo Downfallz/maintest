@@ -130,28 +130,28 @@ class Score:
 
     @classmethod
     def mixture(cls, parts: Sequence[tuple[str, Score]]) -> Score:
-        """One score over several opponents: the mean of the scores against each, every opponent weighing
-        the same.
+        """One score over several opponents: the candidate's worst matchup among them, with its interval.
 
         A search against one opponent finds the key to that lock: the lookahead weights of search run 5
         scored 0.84 against Greedy and 0.70 against Random where Greedy itself scores 0.99 (journal,
-        2026-09-16). A candidate scored on the mean over Greedy, a searched set and Random cannot win by
-        learning one of them. The interval is the mean of the intervals, which is wider than the mean's own
-        and so reads conservatively; the evaluation kept is the first opponent's, which is what stamps the
-        training log. The matches are the total played.
+        2026-09-16). The worst matchup rather than the mean, because a mean can still be won by learning one
+        opponent: 1.0, 0.5 and 0.5 average above 0.6, 0.6 and 0.6, and the first set has learned one lock and
+        lost two. Scored as its worst matchup, a candidate rises only by raising the opponent it is weakest
+        against, which is what "holds against all of them" means. The evaluation kept is the first
+        opponent's, which is what stamps the training log; the matches are the total played.
         """
         if not parts:
             raise ValueError("A mixture needs at least one opponent.")
-        scores = [score for _, score in parts]
+        worst = min((score for _, score in parts), key=lambda score: score.mean)
         return cls(
-            mean=float(np.mean([score.mean for score in scores])),
-            low=float(np.mean([score.low for score in scores])),
-            high=float(np.mean([score.high for score in scores])),
-            win_rate=float(np.mean([score.win_rate for score in scores])),
-            win_rate_low=float(np.mean([score.win_rate_low for score in scores])),
-            win_rate_high=float(np.mean([score.win_rate_high for score in scores])),
-            matches=sum(score.matches for score in scores),
-            evaluation=scores[0].evaluation,
+            mean=worst.mean,
+            low=worst.low,
+            high=worst.high,
+            win_rate=worst.win_rate,
+            win_rate_low=worst.win_rate_low,
+            win_rate_high=worst.win_rate_high,
+            matches=sum(score.matches for _, score in parts),
+            evaluation=parts[0][1].evaluation,
             parts=tuple(parts),
         )
 
@@ -204,8 +204,8 @@ class EngineCommand:
 
     root: Path = field(default_factory=Path.cwd)
     command: Sequence[str] = ENGINE_COMMAND
-    #: Agent B of every evaluation, or several separated by commas: the score is then the mean over them
-    #: (``Score.mixture``), so a candidate cannot win by learning one opponent.
+    #: Agent B of every evaluation, or several separated by commas: the score is then the candidate's worst
+    #: matchup among them (``Score.mixture``), so it cannot win by learning one opponent.
     opponent: str = "greedy"
     seeds: str = "benchmarks/benchmark-seeds.json"
     kind: str = "heuristic"
@@ -263,7 +263,7 @@ class CliEvaluator:
         """Runs ``spec`` as agent A against every opponent and reads what the engine wrote.
 
         One opponent writes ``output``. Several write ``<output stem>-vs-<opponent>.json`` each and score as
-        their mixture, the first opponent's evaluation standing for the whole where one is needed.
+        the worst of them, the first opponent's evaluation standing for the whole where one is needed.
         """
         output = Path(output).resolve()
         opponents = self._engine.opponents

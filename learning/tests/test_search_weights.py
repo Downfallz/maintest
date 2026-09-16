@@ -131,17 +131,17 @@ def test_only_a_kind_that_plays_a_weights_file_is_accepted() -> None:
         EngineCommand(kind="policy")
 
 
-def test_the_cli_evaluator_scores_a_candidate_as_the_mean_over_several_opponents(
+def test_the_cli_evaluator_scores_a_candidate_as_its_worst_matchup_among_several_opponents(
     tmp_path: Path, fake_engine: list[str]
 ) -> None:
-    """The fake scores kill=3 at 0.5 against greedy and 0.7 against random; the mixture is their mean."""
+    """The fake scores kill=3 at 0.5 against greedy and 0.7 against random; the mixture is the worse one."""
     engine = EngineCommand(root=tmp_path, command=tuple(fake_engine), opponent="greedy, random")
     evaluator = CliEvaluator(engine, tmp_path / "work")
 
     score = evaluator.evaluate({**TARGET, "kill": 3.0})
 
     assert engine.opponents == ("greedy", "random")
-    assert score.mean == pytest.approx(0.6)
+    assert score.mean == pytest.approx(0.5)
     assert score.matches == 800
     assert [opponent for opponent, _ in score.parts] == ["greedy", "random"]
     assert [part.mean for _, part in score.parts] == pytest.approx([0.5, 0.7])
@@ -151,17 +151,29 @@ def test_the_cli_evaluator_scores_a_candidate_as_the_mean_over_several_opponents
     assert (tmp_path / "work" / "candidate-evaluation-vs-random.json").is_file()
 
 
-def test_a_mixture_score_averages_every_number_and_keeps_the_first_evaluation() -> None:
-    against_greedy = Score.of(Evaluation.from_json(evaluation_json(0.4, 0.3)))
-    against_random = Score.of(Evaluation.from_json(evaluation_json(0.8, 0.9)))
+def test_a_mixture_score_is_the_worst_matchup_with_its_interval_and_keeps_the_first_evaluation() -> None:
+    against_greedy = Score.of(Evaluation.from_json(evaluation_json(0.8, 0.9)))
+    against_random = Score.of(Evaluation.from_json(evaluation_json(0.4, 0.3)))
 
     mixture = Score.mixture([("greedy", against_greedy), ("random", against_random)])
 
-    assert mixture.mean == pytest.approx(0.6)
-    assert mixture.low == pytest.approx((against_greedy.low + against_random.low) / 2)
-    assert mixture.win_rate == pytest.approx(0.6)
+    assert mixture.mean == pytest.approx(0.4)
+    assert mixture.low == against_random.low
+    assert mixture.win_rate == pytest.approx(0.3)
     assert mixture.matches == 800
     assert mixture.evaluation is against_greedy.evaluation
+
+
+def test_learning_one_opponent_cannot_outscore_holding_against_all_of_them() -> None:
+    """The mean would rank 1.0, 0.5, 0.5 above 0.6, 0.6, 0.6, which is the failure the mixture is for."""
+    one_lock = [(name, _even(score)) for name, score in (("a", 1.0), ("b", 0.5), ("c", 0.5))]
+    holds = [(name, _even(0.6)) for name in ("a", "b", "c")]
+
+    assert Score.mixture(holds).mean > Score.mixture(one_lock).mean
+
+
+def _even(score: float) -> Score:
+    return Score.of(Evaluation.from_json(evaluation_json(score, score)))
 
 
 def test_an_empty_opponent_list_is_refused() -> None:

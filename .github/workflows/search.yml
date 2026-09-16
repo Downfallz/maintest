@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       opponent:
-        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores the mean over them, so it cannot win by learning one of them (journal, 2026-09-16)"
+        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores as its worst matchup among them, so it cannot win by learning one of them (journal, 2026-09-16)"
         default: greedy
       check_opponent:
         description: "A second opponent the hold-out also replays both agents against, or empty for none. A set that beats the opponent it was searched against and falls against this one learned that opponent, not the game (journal, 2026-09-16)"
@@ -271,22 +271,21 @@ jobs:
             found_row="$found_row $column_found |"
             baseline_row="$baseline_row $column_baseline |"
           }
-          # One column per opponent the search played, and the outputs are the mean over them, which is the
-          # number the search optimized. The first opponent keeps the plain file names every run so far wrote.
+          # One column per opponent the search played, and the outputs are each agent's worst matchup among
+          # them, which is the number the search optimized: a mean could be won by learning one opponent. The
+          # first opponent keeps the plain file names every run so far wrote.
           read -r -a opponents <<< "${OPPONENT//,/ }"
-          found_sum=0
-          baseline_sum=0
+          found_score=""
+          baseline_score=""
           for index in "${!opponents[@]}"; do
             suffix=""
             if (( index > 0 )); then
               suffix="-$index"
             fi
             column "${opponents[index]}" "$suffix"
-            found_sum="$(jq -n --argjson a "$found_sum" --argjson b "$column_found" '$a + $b')"
-            baseline_sum="$(jq -n --argjson a "$baseline_sum" --argjson b "$column_baseline" '$a + $b')"
+            found_score="$(jq -n --argjson a "${found_score:-$column_found}" --argjson b "$column_found" '[$a, $b] | min')"
+            baseline_score="$(jq -n --argjson a "${baseline_score:-$column_baseline}" --argjson b "$column_baseline" '[$a, $b] | min')"
           done
-          found_score="$(jq -n --argjson s "$found_sum" --argjson n "${#opponents[@]}" '$s / $n')"
-          baseline_score="$(jq -n --argjson s "$baseline_sum" --argjson n "${#opponents[@]}" '$s / $n')"
           echo "found=$found_score" >> "$GITHUB_OUTPUT"
           echo "baseline=$baseline_score" >> "$GITHUB_OUTPUT"
           check_note=""
@@ -374,7 +373,7 @@ jobs:
             echo
             echo "**On seeds no candidate saw**, which is the one comparison the run above cannot make:"
             echo "these weights score \`$HOLDOUT_FOUND\` against \`$OPPONENT\` where what the search started"
-            echo "from scores \`$HOLDOUT_BASELINE\` (the mean over the opponents when there are several)."
+            echo "from scores \`$HOLDOUT_BASELINE\` (each agent's worst matchup when there are several)."
             if [[ -n "$HOLDOUT_CHECK_FOUND" ]]; then
               echo "**Against \`$CHECK\`**, an opponent the search never played, they score"
               echo "\`$HOLDOUT_CHECK_FOUND\` where what it started from scores \`$HOLDOUT_CHECK_BASELINE\`: a set"
