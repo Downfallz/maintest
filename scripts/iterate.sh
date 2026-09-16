@@ -20,6 +20,8 @@ Where things go
   --against <id>         a previous run to compare with; its value policy is replayed on this content
   --open                 try to open the first seed's runs/<id>/seeds/<seed>/report.html at the end (best
                          effort). The spread, not that page, is the result of the turn.
+  --dry-run              resolve and check the seeds and the match count, print them, and stop before
+                         anything is built or played. What the tests of this script run.
   --baseline <agent>     a third opponent every policy of the turn is also played against, on top of Greedy
                          and Random: the current champion, usually `heuristic:learning/weights/search-4.json`.
                          Greedy is a solved opponent and beating it stopped saying much, but the reason to
@@ -111,6 +113,7 @@ run_id="$(date -u +%Y%m%d-%H%M%S)"
 against=""
 baseline=""
 open_page=false
+dry_run=false
 matches=200
 traces=4
 teacher=greedy
@@ -131,6 +134,7 @@ while [[ $# -gt 0 ]]; do
     --against) against="$2"; shift 2 ;;
     --baseline) baseline="$2"; shift 2 ;;
     --open) open_page=true; shift ;;
+    --dry-run) dry_run=true; shift ;;
     --matches) matches="$2"; shift 2 ;;
     --traces) traces="$2"; shift 2 ;;
     --explore) explore="$2"; shift 2 ;;
@@ -165,6 +169,14 @@ if [[ -e "$run" ]]; then
   exit 1
 fi
 
+# The match count is arithmetic below (the default seeds, the spacing check) and a number to the engine, so it
+# is read in base ten before either: with a leading zero, "010" would be octal 8 here and decimal 10 there,
+# and the two seeds spaced by 8 would record datasets that overlap by two matches.
+if ! [[ "$matches" =~ ^[0-9]+$ ]] || (( 10#$matches < 1 )); then
+  echo "The match count '$matches' is not a whole number of at least one." >&2
+  exit 2
+fi
+matches=$((10#$matches))
 # The default is spaced by the match count, because the seeds of a list have to be (the check below says why).
 if [[ -z "$seeds_requested" ]]; then
   seeds_requested="1 $((1 + matches)) $((1 + 2 * matches))"
@@ -210,6 +222,11 @@ for ((i = 0; i < ${#seed_list[@]}; i++)); do
     fi
   done
 done
+if [[ "$dry_run" == true ]]; then
+  echo "Seeds: ${seed_list[*]}"
+  echo "Matches: $matches"
+  exit 0
+fi
 # Where a previous run keeps its artifacts depends on when it was produced: before ADR 0049 they sat at the
 # root of runs/<id>/, and since then there is one set per seed. Resolved once, here, rather than inside the
 # loop -- an unresolvable `--against` used to surface as an ArtifactError out of `report`, which under
