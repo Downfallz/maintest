@@ -7,6 +7,7 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Random | `random` | Picks uniformly among the options. The floor every other agent is measured against; deterministic for a seed. |
 | Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
+| Lookahead | `lookahead[:<weights file>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. Deterministic. Evolution and speed are Greedy's. See [the round played out](#the-round-played-out). |
 | Policy | `policy:<policy.json>` | A trained policy (`docs/learning/training.md`): scores the candidate actions with one weight row per action key and takes the best. Refused when its feature schema is not the current one. |
 | Exploring | `explore:<rate>[:<agent>]` | Another agent, except that the given share of decisions is taken uniformly at random (ADR 0014). Bare, it wraps Greedy; a second colon names the agent it deviates from instead — `explore:0.2:heuristic:<weights>`, `explore:0.2:policy:<file>`, or a bare path as the shorthand for a weights file. For recording datasets a value regression can learn from, never for a baseline: it draws from a random source, so it is deterministic for a seed but not for the digest. |
 
@@ -75,6 +76,55 @@ Decisions:
 
 Both agents are deterministic: the same board gives the same decision, so a Greedy versus Greedy evaluation
 on the benchmark seeds replays exactly. That is what makes the benchmark digest an engine-change detector.
+
+## The round played out
+
+The lookahead agent prices a combat move by the board the round leaves rather than by what the move does on
+the board it is cast on. ADR 0047 gave the Domain `Advance`, which restores creatures from snapshots and runs
+the match's own rules on them, so the agent can put a move on the board and keep going:
+
+- **Intent**: for each castable spell, the round is played from its first activation slot. At the actor's
+  slot the candidate spell is cast on the best target set the one-step scorer finds *on the board at that
+  moment*. Every other slot plays a spell and the scorer's best targets for it on the board at its slot. The
+  spell is the declared one for an ally that has declared, and for everyone else the spell the scorer would
+  declare **on the board before combat** — the information the match gives, since every intent is declared
+  before anything resolves. Guessed at the slot instead, the enemy becomes clairvoyant and punishes every
+  aggressive move, which measured as the lookahead losing three matches in four. A dead or stunned creature
+  plays nothing, as in the match. The round's worth is the **sum of what the scorer says of every action it
+  holds**, the actor's team's for and the other's against, each scored on the board it lands on; a round
+  that ends the match adds or takes away the whole board at full health. The spell whose round is worth most
+  wins.
+- **Targets**: the same, from the actor's slot on, starting from the board the **revealed actions** leave.
+  They are public and bound in timeline order, so `Advance` replays them exactly where the one-step agent
+  could only carry health forward and stop at the first stun, heal or buff (ADR 0039). No target when the
+  spell is no longer castable.
+- **Ties** go to the candidate with the best one-step score, then to the first in order. The second key
+  decides whenever the round cannot: when the guessed slots have the actor dead or stunned before its own,
+  every candidate leaves the same round, and the choice still matters in every world where the guess is
+  wrong. Without it the tie went to the first spell in id order, and the weakest spell in the catalogue was
+  cast three times as often as Greedy casts it.
+- **The actor's critical roll** is weighted the way the scorer weights it: the round is played once on a
+  forced critical and once on a miss, and the two are mixed by the actor's chance for that spell. Every
+  other creature's roll is a miss, which keeps the cost at two rounds per candidate. On a miss alone, a spell
+  that crits three casts in four was priced at half its worth and never cast.
+- **Speed and evolution** are the heuristic agent's: neither is a combat move, and the round they plan has no
+  timeline yet to play out.
+
+Summing the scorer's own scores keeps its calibration: a move with no consequence for the rest of the round
+is worth exactly what Greedy says it is, and only the interactions are new. The first version valued the
+board the round leaves instead, health, energy and conditions priced by the same weights, and measured eight
+points of win rate below the sum against Greedy: the weights were swept for the one-step reading, not for a
+reading of the board.
+
+What it sees that the one-step reading cannot: a stun that takes away an enemy's kill, a kill that lands
+before its target acts, a target another action will have killed first, a defense buff that turns a lethal
+round into a survivable one. What it does not see is hidden: an enemy's intent before it is revealed, which
+the rollout stands in for with the scorer's pick, and every roll but the actor's own.
+
+The cost is the branching: one decision plays the rest of the round twice per candidate, and each slot it
+plays asks the scorer for a best target set, so a decision costs on the order of the timeline length times
+what a one-step decision costs. The journal entry that introduced it carries the measurement, and the
+measurement is the thing to read before playing it: on the catalogue of that day it does **not** beat Greedy.
 
 ## Built-in weights
 

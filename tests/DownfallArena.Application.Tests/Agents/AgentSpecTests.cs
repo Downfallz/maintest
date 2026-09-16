@@ -37,6 +37,8 @@ public sealed class AgentSpecTests
         var resolved = factory.Resolve(AgentSpec.Parse("heuristic:w.json"));
         resolved.Version.ShouldBe(ScoringWeights.Default.Fingerprint);
         resolved.ToString().ShouldBe($"Heuristic:w.json@{ScoringWeights.Default.Fingerprint}");
+        factory.Resolve(AgentSpec.Parse("lookahead")).ShouldBe(new AgentSpec(AgentKind.Lookahead), "the built-in weights need no fingerprint");
+        factory.Resolve(AgentSpec.Parse("lookahead:w.json")).ToString().ShouldBe($"Lookahead:w.json@{ScoringWeights.Default.Fingerprint}");
         Should.Throw<ArgumentException>(() => factory.Resolve(new AgentSpec(AgentKind.Heuristic)));
         Should.Throw<ArgumentNullException>(() => factory.Resolve(null!));
     }
@@ -90,6 +92,8 @@ public sealed class AgentSpecTests
         factory.Create(AgentSpec.Random, rules, new TestRandom(1)).ShouldBeOfType<RandomAgent>();
         factory.Create(AgentSpec.Greedy, rules, new TestRandom(1)).ShouldBeOfType<GreedyAgent>();
         factory.Create(AgentSpec.Parse("heuristic:weights.json"), rules, new TestRandom(1)).ShouldBeOfType<HeuristicAgent>().Weights.ShouldBe(ScoringWeights.Default);
+        factory.Create(AgentSpec.Parse("lookahead"), rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>().Weights.ShouldBe(ScoringWeights.Default);
+        factory.Create(AgentSpec.Parse("lookahead:weights.json"), rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>();
         Should.Throw<ArgumentException>(() => factory.Create(new AgentSpec(AgentKind.Heuristic), rules, new TestRandom(1))).Message.ShouldContain("heuristic:<path>");
         Should.Throw<ArgumentNullException>(() => factory.Create(null!, rules, new TestRandom(1)));
         Should.Throw<ArgumentNullException>(() => factory.Create(AgentSpec.Random, null!, new TestRandom(1)));
