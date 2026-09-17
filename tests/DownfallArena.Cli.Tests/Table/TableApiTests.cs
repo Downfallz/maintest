@@ -1,5 +1,6 @@
 using System.Text;
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
@@ -69,6 +70,7 @@ public sealed class TableApiTests : IDisposable
     /// </summary>
     [Theory]
     [InlineData("GET", "/api/session", "")]
+    [InlineData("GET", "/api/catalogue", "")]
     [InlineData("GET", "/api/seat/player1", "")]
     [InlineData("GET", "/api/seat/player2", "")]
     [InlineData("POST", "/api/seat/player1/decision", """{"kind":"Evolution","pass":true}""")]
@@ -85,6 +87,84 @@ public sealed class TableApiTests : IDisposable
         blank.Status.ShouldBe(403);
         another.Status.ShouldBe(403);
     }
+
+    /// <summary>
+    /// The deck, as the table is playing it. It is the same for both seats and hides nothing — what is hidden
+    /// is which card a creature has face down — and it is what lets the page carry no content of its own.
+    /// </summary>
+    [Fact]
+    public async Task The_catalogue_is_every_card_of_the_content_this_match_is_playing()
+    {
+        var table = await Seated();
+
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token);
+
+        answer.Status.ShouldBe(200);
+        var body = Text(answer);
+        body.ShouldContain("\"name\":\"Strike\"");
+        body.ShouldContain("\"targeting\":\"One enemy\"");
+        body.ShouldContain("\"effects\":[\"Damage 1\"]");
+        body.ShouldContain("\"contentHash\"");
+        body.ShouldContain("\"rules\"");
+    }
+
+    /// <summary>
+    /// The catalogue cannot change while a host runs, so a page fetches it once. The tag is the content hash:
+    /// the same pair that says which game this is says when the answer is still good.
+    /// </summary>
+    [Fact]
+    public async Task A_page_that_already_has_the_catalogue_is_told_so_rather_than_sent_it_again()
+    {
+        var table = await Seated();
+        var first = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token);
+        var tag = first.Headers.ShouldNotBeNull().Single(header => header.Key == "ETag").Value;
+
+        var again = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token, ifNoneMatch: tag);
+
+        again.Status.ShouldBe(304);
+        again.Body.ShouldBeEmpty();
+        again.Headers.ShouldNotBeNull().ShouldContain(header => header.Key == "ETag" && header.Value == tag);
+    }
+
+    [Fact]
+    public async Task A_tag_from_another_catalogue_is_answered_with_the_catalogue()
+    {
+        var table = await Seated();
+
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token, ifNoneMatch: "\"another-content-hash\"");
+
+        answer.Status.ShouldBe(200);
+    }
+
+    /// <summary>
+    /// The answer carries the rule set as well as the content, so the tag has to. A host restarted on the same
+    /// port with the same content and a different `--rules` file is a different answer, and a browser sending
+    /// the old tag would otherwise be told to keep a rule set this table is not playing.
+    /// </summary>
+    [Fact]
+    public async Task A_table_playing_other_rules_on_the_same_content_is_a_different_tag()
+    {
+        var table = await Seated();
+        var same = Api(table, Rules);
+        var other = Api(table, RuleSet.Create(Rules.TeamSize, Rules.EnergyPerRound, Rules.EvolutionPicksPerRound, Rules.RoundCap + 6, Rules.CriticalMultiplier));
+
+        var first = Tag(await same.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
+        var second = Tag(await other.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
+
+        first.ShouldBe(Tag(await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token)));
+        second.ShouldNotBe(first);
+    }
+
+    /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>
+    private TableApi Api((TableApi Api, TableSession Session, HumanSeat Person, string Token) table, RuleSet rules) =>
+        new(
+            table.Session,
+            table.Session.Queries,
+            [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
+            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), rules));
+
+    private static string Tag(StudioResponse response) =>
+        response.Headers.ShouldNotBeNull().Single(header => header.Key == "ETag").Value;
 
     [Fact]
     public async Task A_seat_is_served_its_own_board_and_the_question_it_is_being_asked()
@@ -209,7 +289,8 @@ public sealed class TableApiTests : IDisposable
         var api = new TableApi(
             session,
             session.Queries,
-            [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)]);
+            [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
+            CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), Rules));
 
         await Waiting(person, "Evolution");
         return (api, session, person, token);

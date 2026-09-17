@@ -118,6 +118,12 @@ player aid and rulebook state that one and never its complement.
 **Where the rule is enforced: the data builder and `check-knobs`** — options 1 and 2 above, not the
 `CriticalChance` type. Taken as recommended; say so if you want it elsewhere.
 
+**The app is already on both sides of the pass.** `CatalogueProjection` computes `21 - 20 x chance` and prints
+`Crit 35% · d20 14+` when the chance is a twentieth; when it is not, the card prints the percentage and no die
+line — the same fallback `components.md`:778 gives the print generator. So today Pummel's 0.767 prints as
+`Crit 76.7%`, and the day this pass lands it prints a die face with **no change to the app**: the rule is read
+off the content, not written into the client (stage 3 of [app-roadmap.md](app-roadmap.md)).
+
 ### What the catalogue looks like afterwards
 
 Sixteen of the 36 Spells never touch the die, and the twenty that do carry **nine distinct chances**, each a
