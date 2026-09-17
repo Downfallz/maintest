@@ -40,11 +40,13 @@ tests/
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
   DownfallArena.Application.Tests   Use case tests with NSubstitute for ports.
   DownfallArena.Infrastructure.Tests Adapter tests (in-memory, file-backed, seeded random).
+  DownfallArena.Cli.Tests           Host tests: the console commands and the studio's HTTP host.
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
 docs/
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
   domain/       Glossary (ubiquitous language), game rules, and the spell catalogue.
+  tabletop/     The board game translation: the plan, and what it produces (plan, audit, rule set, components, rulebook).
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
 .claude/        Claude Code configuration: rules, agents, skills, hooks.
 .github/        CI, issue and PR templates, Dependabot, CODEOWNERS.
@@ -86,6 +88,7 @@ scripts/iterate.sh --against <previous-run-id>                       # one full 
 scripts/iterate.sh --seeds "1 5001 10001"                            # the default at 5000 matches: three dataset seeds spaced by the match count, because closer seeds record the same matches shifted, and the turn reports the spread, because one seed is a sample (ADR 0049)
 scripts/iterate.sh --explore 0.2                                     # plus an exploring dataset for the value policy (ADR 0014)
 scripts/iterate.sh --teacher heuristic:learning/weights/search-4.json # record a stronger player than greedy; a clone is capped by what it imitates (journal, 2026-09-15)
+scripts/iterate.sh --clone-control                                   # plus a clone blind to the candidate terms, played as `clone-blind`: what the terms bought, on one dataset and one learner (ADR 0051)
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its

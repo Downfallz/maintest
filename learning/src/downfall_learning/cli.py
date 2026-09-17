@@ -211,16 +211,26 @@ def _add_check_knobs(commands: argparse._SubParsersAction) -> None:
     check.set_defaults(handler=_check_knobs)
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="downfall-learning", description=__doc__)
-    commands = parser.add_subparsers(dest="command", required=True)
-
+def _add_train_clone(commands: argparse._SubParsersAction) -> None:
     clone = commands.add_parser("train-clone", help="behaviour cloning: observation to action key")
     _add_dataset_arguments(clone)
     clone.add_argument("--epochs", type=int, default=20)
     clone.add_argument("--alpha", type=float, default=1e-4, help="L2 regularization strength")
+    clone.add_argument(
+        "--ignore-terms",
+        action="store_true",
+        help="train on the observation alone, dropping the candidate terms the run recorded (ADR 0051): "
+        "the control that says what the terms bought, since the learner itself changed with them",
+    )
     _add_quiet(clone)
     clone.set_defaults(handler=_train_clone)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="downfall-learning", description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    _add_train_clone(commands)
 
     value = commands.add_parser("train-value", help="value regression: (observation, action) to return")
     _add_dataset_arguments(value)
@@ -355,6 +365,8 @@ def _write_policy(policy: Policy, directory: Path) -> None:
 
 def _train_clone(arguments: argparse.Namespace) -> int:
     dataset = _dataset(arguments)
+    if arguments.ignore_terms and dataset.has_terms:
+        dataset = replace(dataset, term_names=(), candidate_terms=())
     log = TrainingLog(dataset.stamp, arguments.output / TRAINING_FILE)
     options = CloneOptions(arguments.epochs, arguments.alpha, arguments.validation, arguments.seed)
     progress = _progress(arguments, "train-clone")
