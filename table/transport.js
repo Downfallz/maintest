@@ -20,17 +20,19 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     return { status: response.status, ok: response.ok, body: text ? parse(text) : null };
   }
 
-  function parse(text) {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return { message: text };
-    }
-  }
-
   return {
     seat: () => send('GET', `/api/seat/${seat}`),
     session: () => send('GET', '/api/session'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
   };
+}
+
+// A host answers a refusal as JSON when it has a code to give and as a line of text when it does not; the page
+// reads both the same way.
+function parse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
 }

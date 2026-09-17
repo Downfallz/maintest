@@ -30,8 +30,8 @@ internal static class TableHost
         var random = services.GetRequiredService<IRandomSource>();
         var agents = services.GetRequiredService<IAgentFactory>();
 
-        var seat1 = Seat(PlayerSlot.Player1, options.Player1Named, options.Player1, options, rules, agents, random, stopping.Token);
-        var seat2 = Seat(PlayerSlot.Player2, options.Player2Named, options.Player2, options, rules, agents, random, stopping.Token);
+        var seat1 = Seat(PlayerSlot.Player1, options, rules, agents, random, stopping.Token);
+        var seat2 = Seat(PlayerSlot.Player2, options, rules, agents, random, stopping.Token);
         using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, stopping.Token);
 
         // The session's own read side, not the container's: it is the one behind the lock the driver writes
@@ -117,14 +117,13 @@ internal static class TableHost
 
     private static (SeatAgent Agent, TableSeat Seat) Seat(
         PlayerSlot slot,
-        bool named,
-        AgentSpec spec,
         CliOptions options,
         RuleSet rules,
         IAgentFactory agents,
         IRandomSource random,
         CancellationToken cancellation)
     {
+        var (named, spec) = Chosen(slot, options);
         var bot = agents.Create(spec, rules, random);
         if (named)
         {
@@ -144,8 +143,14 @@ internal static class TableHost
         return (seat, new TableSeat(slot, Token(), person));
     }
 
-    private static string Describe(PlayerSlot slot, CliOptions options) =>
-        (slot == PlayerSlot.Player1 ? options.Player1 : options.Player2).ToString();
+    /// <summary>
+    /// The agent this slot was told to play, and whether it was told at all. The table seats a person in every
+    /// slot no agent was named for, and "the option was absent" is the only thing that says so.
+    /// </summary>
+    private static (bool Named, AgentSpec Spec) Chosen(PlayerSlot slot, CliOptions options) =>
+        slot == PlayerSlot.Player1 ? (options.Player1Named, options.Player1) : (options.Player2Named, options.Player2);
+
+    private static string Describe(PlayerSlot slot, CliOptions options) => Chosen(slot, options).Spec.ToString();
 
     /// <summary>
     /// A seat token. It is not a credential — nothing here has an account — but it must not be guessable from
