@@ -48,7 +48,7 @@ internal sealed record CliOptions
 
     /// <summary>
     /// The interface address the table binds. The default is this machine and no other; a playtest on a phone
-    /// needs the address that phone can reach (ADR 0052). The studio never reads it (ADR 0023).
+    /// needs the address that phone can reach (ADR 0053). The studio never reads it (ADR 0023).
     /// </summary>
     public string Bind { get; init; } = HttpHost.Loopback;
 

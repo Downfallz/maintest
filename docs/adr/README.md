@@ -49,7 +49,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0041](0041-a-condition-stacks-unless-it-is-a-stun.md) | A Condition stacks unless it is a Stun | Accepted |
 | [0042](0042-a-creature-has-no-base-critical-chance.md) | A Creature has no base critical chance | Accepted |
 | [0043](0043-a-control-spell-is-not-an-attack-and-reach-is-not-force.md) | A control spell is not an attack, and reach is not force | Accepted |
-| [0044](0044-the-exploit-target-compares-against-a-yardstick-that-does-not-hold.md) | The exploit target compares against a yardstick that does not hold | Proposed |
+| [0044](0044-the-exploit-target-compares-against-a-yardstick-that-does-not-hold.md) | The exploit target compares against a yardstick that does not hold | Superseded by [0052](0052-read-the-exploit-term-as-the-best-of-a-panel.md) |
 | [0045](0045-a-better-fit-is-not-a-better-player.md) | A better fit is not a better player | Accepted |
 | [0046](0046-credit-a-move-along-its-trajectory-not-from-the-end-of-the-match.md) | Credit a move along its trajectory, not from the end of the match | Accepted |
 | [0047](0047-a-lookahead-agent-needs-a-hypothetical-board.md) | A lookahead agent needs a hypothetical board | Accepted |
@@ -57,4 +57,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0049](0049-one-seed-is-not-a-measurement.md) | One seed is not a measurement | Accepted |
 | [0050](0050-price-how-close-a-hit-brings-its-target-to-a-kill.md) | Price how close a hit brings its target to a kill, and leave the baseline at zero | Accepted |
 | [0051](0051-the-policy-sees-what-the-heuristic-sees.md) | The policy sees what the heuristic sees | Accepted |
-| [0052](0052-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
+| [0052](0052-read-the-exploit-term-as-the-best-of-a-panel.md) | Read the exploit term as the best of a panel, not as one named agent | Accepted |
+| [0053](0053-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |

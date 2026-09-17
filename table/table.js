@@ -49,20 +49,23 @@ async function refresh(state) {
   if (state.sending) return;
 
   // Every seat this page holds, every poll: the host answers one seat per payload, and which one is being
-  // asked is exactly what the page cannot know without asking.
+  // asked is exactly what the page cannot know without asking. Over a copy, because a seat can be dropped
+  // here.
   const views = [];
-  for (const seat of state.seats) {
+  for (const seat of [...state.seats]) {
     const answer = await seat.transport.seat();
-    if (!answer.ok) {
-      // A token this host does not know is a seat from another session. Keeping it would mean answering 403
-      // for ever; dropping it is what makes the next code work.
-      if (answer.status === 403) {
-        forget(storage);
-        element('phase').textContent = 'This seat belongs to another table. Type the code this host printed.';
-        state.seats = [];
-        return;
-      }
 
+    // A token this host does not know is a seat from another table -- an earlier session, or the browser of
+    // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
+    // same page, and it has already been taken out of the address bar, so forgetting it too would mean
+    // reading it off the host's screen again.
+    if (answer.status === 403) {
+      forget(storage, seat.seat);
+      state.seats = state.seats.filter(held => held.seat !== seat.seat);
+      continue;
+    }
+
+    if (!answer.ok) {
       element('phase').textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
       return;
     }
@@ -70,10 +73,12 @@ async function refresh(state) {
     views.push({ ...seat, view: answer.body });
   }
 
-  // Nothing left to render: every seat this page held was refused, and what it says is already on the screen.
-  if (views.length > 0) {
-    render(state, views);
+  if (views.length === 0) {
+    element('phase').textContent = 'This browser holds no seat at this table. Type the code the host printed.';
+    return;
   }
+
+  render(state, views);
 }
 
 const nameOf = seat => (seat === 'player1' ? 'Player 1' : 'Player 2');

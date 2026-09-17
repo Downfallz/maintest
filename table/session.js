@@ -33,13 +33,12 @@ export function heldSeats(search, storage) {
 }
 
 // A token the host no longer knows is worse than none: it answers 403 to every poll, and the page would say so
-// for ever. Dropping it is what lets the next code work.
-export function forget(storage) {
-  try {
-    storage?.removeItem(KEY);
-  } catch {
-    // Nothing kept it in the first place.
-  }
+// for ever. One seat is dropped, not the lot: the other seat on this page may be the code just typed for the
+// table being played, and it is no longer in the address bar to be read back from.
+export function forget(storage, seat) {
+  const held = { ...remembered(storage) };
+  delete held[seat];
+  remember(storage, held);
 }
 
 function remembered(storage) {

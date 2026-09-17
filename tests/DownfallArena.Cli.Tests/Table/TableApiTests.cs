@@ -64,7 +64,7 @@ public sealed class TableApiTests : IDisposable
 
     /// <summary>
     /// Every route, not the one a test happened to pick. The token is the whole fence around a seat, and it is
-    /// the only fence left once the host binds an address a phone can reach (ADR 0052): a route added later
+    /// the only fence left once the host binds an address a phone can reach (ADR 0053): a route added later
     /// that forgets to ask for one would hand a seat to whoever is on the network.
     /// </summary>
     [Theory]

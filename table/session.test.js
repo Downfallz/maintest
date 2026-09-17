@@ -59,17 +59,32 @@ test('a fresh token for a seat wins over the one this browser kept', () => {
 
 test('forgetting a seat is what lets the next table be joined', () => {
   const kept = storage();
-  heldSeats('?player1=cafe&player2=beef', kept);
+  heldSeats('?player1=cafe', kept);
 
-  forget(kept);
+  forget(kept, 'player1');
 
   assert.deepEqual(heldSeats('', kept), []);
+});
+
+// The case that costs a player a trip back to the console: a stale token from an earlier table sits beside the
+// code they just typed for this one, which the page has already taken out of the address bar.
+test('forgetting the seat this table refused keeps the seat it accepted', () => {
+  const kept = storage();
+  heldSeats('?player1=stale&player2=beef', kept);
+
+  forget(kept, 'player1');
+
+  assert.deepEqual(heldSeats('', kept), [{ seat: 'player2', token: 'beef' }]);
+});
+
+test('forgetting a seat in a browser that keeps nothing is not an error', () => {
+  assert.doesNotThrow(() => forget(refusing, 'player1'));
+  assert.doesNotThrow(() => forget(null, 'player1'));
 });
 
 test('a browser that keeps nothing still plays the link it was opened with', () => {
   assert.deepEqual(heldSeats('?player1=cafe', refusing), [{ seat: 'player1', token: 'cafe' }]);
   assert.deepEqual(heldSeats('', refusing), []);
-  assert.doesNotThrow(() => forget(refusing));
 });
 
 test('a page with no storage at all reads the link and nothing else', () => {

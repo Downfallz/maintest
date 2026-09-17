@@ -7,7 +7,7 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// The table's HTTP host: the page, one seat's API, and the short code a player types to reach their seat. It
 /// binds the address it is given — the loopback one by default, and the machine's own when the players are two
-/// people passing a phone across a table (ADR 0052).
+/// people passing a phone across a table (ADR 0053).
 /// </summary>
 /// <remarks>
 /// Two fences, and they answer different attacks. The same-origin check refuses a request another page made

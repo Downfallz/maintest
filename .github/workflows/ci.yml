@@ -110,9 +110,9 @@ jobs:
       #
       # The second ignore, `csharpsquid:S5332` ("using http protocol is insecure") on `HttpHost.cs` alone. The
       # rule is right about the protocol and there is no fix to make: the table serves two phones on a home
-      # network for an evening (ADR 0052), and HTTPS there means a certificate those phones trust, which means
+      # network for an evening (ADR 0053), and HTTPS there means a certificate those phones trust, which means
       # running a certificate authority to protect a seat token on a link between a laptop and a phone in the
-      # same room. ADR 0052 took that trade explicitly when it took leaving the loopback address, and named the
+      # same room. ADR 0053 took that trade explicitly when it took leaving the loopback address, and named the
       # fence it keeps instead: a seat token on every route, held by `TableApiTests`. Scoped to the one file
       # that writes a prefix; anything else in this repository that reaches for `http://` still gets the rule.
       - name: Begin SonarCloud analysis

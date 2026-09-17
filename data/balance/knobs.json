@@ -20,9 +20,14 @@
         "reads": "Whether the content offers a choice, which is a different question from whether a greedy bot takes one. Both sides play greedily four decisions in five and draw uniformly the fifth (ADR 0014), so a spell the argmax always passes over still gets cast and can be read. Every target that needs a spell to be cast in order to mean anything is read here rather than on the mirrored run."
       },
       "exploit": {
-        "p1": "heuristic:learning/weights/pressure-floor.json",
+        "p1": [
+          "heuristic:learning/weights/search-4.json",
+          "heuristic:learning/weights/mixture-mean.json",
+          "heuristic:learning/weights/pressure-floor.json",
+          "heuristic:learning/weights/stun-first.json"
+        ],
         "p2": "greedy",
-        "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A goes stale when the content moves — a tuning pass changes what there is to exploit — so it is refreshed from the next search run, not kept."
+        "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A is a panel and the reading is its best exploiter (ADR 0052): one agent only ever reads what that agent happens to punish, and the same one-spell move was worth 0.013 to one of these sets and 0.235 to another (journal, 2026-09-17), so the term named a pair rather than a catalogue. Every set is played and the highest win rate decides the evaluation. A set goes stale when the content moves — a tuning pass changes what there is to exploit — so the newest search joins the panel rather than replacing it, and an older set stays because a moved catalogue sometimes blinds the newer ones and not it."
       }
     },
     "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one. ADR 0029 did it again, and harder: seven targets moved off the mirrored run onto the exploring one without their bands changing, which took the core content from 69.39 to 52.00 without a single number in the content moving. Compare scores only across runs judged by the same set read from the same runs.",

@@ -446,7 +446,7 @@ person tests the app itself between playtests.
 
 ## The ADR
 
-The decision record landed as [ADR 0052](../adr/0052-a-playtest-app-on-the-same-engine.md), Accepted on
+The decision record landed as [ADR 0053](../adr/0053-a-playtest-app-on-the-same-engine.md), Accepted on
 2026-09-17, and the text that was held here moved into it. The record is the short form — the decision, what
 it costs, and the alternatives that lost. This document stays the long form: what the client may never decide,
 where the hidden-information boundary is, the screens, and what a session records.
