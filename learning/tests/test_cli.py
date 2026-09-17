@@ -69,6 +69,73 @@ def test_search_weights_drives_the_engine_command(
     assert "this run cannot say" in printed
 
 
+def test_search_weights_can_play_every_candidate_as_the_lookahead(
+    tmp_path: Path, fake_engine: list[str], capsys: pytest.CaptureFixture
+) -> None:
+    code = cli.main(
+        [
+            "search-weights",
+            "-o",
+            str(tmp_path / "search"),
+            "--kind",
+            "lookahead",
+            "--iterations",
+            "1",
+            "--population",
+            "2",
+            "--repo",
+            str(tmp_path),
+            "--engine",
+            *fake_engine,
+        ]
+    )
+
+    assert code == 0
+    assert json.loads((tmp_path / "search" / "search.json").read_text())["kind"] == "lookahead"
+    stamp = json.loads((tmp_path / "search" / "evaluation.json").read_text())["stamp"]
+    assert stamp["player1Agent"].startswith("lookahead:")
+    assert "as `lookahead:<weights>`" in capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        cli.main(["search-weights", "-o", str(tmp_path / "x"), "--kind", "policy"])
+
+
+def test_search_weights_plays_every_candidate_against_each_opponent_of_a_list(
+    tmp_path: Path, fake_engine: list[str], capsys: pytest.CaptureFixture
+) -> None:
+    code = cli.main(
+        [
+            "search-weights",
+            "-o",
+            str(tmp_path / "search"),
+            "--iterations",
+            "1",
+            "--population",
+            "2",
+            "--opponent",
+            "greedy,random",
+            "--repo",
+            str(tmp_path),
+            "--engine",
+            *fake_engine,
+        ]
+    )
+
+    assert code == 0
+    assert (tmp_path / "search" / "evaluation-vs-greedy.json").is_file()
+    assert (tmp_path / "search" / "evaluation-vs-random.json").is_file()
+    assert "even against greedy,random" in capsys.readouterr().out
+
+
+def test_evaluate_policy_refuses_a_list_of_opponents(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+    run = write_run(tmp_path / "run", matches=10)
+    cli.main(["train-value", str(run), "-o", str(tmp_path / "model")])
+
+    code = cli.main(["evaluate-policy", str(tmp_path / "model"), "--opponent", "greedy,random"])
+
+    assert code == 1
+    assert "one opponent" in capsys.readouterr().err
+
+
 def test_export_csv_writes_the_projection(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
     run = write_run(tmp_path / "run", matches=3)
 
@@ -146,10 +213,8 @@ def test_evaluate_policy_drives_the_engine_and_updates_the_model(
     assert json.loads((tmp_path / "model" / "training.jsonl").read_text())["winRate"] == 0.75
 
 
-def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
-    tmp_path: Path, capsys: pytest.CaptureFixture
-) -> None:
-    """The preflight, not the engine. Without it the search starts and fails one candidate at a time."""
+def broken_objective(tmp_path: Path) -> Path:
+    """A knobs file whose objective names a weights file that is not there, in an empty content tree."""
     balance = tmp_path / "data" / "balance"
     balance.mkdir(parents=True)
     knobs = balance / "knobs.json"
@@ -170,12 +235,49 @@ def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
     )
     (tmp_path / "data" / "Spells").mkdir()
     (tmp_path / "data" / "aliases.json").write_text("{}", encoding="utf-8")
+    return knobs
+
+
+def test_tune_content_refuses_an_objective_whose_agent_file_is_missing(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The preflight, not the engine. Without it the search starts and fails one candidate at a time."""
+    knobs = broken_objective(tmp_path)
 
     code = cli.main(
         [
             "tune-content",
             "-o",
             str(tmp_path / "out"),
+            "--knobs",
+            str(knobs),
+            "--data",
+            str(tmp_path / "data"),
+            "--engine",
+            "no-such-engine",
+        ]
+    )
+
+    assert code == 1
+    error = capsys.readouterr().err
+    assert "weights/gone.json" in error
+    assert "no-such-engine" not in error
+
+
+def test_score_content_refuses_the_same_broken_objective_before_touching_the_engine(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The same preflight as tune-content: a hold-out that starts and then fails is a workflow run wasted."""
+    knobs = broken_objective(tmp_path)
+    (tmp_path / "unseen.json").write_text(json.dumps({"seeds": [1, 2, 3]}), encoding="utf-8")
+
+    code = cli.main(
+        [
+            "score-content",
+            "-o",
+            str(tmp_path / "out"),
+            "--seeds",
+            str(tmp_path / "unseen.json"),
             "--knobs",
             str(knobs),
             "--data",

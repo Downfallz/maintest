@@ -37,6 +37,8 @@ public sealed class AgentSpecTests
         var resolved = factory.Resolve(AgentSpec.Parse("heuristic:w.json"));
         resolved.Version.ShouldBe(ScoringWeights.Default.Fingerprint);
         resolved.ToString().ShouldBe($"Heuristic:w.json@{ScoringWeights.Default.Fingerprint}");
+        factory.Resolve(AgentSpec.Parse("lookahead")).ShouldBe(new AgentSpec(AgentKind.Lookahead), "the built-in weights need no fingerprint");
+        factory.Resolve(AgentSpec.Parse("lookahead:w.json")).ToString().ShouldBe($"Lookahead:w.json@{ScoringWeights.Default.Fingerprint}");
         Should.Throw<ArgumentException>(() => factory.Resolve(new AgentSpec(AgentKind.Heuristic)));
         Should.Throw<ArgumentNullException>(() => factory.Resolve(null!));
     }
@@ -47,14 +49,15 @@ public sealed class AgentSpecTests
     /// every stamp naming these weights no longer matches them, so it has to be deliberate. It was
     /// <c>7aff3a10</c> until ADR 0028 moved the defense price from 0.5 to 0.65, <c>a4e83485</c> until
     /// ADR 0032 moved the initiative price from 0.5 to 2.1, <c>93f3683c</c> until ADR 0037 moved the energy
-    /// price from 0.2 to 0.3, and <c>1933f3ae</c> until ADR 0040 removed the <c>fizzle</c> weight entirely --
-    /// the first time the list got shorter rather than a number moving. Each came with a journal entry and a
-    /// regenerated benchmark digest.
+    /// price from 0.2 to 0.3, <c>1933f3ae</c> until ADR 0040 removed the <c>fizzle</c> weight entirely --
+    /// the first time the list got shorter rather than a number moving -- and <c>362b0496</c> until ADR 0050
+    /// added the <c>pressure</c> weight at zero: the list got longer and no decision moved, so the digest
+    /// stayed and only the stamp changed. Each came with a journal entry or an ADR.
     /// </summary>
     [Fact]
     public void The_built_in_weights_keep_the_fingerprint_committed_stamps_were_written_with()
     {
-        ScoringWeights.Default.Fingerprint.ShouldBe("362b0496");
+        ScoringWeights.Default.Fingerprint.ShouldBe("5833ff4d");
     }
 
     [Fact]
@@ -90,6 +93,8 @@ public sealed class AgentSpecTests
         factory.Create(AgentSpec.Random, rules, new TestRandom(1)).ShouldBeOfType<RandomAgent>();
         factory.Create(AgentSpec.Greedy, rules, new TestRandom(1)).ShouldBeOfType<GreedyAgent>();
         factory.Create(AgentSpec.Parse("heuristic:weights.json"), rules, new TestRandom(1)).ShouldBeOfType<HeuristicAgent>().Weights.ShouldBe(ScoringWeights.Default);
+        factory.Create(AgentSpec.Parse("lookahead"), rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>().Weights.ShouldBe(ScoringWeights.Default);
+        factory.Create(AgentSpec.Parse("lookahead:weights.json"), rules, new TestRandom(1)).ShouldBeOfType<LookaheadAgent>();
         Should.Throw<ArgumentException>(() => factory.Create(new AgentSpec(AgentKind.Heuristic), rules, new TestRandom(1))).Message.ShouldContain("heuristic:<path>");
         Should.Throw<ArgumentNullException>(() => factory.Create(null!, rules, new TestRandom(1)));
         Should.Throw<ArgumentNullException>(() => factory.Create(AgentSpec.Random, null!, new TestRandom(1)));

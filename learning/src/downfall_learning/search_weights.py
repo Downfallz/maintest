@@ -111,6 +111,8 @@ class Score:
     win_rate_high: float
     matches: int
     evaluation: Evaluation | None = None
+    # One score per opponent when the candidate was played against several; empty for a single opponent.
+    parts: tuple[tuple[str, Score], ...] = ()
 
     @classmethod
     def of(cls, evaluation: Evaluation) -> Score:
@@ -125,6 +127,53 @@ class Score:
             matches=evaluation.matches,
             evaluation=evaluation,
         )
+
+    @classmethod
+    def mixture(cls, parts: Sequence[tuple[str, Score]], floor: Mapping[str, float] | None = None) -> Score:
+        """One score over several opponents: the mean over them, under a floor no matchup may fall below.
+
+        A search against one opponent finds the key to that lock: the lookahead weights of search run 5
+        scored 0.84 against Greedy and 0.70 against Random where Greedy itself scores 0.99 (journal,
+        2026-09-16). A plain mean over several can still be won by learning one of them: 1.0, 0.5 and 0.5
+        average above 0.6, 0.6 and 0.6, and the first set has learned one lock and lost two. The worst
+        matchup cannot be won that way, and the search tried it twice from a set found by the mean: with the
+        start in the panel it wandered, with the start out it flattened every matchup to 0.55 and gave up 25
+        points against Greedy (journal, 2026-09-16). An optimised floor finds the set that loses to nobody
+        by much and beats nobody by much.
+
+        So the mean, which climbs, under the constraint that keeps it honest: ``floor`` names, per opponent,
+        the score a candidate may not fall below, and the search sets it from what it started from (the low
+        end of each of the start's intervals, so 400 matches of noise are not a violation). A candidate above
+        every floor scores its mean; a candidate below one scores its worst shortfall, a negative number, so
+        every violating candidate ranks below every conforming one and among themselves by how far they
+        fell. Without a floor, the plain mean: what the start itself is scored with, since it is its own
+        floor. The interval and win rate are the means of the parts'; the evaluation kept is the first
+        opponent's, which is what stamps the training log; the matches are the total played.
+        """
+        if not parts:
+            raise ValueError("A mixture needs at least one opponent.")
+        scores = [score for _, score in parts]
+        shortfall = 0.0
+        if floor is not None:
+            shortfall = min(score.mean - floor.get(opponent, 0.0) for opponent, score in parts)
+        mean = float(np.mean([score.mean for score in scores])) if shortfall >= 0 else shortfall
+        return cls(
+            mean=mean,
+            low=float(np.mean([score.low for score in scores])),
+            high=float(np.mean([score.high for score in scores])),
+            win_rate=float(np.mean([score.win_rate for score in scores])),
+            win_rate_low=float(np.mean([score.win_rate_low for score in scores])),
+            win_rate_high=float(np.mean([score.win_rate_high for score in scores])),
+            matches=sum(score.matches for score in scores),
+            evaluation=parts[0][1].evaluation,
+            parts=tuple(parts),
+        )
+
+    @property
+    def floor(self) -> dict[str, float]:
+        """What a candidate must not fall below to count as holding what this score holds: the low end of
+        each matchup's interval, so that a draw within the noise of the matches played is not a fall."""
+        return {opponent: part.low for opponent, part in self.parts}
 
 
 def reads_as_a_tie(low: float, high: float, even: float = 0.5) -> bool:
@@ -161,14 +210,39 @@ class Evaluator(Protocol):
     def evaluate(self, weights: Mapping[str, float]) -> Score: ...
 
 
+WEIGHT_KINDS = ("heuristic", "lookahead", "minimax")
+"""The agent kinds the engine ships that play a weights file, so a search can tune the weights for any of
+their readings. A kind listed here that the engine does not know would abort a search on its first
+evaluation, so the list follows the engine and not the other way round."""
+
+
 @dataclass(frozen=True)
 class EngineCommand:
-    """How to reach the engine: the command prefix, the opponent, the seed file, and the working directory."""
+    """How to reach the engine: the command prefix, the opponent, the seed file, the working directory, and
+    the agent kind a weights file is played by (``heuristic`` reads it one step, ``lookahead`` and
+    ``minimax`` play the round out; docs/learning/agents.md)."""
 
     root: Path = field(default_factory=Path.cwd)
     command: Sequence[str] = ENGINE_COMMAND
+    #: Agent B of every evaluation, or several separated by commas: the score is then the mean over them
+    #: under the floor the search anchors on its start (``Score.mixture``), so a candidate cannot win by
+    #: learning one opponent at the cost of another.
     opponent: str = "greedy"
     seeds: str = "benchmarks/benchmark-seeds.json"
+    kind: str = "heuristic"
+
+    def __post_init__(self) -> None:
+        if self.kind not in WEIGHT_KINDS:
+            raise ValueError(
+                f"No agent kind '{self.kind}' plays a weights file; one of {', '.join(WEIGHT_KINDS)}."
+            )
+        if not self.opponents:
+            raise ValueError("The opponent is empty; name one agent spec, or several separated by commas.")
+
+    @property
+    def opponents(self) -> tuple[str, ...]:
+        """The opponents of every evaluation, one or more, in the order given."""
+        return tuple(part.strip() for part in self.opponent.split(",") if part.strip())
 
 
 class CliEvaluator:
@@ -190,18 +264,50 @@ class CliEvaluator:
         self._workdir = Path(workdir).resolve()
         self._workdir.mkdir(parents=True, exist_ok=True)
         self.calls = 0
+        self._floor: dict[str, float] | None = None
 
     @property
     def opponent(self) -> str:
         return self._engine.opponent
 
+    @property
+    def floor(self) -> dict[str, float] | None:
+        """Per opponent, what a candidate must not fall below; ``None`` until the search anchors it."""
+        return self._floor
+
+    def anchor(self, score: Score) -> None:
+        """Sets the floor from a score's parts: every later mixture is read against what this one holds."""
+        self._floor = score.floor or None
+
+    @property
+    def kind(self) -> str:
+        """The agent kind every candidate weights file is played by."""
+        return self._engine.kind
+
     def evaluate(self, weights: Mapping[str, float]) -> Score:
         weights_path = write_weights(self._workdir / "candidate-weights.json", weights)
-        return self.evaluate_spec(f"heuristic:{weights_path}", self._workdir / "candidate-evaluation.json")
+        return self.evaluate_spec(
+            f"{self._engine.kind}:{weights_path}", self._workdir / "candidate-evaluation.json"
+        )
 
     def evaluate_spec(self, spec: str, output: Path) -> Score:
-        """Runs one evaluation of ``spec`` as agent A and reads the evaluation it wrote to ``output``."""
+        """Runs ``spec`` as agent A against every opponent and reads what the engine wrote.
+
+        One opponent writes ``output``. Several write ``<output stem>-vs-<opponent>.json`` each and score as
+        their mixture under the anchored floor, the first opponent's evaluation standing for the whole where
+        one is needed.
+        """
         output = Path(output).resolve()
+        opponents = self._engine.opponents
+        if len(opponents) == 1:
+            return self._evaluate_against(spec, opponents[0], output)
+        parts = [
+            (opponent, self._evaluate_against(spec, opponent, output.with_name(part_name(output, opponent))))
+            for opponent in opponents
+        ]
+        return Score.mixture(parts, self._floor)
+
+    def _evaluate_against(self, spec: str, opponent: str, output: Path) -> Score:
         output.parent.mkdir(parents=True, exist_ok=True)
         arguments = [
             *self._engine.command,
@@ -209,7 +315,7 @@ class CliEvaluator:
             "--p1",
             spec,
             "--p2",
-            self._engine.opponent,
+            opponent,
             "--seeds",
             self._engine.seeds,
             "--out",
@@ -243,7 +349,7 @@ class Candidate:
     score: Score
 
     def to_json(self) -> dict[str, object]:
-        return {
+        entry: dict[str, object] = {
             "iteration": self.iteration,
             "weights": dict(self.weights),
             "score": self.score.mean,
@@ -252,6 +358,20 @@ class Candidate:
             "winRate": self.score.win_rate,
             "matches": self.score.matches,
         }
+        # Against several opponents the score is a mean or a shortfall, and neither says which opponent a
+        # candidate fell against or gained on: a search that found nothing under its floor could only be read
+        # by replaying its best fallers (journal, 2026-09-16). One row per opponent says it.
+        if self.score.parts:
+            entry["parts"] = {
+                opponent: {
+                    "score": part.mean,
+                    "low": part.low,
+                    "high": part.high,
+                    "winRate": part.win_rate,
+                }
+                for opponent, part in self.score.parts
+            }
+        return entry
 
 
 @dataclass(frozen=True)
@@ -259,25 +379,48 @@ class SearchResult:
     best: Candidate
     candidates: tuple[Candidate, ...]
     initial: Candidate
+    # Per opponent, what a candidate had to hold to score its mean rather than its shortfall; ``None`` when
+    # the search played one opponent or never anchored.
+    floor: Mapping[str, float] | None = None
 
-    def write(self, directory: Path) -> Path:
-        """Writes ``weights.json`` (the best), ``search.json`` (every candidate), the best evaluation."""
+    def write(self, directory: Path, kind: str = "heuristic") -> Path:
+        """Writes ``weights.json`` (the best), ``search.json`` (every candidate with its score per
+        opponent, the floor they were held to, and the agent kind that played them: weights searched for
+        one reading are only meaningful played by it), the best evaluation."""
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         write_weights(directory / "weights.json", self.best.weights)
-        summary = {
+        summary: dict[str, object] = {
+            "kind": kind,
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "candidates": [candidate.to_json() for candidate in self.candidates],
         }
+        if self.floor is not None:
+            summary["floor"] = dict(self.floor)
         (directory / "search.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
         if self.best.score.evaluation is not None:
             raw = json.dumps(self.best.score.evaluation.raw, indent=2) + "\n"
             (directory / "evaluation.json").write_text(raw, encoding="utf-8")
+        # Against several opponents, the evaluation above is the first one's; the others land beside it.
+        for opponent, score in self.best.score.parts:
+            if score.evaluation is not None:
+                raw = json.dumps(score.evaluation.raw, indent=2) + "\n"
+                (directory / part_name(directory / "evaluation.json", opponent)).write_text(
+                    raw, encoding="utf-8"
+                )
         return directory
 
 
-def format_search(result: SearchResult, opponent: str, evaluations: int, output: Path) -> str:
+def part_name(output: Path, opponent: str) -> str:
+    """``<output stem>-vs-<opponent>.json``, the opponent spelled with what a file name allows."""
+    safe = "".join(character if character.isalnum() else "-" for character in opponent).strip("-")
+    return f"{output.stem}-vs-{safe or 'opponent'}{output.suffix}"
+
+
+def format_search(
+    result: SearchResult, opponent: str, evaluations: int, output: Path, kind: str = "heuristic"
+) -> str:
     """What a weight search found, and — plainly — what it did not establish.
 
     The line this replaced printed the best score, the initial score and a win rate, which reads as a verdict
@@ -291,7 +434,11 @@ def format_search(result: SearchResult, opponent: str, evaluations: int, output:
         before = result.initial.weights.get(name)
         (moved if before is None or abs(after - before) > 5e-4 else still).append((name, before, after))
 
-    lines = [f"The search played {evaluations} evaluation(s) and kept the best weights it found.", ""]
+    lines = [
+        f"The search played {evaluations} evaluation(s) as `{kind}:<weights>` and kept the best weights"
+        " it found.",
+        "",
+    ]
     lines.append("What it changed")
     if moved:
         width = max(len(name) for name, _, _ in moved)
@@ -389,6 +536,11 @@ def search_weights(
     # Exact, unlike the tuner's: the population is fixed and nothing here is skipped or memoized.
     progress.total = 1 + options.iterations * options.population
     first = Candidate(0, _as_weights(mean), evaluator.evaluate(_as_weights(mean)))
+    # Against several opponents, what the search started from is the floor: a candidate that falls below it
+    # against any one of them has learned another, and ranks below every candidate that did not.
+    anchor = getattr(evaluator, "anchor", None)
+    if anchor is not None:
+        anchor(first.score)
     progress.step(f"baseline {first.score.mean:.4f}")
     if log is not None and log.stamp is None:
         log.stamp = stamp_of(first.score)
@@ -422,7 +574,8 @@ def search_weights(
     if log is not None and best.iteration > 0:
         log.mark_best(best.iteration)
     progress.finish(f"best {best.score.mean:.4f} from {first.score.mean:.4f}")
-    return SearchResult(best=best, candidates=tuple(candidates), initial=first)
+    floor = getattr(evaluator, "floor", None)
+    return SearchResult(best=best, candidates=tuple(candidates), initial=first, floor=floor)
 
 
 def stamp_of(score: Score) -> RunStamp | None:

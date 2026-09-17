@@ -11,8 +11,11 @@ dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json
 ```
 
-`simulate --record <dir>` writes the dataset and one trace per match under `<dir>`; `play --trace <file>`
-writes the trace of that one match. `runs/` is git-ignored: artifacts are outputs, not sources.
+`simulate --record <dir>` writes the dataset and, by default, one trace per match under `<dir>`;
+`--traces <n>` keeps only the first `n` of them and `--traces 0` keeps none, which is what a dataset large
+enough to train on wants: a trace is about twenty times the disk of the steps from the same match and no
+learner reads one. `play --trace <file>` writes the trace of that one match. `runs/` is git-ignored:
+artifacts are outputs, not sources.
 
 ## Run directory
 
@@ -21,7 +24,7 @@ writes the trace of that one match. `runs/` is git-ignored: artifacts are output
   manifest.json          run stamp, feature schema, counts
   steps.jsonl            one step per line
   episodes.jsonl         one episode per line (two per match)
-  traces/<match-id>.json one trace per match
+  traces/<match-id>.json one trace per match, up to what --traces allows
 ```
 
 The manifest is written twice: when the run starts, with zero counts, so an interrupted run still says what
@@ -51,7 +54,7 @@ Defined once in `ArtifactJson` (Infrastructure) and shared by every file:
 | `schemaId`, `schemaVersion` | The feature schema of every step (`docs/learning/features.md`). |
 | `featureNames` | The name of every index of an observation, so a reader needs no engine to label columns. |
 | `matches`, `steps`, `episodes` | Counts, final once the run finished. |
-| `traces` | Whether `traces/` was written. |
+| `traces` | Whether `traces/` was written at all. It does not say how many: a capped run holds a sample, and a reader that counts anything over them (the viewer's fizzle and crit tiles) prints the denominator it actually had. The rates an evaluation reports are counted over every match and never over traces. |
 
 ## `steps.jsonl`
 

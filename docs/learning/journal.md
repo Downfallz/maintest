@@ -4,6 +4,1684 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-17. The mean of five value fits scores 0.06 where the mean of three scored 0.48, and the jackknife says a mean moves by two thirds with the draw of its fits
+
+- **`ci-118` is `ci-106` on five seeds**: 1, 5001, 10001, 15001 and 20001 at 5000 matches, twenty-five
+  thousand distinct matches, every other knob the same (teacher and baseline `search-4`, lambda 0.9, the ADR
+  0048 baseline, explore 0.2). The first three seeds reproduced `ci-106` to the digit on every row, so its
+  mean of three is this turn's mean of the first three, and the mean of five is the same data plus two fits.
+  Two hours and fifty-nine minutes on the runner, under the 300-minute limit this change raised; the
+  experiment file guessed two and a quarter, and the ten replicate evaluations of the jackknife are the rest.
+
+  | by seed, one sample each | 1 | 5001 | 10001 | 15001 | 20001 | width over 5 | width over 3 (`ci-106`) |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | value against Greedy | 0.3475 | 0.0450 | 0.0788 | **0.8525** | 0.0512 | **0.808** | 0.303 |
+  | value against `search-4` | 0.1812 | 0.0025 | 0.0000 | 0.2575 | 0.2350 | 0.258 | 0.181 |
+  | value against Random | 0.7450 | 0.7425 | 0.8712 | 0.8275 | 0.8000 | 0.129 | 0.129 |
+  | clone against Greedy | 0.7863 | 0.8000 | 0.7425 | 0.7462 | 0.7562 | 0.058 | 0.058 |
+  | clone against `search-4` | 0.5513 | 0.6175 | 0.5625 | 0.6088 | 0.5975 | 0.066 | 0.066 |
+  | clone against the champion `ci-69` | 0.5125 | 0.4838 | 0.5513 | 0.5000 | 0.4925 | — | — |
+
+- **The clone's widths did not move and the value policy's tripled.** The expectation was `ci-106`'s widths
+  on every row, the same distribution sampled twice more. The clone kept them to the third decimal, at parity
+  with its teacher on every seed and measurably above the champion on one of five, so nothing is committed.
+  The value fit on seed 15001 scored 0.8525 against Greedy, the highest a value policy has ever read on any
+  seed, and seed 20001's collapsed to 0.0512: the row now runs from 0.045 to 0.853 over five draws of one
+  configuration. Seed 15001's fit is not a result (ADR 0049: `ci-88`'s 0.6625 against `search-4` was one
+  draw, and the next seed read 0.0975); it is the width of the row, and the width is the finding. A value fit
+  of this configuration is a draw from 0.05 to 0.85, and its held-out r2 does not say which (0.117 on seed
+  15001 against 0.148 on seed 20001, the best fit of the five in play and the worst).
+
+- **The mean of five is below the mean of three, and the interval says that is noise.** The mean of all
+  five fits, played as one policy, against the mean of the first three from the `ci-106` entry, with the five
+  means that leave one seed out and the jackknife they give:
+
+  | | mean of 3 (`ci-106`) | **mean of 5** | jackknife SE | interval (2 SE) | without 1 / 5001 / 10001 / 15001 / 20001 |
+  | --- | --- | --- | --- | --- | --- |
+  | against Greedy | 0.4800 | **0.0638** | 0.332 | 0.000 to 0.729 | 0.1212 / 0.5238 / 0.1175 / 0.2437 / 0.0612 |
+  | against `search-4` | 0.4625 | **0.2062** | 0.351 | 0.000 to 0.909 | 0.1950 / 0.3088 / 0.1950 / 0.5962 / 0.0825 |
+
+  The expectation named two outcomes: the mean of three above the interval of the mean of five, if averaging
+  keeps helping, or inside it, if the mean of three was as far as averaging goes. It is inside, and the
+  interval is the whole scale: a standard error of a third on a score out of one, three times what the mean
+  of `ci-100`'s fits measured (0.11), and five means of four fits that range from 0.06 to 0.52 against Greedy.
+  Adding two fits to the mean that scored 0.48 gave a mean that scores 0.06; leaving seed 5001's collapsed
+  fit out of the five gives 0.52 and leaving seed 15001's 0.85 fit out gives 0.24, so the mean is not ordered
+  by its parts either. A mean of linear scorers removes variance between fits that disagree by their data
+  and cannot remove a fit that plays a different game: the `ci-106` entry read the mean of three as averaging
+  doing its work, and it was one draw of a quantity that moves by two thirds with the draw of its fits.
+
+- **What this licenses.** The number of fits is not the lever, and neither is the data per fit: 5000
+  matches steadied the clone and not the value policy (the entry of 2026-09-16), and five fits of 5000 do not
+  steady their mean. Every value number this journal holds is one draw from a row 0.8 wide, the spread reads
+  the row, and a gate reads its minimum, which is 0.045. The lever left is what a fit can see: a value row
+  regresses the return on the board, and the part of a decision it is collapsing on is the part the board
+  does not carry, what each action would do, which the heuristic reads and the policy cannot (ADR 0051, the
+  candidate terms). The cheaper question the `ci-106` entry asked, three fits on 1000 matches against one on
+  3000, is answered by this one: it would be measuring the draw.
+
+## 2026-09-16. A ninth weight, the share of a kill a hit takes: Greedy's own weights with it at 2 beat Greedy 0.75 and hold `search-4`, and the baseline stays at zero
+
+- **What moved**: the scorer gained a term (ADR 0050). `pressure` prices the share of the health a target
+  had that a hit takes, one for a kill, signed like the damage: the reading between `damage`, which counts
+  every point the same wherever it lands, and `kill`, which pays only once the last point lands. The two
+  searches of this day, from `search-4` and from `mixture-mean`, ended where the eight weights had nothing
+  left to trade; this is the first term added because of that. It ships at zero, so the benchmark digest
+  verifies unchanged on `7e199df4` and only the built-in fingerprint moves (`362b0496` to `5833ff4d`).
+
+- **Swept alone, then played on seeds nothing has searched** (content `7e199df4`, engine `ca55a26`; the
+  sweep on the 400 benchmark seeds, the head-to-heads on 200 seeds from `995317`, Greedy's own weights plus
+  the one value, against the compiled Greedy at zero, `search-4` and `mixture-mean`):
+
+  | `pressure` | rounds (mirror) | `player1WinShare` | vs Greedy | vs `search-4` | vs `mixture-mean` |
+  | --- | --- | --- | --- | --- | --- |
+  | 0.0 | 7.78 | 0.465 | 0.500 | 0.086 | 0.136 |
+  | 0.5 | 5.83 | 0.370 | 0.445 (0.393 to 0.497) | 0.263 (0.212 to 0.313) | |
+  | 1.0 | 6.14 | 0.335 | 0.479 (0.425 to 0.533) | 0.461 (0.408 to 0.515) | |
+  | **2.0** | 5.63 | 0.410 | **0.751 (0.706 to 0.796)** | **0.480 (0.426 to 0.534)** | 0.306 (0.263 to 0.350) |
+  | 3.0 | 5.14 | 0.000 | 0.153 (0.116 to 0.189) | 0.088 (0.059 to 0.116) | |
+
+  (The 0.0 row against `search-4` and `mixture-mean` is those sets' own readings against Greedy, turned
+  over: 0.914 and 0.864 on these seeds, the three-opponent entry.)
+
+- **The largest single gain this project has measured, from one number set by hand.** At 2.0 Greedy beats
+  Greedy by 25 points and holds `search-4` at parity, which took a search of all eight weights to reach 0.914
+  against Greedy; `mixture-mean` still beats it by 19. The step is narrow: 1.0 ties, 2.0 wins, 3.0 collapses
+  to 0.153, with the mirror's first-mover share falling to zero at 3.0 and matches ending in five rounds. A
+  value one step from a collapse is not a value to set by hand, and it is not the baseline's: at every point
+  above zero the mirror is lopsided toward the second mover and matches sit under the balance objective's
+  round band, and Greedy is the yardstick every number here is read against. ADR 0050 leaves it at zero and
+  gives the dimension to the searched sets.
+
+- **What this licenses.** The rung the eight weights could not climb: a search from `mixture-mean` with nine
+  weights, the ninth free, against `greedy`, `mixture-worst`, `search-4` and `random` under the floor. Its
+  candidates start where 2.0 alone loses to `mixture-mean` by 19, so the question is whether the term adds to
+  the eight or replaces part of them. And the panel's blind spot, now that a pressing set exists: whether a
+  set that presses is exploitable by one that presses back is what a search against it would say.
+
+## 2026-09-16. Under the floor of what it started from, the search finds no neighbour of `mixture-mean` at all: every gain against one opponent is paid to `search-4`
+
+- **The search**: `mixture-mean` as the start, the mean under the start's floor as fitness (the constrained
+  mean that replaced the worst matchup after the rung-2 entry of this day), against `greedy`,
+  `mixture-worst`, `search-4` and `random` at once, ten rounds of sixteen on the benchmark seeds, 644
+  evaluations in 55 minutes, on content `7e199df4` and engine `9e272ab25531`, built in the branch's worktree
+  before its commit (hence its dirty mark; no C# changed between that commit and `main`, so the engine is
+  `main`'s), into `runs/search-mixture-3/` locally. The start on those seeds: 0.884 against Greedy, 0.4925
+  against `mixture-worst`, 0.705 against `search-4`, 0.9925 against Random, mean 0.7684; its floors, the low
+  end of each interval: 0.853, 0.471, 0.664, 0.984.
+
+- **Not one of the 159 candidates held above all four floors.** The start is the only conforming set of the
+  run, so the best is the start and nothing was written. The shortfalls: the least 0.024, the median 0.129,
+  twelve within 0.05 of holding; the spread of the draw went from 0.67 of each weight in round 1 to 0.13 by
+  round 10, so the search narrowed around the least-falling sets, as it does, and found none that held
+  there either.
+
+- **Which floor, replayed.** The search keeps one score per candidate and not its parts, so the three
+  least-falling sets (rounds 6, 7 and 9; stun 5.1 to 5.3 against 4.06, bleed negative against 0.50, heal
+  0.22 to 0.26 against 0.53, the rest within a tenth) were replayed on the same seeds, on engine
+  `5fd061112bbb` and the same content; the three scores against Random reproduce the start's to the digit:
+
+  | on the searched seeds | `mixture-mean` (floor) | round 6 | round 7 | round 9 |
+  | --- | --- | --- | --- | --- |
+  | against Greedy | 0.884 (0.853) | 0.870 | 0.871 | 0.894 |
+  | against `mixture-worst` | 0.4925 (0.471) | **0.565** | **0.5475** | **0.5475** |
+  | against `search-4` | 0.705 (0.664) | *0.640* | *0.640* | *0.640* |
+  | against Random | 0.9925 (0.984) | 0.9925 | 0.9925 | 0.9925 |
+
+  All three fell against `search-4`, by the same 0.024 below its floor and 6.5 points below the start, and
+  all three gained 5.5 to 7 points against `mixture-worst`. Their mean is the start's to within a point: the
+  neighbourhood trades one strong opponent for the other, and the floor refused the trade, which is exactly
+  what it was built to refuse. The plain mean would have taken it, and the entry after would have read a set
+  that beats `mixture-worst` and lost a rung against `search-4`.
+
+- **What this says about the ladder, and about the floor.** From `search-4`, the plain mean found a set 25
+  points better against `search-4` at 5 points against Greedy (0.864 against 0.914, the three-opponent
+  entry): the first rung was a trade too, and one this floor would have refused, since 0.864 is under the
+  low end of `search-4`'s interval against Greedy. So the floor keeps a rung from being lost and also keeps
+  one from being climbed when climbing costs an opponent, and what this run measures is the neighbourhood
+  under that rule: from `mixture-mean`, within two thirds of each weight and then within an eighth, no set
+  improves any opponent without paying another beyond the noise of 400 matches. Another start, a wider
+  draw or a looser floor are not excluded by 159 candidates around one point; what is excluded is a third
+  rung near `mixture-mean` on this panel at this cost, which is where the rung-2 entry ended too, from the
+  worst-matchup side: two fitnesses, two searches, the same neighbourhood empty.
+
+- **What this licenses.** Another search of the same neighbourhood is the one thing this run says not to
+  buy. The cheaper next question for the heuristic is what the weights weigh: a feature the score does not
+  see (the weakest enemy's distance to a kill, the opponent's energy, initiative relative to the target),
+  measured one at a time on fixed content with `sweep-weight.py` (ADR 0037) before any search sees it. A
+  search from `search-4` under the floor, or from `mixture-mean` with a floor set a few points under the
+  start, would say whether the rule or the region is what stopped this one. And the search itself should
+  keep every candidate's parts in `search.json`, so that the next entry can name the floor a search fell
+  against without replaying its best fallers.
+
+## 2026-09-16. A clone of the teacher that beats `search-4` plays at parity with `search-4`, 27 points below the clone of `search-4`: a clone is capped by what it can copy, not by what it imitates
+
+- **`ci-112` is `ci-106` with one knob moved**: the recorded agent is `mixture-mean` (0.746 against `search-4`
+  and 0.864 against Greedy on unseen seeds, the three-opponent entry of this day) instead of `search-4`, which
+  stays the baseline opponent so the clone rows read against the same bar as every turn since 2026-09-15.
+  Seeds 1, 5001 and 10001, 5000 matches, lambda 0.9, the ADR 0048 baseline, explore 0.2. The question written
+  before the run: does a clone of a teacher that beats `search-4` by 25 points beat `search-4`, where every
+  clone of `search-4` read at parity with it?
+
+- **Two seeds, not three, and read on purpose.** The run hit the workflow's 150-minute limit with its third
+  seed half trained, so there is no spread and no mean; the two seeds below are one sample each, under ADR
+  0049's bar, and the turn was not rerun because the two agree with each other and with the refutation the
+  experiment file wrote down. The reason for the overrun is the teacher and is measured below.
+
+  | one sample each | `ci-112` seed 1 | `ci-112` seed 5001 | `ci-106` (teacher `search-4`), by seed |
+  | --- | --- | --- | --- |
+  | clone against Greedy | 0.5125 | 0.5363 | 0.7863 / 0.8000 / 0.7425 |
+  | clone against `search-4` | 0.5150 | 0.4888 | 0.5513 / 0.6175 / 0.5625 |
+  | clone against Random | 0.9700 | 0.9750 | 0.9900 / 0.9888 / 0.9850 |
+  | clone accuracy, held out | 0.9228 | 0.9277 | 0.9632 / 0.9611 / 0.9642 |
+  | clone loss, held out | 4.71 | 4.71 | 2.06 / 2.24 / 2.15 |
+  | clone action keys | 285 | 280 | 220 / 216 / 220 |
+  | value against Greedy | 0.2338 | 0.2575 | 0.3475 / 0.0450 / 0.0788 |
+  | value against `search-4` | 0.0575 | 0.1938 | 0.1812 / 0.0025 / 0.0000 |
+  | value against Random | 0.8825 | 0.8438 | 0.7450 / 0.7425 / 0.8712 |
+  | value fit r2, held out | 0.1689 | 0.1601 | 0.1278 / 0.1393 / 0.1389 |
+
+- **The clone of the stronger teacher is the weaker clone.** At parity with `search-4` on both seeds, which
+  the clone of `search-4` also is; and 25 to 27 points behind the clone of `search-4` against Greedy, where its
+  teacher is 5 points ahead of `search-4`. The refutation the file wrote before the run: "a clone at parity
+  with `search-4` again would say the clone caps below its teacher, and the teacher's edge is in decisions a
+  linear clone cannot copy." The numbers say which decisions. `mixture-mean` plays a wider repertoire, 285
+  action keys against 220, and the linear clone copies it at 92.3 % where it copied `search-4` at 96.3 %,
+  with more than twice the held-out loss. The eight decisions in a hundred it misses are the ones the
+  teacher makes and `search-4` does not, since the rest is what the two teachers share; against Greedy
+  those eight cost 27 points, against `search-4` they cost the whole edge. A clone is capped by what it can
+  copy, and a stronger teacher whose strength is spread over more actions is copied worse, not better.
+
+- **The value fits did not collapse, twice.** 0.2338 and 0.2575 against Greedy, where `ci-106`'s three fits
+  gave 0.3475, 0.0450 and 0.0788; a better held-out r2 on both seeds (0.16 to 0.17 against 0.13 to 0.14).
+  Two samples of a row whose spread measured 0.30 the day before are a note, not a result; the note is that
+  the exploring dataset of a stronger teacher may be a steadier one to fit, and a turn with three seeds would
+  say so or not.
+
+- **What it costs, and why.** A match of `mixture-mean` self-play runs a third longer than one of `search-4`
+  (670 thousand steps in the 5000-match dataset against 510 thousand), and the clone fits a third more action
+  keys, so an epoch of the clone took 2 min 55 s against 1 min 01 s and a seed 68 minutes against 26. The
+  workflow's limit goes from 150 to 300 minutes with this entry, so a turn is never again lost to the
+  teacher it records.
+
+- **What this licenses.** The ladder's sets are agents in their own right, and cloning is not the way to carry
+  their edge into a policy: the clone side of the loop keeps `search-4` as its teacher, where the rows are
+  comparable turn to turn, and the champion decision does not move (no clone of either teacher beats
+  `ci-69` measurably on every seed; this turn did not reach that comparison). The lever on the clone is the
+  model's capacity for a wider repertoire, not the teacher; on the value side it is the mean of the fits
+  (the `ci-106` entry), which the five-seed turn measures next with its jackknife.
+
+## 2026-09-16. Spaced seeds give the same widths, and the mean of three fits from different data plays at parity where every part collapses
+
+- **`ci-106` is `ci-100` on seeds 1, 5001 and 10001**, fifteen thousand distinct matches, every other knob
+  the same, run on this change's branch with the mean step at the end. The check on the machinery held:
+  seed 1 reproduced `ci-100`'s seed 1 to the digit on all five numbers (value 0.3475 / 0.1812 / 0.7450,
+  clone 0.7863 / 0.5513). One hour and nineteen minutes on the runner.
+
+  | by seed | `ci-100` (1, 2, 3) | width | `ci-106` (1, 5001, 10001) | width |
+  | --- | --- | --- | --- | --- |
+  | value against `search-4` | 0.1812 / 0.2075 / 0.0462 | 0.161 | 0.1812 / 0.0025 / 0.0000 | 0.181 |
+  | value against `Greedy` | 0.3475 / 0.3500 / 0.0112 | 0.339 | 0.3475 / 0.0450 / 0.0788 | 0.303 |
+  | value against `Random` | 0.7450 / 0.7638 / 0.8087 | 0.064 | 0.7450 / 0.7425 / 0.8712 | 0.129 |
+  | clone against `Greedy` | 0.7863 / 0.7950 / 0.8175 | 0.031 | 0.7863 / 0.8000 / 0.7425 | 0.058 |
+  | clone against `search-4` | 0.5513 / 0.4738 / 0.5550 | 0.081 | 0.5513 / 0.6175 / 0.5625 | 0.066 |
+  | clone against the champion `ci-69` | 0.5125 / 0.44 / 0.474 | — | 0.5125 / 0.4838 / 0.5513 | — |
+
+- **The expectation, and what came back.** The experiment file wrote that the widths should be at least
+  `ci-100`'s, since a fresh draw adds sampling variance to the split sensitivity that was already there.
+  Three rows are wider and two narrower, all of the same order: the spread of a fit under a shifted fifth
+  of one dataset and the spread under three different datasets are the same size. So every spread this
+  journal reported on overlapping seeds was about the right width for the wrong reason, and the readings
+  that rested on the width stand; only the word "draw" was wrong. The clone is at parity with its teacher on
+  every seed and beats the champion measurably on none, as at `ci-100`.
+
+- **Two collapses out of three, and the mean plays at parity.** Seeds 5001 and 10001 gave value fits at
+  0.045 and 0.079 against Greedy and 0.0025 and 0.0 against `search-4`, where `ci-100` had one collapse in
+  three. Their mean with seed 1's fit, one policy scoring every candidate as the mean of their scores:
+
+  | one sample each | seed 1 | seed 5001 | seed 10001 | **their mean** |
+  | --- | --- | --- | --- | --- |
+  | against Greedy | 0.3475 | 0.0450 | 0.0788 | **0.4800** (0.441 to 0.519; 41 % wins, the rest draws) |
+  | against `search-4` | 0.1812 | 0.0025 | 0.0000 | **0.4625** (0.435 to 0.490) |
+  | against Random | 0.7450 | 0.7425 | 0.8712 | **0.8300** (0.793 to 0.867) |
+
+  Above every part against both strong opponents, by 13 points over the best part against Greedy and 28 over
+  it against `search-4`, and the first value policy whose interval against Greedy contains one half. The
+  entry below found the mean of `ci-100`'s three fits at 0.14 and 0.15 on the same two rows: those fits
+  shared four fifths of their training matches, these share none. A mean removes variance between fits
+  exactly when the fits disagree for reasons of their own data, which is what averaging predicts and what the
+  overlapping seeds could not show. The parts collapse in play and the mean does not: the collapse is
+  variance after all, of a kind one fit cannot average away by itself.
+
+- **What this licenses.** The mean is a knob, on spaced seeds. It is one policy and these are one sample
+  each, so the next turn asks for the spread of the thing itself: five seeds instead of three, and the mean
+  of all five beside the mean of the first three, which says whether more fits keep helping. And a cheaper
+  version of the same question, three fits on 1000 matches each averaged against one on 3000, which says
+  whether the averaging or the data is doing the work.
+
+## 2026-09-16. The mean of ci-100's three value fits plays between them, and best of all against Random
+
+- **The question the seed-3 entry of this day left**: three value fits that read the same on every held-out
+  number and score 0.35, 0.35 and 0.011 against Greedy. A policy is linear, so the mean of three is exactly a
+  policy scoring every candidate as the mean of their scores, with nothing chosen. `mean-policy` builds it,
+  and the loop now plays it as its last step, outside the spread and outside every gate, because it is one
+  policy and its numbers are one sample each. Played here on the three fits the reproduction of `ci-100`
+  rebuilt:
+
+  | one sample each | seed 1 | seed 2 | seed 3 | **their mean** |
+  | --- | --- | --- | --- | --- |
+  | against Greedy | 0.3475 | 0.3500 | 0.0112 | **0.1400** (0.107 to 0.173) |
+  | against `search-4` | 0.1812 | 0.2075 | 0.0462 | **0.1500** (0.114 to 0.186) |
+  | against Random | 0.7450 | 0.7638 | 0.8087 | **0.8387** (0.805 to 0.873) |
+
+- **Neither answer that entry offered.** The mean does not play like the two better fits, so their
+  disagreement with seed 3 was not zero-mean noise around one good policy that averaging removes. It does not
+  collapse like seed 3 either: 0.14 against Greedy is twelve times seed 3 and a third of seeds 1 and 2, and
+  against `search-4` it sits inside the three. Against Random it is the best of the four, above every part,
+  which is what averaging does to fits whose errors are independent on the boards Random drives them to. So
+  the three fits disagree in a way that is noise where the opponent is weak and structure where it is not: on
+  Greedy's boards, two of them found one way to play and one found another, and the mean of the two ways is
+  worse than either. A mean is not the knob; it is one more number that says the value policy's play is
+  decided off the recorded distribution.
+
+- **What this is a sample of.** These three fits are the overlapping ones that entry describes, one dataset
+  under three splits, so this is the mean of three splits and not of three draws. The loop's own mean, on
+  seeds spaced by the match count, is the version to read, and it comes with the next turn.
+
+## 2026-09-16. The second rung of the worst-matchup ladder does not exist: with its start in the panel the search wanders, and with it out the search flattens
+
+- **Two searches from `mixture-mean.json`**, the set that beats `search-4` by 25 points on unseen seeds, each
+  10 rounds of 16, seed 0, worst-matchup fitness, content `7e199df4`. The first against `greedy`,
+  `mixture-mean`, `search-4` and `random`: the start is in the panel, so its own fitness is 0.5 by
+  construction (it draws itself) and a candidate has to beat the set it came from. The second against
+  `greedy`, `mixture-worst`, `search-4` and `random`: the start out of the panel, so the baseline reads its
+  real worst matchup, 0.4925 against `mixture-worst`, and there is room above it.
+
+  | on the searched seeds | fitness, start | fitness, best (round) | best against Greedy | `search-4` | the fourth |
+  | --- | --- | --- | --- | --- | --- |
+  | start in the panel | 0.5000 | 0.5225 (3) | 0.8263 | 0.6713 | 0.5225 against `mixture-mean` |
+  | start out of the panel | 0.4925 | 0.5525 (9) | 0.6012 | 0.5525 | 0.5525 against `mixture-worst` |
+  | `mixture-mean` itself | | | 0.8838 | 0.7050 | |
+
+- **On 200 seeds no candidate saw** (995317 to 995516, mirrored), the best of each:
+
+  | agent A | against Greedy | against `mixture-mean` | against `mixture-worst` | against `search-4` |
+  | --- | --- | --- | --- | --- |
+  | best, start in the panel | 0.8187 | 0.4750 (0.436 to 0.514) | | 0.6850 |
+  | best, start out of the panel | 0.6138 (0.555 to 0.673) | 0.5250 (0.461 to 0.589) | 0.5625 (0.499 to 0.626) | 0.5525 (0.489 to 0.616) |
+  | `mixture-mean` | 0.8638 | 0.5 (itself) | 0.4725 | 0.7462 |
+
+- **With the start in the panel, the search wanders.** After round 3 every round's best sat between 0.47 and
+  0.49, below the start; the best it kept loses to `mixture-mean` on unseen seeds (0.475, the interval
+  through one half) and is worse than it against Greedy and `search-4`. A fitness that reads 0.5 for the
+  start and asks the elite to beat it is a fitness whose signal is the noise of 400 matches against oneself.
+
+- **With the start out of the panel, the search flattens.** The worst matchup rose, 0.49 to 0.55, and it rose
+  by bringing every matchup down to it: against Greedy 0.864 to 0.614, against `search-4` 0.746 to 0.553,
+  and on unseen seeds every one of its four intervals against a real opponent contains one half. It is an
+  equalizer, not a stronger player: `mixture-mean` is 25 points better against Greedy and 19 against
+  `search-4`, and the one thing this set does better, its matchup against `mixture-worst`, is 0.5625 with
+  0.499 at the bottom of the interval. The worst matchup, optimised, finds the set that loses to nobody by
+  much and beats nobody by much.
+
+- **So the worst-matchup ladder has one rung, and the mean found it.** The entry below reads the first
+  search: the mean fitness climbed every round and found `mixture-mean`, the worst matchup peaked at round
+  2 and found `mixture-worst`, and the change kept the worst matchup because a mean can be won by one
+  opponent. Both are true and the second is the one that matters for a ladder: a mean can climb, and it
+  did not learn one opponent when it was given three. What a second rung needs is a fitness that climbs
+  and cannot be won by one opponent, which is the mean under the constraint that no matchup falls below
+  the start's. That is a change to `Score.mixture`, and it is the next one. No weights file from either
+  search: neither is a better teacher than `mixture-mean`.
+
+- **One number kept.** The searches cost 45 and 85 minutes for 161 evaluations of three and four; the
+  hold-out five. The next rung is not a matter of budget.
+
+## 2026-09-16. A search against three opponents finds two sets that beat `search-4` on unseen seeds, and the plain mean found the better one
+
+- **The search the previous entries left.** `search-weights --opponent greedy,heuristic:learning/weights/search-4.json,random`,
+  10 rounds of 16 from the built-in weights, search seed 0, content `7e199df4`: every candidate played against
+  the three, one evaluation each on the benchmark seeds. Run twice locally on this change's code, because the
+  fitness moved while it was under review: once scoring a candidate as the **mean** over the three (the first
+  draft), once as its **worst matchup** (what the change ships, after the review's point that a mean can be
+  won by one opponent: 1.0, 0.5, 0.5 average above 0.6, 0.6, 0.6). 161 evaluations of three each, 45 minutes
+  apiece.
+
+  | best of each search, on the searched seeds | against Greedy | against `search-4` | against Random | fitness |
+  | --- | --- | --- | --- | --- |
+  | mean fitness, `mixture-mean.json` | 0.8838 | 0.7050 | 0.9925 | 0.8604 (round 10) |
+  | worst-matchup fitness, `mixture-worst.json` | 0.8912 | 0.6225 | 0.9925 | 0.6225 (round 2) |
+  | the built-in weights they started from | 0.5000 | 0.0700 | 0.9788 | 0.5162 / 0.0700 |
+
+- **On 200 seeds no candidate saw** (995317 to 995516, mirrored; the four agents on one footing):
+
+  | agent A | against Greedy | against `search-4` | against Random |
+  | --- | --- | --- | --- |
+  | `mixture-mean.json` | 0.8638 (0.830 to 0.897) | **0.7462** (0.708 to 0.785) | 0.9975 |
+  | `mixture-worst.json` | 0.8688 (0.834 to 0.904) | **0.6550** (0.609 to 0.701) | 0.9962 |
+  | `search-4.json` | 0.9137 (0.884 to 0.944) | 0.5 (itself) | 0.9900 |
+  | Greedy | 0.5 (itself) | 0.0862 (0.056 to 0.116) | 0.9800 |
+
+  And head to head, `mixture-mean` against `mixture-worst`: 0.4725 (0.448 to 0.497).
+
+- **Both hold against all three, and that is the first time.** Every set this journal has measured either lost
+  to `search-4` or learned one opponent (the lookahead weights of run 5: 0.84 against Greedy, 0.70 against
+  Random). These two beat `search-4` head to head on unseen seeds by 15 and 25 points with the whole interval
+  clear of one half, beat Greedy by 36 and 37, and lose nothing to Random. The route the 2026-09-16 lookahead
+  entry closed "unless a search against a mixture of opponents finds a set that holds against all three" is
+  open. Not transitive, as always here: `search-4` beats Greedy harder than either of them (0.914 against
+  0.864 and 0.869), and the worst-matchup set beats the mean set head to head while the mean set beats
+  `search-4` by more. Which is the stronger teacher is what recording a turn with each will say; neither
+  moves the baseline, and `greedy.json` is untouched.
+
+- **The mean found the better set, and the worst matchup is still the right fitness.** The mean climbed
+  every round, 0.695 to 0.860; the worst matchup peaked at round 2 at 0.6225 and hovered between 0.55 and
+  0.57 for the eight rounds after. A worst-of-three is a noisier target than a mean-of-three: it moves with
+  whichever of three 400-match estimates drew low, and an elite chosen on it chases that noise. And the
+  failure the worst matchup exists to prevent did not happen this time: the mean's best has no weak matchup.
+  So on one search each, the mean found more and the worst matchup guaranteed more. The change keeps the
+  worst matchup, because it cannot be won by one opponent whatever the draw; what it needs to climb is more
+  matches per evaluation or a larger population, which is a knob, not a fitness. One search each is one
+  sample of each fitness.
+
+- **What moved in the weights.** Both sets move the same way from the built-in ones and further than
+  `search-4` did: `kill` up (7.2 and 8.8 against 5.0; `search-4` 6.5), `bleed` down (0.50 and 0.19 against
+  0.8; 0.69), `energy` down (0.16 and 0.12 against 0.3; 0.18), `heal` down (0.53 and 0.61 against 0.8; 0.51).
+  The `search-4` direction, taken further, with `bleed` nearly written off by the worst-matchup set.
+
+- **What comes next.** A turn of the loop recorded with one of these as teacher and baseline, the way
+  `search-4` replaced Greedy on 2026-09-15: a clone is capped by what it imitates, and this is the first
+  teacher that beats `search-4`.
+
+## 2026-09-16. Seed 3's fit is the others' fit, and seeds 1, 2 and 3 were one dataset: every spread so far was a split, not a draw
+
+- **The question the entry below left.** Two value policies at 0.35 against Greedy and one at 0.011, from
+  three seeds of one configuration at 5000 matches. Look at seed 3's fit before any knob moves. So the value
+  half of `ci-100` was reproduced locally, seed by seed: the exploring dataset, the value fit with `ci-100`'s
+  options, the three evaluations. **All nine numbers came back to the digit** (0.3475 / 0.3500 / 0.0112
+  against Greedy, 0.1812 / 0.2075 / 0.0462 against `search-4`, 0.7450 / 0.7638 / 0.8087 against Random), so
+  what follows is `ci-100`'s policies and not a re-run's.
+
+- **Nothing in the fit tells seed 3 apart.** On its own held-out fifth, each fit reads the same:
+
+  | fit, by seed | 1 | 2 | 3 |
+  | --- | --- | --- | --- |
+  | r2 on its held-out matches | 0.1278 | 0.1105 | 0.1077 |
+  | the baseline alone | 0.1393 | 0.1259 | 0.1241 |
+  | legal accuracy | 0.3348 | 0.3361 | 0.3349 |
+  | spread of the advantage it fits | 0.2765 | 0.2768 | 0.2779 |
+  | action keys with a row of their own | 540 of 640 | 536 of 635 | 536 of 637 |
+
+  Nor in what it chooses on the recorded distribution: on the held-out Intent steps of any of the three
+  datasets, any two of the policies agree on 60 to 64 % of their choices, seed 3 no less than the others
+  (63 % with seed 1, the highest pair), and all three take `basic_attack` on 16 to 17 % of the steps where
+  it is offered, where the recorded explorer took it on 5 %. Three fits that are statistically the same fit.
+
+- **Where seed 3 differs is in play, off that distribution.** Against Greedy, seed 3's policy casts
+  `basic_attack` for 39 % of its actions (seeds 1 and 2: 5 % and 15 %), fizzles 16.5 % of its casts (8 to
+  9 %), crits half as often, and ends with 0.8 health to Greedy's 44.6. Against Random it is the best of the
+  three. The boards Greedy drives it to are not the explorer's boards, and on those the rows of one fit favour
+  the one-energy attack where the other two do not. The fit's own numbers are measured on the explorer's
+  distribution and cannot see this; play is a different measurement, and what decided between 0.35 and 0.011
+  is which matches were in the training fifth. Which raises the question of how different those were.
+
+- **They were not different. Seeds 1, 2 and 3 are one dataset.** Match `i` of a dataset recorded from seed
+  `s` plays seed `s + i` (`SimulationScenario.SeedOf`). So seed 1 records matches 1 to 5000, seed 2 records
+  2 to 5001, seed 3 records 3 to 5002: consecutive datasets share 4999 of 5000 matches, and those are the
+  same match to the step, the round and the return, not merely the same seed. Match ids are time-ordered, so
+  the sorted list the split shuffles is in seed order, the shuffle is seeded, and **the fifth seed 1 holds out,
+  shifted by one, is exactly the fifth seed 2 holds out**: 818 of seed 1's 1000 held-out matches are seed 2's
+  training matches, and the two training sets share 3181 of 4000. That is why, in the reproduction, each
+  policy predicts another seed's held-out matches better than its own (r2 0.21 against 0.13): it trained on
+  them. And it is what every spread in this journal has been, from the 56 points of `ci-88`, `ci-90` and
+  `ci-91` that made ADR 0049 through `ci-95` and `ci-100`: **one dataset, fitted under three overlapping
+  splits.** The width is real, and it is the fit's sensitivity to 20 % of its training matches, which is a
+  worse fact about the fit than a wide draw would have been. It is not, and never was, three draws of the
+  data; ADR 0049's decision stands and its evidence was mislabelled.
+
+- **What changed.** `scripts/iterate.sh` refuses a seed list closer than the match count before it plays a
+  match, and its default is `1`, `1 + matches`, `1 + 2 * matches`; the workflow passes an empty list through so
+  that default applies. `learning/experiments/next.json` asks for the turn `ci-100` could not be: the same
+  knobs on seeds 1, 5001 and 10001, fifteen thousand distinct matches, with the expectation that its widths are
+  at least `ci-100`'s. Seed 1 of that turn must reproduce `ci-100`'s seed 1 to the digit, as the reproduction
+  here did, and that is the check on the machinery. Two of the 200 benchmark seeds, 1376 and 12440, fall inside
+  the range those datasets record; the evaluation plays them with other agents, so the match is not the same
+  past the opening draw, and it is noted rather than moved.
+
+- **What this does not license.** Reading the collapse as a knob to turn. Three equal fits with a 34-point
+  gap in play, from a fifth of the training matches, say the value policy's play is not determined by its
+  fit, and no fit metric measured on the recorded distribution will predict it. The first thing to know is
+  the width on datasets that are actually different, which is what the next turn measures.
+
+## 2026-09-16. Five thousand matches steady the clone and not the value policy, and neither gets better
+
+- **`ci-100` is the first turn at 5000 matches**, the one knob the entry two below moved: seeds 1, 2 and 3,
+  lambda 0.9, the ADR 0048 baseline, `search-4` as teacher, and every seed recorded, trained and evaluated
+  as `ci-95` was at 1000. One hour and forty-seven minutes on the runner, against twenty-six at 1000. The gate
+  refused both policies. Two earlier attempts at this turn (runs 97 to 99) were cancelled by the merges of
+  the day, because a push to `main` cancels the loop in progress; a turn this long needs a quieter branch
+  or a concurrency rule that lets it finish, and that is a change to make before the next one.
+
+  | by seed | `ci-95`, 1000 matches | width | `ci-100`, 5000 matches | width |
+  | --- | --- | --- | --- | --- |
+  | value against `search-4` | 0.6625 / 0.0975 / 0.3038 | 0.565 | 0.1812 / 0.2075 / 0.0462 | **0.161** |
+  | value against `Greedy` | 0.0325 / 0.1537 / 0.0338 | 0.121 | 0.3475 / 0.3500 / 0.0112 | **0.339** |
+  | value against `Random` | 0.6925 / 0.6575 / 0.7900 | 0.133 | 0.7450 / 0.7638 / 0.8087 | 0.064 |
+  | clone against `Greedy` | 0.7250 / 0.7987 / 0.8213 | 0.096 | 0.7863 / 0.7950 / 0.8175 | **0.031** |
+  | clone against `search-4` | 0.5325 / 0.5775 / 0.5200 | 0.058 | 0.5513 / 0.4738 / 0.5550 | 0.081 |
+  | clone against the champion `ci-69` | 0.5 / 0.536 / 0.424 | — | 0.5125 / 0.44 / 0.474 | — |
+
+  The four baseline rows have a width of zero again, as they must.
+
+- **The expectation, and what came back.** The entry that moved the knob wrote that if the width was fit
+  variance it should fall by about the square root of five, 0.565 toward 0.25 on the value policy against
+  `search-4`. It fell to 0.161, further than that. **And the same policy's width against `Greedy` went the
+  other way, 0.121 to 0.339**: two seeds at 0.35, the best any value policy has scored against Greedy (the
+  single-seed 0.296 of ADR 0048 was the record), and the third at 0.011, one match in a hundred. Five times
+  the data did not make the value fit steadier. It made two draws better and one collapse, which is not
+  what sampling variance does when it shrinks; it is what a fit does when it lands in different places. The
+  value regression's spread is not a dataset-size problem, or not only one.
+
+- **The clone is the other story, and it is the expected one.** Its width against Greedy fell 0.096 to
+  0.031, the square root of five to the rounding, at the same level. For the clone the spread *was* fit
+  variance, and 5000 matches removed it. What they did not do is make it better: 0.79 to 0.82 against
+  Greedy is where the 1000-match clones were, 0.47 to 0.56 against its teacher is parity with `search-4`
+  again, and against the committed champion `ci-69`, a 1000-match clone, the three seeds read 0.51, 0.44
+  and 0.47. A steadier copy of the same player. The cap is the teacher (journal, 2026-09-15), and more data
+  only measures that cap more precisely.
+
+- **What this licenses.** The next value-policy knob can be read at 0.16 on the teacher row where it could
+  not be read at 0.57, so the 5000-match turn stays. The Greedy row cannot be read at all until the collapse
+  is understood: three seeds is enough to see it and not enough to say what it is, and the first thing to
+  look at is seed 3's fit itself, its held-out error against the other two, before any knob moves.
+
+## 2026-09-16. The lookahead with its own weights beats Greedy 0.84 and loses to Random: it found the exploit, not the strength
+
+- **The experiment the entry below left on ADR 0047's route.** `search-weights --kind lookahead` plays
+  every candidate weights file as the lookahead agent instead of the one-step one, so the rollout reads the
+  round through weights that are its own. One search, seed 0, six rounds of twelve, against `Greedy` on the
+  benchmark seeds, run twice: on the `Search the agent weights` workflow (run 5, which the maintainer
+  dispatched) and on this machine. **Both found the same weights**, to the digit, which is what a
+  deterministic search on a deterministic engine owes and the first time it was checked across two machines.
+  The workflow's push was refused (a workflow-modifying branch, `workflows` permission), so the file is
+  committed here as `learning/weights/lookahead-5.json`, the name run 5 chose.
+
+  | `lookahead:lookahead-5.json` against | seeds | win rate | 95 % interval | bare `lookahead` |
+  | --- | --- | --- | --- | --- |
+  | `Greedy` | the search's own | 0.8425 | 0.797 to 0.888 | 0.4575 |
+  | `Greedy` | 200 seeds no candidate saw | **0.836** | 0.790 to 0.883 | 0.458 |
+  | `search-4` | benchmark | 0.117 | 0.088 to 0.147 | 0.200 |
+  | `search-4` | the same 200 unseen | 0.100 | 0.071 to 0.129 | — |
+  | `Random` | the same 200 unseen | **0.700** | 0.657 to 0.743 | 0.990 |
+
+  The hold-out the workflow runs, the found set against the same opponent on seeds the search never saw,
+  read **0.836 against 0.458** and would have called this the strongest agent this repository has produced
+  against Greedy short of `search-4`. It is not. **It loses three matches in ten to Random**, where the same
+  reading with the built-in weights loses one in a hundred, and it loses to `search-4` harder than the
+  weights it started from.
+
+- **What the search found.** The lookahead plays every enemy slot as the spell Greedy would declare, and
+  when the opponent *is* Greedy that guess is exact. A search against Greedy therefore does not tune the
+  reading of the game; it tunes the reading of one opponent whose every reply the agent already knows. The
+  weights it moved say so: `damage` to 0.37, `kill` to 8.8, `initiative` to 4.2, `stun` to 4.2, a set that
+  buys kills and tempo against a player whose next move is a certainty and has nothing to say to a player
+  who moves at random. Played by the one-step agent the same file scores about 0.31 against Greedy on the
+  same unseen seeds: the weights are not a better evaluation, they are a key to one lock.
+
+- **What this says about the hold-out.** Replaying on unseen seeds answers "did it fit the seed file", and
+  it answered honestly: no. It cannot answer "did it fit the opponent", because the opponent is the same on
+  both sides of it. `search.yml` and `tune.yml` both replay against the opponent they searched against and
+  nothing else; a second opponent in that step, `random` at the least, is what would have caught this, and
+  it is the next small change to both. Until then a searched set that beats its opponent has to be played
+  against something else before it is called anything.
+
+- **Where this leaves ADR 0047's route.** The guess at parity with Greedy, the floor below it (the minimax,
+  on its own pull request), and now the searched guess that exploits it. None is a stronger player. The one
+  reading of this that still stands is the one the entry below wrote: on this game, the strength is in the
+  evaluation and not in the horizon, and a search that can see its opponent's replies will learn the
+  opponent rather than the game. The route is closed unless a search against a *mixture* of opponents
+  (Greedy, `search-4`, Random) finds a set that holds against all three, and that is a different search
+  from the one the workflow runs today.
+
+## 2026-09-16. The worst reply plays worse than the guessed one: minimax is a floor, and floors lose here
+
+- **`minimax` is the lookahead agent with every enemy slot still ahead played as the reply that costs the
+  actor most**, among the spells that enemy can cast, one enemy at a time in timeline order. It is what
+  "lookahead" promises when the opponent's move is unknown: search over the reply instead of guessing it.
+  The expectation, written before the run and in the agent's own summary: at or below the lookahead's 0.458
+  against Greedy, because a floor reads the round against an opponent who sees the move and Greedy does not
+  see it; and the number to beat against `search-4` was 0.200. Benchmark seeds, mirrored, content `7e199df4`:
+
+  | Minimax against | win rate | 95 % interval | the lookahead on the same seeds |
+  | --- | --- | --- | --- |
+  | `Greedy` | 0.427 | 0.378 to 0.477 | 0.458 |
+  | `search-4` | **0.083** | 0.053 to 0.112 | 0.200 |
+  | `Lookahead` | 0.545 | 0.512 to 0.578 | — |
+
+  Below the lookahead against Greedy, inside the intervals; **eleven points below it against `search-4`**,
+  well outside them; and a winner head to head against the lookahead, which is the non-transitivity this
+  journal keeps meeting and not a result. At 83 s for the 400 matches against 16 s, five times the cost.
+
+- **Why a floor loses.** Against Greedy the guessed reply is Greedy's own rule, so the guess is nearly the
+  truth and the floor is strictly more pessimistic than the truth: the agent defends against answers that
+  never come. Against `search-4` the floor is worse still, because `search-4` plays the aggressive move and
+  the floor spends the actor's slot on the defensive one; 0.083 is a defender being run over. The minimax
+  reading is right for a game where the opponent answers the move. Intents here are declared at the same
+  time, and the reply that costs most is the one the opponent did not see to play.
+
+- **What the mechanism does, verified apart from the win rate.** `Replies` on the agent hands out the spell
+  it took each other creature to play. On a board where the enemy can Rend the actor, which its own reading
+  prices above everything, or Strike the ally that has declared a Rend of its own, the lookahead takes the
+  enemy at Rend and the minimax takes it at the Strike, because the kill costs the round the ally's action on
+  top of the ally. That is the difference between a guess and a floor in one test, and it is not a
+  difference that wins matches.
+
+- **Where this leaves ADR 0047's route.** Two agents built on `Advance`, both measured, neither better than
+  Greedy: the guess reads the round the way the opponent plays it and adds nothing measurable, the floor
+  reads it the way no opponent plays it and loses. What has not been tried is the reading with its own
+  weights: `search-weights` plays `heuristic:<file>` and would have to play `lookahead:<file>` to find out
+  whether a rollout has a different ceiling from a step, and that is the one experiment left on this route
+  before the honest reading is that on this game the strength is in the evaluation and not in the horizon.
+  Both agents stay in the catalogue as kinds that play nothing by default; the digest is unchanged.
+
+## 2026-09-16. The lookahead agent plays the round out and does not beat Greedy
+
+- **The agent ADR 0047 was for exists, and the measurement it asked for says not to expect much from it as
+  it stands.** `lookahead` decides a combat move by putting it on a hypothetical board (`Advance`, the
+  Domain half of the ADR), playing every other activation slot of the round as the heuristic agent would,
+  and summing what the scorer says of every action the round then holds, allies for and enemies against.
+  On the benchmark seeds, mirrored, content `7e199df4`:
+
+  | Lookahead against | win rate | 95 % interval | Greedy on the same seeds |
+  | --- | --- | --- | --- |
+  | `Greedy` | **0.458** | 0.407 to 0.508 | 0.5 by definition |
+  | `search-4` | 0.200 | 0.157 to 0.243 | 0.070 (`search-4` beats Greedy 0.930, ADR 0047) |
+  | `Random` | 0.990 | 0.980 to 1.000 | — |
+
+  Parity with Greedy, inside the interval; a wider margin against `search-4` than Greedy has, but still a
+  loss four matches in five. Nothing here beats the bar.
+
+- **It took four corrections to get to parity, and each one was a bias in the model of the other creatures,
+  not a bug in the rules.** The first version scored **0.190** against Greedy. In order:
+  1. When the guess had the actor dead before its own slot, every candidate left the same round and the tie
+     went to the first spell in id order, which is `basic_attack` on most creatures. Ties broken by the
+     one-step score: **0.233**.
+  2. The rollout guessed every enemy's *spell* at its slot, on the board after the actor's move. The match
+     declares every intent before anything resolves, so that enemy was clairvoyant, and a clairvoyant enemy
+     punishes every aggressive move: the agent stopped casting `hateful_sacrifice` (the spell with the best
+     won-cast share in the table, 82 %) and cast `death_squad` eighteen times more often than Greedy.
+     Guessing the spell on the board before combat, and only the targets at the slot: **0.310**.
+  3. Every roll was a miss, so `crushing_stomp` (75 % critical) was priced at half its worth and cast zero
+     times in 400 matches against Greedy's 315. The actor's own roll weighted between critical and miss the
+     way the scorer weights it: **0.370**.
+  4. The round was valued by the board it leaves, health, energy and conditions priced by the same weights.
+     Summing the scorer's own scores of the round's actions instead, which keeps Greedy's calibration exactly
+     and adds only the interactions: **0.453**. The weights were swept for the one-step reading (ADR 0028,
+     0032, 0037), and a reading of the board is a different function of them.
+  5. An ally that has not declared yet was guessed by the scorer alone, without the team's declarations
+     the real heuristic agent reads (ADR 0039), the actor's candidate included. Codex caught it; guessed as
+     that agent would, with the candidate on the board: **0.458**, and the cost below.
+
+- **Where the parity comes from.** Two ablations split the agent: Greedy's intents with the lookahead's
+  targets scored 0.507 against Greedy (0.468 to 0.547, no signal), and the lookahead's intents with Greedy's
+  targets reproduced the loss. The target decision is the one with no hidden information -- the revealed
+  actions are public and `Advance` replays them exactly, and its fizzle rate is the lowest in the table --
+  and it is worth nothing measurable. The intent decision is the one that guesses, and every guess it makes
+  is a place to lose. Against Greedy the guess of an enemy's spell is close to exact, since it is Greedy's
+  own rule, and the reading still does not win; against `search-4` the guess is wrong in the way the weights
+  differ.
+
+- **What it costs**: 400 matches in 16.0 s against 5.9 s for the Greedy mirror on the same machine, with
+  the evaluation's parallelism (10.2 s before the fifth correction, which asks the heuristic agent for every
+  undeclared ally once per candidate). A decision plays the round twice per candidate and asks the scorer
+  for a best target set at every slot, so per decision it is several times a one-step decision, but the
+  wall clock says cost is not what stands in the way of a search agent here.
+
+- **What is not claimed.** That lookahead cannot help. The agent reads the round through the weights of a
+  one-step agent, and no weight search has been run for this reading: `search-weights` plays
+  `heuristic:<file>` and would need to play `lookahead:<file>` to tune it. That is the next experiment if
+  the route is kept, and the honest reading of this entry is that the route has not earned it yet: the
+  cheapest lookahead that could be built is a wash, and the one that beats `search-4` is a searched weight
+  file that reads one ply.
+
+- **Determinism holds**: the agent draws nothing, a digest with it replays, and the benchmark digest is
+  unchanged since it plays nothing by default.
+
+## 2026-09-16. The content tuner gets the hold-out the weight search already had
+
+- **Not a number that moved; a number that could not be trusted.** `tune.yml` picked the candidate that
+  scored best on the seed file the objective names, and `improved` compared it with the starting content
+  *on those same seeds*. That is the shape of problem ADR 0049 names for the learning loop, and
+  `search.yml` had already answered it for the weight search: replay the winner and the starting point on a
+  window of seeds no candidate saw. The tuner had no such step. I had written that both workflows lacked
+  one; only the tuner did, and the entry that said otherwise was wrong about `search.yml`.
+
+- **What exists now.** `score-content` plays a catalogue as it stands, once, on a seed file, and scores it by
+  the objective — no search, no neighbours. The `Tune the catalogue` workflow keeps a copy of `data/` before
+  the search touches it, and when a proposal is applied, plays both catalogues on a window of consecutive
+  seeds placed clear of the objective's file (above its largest seed when that fits the signed range, below
+  its smallest otherwise, the same rule as `search.yml`). Both scores go in the run summary and the commit
+  message. **Lower is better there**, because the score is a penalty, and both places say so rather than
+  letting the table be read the way the win-rate table reads.
+
+- **It reports and does not gate**, which is what `search.yml` does too: the maintainer reads two numbers on
+  the pull request and decides. A proposal that does not score below its starting point on unseen seeds has
+  been shown to fit the file it was searched on, and nothing else.
+
+- **Checked on the real engine, not only on the fakes.** `score-content` on the committed content with a
+  three-seed window played all four objective evaluations, wrote `score.json` with the seed file it was
+  given, and printed the breakdown — 248.6, almost all of it `exploit.winRateA` reading 1.000 on three
+  matches, which is what three matches look like and not a finding. The jq window against the real
+  `benchmark-seeds.json` starts at 995317, one past its largest seed, and shares none of its 200 seeds.
+
+- **Two things the pull request's reviewers caught, both real.** Codex: the lower window was refused when
+  its start would be negative, copied from `search.yml`'s rule — but a seed is an `int` the engine adds to
+  unchecked, and the seed file loader refuses only an empty list and a repeat, so the floor is the signed
+  minimum and not zero. Checked at the edges: a top at `int.MaxValue` with a low of 100 now gives −100, a
+  low of 0 gives −200 where it used to give up, and one seed past the signed minimum still gives "none".
+  `search.yml` carries the same `>= 0` and is not touched here. Sonar: the new command duplicated
+  `tune-content`'s preflight line for line and had no test past that preflight, so both handlers now share
+  one, and `score-content` grew `--builder` so the whole command runs end to end on the fake builder and
+  engine in a test — the same call `tune.yml`'s hold-out step makes.
+
+- **What is not claimed.** No tuning pass has run under this yet, so no proposal has been checked by it. And
+  it is a window of 200 seeds against a search that played 200: one hold-out, not a spread. The tuner's
+  score is a sum over four evaluations of 200 matches each and is steadier than a single win rate, but how
+  steady is not measured here.
+
+## 2026-09-16. The three-seed loop reproduces its own evidence to the digit, so the dataset goes to 5000
+
+- **`ci-95` was a regression test before it was an experiment.** The first turn of `iterate.sh --seeds`
+  asked for seeds 1, 2 and 3 at lambda 0.9 with the ADR 0048 baseline — exactly `ci-88`, `ci-90` and `ci-91`,
+  which had run one at a time. Nothing about recording, training or evaluation changed in that refactor,
+  only that one turn now runs all three seeds and ranges them, so every number had to come back the same.
+
+  | `ci-95`, by seed | 1 | 2 | 3 | width | the single-seed runs |
+  | --- | --- | --- | --- | --- | --- |
+  | value against `search-4` | 0.6625 | 0.0975 | 0.3038 | **0.565** | 0.6625 / 0.0975 / 0.30375 |
+  | value against `Greedy` | 0.0325 | 0.1537 | 0.0338 | 0.121 | 0.0325 / 0.15375 / 0.03375 |
+  | value against `Random` | 0.6925 | 0.6575 | 0.7900 | 0.133 | 0.6925 / 0.6575 / 0.79 |
+  | clone against `Greedy` | 0.7250 | 0.7987 | 0.8213 | 0.096 | 0.725 / 0.79875 / 0.82125 |
+  | clone against `search-4` | 0.5325 | 0.5775 | 0.5200 | 0.058 | 0.5325 / 0.5775 / 0.52 |
+  | clone against the champion `ci-69` | 0.5 | +0.536 | −0.424 | — | 0.5 / +0.53625 / −0.42375 |
+
+  **Every digit.** The four baseline rows have a width of exactly zero, as they must — they never read the
+  dataset seed. The gate printed `Seeds: 1 2 3`, played the champion once per seed and listed each margin,
+  and refused both policies; `spread.json` and 57 files landed in the artifact. The machinery is trusted.
+
+- **What that width now licenses.** 0.565 on the value policy against its own teacher, from the draw alone,
+  is the number ADR 0049 is built on. It is not a property of lambda 0.9 or of the baseline; it is what a
+  thousand-match fit looks like. Until it narrows, no knob on this loop can be read at all.
+
+- **So the next turn moves one thing: 1000 matches to 5000.** Same three seeds, same lambda, same alpha,
+  min samples, discount and baseline alpha. The maintainer asked for it, and it is the right first move
+  because the spread is variance between *fits*, and five times the data is the plainest way to shrink
+  that. **An expectation, written down first**: if the width is fit variance, it should fall by about the
+  square root of five, from 0.565 toward **0.25** on that row. The last expectation this journal wrote
+  before a run was refused in both directions (`ci-89`), so this one is a number to be checked, not a
+  claim. And a narrower spread would mean the *measurement* got steadier, not that the policy got better;
+  those are different claims and the entry that reads the run has to keep them apart.
+
+- **What it costs**: recording five thousand matches twice per seed and training on five times the steps,
+  three times over. Roughly an hour and a half to two hours a turn, against half an hour at 1000 and ten
+  minutes before ADR 0049. Named here so the next entry does not have to explain why the run took so long.
+
+## 2026-09-16. The fourth seed took back my last surviving claim, and the loop now runs three of them
+
+- **`ci-92` is seed 4 of the configuration the entry below is about**, and it is the widest draw yet. The
+  value policy scored **0.0 against `search-4`** — not one match in four hundred — where seed 1 scored
+  0.6625. **The spread is now 66 points**, and the clone's is wider than it looked too.
+
+  | at lambda 0.9, by dataset seed | 1 (`ci-88`) | 2 (`ci-90`) | 3 (`ci-91`) | 4 (`ci-92`) |
+  | --- | --- | --- | --- | --- |
+  | value against `search-4` | **0.6625** | 0.0975 | 0.30375 | **0.0** |
+  | value against `Greedy` | 0.0325 | 0.15375 | 0.03375 | 0.0 |
+  | clone against `Greedy` | 0.725 | 0.79875 | **0.82125** | **0.68125** |
+  | clone against `search-4` | 0.5325 | 0.5775 | 0.52 | 0.4625 |
+  | clone against the champion `ci-69` | 0.5 (itself) | **+0.53625** | **−0.42375** | 0.495 |
+
+- **It refuted the one cross-seed claim I had let stand.** The entry below says the clone beating `Greedy`
+  better at seeds 2 and 3 than at seed 1 is "the only claim here with more than one seed behind it", and
+  reads it as seed 1 being the weak draw. Seed 4 came back at **0.68125, below all three**. There was no
+  weak draw; there is a wide one. Two agreeing samples are still samples, and I should not have promoted
+  them.
+
+- **Against the champion the same configuration is better, worse and level.** +0.536, −0.424, 0.495 across
+  three comparable draws. Whether a turn proposes a new champion or is refused by the bar is, at this width,
+  decided by which thousand matches it was fitted on.
+
+- **So ADR 0049 is Accepted and implemented in this change.** `scripts/iterate.sh --seeds` (default `1 2 3`)
+  runs recording, training, evaluation and the report **once per seed** into `runs/<id>/seeds/<seed>/`; the
+  baselines are evaluated once because they never read the dataset seed; and a new `spread` command ranges
+  every win rate across the seeds into `runs/<id>/spread.json`, which is what the turn ends on. The commit
+  gate reads the **minimum**, which is "every seed cleared it", and plays the committed champion **once per
+  seed**, requiring every one to beat it measurably. The committed file is the first seed's, **chosen by
+  position and never by score**: the benchmark seeds are fixed, so picking the best-scoring seed is
+  selection on the test set, and this table is what that would have manufactured.
+
+- **The first thing the new machinery printed was its own justification.** A two-seed smoke run on 60
+  matches came back with `value-vs-random` at 0.0150 and 0.7338 — a width of 0.72 on a single knobless
+  configuration. A single-seed run still works, for reproducing an old one; it prints a width of zero and
+  says in as many words that this is a sample, because a width of zero must not read as agreement.
+
+- **What this costs**: about half an hour a turn instead of ten minutes, named in the ADR. What it buys is
+  that the next number in this journal will be a range.
+
+- **Not done, and first in line**: ADR 0048's baseline fix was reported as a win rate moving 0.10125 to
+  0.29625 against `Greedy`, on one seed each. Its held-out fit improvement stands and is measured on data;
+  the win rate is inside the width above and was withdrawn. **Re-measuring it as a spread has not been
+  done.** `search.yml` and `tune.yml` have the same shape of problem and are untouched.
+
+## 2026-09-16. Three seeds of the same configuration disagree by 56 points, so most of this week is a sample
+
+`ci-91` took the third dataset draw, seed 3, chosen in advance and not for its score. With `ci-88` (seed 1)
+and `ci-90` (seed 2) that makes **three runs of one configuration** — lambda 0.9, the ADR 0048 baseline,
+`search-4` as teacher and baseline, 1000 matches — differing only in which matches were recorded. The
+evaluation is the fixed benchmark seeds every time.
+
+| at lambda 0.9, by dataset seed | 1 (`ci-88`) | 2 (`ci-90`) | 3 (`ci-91`) |
+| --- | --- | --- | --- |
+| value against `search-4` | **0.6625** | **0.0975** | 0.30375 |
+| value against `Greedy` | 0.0325 | 0.15375 | 0.03375 |
+| value against `Random` | 0.6925 | 0.6575 | 0.79 |
+| clone against `Greedy` | 0.725 | 0.79875 | **0.82125** |
+| clone against `search-4` | 0.5325 | **0.5775** | 0.52 |
+| clone against the champion `ci-69` | 0.5 (itself) | **+0.53625** | **−0.42375** |
+
+- **The spread from the seed alone is 56 points**, and every effect this project has measured is smaller
+  than that. Lambda, the baseline, the teacher — each was one seed against one seed. **`ci-88` beating
+  `search-4`, which I reported last night as the first agent ever to do it, is inside this spread and is not
+  a result.** ADR 0049 is the proposal that follows from it.
+
+- **This also takes back a headline I gave the user.** ADR 0048's win-rate claim — 0.10125 to 0.29625
+  against `Greedy` from fixing the baseline — is a seed-1 sample. The *fit* improvement is real and
+  held-out: `baselineR2` 0.0705 to 0.1053, rounds 15-30 from −0.2179 to +0.0685, measured on data, not on
+  matches. The **19-point win-rate gain is inside the seed spread** and I should not have called it a
+  tripling. ADR 0048 is Accepted and immutable, so the correction lives in ADR 0049 and here.
+
+- **The clone rows are the sharper lesson, because they contradict each other.** `ci-91`'s clone beats
+  `Greedy` **0.82125** — the best any policy has managed, against the committed champion's 0.725 — and loses
+  to that same champion head to head at **0.42375**, interval from 0.387. Being better against a third party
+  does not make you better than the player you are replacing. The champion bar refused it, its second
+  correct refusal in one night and its fourth overall.
+
+- **And `ci-90`'s clone looks thinner now.** It cleared every bar, including the champion at 0.53625 with an
+  interval from 0.51473. But `ci-91` shows the same quantity swinging to 0.42375 on a neighbouring draw, so
+  a margin of 0.036 over one seed is not much to commit a model on. Nothing was committed, which is the
+  right outcome for a reason that was not visible an hour ago.
+
+- **What survives all three seeds.** The clone beats `Greedy` more at seeds 2 and 3 (0.79875, 0.82125) than
+  at seed 1 (0.725), so seed 1 looks like the weak draw rather than seeds 2 and 3 being lucky — that one is
+  consistent across two independent draws and is the only claim here with more than one seed behind it. And
+  the value policy loses to `Greedy` on every seed, 0.0325, 0.15375, 0.03375, which is the clearest thing
+  the loop has said all week: **at lambda 0.9 it is simply not a good player**, whatever it does to the
+  teacher on any given draw.
+
+- **What happens next is a change to the loop, not a new claim from it.** ADR 0049 proposes that a
+  configuration be run on at least three seeds and reported as a spread, with the gate requiring every seed.
+  The loop fires on every push to the pull request whatever `next.json` says, so that slot goes to **seed 4
+  of the same configuration** — a fourth sample of the spread this entry is about, which is the one thing a
+  single-seed turn can still usefully contribute. It is not a new experiment and no new knob moves.
+
+## 2026-09-16. The spike was a lucky draw, and the clone quietly cleared every bar the project has
+
+`ci-90` moved one thing against `ci-88`: the **dataset seed, 1 to 2**. Same lambda 0.9, same teacher, same
+1000 matches, same alpha, min samples, discount and baseline alpha, and the evaluation still runs on the
+fixed benchmark seeds. Two things came back, and they point in opposite directions.
+
+- **The lambda 0.9 spike does not survive a different draw.** Against `search-4` the value policy goes
+  **0.6625 to 0.0975** — win rate 9.5%, interval 6.8% to 12.2%, measurably beaten. So `ci-88` beating
+  `search-4` was **one lucky fit**, not a property of that lambda against that teacher. Three runs had
+  pointed at it and the fourth took it away.
+
+  | value policy, lambda 0.9 | seed 1 (`ci-88`) | seed 2 (`ci-90`) |
+  | --- | --- | --- |
+  | against `search-4` | **0.6625** | **0.0975** |
+  | against `Greedy` | 0.0325 | 0.15375 |
+  | against `Random` | 0.6925 | 0.6575 |
+  | rounds / cap against `search-4` | 17.1 / 38.2% | 14.0 / 27.3% |
+
+  Changing which 1000 matches it fits on moves the result against the teacher by **56 points**. That is
+  larger than every lambda effect measured this week put together, and it means no single run of this
+  pipeline says anything about lambda at all.
+
+- **The clone cleared all four bars, and it is the first policy ever to do it.** Nothing about the clone
+  changed except the dataset it imitates.
+
+  | clone | seeds 1 (`ci-69`, `ci-86`..`ci-89`) | seed 2 (`ci-90`) |
+  | --- | --- | --- |
+  | against `Greedy` | 0.725 | **0.79875** (win 77.8%, 73.0 to 82.5) |
+  | against `Random` | 0.9925 | 0.9875 |
+  | against `search-4` | 0.5325 (cannot be told apart) | **0.5775 — win 57.2%, 53.0 to 61.5, measurably better** |
+  | against the champion `ci-69` | 0.5 (interval from 0.5) | **0.53625, interval from 0.51473** |
+
+  The gate said `clears 0.5` for the first time in the loop's history, and did not commit it only because
+  this run was not asked to.
+
+- **Why this is the opposite of `ci-88`, and why that matters.** `ci-88` beat `search-4` and lost to
+  `Greedy` 0.0325, which is what an exploit looks like. This clone beats `Greedy` **better than any policy
+  before it**, beats `Random`, beats `search-4`, and beats the committed champion — four opponents, no hole.
+  It is still not transitive with `search-4` (which beats `Greedy` 0.930 where this beats it 0.799), but
+  losing to nothing is a different object from losing to the weakest agent on the board.
+
+- **And the hazard, which is the reason this entry does not end in a commit.** The only thing that changed is
+  a seed, and the evaluation runs on **fixed** benchmark seeds. So "try dataset seeds until one scores well"
+  is selection on the test set, and it would manufacture exactly this result out of noise. The value policy
+  in this same run is the proof that a seed can swing a headline number by 56 points. **`ci-90`'s clone has
+  not been shown to be better; it has been shown to score better on one draw**, which is what `ci-88` also
+  looked like four hours ago.
+
+- **So `ci-91` takes a third draw, seed 3, and it is not chosen.** Whatever it says stands. If the clone is
+  near 0.8 against `Greedy` again, seed 1 was the unlucky one and the clone genuinely improved; if it falls
+  back near 0.725, both `ci-88` and `ci-90` were draws and the pipeline's run-to-run spread is simply wider
+  than anything it has been asked to measure. Either answer is worth more than a committed model.
+
+## 2026-09-16. The prediction was wrong in both directions, and lambda 0.9 is a spike rather than a trend
+
+- **I wrote the prediction down before the run and it was refused on both halves.** `next.json` said: if the
+  trend is monotone, lambda 0.8 is *worse* against `Greedy` than `ci-88`'s 0.0325 and *better* against
+  `search-4` than its 0.6625. `ci-89` came back better against `Greedy` and far worse against `search-4`.
+
+  | value policy, ADR 0048 baseline | lambda 0.95 (`ci-86`, `ci-87`) | lambda 0.9 (`ci-88`) | lambda 0.8 (`ci-89`) |
+  | --- | --- | --- | --- |
+  | against `search-4` | 0.4975 | **0.6625** | 0.27875 |
+  | against `Greedy` | **0.29625** | 0.0325 | 0.10375 |
+  | against `Random` | 0.6275 | 0.6925 | **0.75875** |
+
+  So the alternative the prediction offered is the one that happened: **lambda 0.9 is a peak against the
+  teacher, not a point on a trend.** Nothing monotone survives on either of the two agents that matter.
+
+- **One thing is monotone, and it is the opponent nobody is trying to beat.** Against `Random` the three
+  lambdas go 0.6275, 0.6925, 0.75875 — clean, in order, as lambda falls. Against `Greedy` and `search-4`
+  there is no order at all. A knob that sorts your results against `Random` and scrambles them against real
+  opponents is not a strength knob.
+
+- **The stalling story does not survive either, and it was mine.** `ci-88`'s entry read the 0.6625 as
+  dragging `search-4` to the round cap. But `ci-89` plays `search-4` almost as long — **16.7 rounds and 29.2%
+  capped**, against `ci-88`'s 17.1 and 38.2% — and scores 0.279 there instead of 0.6625. The long game is
+  present at both lambdas; only one of them converts it. Reaching the cap is not what wins those matches, so
+  "it stalls the teacher" explains less than I said it did. What separates them has to be *who is healthier*
+  when the cap arrives, and this run does not measure that.
+
+- **The other half of that reading also fails.** `ci-88` died against `Greedy` on the `Greedy` mirror's own
+  pace, 7.0 rounds and 0.0% capped, and I took that as the exploit having no grip outside the teacher.
+  `ci-89` against `Greedy` plays **13.9 rounds and caps 18.5%** — the long game does appear there — and still
+  only scores 0.10375. Two lambdas, two different failure shapes, no story that covers both.
+
+- **What stands.** `ci-88` beating `search-4` measurably is still the only time it has happened, and it is
+  still an exploit: it loses to `Greedy` 0.0325. The gate refused every policy of all three runs. The clone
+  is byte-for-byte the same player in `ci-86`, `ci-87`, `ci-88` and `ci-89` — 0.725 / 0.9925 / 0.5325, refused
+  each time at 0.5 against `ci-69` — and every fixed row of every report is identical to the digit, so the
+  four runs differ by exactly the knob each one moved.
+
+- **What to do about it.** The pipeline is deterministic, so re-running lambda 0.9 would return 0.6625 and
+  prove nothing. `ci-90` changes the **dataset seed to 2** at lambda 0.9 instead: same fixed benchmark seeds
+  for the evaluation, a different 1000 matches to fit on. If 0.6625 survives a different draw it is a
+  property of that lambda against that teacher; if it collapses, it was one lucky fit and the spike is noise
+  that three runs happened to point at. No prediction this time — the last one earned none.
+
+## 2026-09-16. Something finally beat `search-4`, and it is the wrong kind of win
+
+- **`ci-88` is the first agent in this project to beat `search-4` measurably.** Win rate **0.6550 over 400
+  matches, interval 0.5988 to 0.7112** — the whole of it above one half, so the evaluation says it in its own
+  words rather than leaving it to me. Score 0.6625. That is the standing goal of the last week, reached.
+
+- **It also loses to `Greedy` 0.0325**, interval 0.0154 to 0.0496. `Greedy` is the weaker agent by a distance:
+  `search-4` beats it 0.930. So the thing that beats `search-4` is destroyed by an opponent `search-4`
+  crushes. **This is not a better player. It is an exploit of one opponent**, and the run that produced it
+  says so on the next line.
+
+  | value policy, ADR 0048 baseline | lambda 0.95 (`ci-86`, `ci-87`) | lambda 0.9 (`ci-88`) |
+  | --- | --- | --- |
+  | against `search-4` | 0.4975 (cannot be told apart) | **0.6625 — beats it measurably** |
+  | against `Greedy` | 0.29625 | **0.0325** |
+  | against `Random` | 0.6275 | 0.6925 |
+  | rounds / cap against `search-4` | 23.8 / 56.0% | 17.1 / 38.2% |
+  | rounds / cap against `Greedy` | 17.3 / 35.8% | **7.0 / 0.0%** |
+
+- **One knob moved**: lambda 0.95 to 0.9. Same teacher, 1000 matches, seed, alpha, min samples, discount and
+  baseline alpha. The engine stamp reads `8517a75cb98d` against `ci-86`'s `dc80d1a32581`, but every fixed row
+  of the report is identical to the digit — `baseline-vs-greedy` 0.930 at 7.2 rounds, the `Greedy` mirror
+  0.500 at 7.8, `greedy-vs-random` 0.979, `random-vs-random` 0.500, and all three clone rows — so the engine
+  is behaviourally the same and the stamp is not.
+
+- **The two opponents order the two lambdas in opposite directions, and they do it hard.** 0.95 is better
+  against `Greedy` by 26 points; 0.9 is better against `search-4` by 17. Neither ordering is close enough to
+  be noise. `ci-81` saw the same sign with the broken baseline and it was small; fixing the baseline made it
+  large. So **the answer to what `ci-87` asked is no**: the curve did not lift as a shape. Lowering lambda
+  buys specialisation against the teacher and pays for it everywhere else.
+
+- **The round cap is where it does its work, and only against `search-4`.** 17.1 rounds and 38.2% of matches
+  capped against `search-4`; **7.0 rounds and 0.0% capped against `Greedy`**, which is the `Greedy` mirror's
+  own pace. It does not stall in general — it stalls *the teacher*, and ADR 0011 hands a capped match to the
+  healthier team. Against `Greedy` it never gets there: no draws, no capped matches, spell entropy 2.42
+  against the clone's 3.10, a 15.6% fizzle rate against `Greedy`'s 9.4%. It plays a narrow repertoire badly
+  and dies on schedule.
+
+- **The gate refused it, and that is the point.** Committing needs 0.5 against `Greedy`; it scored 0.0325.
+  Had "beats `search-4`" been the only bar, this would have been pushed as a champion. It is the case ADR
+  0044 named — a yardstick that does not hold — arriving on its own, and the `Greedy` bar caught it without
+  anyone deciding anything.
+
+- **What this costs us.** `search-4` is the teacher, the baseline opponent and the bar in one. An agent
+  trained on its self-play, scored against it, can learn its habits rather than the game; the further lambda
+  bootstraps through its own value function, the more room there is to do exactly that. Measuring against a
+  second independent opponent is not a nicety here, it is the only reason this was visible.
+
+- **A prediction, written before the run.** If this is monotone, lambda **0.8** should be worse still against
+  `Greedy` and better still against `search-4`. If instead 0.9 is a peak against `search-4`, it is a
+  resonance with the teacher rather than a trend. `next.json` asks for 0.8; the journal will say which.
+
+## 2026-09-16. The baseline fix tripled the value policy against `Greedy`, and made its score against `search-4` unreadable
+
+- **`ci-86` is the first run played with the baseline of ADR 0048**, and it is the first time a value policy
+  has moved a win rate by a lot. One thing changed against `ci-72`: the state baseline is pulled by its own
+  `--baseline-alpha 10000` instead of sharing the action rows' `10`, and it is clipped to the range a return
+  can take. Same teacher (`search-4`), same 1000 matches, same seed 1, same alpha, min samples, lambda 0.95
+  and discount 1.0. The recorded datasets are identical to `ci-72`'s (53.9% / 45.6% / 0.5%, 8.0 rounds).
+
+  | value policy | lambda 0.95, shared baseline (`ci-72`) | lambda 0.95, ADR 0048 baseline (`ci-86`) |
+  | --- | --- | --- |
+  | against `Greedy` | 0.10125 | **0.29625** (win rate 0.2625, 0.2278 to 0.2972) |
+  | against `search-4` | 0.210 | **0.4975** (win rate 0.4950, 0.4533 to 0.5367) |
+  | against `Random` | 0.6425 | 0.6275 |
+  | `baselineR2` | 0.07054 | **0.1053** |
+  | `advantageStd` | 0.4071 | 0.3852 |
+
+  `baselineR2` landed on the 0.1053 the ADR predicted for this dataset, so the fit did what the measurement
+  said it would. **It is not comparable with the five runs that read 0.07054**: it is now taken on the
+  clipped values actually used, and the step on identical data is 0.0705 to 0.0806. `r2` went −0.0135 to
+  0.02731, and that one is not a clean comparison either — the metric's definition moved in the same commit.
+
+- **The win rates are the comparable numbers, and they nearly tripled on one and doubled on the other.**
+  That is worth stating plainly because it is the first time: five turns of lambda work moved the value
+  policy between 0.000 and 0.10125 against `Greedy`, and fixing what the lambda takes its advantage *from*
+  moved it to 0.29625 in one step. The mechanism ADR 0046 built was being fed by a signal that was
+  anti-predictive exactly where the high-lambda policies play.
+
+- **`0.4975` against `search-4` is not parity with `search-4`, and the same run proves it.** `search-4` beats
+  `Greedy` 0.930. This policy loses to `Greedy` 0.29625, measurably — the whole interval is below one half.
+  An agent that were genuinely `search-4`'s equal would not do that. The evaluation says the honest thing
+  itself: over 400 matches the interval is 0.4533 to 0.5367, so this run *cannot tell them apart*, which is
+  not a claim that they are equal. **Fourth time these matchups have come out non-transitive**, and the
+  starkest.
+
+- **The reading the numbers support is that it stalls.** Against `search-4` it plays **23.8 rounds** and
+  reaches the round cap in **56.0%** of matches; against `Greedy`, 17.3 rounds and 35.8% capped with 6.8%
+  draws. `search-4` against `Greedy` plays 7.2 rounds and caps 1.5%; the `Greedy` mirror plays 7.8 and caps
+  0.5%. ADR 0011 gives a capped match to the healthier team, so more than half of its result against
+  `search-4` is decided by a health margin rather than by a kill. The same plan against `Greedy` caps less
+  often and loses anyway.
+
+  Two things would settle it and neither is done here: play the pair on enough matches to close an interval
+  eight points wide, and read the capped matches apart from the decided ones. Until then "it stalls to the
+  cap and splits on health" is the reading, not the measurement.
+
+- **One number I cannot explain and am not explaining away.** In `value-vs-baseline` the slot-1 player takes
+  only **25.5%** of the wins, and 17.0% in `value-vs-greedy`, against 46.5% in the `Greedy` mirror and 51.0%
+  in `baseline-vs-greedy`. Whatever seat advantage the content carries, these long matches amplify it far
+  past anything the short ones show. Recorded, not interpreted.
+
+- **The clone is untouched and was refused again.** 0.725 against `Greedy`, 0.9925 against `Random`, 0.5325
+  against `search-4` — `ci-69` and `ci-72` to the digit, as it must be, since nothing in ADR 0048 reaches
+  the clone. The champion bar read `0.5 against models/clone/ci-69/policy.json (interval from 0.5)` and kept
+  it out: third correct refusal, and the first one on a run where the other model moved.
+
+- **`ci-87` reproduced it on the same parameters**, deliberately, because the largest move a value policy
+  has made should not rest on one run: 0.29625, 0.6275, 0.4975 and the clone at 0.725 / 0.9925 / 0.5325,
+  refused again at 0.5 against `ci-69`. Every digit. So the numbers above are the pipeline, not a roll.
+
+- **What is not claimed.** Nothing here beats `search-4`. Neither policy was committed, and neither cleared
+  0.5 against `Greedy`. What this run also does is **cast doubt on the lambda sweep**: 1.0, 0.95, 0.9, 0.8
+  and 0.5 were all measured against the broken baseline, so 0.95 is the best point on a curve that no longer
+  exists. That curve is worth walking again before anything else is read into it, and `ci-88` takes its
+  first step at lambda 0.9 — the point that read 0.035 against `Greedy` where 0.95 read 0.10125. If the
+  whole curve lifted, 0.9 lifts too; if only 0.95 did, it was a spot rather than a shape.
+
+## 2026-09-15. The baseline was capping the lambda, and one of my two guesses about why was wrong
+
+- **`baselineR2` read 0.07054 on five consecutive runs** — `ci-72`, `ci-74`, `ci-78`, `ci-80`, `ci-81` —
+  while the lambda moved from 1.0 to 0.5 and back. Every lambda below 1.0 takes its advantage as
+  `V(next) - V(here)` (ADR 0046), so that number caps the mechanism. Measured on the exact 1000-match
+  exploring dataset those runs used, re-recorded locally and identical to them (53.9% / 45.6% / 0.5%, 8.0
+  rounds):
+
+  | | all held-out steps | rounds 15-30 |
+  | --- | --- | --- |
+  | as fitted, alpha 10 | +0.0705 | **-0.2179** |
+  | alpha 1000 | +0.0824 | -0.1383 |
+  | alpha 10000 | +0.1021 | +0.0200 |
+  | gradient boosting, same features | **+0.1215** | **+0.3760** |
+
+- **The first thing that was wrong: the alpha was shared and far too low.** Held-out `r2` rises monotonically
+  with it, but `--alpha` also sets the pull on the action rows, which are fitted on a median of sixty
+  examples each and want the small number. One knob served neither. `--baseline-alpha` separates them, and
+  its default keeps them shared, so every earlier run reproduces.
+
+- **The second: the fit predicted returns that cannot happen.** `Returns.Of` pays ±1 plus a tenth of the
+  health margin, so nothing here is outside 1.05; the linear fit predicts from **-1.78 to +2.19**. In rounds
+  15 and beyond that made the baseline **worse than predicting a constant** — `r2` -0.2179 against -0.0014
+  for the training mean — and the overshoot is half of it: clipping alone takes those rounds to -0.1110.
+  Clipping is not a knob. A prediction the target cannot take is wrong by construction.
+
+- **A guess of mine that the measurement refused.** The natural story was that the baseline cannot express
+  "health decides more as the cap approaches" (ADR 0011), because that is an interaction between
+  `round_fraction` — which *is* feature 0, the observation does carry it — and the health features, and the
+  model is linear. Adding those interaction terms made it **worse**: 0.0705 → 0.0574 overall, and
+  -0.2179 → -0.4375 in the late game. Recorded because it was wrong. What the late game actually wants is a
+  fit of its own: trained on late steps alone, the same features and the same model reach **+0.0625** there,
+  where the shared fit reaches -0.2179.
+
+- **What this is worth, end to end, on the same dataset**: `baselineR2` 0.0705 → **0.0806** from the clip
+  alone → **0.1053** with `--baseline-alpha 10000`, and rounds 15-30 from -0.2179 to **+0.0685**. That is
+  where the high-lambda policies live: `ci-81` played 19.1 rounds against `Greedy` and reached the cap in
+  46.2% of matches, taking its advantage from a signal that was anti-predictive exactly there.
+
+- **The fact that made all of it cheap.** The baseline never reaches the engine as anything that matters:
+  `LinearScorer.scores` adds it to every candidate of a decision alike, and the code says so — *"The same
+  number for every candidate, so it never changes the winner."* It is a **training-time device**, so it can
+  be improved with no format change, no engine change and no feature schema. That also means the 0.1215 a
+  nonlinear baseline reaches is **available**, and ADR 0048 leaves it open rather than taking it.
+
+- **A second defect in the same change, found by the Codex review.** Clipping the value the action rows are
+  fitted against, while reconstructing the reported score from the unclipped written baseline, mixes two
+  different values: the score is then wrong by exactly the overshoot, on the steps the clip exists for. The
+  metric now scores against the value actually fitted on, which on this dataset is `r2` 0.0237 → **0.0273**
+  and `loss` 1.0062 → 1.0024. `accuracy` cannot move either way, since a baseline adds one number to every
+  candidate of a decision. It has **no test**: the fixture's baseline predicts inside the return range at
+  every alpha, so the clip never bites there, and the test I first wrote passed with the bug still in. It was
+  removed rather than kept — a test that cannot fail claims a coverage it does not have.
+
+- **`baselineR2` is not comparable across this entry.** It is now measured on the values actually used, clip
+  included. The step change on identical data is 0.0705 to 0.0806.
+
+- **Nothing here has been played.** This is a fit that is less wrong, not an agent that is better. The
+  lambda sweep put the value policy near 0.10 against `Greedy` where the clone of the same turn plays 0.725.
+
+## 2026-09-15. There is no best lambda: the two opponents peak in different places
+
+- **`ci-81` ran lambda 0.9 and broke the prediction `next.json` had written down before it.** That file said
+  to expect 0.9 to be indistinguishable from 0.95 against `Greedy`, and that if it were also
+  indistinguishable against `search-4` the sweep had hit the noise floor. Both halves are wrong, and wrong in
+  opposite directions.
+
+  | value policy | 1.0 | 0.95 | **0.9** | 0.8 | 0.5 |
+  | --- | --- | --- | --- | --- | --- |
+  | `advantageStd` | — | 0.4071 | **0.3017** | 0.226 | 0.1629 |
+  | `r2` | −0.3457 | −0.0135 | **+0.0299** | +0.0500 | +0.0586 |
+  | against `Greedy` | 0.0025 | **0.10125** | 0.035 | 0.0788 | 0.000 |
+  | against `search-4` | — | 0.210 | **0.355** | 0.1013 | 0.000 |
+
+- **The peaks are in different places, and both gaps are measurable.** Against `Greedy`, 0.9 scores 0.035
+  with an interval of 0.0160 to 0.0540 — the whole of it below 0.95's 0.10125, so 0.9 is measurably *worse*.
+  Against `search-4`, 0.9 scores 0.355 with an interval of 0.3237 to 0.3863 — the whole of it above 0.95's
+  0.210, so 0.9 is measurably *better*, and by the largest margin the value policy has ever managed against
+  anything but `Random`. **So the question "which lambda" has no answer until the opponent is named.** This
+  is the third non-transitivity recorded today and the sharpest: the first two were about ranking agents,
+  this one is about tuning one.
+
+- **`r2` is perfectly monotone in lambda across five points while the win rate is neither monotone nor even
+  single-peaked.** −0.3457, −0.0135, +0.0299, +0.0500, +0.0586 as lambda falls from 1.0 to 0.5 — every step
+  an improvement — against win rates of 0.0025, 0.10125, 0.035, 0.0788, 0.000 on one opponent and a
+  different shape on the other. ADR 0045 established that a better fit is not a better player. This is the
+  strongest form of it yet: the fit orders the five runs perfectly and tells you nothing about any of them.
+
+- **What correlates instead is the round cap.** Against `Greedy` the lambda 0.9 policy plays **19.1 rounds**
+  and reaches the cap in **46.2%** of matches, where `Greedy` against `Greedy` plays 7.8 and caps 0.5%. At
+  0.8 it is 11.9 rounds and 21.2%; at 0.5, 5.9 rounds and 0%. The high-lambda policies run the clock, and
+  at the cap the healthier team wins (ADR 0011). Against `search-4` that is apparently worth something —
+  16.5 rounds, 34.0% cap, its best score — and against `Greedy` it is worth almost nothing.
+  **This is a correlation, not a mechanism**: nothing here establishes *why* stalling pays against one and
+  not the other, and `ci-72` at lambda 0.95 already capped 49.0% against the baseline, so stalling is not
+  new at 0.9. The traces of `run-81` are where that would be settled.
+
+- **The sweep is closed rather than continued.** A sixth point buys another number on a curve that has been
+  shown to depend on who is asked. `next.json` settles at **0.95**, the best against `Greedy`, which is the
+  opponent every number in this journal is measured against — a default chosen on the stated reference, not
+  on the highest number available.
+
+- The champion bar blocked `ci-81`'s clone again, at `0.5 against models/clone/ci-69/policy.json
+  (interval from 0.5)`. Second production run, second correct refusal.
+
+## 2026-09-15. The lambda peaks at 0.95, and the fit rises all the way past it
+
+- **`ci-80` ran lambda 0.8**, the third point on the curve, on the pull request that asked for it. Same
+  teacher, 1000 matches, seed, alpha, min samples and share as the three before it, and `baselineR2` reads
+  **0.07054** for the fourth run running.
+
+  | value policy | lambda 1.0 | 0.95 (`ci-72`) | 0.8 (`ci-80`) | 0.5 (`ci-74`) |
+  | --- | --- | --- | --- | --- |
+  | `advantageStd` | — | 0.4071 | **0.226** | 0.1629 |
+  | `r2` | −0.3457 | −0.0135 | **+0.0500** | +0.0586 |
+  | against `Greedy` | 1 win in 400 | 0.10125 | **0.0788** | 0.000 |
+  | against `search-4` | — | 0.210 | **0.1013** | 0.000 |
+  | against `Random` | — | 0.6425 | 0.7462 | 0.70375 |
+
+- **The reading was pre-registered and it is followed here.** `next.json` said before the run: if 0.8 lands
+  between 0 and 0.10125 the peak is nearer 0.95 and the next point is 0.9. It landed there, so 0.9 it is —
+  even though the finer sweep is not where I would now spend the time (below).
+
+- **But against `Greedy` the two cannot be told apart.** `ci-80` scores 0.0788 with an interval of 0.0538 to
+  0.1037, and `ci-72`'s 0.10125 sits **inside** it. Four hundred matches cannot separate lambda 0.8 from
+  0.95 on that opponent. Against `search-4` they separate cleanly: 0.1013 with an interval of 0.0739 to
+  0.1286 against 0.210, which is well outside it. So the ordering rests on the `search-4` column, and this
+  is the second time in two days that the panel decided something one opponent could not.
+
+- **The fit rises monotonically across the whole sweep while the agent peaks in the middle.** `r2` goes
+  −0.3457, −0.0135, +0.0500, +0.0586 as lambda falls from 1.0 to 0.5 — every step an improvement, the last
+  two positive — and the win rate goes 0.0025, 0.10125, 0.0788, 0.000. ADR 0045 said a better fit is not a
+  better player on two points; this is the same lesson on four, in one controlled sweep, with `r2` still
+  under `baselineR2` at every one of them.
+
+- **The champion bar worked the first time it ran in production.** `ci-80`'s clone is `ci-69` again — the
+  lambda is read by `train-value` alone — and the gate said so in the words it was given:
+  `0.5 against models/clone/ci-69/policy.json (interval from 0.5) -- does not clear`. Where `ci-78` was
+  proposed and had to be caught by hand, this one was refused by the rule. The value policy printed
+  `no committed champion`, which is correct: there is no `models/value/` to be better than.
+
+- **What I would not do next.** Another lambda point buys a number that 400 matches may not resolve, on an
+  agent at 0.0788 against `Greedy` where the clone of the same turn plays 0.725 without any of this. The
+  sweep has found its answer — 0.95, or near it — and the binding constraint is visible in the table that
+  never moves: `baselineR2` 0.07054, four runs running. A low-lambda advantage is `V(next) - V(here)`, so
+  everything below 1.0 is built on a baseline that explains seven percent of the return. That is the number
+  to attack, not the lambda.
+
+## 2026-09-15. ci-78 proposed a model already committed, and the gate had no way to notice
+
+- **What happened**: a dispatched turn on `main` at `9f10d89` ran with `commit=true` and the merged
+  `value_lambda` 0.5. The value policy reproduced `ci-74` to the digit (0.000 against `Greedy`, 0.70375
+  against `Random`, 0.000 against `search-4`) and the clone cleared all three bars, so the workflow pushed
+  `policy/78` with `models/clone/ci-78/`.
+
+- **That clone is `models/clone/ci-69`.** Not similar to it — the same model:
+
+  | | `ci-69` | `ci-78` |
+  | --- | --- | --- |
+  | against `Greedy` | 0.725 | 0.725 |
+  | against `Random` | 0.9925 | 0.9925 |
+  | against `search-4` | 0.5325 | 0.5325 |
+  | epoch / loss / accuracy | 14 / 2.246 / 0.9555 | 14 / 2.246 / 0.9555 |
+
+  `value_lambda` is read by `train-value` and by nothing else, so the clone of that turn was determined to
+  be identical before the run started. Only the file fingerprint differs (`85a51347` against `4126ba18`),
+  because `trainedAt` is in the bytes. The branch was not merged, and `models/README.md` already said why:
+  "prefer raising the bar over filling the history with near-duplicates".
+
+- **The defect is in the gate, not in the run.** Its three bars ask *is this good* — at least
+  `commit_above` against `Greedy`, `commit_above_baseline` against the baseline, better than `Random`. None
+  asks *is this new*, and `ci-69` had cleared all three hours earlier, so every re-run of a config that once
+  passed proposes the same model again, forever, and the only thing stopping it is somebody reading the
+  numbers.
+
+- **What changed**: a fourth bar, the only one that is not a constant. The newest committed policy of the
+  same kind is played head to head on the benchmark seeds, and the new one must take the whole interval
+  above one half. Two identical policies score exactly 0.5 against each other, so anything less than
+  measurable is a duplicate: checked against the real numbers, 0.5 with interval [0.5, 0.5] is blocked, the
+  clone's parity result against `search-4` (0.5325, interval from 0.4981) is blocked, and 0.60 from 0.5556
+  passes. No committed policy of that kind, or one whose feature schema no longer applies, leaves nothing to
+  be better than and the bar does not apply. `evaluation-vs-champion.json` is kept beside the policy, for
+  the reason the Codex review gave for the baseline one: the artifact expires and the model must not outlive
+  its evidence.
+
+- **The Codex fix landed and worked first time.** `policy/78` carried `evaluation-vs-baseline.json`, the
+  first model proposal to keep the third bar's evidence — which is how the duplicate was caught quickly.
+
+## 2026-09-15. Lambda 0.5 gives the best fit the value policy has ever had, and zero wins in 400
+
+- **What changed**: `learning/experiments/next.json` asked for `value_lambda` 0.5, one point further down the
+  curve `ci-72` opened. Nothing else moved: same teacher, same 1000 matches, same seed, alpha, min samples
+  and share, and `baselineR2` reads **0.07054** for the third run running, so the data and the baseline fit
+  are identical and the advantage estimate is again the only difference.
+
+  | value policy | lambda 1.0 | lambda 0.95 (`ci-72`) | lambda 0.5 (`ci-74`) |
+  | --- | --- | --- | --- |
+  | `advantageStd` | — | 0.4071 | **0.1629** |
+  | `r2` | −0.3457 | −0.0135 | **+0.0586** |
+  | against `Greedy` | 1 win in 400 | 0.10125 | **0.000** |
+  | against `search-4` | — | 0.210 | **0.000** |
+  | against `Random` | — | 0.6425 | 0.70375 |
+
+- **Zero is the literal count.** `value-vs-baseline` reads 0.0% with an interval of 0.0% to 0.0%: four
+  hundred mirrored matches, no win and no draw, average five rounds. The agent is not weak, it is losing as
+  fast as the rules allow.
+
+- **And it has the best fit ever recorded here.** `r2` went positive for the first time — from −0.3457 at
+  lambda 1.0 through −0.0135 to **+0.0586** — while the win rate went to nothing. ADR 0045 established that
+  a better fit is not a better player; this is the same lesson at the opposite extreme and far louder, on the
+  knob ADR 0046 added rather than on the sharing ADR 0045 measured. `r2` is still **below** `baselineR2`
+  either way: the position alone predicts the return better than the position and the action together, even
+  now.
+
+- **The ADR named this failure before it happened**, which is the one comfort here. ADR 0046's Consequences:
+  "at low `lambda` the signal is whatever the baseline says, and `baselineR2` has read between 0.07 and 0.14.
+  A bad baseline makes a bad advantage." With no reward before the end of the match, a low-lambda advantage
+  is `V(next) - V(here)` and nothing else, so a baseline explaining 7% of the return leaves a target that is
+  mostly its own error. Low variance and no signal: `advantageStd` fell by a factor of 2.5 and took the
+  ranking with it.
+
+- **The curve is not monotonic, and the reading was written down before the run.** `next.json` said: if 0.5
+  collapses, the useful lambda is between 0.5 and 1.0 and the answer is a finer sweep, not a lower one. It
+  collapsed, so **0.0 is not next** and the open interval is 0.5 to 1.0, with 0.95 the only point in it known
+  to help.
+
+- **One oddity worth not explaining away.** It beats `Random` *better* than `ci-72` did, 0.70375 against
+  0.6425, while beating `Greedy` zero times. Its spell entropy is 2.07 against the baseline's 2.47, so it is
+  playing a narrower repertoire than anything else on the board. Why a policy can improve against `Random`
+  and collapse against everything else is not established here.
+
+- **The clone is untouched, as it must be**: `ci-74` reproduces `ci-72` and `ci-69` exactly — 0.725, 0.9925,
+  0.5325, epoch 14, loss 2.246, accuracy 0.9555. Its file fingerprint differs only because `trainedAt` is in
+  the bytes.
+
+## 2026-09-15. The matchups are not transitive, and the advantage stops being the whole match
+
+- **What changed**: four things, none of which move a default. `explore:<rate>:<agent>` now wraps any agent
+  spec rather than only a weights file, so a policy can be the agent an exploring run deviates from
+  (`AgentFactory.Inner`). `train-value` gains `--gae-lambda` and `--discount`, which estimate what an action
+  added along its own trajectory instead of from the end of the match (ADR 0046); 1.0 is the default and
+  reproduces every earlier run. `search.yml` gains an `initial` input. `iterate.sh` gains `--baseline`, a
+  third opponent every policy of a turn is played against. Content, engine defaults and the benchmark digest
+  are untouched.
+
+- **The measurement that reframes the rest.** `ci-69`'s clone had never been played against its own teacher.
+  On `7e199df4`, 200 benchmark seeds mirrored:
+
+  | | score | interval |
+  | --- | --- | --- |
+  | `ci-69` against `search-4` | **0.5325** | 0.4980 to 0.5669 |
+  | `ci-69` against `Greedy` | 0.7250 | 0.6775 to 0.7725 |
+  | `search-4` against `Greedy` | 0.9300 | 0.9031 to 0.9569 |
+
+  The clone is **at parity with the agent it imitates** — 211 wins to 185, an interval that includes one half
+  — and is twenty points behind that same agent against a third one, on intervals that do not overlap. So the
+  ordering depends on who is asked. This is not a paradox needing explanation before it can be used: it is
+  the reason a single head-to-head cannot be the bar, and `--baseline` and `commit_above_baseline` exist
+  because of it.
+
+- **It also relocates the clone's defect.** The clone imitates `search-4` on **95.56%** of held-out decisions
+  (`models/clone/ci-69/policy.json`, 20,983 steps) and was, until today, described as losing twenty points
+  to that missing 4.4%. It loses nothing to it *in its teacher's own distribution*. The twenty points appear
+  only against `Greedy`, whose positions `search-4`'s play never visits — which is what distribution shift
+  looks like when you finally measure both sides of it, and it moves the case for labelling the student's own
+  states from a hypothesis to a diagnosis.
+
+- **Why the advantage changed, and why `r2` is expected to fall.** `Returns.Of` pays once per episode and the
+  dataset joins that scalar onto every step of it, so a 30-round match labelled hundreds of decisions with
+  one ±1 and no credit assignment at all. ADR 0045 measured two *groupings* of the action rows against each
+  other, both fitted on that same target, so the grouping and the target were never separated. `--gae-lambda`
+  separates them. At 1.0 the backward sum telescopes back to `returns - values`: maximum difference **1.6e-15**
+  over 12,400 steps, four orders below the six decimals a policy is written with, so no committed number is
+  invalidated by this landing. Below 1.0 the rows stop targeting the episode return, so `loss` and `r2` will
+  read worse whatever happens to the agent. ADR 0045 is the standing reason not to care.
+
+- **The weight ladder could not climb, and the cause was one missing input.** `search-weights` has taken
+  `--initial` all along; `search.yml` never passed it, so every run restarted from the built-in weights. A
+  search against `search-4` therefore began from behind the thing it was trying to beat, and run *n+1* could
+  not build on run *n*. The hold-out control moves with it: it replays what the search started from, not
+  `greedy`, since comparing found weights against an agent the search was never about says nothing.
+
+- **The first evidence, `ci-72`, ran on the pull request that carries this entry** — changing
+  `learning/experiments/next.json` is what asks for a run, so the loop played lambda 0.95 with `search-4` as
+  both teacher and baseline before the change merged. One knob moved against the previous turn on the same
+  teacher, same 1000 matches, same seed, same alpha and min samples, and `baselineR2` reads **0.07054**
+  against the previous **0.0705** — the same data and the same baseline fit, so the advantage estimate is the
+  only thing that changed.
+
+  | value policy | lambda 1.0 | lambda 0.95 (`ci-72`) |
+  | --- | --- | --- |
+  | `r2` | −0.3457 | **−0.0135** |
+  | against `Greedy` | 1 win in 400 | **0.10125** |
+  | against `search-4` | — | 0.210 |
+  | `advantageStd` | — | 0.4071 |
+
+  `r2` gained 0.33 and the win rate moved with it, which is worth noticing precisely because ADR 0045 is the
+  standing case that the two can move in opposite directions. **The policy is still bad**: 0.10 against
+  `Greedy` where the clone of the same turn plays 0.725, and 0.210 against the teacher. What changed is that
+  it stopped playing the starting kit — an argmax over 588 keys with no signal — and started ranking
+  something. 423 of the 588 keys now get a regression of their own.
+
+- **What is not claimed.** Nothing here has produced an agent stronger than `search-4`. The clone of `ci-72`
+  reproduces `ci-69` exactly (0.725, 0.9925, 0.5325), as it should: nothing in this change touches the clone.
+  The lambda is one point on a curve nobody has walked — 0.5 and 0.0 are untried, and whether the gain
+  continues or reverses is the next measurement, not a prediction.
+
+## 2026-09-15. A policy keeps six decimals, and the saving is in what git stores rather than on disk
+
+- **What changed**: `policy.json` rounds its weights to six decimals on the way out (`WEIGHT_DECIMALS`), and
+  `models/clone/ci-69/` is rewritten at that precision with both its evaluations regenerated. No content
+  moves, no agent default moves, the benchmark digest is untouched. Nothing on the C# side changes: the
+  engine reads the same field of the same shape, with fewer digits in it.
+- **The number that matters is the compressed one, and it is the only place the saving is large.** Measured
+  on `ci-69`'s clone:
+
+  | | on disk | git (zlib) |
+  | --- | --- | --- |
+  | full precision, indented | 1.91 MB | **0.57 MB** |
+  | six decimals, indented | 1.36 MB | **0.30 MB** |
+  | full precision, compact | 1.27 MB | 0.53 MB |
+  | six decimals, compact | 0.73 MB | 0.27 MB |
+
+  Rounding roughly halves what git stores. Dropping the indentation as well takes 0.73 MB off the disk and
+  only **0.03 MB** off the repository, because zlib already pays for whitespace — so the file stays indented
+  and the change is the rounding alone.
+- **A claim of mine this corrects.** I have said several times that rounding "halves `policy.json`". That was
+  measured on the *value* policy in compact form, where it does; on this clone, on disk, it is 71%. The
+  halving is real but it is of the compressed size, which is a different sentence and the one that was worth
+  making.
+- **Six decimals is chosen with room to spare, not at the edge.** The committed clone plays the benchmark
+  seeds identically at six, four and three decimals — 0.710, score 0.725, average rounds 11.5175, the whole
+  spell-usage table equal — and over **5326 recorded steps and 37886 candidate scorings, not one argmax
+  differs** at any of the three. A score is a dot product of 431 terms, so a weight's seventh decimal is
+  orders of magnitude below the gap between two candidates. Three was tested and was harmless; six is what
+  ships.
+- **Rewriting the model forced its evaluations to be rewritten too**, which is the part worth remembering.
+  A policy's identity in a run stamp is a fingerprint of its bytes, so `ci-69` went
+  `Policy:…@17b063c6` to `Policy:…@4126ba18` while playing exactly the same. The two `evaluation*.json`
+  beside it still named the old bytes, and an evaluation that names an agent which no longer exists is the
+  same defect as a `keep` describing content that has moved. Both are regenerated against the file they sit
+  beside: 0.710 against `Greedy`, 0.9925 against `Random`, unchanged.
+- **Verified**: the rewritten policy replayed on the benchmark seeds against `Greedy` and against `Random`,
+  the per-precision argmax comparison above, 312 pytest, 779 .NET tests, format, ruff, and the benchmark
+  digest.
+
+## 2026-09-15. The first model in `models/`, and the ignore rule that dropped its evidence
+
+- **What changed**: `models/clone/ci-69/` — the first trained policy this repository keeps, from
+  [learning loop 69](https://github.com/Downfallz/maintest/actions/runs/34986429586) with `commit=true`.
+  Engine `c6e51aa`, content `7e199df4`, schema `features:v5+69ea1a69f9ac`, both sides recorded as
+  `Heuristic:learning/weights/search-4.json@74a15d71` from seed 1. No content moves and no agent default
+  moves; `ScoringWeights.Default` and the benchmark digest are untouched, so every number before this still
+  compares.
+- **What it plays**: **0.710** against `Greedy` (400 matches, 0.662 to 0.758), score **0.725**, and **0.9925**
+  against `Random` where `Greedy` reads 0.9775. Kept at epoch 14 of 20 on 0.9555 imitation accuracy.
+- **Replayed from the committed bytes rather than trusted**: `evaluate --p1 policy:models/clone/ci-69/policy.json`
+  returns 0.710 and the interval 0.6617 to 0.7583, the digits the run's own `training.jsonl` recorded. The
+  file on the branch is the policy that earned the number, which is the one thing a committed model has to
+  be.
+- **And the run committed it without the evaluation that justifies it.** `.gitignore` carried a bare
+  `evaluation.json`, for "the default `--out` of `evaluate` and of `simulate`, run from the repository root"
+  — but an unanchored pattern matches at **every** depth, so `git add models` silently dropped
+  `models/clone/ci-69/evaluation.json` while keeping `evaluation-vs-random.json` beside it. `models/README.md`
+  says a policy is kept with the evaluation that earned it a place; the first one to arrive did not have one.
+  Both patterns are anchored now, and the file is restored by the replay above.
+- **The lesson is about where a rule applies, not about ignoring files.** The comment above those two lines
+  already said "run from the repository root": the intent was written down and the pattern did not carry it.
+  A silent `git add` is the worst place for that to be true, because nothing fails — the commit simply
+  contains less than it says it does, and the workflow's own message claimed the evaluations were "beside
+  each policy".
+- **What it means for the loop**: the path from a recorded dataset to a proposed, reviewed, committed model
+  is now exercised end to end, and the bar it cleared (at least 0.5 against `Greedy`, and beating `Random`)
+  did what it was built for on the first real candidate. The value policy of the same run did not clear it
+  and was not committed, which is also what it was built for.
+- **Open, unchanged**: `policy.json` is 1.8 MB and 90,948 lines of it are weights; rounding them to six
+  decimals halves it. That is fine once and a problem at one a week, so it is worth doing before the bar is
+  ever lowered.
+
+## 2026-09-15. The first learned agent to beat Greedy, and a fit that got better by playing worse
+
+- **What changed**: two things a policy is trained from. `simulate --record` can be pointed at any agent
+  (`iterate.sh --teacher`), and the exploring dataset now deviates from **that** agent rather than always from
+  Greedy (`explore:<rate>:<weights>`); and `train-value --share kind` fits one regression per decision kind
+  instead of one per action key (ADR 0045). No content moves, no agent default moves, the digest is unchanged.
+
+- **The teacher is worth 39 points, and the clone finally beats the thing it is measured against.** One turn
+  of the loop on `7e199df4`, 1000 matches, `explore 0.2`, against `search-4` instead of `Greedy`:
+
+  | against `Greedy`, 400 matches | teacher `greedy` (ci-10) | teacher **`search-4`** |
+  | --- | --- | --- |
+  | clone | 32.0% | **71.0%** (score 0.725) |
+  | value | 43.5% | **0.25%** |
+  | clone against `Random` | 94.0% | **99.25%** |
+
+  `Greedy` itself beats `Random` 97.75%, so the clone is now the strongest agent in the repository that is not
+  a searched weight set. It cleared the commit bar of `iterate.yml` on both counts; nothing is committed under
+  `models/` here, because that is the workflow's job with `commit=true` and a human opening the branch.
+- **And it is visibly imitating the right player.** The clone casts `throwing_star` 27.9%, `lightning_bolt`
+  21.6% and `tranquilizer_dart` 13.4% — `search-4`'s own repertoire, where `Greedy` casts `lightning_bolt` 69
+  times in 400 matches. Imitation accuracy 0.9555 against 0.9393. A clone can only be as good as what it
+  imitates, and this is the measurement of that sentence.
+- **The value policy collapsed, and that is the more useful half of the result.** 43.5% to **1 win in 400**.
+  It is not broken: it plays `heavy_strike` 20.7%, `basic_attack` 13.3%, `pummel` 12.5% and **`wait` 11.6%** —
+  the starting kit, forever, on a catalogue of 36 spells. Its `r2` is −0.3457 against a `baselineR2` of 0.0705,
+  so its action rows carry no signal, and with no signal the argmax over 588 keys is whatever arbitrary
+  preference order the noise produces. On Greedy-explored data that order happened to be decent. On
+  `search-4`-explored data it is catastrophic.
+- **So the ci-10 entry below needs correcting: its 43.5% was not skill.** It was reproducible — the CI run
+  reproduced it to the digit — and reproducible is not the same as earned. The honest reading of the pair is
+  that the value policy has never ranked actions better than chance, and one dataset flattered it. The entry
+  stands as written about what was measured; what it let the reader infer about the agent does not.
+- **The model change was measured and lost**, which is [ADR 0045](../adr/0045-a-better-fit-is-not-a-better-player.md).
+  The diagnosis behind it was right — 431 features fitted from a median of 60 examples, 549 of 612 regressions
+  underdetermined — and fixing it improved every number that describes the fit:
+
+  | on ci-10's exploring dataset | `share action` | `share kind` |
+  | --- | --- | --- |
+  | regressions | 600 | **5** |
+  | `r2` | −0.2876 | **+0.1292** |
+  | loss | 1.33 | **0.90** |
+  | accuracy | 0.3407 | **0.3647** |
+  | **win rate against `Greedy`** | **0.4350** | 0.3250 |
+
+  An improvement of 0.42 in `r2` cost **11 points of win rate**. `action` stays the default. A policy has to
+  rank the actions of one position; `r2` scores absolute prediction, and this is how far apart the two can
+  move — the same lesson ci-9 got wrong in the other direction when it stopped this work on `baselineR2 > r2`.
+- **What the two results say together**: everything gained here came from **better data**, and nothing from a
+  better model. The clone, the simplest learner in the repository, beats `Greedy` by imitating someone who
+  already does. The value policy, the one with a model of the return, cannot rank a move on either dataset.
+- **Verified**: both splits trained on ci-10's exploring dataset and played on the benchmark seeds; the
+  teacher turn run end to end, its stamps confirming the chain (`Explore:0.2:learning/weights/search-4.json@74a15d71`
+  on the exploring dataset, not Greedy); 779 .NET tests, 310 pytest, format, ruff, digest verified.
+- **One thing the trace cap bought, in passing**: that turn's two 1000-match datasets are **320 MB** where
+  ci-10's were 9.1 GB.
+
+## 2026-09-15. `ci-10`: the value policy goes 0 of 400 to 43.5%, and the number that parked it got worse
+
+- **What this is**: [ci-9](#2026-09-09-ci-9-the-baseline-works-and-it-says-the-content-has-no-decision-in-it)'s
+  configuration replayed exactly — 1000 matches, `explore 0.2`, alpha 10, min samples 10 — on content
+  `7e199df4`, engine `6fc5d94b13c7`. Nothing is committed under `models/`: neither policy beats `Greedy`.
+- **Two axes moved, not one**, and the entry says so rather than crediting the content alone: ci-9 ran on
+  engine `1cc41a7797e3` and the catalogue of the day. Between them sit ADRs 0031 to 0043 as well as every
+  content pass. What follows is "the loop today against the loop then", not a controlled content comparison.
+- **The result**:
+
+  | against `Greedy`, 400 matches | ci-9 | **ci-10** |
+  | --- | --- | --- |
+  | value policy | **0 of 400** | **43.5%**, score 0.461 |
+  | clone policy | — | 32.0%, score 0.328 |
+
+- **The finding is about the instrument, not the agent. The number ci-9 stopped on got *worse*.** That entry
+  decided on `baselineR2` 0.2815 against `r2` 0.2225 — the position alone predicting the held-out return
+  better than the position and the action together, so "the action rows add variance". Today that gap is
+  wider: **`r2` −0.2876 against `baselineR2` 0.1355**. The fit is worse and the play went from losing every
+  single match to nearly even. `r2` scores how close a predicted return is in absolute terms; a policy only
+  has to **rank the actions of one position**, and a model can rank well while predicting badly. Win rate was
+  always the instrument. The diagnosis ci-9 attached to it was right — the content posed no question — but
+  the stopping criterion was measuring something else, and it would have kept saying stop.
+- **The clone is the sharper result.** It reproduces `Greedy`'s choice **93.93%** of the time and wins
+  **32.0%** against the agent it is copying. Six decisions in a hundred are worth eighteen points of win
+  rate: errors compound down a match, and a policy that is right 94% of the time is nowhere near 94% as good.
+- **Skill here is not one scale**, which is worth knowing before any of this is called progress:
+
+  | | against `Random` | against `Greedy` |
+  | --- | --- | --- |
+  | `Greedy` | 97.75% | — |
+  | clone | 94.0% | 32.0% |
+  | value | **67.75%** | **43.5%** |
+
+  The value policy is much the weakest agent here and still does best against `Greedy`. That is the same
+  non-transitivity the `exploit` target exists to catch, showing up inside the loop.
+- **A hypothesis this entry had to drop.** value-vs-greedy runs **17.0 rounds** with **27% reaching the round
+  cap**, against greedy-vs-greedy's 7.8 and 0.5%, and the cap awards the win to the healthier team
+  (`WinCondition`, ADR 0011) — so the obvious reading is that it stalls and wins on attrition. It does not.
+  Counted by reason: **167 of its 174 wins are eliminations and 7 are cap wins, while 80 of its 205 losses
+  are cap losses.** The long matches are a liability, not a strategy, and the 43.5% is won honestly. That is
+  also where the headroom is.
+- **ADR 0014 in one line**: the value policy fitted **600 action keys** off the explored dataset; the clone
+  saw **202** off pure self-play, because a deterministic bot never shows you the rest.
+- **What blocks committing any of this**: `policy.json` is **5.8 MB** for the value policy and **1.8 MB** for
+  the clone, against `models/README.md`'s "Small JSON files only". Rounding the weights to six decimals halves
+  it, measured; that is a change to the exchange format (ADR 0013) and is not made here.
+- **And what the run cost**: 9.1 GB, of which **8.8 GB was match traces** no learner reads. `--traces` landed
+  with this entry for that reason; the same run now writes about 0.3 GB and records in a third of the time.
+- **Verified**: the loop end to end on a clean tree, the win-reason breakdown counted from the evaluation's
+  own seed pairs, and the commit gate of `iterate.yml` exercised against these evaluations at three bars.
+
+## 2026-09-15. The exploit target has never been inside its band, and tune 9 was credited 30.42 for a stale file
+
+- **What changed**: `exploit.p1` in `data/balance/knobs.json` moves from `search-3.json` to
+  **`search-4.json`**, the weights of [search run 4](https://github.com/Downfallz/maintest/actions/runs/34914247550),
+  searched against `greedy` on the current content `7e199df4`. No content moves, no agent default moves, the
+  content hash and the benchmark digest are unchanged. `search-3.json` stays where it is; nothing else reads it.
+- **The objective reads 10.35 to 124.36**, and every point of that is one term: `exploit` **0.5025 to 0.9275**,
+  penalty **0.00 to 114.00**. Nothing about the catalogue got worse between those two numbers. The file the
+  target names was one content out of date, which is the staleness its own `reads` text has always warned about
+  and which [PR #81](https://github.com/Downfallz/maintest/pull/81) fixed once already, one merge before tune 9
+  spent it again.
+- **Tune run 9's largest gain was an artefact, and the correction belongs here.** That pass was credited
+  **−30.42** for taking `exploit` to 0.502. Measured with a search run against each catalogue instead:
+
+  | against `greedy`, benchmark seeds | old content `938bef5e` | new content `7e199df4` |
+  | --- | --- | --- |
+  | `search-3` (searched on `938bef5e`) | **0.745** | 0.5025 |
+  | `search-4` (searched on `7e199df4`) | 0.7025 | **0.9275** |
+
+  Each agent peaks on the content it was searched against, so neither column alone says anything. The
+  off-diagonal does: **`search-4` is *worse* than `search-3` on the old content** (0.7025 against 0.745), so it
+  is not simply a stronger weight set that would have won anywhere. Same 36 spells, same tiers, only tune 9's
+  eleven numbers moved, and the best fresh exploiter goes **0.745 to 0.9275**. Tune 9 did not cut
+  exploitability. It raised it, and was paid 30.42 for the appearance of the opposite.
+- **The previous entry's cross-check was the wrong check, and this withdraws its conclusion.** It played the
+  four-catalogue-stale `search-2` on both contents, found it *gained* (0.182 to 0.325), and read that as
+  refuting the suspicion that the content had slid out from under the agent aimed at it. The measurement is
+  right and the inference was too generous: a stale agent gaining says nothing about how much room a fresh one
+  would find. Only a fresh search answers that, and the entry said so — *"nothing has searched `7e199df4` yet…
+  this pass spent that reading, it did not settle it"* — without acting on it. The caveat was correct and the
+  conclusion around it was not.
+- **This target has never once been inside its band when the file was fresh.** Every low reading in this
+  journal is a stale agent, not a safe catalogue:
+
+  | content | fresh search, hold-out seeds |
+  | --- | --- |
+  | `d4a21a55` (search 2) | 0.5875 |
+  | `938bef5e` (search 3) | 0.8075 |
+  | `7e199df4` (search 4) | **0.91375** |
+
+  The first step is confounded — tier 3 doubled the catalogue between `d4a21a55` and `938bef5e`, and a larger
+  action space gives a searched agent more to work with. The second is not: same catalogue, tuning only.
+- **What the hole is, concretely.** The two agents disagree on two spells and almost nothing else. `greedy`
+  casts `death_squad` **1052** times (its second spell) where `search-4` casts it **4**; `search-4` casts
+  `lightning_bolt` **1572** times where `greedy` casts it **69**. `death_squad` is 2 energy for +2 initiative on
+  three allies for one round and no damage — pure tempo, which its own `keep` says is the whole point.
+  `ActionScorer` is a one-step lookahead, so it prices the buff where it is applied and never sees whether the
+  tempo converts. Normalised to `damage`, `search-4` barely moves `kill` (+2%) or `stun` (+1%) and halves
+  `heal` (−51%) and `energy` (−53%): it stops buying upkeep and tempo and hits instead. That is a
+  credit-assignment gap across rounds, which is what a value policy exists to close and what a one-step
+  heuristic structurally cannot.
+- **What this does to the next tuning pass**: `exploit` is now **92% of the objective** (114.00 of 124.36), so
+  a pass run today would chase nothing else and could spend the tier work [ADR 0043](../adr/0043-a-control-spell-is-not-an-attack-and-reach-is-not-force.md)
+  bought. Whether the band (`..0.55`) and the scale (0.05) are reachable at all is now a live question and an
+  ADR's, not a knob's: they were set when a fresh search read 0.5875, and nothing has read near that since.
+- **Scores here compare with nothing before them.** The objective changed what it measures, as
+  `data/balance/README.md` warns of any change to a target. 10.35 and 124.36 are the same content.
+- **Verified**: the 0.9275 played with the engine on the benchmark seeds (400 matches, interval 0.8994 to
+  0.9556), both agents replayed on both contents, the penalty recomputed from the objective's own breakdown,
+  the benchmark digest re-verified unchanged, and the full gate.
+
+## 2026-09-15. The first pass run on a live `tierDamageSpread`, and it went for the floor
+
+- **What changed**: the catalogue, by [tune run 9](https://github.com/Downfallz/maintest/actions/runs/34882749657)
+  (ADR 0021) — seed 0, 24 rounds of 12, at most 30 knobs, pair depth 3, 600 versions over 4 h 49 (the engine
+  played 591 of the 601 it was handed; the rest were catalogues it had already measured). Eleven moves on
+  nine spells, merged as proposed. Content hash **`938bef5e` to `7e199df4`**, digest regenerated and
+  verified. No agent weight moves, so the fingerprint stays `362b0496`.
+- **The objective reads 49.014 to 10.352**, the best measured on this content. Reproduced locally on a clean
+  tree at **10.35** with every column matching the proposal.
+
+  | Target | Before | After | Band | Penalty |
+  | --- | --- | --- | --- | --- |
+  | `exploit.winRateA` | 0.745 | **0.502** | ..0.55 | 0.00 |
+  | `tierDamageSpread` | 3.587 | **2.704** | ..2 | 1.98 |
+  | `tierWinSpread` | 0.290 | **0.264** | ..0.15 | 1.31 |
+  | `tierUsageShare` | 0.679 | 0.674 | ..0.5 | 6.05 |
+  | `player1WinShare` | 0.440 | **0.465** | 0.45..0.55 | 0.00 |
+  | `spellsBarelyCast` | 2 | **4** | ..2 | 1.00 |
+  | `averageRounds` | 7.920 | 7.775 | 8..16 | 0.01 |
+
+- **`tierDamageSpread` moved for the first time, and it moved the right way.** ADR 0043 unpinned it from
+  `MOST_LOPSIDED` one merge ago; this is the first search graded on it. Almost all of the
+  8.09 is **the floor of tier 3 coming up, not its ceiling coming down**:
+
+
+  | tier 3, damage per landed target | before | after |
+  | --- | --- | --- |
+  | lowest attack (`soul_devourer`) | 3.73 | **4.85** |
+  | highest attack (`hateful_sacrifice`) | 13.36 | 13.12 |
+  | ratio | 3.582 | **2.705** |
+
+  The move that did it is `soul_devourer` **5 damage to 6**. That is the same spell tune 8 took **5 to 4**
+  for free while the metric was pinned, and that ADR 0043 restored to 5. A term that could not be scored
+  was licence to degrade what it named; a term that can be scored is a reason to improve it, and the search
+  found that gradient on its first pass over it. It also pushed the spell to tier 3's **best win share,
+  0.657**, which is now the top of the `tierWinSpread` this entry still owes 1.31 to.
+- **The 30.42 is the largest number here and the least settled.** `exploit` is the one target that names a
+  file, and `knobs.json` says its agent "goes stale when the content moves". Measured both agents on both
+  catalogues:
+
+  | against `greedy` | content `938bef5e` | content `7e199df4` |
+  | --- | --- | --- |
+  | `search-2` (searched on `91da955c`, four catalogues old) | 0.182 | **0.325** |
+  | `search-3` (searched on `938bef5e`) | **0.745** | **0.502** |
+
+  The first row is the check worth having, and it refutes the cheap suspicion: the content did not simply
+  slide out from under the agent pointed at it, because a badly stale agent **gained** 0.143 here. The
+  0.243 that `search-3` lost is a real loss for the best exploiter anyone has found. What it does not show
+  is that the catalogue is hard to exploit, because **nothing has searched `7e199df4` yet**: `search-3` is
+  now one content stale by the same definition [PR #81](https://github.com/Downfallz/maintest/pull/81)
+  fixed one merge ago, and it clears the band by 0.048. Refresh it from the next search run before reading
+  `exploit` as solved — this pass spent that reading, it did not settle it.
+- **What the `+1.00` actually cost, which the report gives only as a count.** `spellsBarelyCast` 2 to 4 and
+  `spellsNeverCast` 2 to 2 — and **neither count names the same spells on both sides**:
+
+  | spell | landed casts before | after | |
+  | --- | --- | --- | --- |
+  | `revenant_guards` | 82 (5.2% of tier 3) | **11** (0.7%) | cast to barely |
+  | `mortal_wound` | 80 (5.0%) | **31** (2.0%) | still cast, now the tier's worst winner at 0.393 |
+  | `engulfing_flames` | 20 (1.3%) | **11** (0.7%) | cast to barely |
+  | `ice_spear` | **0** | **9** (0.6%) | never to barely |
+  | `toxic_waves` | 3 (0.2%) | **0** | barely to never |
+
+  `revenant_guards` lost seven eighths of its play to a single point of energy. `ice_spear` is the one
+  revival: tune 8 priced it out at 3 energy and it went uncast, and this pass put the price back to 2 and
+  halved the slow instead — the shape its own `knobs.json` note argued for, against the shape tune 8 took.
+- **The finding: a count that holds still while its membership turns over.** `spellsNeverCast` reads
+  `2.000` on both sides of this pass and sits under the report's *"what the score is not watching"*, and
+  underneath that unchanged number one spell came back to life and another died. It is the same defect as
+  a term pinned at its cap, in a quieter form: a metric that counts **how many** and not **which** cannot
+  see a swap, so a pass can kill a spell for free as long as it revives another. Worth a target that names
+  them, or at least a report line that diffs the two sets.
+- **Two `keep`s the moves break.** The proposal's own before-merging list asks for this check, and it does
+  not pass clean. Recorded rather than reverted: which way to resolve them is the author's call, not a
+  search's and not this entry's.
+  - `mortal_wound`, bleed duration 2 to 1: *"More damage over time than up front"* is now **false**. It is
+    4 up front against 4 over one round, and `ResolutionRules.Outcome` multiplies `Damage` and `Heal` only
+    — a `Bleed` is a `LastingEffect` and never scales — so at a critical chance of 0.45 the up-front half
+    expects **5.8** against a bleed fixed at 4. Its second keep, *"the catalogue's heaviest bleed"*, is now
+    reading-dependent: 4 a round against `summon_minions`' 2, but 4 in total against its 6.
+  - `revenant_guards`, energy cost 2 to 3: its keep reads *"Priced above the single-target version or it
+    simply replaces it — **and the price is health, not energy**"*, ADR 0031 set that price at 4 health as
+    a bleed, and the entry's own note ends *"No energy price moved."* This pass moved it, and the spell it
+    moved is the one that lost seven eighths of its casts.
+- **One note corrected on the way**, the third cross-reference in three days to drift because only one side
+  of it was updated: `ice_spear`'s `knobs.json` note claimed the amount knob "stops at 2, which is where the
+  content sits" (it sits at 1), priced the slow at 41% of a `cast_value` of 10.20 (it is 8.10), and named
+  the spell as the bar `engulfing_flames` and `tranquilizer_dart` cannot clear (`check-knobs` now names
+  `soul_devourer` at 10.10 for both). The copy that drifts is the one that is not executed.
+- **Scores here compare with tune 8's and ADR 0043's** — same objective, same weights, same `exploit` file —
+  and with nothing measured before `search-3` became that file.
+- **Verified**: Release build, the content rebuilt to hash `7e199df4` from a clean tree, the benchmark
+  digest re-verified (400 matches unchanged), the objective replayed at 10.35 on all four evaluations, the
+  before-content variety evaluation replayed to get the per-spell counts above, `check-knobs`, and the CI
+  gate (build, .NET tests, format, ruff, pytest, studio tests).
+
 ## 2026-09-14. The exploiter had gone stale through four catalogues, and was reading the content safe
 
 - **What changed**: `learning/weights/search-3.json`, from

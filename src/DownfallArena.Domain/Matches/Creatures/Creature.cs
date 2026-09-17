@@ -1,5 +1,6 @@
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
+using DownfallArena.Domain.Resources.Talents;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 using DownfallArena.SharedKernel.Stats;
@@ -9,12 +10,13 @@ namespace DownfallArena.Domain.Matches.Creatures;
 /// <summary>
 /// A combat unit in a match, spawned from a creature definition. Every state change goes through a method that
 /// protects the invariants; derived values (stun, total defense, current initiative) come from the conditions.
-/// The mutators are internal: only the <see cref="Match"/> aggregate and the rules it runs may change a creature.
+/// The mutators are internal: only the <see cref="Match"/> aggregate and the rules it runs may change a creature,
+/// and <see cref="Rules.Advance"/>, on creatures it restores and never hands out (ADR 0047).
 /// </summary>
 public sealed class Creature : Entity<CreatureId>
 {
     private readonly HashSet<SpellId> _knownSpells;
-    private readonly ConditionSet _conditions = new();
+    private readonly ConditionSet _conditions;
 
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
         : base(id)
@@ -25,6 +27,19 @@ public sealed class Creature : Entity<CreatureId>
         Energy = definition.BaseStats.Energy;
         BaseInitiative = definition.BaseStats.Initiative;
         _knownSpells = [.. definition.StartingSpells];
+        _conditions = new ConditionSet();
+    }
+
+    private Creature(CreatureSnapshot snapshot, CreatureDefinition definition)
+        : base(snapshot.Id)
+    {
+        Owner = snapshot.Owner;
+        Definition = definition;
+        Health = snapshot.Health;
+        Energy = snapshot.Energy;
+        BaseInitiative = snapshot.BaseInitiative;
+        _knownSpells = [.. snapshot.KnownSpells];
+        _conditions = new ConditionSet(snapshot.Conditions);
     }
 
     public PlayerSlot Owner { get; }
@@ -83,6 +98,60 @@ public sealed class Creature : Entity<CreatureId>
         return new Creature(id, owner, definition);
     }
 
+    /// <summary>
+    /// The creature a snapshot was taken of, at that state: health, energy, base initiative, known spells and
+    /// conditions as they were, so the rules a match runs can be run on it. Internal on purpose, and the one
+    /// door into a creature that did not spawn at full health: <see cref="Rules.Advance"/> uses it to answer
+    /// what a board would be after a move a match has not played (ADR 0047), and nothing else does. A snapshot
+    /// is a copy of a real creature, so its health cannot exceed the definition's and it knows its starting
+    /// spells and nothing its talent tree does not offer; a caller that hands one where that fails has a
+    /// bug, not a rule violation.
+    /// </summary>
+    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, TalentTree tree)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(tree);
+
+        if (definition.Id != snapshot.DefinitionId)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} was spawned from '{snapshot.DefinitionId.Value}', not '{definition.Id.Value}'.", nameof(definition));
+        }
+
+        if (tree.Id != definition.TalentTree)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} unlocks from '{definition.TalentTree.Value}', not '{tree.Id.Value}'.", nameof(tree));
+        }
+
+        if (snapshot.Health > definition.BaseStats.Health)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} cannot have {snapshot.Health} health out of {definition.BaseStats.Health}.", nameof(snapshot));
+        }
+
+        // What a creature knows is what it spawned with plus what it unlocked, and an unlock comes from the
+        // tree: a spell from anywhere else would let the hypothetical board cast past the evolution rules.
+        if (!definition.StartingSpells.All(snapshot.KnownSpells.Contains)
+            || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell) || tree.Spells.Any(offered => offered.Id == spell)))
+        {
+            throw new ArgumentException($"Creature {snapshot.Id} knows spells its definition and tree do not give it, or lacks a starting one.", nameof(snapshot));
+        }
+
+        // The rules that price an action read the snapshot's derived values; the rules that apply it read the
+        // restored creature's, recomputed from its conditions. A snapshot where the two disagree would be
+        // resolved on one board and applied to another.
+        var creature = new Creature(snapshot, definition);
+        if (creature.MaxHealth != snapshot.MaxHealth
+            || creature.TotalDefense != snapshot.TotalDefense
+            || creature.CurrentInitiative != snapshot.CurrentInitiative
+            || creature.CriticalChance != snapshot.CriticalChance
+            || creature.IsStunned != snapshot.IsStunned)
+        {
+            throw new ArgumentException($"Creature {snapshot.Id}'s snapshot disagrees with the conditions it carries.", nameof(snapshot));
+        }
+
+        return creature;
+    }
+
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
 
     /// <summary>
@@ -125,7 +194,7 @@ public sealed class Creature : Entity<CreatureId>
     }
 
     /// <summary>
-    /// Restores health up to the maximum. Returns the amount actually healed; a dead creature cannot be healed.
+    /// Gives health back up to the maximum. Returns the amount actually healed; a dead creature cannot be healed.
     /// </summary>
     internal int Heal(int amount)
     {

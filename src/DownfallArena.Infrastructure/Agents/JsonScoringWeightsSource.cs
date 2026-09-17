@@ -33,8 +33,9 @@ public sealed class JsonScoringWeightsSource : IScoringWeightsSource
             file.Bleed ?? defaults.Bleed,
             file.Defense ?? defaults.Defense,
             file.Energy ?? defaults.Energy,
-            file.Initiative ?? defaults.Initiative).Validated();
+            file.Initiative ?? defaults.Initiative,
+            file.Pressure ?? defaults.Pressure).Validated();
     }
 
-    private sealed record WeightsFile(double? Damage, double? Kill, double? Heal, double? Stun, double? Bleed, double? Defense, double? Energy, double? Initiative);
+    private sealed record WeightsFile(double? Damage, double? Kill, double? Heal, double? Stun, double? Bleed, double? Defense, double? Energy, double? Initiative, double? Pressure);
 }

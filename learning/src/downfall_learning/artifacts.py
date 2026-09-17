@@ -323,6 +323,9 @@ class Dataset:
     candidates: tuple[tuple[str, ...], ...]
     returns: np.ndarray
     match_ids: tuple[str, ...]
+    # The player a step belongs to. A match holds one episode per slot, interleaved in the arrays, so
+    # (match_id, slot) is what names a trajectory -- which is what an advantage has to be computed along.
+    slots: tuple[str, ...]
     kinds: tuple[str, ...]
 
     def __len__(self) -> int:
@@ -343,6 +346,7 @@ class Dataset:
             candidates=tuple(self.candidates[i] for i in index),
             returns=self.returns[index],
             match_ids=tuple(self.match_ids[i] for i in index),
+            slots=tuple(self.slots[i] for i in index),
             kinds=tuple(self.kinds[i] for i in index),
         )
 
@@ -356,6 +360,7 @@ class _Selection:
     candidates: list[tuple[str, ...]]
     returns: list[float]
     match_ids: list[str]
+    slots: list[str]
     kinds: list[str]
 
 
@@ -374,6 +379,7 @@ def _select(run: Run, wanted: set[str] | None) -> _Selection:
         candidates=[step.candidates for step in steps],
         returns=[episode_returns[(step.match_id, step.slot)] for step in steps],
         match_ids=[step.match_id for step in steps],
+        slots=[step.slot for step in steps],
         kinds=[step.kind for step in steps],
     )
 
@@ -396,5 +402,6 @@ def build_dataset(runs: Sequence[Run], kinds: Iterable[str] | None = None) -> Da
         candidates=tuple(chain.from_iterable(selection.candidates for selection in selections)),
         returns=np.asarray([value for selection in selections for value in selection.returns], dtype=float),
         match_ids=tuple(chain.from_iterable(selection.match_ids for selection in selections)),
+        slots=tuple(chain.from_iterable(selection.slots for selection in selections)),
         kinds=tuple(chain.from_iterable(selection.kinds for selection in selections)),
     )

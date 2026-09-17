@@ -10,16 +10,27 @@ namespace DownfallArena.Application.Learning.Recording;
 /// <summary>
 /// Records a run as a dataset (ADR 0013): <c>manifest.json</c> with the run stamp, one line per step in
 /// <c>steps.jsonl</c>, one line per episode in <c>episodes.jsonl</c>, and when a trace recorder is given, one
-/// <c>traces/&lt;match&gt;.json</c> per match. Matches are closed explicitly by the runner, once their final board
-/// is known, rather than on the <c>MatchEnded</c> event: the return needs the board.
+/// <c>traces/&lt;match&gt;.json</c> per match up to <paramref name="traceLimit"/>. Matches are closed explicitly
+/// by the runner, once their final board is known, rather than on the <c>MatchEnded</c> event: the return needs
+/// the board.
 /// </summary>
+/// <param name="traceLimit">
+/// How many match traces to write, newest matches dropped rather than oldest so a run always keeps the same
+/// first few whatever its length. A trace is two board projections per event and about twenty times the size
+/// of the steps a learner reads from the same match, so a dataset large enough to fit rare actions cannot
+/// afford one per match: 1000 matches write about 70 MB of steps and 4.7 GB of traces. Nothing trains on a
+/// trace -- it is the viewer's artifact (L3) -- so a handful of them is a sample, not a loss. Every match is
+/// still handed to <see cref="MatchTraceRecorder.Complete"/> so the recorder forgets it; skipping that is how
+/// a long run runs out of memory instead of disk.
+/// </param>
 public sealed class RunRecorder(
     IArtifactWriter writer,
     RunStamp stamp,
     ObservationBuilder observations,
     ActionEncoder actions,
     TimeProvider timeProvider,
-    MatchTraceRecorder? traces = null) : IMatchRecorder
+    MatchTraceRecorder? traces = null,
+    int traceLimit = int.MaxValue) : IMatchRecorder
 {
     public const string ManifestFile = "manifest.json";
     public const string StepsFile = "steps.jsonl";
@@ -43,6 +54,9 @@ public sealed class RunRecorder(
     public int Steps { get; private set; }
 
     public int Episodes { get; private set; }
+
+    /// <summary>Match traces actually written, which <c>traceLimit</c> caps below <see cref="Matches"/>.</summary>
+    public int Traces { get; private set; }
 
     /// <summary>
     /// Starts the dataset files empty and writes the manifest with zero counts, so a reused directory never mixes
@@ -84,7 +98,13 @@ public sealed class RunRecorder(
         await writer.AppendJsonLinesAsync(EpisodesFile, episodes, cancellationToken);
         if (traces is { } tracer)
         {
-            await writer.WriteJsonAsync($"{TracesDirectory}/{matchId}.json", tracer.Complete(matchId, stamp, seed), cancellationToken);
+            // Completed whether or not it is written: Complete is what makes the recorder forget the match.
+            var trace = tracer.Complete(matchId, stamp, seed);
+            if (Traces < traceLimit)
+            {
+                await writer.WriteJsonAsync($"{TracesDirectory}/{matchId}.json", trace, cancellationToken);
+                Traces++;
+            }
         }
 
         Matches++;
@@ -108,7 +128,9 @@ public sealed class RunRecorder(
                 Matches = Matches,
                 Steps = Steps,
                 Episodes = Episodes,
-                Traces = traces is not null,
+                // Known before the first match rather than counted, so an interrupted run says the same thing
+                // as a finished one: whether this run writes traces at all, not how far it got.
+                Traces = traces is not null && traceLimit > 0,
             },
             cancellationToken);
 }

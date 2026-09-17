@@ -111,6 +111,168 @@ def test_the_cli_evaluator_runs_the_engine_and_reads_its_evaluation(
     assert json.loads((tmp_path / "work" / "candidate-weights.json").read_text())["kill"] == 8.0
 
 
+@pytest.mark.parametrize("kind", ["lookahead", "minimax"])
+def test_the_cli_evaluator_plays_each_candidate_as_the_kind_it_was_given(
+    tmp_path: Path, fake_engine: list[str], kind: str
+) -> None:
+    engine = EngineCommand(root=tmp_path, command=tuple(fake_engine), kind=kind)
+    evaluator = CliEvaluator(engine, tmp_path / "work")
+
+    score = evaluator.evaluate(TARGET)
+
+    assert evaluator.kind == kind
+    assert score.evaluation is not None
+    assert score.evaluation.stamp.player1_agent.startswith(f"{kind}:")
+    assert score.evaluation.stamp.player1_agent.endswith("candidate-weights.json")
+
+
+def test_only_a_kind_that_plays_a_weights_file_is_accepted() -> None:
+    with pytest.raises(ValueError, match="policy"):
+        EngineCommand(kind="policy")
+
+
+def test_the_cli_evaluator_scores_a_candidate_as_the_mean_over_several_opponents(
+    tmp_path: Path, fake_engine: list[str]
+) -> None:
+    """The fake scores kill=3 at 0.5 against greedy and 0.7 against random; unanchored, the mixture is their
+    mean."""
+    engine = EngineCommand(root=tmp_path, command=tuple(fake_engine), opponent="greedy, random")
+    evaluator = CliEvaluator(engine, tmp_path / "work")
+
+    score = evaluator.evaluate({**TARGET, "kill": 3.0})
+
+    assert engine.opponents == ("greedy", "random")
+    assert evaluator.floor is None
+    assert score.mean == pytest.approx(0.6)
+    assert score.matches == 800
+    assert [opponent for opponent, _ in score.parts] == ["greedy", "random"]
+    assert [part.mean for _, part in score.parts] == pytest.approx([0.5, 0.7])
+    assert score.evaluation is score.parts[0][1].evaluation
+    assert evaluator.calls == 2
+    assert (tmp_path / "work" / "candidate-evaluation-vs-greedy.json").is_file()
+    assert (tmp_path / "work" / "candidate-evaluation-vs-random.json").is_file()
+
+
+def test_an_unanchored_mixture_is_the_mean_of_its_parts_and_keeps_the_first_evaluation() -> None:
+    against_greedy = Score.of(Evaluation.from_json(evaluation_json(0.8, 0.9)))
+    against_random = Score.of(Evaluation.from_json(evaluation_json(0.4, 0.3)))
+
+    mixture = Score.mixture([("greedy", against_greedy), ("random", against_random)])
+
+    assert mixture.mean == pytest.approx(0.6)
+    assert mixture.low == pytest.approx((against_greedy.low + against_random.low) / 2)
+    assert mixture.win_rate == pytest.approx(0.6)
+    assert mixture.matches == 800
+    assert mixture.evaluation is against_greedy.evaluation
+    assert mixture.floor == {"greedy": against_greedy.low, "random": against_random.low}
+
+
+def test_learning_one_opponent_cannot_outscore_holding_against_all_of_them() -> None:
+    """The plain mean ranks 1.0, 0.5, 0.5 above 0.6, 0.6, 0.6; anchored on a start that holds 0.6 against
+    each, the set that learned one lock fell below the floor against two and ranks below."""
+    start = Score.mixture([(name, _even(0.6)) for name in ("a", "b", "c")])
+    one_lock = [(name, _even(score)) for name, score in (("a", 1.0), ("b", 0.5), ("c", 0.5))]
+    holds = [(name, _even(0.6)) for name in ("a", "b", "c")]
+
+    assert Score.mixture(one_lock).mean > Score.mixture(holds).mean
+    assert Score.mixture(holds, start.floor).mean > Score.mixture(one_lock, start.floor).mean
+    assert Score.mixture(one_lock, start.floor).mean < 0
+
+
+def test_a_candidate_within_the_noise_of_the_start_is_not_a_fall() -> None:
+    """The floor is the low end of the start's interval, so 0.58 against a start at 0.6 conforms."""
+    start = Score.mixture([(name, _even(0.6)) for name in ("a", "b")])
+    near = [("a", _even(0.58)), ("b", _even(0.7))]
+
+    assert Score.mixture(near, start.floor).mean == pytest.approx(0.64)
+
+
+def test_among_falling_candidates_the_one_that_fell_least_ranks_first() -> None:
+    start = Score.mixture([(name, _even(0.6)) for name in ("a", "b")])
+    fell_a_little = [("a", _even(0.5)), ("b", _even(0.9))]
+    fell_a_lot = [("a", _even(0.2)), ("b", _even(1.0))]
+
+    assert Score.mixture(fell_a_little, start.floor).mean > Score.mixture(fell_a_lot, start.floor).mean
+
+
+def test_the_search_anchors_its_floor_on_what_it_started_from(tmp_path: Path, fake_engine: list[str]) -> None:
+    engine = EngineCommand(root=tmp_path, command=tuple(fake_engine), opponent="greedy,random")
+    evaluator = CliEvaluator(engine, tmp_path / "work")
+
+    result = search_weights(evaluator, SearchOptions(iterations=1, population=2, seed=1), TARGET)
+
+    assert evaluator.floor is not None
+    assert set(evaluator.floor) == {"greedy", "random"}
+    assert evaluator.floor["greedy"] == pytest.approx(0.95)
+    assert result.initial.score.mean == pytest.approx(1.0)
+    assert result.floor == evaluator.floor
+
+
+def _even(score: float) -> Score:
+    return Score.of(Evaluation.from_json(evaluation_json(score, score)))
+
+
+def test_an_empty_opponent_list_is_refused() -> None:
+    with pytest.raises(ValueError, match="opponent is empty"):
+        EngineCommand(opponent=" , ")
+
+
+def test_a_candidate_played_against_several_opponents_keeps_its_score_per_opponent() -> None:
+    against_greedy = Score.of(Evaluation.from_json(evaluation_json(0.4, 0.3)))
+    against_random = Score.of(Evaluation.from_json(evaluation_json(0.8, 0.9)))
+    candidate = Candidate(1, TARGET, Score.mixture([("greedy", against_greedy), ("random", against_random)]))
+
+    parts = candidate.to_json()["parts"]
+
+    assert parts["greedy"]["score"] == pytest.approx(0.4)
+    assert parts["greedy"]["winRate"] == pytest.approx(0.3)
+    assert parts["random"]["score"] == pytest.approx(0.8)
+    assert parts["random"]["low"] == pytest.approx(0.75)
+
+
+def test_a_candidate_played_against_one_opponent_has_no_parts() -> None:
+    candidate = Candidate(1, TARGET, _even(0.6))
+
+    assert "parts" not in candidate.to_json()
+
+
+def test_a_falling_candidate_names_the_opponent_it_fell_against(tmp_path: Path) -> None:
+    """A search that found nothing under its floor could only be read by replaying its best fallers."""
+    floor = {"greedy": 0.55, "random": 0.75}
+    fell = Candidate(2, TARGET, Score.mixture([("greedy", _even(0.5)), ("random", _even(0.9))], floor))
+    result = SearchResult(best=fell, candidates=(fell,), initial=fell, floor=floor)
+
+    summary = json.loads((result.write(tmp_path / "search") / "search.json").read_text())
+
+    written = summary["candidates"][0]
+    assert written["score"] == pytest.approx(-0.05)
+    assert written["parts"]["greedy"]["score"] == pytest.approx(0.5)
+    assert summary["floor"] == {"greedy": pytest.approx(0.55), "random": pytest.approx(0.75)}
+
+
+def test_a_search_against_one_opponent_writes_no_floor(tmp_path: Path) -> None:
+    best = Candidate(1, TARGET, _even(0.6))
+
+    summary = json.loads(
+        (SearchResult(best, (best,), best).write(tmp_path / "search") / "search.json").read_text()
+    )
+
+    assert "floor" not in summary
+
+
+def test_the_result_writes_one_evaluation_per_opponent_of_a_mixture(tmp_path: Path) -> None:
+    against_greedy = Score.of(Evaluation.from_json(evaluation_json(0.4, 0.3)))
+    against_random = Score.of(Evaluation.from_json(evaluation_json(0.8, 0.9)))
+    best = Candidate(1, TARGET, Score.mixture([("greedy", against_greedy), ("random", against_random)]))
+    result = SearchResult(best=best, candidates=(best,), initial=best)
+
+    directory = result.write(tmp_path / "search")
+
+    assert json.loads((directory / "evaluation.json").read_text())["agentA"]["score"]["mean"] == 0.4
+    assert json.loads((directory / "evaluation-vs-greedy.json").read_text())["agentA"]["score"]["mean"] == 0.4
+    assert json.loads((directory / "evaluation-vs-random.json").read_text())["agentA"]["score"]["mean"] == 0.8
+
+
 def test_the_cli_evaluator_reports_an_engine_failure(tmp_path: Path, fake_engine: list[str]) -> None:
     evaluator = CliEvaluator(EngineCommand(root=tmp_path, command=tuple(fake_engine)), tmp_path / "work")
 

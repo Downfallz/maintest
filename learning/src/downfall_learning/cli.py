@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
@@ -18,13 +19,26 @@ from downfall_learning.iteration import (
     load_report,
     write_report,
 )
-from downfall_learning.knobs import KNOBS_FILE, KnobsError, findings, load_content, load_knobs, validate
+from downfall_learning.jackknife import build_jackknife, format_jackknife, write_jackknife
+from downfall_learning.knobs import (
+    KNOBS_FILE,
+    Content,
+    Knobs,
+    KnobsError,
+    Objective,
+    findings,
+    load_content,
+    load_knobs,
+    validate,
+)
+from downfall_learning.mean_policy import mean_policy
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.progress import Progress
 from downfall_learning.report import TRAINING_FILE, TrainingLog
 from downfall_learning.search_weights import (
     BUILDER_SOURCES,
     ENGINE_SOURCES,
+    WEIGHT_KINDS,
     CliEvaluator,
     EngineCommand,
     SearchOptions,
@@ -33,21 +47,26 @@ from downfall_learning.search_weights import (
     search_weights,
     win_rate_lines,
 )
+from downfall_learning.spread import build_spread, format_spread, write_spread
 from downfall_learning.stamps import RunStamp
 from downfall_learning.train_clone import CloneOptions, train_clone
-from downfall_learning.train_value import ValueOptions, train_value
+from downfall_learning.train_value import SHARES, ValueOptions, train_value
 from downfall_learning.tune_content import (
+    DATA_BUILDER_COMMAND,
     PAIR_DEPTH,
     ContentEngine,
     EngineContentEvaluator,
     TuneOptions,
     format_result,
+    format_score,
+    score_content,
     tune_content,
 )
 from downfall_learning.viewer import RUN_PAGE, write_run_page
 
 RUNS_HELP = "one or more run directories recorded by 'simulate --record'"
 REPO_HELP = "the engine repository root (default: cwd)"
+DATA_HELP = "the authored content directory"
 OUTPUT_HELP = "the directory the model is written to"
 
 
@@ -74,7 +93,20 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
     search.add_argument(
         "--initial", type=Path, help="a weights file to start from (default: the built-in weights)"
     )
-    search.add_argument("--opponent", default="greedy", help="agent B of every evaluation (default greedy)")
+    search.add_argument(
+        "--opponent",
+        default="greedy",
+        help="agent B of every evaluation (default greedy), or several separated by commas: a candidate then"
+        " scores the mean over them, and a candidate that falls below the start against any of them ranks"
+        " below every one that did not, so it cannot win by learning one of them",
+    )
+    search.add_argument(
+        "--kind",
+        default="heuristic",
+        choices=WEIGHT_KINDS,
+        help="the agent kind that plays each candidate: heuristic reads the weights one step, lookahead"
+        " and minimax play the round out (default heuristic)",
+    )
     search.add_argument(
         "--seeds", default="benchmarks/benchmark-seeds.json", help="the seed file of every evaluation"
     )
@@ -102,7 +134,7 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
     )
     tune.add_argument("-o", "--output", type=Path, required=True, help="the directory the proposal lands in")
     tune.add_argument("--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})")
-    tune.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    tune.add_argument("--data", type=Path, default=Path("data"), help=DATA_HELP)
     tune.add_argument("--iterations", type=int, default=8, help="rounds of neighbours (default 8)")
     tune.add_argument("--neighbours", type=int, default=4, help="candidates played per round (default 4)")
     tune.add_argument(
@@ -141,12 +173,38 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
     tune.set_defaults(handler=_tune_content)
 
 
+def _add_score_content(commands: argparse._SubParsersAction) -> None:
+    score = commands.add_parser(
+        "score-content",
+        help="play the content as it stands on a seed file and score it by the objective, with no search",
+    )
+    score.add_argument("-o", "--output", type=Path, required=True, help="the directory score.json lands in")
+    score.add_argument(
+        "--seeds",
+        type=Path,
+        required=True,
+        help="the seed file to play; the point is one the search that proposed this content never saw",
+    )
+    score.add_argument(
+        "--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})"
+    )
+    score.add_argument("--data", type=Path, default=Path("data"), help=DATA_HELP)
+    score.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
+    score.add_argument(
+        "--engine", nargs="+", help="the engine command prefix (default: dotnet run --project ...)"
+    )
+    score.add_argument(
+        "--builder", nargs="+", help="the data builder command prefix (default: the built assembly)"
+    )
+    score.set_defaults(handler=_score_content)
+
+
 def _add_check_knobs(commands: argparse._SubParsersAction) -> None:
     check = commands.add_parser("check-knobs", help="the balance knobs against the content they describe")
     check.add_argument(
         "--knobs", type=Path, default=KNOBS_FILE, help=f"the knobs file (default {KNOBS_FILE})"
     )
-    check.add_argument("--data", type=Path, default=Path("data"), help="the authored content directory")
+    check.add_argument("--data", type=Path, default=Path("data"), help=DATA_HELP)
     check.add_argument(
         "--strict", action="store_true", help="fail on the content findings too, not only on the knobs file"
     )
@@ -168,6 +226,29 @@ def build_parser() -> argparse.ArgumentParser:
     _add_dataset_arguments(value)
     value.add_argument("--alpha", type=float, default=1.0, help="ridge regularization strength")
     value.add_argument("--min-samples", type=int, default=5, help="steps an action needs to get its own row")
+    value.add_argument(
+        "--share",
+        choices=SHARES,
+        default="action",
+        help="what an action row is fitted on: 'kind' one regression per decision kind and a scalar per "
+        "action, 'action' one regression per action over the whole observation (ADR 0045)",
+    )
+    value.add_argument(
+        "--baseline-alpha",
+        type=float,
+        help="how strongly the state baseline alone is pulled toward zero (ADR 0048); it wants far "
+        "more than the action rows do. Default: whatever --alpha says, which is what they shared",
+    )
+    value.add_argument(
+        "--gae-lambda",
+        type=float,
+        default=1.0,
+        help="how far an advantage looks ahead along its own trajectory (ADR 0046): 1.0 the episode "
+        "return, which is the old behaviour, 0.0 the one-step difference in state value",
+    )
+    value.add_argument(
+        "--discount", type=float, default=1.0, help="how much a later step is worth (default 1.0, none)"
+    )
     value.set_defaults(handler=_train_value)
 
     _add_search_weights(commands)
@@ -197,6 +278,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report.set_defaults(handler=_report)
 
+    spread = commands.add_parser(
+        "spread", help="the spread of a turn's win rates across its dataset seeds (ADR 0049)"
+    )
+    spread.add_argument("run", type=Path, help="a run directory holding seeds/<seed>/ subdirectories")
+    spread.set_defaults(handler=_spread)
+
+    _add_mean_policy(commands)
+    _add_jackknife(commands)
+
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
     csv.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
     csv.add_argument("-o", "--output", type=Path, required=True, help="the CSV file to write")
@@ -205,6 +295,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     _add_check_knobs(commands)
     _add_tune_content(commands)
+    _add_score_content(commands)
 
     stamps = commands.add_parser(
         "compare-stamps",
@@ -219,6 +310,27 @@ def build_parser() -> argparse.ArgumentParser:
 def _dataset(arguments: argparse.Namespace) -> Dataset:
     runs = load_runs(arguments.runs, allow_mixed=arguments.allow_mixed)
     return build_dataset(runs, kinds=getattr(arguments, "kinds", None))
+
+
+def _add_mean_policy(commands: argparse._SubParsersAction) -> None:
+    mean = commands.add_parser(
+        "mean-policy",
+        help="one policy scoring every candidate as the mean of several: the fits of a turn's seeds as one",
+    )
+    mean.add_argument(
+        "models", nargs="+", type=Path, help="two or more model directories holding policy.json, or the files"
+    )
+    mean.add_argument("-o", "--output", type=Path, required=True, help=OUTPUT_HELP)
+    mean.set_defaults(handler=_mean_policy)
+
+
+def _add_jackknife(commands: argparse._SubParsersAction) -> None:
+    jackknife = commands.add_parser(
+        "jackknife",
+        help="the spread of a turn's mean policy, from the means that leave one seed out",
+    )
+    jackknife.add_argument("run", type=Path, help="a run directory holding mean/ and mean/without-<seed>/")
+    jackknife.set_defaults(handler=_jackknife)
 
 
 def _add_quiet(parser: argparse.ArgumentParser) -> None:
@@ -253,7 +365,16 @@ def _train_clone(arguments: argparse.Namespace) -> int:
 def _train_value(arguments: argparse.Namespace) -> int:
     dataset = _dataset(arguments)
     log = TrainingLog(dataset.stamp, arguments.output / TRAINING_FILE)
-    options = ValueOptions(arguments.alpha, arguments.validation, arguments.seed, arguments.min_samples)
+    options = ValueOptions(
+        arguments.alpha,
+        arguments.validation,
+        arguments.seed,
+        arguments.min_samples,
+        arguments.share,
+        arguments.discount,
+        arguments.gae_lambda,
+        arguments.baseline_alpha,
+    )
     _write_policy(train_value(dataset, options, log), arguments.output)
     return 0
 
@@ -266,17 +387,31 @@ def _search_weights(arguments: argparse.Namespace) -> int:
     evaluator = CliEvaluator(_engine(arguments), arguments.output / "work")
     log = TrainingLog(path=arguments.output / TRAINING_FILE)
     result = search_weights(evaluator, options, initial, log, _progress(arguments, "search-weights"))
-    result.write(arguments.output)
-    print(format_search(result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json"))
+    result.write(arguments.output, evaluator.kind)
+    print(
+        format_search(
+            result, evaluator.opponent, evaluator.calls, arguments.output / "weights.json", evaluator.kind
+        )
+    )
     return 0
 
 
 def _engine(arguments: argparse.Namespace) -> EngineCommand:
-    engine = EngineCommand(root=arguments.repo, opponent=arguments.opponent, seeds=arguments.seeds)
+    engine = EngineCommand(
+        root=arguments.repo,
+        opponent=arguments.opponent,
+        seeds=arguments.seeds,
+        kind=getattr(arguments, "kind", "heuristic"),
+    )
     return replace(engine, command=tuple(arguments.engine)) if arguments.engine else engine
 
 
 def _evaluate_policy(arguments: argparse.Namespace) -> int:
+    if "," in arguments.opponent:
+        raise ValueError(
+            "evaluate-policy plays one opponent and writes one evaluation; a list of opponents is what "
+            "search-weights takes."
+        )
     evaluator = CliEvaluator(_engine(arguments), arguments.model / "work")
     score = evaluate_policy(arguments.model, evaluator, arguments.output, update_log=not arguments.no_log)
     lines = [
@@ -303,6 +438,33 @@ def _report(arguments: argparse.Namespace) -> int:
     if not arguments.no_html:
         page = write_run_page(arguments.run, arguments.viewer)
         print(f"\nOpen '{page}' in a browser: the viewer with this run already loaded.")
+    return 0
+
+
+def _spread(arguments: argparse.Namespace) -> int:
+    spread = build_spread(arguments.run)
+    path = write_spread(spread, arguments.run)
+    print(format_spread(spread))
+    print(f"\nWritten to '{path}'. A gate reads the min, never the max (ADR 0049).")
+    return 0
+
+
+def _jackknife(arguments: argparse.Namespace) -> int:
+    jackknife = build_jackknife(arguments.run)
+    path = write_jackknife(jackknife, arguments.run)
+    print(format_jackknife(jackknife))
+    print(f"\nWritten to '{path}'.")
+    return 0
+
+
+def _mean_policy(arguments: argparse.Namespace) -> int:
+    policies = [Policy.load(model / POLICY_FILE if model.is_dir() else model) for model in arguments.models]
+    mean = mean_policy(policies)
+    path = mean.save(arguments.output / POLICY_FILE)
+    print(
+        f"Policy ({mean.kind}, {len(mean.action_keys)} actions) written to '{path}': the mean of "
+        f"{len(policies)} policies, scoring every candidate as the mean of their scores."
+    )
     return 0
 
 
@@ -346,25 +508,42 @@ def _check_knobs(arguments: argparse.Namespace) -> int:
     return 1 if reports and arguments.strict else 0
 
 
-def _tune_content(arguments: argparse.Namespace) -> int:
+def _content_evaluator(
+    arguments: argparse.Namespace, seeds: str | None = None
+) -> tuple[Knobs, Content, Objective, EngineContentEvaluator] | None:
+    """The knobs, the content, the objective and an evaluator on the engine, or ``None`` after saying why.
+
+    One preflight for ``tune-content`` and ``score-content``, so a hold-out cannot start on a knobs file the
+    search itself would have refused. ``seeds`` replaces the objective's seed file and nothing else about
+    it, which is how the hold-out points the same evaluations at seeds no candidate saw.
+    """
     try:
         knobs = load_knobs(arguments.knobs)
         content = load_content(arguments.data)
     except KnobsError as error:
         print(error, file=sys.stderr)
-        return 1
+        return None
 
     problems = validate(knobs, content, root=_repository_of(arguments.knobs))
     if problems:
         for problem in problems:
             print(f"problem: {problem}", file=sys.stderr)
-        print("The knobs and the content disagree; fix that before searching.", file=sys.stderr)
-        return 1
+        print("The knobs and the content disagree; fix that before playing anything.", file=sys.stderr)
+        return None
 
-    engine = EngineCommand(root=arguments.repo, seeds=knobs.objective.seeds or EngineCommand().seeds)
+    objective = knobs.objective
+    if seeds is not None:
+        objective = Objective(seeds=seeds, evaluations=objective.evaluations, targets=objective.targets)
+    engine = EngineCommand(root=arguments.repo, seeds=objective.seeds or EngineCommand().seeds)
     if arguments.engine:
         engine = replace(engine, command=tuple(arguments.engine))
-    host = ContentEngine(engine=engine, data=arguments.data, workdir=arguments.output / "work")
+    builder = getattr(arguments, "builder", None)
+    host = ContentEngine(
+        engine=engine,
+        data=arguments.data,
+        workdir=arguments.output / "work",
+        builder=tuple(builder) if builder else DATA_BUILDER_COMMAND,
+    )
     # Both, each against the trees it is built from. The comment here used to say the evaluator checked the
     # engine, which was true of `CliEvaluator` and never of `EngineContentEvaluator` -- so a run whose
     # builder happened to be fresh played every candidate on a stale CLI and said nothing.
@@ -372,8 +551,15 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         unreachable = missing_engine(command, engine.root, sources)
         if unreachable:
             print(unreachable, file=sys.stderr)
-            return 1
-    evaluator = EngineContentEvaluator(host, knobs.objective, content)
+            return None
+    return knobs, content, objective, EngineContentEvaluator(host, objective, content)
+
+
+def _tune_content(arguments: argparse.Namespace) -> int:
+    prepared = _content_evaluator(arguments)
+    if prepared is None:
+        return 1
+    knobs, content, _, evaluator = prepared
     options = TuneOptions(
         iterations=arguments.iterations,
         neighbours=arguments.neighbours,
@@ -395,6 +581,22 @@ def _tune_content(arguments: argparse.Namespace) -> int:
     elif arguments.apply:
         print("Nothing improved, so nothing was applied.")
     print(f"{evaluator.calls} evaluation(s) played; the proposal is in '{arguments.output}'.")
+    return 0
+
+
+def _score_content(arguments: argparse.Namespace) -> int:
+    # The engine runs in the repository root, so the seed file goes in absolute: a relative path would be
+    # read from there, not from where this command was launched.
+    prepared = _content_evaluator(arguments, seeds=str(Path(arguments.seeds).resolve()))
+    if prepared is None:
+        return 1
+    _, content, objective, evaluator = prepared
+    score = score_content(evaluator, objective, content)
+    arguments.output.mkdir(parents=True, exist_ok=True)
+    path = arguments.output / "score.json"
+    path.write_text(json.dumps(score.to_json(), indent=2) + "\n", encoding="utf-8")
+    print(format_score(score, objective))
+    print(f"\nWritten to '{path}'.")
     return 0
 
 
@@ -455,6 +657,18 @@ def report_command() -> int:
     return _run("report")
 
 
+def spread_command() -> int:
+    return _run("spread")
+
+
+def mean_policy_command() -> int:
+    return _run("mean-policy")
+
+
+def jackknife_command() -> int:
+    return _run("jackknife")
+
+
 def compare_stamps_command() -> int:
     return _run("compare-stamps")
 
@@ -465,6 +679,10 @@ def check_knobs_command() -> int:
 
 def tune_content_command() -> int:
     return _run("tune-content")
+
+
+def score_content_command() -> int:
+    return _run("score-content")
 
 
 if __name__ == "__main__":

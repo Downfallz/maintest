@@ -2269,6 +2269,8 @@ function closeSheets() {
 const AGENTS = [
   { value: 'random', label: 'Random — picks uniformly' },
   { value: 'greedy', label: 'Greedy — one-step lookahead, deterministic' },
+  { value: 'lookahead', label: 'Lookahead — plays the round out before each combat move, deterministic' },
+  { value: 'minimax', label: 'Minimax — the lookahead against the enemy reply that costs it most, deterministic' },
   { value: 'explore:0.2', label: 'Explore 20% — greedy, one action in five at random' },
   { value: 'heuristic-weights', label: 'Heuristic — with the weights below', weights: true, spec: () => 'heuristic:' },
   { value: 'heuristic-file', label: 'Heuristic — with weights from a file', path: 'learning/weights/greedy.json', spec: path => `heuristic:${path}` },

@@ -1,0 +1,406 @@
+using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Creatures;
+using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Matches.Rules;
+using DownfallArena.Domain.Resources;
+using DownfallArena.SharedKernel.Identifiers;
+
+namespace DownfallArena.Application.Agents;
+
+/// <summary>
+/// Decides a combat move by playing the round out (ADR 0047). Where the heuristic agent prices a move by what
+/// it does on the board it is cast on, this one puts the move on the board, plays every later activation slot
+/// the way the heuristic agent would play it, and sums what the scorer says of every action the round then
+/// holds, allies for and enemies against. So it sees what the one-step reading cannot: a stun that takes away
+/// the enemy's kill, a kill that lands before the target acts, a target that another action will have killed
+/// first, a defense buff that turns a lethal round into a survivable one, all through the same rules the
+/// match runs, none of it guessed. The sum is the scorer's own calibration: a move with no consequence for
+/// the rest of the round is worth exactly what the greedy agent says it is, and only the interactions are
+/// new. A board valued on its own instead, health and conditions priced by the same weights, measured eight
+/// points of win rate worse against the greedy agent, whose weights were tuned for the one-step reading and
+/// not for a reading of the board it leaves (journal, 2026-09-16).
+/// <para>
+/// What it does not see is hidden: an enemy's intent is not public until revealed, so an enemy slot that is
+/// still ahead plays what the scorer would play for it, and an ally that has not declared plays the same way.
+/// What has been declared or revealed is read as it is. The round is played on the plain roll, which is what
+/// makes the agent deterministic and the digest replayable; a critical that would change the answer is a
+/// chance, not a reading.
+/// </para>
+/// <para>
+/// Adversarial, it is the minimax agent: an enemy slot that is still ahead is not guessed but played as the
+/// reply that costs the actor most among the spells that enemy can cast, one enemy at a time in timeline
+/// order, the others held at what was already taken for them. That reads the round against an opponent who
+/// sees the actor's move, which no opponent in this game does, since intents are simultaneous: it is the
+/// floor of what the move is worth, not its expectation, and whether a floor plays better than a guess is
+/// what the journal measures.
+/// </para>
+/// <para>
+/// Evolution and speed are the heuristic agent's: neither is a combat move, and the round they plan has no
+/// timeline yet to play out.
+/// </para>
+/// </summary>
+public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, bool adversarial = false) : IPlayerAgent
+{
+    private readonly HeuristicAgent _oneStep = new(weights, resources, rules);
+    private readonly ActionScorer _scorer = new(resources, rules, weights);
+
+    public ScoringWeights Weights => weights;
+
+    /// <summary>Whether enemy slots are played as the worst reply rather than as the guessed one: the minimax agent.</summary>
+    public bool IsAdversarial => adversarial;
+
+    public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => _oneStep.DecideEvolution(board, options);
+
+    public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => _oneStep.DecideSpeed(board, creature);
+
+    /// <summary>
+    /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
+    /// the actor casting that spell on the best targets the board offers when its slot comes. Ties go to the
+    /// first spell in ordinal id order.
+    /// </summary>
+    public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(intentOption);
+
+        var creatures = Creatures(board);
+        var actor = creatures.First(creature => creature.Id == intentOption.Creature);
+        SpellId? best = null;
+        var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
+        foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        {
+            var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
+            var value = (
+                Round: Value(board, creatures, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
+                OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0);
+            if (Better(value, bestValue))
+            {
+                best = spell;
+                bestValue = value;
+            }
+        }
+
+        return best ?? throw new InvalidOperationException("The options offer no castable spell.");
+    }
+
+    /// <summary>
+    /// The target set whose round ends best, on the board the actions already revealed leave: they are bound
+    /// in timeline order and public, so the board this actor's action lands on is a reading, not a guess
+    /// (ADR 0039, made exact by ADR 0047). Ties go to the first set in candidate order; no target when the
+    /// spell is no longer castable.
+    /// </summary>
+    public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (!options.LegalTargets.IsCastable)
+        {
+            return [];
+        }
+
+        var beforeCombat = Creatures(board);
+        var declared = DeclaredSpells(board, beforeCombat, options.Actor, options.Spell);
+        IReadOnlyList<CreatureSnapshot> ahead = beforeCombat;
+        foreach (var revealed in board.RevealedActions)
+        {
+            ahead = Advance.Action(revealed, ahead, resources, rules, ForcedRandom.NotCritical).Board;
+        }
+
+        var intent = new CombatIntent(options.Actor, options.Spell);
+        IReadOnlyList<CreatureId> best = [];
+        var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
+        foreach (var targets in TargetSets.Of(options.LegalTargets))
+        {
+            var action = CombatAction.Bind(intent, targets);
+            var value = (
+                Round: Value(board, ahead, beforeCombat, board.RevealedActions.Count, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
+                OneStep: _scorer.Expected(action, ahead));
+            if (Better(value, bestValue))
+            {
+                best = targets;
+                bestValue = value;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// What this agent takes every other creature on the timeline to play when the actor declares a candidate:
+    /// an ally's declared spell or the one the heuristic agent would declare for it, an enemy's guessed spell,
+    /// or, for the minimax agent, the reply that costs the actor most. A reading a test or a viewer can ask
+    /// for; the decisions above are made on it.
+    /// </summary>
+    public IReadOnlyDictionary<CreatureId, SpellId?> Replies(PlayerBoardState board, CreatureId actor, SpellId candidate)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        var creatures = Creatures(board);
+        var declared = DeclaredSpells(board, creatures, actor, candidate);
+        Value(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(ahead, actor, candidate));
+        return declared;
+    }
+
+    /// <summary>
+    /// The round's worth for a candidate: played out on the replies as they stand, or, adversarially, with
+    /// each enemy slot still ahead settled at the reply that costs the actor most. One enemy at a time in
+    /// timeline order, each over the spells it can cast, the earlier ones already settled and the later ones
+    /// still at their guess: a joint worst case over every enemy would cost the product of their spell counts
+    /// where this costs the sum, and the round is short enough that the difference between the two is rarely
+    /// a different reply. The map is left holding what was settled, which is what <see cref="Replies"/> reads.
+    /// The replies an enemy can choose from are read on the board before combat, where it declared: the
+    /// round is played from <paramref name="start"/>, which at reveal time has the revealed actions on it,
+    /// and an energy one of those gave or drained changes what the enemy can cast now, not what it could
+    /// declare then.
+    /// </summary>
+    private RoundValue Value(
+        PlayerBoardState board,
+        IReadOnlyList<CreatureSnapshot> start,
+        IReadOnlyList<CreatureSnapshot> beforeCombat,
+        int fromSlot,
+        CreatureId actor,
+        Dictionary<CreatureId, SpellId?> declared,
+        Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
+    {
+        var value = PlayOut(board, start, fromSlot, actor, declared, candidate);
+        if (!adversarial)
+        {
+            return value;
+        }
+
+        foreach (var enemy in board.Timeline.Skip(fromSlot).Select(slot => slot.Creature).Distinct())
+        {
+            var snapshot = beforeCombat.First(creature => creature.Id == enemy);
+            if (enemy == actor || snapshot.Owner == board.Slot)
+            {
+                continue;
+            }
+
+            var worst = declared[enemy];
+            foreach (var spell in Castable(snapshot))
+            {
+                declared[enemy] = spell;
+                var replied = PlayOut(board, start, fromSlot, actor, declared, candidate);
+                if (replied.CompareTo(value) < 0)
+                {
+                    value = replied;
+                    worst = spell;
+                }
+            }
+
+            declared[enemy] = worst;
+        }
+
+        return value;
+    }
+
+    /// <summary>
+    /// The round played out first, the one-step score second. The second key is not a refinement: it is
+    /// what decides when the first cannot. The rollout stands in for the hidden slots with a guess, and when
+    /// that guess has the actor dead or stunned before its own slot, every candidate leaves the same board and
+    /// the round says nothing about the choice. The choice still matters in every world where the guess is
+    /// wrong and the actor does act, and the one-step reading is the best that can be said about those.
+    /// Without it the tie went to the first spell in id order, which is how the weakest spell in the
+    /// catalogue came to be cast three times more often than the greedy agent casts it.
+    /// </summary>
+    private static bool Better((RoundValue Round, double OneStep) candidate, (RoundValue Round, double OneStep) best)
+    {
+        var round = candidate.Round.CompareTo(best.Round);
+        return round > 0 || (round == 0 && candidate.OneStep > best.OneStep);
+    }
+
+    /// <summary>
+    /// What the round is worth when played out from a slot: the actor plays what the candidate says at its
+    /// slot, every other creature plays what can be read of it, and every action is scored on the board it
+    /// lands on, the actor's team's for and the other's against, under the match the round ends, if it ends
+    /// one, which outranks the score.
+    /// </summary>
+    private RoundValue PlayOut(
+        PlayerBoardState board,
+        IReadOnlyList<CreatureSnapshot> start,
+        int fromSlot,
+        CreatureId actor,
+        Dictionary<CreatureId, SpellId?> declared,
+        Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
+    {
+        var chance = CriticalChance(start, actor, candidate);
+        var plain = PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.NotCritical);
+        return chance == 0 ? plain : RoundValue.Mix(chance, PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.Critical), plain);
+    }
+
+    private RoundValue PlayOut(
+        PlayerBoardState board,
+        IReadOnlyList<CreatureSnapshot> start,
+        int fromSlot,
+        CreatureId actor,
+        Dictionary<CreatureId, SpellId?> declared,
+        Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate,
+        ForcedRandom roll)
+    {
+        var ahead = start;
+        var value = 0.0;
+        for (var index = fromSlot; index < board.Timeline.Count; index++)
+        {
+            var creature = board.Timeline[index].Creature;
+            var action = creature == actor ? candidate(ahead) : Guess(ahead, creature, declared[creature]);
+            if (action is null)
+            {
+                continue;
+            }
+
+            var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical);
+            var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
+            value += sign * _scorer.Score(advanced.Resolution, ahead);
+            ahead = advanced.Board;
+        }
+
+        var cleaned = Advance.Cleanup(ahead, resources);
+        return Advance.Outcome(cleaned, resources, board.RoundNumber ?? 1, rules) switch
+        {
+            null => new RoundValue(0, value),
+            { Winner: null } => new RoundValue(0, value),
+            { Winner: var winner } => new RoundValue(winner == board.Slot ? 1 : -1, value),
+        };
+    }
+
+    /// <summary>
+    /// The actor's chance of a critical on the candidate, read the way <see cref="ActionScorer.Expected"/>
+    /// reads it, so the rollout is weighted between its two rolls rather than taken on a miss: taken on a
+    /// miss, a spell that crits three casts in four is priced at half of what it does, and the agent stops
+    /// casting it. Only the actor's own roll is weighted; every other creature's stays a miss, which keeps
+    /// the cost at two rounds per candidate rather than two to the power of the slots left.
+    /// </summary>
+    private double CriticalChance(IReadOnlyList<CreatureSnapshot> start, CreatureId actor, Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
+    {
+        var action = candidate(start);
+        if (action is null)
+        {
+            return 0;
+        }
+
+        var snapshot = start.First(creature => creature.Id == actor);
+        return snapshot.CriticalChance.Plus(resources.GetSpell(action.Spell).Stats.CriticalChance.Value).Value;
+    }
+
+    /// <summary>
+    /// What a round played out is worth: the match it ends first, then the score of its actions. A win is
+    /// worth more than any score and a loss less than any, whatever a weights file says, because the two are
+    /// never added: a weights file only has to be finite, so no bound in its unit could be trusted to
+    /// dominate it, and a win an agent could be paid to decline is not a win it reads. Between two rolls,
+    /// the outcome mixes the way the score does, so a critical that wins on the spot three casts in four is
+    /// worth three quarters of a win.
+    /// </summary>
+    private readonly record struct RoundValue(double Outcome, double Score) : IComparable<RoundValue>
+    {
+        public static RoundValue Lowest => new(double.NegativeInfinity, double.NegativeInfinity);
+
+        public static RoundValue Mix(double chance, RoundValue critical, RoundValue plain) =>
+            new((chance * critical.Outcome) + ((1 - chance) * plain.Outcome), (chance * critical.Score) + ((1 - chance) * plain.Score));
+
+        public int CompareTo(RoundValue other)
+        {
+            var outcome = Outcome.CompareTo(other.Outcome);
+            return outcome != 0 ? outcome : Score.CompareTo(other.Score);
+        }
+    }
+
+    /// <summary>
+    /// What a creature other than the actor plays at its slot: its spell on the best targets the board
+    /// offers at that moment, or nothing when it is dead, stunned, or has no legal target, as its slot would
+    /// fizzle or bind no target in the match too.
+    /// <para>
+    /// The spell is what the creature has declared when it is an ally that has, and otherwise the spell the
+    /// scorer would declare for it <em>on the board before combat</em>, never on the board at its slot. That
+    /// is the information the match gives: every intent is declared before anything resolves, so a creature
+    /// does not get to pick its spell after seeing what the actor did. Guessing it at the slot instead makes
+    /// every enemy clairvoyant, and a clairvoyant enemy punishes every aggressive move the actor could make,
+    /// which read as the lookahead losing to the greedy agent three matches in four. Targets are the one
+    /// thing a creature does choose after the earlier slots have revealed, so those are read at the slot.
+    /// </para>
+    /// </summary>
+    private CombatAction? Guess(IReadOnlyList<CreatureSnapshot> ahead, CreatureId creature, SpellId? spell)
+    {
+        var snapshot = ahead.First(candidate => candidate.Id == creature);
+        return spell is null || snapshot.IsDead || snapshot.IsStunned ? null : BestTargets(ahead, creature, spell);
+    }
+
+    /// <summary>
+    /// The spell every creature but the actor is taken to have declared, on the board before combat. An ally
+    /// that has declared: its declared spell. An ally that has not: what the heuristic agent would declare
+    /// for it once the actor's candidate is on the board too, since that ally will decide after this one and
+    /// reads the team's declarations (ADR 0039), so a target the candidate kills is one it will not aim at.
+    /// An enemy: the scorer's pick on the board before combat, its own declarations being hidden. Nothing
+    /// for a creature with no castable spell.
+    /// </summary>
+    private Dictionary<CreatureId, SpellId?> DeclaredSpells(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> beforeCombat, CreatureId actor, SpellId candidate)
+    {
+        var withCandidate = board.Intents.Any(intent => intent.Actor == actor)
+            ? board
+            : board with { Intents = [.. board.Intents, new CombatIntent(actor, candidate)] };
+        var spells = new Dictionary<CreatureId, SpellId?>();
+        foreach (var creature in board.Timeline.Select(slot => slot.Creature))
+        {
+            if (creature == actor || spells.ContainsKey(creature))
+            {
+                continue;
+            }
+
+            var snapshot = beforeCombat.First(other => other.Id == creature);
+            spells[creature] = snapshot.Owner != board.Slot
+                ? GreedyIntent(snapshot, beforeCombat)
+                : board.Intents.FirstOrDefault(intent => intent.Actor == creature)?.Spell ?? AllyIntent(withCandidate, snapshot);
+        }
+
+        return spells;
+    }
+
+    /// <summary>What the heuristic agent would declare for an ally that has not yet, given the team's declarations so far.</summary>
+    private SpellId? AllyIntent(PlayerBoardState board, CreatureSnapshot ally)
+    {
+        var castable = Castable(ally);
+        return castable.Count == 0 ? null : _oneStep.DecideIntent(board, new IntentOption(ally.Id, castable));
+    }
+
+    /// <summary>The spells a creature knows and can afford, in ordinal id order.</summary>
+    private List<SpellId> Castable(CreatureSnapshot creature) =>
+        [.. creature.KnownSpells
+            .Where(spell => resources.GetSpell(spell).Stats.Cost.Value <= creature.Energy.Value)
+            .OrderBy(spell => spell.Value, StringComparer.Ordinal)];
+
+    /// <summary>The spell the scorer would declare for a creature on a board, as the greedy agent declares it.</summary>
+    private SpellId? GreedyIntent(CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        SpellId? best = null;
+        var bestScore = double.NegativeInfinity;
+        foreach (var spell in snapshot.KnownSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        {
+            if (resources.GetSpell(spell).Stats.Cost.Value > snapshot.Energy.Value)
+            {
+                continue;
+            }
+
+            var score = _scorer.Best(snapshot, spell, creatures)?.Score;
+            if (score is { } found && found > bestScore)
+            {
+                best = spell;
+                bestScore = found;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>The spell on its best targets by the one-step reading, or nothing when it has no legal target.</summary>
+    private CombatAction? BestTargets(IReadOnlyList<CreatureSnapshot> ahead, CreatureId actor, SpellId spell)
+    {
+        var snapshot = ahead.First(candidate => candidate.Id == actor);
+        return _scorer.Best(snapshot, spell, ahead) is { } found
+            ? CombatAction.Bind(new CombatIntent(actor, spell), found.Targets)
+            : null;
+    }
+
+    private static List<CreatureSnapshot> Creatures(PlayerBoardState board) => [.. board.Allies, .. board.Enemies];
+}

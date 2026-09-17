@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Matches.Projections;
@@ -9,6 +10,7 @@ using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Randomness;
 using DownfallArena.SharedKernel.Stats;
+using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Agents;
 
@@ -154,11 +156,65 @@ public sealed class ExploringAgentTests
         Handlers.Agents().Resolve(spec).ShouldBe(spec, "the rate is the whole identity, so there is no version to add");
     }
 
+    /// <summary>
+    /// The agent an exploring run deviates from is the one whose play is being learned, so it can be named
+    /// after the rate. Recording an exploring dataset against Greedy while the pure one is recorded against
+    /// someone else would train the two policies of one loop on two different players.
+    /// </summary>
+    [Fact]
+    public void An_exploring_spec_can_name_the_weights_it_deviates_from()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+        var spec = AgentSpec.Parse("explore:0.2:learning/weights/search-4.json");
+
+        factory.Create(spec, Rules, new TestRandom(1)).ShouldBeOfType<ExploringAgent>().Rate.ShouldBe(0.2);
+
+        weights.Received().Load("learning/weights/search-4.json");
+    }
+
+    /// <summary>Those weights are as much the agent's identity as a heuristic agent's are, so they stamp.</summary>
+    [Fact]
+    public void An_exploring_spec_that_names_weights_is_fingerprinted_and_one_without_is_not()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        var named = factory.Resolve(AgentSpec.Parse("explore:0.2:learning/weights/search-4.json"));
+        var bare = AgentSpec.Parse("explore:0.2");
+
+        named.Version.ShouldNotBeNull();
+        named.Version.ShouldBe(ScoringWeights.Default.Fingerprint);
+        factory.Resolve(bare).ShouldBe(bare, "greedy is the whole identity, so there is no version to add");
+    }
+
+    /// <summary>
+    /// The inner agent may be written as a full spec, which is what lets a policy be explored. A bare path
+    /// stays the weights shorthand every journal entry before this one uses, so the two forms have to reach
+    /// the same weights source with the same path.
+    /// </summary>
+    [Fact]
+    public void An_exploring_spec_reads_its_inner_agent_as_a_spec_or_as_the_weights_shorthand()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        factory.Create(AgentSpec.Parse("explore:0.2:heuristic:learning/weights/search-4.json"), Rules, new TestRandom(1))
+            .ShouldBeOfType<ExploringAgent>().Rate.ShouldBe(0.2);
+
+        weights.Received().Load("learning/weights/search-4.json");
+        factory.Resolve(AgentSpec.Parse("explore:0.2:greedy")).Version.ShouldBeNull("greedy reads no file, so it fingerprints nothing");
+    }
+
     [Theory]
     [InlineData("explore")]
     [InlineData("explore:0")]
     [InlineData("explore:2")]
     [InlineData("explore:soon")]
+    [InlineData("explore::learning/weights/search-4.json")]
     public void The_factory_refuses_a_spec_without_a_usable_rate(string text)
     {
         var spec = AgentSpec.Parse(text);

@@ -16,8 +16,19 @@ on:
   workflow_dispatch:
     inputs:
       opponent:
-        description: "Agent B of every evaluation"
+        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores the mean over them, and one that falls below the start against any of them ranks below every one that did not, so it cannot win by learning one of them (journal, 2026-09-16)"
         default: greedy
+      check_opponent:
+        description: "A second opponent the hold-out also replays both agents against, or empty for none. A set that beats the opponent it was searched against and falls against this one learned that opponent, not the game (journal, 2026-09-16)"
+        default: random
+      kind:
+        description: "The agent kind that plays each candidate: heuristic reads the weights one step, lookahead and minimax play the round out (docs/learning/agents.md)"
+        type: choice
+        options: [heuristic, lookahead, minimax]
+        default: heuristic
+      initial:
+        description: "Weights the search starts from (empty: the built-in ones, which greedy plays)"
+        default: ""
       seeds:
         description: "Seed file of every evaluation"
         default: benchmarks/benchmark-seeds.json
@@ -50,8 +61,10 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   BRANCH: search/${{ github.run_number }}
-  # The searched set, under its own name next to greedy.json (docs/learning/agents.md).
-  FOUND: learning/weights/search-${{ github.run_number }}.json
+  # The searched set, under its own name next to greedy.json (docs/learning/agents.md). Weights searched for
+  # a reading other than the one-step one carry that reading's name, because they are only meaningful played
+  # by it: `lookahead-12.json` is for `lookahead:`, not for `heuristic:`.
+  FOUND: learning/weights/${{ inputs.kind == 'heuristic' && 'search' || inputs.kind }}-${{ github.run_number }}.json
   # Under runs/, which .gitignore covers: inside the workspace for the artifact, invisible to git.
   OUT: runs/search-${{ github.run_number }}
 
@@ -92,18 +105,27 @@ jobs:
         run: dotnet run --project tools/DownfallArena.DataBuilder --no-build --configuration Release -- data data/dst
 
       # Inputs reach the shell through the environment, never through the script text.
+      # `initial` is what lets the ladder climb. Without it every run restarts from the built-in weights, so a
+      # search against a set stronger than Greedy begins the climb from behind whatever it is trying to beat,
+      # and run 5 cannot build on run 4. The CLI has always taken `--initial`; only this form did not pass it.
       - name: Search
         env:
           OPPONENT: ${{ inputs.opponent }}
+          KIND: ${{ inputs.kind }}
+          INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
           ITERATIONS: ${{ inputs.iterations }}
           POPULATION: ${{ inputs.population }}
           SEED: ${{ inputs.seed }}
         run: |
           mkdir -p "$OUT"
+          start=()
+          if [[ -n "$INITIAL" ]]; then
+            start=(--initial "$INITIAL")
+          fi
           uv run --project learning --locked --no-sync --no-build \
             python -m downfall_learning.cli search-weights -o "$OUT" \
-            --opponent "$OPPONENT" --seeds "$SEEDS" \
+            --opponent "$OPPONENT" --kind "$KIND" "${start[@]}" --seeds "$SEEDS" \
             --iterations "$ITERATIONS" --population "$POPULATION" --seed "$SEED" \
             2>&1 | tee "$OUT/search.log"
 
@@ -113,6 +135,7 @@ jobs:
         if: always()
         env:
           OPPONENT: ${{ inputs.opponent }}
+          INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
           ITERATIONS: ${{ inputs.iterations }}
           POPULATION: ${{ inputs.population }}
@@ -122,7 +145,8 @@ jobs:
           {
             echo "## Weight search \`$RUN_NUMBER\`"
             echo
-            echo "Against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`."
+            echo "Against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`,"
+            echo "starting from \`${INITIAL:-the built-in weights}\`."
             echo
             echo '```'
             cat "$OUT/search.log" 2>/dev/null || echo 'The search wrote nothing.'
@@ -130,12 +154,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           found="$OUT/weights.json"
+          started_from="${INITIAL:-learning/weights/greedy.json}"
           if [[ -f "$found" ]]; then
             {
               echo
-              echo "### The weights it found, as ratios to \`damage\`"
+              echo "### The weights it found, as ratios to \`damage\`, against the ones it started from"
               echo
-              echo "| Weight | Baseline | Found | Change |"
+              echo "| Weight | \`$started_from\` | Found | Change |"
               echo "| --- | --- | --- | --- |"
               jq -rs '
                 (.[0]) as $new | (.[1]) as $old
@@ -143,7 +168,7 @@ jobs:
                 | ($old | keys_unsorted[]) as $key
                 | [$key, ($old[$key] / $do), ($new[$key] / $dn)]
                 | "| `\(.[0])` | \(.[1] * 1000 | round / 1000) | \(.[2] * 1000 | round / 1000) | \(((.[2] / (if .[1] == 0 then 1 else .[1] end) - 1) * 1000 | round / 10))% |"
-              ' "$found" learning/weights/greedy.json
+              ' "$found" "$started_from"
               echo
               echo "\`learning/weights/greedy.json\` is not touched either way: it is the benchmark baseline, and"
               echo "moving it makes every comparison in \`docs/learning/journal.md\` incomparable. Adopting these"
@@ -180,11 +205,21 @@ jobs:
       # it unchecked, so a window that ran past the maximum would fail the run, or wrap and land back on the
       # seeds it is supposed to avoid. The baseline is replayed on the same seeds as the control -- against
       # `greedy` it is even by construction, which is exactly what makes it a check on the seed set.
+      #
+      # Unseen seeds answer "did it fit the seed file" and cannot answer "did it fit the opponent", because
+      # the opponent is the same on both sides. So both agents are replayed a second time against another
+      # opponent, `random` by default: a set that beats the opponent it was searched against and scores below
+      # what it started from here has learned that opponent rather than the game. The lookahead weights of
+      # search run 5 were that set, 0.84 against Greedy and 0.70 against Random where Greedy itself scores
+      # 0.99 (journal, 2026-09-16), and this step would have said so in the run summary.
       - name: Replay on seeds the search never saw
         if: steps.found.outputs.applied == 'true'
         id: holdout
         env:
           OPPONENT: ${{ inputs.opponent }}
+          CHECK: ${{ inputs.check_opponent }}
+          KIND: ${{ inputs.kind }}
+          INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
         run: |
           matches="$(jq -r '.seeds | length' "$SEEDS")"
@@ -200,30 +235,92 @@ jobs:
           fi
           replay() {
             dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
-              evaluate --p1 "$1" --p2 "$OPPONENT" --seed "$start" --matches "$matches" \
-              --out "$OUT/holdout-$2.json" > "$OUT/holdout-$2.log"
+              evaluate --p1 "$1" --p2 "$2" --seed "$start" --matches "$matches" \
+              --out "$OUT/holdout-$3.json" > "$OUT/holdout-$3.log"
           }
-          # `greedy` is the baseline because the search has no --initial input: it always starts from the
-          # built-in weights, which is what `greedy` plays.
-          replay "heuristic:$OUT/weights.json" found
-          replay greedy baseline
-          # The same number the search optimized, so the two are on one scale: agent A's mean score.
-          read -r found_score baseline_score <<< "$(jq -rs '[.[0].agentA.score.mean, .[1].agentA.score.mean] | @tsv' \
-            "$OUT/holdout-found.json" "$OUT/holdout-baseline.json")"
+          # Agent A's mean score of two evaluations, the number the search optimized, so every column of the
+          # table below is on one scale.
+          scores() {
+            jq -rs '[.[0].agentA.score.mean, .[1].agentA.score.mean] | @tsv' \
+              "$OUT/holdout-$1.json" "$OUT/holdout-$2.json"
+          }
+          # The control is whatever the search started from, which is what "better" has to mean here: with no
+          # `initial` that is the built-in weights, and `greedy` plays exactly those. Replaying `greedy`
+          # against a search that started somewhere else would compare the found weights with an agent
+          # neither the search nor the question was about.
+          # Played by the kind the search played, so the control reads the same way as the found set: bare
+          # `greedy` is the one-step reading of the built-in weights, and `lookahead` or `minimax` bare is
+          # that reading of the same weights.
+          started_from="$KIND"
+          if [[ -n "$INITIAL" ]]; then
+            started_from="$KIND:$INITIAL"
+          elif [[ "$KIND" == "heuristic" ]]; then
+            started_from=greedy
+          fi
+          header="| Agent |"
+          rule="| --- |"
+          found_row="| The weights it found |"
+          baseline_row="| What it started from (\`$started_from\`) |"
+          # column <opponent> <suffix>: both agents against one opponent, as one more column of the table.
+          column() {
+            replay "$KIND:$OUT/weights.json" "$1" "found$2"
+            replay "$started_from" "$1" "baseline$2"
+            read -r column_found column_baseline <<< "$(scores "found$2" "baseline$2")"
+            header="$header Score against \`$1\` |"
+            rule="$rule --- |"
+            found_row="$found_row $column_found |"
+            baseline_row="$baseline_row $column_baseline |"
+          }
+          # One column per opponent the search played, and the outputs are the mean over them, which is the
+          # number the search optimized, with the constraint it optimized under read on fresh seeds: a
+          # column where the found set scores below what it started from is named, because a mean can be won
+          # by learning one opponent and the search's floor was measured on the seeds it searched. The first
+          # opponent keeps the plain file names every run so far wrote.
+          read -r -a opponents <<< "${OPPONENT//,/ }"
+          found_sum=0
+          baseline_sum=0
+          fell=()
+          for index in "${!opponents[@]}"; do
+            suffix=""
+            if (( index > 0 )); then
+              suffix="-$index"
+            fi
+            column "${opponents[index]}" "$suffix"
+            found_sum="$(jq -n --argjson a "$found_sum" --argjson b "$column_found" '$a + $b')"
+            baseline_sum="$(jq -n --argjson a "$baseline_sum" --argjson b "$column_baseline" '$a + $b')"
+            if jq -e -n --argjson f "$column_found" --argjson b "$column_baseline" '$f < $b' > /dev/null; then
+              fell+=("${opponents[index]}")
+            fi
+          done
+          found_score="$(jq -n --argjson s "$found_sum" --argjson n "${#opponents[@]}" '$s / $n')"
+          baseline_score="$(jq -n --argjson s "$baseline_sum" --argjson n "${#opponents[@]}" '$s / $n')"
           echo "found=$found_score" >> "$GITHUB_OUTPUT"
           echo "baseline=$baseline_score" >> "$GITHUB_OUTPUT"
+          echo "fell=${fell[*]-}" >> "$GITHUB_OUTPUT"
+          check_note=""
+          if (( ${#fell[@]} > 0 )); then
+            check_note="Against ${fell[*]} the found set scores below what it started from: the mean it was chosen on was paid for there."
+          fi
+          # An opponent the search already played would be the same column twice, so the check only runs
+          # against one it did not.
+          if [[ -n "$CHECK" ]] && ! printf '%s\n' "${opponents[@]}" | grep -qxF -- "$CHECK"; then
+            column "$CHECK" "-check"
+            echo "check_found=$column_found" >> "$GITHUB_OUTPUT"
+            echo "check_baseline=$column_baseline" >> "$GITHUB_OUTPUT"
+            check_note="$check_note A found agent that beats \`$OPPONENT\` here and scores below what it started from against \`$CHECK\` has learned \`$OPPONENT\`, not the game."
+          fi
           {
             echo
             echo "### On $matches seeds no candidate saw ($start to $((start + matches - 1)), mirrored)"
             echo
-            echo "| Agent | Score against \`$OPPONENT\` |"
-            echo "| --- | --- |"
-            echo "| The weights it found | $found_score |"
-            echo "| The baseline | $baseline_score |"
+            echo "$header"
+            echo "$rule"
+            echo "$found_row"
+            echo "$baseline_row"
             echo
             echo "This is the comparison the search's own numbers cannot make. A found agent that does not beat"
-            echo "the baseline here has not been shown to be better at anything but the seed file it was"
-            echo "searched on."
+            echo "what it started from here has not been shown to be better at anything but the seed file it"
+            echo "was searched on. $check_note"
           } >> "$GITHUB_STEP_SUMMARY"
 
       # The gate a contributor runs before pushing, and the one ci.yml runs. A weights file is content the test
@@ -254,12 +351,18 @@ jobs:
           RUN_NUMBER: ${{ github.run_number }}
           BASE: ${{ github.ref_name }}
           OPPONENT: ${{ inputs.opponent }}
+          CHECK: ${{ inputs.check_opponent }}
+          KIND: ${{ inputs.kind }}
+          INITIAL: ${{ inputs.initial }}
           SEEDS: ${{ inputs.seeds }}
           ITERATIONS: ${{ inputs.iterations }}
           POPULATION: ${{ inputs.population }}
           SEED: ${{ inputs.seed }}
           HOLDOUT_FOUND: ${{ steps.holdout.outputs.found }}
           HOLDOUT_BASELINE: ${{ steps.holdout.outputs.baseline }}
+          HOLDOUT_CHECK_FOUND: ${{ steps.holdout.outputs.check_found }}
+          HOLDOUT_CHECK_BASELINE: ${{ steps.holdout.outputs.check_baseline }}
+          HOLDOUT_FELL: ${{ steps.holdout.outputs.fell }}
         run: |
           hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
           git config user.name "github-actions[bot]"
@@ -273,7 +376,8 @@ jobs:
             echo "Add the weights of search run $RUN_NUMBER"
             echo
             echo "One weight search from [workflow run $RUN_NUMBER]($SERVER/$REPOSITORY/actions/runs/$RUN_ID),"
-            echo "against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`."
+            echo "against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`,"
+            echo "starting from \`${INITIAL:-the built-in weights}\`, every candidate played as \`$KIND\`."
             echo "Content hash \`$hash\`."
             echo
             echo '```'
@@ -281,12 +385,18 @@ jobs:
             echo '```'
             echo
             echo "**On seeds no candidate saw**, which is the one comparison the run above cannot make:"
-            echo "these weights score \`$HOLDOUT_FOUND\` against \`$OPPONENT\` where the baseline scores"
-            echo "\`$HOLDOUT_BASELINE\`."
+            echo "these weights score \`$HOLDOUT_FOUND\` against \`$OPPONENT\` where what the search started"
+            echo "from scores \`$HOLDOUT_BASELINE\` (the mean over the opponents when there are several${HOLDOUT_FELL:+; below what it started from against $HOLDOUT_FELL})."
+            if [[ -n "$HOLDOUT_CHECK_FOUND" ]]; then
+              echo "**Against \`$CHECK\`**, an opponent the search never played, they score"
+              echo "\`$HOLDOUT_CHECK_FOUND\` where what it started from scores \`$HOLDOUT_CHECK_BASELINE\`: a set"
+              echo "that wins the first comparison and loses this one learned \`$OPPONENT\`, not the game."
+            fi
             echo
             echo "This adds \`$FOUND\`. It does **not** move the baseline: \`ScoringWeights.Default\` and"
             echo "\`learning/weights/greedy.json\` are untouched, so every benchmark and every journal entry stays"
-            echo "comparable. Play it with \`evaluate --p1 heuristic:$FOUND\`."
+            echo "comparable. Play it with \`evaluate --p1 $KIND:$FOUND\`: weights searched for one reading are"
+            echo "only meaningful played by it."
             echo
             echo "Before merging:"
             echo
@@ -299,7 +409,7 @@ jobs:
             echo
             echo "The search is deterministic: the same seed on the same content and the same engine returns the"
             echo "same weights, so this reproduces locally with \`search-weights --seed $SEED --iterations"
-            echo "$ITERATIONS --population $POPULATION --opponent $OPPONENT --seeds $SEEDS\`."
+            echo "$ITERATIONS --population $POPULATION --opponent $OPPONENT --kind $KIND --seeds $SEEDS${INITIAL:+ --initial $INITIAL}\`."
           } > "$RUNNER_TEMP/message.txt"
           git commit -F "$RUNNER_TEMP/message.txt"
           git push origin "$BRANCH"
@@ -327,9 +437,8 @@ jobs:
             runs/search-${{ github.run_number }}/search.log
             runs/search-${{ github.run_number }}/weights.json
             runs/search-${{ github.run_number }}/search.json
-            runs/search-${{ github.run_number }}/evaluation.json
+            runs/search-${{ github.run_number }}/evaluation*.json
             runs/search-${{ github.run_number }}/training.jsonl
-            runs/search-${{ github.run_number }}/holdout-found.json
-            runs/search-${{ github.run_number }}/holdout-baseline.json
+            runs/search-${{ github.run_number }}/holdout-*.json
           if-no-files-found: warn
           retention-days: 30

@@ -216,7 +216,11 @@ def main() -> int:
             return 1
         distance = sum((weights.get(name, target) - target) ** 2 for name, target in TARGET.items())
         score = max(0.0, min(1.0, 1.0 - 0.02 * distance))
+        # Random is the easier opponent, so a mixture over greedy and random reads between the two.
+        if options["--p2"] == "random":
+            score = min(1.0, score + 0.2)
     evaluation = json.loads(Path(__file__).with_name("template.json").read_text())
+    evaluation["stamp"]["player1Agent"] = options["--p1"]
     for name in ("score", "winRate"):
         low, high = max(0.0, score - 0.05), min(1.0, score + 0.05)
         evaluation["agentA"][name] = {"mean": score, "low": low, "high": high}

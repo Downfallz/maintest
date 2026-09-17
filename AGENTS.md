@@ -65,22 +65,29 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # valida
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --out simulation.csv
-dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces
+dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random   # plus a dataset and traces (--traces N caps the traces; 0 keeps none)
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json                  # plus the match trace
-dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, heuristic:<weights.json>, policy:<policy.json>, explore:<rate>
+dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, lookahead[:<weights.json>], minimax[:<weights.json>], heuristic:<weights.json>, policy:<policy.json>, explore:<rate>[:<agent>] (explore deviates from greedy, or from the agent named: heuristic:<weights.json>, policy:<policy.json>, or a bare path as the weights shorthand)
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
 dotnet run --project src/DownfallArena.Cli -- studio               # the content studio on http://127.0.0.1:5099 (studio/README.md)
 dotnet run --project src/DownfallArena.Cli -- studio --export site/data  # what the published studio reads, as files (ADR 0023)
 uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)   # the Python side
-uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md)
+uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md); --kind lookahead|minimax tunes them for that reading instead; --opponent greedy,heuristic:<w.json>,random scores each candidate as the mean over the list, ranking any candidate that falls below the start against one of them last, so it cannot learn one opponent
 uv run --project learning check-knobs                                # the balance knobs against the content they describe (data/balance/README.md)
 uv run --project learning tune-content -o runs/tune-1                # search those knobs for a better catalogue (ADR 0021); --apply writes it
+uv run --project learning score-content -o runs/score --seeds unseen.json   # play the content as it stands on a seed file, no search: how a proposal is checked on seeds it was not searched on
 uv run --project learning python scripts/sweep-weight.py energy 0.2 0.3 0.4   # one scoring weight alone, on fixed content (ADR 0037); one sweep at a time
 # the same two searches run on GitHub Actions, each able to push a proposal branch: "Tune the catalogue" changes the content, "Search the agent weights" adds what it found next to greedy.json (docs/learning/training.md)
+# "Learning loop" runs scripts/iterate.sh there on learning/experiments/next.json, and with commit=true proposes a policy that clears its bar under models/ (models/README.md)
 uv run --project learning train-clone runs/greedy -o models/clone/v1 # or train-value; export-csv; compare-stamps
 uv run --project learning evaluate-policy models/clone/v1 --opponent greedy   # play a policy with the engine, win rate into its log
+uv run --project learning spread runs/<id>                           # every win rate of a turn ranged across its dataset seeds (ADR 0049)
+uv run --project learning mean-policy runs/<id>/seeds/*/value -o runs/<id>/mean/value   # the seeds' value fits as one policy, scoring every candidate as their mean; what a turn plays as its last step
+uv run --project learning jackknife runs/<id>                        # the standard error of that mean's score, from the means the turn played with one seed left out (runs/<id>/mean/without-<seed>/)
 scripts/iterate.sh --against <previous-run-id>                       # one full turn of the loop into runs/<id>/; --help lists every tuning flag
+scripts/iterate.sh --seeds "1 5001 10001"                            # the default at 5000 matches: three dataset seeds spaced by the match count, because closer seeds record the same matches shifted, and the turn reports the spread, because one seed is a sample (ADR 0049)
 scripts/iterate.sh --explore 0.2                                     # plus an exploring dataset for the value policy (ADR 0014)
+scripts/iterate.sh --teacher heuristic:learning/weights/search-4.json # record a stronger player than greedy; a clone is capped by what it imitates (journal, 2026-09-15)
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
@@ -107,7 +114,8 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 - Expected failures return `Result` / `Result<T>` with a `DomainError(Code, Message)`. Error codes are stable and
   namespaced by aggregate (`Match.AlreadyStarted`). Exceptions mean a bug or a broken invariant.
 - State changes go through aggregate methods that protect invariants. No public setters on domain types.
-  Entity mutators (`Creature`, `Round`) are `internal`: only `Match` and the rules it runs change them.
+  Entity mutators (`Creature`, `Round`) are `internal`: only `Match` and the rules it runs change them, and
+  `Advance`, on creatures it restores from snapshots and never hands out (ADR 0047).
   `DownfallArena.Domain.Tests` reaches them through `InternalsVisibleTo`.
 - Domain events are immutable records named in the past tense (`RoundEnded`), raised via `RaiseDomainEvent`.
 - Use the words in `docs/domain/glossary.md`. If you need a word that is not there, add it in the same change.
@@ -151,4 +159,7 @@ If a task genuinely needs a rule to change, write an ADR first and update the ar
 - Do not suppress an analyzer warning to make a build pass. Fix the cause, or justify the suppression in
   `.editorconfig` with a comment.
 - Do not skip, disable, or delete tests to get green.
+- Do not report a learning-loop win rate from one dataset seed as a result, and never pick the seed that
+  scored best: the benchmark seeds are fixed, so that is selection on the test set. One seed is a sample
+  (ADR 0049) — a turn runs three, the journal reports the spread, and a gate reads the minimum.
 - Do not commit secrets, local settings (`.claude/settings.local.json`), or build output.

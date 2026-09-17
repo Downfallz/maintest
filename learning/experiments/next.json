@@ -1,8 +1,15 @@
 {
-  "why": "Value regression is parked (journal, ci-9): the three starting spells cost the same, share an initiative and a targeting, and one of them strictly dominates, so there is no decision for a learner to find. The loop keeps running for its balance signals, so exploration is off: no second dataset, half the time, and the report still carries spell entropy, player 1 share, draws and round cap. Watch greedy's spell entropy, 0.23 today: it rises when the content finally offers a choice.",
-  "matches": 200,
-  "seed": 1,
-  "explore": "off",
+  "why": "ci-106 on five seeds instead of three: 1, 5001, 10001, 15001 and 20001 at 5000 matches, twenty-five thousand distinct matches, every other knob the same (lambda 0.9, the ADR 0048 baseline, search-4 as teacher and baseline, explore 0.2). The question is the mean of the value fits, the one row ci-106 could only sample once: its mean of three scored 0.48 against Greedy, 0.4625 against search-4 and 0.83 against Random where the parts scored at most 0.35 and 0.18 against the first two (journal, 2026-09-16). The first three seeds here are ci-106's seeds and reproduce it to the digit, so ci-106's mean row is the mean of the first three and this turn's mean row is the mean of all five, on the same data plus two fits: the comparison the ci-106 entry asked for, without a second mean step. Both means are one sample each, so the turn also plays the five means that leave one seed out and reads the jackknife of the mean of five: its standard error, and an interval of two errors each way. The means of four are also, one seed at a time, the mean of three plus one more fit. An expectation written before the run: if the mean removes variance between fits, five fits should read above three against Greedy and search-4, with the mean of three (0.48, 0.4625) outside the jackknife interval of the mean of five; if the mean of three was as far as averaging goes, the mean of three sits inside that interval, and the next lever is the data per fit rather than the number of fits. Read the interval, not the two numbers: the difference between one mean of three and one mean of five is a difference between two samples until the interval says otherwise. The spread over five seeds should have the widths of ci-106 (0.303 and 0.181 on the value policy against Greedy and search-4, 0.058 and 0.066 on the clone), since it is the same distribution sampled twice more. Expect nothing to be committed: the clone reads at parity with its teacher and the champion. The cost is five thirds of ci-106's, about two hours and a quarter on the runner, which the workflow's timeout was raised to hold.",
+  "matches": 5000,
+  "seeds": [1, 5001, 10001, 15001, 20001],
+  "traces": 4,
+  "teacher": "heuristic:learning/weights/search-4.json",
+  "baseline": "heuristic:learning/weights/search-4.json",
+  "explore": 0.2,
   "value_alpha": 10,
-  "value_min_samples": 10
+  "value_min_samples": 10,
+  "value_share": "action",
+  "value_lambda": 0.9,
+  "value_discount": 1.0,
+  "value_baseline_alpha": 10000
 }

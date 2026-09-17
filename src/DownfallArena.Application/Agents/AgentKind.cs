@@ -17,6 +17,12 @@ public enum AgentKind
     /// <summary>A trained policy read from the <c>policy.json</c> the spec names (docs/learning/training.md).</summary>
     Policy,
 
-    /// <summary>Greedy, but a share of decisions the spec names are taken at random, to record exploration (ADR 0014).</summary>
+    /// <summary>Another agent, but a share of decisions the spec names are taken at random, to record exploration (ADR 0014).</summary>
     Explore,
+
+    /// <summary>Plays the round out on a hypothetical board before choosing a combat move (ADR 0047); the built-in weights, or the file the spec names.</summary>
+    Lookahead,
+
+    /// <summary>The lookahead agent with every enemy slot played as the reply that costs the actor most; the built-in weights, or the file the spec names.</summary>
+    Minimax,
 }

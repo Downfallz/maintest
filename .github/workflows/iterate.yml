@@ -13,17 +13,48 @@ on:
         description: "Matches recorded in the dataset (empty: what learning/experiments/next.json says)"
         default: ""
       explore:
-        description: "Share of decisions taken at random in the value dataset, or 'off' (ADR 0014)"
+        description: "Share of decisions taken at random in the value dataset, or 'off' (ADR 0014) (empty: what learning/experiments/next.json says)"
         default: ""
-      seed:
-        description: "Base seed of the recorded dataset"
+      seeds:
+        description: "Dataset seeds to run the turn on, space or comma separated, spaced by at least the match count, e.g. '1 5001 10001' at 5000 matches: closer seeds record the same matches shifted. One seed is a sample, not a measurement (ADR 0049) (empty: what learning/experiments/next.json says, or three seeds spaced by the match count)"
+        default: ""
+      traces:
+        description: "Match traces kept per dataset, 0 for none; they are the viewer's, not a learner's (empty: what learning/experiments/next.json says)"
+        default: ""
+      teacher:
+        description: "The agent whose play is recorded, e.g. heuristic:learning/weights/search-4.json (empty: what learning/experiments/next.json says)"
+        default: ""
+      value_share:
+        description: "What a value row is fitted on: 'action' or 'kind' (ADR 0045) (empty: what learning/experiments/next.json says)"
         default: ""
       value_alpha:
-        description: "How strongly the value fit is pulled toward zero"
+        description: "How strongly the value fit is pulled toward zero (empty: what learning/experiments/next.json says)"
         default: ""
       value_min_samples:
-        description: "Examples an action needs before it gets its own fit"
+        description: "Examples an action needs before it gets its own fit (empty: what learning/experiments/next.json says)"
         default: ""
+      value_baseline_alpha:
+        description: "How strongly the state baseline alone is pulled toward zero, apart from the action rows (ADR 0048) (empty: what learning/experiments/next.json says)"
+        default: ""
+      value_lambda:
+        description: "How far an advantage looks ahead, 1.0 the whole match and 0.0 one step (ADR 0046) (empty: what learning/experiments/next.json says)"
+        default: ""
+      value_discount:
+        description: "How much a later step is worth, 1.0 being no discounting (empty: what learning/experiments/next.json says)"
+        default: ""
+      baseline:
+        description: "A third opponent every policy is also played against, e.g. heuristic:learning/weights/search-4.json (empty: what learning/experiments/next.json says)"
+        default: ""
+      commit:
+        description: "Commit a policy that clears the bar under models/ on a branch, or only report it. This field only: the experiment file does not carry it"
+        type: boolean
+        default: false
+      commit_above:
+        description: "Score against greedy a policy must reach to be committed, 0.5 being even with it. This field only, like commit"
+        default: "0.5"
+      commit_above_baseline:
+        description: "Score against the baseline a policy must also reach, when a baseline is set. This field only, like commit"
+        default: "0.5"
   schedule:
     # Monday morning UTC: one report on whatever landed during the week, even a week with no engine change.
     - cron: "0 6 * * 1"
@@ -41,33 +72,48 @@ on:
     paths:
       - "learning/experiments/**"
 
+# Pushing the proposal branch, and nothing else, the way search.yml does it. GitHub Actions permissions cannot
+# be conditional, so this is `write` even on a report-only run; the checkout below is what decides whether a
+# credential is on disk, and it only keeps one when `commit` is set.
 permissions:
-  contents: read
+  contents: write
 
-# One loop at a time per branch, and the newest push wins. A pull request's path filter matches the whole
-# diff, not the last commit, so every push to a branch that touches the experiment file starts a run; without
-# this they would queue up behind each other, each holding a runner for a quarter of an hour to answer a
-# question a later commit has already changed.
+# One loop at a time per branch. On a pull request the newest push wins: its path filter matches the whole
+# diff, not the last commit, so every push to a branch that touches the experiment file starts a run, and
+# without the cancel they would queue up behind each other, each holding a runner to answer a question a
+# later commit has already changed. On main, and on a schedule or a dispatch, a run in progress finishes:
+# three merges in one morning cancelled three turns of the 5000-match experiment in a row (journal,
+# 2026-09-16), each an hour and three quarters in, and none of them had been made wrong by what landed. The
+# next one waits its turn instead; GitHub keeps one pending run per group, so a burst of merges still ends
+# in one run on the latest main rather than a queue of stale ones.
 concurrency:
   group: iterate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   RUN_ID: ci-${{ github.run_number }}
+  BRANCH: policy/${{ github.run_number }}
 
 jobs:
   iterate:
     name: One turn of the learning loop
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # A seed of the 5000-match experiment costs the runner half an hour with search-4 as teacher and over an
+    # hour with mixture-mean, whose datasets run a third longer and whose clone fits a third more actions:
+    # three seeds took 79 minutes with the first and ran into 150 with the second (journal, 2026-09-16), and
+    # five seeds of the first take up to three hours. A turn that runs into this limit loses every seed it
+    # recorded.
+    timeout-minutes: 300
     steps:
+      # A report-only run keeps no credential on disk, the way this workflow always did. A committing run keeps
+      # the one the checkout sets up and lets git use it, rather than a token inside a remote URL.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: ${{ inputs.commit }}
 
       - name: Set up .NET (version from global.json)
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -94,9 +140,16 @@ jobs:
         env:
           MATCHES: ${{ inputs.matches }}
           EXPLORE: ${{ inputs.explore }}
-          SEED: ${{ inputs.seed }}
+          SEEDS: ${{ inputs.seeds }}
+          TRACES: ${{ inputs.traces }}
+          TEACHER: ${{ inputs.teacher }}
+          VALUE_SHARE: ${{ inputs.value_share }}
           VALUE_ALPHA: ${{ inputs.value_alpha }}
           VALUE_MIN_SAMPLES: ${{ inputs.value_min_samples }}
+          VALUE_BASELINE_ALPHA: ${{ inputs.value_baseline_alpha }}
+          VALUE_LAMBDA: ${{ inputs.value_lambda }}
+          VALUE_DISCOUNT: ${{ inputs.value_discount }}
+          BASELINE: ${{ inputs.baseline }}
         run: |
           plan=learning/experiments/next.json
           knob() {
@@ -108,18 +161,49 @@ jobs:
               printf '%s' "$2"
             fi
           }
+          seeds_from_plan() {
+            # `seeds` as a list is what an experiment writes since ADR 0049; a scalar `seed` is what the
+            # files before it carry, and it still reads as a one-entry list so an old experiment reproduces
+            # rather than failing. Either key may be a list or a scalar, because a hand-edited file will be
+            # both at some point.
+            [[ -f "$plan" ]] || return 0
+            jq -r '
+              def flatten_seeds: if type == "array" then (map(tostring) | join(" ")) else tostring end;
+              if (has("seeds") and .seeds != null) then (.seeds | flatten_seeds)
+              elif (has("seed") and .seed != null) then (.seed | flatten_seeds)
+              else "" end' "$plan"
+          }
           matches="${MATCHES:-$(knob matches 200)}"
           explore="${EXPLORE:-$(knob explore 0.2)}"
-          seed="${SEED:-$(knob seed 1)}"
+          # Empty stays empty: the script then spaces three seeds by the match count itself.
+          seeds="${SEEDS:-$(seeds_from_plan)}"
+          traces="${TRACES:-$(knob traces 4)}"
+          teacher="${TEACHER:-$(knob teacher greedy)}"
+          value_share="${VALUE_SHARE:-$(knob value_share action)}"
           value_alpha="${VALUE_ALPHA:-$(knob value_alpha 1.0)}"
           value_min_samples="${VALUE_MIN_SAMPLES:-$(knob value_min_samples 5)}"
+          value_baseline_alpha="${VALUE_BASELINE_ALPHA:-$(knob value_baseline_alpha '')}"
+          value_lambda="${VALUE_LAMBDA:-$(knob value_lambda 1.0)}"
+          value_discount="${VALUE_DISCOUNT:-$(knob value_discount 1.0)}"
+          baseline="${BASELINE:-$(knob baseline '')}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seed $seed, explore $explore, value alpha $value_alpha, min samples $value_min_samples"
+          echo "Knobs: matches $matches, seeds ${seeds:-spaced by the match count}, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
-          arguments=(--run "$RUN_ID" --matches "$matches" --seed "$seed"
-            --value-alpha "$value_alpha" --value-min-samples "$value_min_samples")
+          arguments=(--run "$RUN_ID" --matches "$matches" --traces "$traces"
+            --teacher "$teacher" --value-share "$value_share"
+            --value-alpha "$value_alpha" --value-min-samples "$value_min_samples"
+            --value-lambda "$value_lambda" --value-discount "$value_discount")
+          if [[ -n "$seeds" ]]; then
+            arguments+=(--seeds "$seeds")
+          fi
+          if [[ -n "$value_baseline_alpha" ]]; then
+            arguments+=(--value-baseline-alpha "$value_baseline_alpha")
+          fi
           if [[ "$explore" != "off" ]]; then
             arguments+=(--explore "$explore")
+          fi
+          if [[ -n "$baseline" ]]; then
+            arguments+=(--baseline "$baseline")
           fi
           # The log stays out of the checkout: an untracked file there would make the build stamp the engine
           # version as dirty, and that stamp is what tells two runs apart.
@@ -130,7 +214,9 @@ jobs:
         run: |
           mkdir -p "runs/$RUN_ID"
           cp "$RUNNER_TEMP/iterate.log" "runs/$RUN_ID/iterate.log" 2>/dev/null || true
-          excerpt="$(sed -n '/^== 6\./,$p' "$RUNNER_TEMP/iterate.log" 2>/dev/null || true)"
+          # The spread is what the turn measured, so the summary opens on it rather than on the first seed's
+          # own evaluations, which are one sample each (ADR 0049).
+          excerpt="$(sed -n '/^== 9\./,$p' "$RUNNER_TEMP/iterate.log" 2>/dev/null || true)"
           if [[ -z "$excerpt" ]]; then
             excerpt="$(tail -n 60 "$RUNNER_TEMP/iterate.log" 2>/dev/null || echo 'The loop wrote nothing.')"
           fi
@@ -148,18 +234,251 @@ jobs:
             echo "The report page and the trained policies are in the artifact of this run."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # The datasets are deliberately left out: they are hundreds of megabytes and the seed reproduces them.
+      # Two separate questions, and reading one for the other is how a report-only run gets called a failure:
+      # `cleared` is which policies beat the bar, reported whether or not anything was asked to be committed;
+      # a branch is only pushed when it was. The bar is a score against Greedy because that is the agent every
+      # number in the journal is measured against; 0.5 is even with it. A policy that cannot beat Random is
+      # refused whatever the bar says -- that is not a model, and a bar typed below one half is how a first
+      # floor model gets committed on purpose rather than by accident.
+      #
+      # When the turn names a baseline, that evaluation is a bar too, and the reason is measured: the matchups
+      # here are not transitive. `ci-69` is at parity with `search-4` head to head (0.5325) and 20 points
+      # behind it against Greedy (0.725 against 0.930), so a run that reads one of those numbers alone can
+      # call the same agent a champion or a failure. Three opponents, three bars.
+      #
+      # And a fourth, which is the only one that is not a constant. The three above ask "is this good"; none
+      # asks "is this new", so a config that cleared them once proposes the same model on every re-run
+      # forever. ci-78 is the worked example: it proposed a clone scoring 0.725, 0.9925 and 0.5325 -- the
+      # committed ci-69 to the last digit, because only train-value reads the lambda that run was changing.
+      # So the newest committed policy of the same kind is played head to head, and the bar is the whole
+      # interval above one half: two identical policies score exactly one half against each other, and
+      # "beats it measurably" is the engine's own words for an interval that clears it.
+      - name: Which policies cleared the bar
+        id: cleared
+        if: always()
+        env:
+          COMMIT: ${{ inputs.commit }}
+          ABOVE: ${{ inputs.commit_above }}
+          ABOVE_BASELINE: ${{ inputs.commit_above_baseline }}
+        run: |
+          above="${ABOVE:-0.5}"
+          above_baseline="${ABOVE_BASELINE:-0.5}"
+          spread="runs/$RUN_ID/spread.json"
+          if [[ ! -f "$spread" ]]; then
+            echo "::error::'$spread' is missing, so no bar can be applied. The turn did not finish."
+            printf 'models=\ncommitting=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mapfile -t seed_list < <(jq -r '.seeds[]' "$spread")
+          # Chosen by position, never by score. Picking the best-scoring seed against fixed benchmark seeds
+          # is selection on the test set, and it would manufacture a champion out of the very spread this
+          # gate exists to read (ADR 0049).
+          first_seed="${seed_list[0]}"
+          echo "Seeds: ${seed_list[*]}. A bar is cleared when every seed clears it; the committed policy is the first seed's."
+          kept=()
+          for model in value clone; do
+            # The minimum across the seeds, which is the same thing as "every seed cleared it".
+            score="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-greedy"].scoreA.min // empty' "$spread")"
+            over_random="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-random"].scoreA.min // empty' "$spread")"
+            [[ -n "$score" && -n "$over_random" ]] || continue
+            worst="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-greedy"].scoreA | "\(.min) to \(.max)"' "$spread")"
+            size="$(du -h "runs/$RUN_ID/seeds/$first_seed/$model/policy.json" 2>/dev/null | cut -f1)"
+            # No baseline evaluation means the turn named none, so that bar does not apply and reads as met.
+            over_baseline="$(jq -r --arg m "$model" '.evaluations[$m + "-vs-baseline"].scoreA.min // empty' "$spread")"
+            against_baseline="not played"
+            clears_baseline=true
+            if [[ -n "$over_baseline" ]]; then
+              against_baseline="$over_baseline against the baseline at worst"
+              jq -e -n --argjson b "$over_baseline" --argjson a "$above_baseline" '$b >= $a' > /dev/null ||
+                clears_baseline=false
+            fi
+            # No committed policy of this kind yet, so there is nothing to be better than and the bar does
+            # not apply. A champion trained under another feature schema cannot play here either; the engine
+            # refuses it by design, and that reads as "cannot be compared" rather than as a pass or a fail.
+            champion="$(find "models/$model" -mindepth 2 -maxdepth 2 -name policy.json 2>/dev/null | sort -V | tail -1)"
+            against_champion="no committed champion"
+            clears_champion=true
+            if [[ -n "$champion" ]]; then
+              # Every seed plays the champion, and every seed has to beat it. ci-90 and ci-91 are why: two
+              # neighbouring draws of one configuration scored +0.53625 and -0.42375 against the same
+              # champion, so one seed's head-to-head decides nothing.
+              margins=()
+              for seed in "${seed_list[@]}"; do
+                versus="$RUNNER_TEMP/$model-$seed-vs-champion.json"
+                failure="$RUNNER_TEMP/$model-$seed-vs-champion.log"
+                if dotnet run --project src/DownfallArena.Cli --no-build --configuration Release -- \
+                     evaluate --p1 "policy:runs/$RUN_ID/seeds/$seed/$model/policy.json" --p2 "policy:$champion" \
+                     --seeds benchmarks/benchmark-seeds.json --out "$versus" > "$failure" 2>&1; then
+                  read -r champion_mean champion_low <<< "$(jq -r '[.agentA.score.mean, .agentA.score.low] | @tsv' "$versus")"
+                  margins+=("seed $seed: $champion_mean from $champion_low")
+                  jq -e -n --argjson l "$champion_low" '$l > 0.5' > /dev/null || clears_champion=false
+                  cp "$versus" "runs/$RUN_ID/seeds/$seed/evaluations/$model-vs-champion.json"
+                elif grep -q "feature schema" "$failure"; then
+                  # The one waiver, and the only one. AgentFactory refuses a policy whose schema is not the
+                  # one this content and rule set give, so a champion from before a content change cannot be
+                  # played at all and there is no comparison to make.
+                  margins+=("seed $seed: another feature schema, cannot be compared")
+                else
+                  # A gate that fails open is not a gate. Every other non-zero exit -- a crash, a full disk,
+                  # a killed run -- leaves the comparison unmade, and waiving it there would let a policy be
+                  # pushed without ever having been shown to beat the one it replaces.
+                  clears_champion=false
+                  margins+=("seed $seed: the comparison failed")
+                  echo "::error::Evaluating $model seed $seed against the champion $champion failed; it is refused rather than waived."
+                  tail -n 20 "$failure"
+                fi
+              done
+              against_champion="against $champion -- ${margins[*]}"
+            fi
+            if [[ "$clears_champion" == true && "$clears_baseline" == true ]] &&
+               jq -e -n --argjson s "$score" --argjson a "$above" '$s >= $a' > /dev/null &&
+               jq -e -n --argjson r "$over_random" '$r > 0.5' > /dev/null; then
+              kept+=("$model")
+              echo "$model: $worst against greedy over ${#seed_list[@]} seeds, $over_random against random at worst, $against_baseline, $against_champion, $size -- every seed clears $above."
+            else
+              echo "$model: $worst against greedy over ${#seed_list[@]} seeds, $over_random against random at worst, $against_baseline, $against_champion, $size -- some seed does not clear $above / $above_baseline, or does not measurably beat the champion on every seed."
+            fi
+          done
+          printf 'models=%s\n' "${kept[*]-}" >> "$GITHUB_OUTPUT"
+          printf 'first_seed=%s\n' "$first_seed" >> "$GITHUB_OUTPUT"
+          if [[ ${#kept[@]} -eq 0 ]]; then
+            echo "Nothing to commit; the policies are in the artifact either way."
+          elif [[ "$COMMIT" != "true" ]]; then
+            echo "A policy cleared the bar and this run was asked not to commit it. It is in the artifact."
+          fi
+          if [[ ${#kept[@]} -gt 0 && "$COMMIT" == "true" ]]; then
+            echo "committing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "committing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # models/README.md: one directory per model and version, the policy with its training log and the
+      # evaluation that earned it a place. The version is this run, so two runs never land on one directory and
+      # the number in the name is the workflow run that can be opened and read.
+      - name: Add the policies and run the gate
+        if: steps.cleared.outputs.committing == 'true'
+        env:
+          MODELS: ${{ steps.cleared.outputs.models }}
+          FIRST_SEED: ${{ steps.cleared.outputs.first_seed }}
+        run: |
+          # The committed policy is the first seed's, picked by position. Its own evaluations travel with it,
+          # and so does spread.json: the policy cleared the bar because *every* seed did, and the file that
+          # says so is the evidence. The run artifact expires in thirty days and a committed model must not
+          # outlive the numbers that earned it a place (ADR 0049).
+          source="runs/$RUN_ID/seeds/$FIRST_SEED"
+          for model in $MODELS; do
+            destination="models/$model/$RUN_ID"
+            mkdir -p "$destination"
+            cp "$source/$model/policy.json" "$destination/policy.json"
+            cp "$source/$model/training.jsonl" "$destination/training.jsonl"
+            cp "$source/evaluations/$model-vs-greedy.json" "$destination/evaluation.json"
+            cp "$source/evaluations/$model-vs-random.json" "$destination/evaluation-vs-random.json"
+            cp "runs/$RUN_ID/spread.json" "$destination/spread.json"
+            # The third bar of the gate, when the turn named a baseline.
+            if [[ -f "$source/evaluations/$model-vs-baseline.json" ]]; then
+              cp "$source/evaluations/$model-vs-baseline.json" "$destination/evaluation-vs-baseline.json"
+            fi
+            # The fourth bar, for the same reason: what this policy beat to take the champion's place.
+            if [[ -f "$source/evaluations/$model-vs-champion.json" ]]; then
+              cp "$source/evaluations/$model-vs-champion.json" "$destination/evaluation-vs-champion.json"
+            fi
+          done
+          dotnet build --no-restore --configuration Release
+          dotnet test --no-build --configuration Release
+          dotnet format --verify-no-changes
+          uv run --project learning --locked --no-sync --no-build python -m ruff check learning
+          uv run --project learning --locked --no-sync --no-build python -m ruff format --check learning
+          uv run --project learning --locked --no-sync --no-build python -m pytest learning/tests -q
+
+      # The branch is pushed; the pull request is not opened here, for the reason search.yml gives: a pull
+      # request opened with GITHUB_TOKEN starts no `pull_request` workflow, so it would arrive with no CI and no
+      # SonarCloud quality gate, which AGENTS.md requires on every one. The link below is one tap.
+      - name: Push the policies and link the pull request
+        if: steps.cleared.outputs.committing == 'true'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+          RUN_ID_URL: ${{ github.run_id }}
+          BASE: ${{ github.ref_name }}
+          ABOVE: ${{ inputs.commit_above }}
+          MODELS: ${{ steps.cleared.outputs.models }}
+          ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          # A re-run keeps github.run_number and only increments the attempt, so re-running a run that already
+          # pushed would build a different commit on the same base and be refused as a non-fast-forward -- at
+          # the end of a loop that takes over an hour. Later attempts get their own branch; the first keeps the
+          # plain policy/<n> that matches search/<n> and tune/<n>.
+          branch="$BRANCH"
+          [[ "$ATTEMPT" == "1" ]] || branch="$BRANCH-$ATTEMPT"
+          hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add models
+
+          # Written to a file: a -m here would carry this file's YAML indentation into the message.
+          {
+            echo "Add the policies of learning loop $RUN_ID"
+            echo
+            echo "One turn of scripts/iterate.sh on the CI runners (learning phase L7), content $hash."
+            echo "Committed because on EVERY dataset seed of the turn they score at least ${ABOVE:-0.5}"
+            echo "against greedy, beat random, and measurably beat the committed policy of their kind"
+            echo "where there was one (ADR 0049). The range below is over those seeds; the committed file"
+            echo "is the first seed's, chosen by position and never by score:"
+            echo
+            spread="runs/$RUN_ID/spread.json"
+            echo "  seeds: $(jq -r '.seeds | join(", ")' "$spread")"
+            # `empty` rather than a null run through the interpolation: a turn that named no baseline has no
+            # such evaluation, and "null to null" is not a range.
+            span() {
+              jq -r --arg m "$2" --arg o "$1" \
+                '.evaluations[$m + "-vs-" + $o].scoreA
+                 | if . == null then empty else "\(.min) to \(.max)" end' "$spread"
+            }
+            for model in $MODELS; do
+              against_baseline="$(span baseline "$model")"
+              printf '  %-6s %s against greedy, %s against random%s\n' \
+                "$model" "$(span greedy "$model")" "$(span random "$model")" \
+                "${against_baseline:+, $against_baseline against the baseline}"
+            done
+            echo
+            echo "The evaluations that earned them a place are beside each policy. A journal entry is still"
+            echo "owed (ADR 0013): these are numbers, not a reason, and a search cannot write one."
+            echo
+            echo "Workflow run: $SERVER/$REPOSITORY/actions/runs/$RUN_ID_URL"
+          } > "$RUNNER_TEMP/message.txt"
+          git commit -F "$RUNNER_TEMP/message.txt"
+          git push origin "$branch"
+
+          {
+            echo
+            echo "### The policies are on \`$branch\`"
+            echo
+            echo "**[Open it as a pull request]($SERVER/$REPOSITORY/compare/$BASE...$branch?expand=1)** — one tap,"
+            echo "and the repository's real checks run on it."
+            echo
+            echo "The build, the tests and the format check all passed on this branch before it was pushed."
+            echo "A journal entry is still owed: a committed policy is a decision, and the numbers above are not one."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The datasets are deliberately left out: with --traces they are a few hundred megabytes, and the seed
+      # reproduces them anyway.
       - name: Upload the run
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: run-${{ github.run_number }}
+          # The datasets are left out on purpose, as they always were: they are the large part and the run
+          # reproduces them anyway. Everything else of every seed travels, plus the spread over them.
           path: |
             runs/ci-${{ github.run_number }}/iterate.log
-            runs/ci-${{ github.run_number }}/report.html
-            runs/ci-${{ github.run_number }}/report.json
-            runs/ci-${{ github.run_number }}/evaluations
-            runs/ci-${{ github.run_number }}/value
-            runs/ci-${{ github.run_number }}/clone
+            runs/ci-${{ github.run_number }}/spread.json
+            runs/ci-${{ github.run_number }}/baselines
+            runs/ci-${{ github.run_number }}/seeds/*/report.html
+            runs/ci-${{ github.run_number }}/seeds/*/report.json
+            runs/ci-${{ github.run_number }}/seeds/*/evaluations
+            runs/ci-${{ github.run_number }}/seeds/*/value
+            runs/ci-${{ github.run_number }}/seeds/*/clone
+            runs/ci-${{ github.run_number }}/mean
           if-no-files-found: warn
           retention-days: 30

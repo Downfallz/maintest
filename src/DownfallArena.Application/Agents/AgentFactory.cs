@@ -21,7 +21,12 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
         return spec.Kind switch
         {
             AgentKind.Heuristic => spec with { Version = Weights(spec).Fingerprint },
+            AgentKind.Lookahead or AgentKind.Minimax when spec.Path is not null => spec with { Version = Weights(spec).Fingerprint },
             AgentKind.Policy => spec with { Version = Policy(spec).Fingerprint },
+            // An exploring agent that names an inner agent is as much that agent as a heuristic or policy
+            // agent is, so the stamp fingerprints what the inner one reads: two runs on different weights,
+            // or on different policies, at one path have to stamp apart.
+            AgentKind.Explore when Inner(spec) is { } inner => spec with { Version = Resolve(inner).Version },
             _ => spec,
         };
     }
@@ -38,7 +43,9 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Greedy => new GreedyAgent(resources, rules),
             AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
             AgentKind.Policy => Trained(spec, rules),
-            AgentKind.Explore => new ExploringAgent(Rate(spec), new GreedyAgent(resources, rules), random),
+            AgentKind.Explore => new ExploringAgent(Rate(spec), Explored(spec, rules, random), random),
+            AgentKind.Lookahead => new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules),
+            AgentKind.Minimax => new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules, adversarial: true),
             _ => throw new InvalidOperationException($"Agent kind '{spec.Kind}' has no implementation."),
         };
     }
@@ -48,10 +55,53 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
 
     /// <summary>The exploration rate the spec carries after the colon: <c>explore:0.1</c>.</summary>
     private static double Rate(AgentSpec spec) =>
-        double.TryParse(spec.Path, NumberStyles.Float, CultureInfo.InvariantCulture, out var rate)
+        double.TryParse(RateText(spec), NumberStyles.Float, CultureInfo.InvariantCulture, out var rate)
         && double.IsFinite(rate) && rate > 0 && rate <= 1
             ? rate
             : throw new ArgumentException($"An exploring agent needs a rate above 0 and at most 1: 'explore:<rate>', not '{spec}'.", nameof(spec));
+
+    private static string RateText(AgentSpec spec) => Split(spec).Rate;
+
+    /// <summary>
+    /// The agent an exploring agent deviates from: <c>Greedy</c>, or whatever a second colon names. An
+    /// exploring run is recorded so that a value policy can see what a move other than the chosen one was
+    /// worth (ADR 0014), so the agent it deviates from is the one whose play is being learned. Leaving it at
+    /// Greedy while the pure dataset is recorded against someone else would train the two policies of one
+    /// loop on two different players.
+    /// </summary>
+    private IPlayerAgent Explored(AgentSpec spec, RuleSet rules, IRandomSource random) =>
+        Inner(spec) is { } inner ? Create(inner, rules, random) : new GreedyAgent(resources, rules);
+
+    /// <summary>
+    /// The inner agent an exploring spec names, or <c>null</c> for the bare <c>explore:0.2</c> that wraps
+    /// Greedy. A full spec is the general form — <c>explore:0.2:policy:models/clone/ci-69/policy.json</c>,
+    /// which is what lets the improved policy of one turn record the dataset of the next — and a bare path
+    /// stays the shorthand for a weights file that ADR 0014 and every journal entry before this one use.
+    /// The two are told apart by whether the text names a kind, so a weights file called exactly
+    /// <c>greedy</c>, with no directory and no extension, would have to be written <c>heuristic:greedy</c>.
+    /// </summary>
+    private static AgentSpec? Inner(AgentSpec spec) =>
+        Split(spec).Inner switch
+        {
+            null => null,
+            { } inner when NamesAKind(inner) => AgentSpec.Parse(inner),
+            { } path => new AgentSpec(AgentKind.Heuristic, path),
+        };
+
+    private static bool NamesAKind(string inner)
+    {
+        var separator = inner.IndexOf(':', StringComparison.Ordinal);
+        var kindText = separator < 0 ? inner : inner[..separator];
+        return Enum.TryParse<AgentKind>(kindText, ignoreCase: true, out var kind) && Enum.IsDefined(kind);
+    }
+
+    /// <summary>The rate and the optional inner agent an exploring spec carries, split on the colon.</summary>
+    private static (string Rate, string? Inner) Split(AgentSpec spec)
+    {
+        var path = spec.Path ?? string.Empty;
+        var separator = path.IndexOf(':', StringComparison.Ordinal);
+        return separator < 0 ? (path, null) : (path[..separator], path[(separator + 1)..]);
+    }
 
     private PolicyFile Policy(AgentSpec spec) =>
         policies.Load(spec.Path ?? throw new ArgumentException("A policy agent needs a policy file: 'policy:<path>'.", nameof(spec)));

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -145,3 +146,34 @@ def test_a_baseline_that_is_not_finite_is_refused() -> None:
 
     with pytest.raises(ValueError, match="must be finite"):
         a_policy(baseline=infinite)
+
+
+def test_a_saved_weight_keeps_six_decimals_and_no_more(tmp_path: Path) -> None:
+    policy = a_policy(
+        weights=np.array([[1.234567891, 0, 0, 0, 0, 0], [0, -0.987654321, 0, 0, 0, 0]]),
+        bias=np.array([0.1234567891, -0.5]),
+        baseline=Baseline(np.array([0.111111111, 0, 0, 0, 0, 0]), 0.222222222),
+    )
+
+    written = json.loads(policy.save(tmp_path / "policy.json").read_text())
+
+    assert written["weights"][0][0] == 1.234568
+    assert written["weights"][1][1] == -0.987654
+    assert written["bias"] == [0.123457, -0.5]
+    assert written["baseline"] == {"weights": [0.111111, 0, 0, 0, 0, 0], "bias": 0.222222}
+
+
+def test_rounding_a_weight_does_not_move_a_score_enough_to_change_a_choice(tmp_path: Path) -> None:
+    # A weight's seventh decimal is far below the gap between two candidates: a score is a dot product over
+    # every feature, and the rounding of one term is eight orders of magnitude under the terms themselves.
+    generator = np.random.default_rng(0)
+    weights = generator.normal(size=(2, len(FEATURE_NAMES)))
+    policy = a_policy(weights=weights, bias=np.array([0.0, 0.0]))
+
+    loaded = Policy.load(policy.save(tmp_path / "policy.json"))
+    observations = generator.normal(size=(500, len(FEATURE_NAMES)))
+
+    assert all(
+        policy.choose(observation, ["a", "b"]) == loaded.choose(observation, ["a", "b"])
+        for observation in observations
+    )

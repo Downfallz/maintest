@@ -93,6 +93,13 @@ jobs:
       - name: Check the balance knobs
         run: uv run --project learning --locked --no-sync --no-build python -m downfall_learning.cli check-knobs
 
+      # --apply overwrites data/ with the winning numbers, and the hold-out below needs the catalogue the
+      # search started from as well as the one it proposed. A copy, not a git stash: the data builder reads
+      # a whole tree and the evaluator copies it again into its own scratch space, so a directory is the shape
+      # both of them already expect.
+      - name: Keep the content the search starts from
+        run: cp -r data "$RUNNER_TEMP/data-initial"
+
       # Inputs reach the shell through the environment, never through the script text. --apply writes the
       # winning numbers into data/ itself; without it the proposal stays in the run directory.
       - name: Tune
@@ -154,6 +161,58 @@ jobs:
             echo "applied=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # The one thing the search itself cannot establish, and the same check search.yml makes on its weights.
+      # Every candidate played the seed file the objective names and the winner is the one that scored best
+      # there, so `improved` is the winner's number and not a fair one. Both catalogues -- the proposal now in
+      # data/, and the copy taken before the search touched it -- are played again on seeds no candidate saw:
+      # a window of consecutive integers clear of every seed in the file, placed above the largest when that
+      # fits in the signed range and below the smallest otherwise, down to the signed minimum: a seed is an
+      # `int` the engine adds to unchecked, and a negative one is as good as any other -- the seed file
+      # loader refuses only an empty list and a repeat. The score is a penalty, so lower is better, and the
+      # summary says so rather than leaving a reader to guess which way the table reads.
+      - name: Replay both catalogues on seeds the search never saw
+        if: steps.found.outputs.applied == 'true'
+        id: holdout
+        run: |
+          seeds="$(jq -r '.objective.seeds // empty' data/balance/knobs.json)"
+          seeds="${seeds:-benchmarks/benchmark-seeds.json}"
+          matches="$(jq -r '.seeds | length' "$seeds")"
+          start="$(jq -r --argjson n "$matches" '
+            [.seeds[]] as $seeds
+            | ($seeds | max) as $highest | ($seeds | min) as $lowest
+            | if $highest + $n <= 2147483647 then $highest + 1
+              elif $lowest - $n >= -2147483648 then $lowest - $n
+              else "none" end' "$seeds")"
+          if [[ "$start" == "none" ]]; then
+            echo "No window of $matches seeds fits clear of '$seeds' in the seed space." >&2
+            exit 1
+          fi
+          unseen="$OUT/holdout-seeds.json"
+          jq -n --argjson start "$start" --argjson n "$matches" '{seeds: [range($start; $start + $n)]}' > "$unseen"
+          score() {
+            uv run --project learning --locked --no-sync --no-build \
+              python -m downfall_learning.cli score-content -o "$OUT/holdout-$2" --seeds "$unseen" \
+              --data "$1" > "$OUT/holdout-$2.log"
+            jq -r '.score' "$OUT/holdout-$2/score.json"
+          }
+          found_score="$(score data found)"
+          baseline_score="$(score "$RUNNER_TEMP/data-initial" baseline)"
+          echo "found=$found_score" >> "$GITHUB_OUTPUT"
+          echo "baseline=$baseline_score" >> "$GITHUB_OUTPUT"
+          {
+            echo
+            echo "### On $matches seeds no candidate saw ($start to $((start + matches - 1)))"
+            echo
+            echo "| Catalogue | Objective score (a penalty: lower is better, 0 is on target) |"
+            echo "| --- | --- |"
+            echo "| The proposal | $found_score |"
+            echo "| What the search started from | $baseline_score |"
+            echo
+            echo "This is the comparison the search's own numbers cannot make. A proposal that does not score"
+            echo "below what it started from here has not been shown to be better at anything but the seed"
+            echo "file it was searched on."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Rebuild the content and regenerate the benchmark digest
         if: steps.found.outputs.applied == 'true'
         run: |
@@ -192,6 +251,8 @@ jobs:
           NEIGHBOURS: ${{ inputs.neighbours }}
           MAX_CHANGES: ${{ inputs.max_changes }}
           PAIR_DEPTH: ${{ inputs.pair_depth }}
+          HOLDOUT_FOUND: ${{ steps.holdout.outputs.found }}
+          HOLDOUT_BASELINE: ${{ steps.holdout.outputs.baseline }}
         run: |
           hash="$(jq -r '.contentHash // "unknown"' data/dst/game.schema.json)"
           git config user.name "github-actions[bot]"
@@ -211,6 +272,11 @@ jobs:
             echo '```'
             cat "$OUT/tune.log"
             echo '```'
+            echo
+            echo "**On seeds no candidate saw**, which is the one comparison the run above cannot make: this"
+            echo "proposal scores \`$HOLDOUT_FOUND\` where the content it started from scores \`$HOLDOUT_BASELINE\`."
+            echo "The score is a penalty, so lower is better and 0 is on target. A proposal that is not below"
+            echo "its starting point here has been shown to fit the seed file it was searched on, and nothing else."
             echo
             echo "Before merging:"
             echo
@@ -252,5 +318,8 @@ jobs:
             runs/tune-${{ github.run_number }}/tune.log
             runs/tune-${{ github.run_number }}/tune.json
             runs/tune-${{ github.run_number }}/content
+            runs/tune-${{ github.run_number }}/holdout-seeds.json
+            runs/tune-${{ github.run_number }}/holdout-found/score.json
+            runs/tune-${{ github.run_number }}/holdout-baseline/score.json
           if-no-files-found: warn
           retention-days: 30
