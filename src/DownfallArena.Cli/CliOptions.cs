@@ -46,6 +46,21 @@ internal sealed record CliOptions
     public int Port { get; init; } = DefaultPort;
 
     /// <summary>
+    /// Whether the command line named an agent for a slot. The table seats a person in every slot it was not
+    /// told to seat a bot in, and "the option was absent" is the only thing that says so: <c>--p1</c> defaults
+    /// to an agent for every other command, so the parsed spec cannot tell silence from a choice.
+    /// </summary>
+    public bool Player1Named { get; init; }
+
+    public bool Player2Named { get; init; }
+
+    /// <summary>
+    /// The round the people take over on. Both seats play as bots until it starts, so a playtest can begin at
+    /// the tenth round, which is the one nobody reaches by hand. None means they play from the first.
+    /// </summary>
+    public int? Handover { get; init; }
+
+    /// <summary>
     /// Where <c>studio --export</c> writes what the read-only routes answer, for a studio served without this
     /// host behind it (ADR 0023). Null serves the page instead.
     /// </summary>
@@ -59,7 +74,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N]";
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -83,7 +98,7 @@ internal sealed record CliOptions
             index += 2;
         }
 
-        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export"], StringComparer.Ordinal).FirstOrDefault();
+        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover"], StringComparer.Ordinal).FirstOrDefault();
         if (unknown is not null)
         {
             throw new ArgumentException($"Unknown option '{unknown}'.");
@@ -101,6 +116,9 @@ internal sealed record CliOptions
             Traces = values.TryGetValue("--traces", out var traces) ? ParseTraces(traces) : null,
             Player1 = AgentSpec.Parse(values.GetValueOrDefault("--p1") ?? "random"),
             Player2 = AgentSpec.Parse(values.GetValueOrDefault("--p2") ?? "random"),
+            Player1Named = values.ContainsKey("--p1"),
+            Player2Named = values.ContainsKey("--p2"),
+            Handover = values.TryGetValue("--handover", out var handover) ? ParseHandover(handover) : null,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
             Write = write,
@@ -115,6 +133,13 @@ internal sealed record CliOptions
     {
         var traces = int.Parse(text, CultureInfo.InvariantCulture);
         return traces >= 0 ? traces : throw new ArgumentException($"'{traces}' traces is not a count.", nameof(text));
+    }
+
+    /// <summary>A round the people can actually take over on, rejected here so a typo is one line, not a stack.</summary>
+    private static int ParseHandover(string text)
+    {
+        var round = int.Parse(text, CultureInfo.InvariantCulture);
+        return round >= 1 ? round : throw new ArgumentException($"Round {round} is not a round to hand over on.", nameof(text));
     }
 
     /// <summary>A port the studio host can actually bind, rejected here so a typo is one line, not a stack.</summary>

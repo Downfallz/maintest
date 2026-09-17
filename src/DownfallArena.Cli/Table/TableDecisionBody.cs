@@ -1,0 +1,54 @@
+using DownfallArena.Application.Matches.Decisions;
+using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.SharedKernel.Identifiers;
+
+namespace DownfallArena.Cli.Table;
+
+/// <summary>
+/// What a tap posts. It is the decision as the wire carries it: ids as the page received them, nothing
+/// resolved, nothing decided.
+/// </summary>
+internal sealed record TableDecisionBody
+{
+    public string? Kind { get; init; }
+
+    public int? Creature { get; init; }
+
+    public string? Spell { get; init; }
+
+    public string? Speed { get; init; }
+
+    public IReadOnlyList<int>? Targets { get; init; }
+
+    public bool Pass { get; init; }
+
+    /// <summary>
+    /// The decision this body names, or the reason it names none. A body that does not parse is refused here
+    /// rather than reaching the check: what the check answers is "the options do not offer this", which is a
+    /// true thing to tell a player, and "this is not a decision at all" is not.
+    /// </summary>
+    public PlayerDecision? ToDecision(out string problem)
+    {
+        problem = string.Empty;
+        switch (Kind)
+        {
+            case "Evolution" when Pass:
+                return PlayerDecision.Pass;
+            case "Evolution" when Creature is { } creature && Spell is { } spell:
+                return PlayerDecision.Unlock(CreatureId.From(creature), SpellId.Parse(spell));
+            case "Speed" when Creature is { } creature && Enum.TryParse<Speed>(Speed, out var speed):
+                return PlayerDecision.ChooseSpeed(CreatureId.From(creature), speed);
+            case "Intent" when Creature is { } creature && Spell is { } spell:
+                return PlayerDecision.DeclareIntent(CreatureId.From(creature), SpellId.Parse(spell));
+            case "Target":
+                return PlayerDecision.BindTargets([.. (Targets ?? []).Select(CreatureId.From)]);
+            default:
+                problem = $"'{Kind}' is not a decision this seat can make, or it is missing what its kind needs.";
+                return null;
+        }
+    }
+
+    /// <summary>The kinds a body may name, so a refusal can say what was expected.</summary>
+    public static string Kinds => string.Join(", ", new[] { PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.Intent, PlayerOptionsKind.Target });
+}

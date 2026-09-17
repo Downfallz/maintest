@@ -41,15 +41,15 @@ internal sealed class TableSession
     public bool IsOver => Outcome.IsCompleted;
 
     /// <summary>
-    /// Creates the match, seats both players, and starts playing. Both seats are seated before the first
-    /// decision is asked, so neither can be handed a question it has nobody to answer with.
+    /// Creates the match and starts playing the seats it is handed. They arrive already occupied, so neither
+    /// can be asked a question it has nobody to answer with.
     /// </summary>
     public static async Task<TableSession> StartAsync(
         IServiceProvider services,
         RuleSet rules,
         int seed,
-        IPlayerAgent player1,
-        IPlayerAgent player2,
+        SeatAgent player1,
+        SeatAgent player2,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -64,12 +64,13 @@ internal sealed class TableSession
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));
 
-        var seat1 = new SeatAgent(player1);
-        var seat2 = new SeatAgent(player2);
-        var driver = services.GetRequiredService<MatchDriver>();
-        var outcome = Task.Run(() => driver.PlayAsync(matchId, seat1, seat2, cancellationToken), cancellationToken);
+        ArgumentNullException.ThrowIfNull(player1);
+        ArgumentNullException.ThrowIfNull(player2);
 
-        return new TableSession(matchId, seat1, seat2, outcome);
+        var driver = services.GetRequiredService<MatchDriver>();
+        var outcome = Task.Run(() => driver.PlayAsync(matchId, player1, player2, cancellationToken), cancellationToken);
+
+        return new TableSession(matchId, player1, player2, outcome);
     }
 
     /// <summary>The seat of a slot, so a caller says which player rather than which field.</summary>

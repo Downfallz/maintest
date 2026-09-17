@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Downfall Arena — table</title>
+    <link rel="stylesheet" href="table.css" />
+  </head>
+  <body>
+    <header>
+      <h1 id="seat">—</h1>
+      <p id="phase" class="muted">Connecting…</p>
+    </header>
+
+    <!-- The pass-the-device screen. It is a screen and not a banner: on one phone it is the whole fence
+         between the two seats, and it has to be impossible to read the board through. -->
+    <section id="pass" hidden>
+      <p class="pass-line">Pass the device to</p>
+      <p class="pass-seat" id="pass-seat">—</p>
+      <button id="pass-ready" type="button">I am <span id="pass-seat-again">—</span></button>
+    </section>
+
+    <main id="table" hidden>
+      <section id="board"></section>
+      <section id="decision" class="sheet">
+        <h2 id="asking">Waiting for the other seat…</h2>
+        <div id="choices"></div>
+        <p id="problem" class="problem" hidden></p>
+      </section>
+    </main>
+
+    <script type="module" src="table.js"></script>
+  </body>
+</html>

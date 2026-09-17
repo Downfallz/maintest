@@ -107,6 +107,8 @@ internal sealed class GameSession
                 return await EvaluateAsync();
             case "benchmark":
                 return await BenchmarkAsync();
+            case "table":
+                return await Table.TableHost.RunAsync(_services, _options, _rules, _seed);
             default:
                 await Console.Error.WriteLineAsync($"Unknown command '{_options.Command}'. {CliOptions.Usage}");
                 return 2;
