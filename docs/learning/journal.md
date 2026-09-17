@@ -15,20 +15,26 @@ first.
   against Random, every floor held. The entry of 2026-09-16 found no neighbour of `mixture-mean` under the
   same floor with eight weights; the ninth is what was missing.
 
-- **On 200 seeds no candidate saw** (995317 to 995516, mirrored), the winner and the start, against the
-  panel and against `mixture-mean` itself:
+- **On 200 seeds nothing has ever played** (7770001 to 7770200, mirrored), the winner against the panel
+  and against `mixture-mean` itself, and then on the 200 seeds the earlier sets were accepted on (995317
+  to 995516), which this search never played but which chose its start and its ninth dimension, so they
+  are reused validation and not a hold-out for this set; the start and `mixture-mean` on those for the
+  comparison:
 
-  | agent A | against Greedy | against `mixture-mean` | against `mixture-worst` | against `search-4` | against Random | rounds |
-  | --- | --- | --- | --- | --- | --- | --- |
-  | **the winner, `pressure-floor.json`** | **1.0000** | **0.9375** (0.913 to 0.962) | **0.9950** (0.988 to 1.0) | **0.9500** (0.929 to 0.971) | 1.0000 | 6.0 to 6.8 |
-  | the start (`mixture-mean` + `pressure` 1.0) | 0.8538 (0.820 to 0.887) | 0.5100 (0.485 to 0.535) | 0.4813 (0.453 to 0.509) | 0.6625 (0.615 to 0.710) | 0.9975 | 5.6 to 8.4 |
-  | `mixture-mean.json` (entry of 2026-09-16) | 0.8638 | 0.5 (itself) | 0.4725 | 0.7462 | 0.9975 | |
+  | agent A | seeds | against Greedy | against `mixture-mean` | against `mixture-worst` | against `search-4` | against Random | rounds |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | **the winner, `pressure-floor.json`** | **untouched** | **1.0000** | **0.9250** (0.897 to 0.953) | **0.9975** (0.993 to 1.0) | **0.9625** (0.944 to 0.981) | 1.0000 | 6.0 to 6.9 |
+  | the winner | reused | 1.0000 | 0.9375 (0.913 to 0.962) | 0.9950 (0.988 to 1.0) | 0.9500 (0.929 to 0.971) | 1.0000 | 6.0 to 6.8 |
+  | the start (`mixture-mean` + `pressure` 1.0) | reused | 0.8538 (0.820 to 0.887) | 0.5100 (0.485 to 0.535) | 0.4813 (0.453 to 0.509) | 0.6625 (0.615 to 0.710) | 0.9975 | 5.6 to 8.4 |
+  | `mixture-mean.json` (entry of 2026-09-16) | reused | 0.8638 | 0.5 (itself) | 0.4725 | 0.7462 | 0.9975 | |
 
-  Every interval clear of one half by a margin no set here has shown: 400 matches against Greedy and 400
-  against Random without a loss or a draw, `search-4` beaten 0.95 where `mixture-mean` beat it 0.746, and
-  `mixture-mean` itself beaten 0.94. Held out, so it is not the winner's-curse reading of the search. The
-  start says what `pressure` alone bought at 1.0: eight points lost against `search-4` (0.746 to 0.6625),
-  parity with the two mixture sets, which is what ADR 0050's sweep read at that value.
+  Every interval clear of one half by a margin no set here has shown, and the same on both windows: 400
+  matches against Greedy and 400 against Random without a loss or a draw on each, `search-4` beaten 0.96
+  where `mixture-mean` beat it 0.746, and `mixture-mean` itself beaten 0.93. The untouched window is the
+  hold-out; the reused one agrees with it to within its intervals, so the earlier sets' acceptance on it did
+  not lend this one anything, and neither reading is the winner's-curse reading of the search. The start
+  says what `pressure` alone bought at 1.0: eight points lost against `search-4` (0.746 to 0.6625), parity
+  with the two mixture sets, which is what ADR 0050's sweep read at that value.
 
 - **What it plays.** Not the same game. Against Greedy the winner casts `wait` 2660 times and Crushing
   Stomp 1696, then Guard 1200, Full Plate 800 and Enraged Charge 756, where Greedy casts Throwing Star 2720
