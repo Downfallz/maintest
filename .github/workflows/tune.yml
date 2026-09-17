@@ -117,6 +117,9 @@ jobs:
             arguments+=(--apply)
           fi
           mkdir -p "$OUT"
+          # `tee` always succeeds and a pipeline exits with its last command's status, so without this a pass
+          # that died reads as a pass that proposed nothing, the way ci-131 did in iterate.yml.
+          set -o pipefail
           uv run --project learning --locked --no-sync --no-build \
             python -m downfall_learning.cli tune-content "${arguments[@]}" 2>&1 | tee "$OUT/tune.log"
 
