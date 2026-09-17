@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, standing, statPairs, targetedBy } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, standing, statPairs, targetedBy } from './board.js';
 
 const creature = { id: 1, health: 14, maxHealth: 20, energy: 2, totalDefense: 3, currentInitiative: 7 };
 
@@ -189,4 +189,27 @@ test('a fresh permanent and a counted condition are docked in their own lanes', 
 
   assert.deepEqual(dock.map(group => group.lane), ['new', null]);
   assert.deepEqual(dock.map(group => group.conditions.map(chipText)), [['Bleed'], ['DefenseBuff']]);
+});
+
+// A stun chip in the dock says a condition is running; it does not say the creature has lost its speed slot
+// this round, which is the thing a player plans around. And the speed is in the timeline, a strip of six, not
+// a thing read per creature (playtest-app.md §3.1).
+test('a row badges its stun and the speed the timeline gave it', () => {
+  const timeline = [{ creature: 1, speed: 'Quick' }, { creature: 2, speed: 'Standard' }];
+
+  assert.deepEqual(badges({ id: 1, isStunned: false }, timeline), ['Quick']);
+  assert.deepEqual(badges({ id: 2, isStunned: true }, timeline), ['stunned', 'Standard']);
+});
+
+// Before TurnOrderResolution there is no timeline, so there is no speed to badge -- and a stun is a stun
+// whether or not the round has ordered itself yet.
+test('a row with no timeline yet badges only what it knows', () => {
+  assert.deepEqual(badges({ id: 1, isStunned: true }, []), ['stunned']);
+  assert.deepEqual(badges({ id: 1, isStunned: false }, []), []);
+  assert.deepEqual(badges({ id: 1, isStunned: true }, undefined), ['stunned']);
+  assert.deepEqual(badges(undefined, undefined), []);
+});
+
+test('a creature the timeline does not carry gets no speed badge', () => {
+  assert.deepEqual(badges({ id: 9, isStunned: false }, [{ creature: 1, speed: 'Quick' }]), []);
 });

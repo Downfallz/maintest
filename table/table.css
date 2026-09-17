@@ -310,6 +310,19 @@ button.chosen { border-width: 2px; }
 
 .creature.picked { outline: 2px solid currentcolor; outline-offset: -2px; }
 
+/* A legal target is a tap surface, and has to look like one: the whole row, because the row is what the choice
+   is made against. */
+.creature.legal { cursor: pointer; border-style: solid; }
+
+.badge {
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid currentcolor;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
 /* The talent mat. A pip per creature, filled when it knows the spell. */
 .band-row { margin-bottom: 10px; }
 

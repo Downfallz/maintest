@@ -26,6 +26,21 @@ export function statPairs(creature) {
   ];
 }
 
+// The badges beside a row's stats: whether the creature is stunned, and the speed it was given once the
+// timeline is built (playtest-app.md §3.1). A stun chip in the dock says a condition is running; it does not
+// say the creature has lost its speed slot this round, which is the thing a player plans around -- and the
+// speed lives in the timeline, which is a strip of six and not a thing read per creature.
+//
+// Both words are the payload's: `isStunned` is the snapshot's own field, and the speed is the band the engine
+// put the slot in.
+export function badges(creature, timeline) {
+  const found = [];
+  if (creature?.isStunned === true) found.push('stunned');
+  const slot = (timeline ?? []).find(one => one?.creature === creature?.id);
+  if (typeof slot?.speed === 'string' && slot.speed !== '') found.push(slot.speed);
+  return found;
+}
+
 // The condition dock, as the printed board has it: four lanes, `new` then `3`, `2`, `1`, with the permanent
 // ones in a group of their own (components.md §3.2, playtest-app.md §3.1).
 //

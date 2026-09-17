@@ -2,7 +2,7 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
-import { chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
 import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine, nextSince } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
@@ -229,7 +229,14 @@ function renderTimeline(board) {
 
 function renderBoard(state, view) {
   const board = view.board;
-  const marks = { picked: state.picked, board };
+  // What a row may do and say this poll. Targeting is a tap on a legal creature (playtest-app.md §3.2), so
+  // the candidates the options offer are the rows that are tappable, and no others.
+  const marks = {
+    picked: state.picked,
+    board,
+    candidates: isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
+    onPick: candidate => pick(state, view, candidate),
+  };
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
   revealed(state, board.revealedActions);
@@ -315,9 +322,15 @@ function backs(state, board, opponentIntents) {
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
 function line(state, creature, which, marks) {
   const picked = (marks?.picked ?? []).includes(creature.id);
+  const legal = (marks?.candidates ?? []).includes(creature.id);
   const casters = targetedBy(creature.id, marks?.board);
   const box = document.createElement('div');
-  box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}`;
+  box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}${legal ? ' legal' : ''}`;
+  if (legal) {
+    box.tabIndex = 0;
+    box.setAttribute('role', 'button');
+    box.addEventListener('click', () => marks.onPick(creature.id));
+  }
 
   const who = document.createElement('div');
   who.className = 'who';
@@ -336,6 +349,13 @@ function line(state, creature, which, marks) {
   const stats = document.createElement('div');
   stats.className = 'stats';
   stats.textContent = statPairs(creature).map(([name, value]) => `${name} ${value}`).join(' · ');
+
+  for (const badge of badges(creature, marks?.board?.timeline)) {
+    const one = document.createElement('span');
+    one.className = 'badge';
+    one.textContent = badge;
+    stats.append(one);
+  }
 
   box.append(who, health, stats, dock(state, creature.conditions));
 
@@ -538,10 +558,22 @@ function intentButtons(state, current) {
   });
 
   const name = chosen === null ? '' : state.cards.get(chosen)?.name ?? chosen;
-  const confirm = button(chosen === null ? 'Choose a card' : `Declare ${name}`, () =>
-    submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: chosen }));
+  const confirm = button(chosen === null ? 'Choose a card' : `Declare ${name}`, () => {
+    confirm.disabled = true;
+    submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: chosen });
+  });
   confirm.disabled = chosen === null;
   return [...cards, confirm];
+}
+
+// Toggling one target. It lives here rather than in the row so the count bound by `maxTargets` is applied in
+// one place: the row is a tap surface and the sheet holds `done`, and they cannot disagree about what is picked.
+function pick(state, view, candidate) {
+  const legal = view.options.target?.legalTargets ?? { candidates: [], maxTargets: 0 };
+  state.picked = state.picked.includes(candidate)
+    ? state.picked.filter(one => one !== candidate)
+    : [...state.picked, candidate].slice(0, legal.maxTargets);
+  refresh(state);
 }
 
 function targetButtons(state, current) {
@@ -554,19 +586,18 @@ function targetButtons(state, current) {
     return [button('No legal target — cast anyway', () => submit(state, current, { kind: 'Target', targets: [] }))];
   }
 
-  const buttons = legal.candidates.map(candidate => {
-    const chosen = picked.includes(candidate);
-    const face = button(`${chosen ? '✓ ' : ''}Creature ${candidate}`, () => {
-      state.picked = chosen ? picked.filter(one => one !== candidate) : [...picked, candidate].slice(0, legal.maxTargets);
-      refresh(state);
-    });
-    if (chosen) face.classList.add('chosen');
-    return face;
-  });
+  // No button a candidate: the tap is on the creature's own row, where its health, its defense and what is
+  // already on it are (playtest-app.md §3.2). The sheet holds `done` and the count it is enabled at.
+  const asking = document.createElement('p');
+  asking.className = 'muted';
+  asking.textContent = `Tap ${legal.minTargets === legal.maxTargets ? legal.maxTargets : `${legal.minTargets} to ${legal.maxTargets}`} on the board.`;
 
-  const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => submit(state, current, { kind: 'Target', targets: picked }));
+  const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => {
+    confirm.disabled = true;
+    submit(state, current, { kind: 'Target', targets: picked });
+  });
   confirm.disabled = picked.length < legal.minTargets;
-  return [...buttons, confirm];
+  return [asking, confirm];
 }
 
 // A spell as the card the host serves, and as the id it was offered by when the catalogue has no card for it.
@@ -624,6 +655,13 @@ function button(label, onClick) {
 }
 
 async function submit(state, current, decision) {
+  // The guard is here and not only on the buttons, because there is no undo: on a slow connection a rapid
+  // double tap posted twice, one call committing the decision and the other coming back 409, which showed the
+  // player an error for a declaration that had in fact been accepted.
+  if (state.sending) {
+    return;
+  }
+
   state.sending = true;
   try {
     const answer = await current.transport.decide(decision);

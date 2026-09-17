@@ -42,10 +42,14 @@
            is at the bottom because it is the tallest thing on the page -- a hand above the boards means
            scrolling past five card faces to read the health a target choice depends on. -->
       <section id="board">
+        <!-- The reveal strip is first because it is what the choice below it is about: during
+             RevealAndTarget the player reads the cast, then the rows whose health and conditions decide the
+             targets. Under the boards it would mean scrolling down to read the cast and back up to act on it.
+             The four blocks §3.3 names keep their order among themselves. -->
+        <div id="revealed" class="revealed" hidden></div>
         <div id="enemies"></div>
         <section id="timeline" class="strip" aria-label="Initiative"></section>
         <div id="allies"></div>
-        <div id="revealed" class="revealed" hidden></div>
         <div id="backs"></div>
         <div id="own-hand"></div>
       </section>
