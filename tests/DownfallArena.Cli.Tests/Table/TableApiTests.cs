@@ -1,7 +1,13 @@
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
+using DownfallArena.Application.Learning;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
@@ -19,7 +25,7 @@ namespace DownfallArena.Cli.Tests.Table;
 /// boundary: a token answers for its own seat and for nothing else, and a late tap is a refusal rather than
 /// the end of the session.
 /// </summary>
-public sealed class TableApiTests : IDisposable
+public sealed partial class TableApiTests : IDisposable
 {
     private static readonly RuleSet Rules = RuleSet.Create(2, 2, 1, 6, 2.0);
 
@@ -89,6 +95,96 @@ public sealed class TableApiTests : IDisposable
     }
 
     /// <summary>
+    /// The feed a seat is served, on the bytes rather than on the object: the trace keeps both boards beside
+    /// every event on purpose, and a serializer that wrote one would leak the whole opposing hand at once.
+    /// </summary>
+    [Fact]
+    public async Task The_feed_carries_what_happened_and_never_the_boards_the_trace_keeps_beside_it()
+    {
+        var table = await Seated();
+
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+
+        var feed = body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..];
+        feed.ShouldContain("\"kind\"");
+        feed.ShouldContain("\"sequence\"");
+        feed.ShouldNotContain("\"allies\"");
+        feed.ShouldNotContain("\"enemies\"");
+        feed.ShouldNotContain("\"player1\":{");
+        feed.ShouldNotContain("\"player2\":{");
+    }
+
+    /// <summary>
+    /// The other seat's intents are the game's hidden information, and the feed is the one place they could
+    /// escape as plain text. Played for rather than asserted at a moment when there is nothing to hide.
+    /// </summary>
+    [Fact]
+    public async Task The_feed_never_carries_the_other_seat_s_intents()
+    {
+        var table = await Seated();
+        await PlayUpToTargeting(table);
+
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+
+        var feed = body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..];
+        feed.ShouldNotContain("IntentSubmitted\",\"matchId\":\"" + table.Session.MatchId + "\",\"roundId\":1,\"slot\":\"Player2\"");
+        feed.ShouldContain("IntentSubmitted");
+    }
+
+    /// <summary>
+    /// A page asks for what it has not seen. The numbers are the trace's, so they do not close up when an
+    /// event is filtered out -- which is what lets a seat ask for the next one without learning what it was
+    /// not shown.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_asks_for_the_feed_from_where_it_left_off()
+    {
+        var table = await Seated();
+
+        var all = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
+        var rest = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: $"?since={all[^1]}")));
+        var none = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: $"?since={all[^1] + 1}")));
+
+        all.ShouldNotBeEmpty();
+        all.ShouldBeInOrder();
+        rest.ShouldBe([all[^1]]);
+        none.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("?since=")]
+    [InlineData("?since=tomorrow")]
+    [InlineData("?since=-4")]
+    [InlineData("?other=3")]
+    public async Task A_query_that_asks_for_nothing_in_particular_is_the_feed_from_the_start(string query)
+    {
+        var table = await Seated();
+
+        var feed = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: query)));
+
+        feed.ShouldNotBeEmpty();
+        feed[0].ShouldBe(0);
+    }
+
+    /// <summary>The cursor the host says to resume from.</summary>
+    private static string NextCursor(string body) =>
+        Cursor().Match(body).Groups[1].Value;
+
+    [GeneratedRegex("\"feedNext\":([0-9]+)")]
+    private static partial Regex Cursor();
+
+    /// <summary>The sequence numbers a payload carries, in the order it carries them.</summary>
+    private static IReadOnlyList<int> Sequences(string body) =>
+    [
+        .. Sequence().Matches(body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..])
+            .Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)),
+    ];
+
+    [GeneratedRegex("\"sequence\":([0-9]+)")]
+    private static partial Regex Sequence();
+
+    /// <summary>
     /// The deck, as the table is playing it. It is the same for both seats and hides nothing — what is hidden
     /// is which card a creature has face down — and it is what lets the page carry no content of its own.
     /// </summary>
@@ -155,13 +251,33 @@ public sealed class TableApiTests : IDisposable
         second.ShouldNotBe(first);
     }
 
+    /// <summary>
+    /// The tag is a hash of the bytes served, not a list of the stamps that went into them, and that is the
+    /// contract rather than an implementation detail. This answer carries the content hash, the rule set and
+    /// this build's projection of both — the card words <c>CatalogueProjection</c> writes and the round shape
+    /// it reads off <c>RoundSubPhase</c> — so a tag assembled from stamps has to be kept in step with whatever
+    /// the projection grows next. Even the engine version cannot close it: a dirty tree stamps the same
+    /// <c>&lt;commit&gt;-dirty</c> whatever is edited in it, which is the state this app is developed in.
+    /// </summary>
+    [Fact]
+    public async Task The_tag_is_the_hash_of_the_catalogue_that_was_served()
+    {
+        var table = await Seated();
+
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token);
+
+        answer.Status.ShouldBe(200);
+        Tag(answer).ShouldBe($"\"{Convert.ToHexStringLower(SHA256.HashData(answer.Body))}\"");
+    }
+
     /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>
     private TableApi Api((TableApi Api, TableSession Session, HumanSeat Person, string Token) table, RuleSet rules) =>
         new(
             table.Session,
             table.Session.Queries,
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), rules));
+            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), rules),
+            _host.Services.GetRequiredService<MatchTraceRecorder>());
 
     private static string Tag(StudioResponse response) =>
         response.Headers.ShouldNotBeNull().Single(header => header.Key == "ETag").Value;
@@ -228,6 +344,60 @@ public sealed class TableApiTests : IDisposable
     }
 
     /// <summary>
+    /// Where to resume is the host's to say, and it is the end of what the host looked at rather than the end
+    /// of what this seat was shown. A seat's own decisions are filtered out of the other seat's feed, so a run
+    /// of them reaches nobody — and a page taking its cursor from the highest entry it was shown would sit
+    /// before such a run and ask for it again on every poll, for as long as the other player took to decide.
+    /// </summary>
+    [Fact]
+    public async Task The_cursor_the_host_hands_back_counts_what_it_looked_at_not_what_it_showed()
+    {
+        var table = await Seated();
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+        await AnswerEach(table, PlayerOptionsKind.Speed, creature => $$"""{"kind":"Speed","creature":{{creature}},"speed":"Quick"}""", until: PlayerOptionsKind.Intent);
+
+        var trace = _host!.Services.GetRequiredService<MatchTraceRecorder>().EntriesOf(table.Session.MatchId);
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player2", string.Empty, "token-of-player-2"));
+
+        // Player 1's speed choices are in the trace and player 2 may see none of them, so the two counts differ
+        // — which is the whole reason the cursor cannot be read off the feed.
+        var shown = Sequences(body);
+        trace.ShouldContain(entry => !SeatVisibility.CanSee(entry.Event, PlayerSlot.Player2));
+        shown.Count.ShouldBeLessThan(trace.Count);
+        int.Parse(NextCursor(body), CultureInfo.InvariantCulture).ShouldBe(trace.Count);
+
+        // And asking again from it is answered with nothing rather than with the entries it could not show.
+        var again = Text(await table.Api.HandleAsync("GET", "/api/seat/player2", string.Empty, "token-of-player-2", query: $"?since={trace.Count}"));
+        Sequences(again).ShouldBeEmpty();
+        NextCursor(again).ShouldBe(trace.Count.ToString(CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// The count of the other side's backs against the cards already turned over. A round keeps every intent
+    /// it was given and tracks the reveal separately, so from the first reveal onwards the two differ — and
+    /// with the reveal strip on the same screen, a count that did not subtract would be reading "one face
+    /// down" beside a card that is plainly face up. Both seats go Standard here so the faster enemy reveals
+    /// first, which is the only ordering that puts an opponent's card face up while this seat is still being
+    /// asked.
+    /// </summary>
+    [Fact]
+    public async Task The_other_side_backs_are_counted_without_the_cards_already_turned_over()
+    {
+        var table = await Seated();
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+        await AnswerEach(table, PlayerOptionsKind.Speed, creature => $$"""{"kind":"Speed","creature":{{creature}},"speed":"Standard"}""", until: PlayerOptionsKind.Intent);
+        await AnswerEach(table, PlayerOptionsKind.Intent, creature => $$"""{"kind":"Intent","creature":{{creature}},"spell":"spell:strike:v1"}""", until: PlayerOptionsKind.Target);
+
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+
+        body.ShouldContain("\"subPhase\":\"RevealAndTarget\"");
+        // Enemy 3 is the first slot, so its card is face up; the other seat has two creatures, so one back
+        // is left. Before the count subtracted the reveal this line read two.
+        body.ShouldContain("\"revealedActions\":[{\"actor\":3,");
+        body.ShouldContain("\"opponentIntents\":1");
+    }
+
+    /// <summary>
     /// Plays this seat through a whole round of decisions, each one answered with what the options offer, until
     /// the match asks it to bind targets. Everything the other seat does in between is the bot's own doing.
     /// </summary>
@@ -290,7 +460,8 @@ public sealed class TableApiTests : IDisposable
             session,
             session.Queries,
             [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), Rules));
+            CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), Rules),
+            _host.Services.GetRequiredService<MatchTraceRecorder>());
 
         await Waiting(person, "Evolution");
         return (api, session, person, token);

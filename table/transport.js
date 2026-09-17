@@ -21,11 +21,20 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   }
 
   return {
-    seat: () => send('GET', `/api/seat/${seat}`),
+    // `since` is the first feed entry this page has not seen. It is the seat route's one query parameter and
+    // it only trims the feed: the board and the options come whole on every poll, because they are a snapshot
+    // and not a log.
+    seat: (since = 0) => send('GET', `/api/seat/${seat}${query(since)}`),
     session: () => send('GET', '/api/session'),
     catalogue: () => send('GET', '/api/catalogue'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
   };
+}
+
+// The one query the seat route takes, or nothing. Zero and a first poll are the same request: the feed from
+// the start, which is what `since` already means on the host.
+function query(since) {
+  return Number.isInteger(since) && since > 0 ? `?since=${since}` : '';
 }
 
 // A host answers a refusal as JSON when it has a code to give and as a line of text when it does not; the page

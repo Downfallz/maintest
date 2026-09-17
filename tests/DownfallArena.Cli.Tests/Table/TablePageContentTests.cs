@@ -36,9 +36,25 @@ public sealed partial class TablePageContentTests
 
         foreach (var word in Content())
         {
-            text.ShouldNotContain(word, Case.Sensitive, $"{file} names {word}, so changing the content would need a change to the page");
+            // As a word, not as a substring: `maxHealth` is a stat a board reads off its snapshot and `Heal`
+            // is an effect the page may not name, and a sweep that could not tell them apart would be one
+            // nobody could keep.
+            Whole(word).IsMatch(text)
+                .ShouldBeFalse($"{file} names {word}, so changing the content would need a change to the page");
         }
     }
+
+    [Fact]
+    public void The_sweep_reads_a_word_and_not_a_fragment_of_one()
+    {
+        Whole("Heal").IsMatch("Heal 4").ShouldBeTrue();
+        Whole("Heal").IsMatch("creature.maxHealth").ShouldBeFalse();
+        Whole("Stun").IsMatch("Stun, 1 round").ShouldBeTrue();
+        Whole("Stun").IsMatch("creature.isStunned").ShouldBeFalse();
+    }
+
+    private static Regex Whole(string word) =>
+        new($@"\b{Regex.Escape(word)}\b", RegexOptions.None, TimeSpan.FromSeconds(5));
 
     /// <summary>
     /// An id, matched by its shape rather than by its prefix: <c>creature:</c> is also how a decision names the

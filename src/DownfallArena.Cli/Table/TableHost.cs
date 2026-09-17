@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
@@ -42,7 +43,7 @@ internal static class TableHost
         // Built once, from the resources this match is playing: a card the page prints is the card the engine
         // resolves, and a tuning pass is a rebuild and a restart rather than a change to the page (ADR 0054).
         var catalogue = CatalogueProjection.Build(services.GetRequiredService<IGameResources>(), rules);
-        var api = new TableApi(session, session.Queries, seats, catalogue);
+        var api = new TableApi(session, session.Queries, seats, catalogue, services.GetRequiredService<MatchTraceRecorder>());
         var codes = new JoinCodes(seats);
         using var server = new TableServer(options.Bind, options.Port, api, new TableFiles(TableDirectory), codes);
 

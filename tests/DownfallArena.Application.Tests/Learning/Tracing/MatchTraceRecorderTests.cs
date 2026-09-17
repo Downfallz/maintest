@@ -66,6 +66,61 @@ public sealed class MatchTraceRecorderTests
         tracer.Complete(matchId, Stamp, null).Outcome.ShouldBeNull();
     }
 
+    /// <summary>
+    /// The table polls the trace of a match that is still playing (ADR 0054), so a reader and the driver are
+    /// on the list at the same time. Handing out the list itself makes every poll a race the reader loses with
+    /// an <see cref="InvalidOperationException" />; what it gets has to be a list that has stopped changing.
+    /// </summary>
+    [Fact]
+    public async Task What_a_reader_walks_does_not_change_while_the_match_plays_on()
+    {
+        var store = new MatchStore();
+        var tracer = new MatchTraceRecorder(store.Repository);
+        var workflow = store.WorkflowWith(tracer);
+        var factory = new TestRandomFactory();
+        var matchId = (await new CreateMatchHandler(workflow, TestContent.Resources, factory).HandleAsync(new CreateMatch(Rules, 1), TestContext.Current.CancellationToken)).Value;
+        var join = new JoinMatchHandler(workflow);
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Alice, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+
+        var walking = tracer.EntriesOf(matchId);
+        var counted = walking.Count;
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Bob, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+
+        walking.Count.ShouldBe(counted);
+        tracer.EntriesOf(matchId).Count.ShouldBeGreaterThan(counted);
+    }
+
+    /// <summary>
+    /// A caller polling a live match wants the entries it has not seen. Copying the whole history to hand back
+    /// its tail would grow with the match and hold the lock for the length of it, so the copy starts where the
+    /// caller starts — and because a sequence number is the position an entry was appended at, that is a slice
+    /// and not a search.
+    /// </summary>
+    [Fact]
+    public async Task The_copy_a_caller_gets_starts_at_the_sequence_it_asked_for()
+    {
+        var store = new MatchStore();
+        var tracer = new MatchTraceRecorder(store.Repository);
+        var workflow = store.WorkflowWith(tracer);
+        var factory = new TestRandomFactory();
+        var matchId = (await new CreateMatchHandler(workflow, TestContent.Resources, factory).HandleAsync(new CreateMatch(Rules, 1), TestContext.Current.CancellationToken)).Value;
+        var join = new JoinMatchHandler(workflow);
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Alice, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Bob, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+
+        var all = tracer.EntriesOf(matchId);
+
+        all.Count.ShouldBeGreaterThan(2);
+        tracer.EntriesOf(matchId, 0).Count.ShouldBe(all.Count);
+        tracer.EntriesOf(matchId, 2).Select(entry => entry.Sequence).ShouldBe(all.Skip(2).Select(entry => entry.Sequence));
+        tracer.EntriesOf(matchId, all.Count).ShouldBeEmpty();
+
+        // A cursor past the end is what a caller holds for one poll after the last event of a match, and a
+        // negative one is a client that sent nonsense; neither is worth an exception.
+        tracer.EntriesOf(matchId, all.Count + 50).ShouldBeEmpty();
+        tracer.EntriesOf(matchId, -4).Count.ShouldBe(all.Count);
+    }
+
     [Fact]
     public async Task Events_that_are_not_match_events_are_ignored()
     {
