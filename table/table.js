@@ -590,7 +590,8 @@ function targetButtons(state, current) {
   // already on it are (playtest-app.md §3.2). The sheet holds `done` and the count it is enabled at.
   const asking = document.createElement('p');
   asking.className = 'muted';
-  asking.textContent = `Tap ${legal.minTargets === legal.maxTargets ? legal.maxTargets : `${legal.minTargets} to ${legal.maxTargets}`} on the board.`;
+  const howMany = legal.minTargets === legal.maxTargets ? `${legal.maxTargets}` : `${legal.minTargets} to ${legal.maxTargets}`;
+  asking.textContent = `Tap ${howMany} on the board.`;
 
   const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => {
     confirm.disabled = true;
