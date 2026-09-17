@@ -207,9 +207,16 @@ on `exploit`: three entries of one agent, and five of it. On the 200 benchmark s
 and 34 a candidate when they went one at a time). The sweep is up to two candidates per playable
 knob — on the nine-spell core content that is 29 knobs and 41 legal single steps. The paired moves below add
 up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139 candidates. The workflow
-then climbs 24 rounds of 6, which is 284 candidates and about **142 minutes**, where the same budget took 67
-before the panel; its timeout is the six hours GitHub gives a job, which is headroom rather than an estimate,
-because a runner's speed is not a promise and a pass killed by the clock loses everything. `--no-pairs` and
+then climbs 12 rounds of 6, which this model puts at 211 candidates.
+
+**On a GitHub runner the model is optimistic twice over, and the first pass under the panel died of it.** Tune
+10 ran 24 rounds and played **349 candidates in 5h59m** — 61.7 seconds each, not 30, and more candidates than
+the count above predicts, because a deepened pair is a candidate the arithmetic does not see. It was killed at
+the six-hour ceiling with nothing to show, since the proposal is only written when the search finishes. So 3.8
+seconds is what an evaluation costs *here*, on four cores, and the runner is the machine a workflow has to fit:
+twelve rounds is about 260 candidates and four and a half hours there, which is why that is now the default.
+`--no-pairs` and `--pair-depth 1` are the switches if a run gets tight, and raising the budget is worth doing
+only against a measured pace rather than against this paragraph's. `--no-pairs` and
 `--pair-depth 1` are the switches if a run gets tight. Raise the budget rather than the step size: a wider
 step reaches further and reads worse in the diff.
 
