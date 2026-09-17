@@ -61,6 +61,6 @@ internal sealed class TableServer : IDisposable
         var method = request.HttpMethod;
         return HttpHost.CrossSite(request.Headers["Sec-Fetch-Site"], method, request.ContentType, "table") is { } refusal
             ? refusal
-            : await _api.HandleAsync(method, path, body, request.Headers[TableApi.TokenHeader]);
+            : await _api.HandleAsync(method, path, body, request.Headers[TableApi.TokenHeader], request.Headers["If-None-Match"]);
     }
 }

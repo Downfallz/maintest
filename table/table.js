@@ -1,6 +1,7 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
+import { cardCost, cardHead, cardLines, cardTitle, loadCards } from './card.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -35,7 +36,9 @@ function tidy() {
 function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
-  const state = { seats, holder: null, shown: null, sending: false, picked: [] };
+  // `cards` is the catalogue, fetched once: it cannot change while a host runs.
+  const state = { seats, holder: null, shown: null, sending: false, picked: [], cards: new Map() };
+  load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
     refresh(state);
@@ -43,6 +46,12 @@ function start(seats) {
 
   refresh(state);
   setInterval(() => refresh(state), 700);
+}
+
+// The catalogue the match is playing, through any seat this page holds: it is the same for both, and it is
+// what every card on this screen is drawn from. A page that does not get it prints spell ids and still plays.
+async function load(state) {
+  state.cards = await loadCards(state.seats);
 }
 
 async function refresh(state) {
@@ -76,6 +85,12 @@ async function refresh(state) {
   for (const seat of refused) {
     forget(storage, seat);
     state.seats = state.seats.filter(held => held.seat !== seat);
+  }
+
+  // The catalogue may have been asked for through a seat this table has just refused. Now that only accepted
+  // seats are left, it is worth asking again -- once, and only while there is nothing to draw cards from.
+  if (refused.length > 0 && state.cards.size === 0 && state.seats.length > 0) {
+    await load(state);
   }
 
   if (views.length === 0) {
@@ -179,7 +194,7 @@ function buttonsFor(state, current) {
     case 'Evolution': {
       const unlocks = (view.options.evolution?.creatures ?? []).flatMap(creature =>
         creature.unlockableSpells.map(spell =>
-          button(`Creature ${creature.creature}: ${spell}`, send({ kind: 'Evolution', creature: creature.creature, spell }))));
+          card(state, spell, `Creature ${creature.creature}`, send({ kind: 'Evolution', creature: creature.creature, spell }))));
       return [...unlocks, button('Pass', send({ kind: 'Evolution', pass: true }))];
     }
     case 'Speed':
@@ -188,7 +203,7 @@ function buttonsFor(state, current) {
     case 'Intent': {
       const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
       return (option?.castableSpells ?? []).map(spell =>
-        button(spell, send({ kind: 'Intent', creature: view.waitingCreature, spell })));
+        card(state, spell, '', send({ kind: 'Intent', creature: view.waitingCreature, spell })));
     }
     case 'Target':
       return targetButtons(state, current);
@@ -220,6 +235,40 @@ function targetButtons(state, current) {
   const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => submit(state, current, { kind: 'Target', targets: picked }));
   confirm.disabled = picked.length < legal.minTargets;
   return [...buttons, confirm];
+}
+
+// A spell as the card the host serves, and as the id it was offered by when the catalogue has no card for it.
+// Nothing here knows what any of these words mean: they arrive rendered (card.js).
+function card(state, spell, prefix, onClick) {
+  const face = state.cards.get(spell);
+  if (!face) {
+    return button([prefix, spell].filter(Boolean).join(' · '), onClick);
+  }
+
+  const choice = document.createElement('button');
+  choice.type = 'button';
+  choice.className = 'card';
+  choice.addEventListener('click', onClick);
+
+  const head = document.createElement('div');
+  head.className = 'card-head';
+  head.textContent = [prefix, cardTitle(face), cardHead(face)].filter(Boolean).join(' · ');
+
+  const cost = document.createElement('span');
+  cost.className = 'card-cost';
+  cost.textContent = cardCost(face);
+  head.append(cost);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  for (const line of cardLines(face)) {
+    const row = document.createElement('div');
+    row.textContent = line;
+    body.append(row);
+  }
+
+  choice.append(head, body);
+  return choice;
 }
 
 function button(label, onClick) {

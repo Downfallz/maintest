@@ -92,3 +92,40 @@ button.chosen { border-width: 2px; }
 .pass-line { color: var(--muted); margin: 0; }
 .pass-seat { font-size: 1.6rem; margin: 0 0 16px; }
 #pass button { width: auto; min-width: 200px; text-align: center; }
+
+/* A card is a button: the whole face is the tap target, because a thumb on a phone is not a pointer.
+   Its words are the host's -- the page only lays them out (card.js). */
+.card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.7rem;
+  margin: 0 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.card-cost {
+  flex: none;
+  min-width: 1.6rem;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.card-body {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
