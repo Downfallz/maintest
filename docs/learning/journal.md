@@ -4,6 +4,71 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-17. The strongest policy this repository has trained takes every match from Greedy and from the champion, and the turn kept nothing, because the bar asks a clone to beat the agent it copies
+
+- **`ci-138` is the turn `ci-131` died in the middle of.** Same experiment: `stun-first` records the dataset
+  and is the baseline, where `search-4` was in `ci-126`; seeds 1, 5001 and 10001 at 5000 matches, lambda 0.9,
+  the ADR 0048 baseline, explore 0.2, alpha 10, min samples 10, share action, baseline alpha 10000, and the
+  clone-blind control. 94 minutes. `ci-131` fitted every model and then died writing `Infinity` into a policy
+  file, which is fixed and has its own entry in this PR's history rather than a number here.
+
+  | on the benchmark seeds, 3 dataset seeds | min | median | max | width |
+  | --- | --- | --- | --- | --- |
+  | **clone against Greedy** | **1.0000** | 1.0000 | 1.0000 | **0.0000** |
+  | clone-blind against Greedy | 0.0050 | 0.2938 | 0.9650 | 0.9600 |
+  | clone against Random | 0.9975 | 1.0000 | 1.0000 | 0.0025 |
+  | clone-blind against Random | 0.8650 | 0.9625 | 0.9750 | 0.1100 |
+  | **clone against `stun-first`**, its teacher | **0.4875** | 0.4900 | 0.4925 | 0.0050 |
+  | clone-blind against `stun-first` | 0.5025 | 0.5188 | 0.5300 | 0.0275 |
+  | value against Greedy | 0.0537 | 0.1913 | 0.7550 | 0.7013 |
+  | value against `stun-first` | 0.0000 | 0.0000 | 0.0550 | 0.0550 |
+
+- **The clone beats the committed champion in every match on every seed.** Against `models/clone/ci-69`:
+  1.0 from a low of 1.0 on seed 1, on seed 5001 and on seed 10001. Nothing trained here has cleared that bar
+  so plainly, and the turn kept it anyway: `clone` is refused because the baseline bar asks for 0.5 against
+  `stun-first` and it reads 0.4875.
+
+- **That bar cannot be cleared by cloning, and `ci-126` is why.** A clone lands on its teacher exactly and
+  tightly — 0.4950 to 0.5000 there, 0.4875 to 0.4925 here — because landing on its teacher is what copying
+  *is*. When the experiment names one agent as both teacher and baseline, the bar reads "beat the agent you
+  are imitating", which imitation cannot do by construction. The gate is not wrong to exist and the policy is
+  not weak; the two were pointed at each other. What to do about it is a decision: give the clone arm a
+  baseline bar at parity rather than above it, name a baseline that is not the teacher, or accept that no
+  clone is ever committed. It wants an ADR, not a sentence here.
+
+- **The expectation written before the run is refuted, and the refutation on record held instead.**
+  `next.json` said the copy accuracy should hold at or above the 99.3 % of `ci-126`, since `stun-first` plays
+  a narrower repertoire. It fell: 0.9852, 0.9855, 0.9846 against `ci-126`'s 0.9928, 0.9933, 0.9943. `ci-116`
+  had already found that a stronger teacher copies *worse*, and it happened again. What the entry did not
+  expect is that the worse copy plays far better: every match from Greedy where `ci-126` read 0.72 to 0.87.
+  A worse copy of a better teacher beats a better copy of a worse one, which is the clone arm's whole ceiling
+  restated — the lever is the teacher.
+
+- **The control earns its keep by inverting.** Read only the baseline row and the terms look harmful: blind
+  takes 0.5025 to 0.5300 from `stun-first` where the clone takes 0.4875 to 0.4925. Read the rest and it is
+  the opposite: against Greedy the clone is at 1.0000 on every seed with a width of **zero**, and the blind
+  control ranges from 0.0050 to 0.9650, a width of 0.96 on the same three datasets and the same learner.
+  The terms buy stability, not only the 1.2 points of copy accuracy they add (0.985 against 0.973). A
+  control that only ever agreed would not have been worth its runner minutes; this one says the treatment
+  and the control differ in *variance* and not only in mean.
+
+- **The value arm fits the same and plays anywhere.** r-squared 0.2852, 0.2917, 0.2984 and termsR2 0.02696,
+  0.02753, 0.02565, all within a whisker of `ci-126`'s 0.2852 and 0.02696: the fit did not move. The play
+  did, and not in a direction that means anything — 0.0537 to 0.7550 against Greedy across three seeds of one
+  configuration. The mean of the three fits, played as one policy, reads 0.2825 (0.2481 to 0.3169), and its
+  jackknife reads **0.2913 plus or minus 0.3454**, an interval from 0.0000 to 0.9820. That is ADR 0049 in its
+  starkest form yet: one seed of this arm is not a sample of anything, and the three-seed mean is barely
+  one either.
+
+- **The loss is a number again.** 0.2381, 0.2405 and 0.2457 for the clones, 0.3656, 0.3469 and 0.3955 for the
+  controls, where `ci-131` reported `inf` on eleven epochs of twenty. The best epoch lands at 7, 12 and 11
+  rather than always at the last one, so the tie-break between epochs of equal accuracy is doing its job
+  again.
+
+- **Nothing was committed**, and for once the `commit` flag is not the reason: the run defaults to false, but
+  the bar refused the clone anyway, so a dispatch with `commit=true` would keep nothing either. The policies
+  are in the run artifact.
+
 ## 2026-09-17. The objective goes from 172.421 to 12.874 without a knob moving, because the term that was 94 % of it stopped being scored
 
 - **[ADR 0053](../adr/0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md), from the entry
