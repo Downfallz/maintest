@@ -545,7 +545,8 @@ class EngineContentEvaluator:
         return max(played, key=lambda outcome: outcome.agent_a.win_rate.mean)
 
     def _play_one(self, name: str, p1: str, p2: str, schema: Path, index: int) -> Evaluation:
-        output = self._workdir / f"evaluation-{name}{f'-{index}' if index else ''}.json"
+        suffix = f"-{index}" if index else ""
+        output = self._workdir / f"evaluation-{name}{suffix}.json"
         self._run(
             [
                 *self._engine.command,
