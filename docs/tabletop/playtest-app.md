@@ -443,7 +443,7 @@ person tests the app itself between playtests.
 
 ## The ADR this becomes
 
-The text below is the decision record. It takes whatever number is free when it lands (0050 is the highest taken as this is written, so 0051) and moves to
+The text below is the decision record. It takes whatever number is free when it lands (0051 is the highest taken as this is written, so 0052) and moves to
 `docs/adr/`, unchanged apart from its number, its date and its links.
 
 ---

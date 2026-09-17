@@ -394,7 +394,7 @@ you do not.
 | **Fast-forward at start-up** | `SeatAgent` delegates; its delegate is a bot until round N. | Shipped in **stage 1** |
 | **Hot-swap a seat mid-match** | Swap the delegate. Mechanically free. What it costs is the truth of the record — see below. | **This stage** |
 | **Fast-forward at will** | The same swap, at a round boundary, from the pilot page. **Refused mid-Round**: the driver asks one seat for several decisions inside one sub-phase (`MatchDriver.cs:65-68,76-85`), and a seat that changes hands between two Creatures of the same team makes that Round unreadable. | **This stage** |
-| **What would the bot do** | `GreedyAgent` is stateless and takes no random source (`src/DownfallArena.Application/Agents/GreedyAgent.cs:13-15`). The pilot calls the matching `Decide*` with the board and options the seat already holds, and shows the answer without submitting it. No mutation, no draw from the Match's source, no step recorded. | **This stage**, cheap, and a reading no cardboard session can produce |
+| **What would the bot do** | `GreedyAgent` is stateless and takes no random source (`src/DownfallArena.Application/Agents/GreedyAgent.cs:13-15`). The pilot calls the matching `Decide*` with the board and options the seat already holds, and shows the answer without submitting it. No mutation, no draw from the Match's source, no step recorded. Since ADR 0051 a recorded step also carries the scorer's terms of **every** candidate (`StepRecord.CandidateTerms`), so the pilot can show *why* the bot prefers its choice, per term, rather than only what it would pick — the same numbers a policy now learns from. | **This stage**, cheap, and a reading no cardboard session can produce |
 | **The decision log** | The session already writes it (stage 5). The pilot reads it back. | **This stage**, free |
 | **Simulation from here** | There is **no way to clone a `Match`**: `InMemoryMatchRepository` holds the aggregate itself (`src/DownfallArena.Infrastructure/Matches/InMemoryMatchRepository.cs:13,17-25`) and the aggregate has no copy. A rollout is therefore a **replay** — a fresh Match on the same seed and content, the session's recorded decisions submitted in order, then bots play on. That is a real piece of work. | **After the first session** |
 | **Replay and branch** | The same replay, stopped one decision early and given a different one. | **After the first session** |
@@ -419,7 +419,8 @@ format change:
   swapped seat stamps the composite — `greedy>human@r10` — so `compare-stamps` sees the agents axis differ
   (`RunStamp.cs:64`) and nobody folds the session into a training set by name.
 - **A `Seat` note per swap**, in `notes.jsonl`, with the round and the direction.
-- **`StepRecord` gains `decidedBy`.** It has no such field today (`docs/learning/artifacts.md:56-68`), so a
+- **`StepRecord` gains `decidedBy`.** It has no such field today (`docs/learning/artifacts.md:56-68`), though
+  ADR 0051 added `CandidateTerms` to the same record, so growing it is a move the dataset has just made. A
   fast-forwarded session's `steps.jsonl` cannot be separated into bot and human decisions — and a cloning run
   would learn the bot's opening as human play. Adding it is backward compatible on both readers: the viewer
   classifies a step by `'observation' in first` (`viewer/index.html:58-64`), and the Python `Step.from_json`
