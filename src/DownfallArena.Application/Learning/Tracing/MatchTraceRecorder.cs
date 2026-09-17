@@ -63,8 +63,28 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
         ArgumentNullException.ThrowIfNull(stamp);
 
         _entries.TryRemove(matchId, out var recorded);
-        var entries = recorded?.Snapshot(0) ?? [];
-        return new MatchTrace
+        return Trace(matchId, stamp, seed, recorded?.Snapshot(0) ?? []);
+    }
+
+    /// <summary>
+    /// The trace of a match as it stands, without forgetting it. What a session checkpointed mid-match writes,
+    /// so a table abandoned at Round 9 leaves a readable partial trace rather than nothing
+    /// (<c>docs/tabletop/app-roadmap.md</c>, stage 5). A bot batch never needed this because a bot batch is
+    /// never interrupted by dinner.
+    /// </summary>
+    public MatchTrace Snapshot(MatchId matchId, RunStamp stamp, int? seed)
+    {
+        ArgumentNullException.ThrowIfNull(stamp);
+
+        return Trace(matchId, stamp, seed, EntriesOf(matchId));
+    }
+
+    /// <summary>
+    /// One definition of what a trace is, so a checkpoint and a finished match cannot disagree about it. The
+    /// outcome is the last entry's, which is null until the match has one.
+    /// </summary>
+    private static MatchTrace Trace(MatchId matchId, RunStamp stamp, int? seed, IReadOnlyList<TraceEntry> entries) =>
+        new()
         {
             MatchId = matchId,
             Seed = seed,
@@ -72,7 +92,6 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
             Entries = entries,
             Outcome = entries.Count == 0 ? null : entries[^1].Player1.Outcome,
         };
-    }
 
     /// <summary>One match's entries, and the lock that lets them be read while they are still being written.</summary>
     private sealed class Recorded

@@ -453,7 +453,7 @@ public sealed partial class TableApiTests : IDisposable
 
         var person = new HumanSeat(_stopping.Token);
         var bot = new GreedyAgent(_host.Services.GetRequiredService<IGameResources>(), Rules);
-        var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(person), new SeatAgent(bot), _stopping.Token);
+        var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(person), new SeatAgent(bot), cancellationToken: _stopping.Token);
 
         const string token = "token-of-player-1";
         var api = new TableApi(

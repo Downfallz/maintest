@@ -1,7 +1,9 @@
 using System.Text.Json;
+using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Events;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Infrastructure.Learning;
@@ -35,6 +37,27 @@ public sealed class ArtifactJsonTests
         var json = JsonSerializer.Serialize(value, ArtifactJson.LineOptions);
 
         json.ShouldBe("""{"spell":"spell:strike:v1","creature":3,"match":"00000000-0000-0000-0000-00000000abcd","player":"00000000-0000-0000-0000-000000000001","round":2,"health":7,"energy":1,"crit":0.25,"slot":"Player2","winner":null}""");
+    }
+
+    /// <summary>
+    /// A playtest note is a line of the same dialect as every other artifact: the fields its kind does not use
+    /// are written as null rather than left out, exactly as a step's round and sub-phase are.
+    /// </summary>
+    [Fact]
+    public void A_playtest_note_is_a_line_of_the_same_dialect()
+    {
+        var note = PlaytestNote.Decision(
+            "2026-09-17T203000Z-ab12",
+            Match,
+            PlayerSlot.Player2,
+            3,
+            RoundSubPhase.IntentSelection,
+            new DateTimeOffset(2026, 9, 17, 20, 29, 58, TimeSpan.Zero),
+            new FixedClock(new DateTimeOffset(2026, 9, 17, 20, 30, 0, TimeSpan.Zero)));
+
+        var json = JsonSerializer.Serialize(note, ArtifactJson.LineOptions);
+
+        json.ShouldBe("""{"sessionId":"2026-09-17T203000Z-ab12","matchId":"00000000-0000-0000-0000-00000000abcd","slot":"Player2","round":3,"subPhase":"IntentSelection","at":"2026-09-17T20:30:00+00:00","kind":"Decision","elapsedMs":2000,"code":null,"message":null,"text":null}""");
     }
 
     [Fact]
@@ -92,4 +115,9 @@ public sealed class ArtifactJsonTests
         Should.Throw<NotSupportedException>(() => JsonSerializer.Deserialize<SpellId>("\"spell:strike:v1\"", ArtifactJson.LineOptions));
         Should.Throw<NotSupportedException>(() => JsonSerializer.Deserialize<Effect>("{}", ArtifactJson.LineOptions));
     }
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
 }
