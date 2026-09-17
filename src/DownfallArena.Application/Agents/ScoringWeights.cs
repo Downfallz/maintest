@@ -67,6 +67,11 @@ public sealed record ScoringWeights(
         ("pressure", Pressure),
     ];
 
+    /// <summary>The score of an action from its terms: every term at its weight (ADR 0051). The one way a score is summed.</summary>
+    public double Apply(ScoreTerms terms) =>
+        (Damage * terms.Damage) + (Kill * terms.Kill) + (Heal * terms.Heal) + (Stun * terms.Stun) + (Bleed * terms.Bleed)
+        + (Defense * terms.Defense) + (Energy * terms.Energy) + (Initiative * terms.Initiative) + (Pressure * terms.Pressure);
+
     /// <summary>Eight hex digits that change with any weight, the version a heuristic agent's spec carries.</summary>
     public string Fingerprint
     {

@@ -7,10 +7,10 @@ namespace DownfallArena.Application.Learning.Recording;
 
 /// <summary>
 /// Wraps a player agent and records every decision it makes as a <see cref="StepRecord"/>: the observation of
-/// the board, the candidate actions the options offered, and the one the agent chose. A choice the options do
-/// not offer is a bug in the agent and is reported as such.
+/// the board, the candidate actions the options offered with the scorer's terms of each (ADR 0051), and the one
+/// the agent chose. A choice the options do not offer is a bug in the agent and is reported as such.
 /// </summary>
-public sealed class RecordingAgent(IPlayerAgent inner, ObservationBuilder observations, ActionEncoder actions, ICollection<StepRecord> steps) : IPlayerAgent
+public sealed class RecordingAgent(IPlayerAgent inner, ObservationBuilder observations, ActionEncoder actions, CandidateTerms terms, ICollection<StepRecord> steps) : IPlayerAgent
 {
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
@@ -20,7 +20,7 @@ public sealed class RecordingAgent(IPlayerAgent inner, ObservationBuilder observ
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Evolution, SubPhase = board.SubPhase, Evolution = options });
         var decision = inner.DecideEvolution(board, options);
-        Record(board, candidates, decision.Choice is { } choice ? actions.Evolve(slots, choice) : ActionEncoder.Pass());
+        Record(board, candidates, terms.Evolution(board, options), decision.Choice is { } choice ? actions.Evolve(slots, choice) : ActionEncoder.Pass());
         return decision;
     }
 
@@ -31,7 +31,7 @@ public sealed class RecordingAgent(IPlayerAgent inner, ObservationBuilder observ
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Speed, SubPhase = board.SubPhase, Speed = new SpeedOptions([creature]) });
         var speed = inner.DecideSpeed(board, creature);
-        Record(board, candidates, ActionEncoder.Speed(slots, new SpeedChoice(creature, speed)));
+        Record(board, candidates, CandidateTerms.Speed(), ActionEncoder.Speed(slots, new SpeedChoice(creature, speed)));
         return speed;
     }
 
@@ -43,7 +43,7 @@ public sealed class RecordingAgent(IPlayerAgent inner, ObservationBuilder observ
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Intent, SubPhase = board.SubPhase, Intent = new IntentOptions([intentOption]) });
         var spell = inner.DecideIntent(board, intentOption);
-        Record(board, candidates, actions.Intent(slots, new CombatIntent(intentOption.Creature, spell)));
+        Record(board, candidates, terms.Intent(board, intentOption), actions.Intent(slots, new CombatIntent(intentOption.Creature, spell)));
         return spell;
     }
 
@@ -55,17 +55,22 @@ public sealed class RecordingAgent(IPlayerAgent inner, ObservationBuilder observ
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Target, SubPhase = board.SubPhase, Target = options });
         var targets = inner.DecideTargets(board, options);
-        Record(board, candidates, actions.Targets(slots, options.Actor, options.Spell, targets));
+        Record(board, candidates, terms.Targets(board, options), actions.Targets(slots, options.Actor, options.Spell, targets));
         return targets;
     }
 
     private BoardSlots Slots(PlayerBoardState board) => BoardSlots.Of(board, observations.Schema.TeamSize);
 
-    private void Record(PlayerBoardState board, IReadOnlyList<EncodedAction> candidates, EncodedAction chosen)
+    private void Record(PlayerBoardState board, IReadOnlyList<EncodedAction> candidates, IReadOnlyList<IReadOnlyList<float>> candidateTerms, EncodedAction chosen)
     {
         if (!candidates.Contains(chosen))
         {
             throw new InvalidOperationException($"The agent chose '{chosen.Key}', which the options do not offer.");
+        }
+
+        if (candidateTerms.Count != candidates.Count)
+        {
+            throw new InvalidOperationException($"{candidates.Count} candidates and {candidateTerms.Count} term vectors: the two readings of the options disagree.");
         }
 
         steps.Add(new StepRecord
@@ -77,6 +82,7 @@ public sealed class RecordingAgent(IPlayerAgent inner, ObservationBuilder observ
             Kind = chosen.Code.Kind,
             Observation = observations.Build(board),
             Candidates = [.. candidates.Select(candidate => candidate.Key)],
+            CandidateTerms = candidateTerms,
             Action = chosen.Key,
             Code = chosen.Code,
         });

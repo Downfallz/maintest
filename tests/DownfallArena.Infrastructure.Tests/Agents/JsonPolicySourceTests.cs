@@ -1,3 +1,4 @@
+using DownfallArena.Application.Agents;
 using DownfallArena.Infrastructure.Agents;
 using DownfallArena.Infrastructure.Tests.Resources;
 
@@ -20,6 +21,29 @@ public sealed class JsonPolicySourceTests
           "metrics": { "accuracy": 0.9 }
         }
         """;
+
+    /// <summary>ADR 0051: a policy may weigh the candidate terms, named in the engine's order; a file without them reads as before.</summary>
+    [Fact]
+    public void A_policy_may_carry_candidate_weights_and_scores_a_candidates_terms_with_them()
+    {
+        var names = string.Join(", ", ScoreTerms.Names.Select(name => $"\"{name}\""));
+        var fallback = "\"fallback\": -1000000000.0,";
+        var weighted = Policy.Replace(fallback, fallback + $" \"candidateTermNames\": [{names}], \"candidateWeights\": [1.0, 5.0, 0, 0, 0, 0, 0, 0, 0],", StringComparison.Ordinal);
+        var reordered = Policy.Replace(fallback, fallback + $" \"candidateTermNames\": [\"kill\", \"damage\"], \"candidateWeights\": [5.0, 1.0],", StringComparison.Ordinal);
+        using var directory = new ContentDirectory().WithFile("weighted.json", weighted).WithFile("reordered.json", reordered).WithFile("plain.json", Policy);
+        var source = new JsonPolicySource();
+
+        var policy = source.Load(Path.Combine(directory.Path, "weighted.json"));
+        var terms = new float[ScoreTerms.Count];
+        terms[0] = 3f;
+        terms[1] = 1f;
+
+        policy.ReadsCandidateTerms.ShouldBeTrue();
+        policy.CandidateWeights.ShouldBe([1.0, 5.0, 0, 0, 0, 0, 0, 0, 0]);
+        policy.Score("intent:0:spell:a:v1", [0.5f, 1f], terms).ShouldBe(1.8 + 3 + 5, 1e-9);
+        source.Load(Path.Combine(directory.Path, "plain.json")).ReadsCandidateTerms.ShouldBeFalse();
+        Should.Throw<InvalidDataException>(() => source.Load(Path.Combine(directory.Path, "reordered.json"))).Message.ShouldContain("this engine reads");
+    }
 
     [Fact]
     public void A_policy_written_by_the_python_side_loads_with_its_fingerprint()

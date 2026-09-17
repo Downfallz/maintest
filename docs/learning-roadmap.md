@@ -194,8 +194,10 @@ The terms below are the authoritative entries of the "Learning" section of
   1. **Weight search** for `HeuristicAgent` (`search-weights`): cross-entropy method over the eight weights,
      each candidate evaluated by the engine's `evaluate` as `heuristic:<file>` against an opponent on the
      benchmark seeds, the mean score as fitness. No dataset needed.
-  2. **Behaviour cloning** (`train-clone`): a linear classifier from observation to action key on a
-     recorded run, one epoch per iteration, the best epoch kept by its accuracy on held-out matches.
+  2. **Behaviour cloning** (`train-clone`): a linear scorer of the candidates of each step, trained to pick
+     the action taken (a conditional logit since ADR 0051, with one weight per candidate term; a classifier
+     from observation to action key before it), one epoch per iteration, the best epoch kept by its accuracy
+     on held-out matches.
   3. **Value regression** (`train-value`): one ridge regression per action key from observation to the
      episode return; the agent takes the option with the highest predicted return. This is the legacy
      `RewardTrainer` idea on real features.

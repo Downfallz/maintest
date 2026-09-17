@@ -43,6 +43,8 @@ class Manifest:
     steps: int
     episodes: int
     traces: bool
+    # The name of each entry of a candidate's terms (ADR 0051); empty on a run recorded before them.
+    candidate_term_names: tuple[str, ...] = ()
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> Manifest:
@@ -53,6 +55,7 @@ class Manifest:
                 schema_id=str(data["schemaId"]),
                 schema_version=str(data["schemaVersion"]),
                 feature_names=tuple(str(name) for name in data["featureNames"]),
+                candidate_term_names=tuple(str(name) for name in data.get("candidateTermNames", ())),
                 matches=int(data["matches"]),
                 steps=int(data["steps"]),
                 episodes=int(data["episodes"]),
@@ -75,9 +78,12 @@ class Step:
     action: str
     # The kind of an action code is its name, the rest are numbers (docs/learning/artifacts.md).
     code: Mapping[str, Any]
+    # One row per candidate, in candidate order: the scorer's terms of that action (ADR 0051), or None on
+    # a step recorded before the engine wrote them.
+    candidate_terms: np.ndarray | None = None
 
     @classmethod
-    def from_json(cls, data: Mapping[str, Any], features: np.ndarray) -> Step:
+    def from_json(cls, data: Mapping[str, Any], features: np.ndarray, term_count: int = 0) -> Step:
         """Fills ``features`` in place and keeps it as the step's own view on the run's array.
 
         The observation is never held as Python floats: at the width of a published schema, a tuple of
@@ -102,12 +108,42 @@ class Step:
                 candidates=tuple(sys.intern(str(key)) for key in data["candidates"]),
                 action=sys.intern(str(data["action"])),
                 code={sys.intern(str(name)): value for name, value in data["code"].items()},
+                candidate_terms=_candidate_terms(
+                    data.get("candidateTerms"), len(data["candidates"]), term_count
+                ),
             )
         except KeyError as error:
             raise ArtifactError(f"A step needs the field {error}.") from None
         if step.action not in step.candidates:
             raise ArtifactError(f"Step action '{step.action}' is not among its candidates.")
         return step
+
+    @property
+    def chosen_terms(self) -> np.ndarray | None:
+        """The terms of the action that was taken, or None when the step carries no terms."""
+        if self.candidate_terms is None:
+            return None
+        return self.candidate_terms[self.candidates.index(self.action)]
+
+
+def _candidate_terms(values: Any, candidates: int, term_count: int) -> np.ndarray | None:
+    """The candidate terms of a step as one array, checked against the manifest's names and the candidates."""
+    if values is None:
+        if term_count:
+            raise ArtifactError("The run names candidate terms and this step carries none.")
+        return None
+    try:
+        terms = np.asarray(values, dtype=float)
+    except (TypeError, ValueError):
+        raise ArtifactError("A step's candidate terms are not a rectangle of numbers.") from None
+    if not np.all(np.isfinite(terms)):
+        raise ArtifactError("A step's candidate terms hold a value that is not finite.")
+    if terms.ndim != 2 or terms.shape != (candidates, term_count):
+        raise ArtifactError(
+            f"A step's candidate terms are {terms.shape}, not ({candidates}, {term_count}): one row per "
+            "candidate, one column per term the manifest names."
+        )
+    return terms
 
 
 @dataclass(frozen=True)
@@ -282,7 +318,7 @@ def load_run(directory: Path) -> Run:
     steps: list[Step] = []
     for index, line in enumerate(read_json_lines(steps_path)):
         try:
-            step = Step.from_json(line, observations[index])
+            step = Step.from_json(line, observations[index], len(manifest.candidate_term_names))
         except ArtifactError as error:
             raise ArtifactError(f"Step {index + 1} of '{directory}': {error}") from None
         if step.schema_id != manifest.schema_id:
@@ -308,6 +344,8 @@ def load_runs(directories: Iterable[Path], *, allow_mixed: bool = False) -> list
         if run.manifest.schema_id != first.manifest.schema_id:
             schema = run.manifest.schema_id
             raise MixedStampsError(f"'{run.directory}' uses schema '{schema}', not the first run's.")
+        if run.manifest.candidate_term_names != first.manifest.candidate_term_names:
+            raise MixedStampsError(f"'{run.directory}' names other candidate terms than the first run.")
     return runs
 
 
@@ -327,6 +365,10 @@ class Dataset:
     # (match_id, slot) is what names a trajectory -- which is what an advantage has to be computed along.
     slots: tuple[str, ...]
     kinds: tuple[str, ...]
+    # The scorer's terms of every candidate of every step, one (candidates, terms) array per step, and the
+    # name of each term (ADR 0051); empty names and None arrays on a run recorded before them.
+    term_names: tuple[str, ...] = ()
+    candidate_terms: tuple[np.ndarray | None, ...] = ()
 
     def __len__(self) -> int:
         return len(self.actions)
@@ -334,6 +376,27 @@ class Dataset:
     @property
     def action_keys(self) -> tuple[str, ...]:
         return tuple(sorted(set(self.actions)))
+
+    @property
+    def has_terms(self) -> bool:
+        """Whether every step carries its candidates' terms, so a learner can weigh them."""
+        return (
+            bool(self.term_names)
+            and len(self.candidate_terms) == len(self)
+            and all(terms is not None for terms in self.candidate_terms)
+        )
+
+    def terms_of(self, index: int) -> np.ndarray | None:
+        """The candidate terms of one step, or None when it has none."""
+        return self.candidate_terms[index] if index < len(self.candidate_terms) else None
+
+    def chosen_terms(self) -> np.ndarray:
+        """The terms of the action taken at every step, (steps, terms); zeros where a step has none."""
+        chosen = np.zeros((len(self), len(self.term_names)))
+        for index, terms in enumerate(self.candidate_terms):
+            if terms is not None:
+                chosen[index] = terms[self.candidates[index].index(self.actions[index])]
+        return chosen
 
     def subset(self, index: Sequence[int] | np.ndarray) -> Dataset:
         index = np.asarray(index, dtype=int)
@@ -348,6 +411,8 @@ class Dataset:
             match_ids=tuple(self.match_ids[i] for i in index),
             slots=tuple(self.slots[i] for i in index),
             kinds=tuple(self.kinds[i] for i in index),
+            term_names=self.term_names,
+            candidate_terms=tuple(self.terms_of(i) for i in index),
         )
 
 
@@ -362,6 +427,7 @@ class _Selection:
     match_ids: list[str]
     slots: list[str]
     kinds: list[str]
+    candidate_terms: list[np.ndarray | None]
 
 
 def _select(run: Run, wanted: set[str] | None) -> _Selection:
@@ -381,6 +447,7 @@ def _select(run: Run, wanted: set[str] | None) -> _Selection:
         match_ids=[step.match_id for step in steps],
         slots=[step.slot for step in steps],
         kinds=[step.kind for step in steps],
+        candidate_terms=[step.candidate_terms for step in steps],
     )
 
 
@@ -404,4 +471,6 @@ def build_dataset(runs: Sequence[Run], kinds: Iterable[str] | None = None) -> Da
         match_ids=tuple(chain.from_iterable(selection.match_ids for selection in selections)),
         slots=tuple(chain.from_iterable(selection.slots for selection in selections)),
         kinds=tuple(chain.from_iterable(selection.kinds for selection in selections)),
+        term_names=first.manifest.candidate_term_names,
+        candidate_terms=tuple(chain.from_iterable(selection.candidate_terms for selection in selections)),
     )

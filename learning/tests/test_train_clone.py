@@ -61,6 +61,20 @@ def test_cloning_needs_an_epoch_and_a_sane_split(tmp_path: Path, options: CloneO
         train_clone(dataset, options)
 
 
+def test_the_reported_loss_is_the_loss_of_the_weights_the_epoch_kept(tmp_path: Path) -> None:
+    """Not a mean over the mini-batch losses, which is a mean over as many models as there were batches."""
+    dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=12))], ["Intent"])
+
+    policy = train_clone(dataset, CloneOptions(epochs=1, validation_share=0.0, batch_size=8))
+
+    taken = []
+    for index in range(len(dataset)):
+        scores = np.asarray(policy.scores(dataset.observations[index], list(dataset.candidates[index])))
+        chosen = dataset.candidates[index].index(dataset.actions[index])
+        taken.append(scores[chosen] - np.log(np.exp(scores - scores.max()).sum()) - scores.max())
+    assert policy.metrics["loss"] == pytest.approx(-float(np.mean(taken)))
+
+
 def test_without_a_validation_share_the_training_steps_are_scored(tmp_path: Path) -> None:
     dataset = build_dataset([load_run(write_run(tmp_path / "run", matches=10))], ["Intent"])
 
