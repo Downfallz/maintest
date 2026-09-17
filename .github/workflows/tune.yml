@@ -51,10 +51,14 @@ jobs:
   tune:
     name: Search the balance knobs
     runs-on: ubuntu-latest
-    # A candidate costs one content build plus one evaluation per objective entry, and the objective has four
-    # of them since ADR 0029. At about seven seconds an evaluation that is roughly 34 seconds a candidate, so
-    # the default budget of 284 candidates needs about 160 minutes rather than the 95 two evaluations cost.
-    timeout-minutes: 300
+    # A candidate costs one content build plus one evaluation per agent the objective names. That was four
+    # since ADR 0029, one per entry, and it is eight since ADR 0052 seated a panel of five on `exploit`: three
+    # entries of one agent and five of it. At about seven seconds an evaluation that is roughly 62 seconds a
+    # candidate rather than 34, so the default budget of 284 candidates needs about 295 minutes where it used
+    # to need 160, which is why the budget below is the six hours GitHub gives a job rather than the five it
+    # was. A pass that wants more room spends it on fewer candidates, not on a longer job: the ceiling here is
+    # the runner's, not ours. The panel is the knob if that becomes the binding cost (ADR 0052).
+    timeout-minutes: 360
     steps:
       # Unlike the other workflows, this one pushes a branch, so it keeps the credentials the checkout sets up
       # and lets git use them. The alternative is a token inside a remote URL, which puts it in the process
