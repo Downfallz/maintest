@@ -111,7 +111,11 @@ wins, and where winning does not require abandoning the taste.
 
 `exploit` is the only evaluation that names a file. The agent goes stale when the content moves — a tuning
 pass changes what there is to exploit — so it is refreshed from the next `search-weights` run rather than
-kept. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
+kept. It names `pressure-floor.json` since 2026-09-17, and reads 1.000 on `7e199df4`: that agent takes every
+one of the 400 matches from Greedy, on the benchmark seeds and on 200 seeds nothing had played alike. The
+ceiling is not a plateau: one reachable move, Crushing Stomp at the weakest of its own bounds, reads 0.790
+and takes the objective from 172.42 to 64.13. The gradient is steep and it runs through the one spell the
+exploiter leans on, which is the sharpest form of the question ADR 0044 holds open. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
 because otherwise the engine fails one candidate at a time, once a search has already started.
 
 Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
