@@ -88,6 +88,7 @@ scripts/iterate.sh --against <previous-run-id>                       # one full 
 scripts/iterate.sh --seeds "1 5001 10001"                            # the default at 5000 matches: three dataset seeds spaced by the match count, because closer seeds record the same matches shifted, and the turn reports the spread, because one seed is a sample (ADR 0049)
 scripts/iterate.sh --explore 0.2                                     # plus an exploring dataset for the value policy (ADR 0014)
 scripts/iterate.sh --teacher heuristic:learning/weights/search-4.json # record a stronger player than greedy; a clone is capped by what it imitates (journal, 2026-09-15)
+scripts/iterate.sh --clone-control                                   # plus a clone blind to the candidate terms, played as `clone-blind`: what the terms bought, on one dataset and one learner (ADR 0051)
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its

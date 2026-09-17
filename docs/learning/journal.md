@@ -4,6 +4,161 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-17. The candidate terms take the clone from copying 96 % of its teacher to copying 99 %, and a better copy plays its teacher to a dead heat: imitation has no ceiling left to lift
+
+- **`ci-126` is `ci-106`'s three seeds with the terms in the data, and with the control that makes them
+  readable.** Seeds 1, 5001 and 10001 at 5000 matches, teacher and baseline `search-4`, lambda 0.9, the ADR
+  0048 baseline, explore 0.2, every knob as this morning's turn ran it. Each seed trains two clones on the
+  same dataset with the same learner: `clone`, which reads the nine terms of every candidate (ADR 0051), and
+  `clone-blind`, which is handed the same rows with the terms dropped. Without that control the turn would
+  be unreadable, since ADR 0051 replaced the multinomial classifier with a conditional logit at the same time
+  as it added the terms (Codex's review of the experiment). 55 minutes on the runner for the three seeds.
+
+  | one dataset, one learner | seed 1 | seed 5001 | seed 10001 | min |
+  | --- | --- | --- | --- | --- |
+  | **copy accuracy**, held out, with terms | 0.9928 | 0.9933 | 0.9943 | 0.9928 |
+  | copy accuracy, blind | 0.9864 | 0.9870 | 0.9871 | 0.9864 |
+  | **against Greedy**, with terms | 0.8700 | 0.7188 | 0.7738 | 0.7188 |
+  | against Greedy, blind | 0.4387 | 0.4875 | 0.7075 | 0.4387 |
+  | **against `search-4`**, with terms | 0.5000 | 0.4950 | 0.4975 | 0.4950 |
+  | against `search-4`, blind | 0.4925 | 0.4850 | 0.4775 | 0.4775 |
+  | **against Random**, with terms | 0.9975 | 0.9900 | 0.9925 | 0.9900 |
+  | against Random, blind | 0.8612 | 0.9825 | 0.7825 | 0.7825 |
+
+- **The terms are worth a great deal, and the measurement is clean.** Same data, same optimizer, same
+  epochs, same split: the terms add six to seven tenths of a point of copy accuracy and 43, 23 and 7 points
+  of win rate against Greedy, on every seed, plus 14, 1 and 21 against Random. Nothing else differs, so
+  nothing else can be credited. What no linear row over the board could express, nine numbers per candidate
+  do: a policy that reads what an action would do plays a different game from one that reads only where the
+  pieces are.
+
+- **And against the teacher it buys nothing, because there is nothing left to buy.** `clone` scores 0.4950
+  to 0.5000 against `search-4`, a spread of five thousandths across three seeds: a dead heat, which is what a
+  copy is worth against the thing it copies. The blind clone sits a point and a half lower, inside the noise
+  of 400 matches. Three journal entries have called the clone "capped at parity with its teacher" and read
+  the cap as a failure to copy the last few decisions; this turn copies 99.3 % of them and lands on exactly
+  parity, tighter than any clone before it. The cap was never the copying. **A perfect clone of `search-4`
+  is `search-4`**, and the arithmetic of the bar does the rest.
+
+- **The cross-comparison with this morning's rows, kept for what it is worth.** `ci-118`'s multinomial clone
+  copied at 0.9611 to 0.9642 and scored 0.5513 to 0.6175 against `search-4` — above its teacher, where this
+  turn's far better copy is level with it. Those are different learners, which is the confound this turn's
+  control exists to avoid, so it is an observation and not a result. As an observation it is the same lesson
+  from the other side: the old clone's four decisions in a hundred that missed were, on that bar, worth five
+  to twelve points, and copying them correctly gave those points back.
+
+- **The value side is untouched by the terms.** `termsR2` reads 0.0157, 0.0142 and 0.0147: the terms of the
+  action taken explain a percent and a half of the advantages before any row is fitted. The fits scored
+  0.2550, 0.0387 and 0.0275 against Greedy and 0.1237, 0.0000 and 0.0000 against `search-4`; their mean
+  scores 0.1200 against Greedy with a jackknife interval of 0.000 to 0.2629, and 0.0200 against `search-4`
+  with an interval of 0.000 to 0.7691. Nothing cleared a bar, the clone is not measurably above the champion
+  `ci-69` on any seed (0.5175, 0.4938, 0.4950), and nothing is committed.
+
+- **What this licenses.** ADR 0051 named a follow-up for the case where the clone copies better and plays no
+  better: read the terms under the teacher's own weights rather than the built-in ones. That follow-up is
+  answered rather than pending. It would tighten the copy, and a tighter copy converges on 0.5 against the
+  teacher, which is where this one already is. The clone arm is doing everything cloning can do, and what it
+  can do is reach its teacher. Two levers are left, and neither is imitation: raise the teacher, now that a
+  clone can copy 99 % of one (`pressure-floor` beats Greedy in every match and `search-4` 0.95, and the
+  entry below reads its mirror as degenerate, so what a clone of it is worth is a measurement and not a
+  guess); or make the value arm work, which the terms did not help and which a jackknife interval three
+  quarters of the scale wide says is still not measuring anything.
+## 2026-09-17. The ladder has another rung: a set that prices a stun above a kill beats the one that beat everything, and its mirror is a first-mover's game
+
+- **The search the entry below asked for**, and it asked for exactly this shape: from `pressure-floor`, with
+  `pressure-floor` itself in the panel, so a candidate has to beat the thing it starts from rather than
+  inherit its wins. `search-weights --initial pressure-floor.json --opponent greedy,search-4,pressure-floor,random`
+  under the floor, 10 rounds of 16, search seed 0, content `7e199df4`, the benchmark seeds, 1 h 03 for 161
+  evaluations of four. The start scores 0.8669 on that panel — it draws with itself by construction — and
+  the winner 0.9366, clearing every floor: 1.0 against Greedy, 0.95 against `search-4`, **0.7963 against
+  `pressure-floor`**, 1.0 against Random. It arrived in the first round and nine more rounds passed nothing,
+  the same shape the two searches before it had.
+
+- **On 200 seeds nothing in this project has ever played** (8880001 onward, mirrored; a window kept clear of
+  every earlier acceptance, so it selected nothing):
+
+  | `stun-first.json`, agent A | score | interval |
+  | --- | --- | --- |
+  | against Greedy | **1.0000** | every match |
+  | against `pressure-floor` | **0.8037** | 0.762 to 0.846 |
+  | against `search-4` | **0.9700** | 0.954 to 0.986 |
+  | against `mixture-mean` | **0.9325** | 0.909 to 0.956 |
+  | against Random | **1.0000** | every match |
+
+  The rung below it, measured the same way this morning, beat `search-4` 0.96 and `mixture-mean` 0.93 and
+  took every match from Greedy and Random. This one does all of that and takes four matches in five from it.
+
+- **What it prices.** `stun` 6.07 to **10.21** and `kill` 6.34 to **9.64**: the first set in this project
+  where a stun is worth more than a kill, and both are worth twenty times a point of damage (`damage` 0.35 to
+  0.45). `pressure` comes back down, 0.93 to 0.58, which is the term that bought the rung below and is worth
+  less once the play is control rather than damage. `energy` rises again, 0.53 to 0.77: the waiting is the
+  plan. Against Greedy it casts `wait` 2500 times and Crushing Stomp 1689, behind Guard 1200 and Full Plate
+  800 — the same line as the rung below, played harder.
+
+- **And the mirror is worse than the one that worried the entry below.** `pressure-floor` against itself ran
+  15.1 rounds with the first mover taking 0.685. This set against itself: 10.6 rounds, 1.5 % at the round
+  cap, no draws, and **the first mover takes 0.925**. Two stun locks facing each other is a game decided by
+  the coin, and the harder the lock the more decided it is. The ladder's top two rungs are agents to play,
+  not baselines to balance against, and that is now a trend rather than an observation: each rung prices
+  control higher and leaves less of the match to the second player.
+
+- **What this licenses.** The set is committed as `learning/weights/stun-first.json`, to be played and
+  compared. `greedy.json` is untouched and the digest is unmoved. Three things follow. The ladder still
+  climbs, so the next search starts here with this in the panel, and the entry above says the clone can now
+  copy 99 % of a teacher, which makes "what is a clone of the strongest agent worth" a measurement rather
+  than a guess. The tuner's exploit evaluation was refreshed to `pressure-floor` an hour before this search
+  ended (the entry below), so it landed one rung behind this set and reads a catalogue that loses every
+  match to the weaker of the two. And the mirror's slide is the thing to watch: if every rung of this ladder is a first-mover's
+  game, then what the search is finding is not strength but a way to spend the first move, and the panel of
+  opponents cannot see the difference.
+## 2026-09-17. The tuner's exploiter is refreshed to `pressure-floor`, and the term it feeds reads its ceiling: the catalogue loses every match to a searched set
+
+- **What moved.** `data/balance/knobs.json` seats `pressure-floor.json` as agent A of the `exploit`
+  evaluation, where it seated `search-4.json`. That is the refresh the file has asked for in its own words
+  since the term existed: an agent searched against a catalogue that no longer exists understates the gap,
+  so it comes from the newest search run rather than being kept. `pressure-floor` is that run (the entry
+  below), and it was searched against this very content, `7e199df4`.
+
+- **What it reads, on the content as it stands, nothing else changed.** `score-content` plays the four
+  evaluations of the objective with no search, twice over: on the benchmark seeds the objective names, and
+  on 200 seeds nothing in this project had ever played (7770001 onward), which the exploiter was not
+  searched on either.
+
+  | exploit agent | benchmark seeds | untouched seeds | objective, benchmark | objective, untouched |
+  | --- | --- | --- | --- | --- |
+  | `search-4` (was) | 0.9275 | 0.9225 | 124.43 | 133.78 |
+  | **`pressure-floor` (is)** | **1.0000** | **1.0000** | **172.42** | **184.78** |
+
+  One thousand six hundred matches against Greedy across the two windows and the two agents, and the new one
+  does not lose or draw a single one of its eight hundred. The other three evaluations read identically
+  either side of the change, as they must: no agent of theirs moved.
+
+- **The ceiling is not a plateau, and I had to be told to check.** The first draft of this entry said the
+  term was now a flag rather than a gradient, on the grounds that every reachable catalogue would read 1.000.
+  That was asserted, not measured (Codex's review). Measured: move one spell to the weakest of its own bounds
+  and score again.
+
+  | catalogue, benchmark seeds | `exploit` | objective | `exploit` penalty | the rest |
+  | --- | --- | --- | --- | --- |
+  | `7e199df4` as it stands | 1.000 | 172.42 | 162.00 | 10.42 |
+  | Crushing Stomp at its weakest bounds | **0.790** | **64.13** | 46.08 | 18.05 |
+
+  Cost 4 to 5, damage 7 to 4, two rounds of stun to one, critical chance 0.75 to 0.40, every step inside the
+  bounds `knobs.json` already allows. The term moves 21 points of win rate and the objective 108, of which
+  116 is bought here and about 8 is paid on the variety targets. So the gradient is steep, it exists at the
+  ceiling, and it runs through one card: the spell `pressure-floor` casts 1696 times against Greedy in the
+  entry below, where Greedy casts Throwing Star.
+
+- **What this licenses, and what it does not.** No tuning pass is run here and no knob is touched, and that
+  restraint matters more after the measurement than before it. A pass run against this objective now has a
+  116-point reason to gut Crushing Stomp, a spell whose own entry keeps "damage and stun together" and "the
+  most expensive cast in the catalogue" as the things that make it itself. Whether that is the content being
+  unhealthy or the agent having a favourite is precisely what ADR 0044 holds open, and the honest reading of
+  this entry is that refreshing the agent sharpened the question rather than answering it. The two seed
+  windows do rule out one answer: the ceiling is not the agent remembering seeds it was searched on. The
+  entry of this morning, written below, named `search-3` as the agent the objective played; it read a stale
+  `docs/learning/agents.md`, the file named `search-4`, and both are corrected here.
+
 ## 2026-09-17. With the ninth weight free, the search under the floor finds a set that beats every agent on the board on unseen seeds, and it plays a stun lock the catalogue allows
 
 - **The search ADR 0050 asked for.** `search-weights` from `mixture-mean` with `pressure` set to 1.0, nine
@@ -58,11 +213,11 @@ first.
   compared, and it is two things at once. For the ladder it is the top rung, and the next search starts
   from it with it in the panel: a set that beats every agent on the board is beaten next by the one searched
   against it, or it is not, and only that search says which. For the content it is the exploit reading the
-  tuner has been missing: `search-3` is what the balance objective's `exploit` evaluation plays (ADR 0021,
-  `docs/learning/agents.md`), and an agent that reads 0.745 there while this one wins every match against
-  Greedy understates the gap by the whole of it. A Crushing Stomp that stuns for two rounds at 75 % critical
-  is what the tuner should see; refreshing the exploit set to this one is a content decision and is not
-  taken here. For the loop it changes nothing yet: a clone is capped by what it can see (ADR 0051), and a
+  tuner has been missing: `search-4` is what the balance objective's `exploit` evaluation plays (ADR 0021,
+  `data/balance/knobs.json`; this sentence first named `search-3`, from a stale `docs/learning/agents.md`),
+  and an agent that reads 0.9275 there while this one wins every match against Greedy understates the gap by
+  what is left of it. A Crushing Stomp that stuns for two rounds at 75 % critical is what the tuner should
+  see; refreshing the exploit set to this one is a content decision, taken in the entry above. For the loop it changes nothing yet: a clone is capped by what it can see (ADR 0051), and a
   teacher whose edge is in waiting for a four-cost stun is a harder one to copy from the board than
   `mixture-mean` was.
 

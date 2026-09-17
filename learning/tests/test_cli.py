@@ -25,6 +25,24 @@ def test_train_clone_writes_a_policy_and_its_training_log(
     assert "Policy (clone, 2 actions)" in capsys.readouterr().out
 
 
+def test_train_clone_can_be_told_to_ignore_the_candidate_terms(tmp_path: Path) -> None:
+    """The control of ADR 0051: the same data and the same learner, with the terms dropped."""
+    run = write_run(tmp_path / "run", matches=20, with_terms=True)
+
+    def train(output: str, *extra: str) -> int:
+        model = str(tmp_path / output)
+        return cli.main(["train-clone", str(run), "-o", model, "--epochs", "2", "--kinds", "Intent", *extra])
+
+    assert train("blind", "--ignore-terms") == 0
+    assert train("seeing") == 0
+
+    blind = Policy.load(tmp_path / "blind" / "policy.json")
+    seeing = Policy.load(tmp_path / "seeing" / "policy.json")
+    assert blind.candidate_weights is None
+    assert blind.candidate_names == ()
+    assert seeing.candidate_weights is not None
+
+
 def test_train_value_writes_a_policy(tmp_path: Path) -> None:
     run = write_run(tmp_path / "run", matches=20)
 
