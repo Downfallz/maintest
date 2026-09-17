@@ -4,7 +4,7 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-17. The strongest policy this repository has trained takes every match from Greedy and from the champion, and the turn kept nothing, because the bar asks a clone to beat the agent it copies
+## 2026-09-17. The strongest policy this repository has trained takes every match from Greedy and from the champion, and the turn kept nothing: the better a clone copies, the closer to one half it lands against its teacher, and the bar sits on that half
 
 - **`ci-138` is the turn `ci-131` died in the middle of.** Same experiment: `stun-first` records the dataset
   and is the baseline, where `search-4` was in `ci-126`; seeds 1, 5001 and 10001 at 5000 matches, lambda 0.9,
@@ -28,13 +28,28 @@ first.
   so plainly, and the turn kept it anyway: `clone` is refused because the baseline bar asks for 0.5 against
   `stun-first` and it reads 0.4875.
 
-- **That bar cannot be cleared by cloning, and `ci-126` is why.** A clone lands on its teacher exactly and
-  tightly — 0.4950 to 0.5000 there, 0.4875 to 0.4925 here — because landing on its teacher is what copying
-  *is*. When the experiment names one agent as both teacher and baseline, the bar reads "beat the agent you
-  are imitating", which imitation cannot do by construction. The gate is not wrong to exist and the policy is
-  not weak; the two were pointed at each other. What to do about it is a decision: give the clone arm a
-  baseline bar at parity rather than above it, name a baseline that is not the teacher, or accept that no
-  clone is ever committed. It wants an ADR, not a sentence here.
+- **The bar is parity, not victory — and a better copy lands closer to it, from below.** The gate reads
+  `>= 0.5`, so an exact half clears; the clone missed by 0.0125, five matches in four hundred. What the three
+  turns together show is why that is not bad luck:
+
+  | clone against its own teacher | copy accuracy | score |
+  | --- | --- | --- |
+  | `ci-118`, teacher `search-4`, multinomial | 0.9600 to 0.9647 | 0.5513 to 0.6175 |
+  | `ci-126`, teacher `search-4`, terms | 0.9928 to 0.9943 | 0.4950 to 0.5000 |
+  | `ci-138`, teacher `stun-first`, terms | 0.9846 to 0.9855 | 0.4875 to 0.4925 |
+
+  The worst copy beat its teacher most. As the copy tightens, the match becomes a mirror, a mirror is one
+  half by the symmetry of the seeds, and the copy approaches that half **from below** because a copy is never
+  quite the thing it copies. So this bar was comfortably cleared when the clone arm was weak and is a
+  systematic near-miss now that it is strong: on that one row, the gate reads the improvement it exists to
+  measure as a regression. It is not unclearable — `ci-118` cleared it and the blind control clears it here
+  at 0.5025 — but it is decided at the margin by how *well* the arm works, which is not what a bar is for.
+
+- **The champion row says the opposite, and it is the row that moved.** Against `ci-69` the same three turns
+  read 0.4838 to 0.5513 (`ci-118`) and then 1.0 from a low of 1.0 on every seed here. The two gates disagree
+  about the same policy, and the one that refused it is the one that gets tighter as the arm improves. What
+  to do about that is a decision — a parity bar that is not the teacher, a baseline named apart from the
+  teacher, or leaving it and committing no clone — and it wants an ADR, not a sentence here.
 
 - **The expectation written before the run is refuted, and the refutation on record held instead.**
   `next.json` said the copy accuracy should hold at or above the 99.3 % of `ci-126`, since `stun-first` plays
