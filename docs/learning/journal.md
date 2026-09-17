@@ -4,7 +4,7 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-17. A clone of searched play beats the clone it was searched over on all three seeds and loses to Greedy on two of them: at 99.16 % copy it lands 22 to 41 points below its own teacher, so imitation carries the moves and not the search
+## 2026-09-17. A clone of searched play beats the clone it was searched over on all three seeds and loses to Greedy on two of them: at 99.2 % copy on every seed it lands 22 to 41 points below its own teacher, so imitation carries the moves and not the search
 
 - **`ci-149` is the first turn whose teacher the loop made itself.** ADR 0055 let a searching agent be built
   on a policy, so this turn records `lookahead:policy:models/clone/ci-69/policy.json` — the committed clone
@@ -42,30 +42,45 @@ first.
 
 - **The clone did not land on its teacher, and that is the finding.** Every turn before this one ended with
   the clone on top of what it copied: `ci-126` at 0.4950 to 0.5000 against `search-4`, `ci-138` at 0.4875 to
-  0.4925 against `stun-first`. Here the copy is just as tight — 0.9916 on seeds 5001 and 10001 (seed 1's
-  figure is outside the log this entry could read) — and the play is not. The teacher,
-  `lookahead:policy:ci-69`, scores **0.8350** against Greedy on these seeds, both sides, 400 matches
-  (0.7969 to 0.8731, measured before the turn was written). Its clone scores 0.4275 to 0.6150 against the
-  same opponent. That is 22 to 41 points below what it copied, at 99 % agreement on the recorded steps.
+  0.4925 against `stun-first`. Here the copy is just as tight — **0.9919, 0.9916, 0.9916**, a width of
+  0.0003 — and the play is not. The teacher, `lookahead:policy:ci-69`, scores **0.8350** against Greedy on
+  these seeds, both sides, 400 matches (0.7969 to 0.8731, measured before the turn was written). Its clone
+  scores 0.4275 to 0.6150 against the same opponent. That is 22 to 41 points below what it copied, at 99 %
+  agreement on the recorded steps.
 
   The cross-check that makes the comparison legitimate: this turn's own `baseline-vs-greedy` row reads
   0.7250 for `ci-69`, to four decimals what the same matchup read locally on a different engine build, so
   the 0.8350 measured beside it in that session stands on the same footing.
 
+  **The copy quality does not explain the spread either.** Accuracy is flat across the three seeds at a
+  width of 0.0003 while the Greedy row swings 0.1875, and the seed that copies *best* (seed 1 at 0.9919) is
+  the outlier that plays best (0.6150). Three ten-thousandths of agreement do not buy nineteen points of win
+  rate; whatever separates seed 1 is not how well it copied.
+
   **Imitation transfers a one-step policy; it does not transfer a search.** The moves are copied faithfully
   and the reason for them is not, and the positions where playing the round out mattered are exactly the ones
-  a one-step reader cannot reconstruct. On the teacher's own self-play distribution that costs 0.84 % of
-  decisions; against an opponent that takes the game somewhere else, it costs the match. ADR 0055 named a
-  ceiling — that search is judged by `ActionScorer`'s weights and so cannot exceed them — and this is a
-  different and nearer one: the clone cannot reach the searched teacher at all.
+  a one-step reader cannot reconstruct. ADR 0055 named a ceiling — that search is judged by `ActionScorer`'s
+  weights and so cannot exceed them — and this is a different and nearer one: the clone cannot reach the
+  searched teacher at all.
 
-- **The style crossed over even though the strength did not.** The clone plays its matches against `ci-69` in
-  5.2 to 5.3 rounds with **no match at the round cap** and 1.2 to 3.8 % draws, where `ci-69` against Greedy
-  runs 11.5 rounds with 20.0 % capped and 3.0 % draws. It inherited the searched teacher's decisiveness,
-  which is what closes the game against `ci-69`'s slow one and what Greedy punishes. Its repertoire is also
-  narrower: entropy 2.51 against `ci-69` and 2.76 against Greedy, where `ci-69` reads 3.10. Non-transitivity
-  in its sharpest form to date, and `models/README.md` already warned that one number can call the same agent
-  a champion or a failure depending which opponent it names.
+- **The tempo crossed over even though the strength did not, and against the same opponent.** All three
+  agents played Greedy, so the rows compare directly:
+
+  | against Greedy, 400 matches | score | rounds | at the cap | entropy A |
+  | --- | --- | --- | --- | --- |
+  | `ci-69`, the inner policy | 0.7250 | 11.5 | 20.0 % | 3.10 |
+  | `lookahead:policy:ci-69`, its teacher | 0.8350 | 7.61 | 4.5 % | — |
+  | clone, seed 1 | 0.6150 | 6.4 | 0.0 % | 2.53 |
+  | clone, seed 5001 | 0.4325 | 7.0 | 0.5 % | 2.76 |
+  | clone, seed 10001 | 0.4275 | 6.8 | 0.0 % | 2.77 |
+
+  The clone closes against Greedy in 6.4 to 7.0 rounds where the policy it was searched over takes 11.5, and
+  its teacher takes 7.61: **the tempo landed on the teacher's and the win rate did not.** Its repertoire also
+  narrowed, entropy 2.53 to 2.77 against `ci-69`'s 3.10. What the turn does not show is any reason to call
+  the tempo itself the weakness — the teacher is just as fast and beats Greedy — so the speed is evidence
+  that something of the teacher transferred, not an explanation of what did not. Non-transitivity in its
+  sharpest form to date, and `models/README.md` already warned that one number can call the same agent a
+  champion or a failure depending which opponent it names.
 
 - **The expectation written before the run is half right, and the hypothesis on record is refuted.**
   `next.json` predicted the clone would land near its teacher as every clone does and therefore beat `ci-69`
