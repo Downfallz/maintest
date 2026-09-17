@@ -195,7 +195,12 @@ agent searched against a catalogue that no longer exists understates the gap rat
 Refresh it from the newest search rather than keeping the old file. `mixture-mean.json` and `mixture-worst.json`
 are the first sets searched against three opponents at once (`greedy`, `search-4` and `random`; journal,
 2026-09-16), and either beats `search-4` head to head on seeds the search never saw while beating Greedy and
-Random. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+Random. `pressure-floor.json` is the first set searched with the ninth weight free, from `mixture-mean`
+against four opponents under the floor (journal, 2026-09-17): on 200 seeds nothing had played it beats Greedy
+and Random in every match, `search-4` 0.96 and `mixture-mean` 0.93, by banking energy for Crushing Stomp's
+two-round stun;
+its mirror runs twice as long as Greedy's and the first mover wins two thirds of it, so it is a rung of the
+ladder and a reading for the tuner, not a baseline. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
