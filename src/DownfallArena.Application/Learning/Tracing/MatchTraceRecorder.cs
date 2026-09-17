@@ -17,9 +17,10 @@ namespace DownfallArena.Application.Learning.Tracing;
 public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventListener
 {
     // Concurrent on the outside, because a batch plays its matches at the same time (ADR 0030) and this
-    // listens to every one of them. Each match's own list keeps a single writer -- a match plays its rounds
-    // in order -- so only the map itself needs protecting.
-    private readonly ConcurrentDictionary<MatchId, List<TraceEntry>> _entries = new();
+    // listens to every one of them; and guarded on the inside, because a match being played is also a match
+    // being read. A match has one writer -- it plays its rounds in order -- but the table polls the trace of
+    // a match still running (ADR 0054), and enumerating a List<T> another thread is appending to throws.
+    private readonly ConcurrentDictionary<MatchId, Recorded> _entries = new();
 
     public Type EventType => typeof(IMatchEvent);
 
@@ -35,30 +36,25 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
         var match = await matches.FindAsync(matchEvent.MatchId, cancellationToken)
             ?? throw new InvalidOperationException($"Match {matchEvent.MatchId} raised an event but is not stored.");
 
-        var entries = _entries.GetOrAdd(match.Id, _ => []);
-
-        var player1 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
-        entries.Add(new TraceEntry
-        {
-            Sequence = entries.Count,
-            Round = player1.RoundNumber,
-            SubPhase = player1.SubPhase,
-            Event = matchEvent,
-            Player1 = player1,
-            Player2 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player2),
-        });
+        _entries.GetOrAdd(match.Id, _ => new Recorded()).Add(
+            matchEvent,
+            PlayerBoardStateProjection.Build(match, PlayerSlot.Player1),
+            PlayerBoardStateProjection.Build(match, PlayerSlot.Player2));
     }
 
-    /// <summary>The entries recorded so far for a match; empty when none was.</summary>
-    public IReadOnlyList<TraceEntry> EntriesOf(MatchId matchId) => _entries.GetValueOrDefault(matchId) ?? [];
+    /// <summary>
+    /// The entries recorded so far for a match, as a copy; empty when none was. A copy because the match may
+    /// still be playing while this is read, and what a caller walks has to be a list that stops changing.
+    /// </summary>
+    public IReadOnlyList<TraceEntry> EntriesOf(MatchId matchId) => _entries.GetValueOrDefault(matchId)?.Snapshot() ?? [];
 
     /// <summary>The trace of a match, which the recorder then forgets.</summary>
     public MatchTrace Complete(MatchId matchId, RunStamp stamp, int? seed)
     {
         ArgumentNullException.ThrowIfNull(stamp);
 
-        _entries.TryRemove(matchId, out var entries);
-        entries ??= [];
+        _entries.TryRemove(matchId, out var recorded);
+        var entries = recorded?.Snapshot() ?? [];
         return new MatchTrace
         {
             MatchId = matchId,
@@ -67,5 +63,37 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
             Entries = entries,
             Outcome = entries.Count == 0 ? null : entries[^1].Player1.Outcome,
         };
+    }
+
+    /// <summary>One match's entries, and the lock that lets them be read while they are still being written.</summary>
+    private sealed class Recorded
+    {
+        private readonly Lock _gate = new();
+        private readonly List<TraceEntry> _entries = [];
+
+        /// <summary>Appends the event with the boards after it, numbered where it landed.</summary>
+        public void Add(IMatchEvent matchEvent, PlayerBoardState player1, PlayerBoardState player2)
+        {
+            lock (_gate)
+            {
+                _entries.Add(new TraceEntry
+                {
+                    Sequence = _entries.Count,
+                    Round = player1.RoundNumber,
+                    SubPhase = player1.SubPhase,
+                    Event = matchEvent,
+                    Player1 = player1,
+                    Player2 = player2,
+                });
+            }
+        }
+
+        public IReadOnlyList<TraceEntry> Snapshot()
+        {
+            lock (_gate)
+            {
+                return [.. _entries];
+            }
+        }
     }
 }

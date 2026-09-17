@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bands, side, withCursor } from './timeline.js';
+import { bands, cursorOf, side, withCursor } from './timeline.js';
 
 const timeline = [
   { owner: 'Player1', creature: 2, speed: 'Quick', initiative: 6 },
@@ -49,4 +49,29 @@ test('a slot is ours or theirs, from the seat reading it', () => {
   assert.equal(side(timeline[0], 'Player1'), 'ally');
   assert.equal(side(timeline[1], 'Player1'), 'enemy');
   assert.equal(side(undefined, 'Player1'), 'enemy');
+});
+
+// The two cursors do not advance together: the resolve cursor stays at zero for the whole of RevealAndTarget
+// while the reveal cursor walks the strip, so reading the wrong one lights the wrong creature for a sub-phase.
+test('the strip points at the slot being revealed while targets are being picked', () => {
+  assert.equal(cursorOf({ subPhase: 'RevealAndTarget', revealCursor: 2, resolveCursor: 0 }), 2);
+});
+
+test('the strip points at the slot being resolved while actions resolve', () => {
+  assert.equal(cursorOf({ subPhase: 'ActionResolution', revealCursor: 4, resolveCursor: 1 }), 1);
+});
+
+// The timeline is built before intents are even declared, so for several sub-phases it exists and the round is
+// on none of its slots. A lit slot there would be pointing at a creature nobody is playing.
+test('the strip points at nothing outside the sub-phases that spend a slot', () => {
+  assert.equal(cursorOf({ subPhase: 'IntentSelection', revealCursor: 0, resolveCursor: 0 }), -1);
+  assert.equal(cursorOf({ subPhase: 'Evolution', revealCursor: 0, resolveCursor: 0 }), -1);
+  assert.equal(cursorOf({ subPhase: 'RevealAndTarget' }), -1);
+  assert.equal(cursorOf(undefined), -1);
+});
+
+test('a strip pointing at nothing lights no slot', () => {
+  const slots = withCursor([{ creature: 1 }, { creature: 2 }], cursorOf({ subPhase: 'Cleanup' }));
+
+  assert.deepEqual(slots.map(slot => slot.isNow), [false, false]);
 });

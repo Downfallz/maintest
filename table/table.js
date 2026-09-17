@@ -2,8 +2,8 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
-import { chipText, conditionDock, healthShare, healthText, statPairs } from './board.js';
-import { bands, side, withCursor } from './timeline.js';
+import { chipText, conditionDock, healthShare, healthText, revealedText, statPairs } from './board.js';
+import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -161,7 +161,7 @@ function render(state, views) {
 // The initiative track: the engine's order, banded by speed, scrolling sideways at 360 px. The strip never
 // sorts -- ties and all, this is the order the round is played in (timeline.js).
 function renderTimeline(board) {
-  const cursor = withCursor(board.timeline, board.resolveCursor);
+  const cursor = withCursor(board.timeline, cursorOf(board));
   const strip = bands(cursor).map(band => {
     const box = document.createElement('div');
     box.className = 'band';
@@ -191,9 +191,26 @@ function renderBoard(state, view) {
   const board = view.board;
   element('board').replaceChildren(
     hand(state, board, view.opponentIntents),
+    revealed(state, board.revealedActions),
     ...(board.allies ?? []).map(creature => line(creature, 'ally')),
     ...(board.enemies ?? []).map(creature => line(creature, 'enemy')),
   );
+}
+
+// The actions that are already face up, in the order they were revealed (board.js). Nothing is drawn while
+// none is, so the board of a planning phase is the board it was.
+function revealed(state, actions) {
+  const box = document.createElement('div');
+  box.className = 'revealed';
+  box.hidden = (actions ?? []).length === 0;
+  for (const action of actions ?? []) {
+    const one = document.createElement('div');
+    one.className = 'revealed-action';
+    one.textContent = revealedText(action, state.cards);
+    box.append(one);
+  }
+
+  return box;
 }
 
 // What is face down. This seat's own backs are its own to read; the other side's is a count and carries no

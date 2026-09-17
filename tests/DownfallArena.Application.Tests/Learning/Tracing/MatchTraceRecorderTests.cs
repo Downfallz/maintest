@@ -66,6 +66,30 @@ public sealed class MatchTraceRecorderTests
         tracer.Complete(matchId, Stamp, null).Outcome.ShouldBeNull();
     }
 
+    /// <summary>
+    /// The table polls the trace of a match that is still playing (ADR 0054), so a reader and the driver are
+    /// on the list at the same time. Handing out the list itself makes every poll a race the reader loses with
+    /// an <see cref="InvalidOperationException" />; what it gets has to be a list that has stopped changing.
+    /// </summary>
+    [Fact]
+    public async Task What_a_reader_walks_does_not_change_while_the_match_plays_on()
+    {
+        var store = new MatchStore();
+        var tracer = new MatchTraceRecorder(store.Repository);
+        var workflow = store.WorkflowWith(tracer);
+        var factory = new TestRandomFactory();
+        var matchId = (await new CreateMatchHandler(workflow, TestContent.Resources, factory).HandleAsync(new CreateMatch(Rules, 1), TestContext.Current.CancellationToken)).Value;
+        var join = new JoinMatchHandler(workflow);
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Alice, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+
+        var walking = tracer.EntriesOf(matchId);
+        var counted = walking.Count;
+        await join.HandleAsync(new JoinMatch(matchId, MatchStore.Bob, MatchStore.Roster(Rules)), TestContext.Current.CancellationToken);
+
+        walking.Count.ShouldBe(counted);
+        tracer.EntriesOf(matchId).Count.ShouldBeGreaterThan(counted);
+    }
+
     [Fact]
     public async Task Events_that_are_not_match_events_are_ignored()
     {

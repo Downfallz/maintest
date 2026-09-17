@@ -31,3 +31,19 @@ export function withCursor(timeline, cursor) {
 export function side(slot, seat) {
   return slot?.owner === seat ? 'ally' : 'enemy';
 }
+
+// Which slot the strip points at, or -1 when it points at none. A round spends two cursors and they do not
+// advance together: the reveal cursor while actions are being bound to their targets, the resolve cursor while
+// they are resolved, and the resolve cursor sits at zero for the whole of RevealAndTarget. Reading it there
+// would keep the first slot lit while three later creatures choose targets, which is the one thing the strip is
+// for. Outside those two sub-phases the round is on no slot at all -- the timeline is built before intents are
+// even declared -- and a lit slot would be pointing at a creature nobody is playing.
+export function cursorOf(board) {
+  if (board?.subPhase === 'RevealAndTarget') return index(board.revealCursor);
+  if (board?.subPhase === 'ActionResolution') return index(board.resolveCursor);
+  return -1;
+}
+
+function index(cursor) {
+  return Number.isInteger(cursor) ? cursor : -1;
+}

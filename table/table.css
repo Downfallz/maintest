@@ -193,6 +193,18 @@ button.chosen { border-width: 2px; }
 
 .backs.enemy { color: var(--muted); }
 
+/* What is already face up this round. It sits above the creatures because it is what the player about to pick
+   targets is reading, and it is the only part of the board that is not a creature. */
+.revealed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--line);
+  font-size: 0.8rem;
+}
+
 /* A creature board: a number and a bar, never a rail of twenty-one cells. */
 .health {
   position: relative;
