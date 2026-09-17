@@ -102,6 +102,11 @@ The value policy (train-value: predicts the return of an action, plays the best 
 The clone policy (train-clone: imitates the recorded bot's choices)
   --clone-epochs <n>     passes over the dataset (default 20); the best pass on held-out matches is kept
   --clone-alpha <x>      the same pull toward zero, for the classifier (default 0.0001)
+  --clone-control        train a second clone on the same dataset with the candidate terms dropped, and play
+                         it against the same opponents under the name `clone-blind` (ADR 0051). The terms
+                         arrived with a new learner, so a clone that reads them cannot be compared with a
+                         turn from before them: this pays one more fit per seed and makes the comparison
+                         one dataset, one learner, terms on and off. Nothing gates on it; it is a control.
 
 Both
   --validation <share>   share of matches held out to check the models (default 0.2)
@@ -129,6 +134,7 @@ value_discount=1.0
 value_baseline_alpha=
 clone_epochs=20
 clone_alpha=0.0001
+clone_control=false
 validation=0.2
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -151,6 +157,7 @@ while [[ $# -gt 0 ]]; do
     --value-discount) value_discount="$2"; shift 2 ;;
     --clone-epochs) clone_epochs="$2"; shift 2 ;;
     --clone-alpha) clone_alpha="$2"; shift 2 ;;
+    --clone-control) clone_control=true; shift ;;
     --validation) validation="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option '$1'." >&2; usage >&2; exit 2 ;;
@@ -331,8 +338,18 @@ for seed in "${seed_list[@]}"; do
   "${learning[@]}" train-value "$value_dataset" -o "$seed_run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation" "${baseline_alpha_arguments[@]}"
   "${learning[@]}" train-clone "$seed_run/dataset" -o "$seed_run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
+  models=(value clone)
+  if [[ "$clone_control" == true ]]; then
+    # The same dataset and the same learner with the terms dropped, so the two clone rows differ by the
+    # terms and nothing else. Without it a turn cannot tell what the terms bought from what the conditional
+    # logit bought, since ADR 0051 brought both at once.
+    step "5b. [seed $seed] Train the control clone, blind to the candidate terms"
+    "${learning[@]}" train-clone "$seed_run/dataset" -o "$seed_run/clone-blind" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation" --ignore-terms
+    models+=(clone-blind)
+  fi
+
   step "6. [seed $seed] Evaluate the policies against the baselines"
-  for model in value clone; do
+  for model in "${models[@]}"; do
     evaluate_policy "$seed_run/$model" greedy "$seed_run/evaluations/$model-vs-greedy.json"
     evaluate_policy "$seed_run/$model" random "$seed_run/evaluations/$model-vs-random.json" --no-log
     if [[ -n "$baseline" ]]; then

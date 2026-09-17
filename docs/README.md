@@ -14,6 +14,13 @@
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Code must use these words. |
 | [domain/game-rules.md](domain/game-rules.md) | The rules of the game as implemented or decided, plus open questions. |
+| [tabletop/plan.md](tabletop/plan.md) | The plan for the board game and the playtest app: what is translated, in which order, and what is still open. |
+| [tabletop/translation.md](tabletop/translation.md) | The audit: what every rule of the engine costs to track by hand, and the verdict on each. |
+| [tabletop/components.md](tabletop/components.md) | What is in the box: the manifest and where each count comes from, the card face, the boards, and the generator's specification. |
+| [tabletop/rulebook.md](tabletop/rulebook.md) | The rules of the physical game, in teaching order, with a worked example per step. |
+| [tabletop/player-aid.md](tabletop/player-aid.md) | One page: the round sequence, the timeline order, condition timing, what a critical multiplies. |
+| [tabletop/d20-criticals.md](tabletop/d20-criticals.md) | Draft: every critical chance is a twentieth, why the offsets are legacy rather than tuning, and where the rule would be enforced. |
+| [tabletop/playtest-app.md](tabletop/playtest-app.md) | The playtest app's specification: what the client may never decide, the hidden-information boundary, and what a session records. |
 | [../studio/README.md](../studio/README.md) | The content studio: browse, edit, version and try the game content. |
 | [../viewer/README.md](../viewer/README.md) | The viewer: traces, batches, evaluations, training runs and comparisons. |
 
