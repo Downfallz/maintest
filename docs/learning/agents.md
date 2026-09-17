@@ -200,7 +200,12 @@ against four opponents under the floor (journal, 2026-09-17): on 200 seeds nothi
 and Random in every match, `search-4` 0.96 and `mixture-mean` 0.93, by banking energy for Crushing Stomp's
 two-round stun;
 its mirror runs twice as long as Greedy's and the first mover wins two thirds of it, so it is a rung of the
-ladder and a reading for the tuner, not a baseline. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+ladder and a reading for the tuner, not a baseline. `stun-first.json` is the rung above it, searched from it
+with it in the panel (journal, 2026-09-17): the first set in which `stun` is the largest weight, above
+`kill`, and on 200 seeds nothing had played it beats `pressure-floor` 0.80, `search-4` 0.97 and
+`mixture-mean` 0.93 while taking every match from Greedy and Random. Its own mirror is worse still, the
+first mover taking 0.925 of it, so the ladder's top two rungs are agents to play and not baselines to
+balance against. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
