@@ -38,6 +38,7 @@ The score of one resolution, with the weights `w`:
 | --- | --- | --- |
 | `w.damage` x effective damage | damage capped at the target's health, per target | for an enemy, against an ally |
 | `w.kill` per kill | a target whose health the damage reaches | for an enemy, against an ally |
+| `w.pressure` x share of the target's health | the effective damage over the health the target had, one for a kill: how much closer the hit brings that creature to a kill (ADR 0050) | for an enemy, against an ally |
 | `w.heal` x effective healing | healing capped at what the target was missing | for an ally, against an enemy |
 | `w.kill` per denied kill | a heal or a defense buff that takes its target from dying to this round's threat to surviving it (ADR 0022) | for an ally, against an enemy |
 | `w.stun` x rounds stunned | a Stun on a target still alive after the damage | for an enemy, against an ally |
@@ -157,6 +158,7 @@ damage spread elsewhere.
 | bleed | 0.8 | Damage over time is discounted against damage now: the target may die first, and the bot only counts the health it could still reach. |
 | defense | 0.65 | Two thirds of a point per point of damage the buff actually takes off the hits the creature is expected to face. Defense subtracts from every incoming hit, so the same buff is worth more to the last creature standing than to a full team. **Not read against `damage` point for point**, whatever the shared unit suggests: an attack is paid once, this is paid for every round the buff holds, so it compounds where `damage` does not. That is why it sits below one. Measured rather than felt (ADR 0028): the play moves in steps as this price rises, 0.65 sits in the middle of the step that puts matches inside the 8..16 round band, and at 1.5 every match runs out of rounds and no attack is ever cast. |
 | energy | 0.3 | Just under a third of a damage per point of energy — kept for the next round, handed to an ally, regenerated over rounds, or taken off an enemy. It was hand-set at 0.2 in phase L5, when the only thing it priced was energy *kept* and it was meant as no more than a tie-breaker towards the cheaper spell. ADR 0020, 0026 and 0035 gave it three more jobs without ever re-measuring it, and ADR 0037 swept it: at 0.0 the first mover wins 0.720 of the mirror, so the term was never a tie-breaker at all. 0.3 is the middle of the step 0.2..0.4, whose right edge breaks hard (0.5 reads 108.33 on the objective with the exploiter at 0.790). Read what it buys precisely: **the mirror's first-mover share, not a stronger agent** — `player1WinShare` goes 0.575 to 0.510, and a 0.3 agent against a 0.2 one is a dead heat. |
+| pressure | 0.0 | The share of a creature's health a hit takes, so the same three points are worth more on a creature at six than on one at twenty and a kill takes the whole share. `damage` cannot tell those apart and `kill` pays only once the last point lands; this is the term between them, and the first added because a search of the other eight had no term for it (journal, 2026-09-16). Zero until measured: ADR 0050 has the sweep. |
 | initiative | 2.1 | Two and a bit per point of initiative, whether an unlock buys it or a debuff takes it off an enemy — one price for one point, so the bot cannot value giving and taking differently. ADR 0018 set it to 0.5 on the reasoning that initiative is indirect the way defense is, and said in the same breath that it was a guess. ADR 0032 measured it instead, by sweeping it alone on fixed content, and the reasoning was backwards: a point of initiative is bought once and kept for the match, in a game the first mover was winning 64 % of. At 2.1 that reading is 0.500. The sweep is in that ADR; 2.1 sits in the middle of its step rather than on an edge. Since ADR 0026 a debuff also multiplies by the rounds it lasts while the unlock's permanent gain does not, so a two-round debuff outvalues a permanent gain of the same size; the tension is recorded in that ADR and is now four times larger. |
 
 To feel out what one of them does, the content studio's run panel can play a heuristic agent from a box per
@@ -176,9 +178,10 @@ on fixed content and playing every value, and moved: `defense` (ADR 0028), `init
 were good and are now measured rather than assumed. `damage` is not swept, because it is the unit: moving it
 alone is the same experiment as scaling the other eight the other way. The one thing those five sweeps did
 turn up is that one of the five priced nothing at all: ADR 0039 gave it a decision to reach and it still
-priced nothing, so ADR 0040 removed it and the table is eight. `ScoringWeights.Default` is the single source;
-`learning/weights/greedy.json` holds the same eight numbers so `heuristic:<file>` and `greedy` start from the
-same place, and a test on each side of the repository pins the two together.
+priced nothing, so ADR 0040 removed it and the table was eight until ADR 0050 added `pressure`, the first
+weight added because a search of the others had nowhere left to go. `ScoringWeights.Default` is the single
+source; `learning/weights/greedy.json` holds the same nine numbers so `heuristic:<file>` and `greedy` start
+from the same place, and a test on each side of the repository pins the two together.
 
 To move them, do not edit them by feel: run `search-weights` (`docs/learning/training.md`), which plays each
 candidate set against a fixed opponent on the benchmark seeds and keeps what wins, and leave the result next
@@ -195,7 +198,7 @@ are the first sets searched against three opponents at once (`greedy`, `search-4
 Random. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
-only moves when the new values actually change a decision: scaling all eight by the same positive factor
+only moves when the new values actually change a decision: scaling all nine by the same positive factor
 leaves every ranking, and the digest, untouched. A change that does move an outcome fails the benchmark check
 until `benchmark --write` regenerates the digest.
 

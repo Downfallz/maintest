@@ -157,7 +157,11 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var score = 0.0;
         foreach (var hit in Damage(resolution, creatures, gone))
         {
-            score += hit.Sign * ((weights.Damage * hit.Effective) + (hit.Kills ? weights.Kill : 0));
+            // Every point landed at the damage price, the last one at the kill price on top, and between the
+            // two the share of the target's health the hit takes, at the pressure price: how much closer it
+            // brings that creature to a kill (ADR 0050). Every term is signed the same way, so a hit an ally
+            // takes counts against on all three.
+            score += hit.Sign * ((weights.Damage * hit.Effective) + (weights.Pressure * hit.Share) + (hit.Kills ? weights.Kill : 0));
         }
 
         var remaining = RemainingHealth(resolution, creatures, gone);
@@ -185,7 +189,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// <summary>Plus one for something done to an enemy of the actor, minus one for something done to an ally or the actor.</summary>
     private static int Sign(CreatureSnapshot actor, CreatureSnapshot target) => target.Owner == actor.Owner ? -1 : 1;
 
-    private static IEnumerable<(CreatureId Id, bool Enemy, int Sign, int Effective, bool Kills)> Damage(
+    /// <summary>
+    /// What a resolution's damage does to each creature it lands on: the points that count, whether they
+    /// kill, and the share of the health the creature had that they take, one for a kill and nothing on a
+    /// creature with no health left to take.
+    /// </summary>
+    private static IEnumerable<(CreatureId Id, bool Enemy, int Sign, int Effective, bool Kills, double Share)> Damage(
         CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId> gone)
     {
         var actor = Target(resolution.Action.Actor, creatures);
@@ -199,7 +208,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             var target = Target(group.Key, creatures);
             var total = group.Sum(outcome => outcome.Amount);
             var effective = Math.Min(total, target.Health.Value);
-            yield return (group.Key, target.Owner != actor.Owner, Sign(actor, target), effective, target.IsAlive && total >= target.Health.Value);
+            var share = target.Health.Value > 0 ? (double)effective / target.Health.Value : 0.0;
+            yield return (group.Key, target.Owner != actor.Owner, Sign(actor, target), effective, target.IsAlive && total >= target.Health.Value, share);
         }
     }
 

@@ -690,6 +690,45 @@ public sealed class ActionScorerTests
         scorer.Expected(Action(One, Recoil, Three), dying).ShouldBe((0.95 * (3 - 7)) + (0.05 * (6 - 7)), 1e-9);
     }
 
+    /// <summary>
+    /// ADR 0050: the pressure weight prices the share of a target's health a hit takes, so the same three
+    /// points are worth more on a creature at six than on one at twenty, and a kill takes the whole share.
+    /// Priced at one, the share reads as itself on top of the damage and the kill.
+    /// </summary>
+    [Fact]
+    public void A_hit_is_worth_more_the_closer_it_brings_its_target_to_a_kill()
+    {
+        var pressing = new ActionScorer(TestContent.Resources, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Pressure = 1.0 });
+
+        // Strike deals 3, a crit 6: on twenty health the shares are 3/20 and 6/20, on six 3/6 and 6/6 (a kill).
+        pressing.Expected(Strike(One, Three), Board(enemyHealth: 20)).ShouldBe((0.95 * (3 + (3 / 20.0))) + (0.05 * (6 + (6 / 20.0))), 1e-9);
+        pressing.Expected(Strike(One, Three), Board(enemyHealth: 6)).ShouldBe((0.95 * (3 + (3 / 6.0))) + (0.05 * (6 + 5 + 1)), 1e-9);
+        pressing.Expected(Strike(One, Three), Board(enemyHealth: 3)).ShouldBe(3 + 5 + 1, 1e-9);
+    }
+
+    /// <summary>
+    /// The weight ships at zero, so nothing the bot decided before it existed moves: the benchmark digest and
+    /// every stamped run read the same. It is measured before it is set (ADR 0050).
+    /// </summary>
+    [Fact]
+    public void At_the_built_in_weight_the_share_of_a_kill_a_hit_takes_prices_nothing()
+    {
+        ScoringWeights.Default.Pressure.ShouldBe(0);
+        Scorer.Expected(Strike(One, Three), Board(enemyHealth: 6)).ShouldBe((0.95 * 3) + (0.05 * (6 + 5)), 1e-9);
+    }
+
+    /// <summary>The share is signed like the damage it rides on: a recoil the caster takes counts against, share included.</summary>
+    [Fact]
+    public void The_share_a_hit_takes_off_an_ally_counts_against()
+    {
+        var scorer = ScorerWith(CasterSpell(Recoil, Damage.Of(2)), ScoringWeights.Default with { Pressure = 1.0 });
+        var board = Board(enemyHealth: 20, actorSpells: [Recoil]);
+
+        // Three to the enemy at twenty and two back to the actor at twenty; six and two on the critical branch.
+        scorer.Expected(Action(One, Recoil, Three), board)
+            .ShouldBe((0.95 * ((3 + (3 / 20.0)) - (2 + (2 / 20.0)))) + (0.05 * ((6 + (6 / 20.0)) - (2 + (2 / 20.0)))), 1e-9);
+    }
+
     private static readonly SpellId Recoil = SpellId.Parse("spell:recoil:v1");
 
     /// <summary>A single-target hit for 3 that also does something to whoever cast it.</summary>
@@ -704,11 +743,11 @@ public sealed class ActionScorerTests
             [Damage.Of(3)],
             casterEffects);
 
-    private static ActionScorer ScorerWith(Spell extra) =>
+    private static ActionScorer ScorerWith(Spell extra, ScoringWeights? weights = null) =>
         new(
             GameResources.Create("test", [.. TestContent.Resources.Creatures], [.. TestContent.Resources.Spells, extra], [.. TestContent.Resources.TalentTrees]),
             MatchStore.TwoOnTwo(),
-            ScoringWeights.Default);
+            weights ?? ScoringWeights.Default);
 
     private static CombatAction Strike(CreatureId actor, CreatureId target) => Action(actor, TestContent.Strike, target);
 

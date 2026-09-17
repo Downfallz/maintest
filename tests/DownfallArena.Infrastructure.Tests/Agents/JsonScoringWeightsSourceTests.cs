@@ -40,6 +40,15 @@ public sealed class JsonScoringWeightsSourceTests
         new JsonScoringWeightsSource().Load(Path.Combine(directory.Path, "partial.json")).ShouldBe(ScoringWeights.Default with { Damage = 2.5, Kill = 0 });
     }
 
+    /// <summary>The ninth weight (ADR 0050) reads like the eight before it, and a file that does not name it keeps zero.</summary>
+    [Fact]
+    public void A_file_may_price_the_share_of_a_kill_a_hit_takes()
+    {
+        using var directory = new ContentDirectory().WithFile("pressure.json", """{ "pressure": 1.5 }""");
+
+        new JsonScoringWeightsSource().Load(Path.Combine(directory.Path, "pressure.json")).ShouldBe(ScoringWeights.Default with { Pressure = 1.5 });
+    }
+
     [Fact]
     public void Unknown_weights_and_bad_files_are_refused()
     {
