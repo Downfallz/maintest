@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
+using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
@@ -239,6 +240,23 @@ public sealed partial class TableApiTests : IDisposable
 
         first.ShouldBe(Tag(await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token)));
         second.ShouldNotBe(first);
+    }
+
+    /// <summary>
+    /// The tag carries the build too. The catalogue is not the content: it is this build's projection of it —
+    /// the card words are written by <c>CatalogueProjection</c> and the round shape is read off
+    /// <c>RoundSubPhase</c>. So a host upgraded over the same content and the same rules serves a different
+    /// answer, and without the build in the tag a browser would keep the old one until its cache was cleared.
+    /// </summary>
+    [Fact]
+    public async Task The_tag_carries_the_build_that_projected_the_catalogue()
+    {
+        var table = await Seated();
+
+        var tag = Tag(await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
+
+        tag.ShouldContain(EngineVersion.Current.ToString());
+        tag.ShouldContain(_host!.Services.GetRequiredService<IGameResources>().Version);
     }
 
     /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>

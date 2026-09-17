@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using DownfallArena.Application.Catalogue;
+using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
@@ -36,8 +37,15 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// host restarted on the same port with the same content and a different <c>--rules</c> file is a different
     /// answer, and a tag of the hash alone would let a browser keep the old rule set (ADR 0054: a session is
     /// reproducible against the pair, not against either half).
+    /// <para>
+    /// The engine version is in it for the same reason one step further out: the catalogue is not the content,
+    /// it is this build's projection of the content. The round shape is read off <c>RoundSubPhase</c> and the
+    /// card words are written by <c>CatalogueProjection</c>, so a host upgraded over the same content and the
+    /// same rules serves a different representation under an otherwise identical tag — and a browser that
+    /// kept the old one would be missing whatever the new projection added, until somebody cleared its cache.
+    /// </para>
     /// </summary>
-    private string Tag => $"\"{catalogue.ContentHash}+{catalogue.Rules.TeamSize}-{catalogue.Rules.EnergyPerRound}-{catalogue.Rules.EvolutionPicksPerRound}-{catalogue.Rules.RoundCap}-{catalogue.Rules.CriticalMultiplier.ToString(CultureInfo.InvariantCulture)}\"";
+    private string Tag => $"\"{EngineVersion.Current}+{catalogue.ContentHash}+{catalogue.Rules.TeamSize}-{catalogue.Rules.EnergyPerRound}-{catalogue.Rules.EvolutionPicksPerRound}-{catalogue.Rules.RoundCap}-{catalogue.Rules.CriticalMultiplier.ToString(CultureInfo.InvariantCulture)}\"";
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? ifNoneMatch = null, string? query = null)
     {
@@ -176,7 +184,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 // What has happened, as this seat may be told it: the boards the trace keeps beside every
                 // event are dropped here and the other seat's hidden decisions never reach the wire
                 // (SeatVisibility). The trace itself is not served during a session.
-                feed = SeatFeedProjection.Build(events.EntriesOf(session.MatchId), seat.Slot, since),
+                feed = SeatFeedProjection.Build(events.EntriesOf(session.MatchId, since), seat.Slot, since),
             },
             ArtifactJson.LineOptions);
     }

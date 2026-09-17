@@ -43,10 +43,19 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     }
 
     /// <summary>
-    /// The entries recorded so far for a match, as a copy; empty when none was. A copy because the match may
-    /// still be playing while this is read, and what a caller walks has to be a list that stops changing.
+    /// The entries recorded so far for a match from <paramref name="since" /> onwards, as a copy; empty when
+    /// none was. A copy because the match may still be playing while this is read, and what a caller walks has
+    /// to be a list that stops changing.
     /// </summary>
-    public IReadOnlyList<TraceEntry> EntriesOf(MatchId matchId) => _entries.GetValueOrDefault(matchId)?.Snapshot() ?? [];
+    /// <param name="since">
+    /// The first sequence number to copy. It is where the copy starts and not where a filter begins: a caller
+    /// polling a live match every few hundred milliseconds wants the handful of entries it has not seen, and
+    /// copying the whole history to hand back the tail would grow with the match and hold the lock for the
+    /// length of it (ADR 0054). Sequence numbers are the positions entries were appended at, so this is a
+    /// slice rather than a search.
+    /// </param>
+    public IReadOnlyList<TraceEntry> EntriesOf(MatchId matchId, int since = 0) =>
+        _entries.GetValueOrDefault(matchId)?.Snapshot(since) ?? [];
 
     /// <summary>The trace of a match, which the recorder then forgets.</summary>
     public MatchTrace Complete(MatchId matchId, RunStamp stamp, int? seed)
@@ -54,7 +63,7 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
         ArgumentNullException.ThrowIfNull(stamp);
 
         _entries.TryRemove(matchId, out var recorded);
-        var entries = recorded?.Snapshot() ?? [];
+        var entries = recorded?.Snapshot(0) ?? [];
         return new MatchTrace
         {
             MatchId = matchId,
@@ -88,11 +97,12 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
             }
         }
 
-        public IReadOnlyList<TraceEntry> Snapshot()
+        public List<TraceEntry> Snapshot(int since = 0)
         {
             lock (_gate)
             {
-                return [.. _entries];
+                var from = Math.Clamp(since, 0, _entries.Count);
+                return _entries.GetRange(from, _entries.Count - from);
             }
         }
     }
