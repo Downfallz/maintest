@@ -25,6 +25,7 @@ from downfall_learning.knobs import (
     load_weights,
     new_dominance,
     outclassed,
+    panel,
     read_value,
     twins,
     unbounded,
@@ -387,6 +388,58 @@ def test_an_evaluation_naming_a_weights_file_that_is_there_is_accepted(tmp_path:
     knobs = load_knobs(write_knobs(tmp_path, document))
 
     assert validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path) == []
+
+
+def test_every_agent_of_a_panel_is_checked_and_an_empty_panel_is_refused(tmp_path: Path) -> None:
+    """ADR 0052: agent A may be a panel, and a missing file anywhere in it fails the same way."""
+    (tmp_path / "weights").mkdir()
+    (tmp_path / "weights" / "found.json").write_text("{}", encoding="utf-8")
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {
+                "exploit": {
+                    "p1": ["heuristic:weights/found.json", "heuristic:weights/gone.json"],
+                    "p2": "greedy",
+                },
+                "empty": {"p1": [], "p2": "greedy"},
+            },
+            "targets": [{"metric": "drawRate", "on": "exploit", "max": 0.05, "scale": 0.05, "weight": 1}],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == [
+        "objective: evaluation 'empty' p1 names no agent at all.",
+        "objective: evaluation 'exploit' p1 reads 'weights/gone.json', which is not a file.",
+    ]
+
+
+def test_a_panel_on_agent_b_is_refused(tmp_path: Path) -> None:
+    """Only agent A is read as a panel, so a list on `p2` would reach the engine as one unknown agent."""
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {"exploit": {"p1": "greedy", "p2": ["greedy", "random"]}},
+            "targets": [{"metric": "drawRate", "on": "exploit", "max": 0.05, "scale": 0.05, "weight": 1}],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == [
+        "objective: evaluation 'exploit' p2 is a list, and only agent A is read as a panel "
+        "(ADR 0052): the opponent is what a panel is measured against."
+    ]
+
+
+def test_a_panel_reads_as_the_agents_it_names_and_a_bare_spec_as_one(tmp_path: Path) -> None:
+    assert panel({"p1": ["greedy", "random"]}, "p1") == ("greedy", "random")
+    assert panel({"p1": "greedy"}, "p1") == ("greedy",)
+    assert panel({}, "p1") == ("greedy",)
 
 
 def test_an_agent_spec_is_read_the_way_the_engine_reads_it(tmp_path: Path) -> None:
