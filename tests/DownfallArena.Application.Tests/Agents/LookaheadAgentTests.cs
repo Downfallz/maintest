@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Agents.Ports;
 using DownfallArena.Application.Evaluation;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Matches.Projections;
@@ -10,6 +11,7 @@ using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
+using NSubstitute;
 
 namespace DownfallArena.Application.Tests.Agents;
 
@@ -146,6 +148,83 @@ public sealed class LookaheadAgentTests
     /// One and Two (three health) for Player1; Three (three health, stunned, no slot this round) and Four
     /// (three health) for Player2. The timeline is One, Four, Two: Four strikes after One and before Two.
     /// </summary>
+    /// <summary>
+    /// ADR 0055: the agent a searching spec is built on plays every seat the search has to guess -- an ally
+    /// that has not declared as the round is played out, and the evolution and the speed, which are not
+    /// combat moves. That seam is what lets the loop search over its own last output instead of over a
+    /// hand-written scorer, so it is worth pinning that the inner agent is actually asked.
+    /// </summary>
+    [Fact]
+    public void The_agent_it_is_built_on_plays_the_seats_the_search_has_to_guess()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(TestContent.Strike);
+        var agent = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: false, inner);
+        var board = FourAboutToKillTwo();
+
+        agent.DecideIntent(board, new IntentOption(One, [TestContent.Slam, TestContent.Strike]));
+
+        // Two is the ally further down the timeline that has declared nothing, so the round cannot be played
+        // out without asking somebody what it casts.
+        inner.Received().DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Is<IntentOption>(option => option.Creature == Two));
+    }
+
+    [Fact]
+    public void The_agent_it_is_built_on_decides_the_evolution_and_the_speed()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        var agent = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: false, inner);
+        var board = FourAboutToKillTwo();
+        var options = new EvolutionOptions(1, [new EvolutionOption(One, [TestContent.Guard])]);
+
+        agent.DecideEvolution(board, options);
+        agent.DecideSpeed(board, One);
+
+        inner.Received().DecideEvolution(board, options);
+        inner.Received().DecideSpeed(board, One);
+    }
+
+    /// <summary>
+    /// The evaluation stays the scorer's whatever the search is built on (ADR 0055): a clone's scores are
+    /// logits and a value policy's are returns under its own baseline, and neither can be summed over a
+    /// round. So a spec that names an agent reads the built-in weights, and one that names a file reads it.
+    /// </summary>
+    [Fact]
+    public void A_searching_spec_reads_an_agent_after_its_kind_and_a_bare_path_as_weights()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        factory.Create(AgentSpec.Parse("lookahead:heuristic:learning/weights/stun-first.json"), Rules, new TestRandom(1))
+            .ShouldBeOfType<LookaheadAgent>().Weights.ShouldBe(ScoringWeights.Default);
+        weights.Received().Load("learning/weights/stun-first.json");
+
+        weights.ClearReceivedCalls();
+        factory.Create(AgentSpec.Parse("lookahead:learning/weights/search-4.json"), Rules, new TestRandom(1))
+            .ShouldBeOfType<LookaheadAgent>().IsAdversarial.ShouldBeFalse();
+        weights.Received().Load("learning/weights/search-4.json");
+
+        factory.Create(AgentSpec.Parse("minimax:greedy"), Rules, new TestRandom(1))
+            .ShouldBeOfType<LookaheadAgent>().IsAdversarial.ShouldBeTrue();
+    }
+
+    /// <summary>What a searching agent reads is its inner agent's file, so that is what its stamp carries.</summary>
+    [Fact]
+    public void A_searching_spec_stamps_as_the_agent_it_is_built_on()
+    {
+        var weights = Substitute.For<IScoringWeightsSource>();
+        weights.Load(Arg.Any<string>()).Returns(ScoringWeights.Default);
+        var factory = new AgentFactory(TestContent.Resources, weights, Substitute.For<IPolicySource>());
+
+        factory.Resolve(AgentSpec.Parse("lookahead:heuristic:learning/weights/stun-first.json")).Version
+            .ShouldBe(ScoringWeights.Default.Fingerprint);
+        factory.Resolve(AgentSpec.Parse("lookahead:greedy")).Version
+            .ShouldBeNull("greedy reads no file, so it fingerprints nothing");
+        factory.Resolve(AgentSpec.Parse("lookahead")).Version
+            .ShouldBeNull("the built-in weights are the whole identity");
+    }
+
     private static PlayerBoardState FourAboutToKillTwo()
     {
         var one = Boards.Creature(1, PlayerSlot.Player1);

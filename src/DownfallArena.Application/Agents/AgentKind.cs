@@ -20,9 +20,9 @@ public enum AgentKind
     /// <summary>Another agent, but a share of decisions the spec names are taken at random, to record exploration (ADR 0014).</summary>
     Explore,
 
-    /// <summary>Plays the round out on a hypothetical board before choosing a combat move (ADR 0047); the built-in weights, or the file the spec names.</summary>
+    /// <summary>Plays the round out on a hypothetical board before choosing a combat move (ADR 0047); the built-in weights, or the file the spec names, or another agent it plays the guessed seats as (ADR 0055).</summary>
     Lookahead,
 
-    /// <summary>The lookahead agent with every enemy slot played as the reply that costs the actor most; the built-in weights, or the file the spec names.</summary>
+    /// <summary>The lookahead agent with every enemy slot played as the reply that costs the actor most; the built-in weights, or the file the spec names, or another agent (ADR 0055).</summary>
     Minimax,
 }
