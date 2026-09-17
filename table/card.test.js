@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cardCost, cardHead, cardLines, cardTitle, cardsById, criticalLine } from './card.js';
+import { cardCost, cardHead, cardLines, cardTitle, cardsById, criticalLine, loadCards } from './card.js';
 
 // A card as the host serves one. Every value here is arbitrary on purpose: the test holds that each one comes
 // out of the renderer, which is what "the page carries no content" means on this side of the wire.
@@ -10,7 +10,7 @@ const card = {
   cost: 2,
   initiative: 3,
   creatureClass: 'Scoundrel',
-  tier: 'Assassin',
+  tier: 3,
   targeting: 'Up to 2 enemies',
   effects: ['Damage 7', 'Bleed 4 a round, 2 rounds'],
   casterEffects: ['Caster: Heal 2'],
@@ -31,7 +31,7 @@ test('every line of a card comes from the card', () => {
   ]);
   assert.equal(cardTitle(card), 'Probe');
   assert.equal(cardCost(card), '2');
-  assert.equal(cardHead(card), 'Scoundrel · Assassin');
+  assert.equal(cardHead(card), 'Scoundrel · Tier 3');
 });
 
 // The one that makes the sweep over the shipped files mean something: with nothing to draw from, the renderer
@@ -68,4 +68,23 @@ test('a spell id finds its card, and a spell the catalogue does not carry finds 
   assert.equal(cards.get('spell:absent:v1'), undefined);
   assert.equal(cardsById(undefined).size, 0);
   assert.equal(cardsById({}).size, 0);
+});
+
+// A seat whose transport refuses everything: the token this browser kept from an earlier table.
+const refusing = { seat: 'player1', transport: { catalogue: async () => ({ ok: false, status: 403, body: null }) } };
+
+const serving = cards => ({ seat: 'player2', transport: { catalogue: async () => ({ ok: true, status: 200, body: { cards } }) } });
+
+// The expensive failure this guards: asking only the first seat, finding a stale token there, and printing
+// raw spell ids for the rest of the session while the seat beside it would have answered.
+test('the catalogue is loaded through whichever seat the table accepts', async () => {
+  const cards = await loadCards([refusing, serving([card])]);
+
+  assert.equal(cards.get('spell:probe:v1').name, 'Probe');
+});
+
+test('a page whose every seat is refused draws no cards rather than failing', async () => {
+  assert.equal((await loadCards([refusing])).size, 0);
+  assert.equal((await loadCards([])).size, 0);
+  assert.equal((await loadCards(undefined)).size, 0);
 });

@@ -1,7 +1,7 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
-import { cardCost, cardHead, cardLines, cardTitle, cardsById } from './card.js';
+import { cardCost, cardHead, cardLines, cardTitle, loadCards } from './card.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -51,10 +51,7 @@ function start(seats) {
 // The catalogue the match is playing, through any seat this page holds: it is the same for both, and it is
 // what every card on this screen is drawn from. A page that does not get it prints spell ids and still plays.
 async function load(state) {
-  const answer = await state.seats[0].transport.catalogue();
-  if (answer.ok) {
-    state.cards = cardsById(answer.body);
-  }
+  state.cards = await loadCards(state.seats);
 }
 
 async function refresh(state) {
@@ -88,6 +85,12 @@ async function refresh(state) {
   for (const seat of refused) {
     forget(storage, seat);
     state.seats = state.seats.filter(held => held.seat !== seat);
+  }
+
+  // The catalogue may have been asked for through a seat this table has just refused. Now that only accepted
+  // seats are left, it is worth asking again -- once, and only while there is nothing to draw cards from.
+  if (refused.length > 0 && state.cards.size === 0 && state.seats.length > 0) {
+    await load(state);
   }
 
   if (views.length === 0) {

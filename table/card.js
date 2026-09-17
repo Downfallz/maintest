@@ -16,8 +16,11 @@ export function cardCost(card) {
   return Number.isInteger(card?.cost) ? String(card.cost) : '';
 }
 
+// The class, and how far into the tree the card sits. The tier is a number the host computed over the whole
+// gate graph: the page says "Tier 3" and has no idea what is behind it.
 export function cardHead(card) {
-  return [card?.creatureClass, card?.tier].filter(part => part).join(' · ');
+  const tier = Number.isInteger(card?.tier) && card.tier > 0 ? `Tier ${card.tier}` : '';
+  return [card?.creatureClass, tier].filter(part => part).join(' · ');
 }
 
 // The body of the card, in the order the printed one reads: who it hits, what it does to them, what it does to
@@ -52,4 +55,19 @@ function requiresLine(card) {
 // has no card, and the caller prints the id it was given rather than inventing one.
 export function cardsById(catalogue) {
   return new Map((catalogue?.cards ?? []).map(card => [card.id, card]));
+}
+
+// The catalogue, through whichever seat this table actually accepts. A page can be holding a token from an
+// earlier table -- kept in this browser, and ordered first -- and asking with that one alone would leave every
+// spell on the screen as its raw id for the whole session. Any seat will do: the catalogue is the same for
+// both, and nothing in it is hidden.
+export async function loadCards(seats) {
+  for (const seat of seats ?? []) {
+    const answer = await seat.transport.catalogue();
+    if (answer.ok) {
+      return cardsById(answer.body);
+    }
+  }
+
+  return new Map();
 }

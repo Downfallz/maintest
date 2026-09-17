@@ -136,6 +136,36 @@ public sealed class TableApiTests : IDisposable
         answer.Status.ShouldBe(200);
     }
 
+    /// <summary>
+    /// The answer carries the rule set as well as the content, so the tag has to. A host restarted on the same
+    /// port with the same content and a different `--rules` file is a different answer, and a browser sending
+    /// the old tag would otherwise be told to keep a rule set this table is not playing.
+    /// </summary>
+    [Fact]
+    public async Task A_table_playing_other_rules_on_the_same_content_is_a_different_tag()
+    {
+        var table = await Seated();
+        var same = Api(table, Rules);
+        var other = Api(table, RuleSet.Create(Rules.TeamSize, Rules.EnergyPerRound, Rules.EvolutionPicksPerRound, Rules.RoundCap + 6, Rules.CriticalMultiplier));
+
+        var first = Tag(await same.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
+        var second = Tag(await other.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
+
+        first.ShouldBe(Tag(await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token)));
+        second.ShouldNotBe(first);
+    }
+
+    /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>
+    private TableApi Api((TableApi Api, TableSession Session, HumanSeat Person, string Token) table, RuleSet rules) =>
+        new(
+            table.Session,
+            table.Session.Queries,
+            [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
+            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), rules));
+
+    private static string Tag(StudioResponse response) =>
+        response.Headers.ShouldNotBeNull().Single(header => header.Key == "ETag").Value;
+
     [Fact]
     public async Task A_seat_is_served_its_own_board_and_the_question_it_is_being_asked()
     {

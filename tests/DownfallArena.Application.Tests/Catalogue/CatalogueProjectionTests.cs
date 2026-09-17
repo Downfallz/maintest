@@ -128,13 +128,36 @@ public sealed class CatalogueProjectionTests
     }
 
     [Fact]
-    public void A_card_says_which_tree_and_which_node_it_is_unlocked_from()
+    public void A_card_says_which_tree_it_is_unlocked_from()
     {
         var guard = View.Cards.Single(card => card.Id == TestContent.Guard);
 
         guard.Tree.ShouldNotBeNullOrWhiteSpace();
-        guard.Tier.ShouldNotBeNullOrWhiteSpace();
         View.Trees.ShouldContain(band => band.Spells.Contains(TestContent.Guard));
+    }
+
+    /// <summary>
+    /// The tier is how far into the tree a spell sits, and inside one node that is what its own prerequisites
+    /// say: the test content offers Strike, then Guard behind it, then Slam behind Guard, all from one node.
+    /// A tier copied from the node would have read the same for all three, which on the real content prints
+    /// "Warlord · Warlord" and says nothing at all.
+    /// </summary>
+    [Fact]
+    public void The_tier_of_a_spell_counts_the_ones_it_is_unlocked_behind()
+    {
+        var view = View;
+
+        Tier(view, TestContent.Strike).ShouldBe(1);
+        Tier(view, TestContent.Guard).ShouldBe(2);
+        Tier(view, TestContent.Slam).ShouldBe(3);
+    }
+
+    /// <summary>A band knows its own depth, which is the row the talent mat draws it on.</summary>
+    [Fact]
+    public void A_band_carries_the_depth_of_its_node()
+    {
+        View.Trees.ShouldAllBe(band => band.Depth >= 1);
+        View.Trees.ShouldContain(band => band.Depth == 1);
     }
 
     /// <summary>The gate is on the card, so a pick can be checked without the talent mat.</summary>
@@ -146,6 +169,87 @@ public sealed class CatalogueProjectionTests
         slam.Requires.ShouldNotBeNull();
         slam.Requires.ShouldContain("Guard");
         slam.Requires.ShouldNotContain("spell:");
+    }
+
+    /// <summary>
+    /// The one thing a gate has to say is which combination is legal. Crushing Stomp on the real content wants
+    /// Full Plate <em>and</em> one of two others; flattening the two groups into one list would name all three
+    /// and leave a player guessing which they need (<c>TalentPrerequisites.AreSatisfiedBy</c>).
+    /// </summary>
+    [Fact]
+    public void A_gate_of_two_groups_keeps_them_apart()
+    {
+        var gated = SpellId.Parse("spell:gated:v1");
+        var tree = TalentTree.Create(
+            TestContent.Tree,
+            "Base",
+            new TalentNode(
+                "base",
+                "Base",
+                TalentPrerequisites.None,
+                [
+                    new TalentSpell(TestContent.Strike, TalentPrerequisites.None),
+                    new TalentSpell(TestContent.Guard, TalentPrerequisites.None),
+                    new TalentSpell(gated, TalentPrerequisites.Of([TestContent.Strike], [TestContent.Guard, TestContent.Slam])),
+                ],
+                []));
+
+        var requires = Cards(tree, [Named(TestContent.Strike, "Strike"), Named(TestContent.Guard, "Guard"), Named(TestContent.Slam, "Slam"), Named(gated, "Gated")])
+            .Single(card => card.Id == gated)
+            .Requires;
+
+        requires.ShouldBe("Strike; one of Guard or Slam");
+    }
+
+    [Fact]
+    public void A_gate_of_several_spells_reads_as_a_sentence()
+    {
+        var gated = SpellId.Parse("spell:gated:v1");
+        var tree = TalentTree.Create(
+            TestContent.Tree,
+            "Base",
+            new TalentNode(
+                "base",
+                "Base",
+                TalentPrerequisites.None,
+                [
+                    new TalentSpell(TestContent.Strike, TalentPrerequisites.None),
+                    new TalentSpell(TestContent.Guard, TalentPrerequisites.None),
+                    new TalentSpell(gated, TalentPrerequisites.Of([TestContent.Strike, TestContent.Guard], [])),
+                ],
+                []));
+
+        var requires = Cards(tree, [Named(TestContent.Strike, "Strike"), Named(TestContent.Guard, "Guard"), Named(gated, "Gated")])
+            .Single(card => card.Id == gated)
+            .Requires;
+
+        requires.ShouldBe("Guard and Strike");
+    }
+
+    private static int Tier(CatalogueView view, SpellId spell) => view.Cards.Single(card => card.Id == spell).Tier;
+
+    private static Domain.Resources.Spell Named(SpellId id, string name) =>
+        Domain.Resources.Spell.Create(
+            id,
+            name,
+            SpellType.Offensive,
+            CreatureClass.Creature,
+            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            TargetingSpec.SingleTarget(TargetOrigin.Enemy),
+            [Damage.Of(1)]);
+
+    /// <summary>One tree and its spells, through the projection.</summary>
+    private static IReadOnlyList<CardFace> Cards(TalentTree tree, IReadOnlyList<Domain.Resources.Spell> spells)
+    {
+        var creature = CreatureDefinition.Create(
+            TestContent.Main,
+            "Main",
+            CreatureClass.Creature,
+            new CreatureStats(Health.Of(20), Energy.Of(0), Defense.Of(0), Initiative.Of(5), CriticalChance.None),
+            TestContent.Tree,
+            [spells[0].Id]);
+
+        return CatalogueProjection.Build(GameResources.Create("probe", [creature], spells, [tree]), Rules).Cards;
     }
 
     /// <summary>

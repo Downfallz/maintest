@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Matches.Decisions;
@@ -27,10 +28,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     private const string SeatPrefix = "/api/seat/";
 
     /// <summary>
-    /// The content hash, as an entity tag. The catalogue cannot change while a host is running — it is built
-    /// from the resources the match is playing — so a page fetches it once and is answered 304 ever after.
+    /// An entity tag over everything the answer carries: the content hash and the rule set. The catalogue
+    /// cannot change while a host is running, so a page fetches it once and is answered 304 ever after — but a
+    /// host restarted on the same port with the same content and a different <c>--rules</c> file is a different
+    /// answer, and a tag of the hash alone would let a browser keep the old rule set (ADR 0054: a session is
+    /// reproducible against the pair, not against either half).
     /// </summary>
-    private string Tag => $"\"{catalogue.ContentHash}\"";
+    private string Tag => $"\"{catalogue.ContentHash}+{catalogue.Rules.TeamSize}-{catalogue.Rules.EnergyPerRound}-{catalogue.Rules.EvolutionPicksPerRound}-{catalogue.Rules.RoundCap}-{catalogue.Rules.CriticalMultiplier.ToString(CultureInfo.InvariantCulture)}\"";
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? ifNoneMatch = null)
     {

@@ -44,11 +44,12 @@ public static class CatalogueProjection
         var placed = bands
             .SelectMany(band => band.Spells.Select(spell => (Spell: spell, Band: band)))
             .ToDictionary(placement => placement.Spell, placement => placement.Band);
+        var tiers = Tiers(resources);
 
         return new CatalogueView(
             resources.Version,
             RuleSetStamp.Of(rules),
-            [.. resources.Spells.Select(spell => Card(spell, placed.GetValueOrDefault(spell.Id), Gate(spell.Id, resources)))],
+            [.. resources.Spells.Select(spell => Card(spell, placed.GetValueOrDefault(spell.Id), tiers.GetValueOrDefault(spell.Id), Gate(spell.Id, resources)))],
             bands);
     }
 
@@ -66,7 +67,7 @@ public static class CatalogueProjection
             : null;
     }
 
-    private static CardFace Card(Spell spell, TalentBand? band, string? requires) =>
+    private static CardFace Card(Spell spell, TalentBand? band, int tier, string? requires) =>
         new(
             spell.Id,
             spell.Name,
@@ -80,7 +81,7 @@ public static class CatalogueProjection
             spell.Stats.CriticalChance.ToString(),
             Threshold(spell.Stats.CriticalChance.Value),
             band?.TreeName,
-            band?.Name,
+            tier,
             requires);
 
     /// <summary>
@@ -113,24 +114,121 @@ public static class CatalogueProjection
     }
 
     /// <summary>
-    /// What a creature must already know before this spell can be picked: the node's prerequisites and the
-    /// spell's own, named rather than listed as ids, because a card is read by a person.
+    /// What a creature must already know before this spell can be picked: the node's gate and the spell's own,
+    /// each as the group it is. Flattening them would lose the only thing a player needs from them — Crushing
+    /// Stomp wants Full Plate <em>and</em> one of two others, and a card that listed all three as one line
+    /// would not say which combination is legal (<see cref="TalentPrerequisites.AreSatisfiedBy" />). Spells are
+    /// named rather than listed as ids, because a card is read by a person.
     /// </summary>
     private static string? Gate(SpellId spell, IGameResources resources)
     {
-        var names = resources.TalentTrees
-            .SelectMany(tree => tree.Nodes.SelectMany(node => node.Spells.Where(offered => offered.Id == spell).SelectMany(offered => node.Prerequisites.ReferencedSpells.Concat(offered.Prerequisites.ReferencedSpells))))
-            .Distinct()
+        var groups = resources.TalentTrees
+            .SelectMany(tree => tree.Nodes.SelectMany(node => node.Spells
+                .Where(offered => offered.Id == spell)
+                .SelectMany(offered => new[] { node.Prerequisites, offered.Prerequisites })))
+            .SelectMany(prerequisites => Phrases(prerequisites, resources))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        return groups.Count > 0 ? string.Join("; ", groups) : null;
+    }
+
+    /// <summary>One phrase per group: everything in <c>allOf</c>, and any one of <c>anyOf</c>.</summary>
+    private static IEnumerable<string> Phrases(TalentPrerequisites prerequisites, IGameResources resources)
+    {
+        if (prerequisites.AllOf.Count > 0)
+        {
+            yield return List(prerequisites.AllOf, resources, "and");
+        }
+
+        if (prerequisites.AnyOf.Count > 0)
+        {
+            yield return $"one of {List(prerequisites.AnyOf, resources, "or")}";
+        }
+    }
+
+    private static string List(IReadOnlySet<SpellId> spells, IGameResources resources, string conjunction)
+    {
+        var names = spells
             .Select(required => resources.TryGetSpell(required, out var known) ? known.Name : required.ToString())
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        return names.Count > 0 ? string.Join(", ", names) : null;
+        return names.Count == 1
+            ? names[0]
+            : $"{string.Join(", ", names[..^1])} {conjunction} {names[^1]}";
     }
 
     private static List<TalentBand> Bands(IGameResources resources) =>
     [
-        .. resources.TalentTrees.SelectMany(tree => tree.Nodes.Select(node =>
-            new TalentBand(tree.Id, tree.Name, node.Code, node.Name, [.. node.Spells.Select(spell => spell.Id)]))),
+        .. resources.TalentTrees.SelectMany(tree => Bands(tree, tree.Root, depth: 1)),
     ];
+
+    private static IEnumerable<TalentBand> Bands(TalentTree tree, TalentNode node, int depth)
+    {
+        yield return new TalentBand(tree.Id, tree.Name, node.Code, node.Name, depth, [.. node.Spells.Select(spell => spell.Id)]);
+        foreach (var band in node.Children.SelectMany(child => Bands(tree, child, depth + 1)))
+        {
+            yield return band;
+        }
+    }
+
+    /// <summary>
+    /// How far into the tree a spell sits: one, plus the tier of whatever has to be known before it can be
+    /// picked. Everything in an <c>allOf</c> has to be known, so that group counts its deepest; any one of an
+    /// <c>anyOf</c> will do, so that group counts its shallowest — the tier is the shortest road in, which is
+    /// the one a player takes.
+    ///
+    /// It is computed rather than read off the node, and both halves of the gate are followed. Every node of
+    /// this content is named after a class, so a tier copied from a node would print "Warlord · Warlord" and
+    /// say nothing; and Full Plate and Crushing Stomp sit in the same node with one gating the other, which is
+    /// exactly the difference a tier is for.
+    /// </summary>
+    private static Dictionary<SpellId, int> Tiers(IGameResources resources)
+    {
+        var gates = resources.TalentTrees
+            .SelectMany(tree => tree.Nodes.SelectMany(node => node.Spells
+                .Select(spell => (spell.Id, Gate: new[] { node.Prerequisites, spell.Prerequisites }))))
+            .GroupBy(offer => offer.Id)
+            .ToDictionary(offers => offers.Key, offers => offers.Select(offer => offer.Gate).ToList());
+
+        var tiers = new Dictionary<SpellId, int>();
+        foreach (var spell in gates.Keys)
+        {
+            Tier(spell, gates, tiers, []);
+        }
+
+        return tiers;
+    }
+
+    /// <summary>
+    /// The tier of one spell, over the gates of every node offering it: the easiest way in counts, so several
+    /// nodes offering the same spell take the shallowest. <paramref name="walking" /> is the chain being
+    /// followed, so content with a cycle in it is a tier of one rather than a stack overflow.
+    /// </summary>
+    private static int Tier(SpellId spell, Dictionary<SpellId, List<TalentPrerequisites[]>> gates, Dictionary<SpellId, int> tiers, HashSet<SpellId> walking)
+    {
+        if (tiers.TryGetValue(spell, out var known))
+        {
+            return known;
+        }
+
+        if (!gates.TryGetValue(spell, out var offers) || !walking.Add(spell))
+        {
+            return 1;
+        }
+
+        var tier = 1 + offers.Min(gate => gate.Max(prerequisites => Behind(prerequisites, gates, tiers, walking)));
+        walking.Remove(spell);
+        tiers[spell] = tier;
+        return tier;
+    }
+
+    /// <summary>How deep one gate reaches: its <c>allOf</c> at its deepest, its <c>anyOf</c> at its shallowest.</summary>
+    private static int Behind(TalentPrerequisites prerequisites, Dictionary<SpellId, List<TalentPrerequisites[]>> gates, Dictionary<SpellId, int> tiers, HashSet<SpellId> walking)
+    {
+        var all = prerequisites.AllOf.Count == 0 ? 0 : prerequisites.AllOf.Max(required => Tier(required, gates, tiers, walking));
+        var any = prerequisites.AnyOf.Count == 0 ? 0 : prerequisites.AnyOf.Min(required => Tier(required, gates, tiers, walking));
+        return Math.Max(all, any);
+    }
 }

@@ -18,7 +18,11 @@ namespace DownfallArena.Application.Catalogue;
 /// fall back to the percentage (<c>docs/tabletop/components.md</c>:778). Zero is <c>null</c>: a spell that never
 /// crits has no face to roll.
 /// </param>
-/// <param name="Tree">The talent tree the spell is unlocked from, and the node within it.</param>
+/// <param name="Tree">The talent tree the spell is unlocked from.</param>
+/// <param name="Tier">
+/// How far into that tree it sits: the depth of the node offering it, plus the rank its own prerequisites put
+/// it at within that node. Zero when no tree offers it at all.
+/// </param>
 /// <param name="Requires">The spells a creature must already know, or <c>null</c> when nothing gates it.</param>
 public sealed record CardFace(
     SpellId Id,
@@ -33,5 +37,5 @@ public sealed record CardFace(
     string Critical,
     int? CriticalThreshold,
     string? Tree,
-    string? Tier,
+    int Tier,
     string? Requires);
