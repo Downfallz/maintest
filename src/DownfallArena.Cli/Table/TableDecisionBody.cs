@@ -49,6 +49,13 @@ internal sealed record TableDecisionBody
         }
     }
 
-    /// <summary>The kinds a body may name, so a refusal can say what was expected.</summary>
-    public static string Kinds => string.Join(", ", new[] { PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.Intent, PlayerOptionsKind.Target });
+    /// <summary>
+    /// The kinds a body may name, so a refusal can say what was expected. Listed rather than read off
+    /// <see cref="PlayerOptionsKind" />, which also carries the states nobody decides — <c>Waiting</c>,
+    /// <c>Resolution</c> and <c>Ended</c> are what a seat is in, not what it is asked.
+    /// </summary>
+    public static string Kinds => string.Join(", ", Decidable);
+
+    private static readonly PlayerOptionsKind[] Decidable =
+        [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.Intent, PlayerOptionsKind.Target];
 }

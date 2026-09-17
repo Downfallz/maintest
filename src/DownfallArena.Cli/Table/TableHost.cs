@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using DownfallArena.Application.Agents;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,35 +30,18 @@ internal static class TableHost
         var random = services.GetRequiredService<IRandomSource>();
         var agents = services.GetRequiredService<IAgentFactory>();
 
-        var seat1 = Seat(PlayerSlot.Player1, options.Player1Named, options.Player1, options, rules, agents, random, stopping.Token);
-        var seat2 = Seat(PlayerSlot.Player2, options.Player2Named, options.Player2, options, rules, agents, random, stopping.Token);
+        var seat1 = Seat(PlayerSlot.Player1, options, rules, agents, random, stopping.Token);
+        var seat2 = Seat(PlayerSlot.Player2, options, rules, agents, random, stopping.Token);
         using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, stopping.Token);
 
         // The session's own read side, not the container's: it is the one behind the lock the driver writes
         // through, and a page polls it while the match is advancing.
-        var api = new TableApi(session, session.Queries, [seat1.Seat, seat2.Seat]);
-        using var server = new TableServer(options.Port, api, new TableFiles(TableDirectory));
-
-        Console.WriteLine($"Table on {server.Url}");
-
-        // The rule set is named before anything is played. The board game is balanced for 8 to 16 rounds and
-        // the engine's default caps at thirty, so a table that took one silently would be testing another
-        // game (docs/tabletop/playtest-app.md, decision 2).
-        Console.WriteLine($"  {RuleSetFile.Describe(rules, options.Rules)}");
         var seats = new[] { seat1.Seat, seat2.Seat };
-        foreach (var seat in seats)
-        {
-            Console.WriteLine($"  {seat.Name}: {(seat.Person is null ? Describe(seat.Slot, options) : "a person")}");
-        }
+        var api = new TableApi(session, session.Queries, seats);
+        var codes = new JoinCodes(seats);
+        using var server = new TableServer(options.Bind, options.Port, api, new TableFiles(TableDirectory), codes);
 
-        // One link, carrying the token of every seat a person holds. Hotseat is one browser: the page follows
-        // whichever seat the match asks next, and a link naming one seat would go dead at the first question
-        // asked of the other. A bot's token is not on it -- nobody needs to read a bot's board.
-        var people = seats.Where(seat => seat.Person is not null).ToList();
-        if (people.Count > 0)
-        {
-            Console.WriteLine($"  Play on {server.Url}?{string.Join('&', people.Select(seat => $"{seat.Name}={seat.Token}"))}");
-        }
+        Announce(server, codes, seats, options, rules);
 
         ConsoleCancelEventHandler stop = (_, eventArgs) =>
         {
@@ -75,22 +59,71 @@ internal static class TableHost
             await serving;
             return 0;
         }
+        catch (System.Net.HttpListenerException exception)
+        {
+            // An address this machine does not answer on, or a port something else already holds. Both are a
+            // line to read and a flag to change, not a stack trace across a table with two people waiting.
+            await Console.Error.WriteLineAsync($"Cannot serve {server.Url}: {exception.Message}.{Elsewhere()}");
+            return 1;
+        }
         finally
         {
             Console.CancelKeyPress -= stop;
         }
     }
 
+    /// <summary>
+    /// What a player reads before the first tap: where the table is, which rule set it is playing, who is in
+    /// each seat, and the code that seat's player types. Everything a session needs to be joined and to be
+    /// reproduced is on these lines, because the alternative is a playtest that nobody can place afterwards.
+    /// </summary>
+    private static void Announce(TableServer server, JoinCodes codes, IReadOnlyList<TableSeat> seats, CliOptions options, RuleSet rules)
+    {
+        Console.WriteLine($"Table on {server.Url}");
+
+        // The rule set is named before anything is played. The board game is balanced for 8 to 16 rounds and
+        // the engine's default caps at thirty, so a table that took one silently would be testing another
+        // game (ADR 0054).
+        Console.WriteLine($"  {RuleSetFile.Describe(rules, options.Rules)}");
+        foreach (var seat in seats)
+        {
+            var who = seat.Person is null ? Describe(seat.Slot, options) : "a person";
+            var join = codes.Of(seat) is { } code ? $" — joins at {server.Url[..^1]}{JoinCodes.Prefix}{code}" : string.Empty;
+            Console.WriteLine($"  {seat.Name}: {who}{join}");
+        }
+
+        // One link carrying every human seat's token, for the case where the two people share this machine's
+        // browser: the page follows whichever seat the match asks, and typing two codes on one device gets to
+        // the same place. A bot's token is on nothing -- nobody needs to read a bot's board.
+        var people = seats.Where(seat => seat.Person is not null).ToList();
+        if (people.Count > 1)
+        {
+            Console.WriteLine($"  Both seats here: {server.Url}?{string.Join('&', people.Select(seat => $"{seat.Name}={seat.Token}"))}");
+        }
+
+        Console.WriteLine(server.IsLoopback
+            ? $"  Only this machine can reach it.{Elsewhere()}"
+            : "  Reachable from this network. A seat is its code: anyone who has one plays that seat.");
+    }
+
+    /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>
+    private static string Elsewhere()
+    {
+        var addresses = NetworkAddresses.OfThisMachine();
+        return addresses.Count == 0
+            ? " For a phone on the same network, bind this machine's address: --bind <address>."
+            : $" For a phone on the same network: --bind {string.Join(" or --bind ", addresses)}.";
+    }
+
     private static (SeatAgent Agent, TableSeat Seat) Seat(
         PlayerSlot slot,
-        bool named,
-        AgentSpec spec,
         CliOptions options,
         RuleSet rules,
         IAgentFactory agents,
         IRandomSource random,
         CancellationToken cancellation)
     {
+        var (named, spec) = Chosen(slot, options);
         var bot = agents.Create(spec, rules, random);
         if (named)
         {
@@ -110,8 +143,14 @@ internal static class TableHost
         return (seat, new TableSeat(slot, Token(), person));
     }
 
-    private static string Describe(PlayerSlot slot, CliOptions options) =>
-        (slot == PlayerSlot.Player1 ? options.Player1 : options.Player2).ToString();
+    /// <summary>
+    /// The agent this slot was told to play, and whether it was told at all. The table seats a person in every
+    /// slot no agent was named for, and "the option was absent" is the only thing that says so.
+    /// </summary>
+    private static (bool Named, AgentSpec Spec) Chosen(PlayerSlot slot, CliOptions options) =>
+        slot == PlayerSlot.Player1 ? (options.Player1Named, options.Player1) : (options.Player2Named, options.Player2);
+
+    private static string Describe(PlayerSlot slot, CliOptions options) => Chosen(slot, options).Spec.ToString();
 
     /// <summary>
     /// A seat token. It is not a credential — nothing here has an account — but it must not be guessable from

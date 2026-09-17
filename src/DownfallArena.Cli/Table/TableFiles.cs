@@ -31,6 +31,7 @@ internal sealed class TableFiles
             ["/table.js"] = (Path.Combine(tableDirectory, "table.js"), JavaScript),
             ["/transport.js"] = (Path.Combine(tableDirectory, "transport.js"), JavaScript),
             ["/seats.js"] = (Path.Combine(tableDirectory, "seats.js"), JavaScript),
+            ["/session.js"] = (Path.Combine(tableDirectory, "session.js"), JavaScript),
         };
     }
 

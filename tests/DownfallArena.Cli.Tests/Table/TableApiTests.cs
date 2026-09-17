@@ -62,6 +62,30 @@ public sealed class TableApiTests : IDisposable
         Text(read).ShouldContain("player2");
     }
 
+    /// <summary>
+    /// Every route, not the one a test happened to pick. The token is the whole fence around a seat, and it is
+    /// the only fence left once the host binds an address a phone can reach (ADR 0054): a route added later
+    /// that forgets to ask for one would hand a seat to whoever is on the network.
+    /// </summary>
+    [Theory]
+    [InlineData("GET", "/api/session", "")]
+    [InlineData("GET", "/api/seat/player1", "")]
+    [InlineData("GET", "/api/seat/player2", "")]
+    [InlineData("POST", "/api/seat/player1/decision", """{"kind":"Evolution","pass":true}""")]
+    [InlineData("POST", "/api/seat/player2/decision", """{"kind":"Evolution","pass":true}""")]
+    public async Task No_route_answers_without_a_token_or_with_one_this_table_never_minted(string method, string path, string body)
+    {
+        var table = await Seated();
+
+        var none = await table.Api.HandleAsync(method, path, body, token: null);
+        var blank = await table.Api.HandleAsync(method, path, body, token: "   ");
+        var another = await table.Api.HandleAsync(method, path, body, token: "token-of-another-table");
+
+        none.Status.ShouldBe(403);
+        blank.Status.ShouldBe(403);
+        another.Status.ShouldBe(403);
+    }
+
     [Fact]
     public async Task A_seat_is_served_its_own_board_and_the_question_it_is_being_asked()
     {

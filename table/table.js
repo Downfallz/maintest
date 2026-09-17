@@ -1,16 +1,35 @@
-import { httpTransport, seatsFromLocation } from './transport.js';
+import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
+import { forget, heldSeats } from './session.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
 // by the engine's own gates. Nothing here decides anything, and nothing here knows a spell by name.
-const held = seatsFromLocation(globalThis.location?.search ?? '');
+const storage = kept();
+const held = heldSeats(globalThis.location?.search ?? '', storage);
 const element = id => document.getElementById(id);
 
 if (held.length === 0) {
-  element('phase').textContent = 'Open the link the host printed: it carries the seats and their tokens.';
+  element('phase').textContent = 'Type the code the host printed, or open the link it printed.';
 } else {
+  // The token is kept, so the address bar does not have to be. What is left is a page a reload brings back.
+  tidy();
   start(held.map(({ seat, token }) => ({ seat, transport: httpTransport(seat, token) })));
+}
+
+function kept() {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    // A browser that refuses storage refuses reading the property too.
+    return null;
+  }
+}
+
+function tidy() {
+  if (globalThis.location?.search && globalThis.history?.replaceState) {
+    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+  }
 }
 
 function start(seats) {
@@ -32,14 +51,36 @@ async function refresh(state) {
   // Every seat this page holds, every poll: the host answers one seat per payload, and which one is being
   // asked is exactly what the page cannot know without asking.
   const views = [];
+  const refused = [];
   for (const seat of state.seats) {
     const answer = await seat.transport.seat();
+
+    // A token this host does not know is a seat from another table -- an earlier session, or the browser of
+    // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
+    // same page, and it has already been taken out of the address bar, so forgetting it too would mean
+    // reading it off the host's screen again.
+    if (answer.status === 403) {
+      refused.push(seat.seat);
+      continue;
+    }
+
     if (!answer.ok) {
       element('phase').textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
       return;
     }
 
     views.push({ ...seat, view: answer.body });
+  }
+
+  // Dropped after the round of polls rather than inside it, so nothing this loop reads changes while it runs.
+  for (const seat of refused) {
+    forget(storage, seat);
+    state.seats = state.seats.filter(held => held.seat !== seat);
+  }
+
+  if (views.length === 0) {
+    element('phase').textContent = 'This browser holds no seat at this table. Type the code the host printed.';
+    return;
   }
 
   render(state, views);

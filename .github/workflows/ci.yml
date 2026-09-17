@@ -107,6 +107,14 @@ jobs:
       # This is what had `main` red on every push since 2026-09-13 while every pull request was green: a PR
       # analysis reads only its own diff, a branch analysis reads the whole new-code period, and nobody reads
       # push runs.
+      #
+      # The second ignore, `csharpsquid:S5332` ("using http protocol is insecure") on `HttpHost.cs` alone. The
+      # rule is right about the protocol and there is no fix to make: the table serves two phones on a home
+      # network for an evening (ADR 0054), and HTTPS there means a certificate those phones trust, which means
+      # running a certificate authority to protect a seat token on a link between a laptop and a phone in the
+      # same room. ADR 0054 took that trade explicitly when it took leaving the loopback address, and named the
+      # fence it keeps instead: a seat token on every route, held by `TableApiTests`. Scoped to the one file
+      # that writes a prefix; anything else in this repository that reaches for `http://` still gets the rule.
       - name: Begin SonarCloud analysis
         if: env.SONAR_TOKEN != ''
         run: >
@@ -120,9 +128,11 @@ jobs:
           /d:sonar.coverage.exclusions="src/DownfallArena.Cli/**,tools/**,studio/**,table/**,viewer/**,scripts/**"
           /d:sonar.python.version="3.11,3.12,3.13"
           /d:sonar.python.coverage.reportPaths="$RUNNER_TEMP/learning-coverage.xml"
-          /d:sonar.issue.ignore.multicriteria="e1"
+          /d:sonar.issue.ignore.multicriteria="e1,e2"
           /d:sonar.issue.ignore.multicriteria.e1.ruleKey="python:S1244"
           /d:sonar.issue.ignore.multicriteria.e1.resourceKey="learning/tests/**/*.py"
+          /d:sonar.issue.ignore.multicriteria.e2.ruleKey="csharpsquid:S5332"
+          /d:sonar.issue.ignore.multicriteria.e2.resourceKey="src/DownfallArena.Cli/Hosting/HttpHost.cs"
 
       - name: Build (warnings are errors)
         run: dotnet build --no-restore --configuration Release

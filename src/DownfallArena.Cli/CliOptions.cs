@@ -1,5 +1,6 @@
 using System.Globalization;
 using DownfallArena.Application.Agents;
+using DownfallArena.Cli.Hosting;
 
 namespace DownfallArena.Cli;
 
@@ -42,8 +43,14 @@ internal sealed record CliOptions
     /// <summary>Where the studio authors content from, and rebuilds the schema into (ADR 0015).</summary>
     public string Data { get; init; } = DefaultData;
 
-    /// <summary>The loopback port the studio listens on.</summary>
+    /// <summary>The port the studio and the table listen on.</summary>
     public int Port { get; init; } = DefaultPort;
+
+    /// <summary>
+    /// The interface address the table binds. The default is this machine and no other; a playtest on a phone
+    /// needs the address that phone can reach (ADR 0054). The studio never reads it (ADR 0023).
+    /// </summary>
+    public string Bind { get; init; } = HttpHost.Loopback;
 
     /// <summary>
     /// Whether the command line named an agent for a slot. The table seats a person in every slot it was not
@@ -80,35 +87,21 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address]";
+
+    /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
+    private static readonly string[] Known =
+    [
+        "--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2",
+        "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules", "--bind",
+    ];
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
         ArgumentNullException.ThrowIfNull(args);
 
         var command = args.Count > 0 && !args[0].StartsWith("--", StringComparison.Ordinal) ? args[0] : "play";
-        var values = new Dictionary<string, string>(StringComparer.Ordinal);
-        var write = false;
-        var index = command == args.ElementAtOrDefault(0) ? 1 : 0;
-        while (index < args.Count)
-        {
-            var option = args[index];
-            if (option == "--write")
-            {
-                write = true;
-                index += 1;
-                continue;
-            }
-
-            values[option] = index + 1 < args.Count ? args[index + 1] : throw new ArgumentException($"Option '{option}' needs a value.");
-            index += 2;
-        }
-
-        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules"], StringComparer.Ordinal).FirstOrDefault();
-        if (unknown is not null)
-        {
-            throw new ArgumentException($"Unknown option '{unknown}'.");
-        }
+        var (values, write) = Scan(args, skipCommand: command == args.ElementAtOrDefault(0));
 
         return new CliOptions
         {
@@ -126,6 +119,7 @@ internal sealed record CliOptions
             Player2Named = values.ContainsKey("--p2"),
             Handover = values.TryGetValue("--handover", out var handover) ? ParseHandover(handover) : null,
             Rules = values.GetValueOrDefault("--rules"),
+            Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
             Write = write,
@@ -133,6 +127,34 @@ internal sealed record CliOptions
             Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
             Export = values.GetValueOrDefault("--export"),
         };
+    }
+
+    /// <summary>
+    /// The command line as a name and a value per option, plus the one flag that carries no value. An option
+    /// nobody takes is refused here rather than ignored: a mistyped flag that parses is a run that quietly did
+    /// something else.
+    /// </summary>
+    private static (Dictionary<string, string> Values, bool Write) Scan(IReadOnlyList<string> args, bool skipCommand)
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        var write = false;
+        for (var index = skipCommand ? 1 : 0; index < args.Count;)
+        {
+            var option = args[index];
+            if (option == "--write")
+            {
+                write = true;
+                index += 1;
+                continue;
+            }
+
+            values[option] = index + 1 < args.Count ? args[index + 1] : throw new ArgumentException($"Option '{option}' needs a value.");
+            index += 2;
+        }
+
+        return values.Keys.Except(Known, StringComparer.Ordinal).FirstOrDefault() is { } unknown
+            ? throw new ArgumentException($"Unknown option '{unknown}'.")
+            : (values, write);
     }
 
     /// <summary>A trace count, rejected here so a typo is one line rather than a run that keeps nothing.</summary>

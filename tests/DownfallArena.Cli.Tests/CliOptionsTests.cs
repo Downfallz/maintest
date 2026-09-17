@@ -100,6 +100,27 @@ public sealed class CliOptionsTests
         options.Player2Named.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// The default is this machine and no other. A playtest on a phone is the reason the option exists, and a
+    /// table that bound the network without being asked would be the wrong default in the other direction.
+    /// </summary>
+    [Fact]
+    public void A_table_binds_this_machine_unless_it_is_told_an_address()
+    {
+        CliOptions.Parse(["table"]).Bind.ShouldBe("127.0.0.1");
+        CliOptions.Parse(["table", "--bind", "192.168.1.12"]).Bind.ShouldBe("192.168.1.12");
+    }
+
+    /// <summary>A typo in an address is one line here, not a stack out of the listener.</summary>
+    [Theory]
+    [InlineData("0.0.0.0")]
+    [InlineData("localhost")]
+    [InlineData("192.168.1")]
+    public void An_address_no_host_can_bind_is_refused_while_parsing(string address)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--bind", address]));
+    }
+
     /// <summary>Round zero is not a round; the table would hand over to nobody.</summary>
     [Theory]
     [InlineData("0")]
