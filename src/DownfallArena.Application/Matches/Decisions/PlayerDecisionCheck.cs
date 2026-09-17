@@ -55,7 +55,10 @@ public static class PlayerDecisionCheck
 
     private static Result SpeedChoice(SpeedOptions options, PlayerDecision decision)
     {
-        if (decision.Speed is null)
+        // Defined, not merely present. A host parses a speed off the wire, and Enum.TryParse takes "7" as
+        // happily as "Quick"; an undefined value would pass every gate below this one and reach the timeline
+        // builder, where its number quietly becomes a priority band of its own.
+        if (decision.Speed is not { } speed || !Enum.IsDefined(speed))
         {
             return Result.Failure(DecisionErrors.NoSpeedChosen);
         }
