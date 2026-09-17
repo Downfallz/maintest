@@ -4,6 +4,82 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-17. The exploit term reads a pair, not a catalogue: one spell moved costs the fresh agent 21 points and the older one 1, and on the moved catalogue the stale agent is the better exploiter
+
+- **The split ADR 0044 asks for, measured.** That ADR holds the question open and says it in the knobs file
+  too: whether `exploit` measures the content or the agent it compares against, and it asks for the split
+  before another tuning pass is run against the term. Four searched sets, two catalogues, the benchmark
+  seeds, agent A against Greedy, which is exactly the evaluation the objective reads. The second catalogue
+  is the current one with Crushing Stomp at the weakest of its own bounds, every step inside what
+  `knobs.json` already allows (cost 5, damage 4, one round of stun, critical 0.40).
+
+  | exploit agent | `7e199df4` as it stands | Crushing Stomp weakened | what the move costs it | penalty, before to after |
+  | --- | --- | --- | --- | --- |
+  | `mixture-mean` | 0.8525 | 0.8225 | 0.030 | 73.20 to 59.40 |
+  | `search-4` | 0.9275 | 0.9150 | 0.013 | 114.00 to 106.58 |
+  | `pressure-floor` | **1.0000** | 0.7900 | **0.210** | 162.00 to 46.08 |
+  | `stun-first` | **1.0000** | 0.7650 | **0.235** | 162.00 to 36.98 |
+
+- **The term measures the pair.** Hold the catalogue and the reading moves 0.15 with the agent; hold the
+  agent and the same one-spell move is worth 0.013 to one of them and 0.235 to another. The move is only
+  visible to the two sets that were built on that spell: `pressure-floor` and `stun-first` are the ones
+  that wait, bank energy and open with Crushing Stomp, and taking the spell away takes their game away.
+  `search-4` barely notices, because it never played that line. So there is no reading of "how exploitable
+  this catalogue is" that does not name an exploiter: the term as defined is a property of the pair.
+
+- **Half of what ADR 0044 asked for, and the half it is.** That ADR asks for a search fitted to each
+  catalogue and then played across both; every set here was searched on `7e199df4` and replayed on the
+  moved one, which is the transfer half. It says how much of an agent's edge a content move takes away, and
+  nothing about what a search fitted to the moved catalogue would find there (Codex's review). That cell is
+  running: a search from `stun-first` against Greedy on the weakened catalogue, which is the same question
+  `search-3` and `search-4` were made to answer on theirs. Until it lands, every reading below is about
+  these four sets, and the claim "a content move buys less than one agent says" holds in the direction it
+  is used: a fresh exploiter can only find **more** than the best of four, never less, so the gradient
+  below is an upper bound on what the move is worth.
+
+- **And the ranking of exploiters changes with the content, which is the file's own rule measured for the
+  first time.** On the current catalogue the two newest sets read 1.0000 and `search-4` 0.9275. On the moved
+  one the order inverts: `search-4` 0.9150 is the best exploiter and the two newest read 0.790 and 0.765.
+  `knobs.json` has always said that an agent searched against a catalogue that no longer exists understates
+  the gap; here it understates it by 12.5 points, and the refresh rule is right for a measured reason rather
+  than a plausible one.
+
+- **What that does to the gradient this journal reported yesterday.** The entry of 2026-09-17 on the
+  exploiter refresh measured that move as worth 116 points of objective, read by `pressure-floor` alone.
+  Read as the best of these four, the same move takes the term from 1.0000 to 0.9150 and the penalty from
+  162.00 to 106.58: **at most 55 points, where one agent read 116**. A single-agent reading credits a
+  content move for blinding that one agent, and at least half the credit in that measurement was exactly
+  that. At most, because a set searched on the moved catalogue can only read higher than the best of these
+  four, which would leave the move worth less still.
+
+- **The mirrors, and a trend this journal claimed and does not have.** The same five agents against
+  themselves on the benchmark seeds:
+
+  | mirror | rounds | at the round cap | first mover | spell entropy |
+  | --- | --- | --- | --- | --- |
+  | Greedy | 7.78 | 0.5 % | **0.465** | 3.12 |
+  | `pressure-floor` | 16.34 | 17.0 % | 0.600 | 3.11 |
+  | `search-4` | 5.76 | 0.0 % | 0.635 | 2.91 |
+  | `mixture-mean` | 8.85 | 7.5 % | 0.745 | 3.32 |
+  | `stun-first` | 10.72 | 2.5 % | **0.930** | 2.62 |
+
+  Every searched set leaves the 0.45 to 0.55 band the balance objective asks of a mirror, and Greedy alone
+  is inside it. But the order does not follow strength: `pressure-floor` beats both `search-4` and
+  `mixture-mean` head to head and has the least decided mirror of the three. The `stun-first` entry called
+  this a trend, "each rung leaves less of the match to the second player", on two points. Five points
+  refuse it, and that sentence is corrected in the entry below. What survives is narrower and still worth
+  keeping: a searched set makes the mirror a first-mover's game, by between 13 and 47 points, and how much
+  is a property of the set rather than of its strength.
+
+- **What this licenses.** Two things, and neither is a tuning pass. The term's definition is the first: if
+  what the objective wants is a property of the catalogue, then `exploit` should read the **best of a panel**
+  of searched sets rather than one named file, the way the weight search already scores a candidate against
+  a panel; the arithmetic above is what that would have changed, and it is a decision for an ADR rather
+  than an edit, since it changes what tuning optimizes. The second is that this measurement is two
+  catalogues, one of them reached by moving a single spell to the end of its bounds. A second content move,
+  chosen to blind `search-4` instead, would say whether the effect is symmetric or whether that one spell is
+  simply the catalogue's exploit.
+
 ## 2026-09-17. The candidate terms take the clone from copying 96 % of its teacher to copying 99 %, and a better copy plays its teacher to a dead heat: imitation has no ceiling left to lift
 
 - **`ci-126` is `ci-106`'s three seeds with the terms in the data, and with the control that makes them
@@ -98,9 +174,10 @@ first.
 - **And the mirror is worse than the one that worried the entry below.** `pressure-floor` against itself ran
   15.1 rounds with the first mover taking 0.685. This set against itself: 10.6 rounds, 1.5 % at the round
   cap, no draws, and **the first mover takes 0.925**. Two stun locks facing each other is a game decided by
-  the coin, and the harder the lock the more decided it is. The ladder's top two rungs are agents to play,
-  not baselines to balance against, and that is now a trend rather than an observation: each rung prices
-  control higher and leaves less of the match to the second player.
+  the coin. The ladder's top two rungs are agents to play, not baselines to balance against. This entry
+  first read that as a trend, each rung leaving less of the match to the second player; the five mirrors
+  measured the next morning refuse it, since `pressure-floor` sits below two weaker sets on that axis (the
+  entry above).
 
 - **What this licenses.** The set is committed as `learning/weights/stun-first.json`, to be played and
   compared. `greedy.json` is untouched and the digest is unmoved. Three things follow. The ladder still
