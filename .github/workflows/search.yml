@@ -123,6 +123,9 @@ jobs:
           if [[ -n "$INITIAL" ]]; then
             start=(--initial "$INITIAL")
           fi
+          # `tee` always succeeds and a pipeline exits with its last command's status, so without this a
+          # search that died reads as a search that found nothing, the way ci-131 did in iterate.yml.
+          set -o pipefail
           uv run --project learning --locked --no-sync --no-build \
             python -m downfall_learning.cli search-weights -o "$OUT" \
             --opponent "$OPPONENT" --kind "$KIND" "${start[@]}" --seeds "$SEEDS" \

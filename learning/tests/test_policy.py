@@ -148,6 +148,21 @@ def test_a_baseline_that_is_not_finite_is_refused() -> None:
         a_policy(baseline=infinite)
 
 
+def test_a_metric_that_is_not_finite_is_left_out_rather_than_written_as_infinity(tmp_path: Path) -> None:
+    """`json.dumps` writes `Infinity` and `NaN`, which is not JSON and which the engine's reader refuses.
+
+    ci-131 wrote a clone whose loss had overflowed and died on `'I' is an invalid start of a value` inside
+    the next command, with every model of the turn already fitted. An undefined reading is worth losing; a
+    file nothing can read costs the turn.
+    """
+    policy = a_policy(metrics={"accuracy": 0.9, "loss": float("inf"), "r2": float("nan")})
+
+    path = policy.save(tmp_path / "policy.json")
+
+    assert json.loads(path.read_text())["metrics"] == {"accuracy": 0.9}
+    assert "Infinity" not in path.read_text() and "NaN" not in path.read_text()
+
+
 def test_a_saved_weight_keeps_six_decimals_and_no_more(tmp_path: Path) -> None:
     policy = a_policy(
         weights=np.array([[1.234567891, 0, 0, 0, 0, 0], [0, -0.987654321, 0, 0, 0, 0]]),
