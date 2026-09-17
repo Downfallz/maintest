@@ -47,11 +47,17 @@ export function conditionDock(conditions) {
   return [...lanes(groups)].map(lane => ({ lane, conditions: groups.get(lane) }));
 }
 
-// Which lane a condition sits in: `new` while its first countdown is still ahead of it, its remaining rounds
-// once that one has passed, and null when it never counts down at all.
+// Which lane a condition sits in: null when it never counts down at all, `new` while its first countdown is
+// still ahead of it, and its remaining rounds once that one has passed.
+//
+// Permanent is tested first and that order is the whole of it. A permanent condition is applied fresh like any
+// other -- the domain sets the flag and leaves the countdown null -- so reading freshness first would put a new
+// permanent buff in the `new` countdown lane, say it was counting down, and then move it to `permanent` at the
+// next cleanup. The printed board is plainer than that: permanent conditions never enter the dock's lanes at
+// all, because they never count down (components.md §3.2).
 export function laneOf(condition) {
-  if (condition?.isFresh === true) return 'new';
-  return Number.isInteger(condition?.remainingRounds) ? condition.remainingRounds : null;
+  if (!Number.isInteger(condition?.remainingRounds)) return null;
+  return condition?.isFresh === true ? 'new' : condition.remainingRounds;
 }
 
 // The printed order, left to right: `new`, then the numbered lanes longest first, then permanent. Only the

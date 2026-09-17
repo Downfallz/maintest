@@ -45,3 +45,23 @@ test('a page with no catalogue draws no mat rather than failing', () => {
   assert.deepEqual(matBands({}, undefined, undefined), []);
   assert.deepEqual(drawn(undefined), []);
 });
+
+// The gate is the only place a player can read why a node is out of reach: the decision sheet offers what is
+// unlocked and says nothing about what is not (playtest-app.md §3.1).
+test('a band carries the gate each of its spells is behind', () => {
+  const catalogue = { trees: [{ treeName: 'Tree', name: 'Node', depth: 2, spells: ['spell:a:v1', 'spell:b:v1'] }] };
+  const cards = new Map([
+    ['spell:a:v1', { name: 'A', requires: 'B' }],
+    ['spell:b:v1', { name: 'B' }],
+  ]);
+
+  const bands = matBands(catalogue, [{ id: 1, knownSpells: ['spell:b:v1'] }], cards);
+
+  assert.deepEqual(bands[0].spells.map(spell => [spell.name, spell.requires]), [['A', 'B'], ['B', '']]);
+});
+
+test('a spell the catalogue has no card for carries no gate rather than an undefined one', () => {
+  const catalogue = { trees: [{ treeName: 'Tree', name: 'Node', depth: 1, spells: ['spell:x:v1'] }] };
+
+  assert.deepEqual(matBands(catalogue, [], new Map())[0].spells.map(spell => spell.requires), ['']);
+});

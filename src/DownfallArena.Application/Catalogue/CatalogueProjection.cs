@@ -1,6 +1,7 @@
 using System.Globalization;
 using DownfallArena.Application.Learning;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Talents;
 using DownfallArena.SharedKernel.Identifiers;
@@ -50,8 +51,22 @@ public static class CatalogueProjection
             resources.Version,
             RuleSetStamp.Of(rules),
             [.. resources.Spells.Select(spell => Card(spell, placed.GetValueOrDefault(spell.Id), tiers.GetValueOrDefault(spell.Id), Gate(spell.Id, resources)))],
-            bands);
+            bands,
+            Round());
     }
+
+    /// <summary>
+    /// The round, as the strip a table prints. The sub-phases are <see cref="RoundSubPhase" /> in declaration
+    /// order, which is the order they are played (ADR 0010) — read off the enum rather than listed here, so a
+    /// step added to the round cannot be one the screen forgets.
+    /// </summary>
+    private static RoundShape Round() =>
+        new(
+            [.. Enum.GetNames<RoundSubPhase>()],
+            [
+                "Healing resolves before bleeding, so a regeneration can carry a creature through a bleed that would otherwise have killed it (ADR 0019).",
+                "A critical is applied before defense is subtracted, not after.",
+            ]);
 
     /// <summary>
     /// The face of a d20 a chance is rolled on, or <c>null</c> when it is not a twentieth. A chance of 1.00 is

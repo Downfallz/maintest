@@ -3,7 +3,7 @@ import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
 import { chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
-import { backText, handRows } from './hand.js';
+import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine, nextSince } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
@@ -75,6 +75,27 @@ async function load(state) {
   state.catalogue = await loadCatalogue(state.seats);
   state.cards = new Map((state.catalogue?.cards ?? []).map(card => [card.id, card]));
   element('rules').textContent = ruleLine(state.catalogue);
+  renderShape(state.catalogue?.round);
+}
+
+// The round's shape, as the printed board's collapsible strip: every step in the order it is played, and the
+// orderings inside them that a player gets wrong. The host serves both -- a screen that listed the steps itself
+// would be a screen holding a rule, and a step added to the round would be one it forgot.
+function renderShape(round) {
+  const steps = round?.subPhases ?? [];
+  const orderings = round?.orderings ?? [];
+  element('shape').hidden = steps.length === 0 && orderings.length === 0;
+  element('sub-phases').replaceChildren(...steps.map(step => {
+    const one = document.createElement('li');
+    one.textContent = step;
+    return one;
+  }));
+
+  element('orderings').replaceChildren(...orderings.map(ordering => {
+    const one = document.createElement('li');
+    one.textContent = ordering;
+    return one;
+  }));
 }
 
 // The one line a print sheet carries, so checking that a deck and a screen are the same game is one glance
@@ -169,7 +190,7 @@ function render(state, views) {
 
   element('phase').textContent = view.over
     ? 'The match is over.'
-    : `Round ${view.board.roundNumber ?? '—'} · ${view.board.subPhase ?? '—'}`;
+    : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${view.board.subPhase ?? '—'}`;
   renderTimeline(view.board);
   renderBoard(state, view);
   renderMat(state, view.board);
@@ -279,7 +300,7 @@ function backs(state, board, opponentIntents) {
 
   const mine = document.createElement('div');
   mine.className = 'backs ally';
-  mine.textContent = (board.intents ?? [])
+  mine.textContent = faceDown(board)
     .map(intent => backText(intent, state.cards))
     .join(' · ') || 'nothing declared';
 
@@ -397,6 +418,13 @@ function renderMat(state, board) {
       const label = document.createElement('span');
       label.textContent = spell.name;
       row.append(label);
+      if (spell.requires !== '') {
+        const gate = document.createElement('span');
+        gate.className = 'gate';
+        gate.textContent = spell.requires;
+        row.append(gate);
+      }
+
       for (const pip of spell.pips) {
         const dot = document.createElement('span');
         dot.className = `pip${pip.known ? ' known' : ''}`;

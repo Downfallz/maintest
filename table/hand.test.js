@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { backText, declaredBy, handRows } from './hand.js';
+import { backText, declaredBy, faceDown, handRows } from './hand.js';
 
 const allies = [
   { id: 1, knownSpells: ['spell:basic_attack:v1', 'spell:heavy_strike:v1'] },
@@ -54,4 +54,33 @@ test('a back this seat may read names the creature and its card', () => {
   assert.equal(backText({ actor: 1, spell: 'spell:pummel:v1' }, cards), '1: Pummel');
   assert.equal(backText({ actor: 2, spell: 'spell:unknown:v1' }, cards), '2: spell:unknown:v1');
   assert.equal(backText(undefined, cards), ': ');
+});
+
+// A round keeps every intent it was given and tracks the reveal separately, so from the first reveal onwards a
+// back drawn for a cast the reveal strip is showing face up is the board contradicting itself about this
+// player's own cards.
+test('a card already turned over is no longer one of this seat backs', () => {
+  const board = {
+    intents: [{ actor: 1, spell: 'a' }, { actor: 2, spell: 'b' }, { actor: 3, spell: 'c' }],
+    revealedActions: [{ actor: 1, spell: 'a', targets: [4] }],
+  };
+
+  assert.deepEqual(faceDown(board).map(intent => intent.actor), [2, 3]);
+});
+
+test('before anything is revealed every declared card is still face down', () => {
+  const board = { intents: [{ actor: 1 }, { actor: 2 }], revealedActions: [] };
+
+  assert.deepEqual(faceDown(board).map(intent => intent.actor), [1, 2]);
+  assert.deepEqual(faceDown({ intents: [{ actor: 1 }] }).map(intent => intent.actor), [1]);
+  assert.deepEqual(faceDown(undefined), []);
+});
+
+test('a seat whose whole team has been revealed has no backs left', () => {
+  const board = {
+    intents: [{ actor: 1 }, { actor: 2 }],
+    revealedActions: [{ actor: 1, targets: [] }, { actor: 2, targets: [] }],
+  };
+
+  assert.deepEqual(faceDown(board), []);
 });

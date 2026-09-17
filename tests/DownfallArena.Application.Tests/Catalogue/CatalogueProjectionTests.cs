@@ -1,6 +1,7 @@
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Resources.Talents;
@@ -362,5 +363,22 @@ public sealed class CatalogueProjectionTests
             .Build(GameResources.Create("probe", [creature], [spell], [tree]), Rules)
             .Cards
             .ShouldHaveSingleItem();
+    }
+
+    /// <summary>
+    /// The round strip the table prints. The steps come off the enum rather than a list here, so a step added
+    /// to the round cannot be one the screen forgets — that is the whole reason the client is served them.
+    /// </summary>
+    [Fact]
+    public void The_round_is_served_as_its_steps_in_play_order_and_the_orderings_inside_them()
+    {
+        View.Round.SubPhases.ShouldBe(Enum.GetNames<RoundSubPhase>());
+        View.Round.SubPhases[0].ShouldBe(nameof(RoundSubPhase.EnergyGain));
+        View.Round.SubPhases[^1].ShouldBe(nameof(RoundSubPhase.Finalization));
+        View.Round.SubPhases.ShouldContain(nameof(RoundSubPhase.RevealAndTarget));
+
+        // The two the player aid calls load-bearing, because they are the two a player gets wrong.
+        View.Round.Orderings.Count.ShouldBe(2);
+        View.Round.Orderings.ShouldAllBe(ordering => ordering.EndsWith('.'));
     }
 }

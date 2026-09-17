@@ -171,3 +171,22 @@ test('every marker is standing before resolution and none after it', () => {
   assert.equal(standing({ ...board }).length, 2);
   assert.deepEqual(standing(undefined), []);
 });
+
+// A permanent condition is applied fresh like any other -- the domain sets the flag and leaves the countdown
+// null -- so reading freshness first would put a new permanent buff in a countdown lane, say it was counting
+// down, and then move it at the next cleanup. Permanent conditions never enter the lanes at all.
+test('a permanent condition stays out of the countdown lanes even when it is fresh', () => {
+  assert.equal(laneOf({ remainingRounds: null, isFresh: true }), null);
+  assert.equal(laneOf({ remainingRounds: null, isFresh: false }), null);
+  assert.equal(laneOf({ isFresh: true }), null);
+});
+
+test('a fresh permanent and a counted condition are docked in their own lanes', () => {
+  const dock = conditionDock([
+    { effect: { kind: 'DefenseBuff' }, remainingRounds: null, isFresh: true },
+    { effect: { kind: 'Bleed' }, remainingRounds: 2, isFresh: true },
+  ]);
+
+  assert.deepEqual(dock.map(group => group.lane), ['new', null]);
+  assert.deepEqual(dock.map(group => group.conditions.map(chipText)), [['Bleed'], ['DefenseBuff']]);
+});

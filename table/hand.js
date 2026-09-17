@@ -32,3 +32,12 @@ export function backText(intent, cards) {
   const spell = cards?.get?.(intent?.spell)?.name ?? intent?.spell ?? '';
   return `${intent?.actor ?? ''}: ${spell}`;
 }
+
+// This seat's cards that are still face down: the intents it submitted, less the ones already turned over. A
+// round keeps every intent it was given and tracks the reveal separately, so from the first reveal onwards the
+// two differ -- and a back drawn for a cast the reveal strip is showing face up on the same screen is the
+// board contradicting itself about this player's own cards.
+export function faceDown(board) {
+  const revealed = new Set((board?.revealedActions ?? []).map(action => action?.actor));
+  return (board?.intents ?? []).filter(intent => !revealed.has(intent?.actor));
+}

@@ -11,4 +11,4 @@ namespace DownfallArena.Application.Catalogue;
 /// <em>and</em> a rule set, or it is not reproducible (ADR 0054), and a deck and a screen that disagree about
 /// either are a playtest of neither.
 /// </remarks>
-public sealed record CatalogueView(string ContentHash, RuleSetStamp Rules, IReadOnlyList<CardFace> Cards, IReadOnlyList<TalentBand> Trees);
+public sealed record CatalogueView(string ContentHash, RuleSetStamp Rules, IReadOnlyList<CardFace> Cards, IReadOnlyList<TalentBand> Trees, RoundShape Round);
