@@ -255,54 +255,59 @@ function renderBoard(state, view) {
 // confirmation -- the same shape targeting has. A second copy of each card in the sheet would be two of one
 // card on one screen, and the enabled-looking one in the hand doing nothing.
 function hand(state, view) {
-  const board = view.board;
   const asked = isAsked(view) && view.waitingFor === 'Intent' ? view.waitingCreature : null;
+  const rows = handRows(view.board.allies, view.options?.intent, view.board.intents);
   const box = document.createElement('div');
   box.className = 'hand-cards';
-  const rows = handRows(board.allies, view.options?.intent, board.intents);
   box.hidden = rows.every(row => row.spells.length === 0);
+  box.append(...rows.map(row => handRow(state, row, asked)));
+  return box;
+}
 
-  for (const row of rows) {
-    const one = document.createElement('div');
-    one.className = 'hand-row';
+// One creature's row: who it is, whether it has declared, and its cards.
+function handRow(state, row, asked) {
+  const one = document.createElement('div');
+  one.className = 'hand-row';
 
-    const who = document.createElement('div');
-    who.className = 'hand-who';
-    who.textContent = `${row.creature}${row.declared ? ' · declared' : ''}`;
-    one.append(who);
+  const who = document.createElement('div');
+  who.className = 'hand-who';
+  who.textContent = `${row.creature}${row.declared ? ' · declared' : ''}`;
 
-    const held = document.createElement('div');
-    held.className = 'held-cards';
-    for (const spell of row.spells) {
-      // Tappable only on the creature being asked: every row says what its creature could cast, which is what
-      // makes the hand readable, but only one creature is being asked at a time.
-      const offered = row.creature === asked && spell.castable;
-      const face = document.createElement('div');
-      face.className = `card held${spell.castable ? ' castable' : ''}${offered ? ' offered' : ''}${offered && spell.spell === state.chosen ? ' chosen' : ''}`;
-      const parts = cardParts(state, spell.spell, '');
-      if (parts === null) {
-        face.textContent = spell.spell;
-      } else {
-        face.append(...parts);
-      }
+  const held = document.createElement('div');
+  held.className = 'held-cards';
+  // Tappable only on the creature being asked: every row says what its creature could cast, which is what
+  // makes the hand readable, but only one creature is being asked at a time.
+  held.append(...row.spells.map(spell => heldCard(state, spell, row.creature === asked && spell.castable)));
 
-      if (offered) {
-        face.tabIndex = 0;
-        face.setAttribute('role', 'button');
-        face.addEventListener('click', () => {
-          state.chosen = spell.spell;
-          refresh(state);
-        });
-      }
+  one.append(who, held);
+  return one;
+}
 
-      held.append(face);
-    }
+// One card in the hand: its whole face, dimmed when the creature cannot cast it, and a tap surface when it is
+// the one being asked for.
+function heldCard(state, spell, offered) {
+  const face = document.createElement('div');
+  face.className = ['card held', spell.castable ? 'castable' : '', offered ? 'offered' : '', offered && spell.spell === state.chosen ? 'chosen' : '']
+    .filter(Boolean)
+    .join(' ');
 
-    one.append(held);
-    box.append(one);
+  const parts = cardParts(state, spell.spell, '');
+  if (parts === null) {
+    face.textContent = spell.spell;
+  } else {
+    face.append(...parts);
   }
 
-  return box;
+  if (offered) {
+    face.tabIndex = 0;
+    face.setAttribute('role', 'button');
+    face.addEventListener('click', () => {
+      state.chosen = spell.spell;
+      refresh(state);
+    });
+  }
+
+  return face;
 }
 
 // The actions that are already face up, in the order they were revealed (board.js). Nothing is drawn while
