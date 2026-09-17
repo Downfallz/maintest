@@ -40,11 +40,13 @@ tests/
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
   DownfallArena.Application.Tests   Use case tests with NSubstitute for ports.
   DownfallArena.Infrastructure.Tests Adapter tests (in-memory, file-backed, seeded random).
+  DownfallArena.Cli.Tests           Host tests: the console commands and the studio's HTTP host.
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
 docs/
   adr/          Architecture Decision Records. New decision = new ADR.
   architecture/ How the code is organized and why.
   domain/       Glossary (ubiquitous language), game rules, and the spell catalogue.
+  tabletop/     The board game translation: the plan, and what it produces (plan, audit, rule set, components, rulebook).
 legacy/         Frozen prototypes from before the clean slate. Read-only reference.
 .claude/        Claude Code configuration: rules, agents, skills, hooks.
 .github/        CI, issue and PR templates, Dependabot, CODEOWNERS.

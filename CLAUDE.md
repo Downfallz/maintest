@@ -6,7 +6,10 @@
 
 - Path-scoped rules live in `.claude/rules/`. They load automatically when you touch matching files.
 - Subagents in `.claude/agents/`: `domain-reviewer` (DDD purity review), `test-engineer` (writes tests first),
-  `code-reviewer` (adversarial review of a diff). Use them for their purpose instead of doing it all inline.
+  `code-reviewer` (adversarial review of a diff). For the board game translation (`docs/tabletop/plan.md`):
+  `boardgame-director` (what survives the table), `tabletop-mathematician` (measures a candidate rule set),
+  `component-designer` (what is in the box), `rulebook-writer` (the rulebook and the player aid),
+  `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
 - Skills in `.claude/skills/`: `/adr` (create a decision record), `/new-aggregate` (scaffold an aggregate with
   tests), `/verify` (build, tests, format check, the CI gate).
 - `.claude/hooks/session-start.sh` installs the .NET SDK on Claude Code on the web when it is missing. It
