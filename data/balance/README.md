@@ -119,8 +119,10 @@ answer is now to **add** the newest search to the panel rather than to replace t
 one evaluation and is sometimes the only one that still sees the hole. On `7e199df4` the panel reads 1.000,
 and the one reachable move measured so far, Crushing Stomp at the weakest of its own bounds, takes it to
 0.915 and the objective from 172.42 to 124.63, where a single fresh agent read that same move as 64.13. A
-candidate therefore costs four evaluations here and seven in all, which is the price of the reading. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
-because otherwise the engine fails one candidate at a time, once a search has already started.
+candidate therefore costs four evaluations here and seven in all, which is the price of the reading. Only
+agent A is read as a panel: agent B is the opponent it is measured against, and `check-knobs` refuses a list
+there. It also refuses an empty panel, and a knobs file whose evaluation names a weights or policy file that
+is not there, because otherwise the engine fails one candidate at a time, once a search has already started.
 
 Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
 of the talent tree, which is the set a player is choosing between at that moment — and report the worst

@@ -567,6 +567,12 @@ def _agent_problems(knobs: Knobs, root: Path) -> list[str]:
     for name, evaluation in sorted(knobs.objective.evaluations.items()):
         for side in ("p1", "p2"):
             specs = panel(evaluation, side)
+            if side == "p2" and isinstance(evaluation.get(side), (list, tuple)):
+                problems.append(
+                    f"objective: evaluation '{name}' p2 is a list, and only agent A is read as a panel "
+                    f"(ADR 0052): the opponent is what a panel is measured against."
+                )
+                continue
             if not specs:
                 problems.append(f"objective: evaluation '{name}' {side} names no agent at all.")
             for spec in specs:

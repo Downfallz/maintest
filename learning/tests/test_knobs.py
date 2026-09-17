@@ -417,6 +417,25 @@ def test_every_agent_of_a_panel_is_checked_and_an_empty_panel_is_refused(tmp_pat
     ]
 
 
+def test_a_panel_on_agent_b_is_refused(tmp_path: Path) -> None:
+    """Only agent A is read as a panel, so a list on `p2` would reach the engine as one unknown agent."""
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "evaluations": {"exploit": {"p1": "greedy", "p2": ["greedy", "random"]}},
+            "targets": [{"metric": "drawRate", "on": "exploit", "max": 0.05, "scale": 0.05, "weight": 1}],
+        }
+    )
+    knobs = load_knobs(write_knobs(tmp_path, document))
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == [
+        "objective: evaluation 'exploit' p2 is a list, and only agent A is read as a panel "
+        "(ADR 0052): the opponent is what a panel is measured against."
+    ]
+
+
 def test_a_panel_reads_as_the_agents_it_names_and_a_bare_spec_as_one(tmp_path: Path) -> None:
     assert panel({"p1": ["greedy", "random"]}, "p1") == ("greedy", "random")
     assert panel({"p1": "greedy"}, "p1") == ("greedy",)
