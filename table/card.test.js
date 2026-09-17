@@ -53,6 +53,14 @@ test('a cost of zero is printed, because free is a rule the page would be invent
   assert.equal(cardCost({ cost: 0 }), '0');
 });
 
+// Three spells of the shipped catalogue buy no initiative at their unlock. A card that dropped the line would
+// read as a card missing one, which is the difference between "buys nothing" and "we did not say".
+test('an unlock that buys no initiative still prints its line', () => {
+  assert.deepEqual(cardLines({ initiative: 0 }), ['Unlock: +0 initiative']);
+  assert.deepEqual(cardLines({ initiative: 3 }), ['Unlock: +3 initiative']);
+  assert.deepEqual(cardLines({}), []);
+});
+
 // Until the catalogue is snapped to the d20 grid, a chance is a percentage and there is no face to roll. The
 // page shows whichever it is given, with no idea which case it is in.
 test('the die line appears only when the host computed a threshold', () => {

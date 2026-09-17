@@ -43,8 +43,10 @@ export function criticalLine(card) {
   return card.criticalThreshold ? `Crit ${card.critical} · d20 ${card.criticalThreshold}+` : `Crit ${card.critical}`;
 }
 
+// Zero is a bonus and is printed, exactly as a zero cost is: three spells of the shipped catalogue buy no
+// initiative at their unlock, and a card that stayed silent about it would read as a card missing a line.
 function unlockLine(card) {
-  return card?.initiative ? `Unlock: +${card.initiative} initiative` : '';
+  return Number.isInteger(card?.initiative) ? `Unlock: +${card.initiative} initiative` : '';
 }
 
 function requiresLine(card) {

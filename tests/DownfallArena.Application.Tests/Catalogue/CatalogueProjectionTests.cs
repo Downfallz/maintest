@@ -39,7 +39,7 @@ public sealed class CatalogueProjectionTests
         slam.Cost.ShouldBe(2);
         slam.Initiative.ShouldBe(1);
         slam.Targeting.ShouldBe("Up to 2 enemies");
-        slam.Effects.ShouldBe(["Damage 2", "Stun, 1 rounds"]);
+        slam.Effects.ShouldBe(["Damage 2", "Stun, 1 round"]);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class CatalogueProjectionTests
     {
         var rend = View.Cards.Single(card => card.Id == TestContent.Rend);
 
-        rend.Effects.ShouldBe(["Damage 1", "Bleed 19 a round, 1 rounds"]);
+        rend.Effects.ShouldBe(["Damage 1", "Bleed 19 a round, 1 round"]);
     }
 
     [Theory]
@@ -292,10 +292,25 @@ public sealed class CatalogueProjectionTests
             "Energy regeneration 2 a round, 3 rounds",
             "Stun, 2 rounds",
             "Defense +3, permanent",
-            "Defense -2, 1 rounds",
-            "Initiative +2, 1 rounds",
+            "Defense -2, 1 round",
+            "Initiative +2, 1 round",
             "Initiative -2, 2 rounds",
         ]);
+    }
+
+    /// <summary>
+    /// The printed deck writes "1 round" and the widths components.md §2.3 measured were measured with it, so
+    /// a card that said "1 rounds" would be both wrong and wider than the face it was measured for.
+    /// `Duration.ToString()` is always plural, which is why the wording is the projection's and not its.
+    /// </summary>
+    [Fact]
+    public void One_round_is_singular_and_no_rounds_at_all_is_permanent()
+    {
+        EffectLine.Of(Bleed.Of(4, rounds: 1)).ShouldBe("Bleed 4 a round, 1 round");
+        EffectLine.Of(Bleed.Of(4, rounds: 2)).ShouldBe("Bleed 4 a round, 2 rounds");
+        EffectLine.Of(DefenseBuff.Of(3, Duration.OfRounds(1))).ShouldBe("Defense +3, 1 round");
+        EffectLine.Of(DefenseBuff.Of(3, Duration.Permanent)).ShouldBe("Defense +3, permanent");
+        EffectLine.Of(Stun.For(1)).ShouldBe("Stun, 1 round");
     }
 
     /// <summary>
