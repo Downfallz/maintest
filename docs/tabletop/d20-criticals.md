@@ -60,8 +60,14 @@ starts on the grid and moves in twentieths stays on it.
 
 ## What it costs
 
-- **Ten Spells move**, by 0.02 at most and 0.0091 on average. That is a content change: a new content hash, a
-  regenerated benchmark digest, a journal entry, and the four readings of `knobs.json` saying what it cost.
+- **Nine Spells are snapped**, by 0.02 at most and 0.019 on average over the nine. **Revenant Guards is the
+  tenth and is not a snap**: it goes from 0.33 to 0, a move of 0.33, because a critical cannot reach anything
+  it does. Do not average the two together — the snap's cost and the zeroing's cost are different decisions
+  and the journal entry has to price them apart. The zeroing also moves what the engine *records*, even though
+  it moves no board: `CombatResolution.IsCritical` is false where it used to be true one cast in three, so the
+  critical counts of every evaluation change for that Spell.
+- Both are a content change: a new content hash, a regenerated benchmark digest, a journal entry, and the four
+  readings of `knobs.json` saying what it cost.
 - **One knob band moves**: `lightning_bolt`'s floor of 0.17 — itself a legacy third — to 0.15 or 0.20. It is
   the only band off its own grid.
 - Nothing else in `data/` changes, and no Spell changes by more than one twentieth, so no spell changes role.
@@ -70,11 +76,19 @@ starts on the grid and moves in twentieths stays on it.
 
 The rule is worth nothing if it is only written down. Three places can hold it, and they are not exclusive:
 
-1. **The data builder** (`tools/DownfallArena.DataBuilder`, ADR 0009). A Spell or a Creature definition whose
-   Critical chance is not a multiple of 0.05 fails the build with a precise error. The content is where the
-   value is authored, so this is where a wrong one should die. It also covers a Creature's own chance, which
-   matters the day one stops being zero: twentieth plus twentieth is a twentieth, so the sum the engine rolls
-   against stays on the grid by construction.
+1. **The data builder** (`tools/DownfallArena.DataBuilder`, ADR 0009). A Spell whose Critical chance is not a
+   multiple of 0.05 fails the build with a precise error. The content is where the value is authored, so this
+   is where a wrong one should die.
+
+   **A Creature definition is held to more than the grid: its Critical chance must be exactly zero.** The grid
+   alone does not carry the rule this document rests on. `ResolutionRules` sums the Creature's chance with the
+   Spell's, so a Creature authored at 0.05 — a legal twentieth — would pass validation while every card, the
+   player aid and the app's catalogue projection print the Spell's threshold alone. The table and the app
+   would then roll against a number nobody printed. Requiring zero is what makes the printed chance the whole
+   chance, and it is the rule ADR 0042 left standing as a possibility rather than closing (see the settled
+   section below). Should a Creature ever want a chance of its own, that is an ADR, and it moves the threshold
+   out of the shared catalogue projection into the per-seat payload — the consequence is written down in
+   `playtest-app.md` §1.3.
 2. **The knobs check** (`uv run --project learning check-knobs`). Every `/criticalChance` band's `min`, `max`
    and `step` must be multiples of 0.05. This closes the other door: a search that cannot leave the grid can
    never re-introduce an offset, which is exactly how the current one got in.

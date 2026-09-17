@@ -220,9 +220,16 @@ otherwise have killed it. Doing it the other way round kills Creatures the rules
 ### 5.3 Evolution
 
 **Trigger.** Ongoing effects are done.
-**Actor.** Both Players, at the same time, openly.
+**Actor.** Both Players, openly, **one pick each in turn**: Player 1 takes a pick, then Player 2, then Player 1
+again, until both have used or given up their picks.
 **Result.** Each Player may unlock Spells from the Talent tree, up to the setup table's Evolution picks per
 Round. One pick unlocks one Spell for one of that Player's **living** Creatures.
+
+The turn order matters and is not a table convention: the engine alternates the same way
+(`MatchDriver.PlayAsync` asks Player 1, then Player 2, once per pass), and an unlock is public the moment it
+happens. So the second Player chooses their first pick already knowing the first Player's, and the first
+Player learns of theirs only when choosing their second. Taking the picks simultaneously would hand both
+Players information the engine never gives them, and the app would then play a different game from the table.
 
 A Spell is unlockable for a Creature when **both** gates are open against the Spells that Creature knows right
 now: the gate on the Talent tree node the Spell sits in, and the Spell's own gate. A gate reads `all of` (know

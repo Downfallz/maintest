@@ -63,14 +63,14 @@ Totals first, then the derivation of each line.
 | --- | --- |
 | Spell cards | 216 |
 | Boards and mats | 6 creature boards, 2 player mats, 2 talent tree mats, 1 initiative track, 1 round track |
-| Condition tokens | 138 in 8 kinds |
+| Condition tokens | 144 in 8 kinds |
 | Markers and chits | 36 stat markers, 6 initiative markers, 6 speed tokens, 4 pick tokens, 2 round markers, 18 target markers, 82 talent pips, 18 overflow chits, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 (recommended: d20) |
 | Paper | about 35 A4 or Letter sheets |
 
 The paper: 24 sheets of cards (9 a sheet), 3 of creature boards (2 a sheet), 2 player mats, 2 talent tree
-mats, 1 for the initiative and round tracks, 2 of tokens (330 pieces at 15 mm, about 185 to a sheet), 1 of player aids. 35.
+mats, 1 for the initiative and round tracks, 2 of tokens (336 pieces at 15 mm, about 185 to a sheet), 1 of player aids. 35.
 Card backs would add 24 more; see Part 6, question 8.
 
 ### 1.1 Spell cards
@@ -147,14 +147,14 @@ for s in S:
 | Bleed | 4 a Round | 6 | `mortal_wound` on a target, `crazed_specter` and `revenant_guards` on their own caster; one each; 6 slots x 1 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
 | Energy regeneration | 2 a Round | 6 | `momentum`, Self only; 6 slots x 1 | **VALUE** |
-| Stun | - | 6 | A Stun **refreshes**, so a Creature carries at most one, ever. One per Creature. | **RULE** (the stacking policy) x **VALUE** (team size) |
+| Stun | - | 12 | A Stun **refreshes**, so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one fills the Speed slot so no Speed token can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. | **RULE** (the stacking policy, and the two places a Stun is shown) x **VALUE** (team size) |
 | Defense buff | +1 | 6 | `guard`'s timed half, one ally; 6 slots x 1 | **VALUE** |
 | Defense buff | +2 | 18 | `revenant_guards`' timed half, up to 3 allies; 6 x 3 | **VALUE** |
 | Defense buff | +3 | 6 | `thundering_seal`'s timed half, one ally; 6 x 1 | **VALUE** |
 | Defense debuff | -2 | 18 | `noxious_cure` on up to 3 allies; 6 x 3. `psycho_rush`'s caster debuff is the same face. | **VALUE** |
 | Initiative buff | +2 | 18 | `death_squad`, up to 3 allies; 6 x 3 | **VALUE** |
 | Initiative debuff | -2 | 6 | `ice_spear` and `protective_slam`, one enemy; 6 x 1 | **VALUE** |
-| **Total** | | **138** | | |
+| **Total** | | **144** | | |
 
 Every amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 3; Energy
 regeneration is 2; timed Defense is 1, 2 or 3; every Initiative change is 2; every Defense debuff is 2. That
@@ -950,7 +950,7 @@ Every **needs a component** verdict in [translation.md](translation.md), and wha
 | 1.7 Reveal in timeline order, bind targets at reveal | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
 | 1.8 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.8 Total Defense | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.8 A lasting Effect attaches as a Condition | The 138 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.8 A lasting Effect attaches as a Condition | The 144 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.8 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.9 Every Condition counts one Round down | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 

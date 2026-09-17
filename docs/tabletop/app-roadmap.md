@@ -223,8 +223,10 @@ client fetches it once.
 
 - `Application.Tests` — `CatalogueProjectionTests`: every Spell in `IGameResources.Spells` has exactly one
   card; a card carries cost, Initiative, targeting and every effect with its duration; the view carries
-  `IGameResources.Version`; a threshold is a whole number from 2 to 20 for every Spell whose chance is not
-  zero, and absent for every Spell whose chance is zero.
+  `IGameResources.Version`; a threshold is a whole number from 1 to 20 for every Spell whose chance is not
+  zero, and absent for every Spell whose chance is zero. The range includes 1: a chance of 1.00 is a legal
+  twentieth and `21 - 20 x 1.00` is `d20: 1+`, a Spell that always crits. Nothing authors one today, which is
+  exactly why a test that stopped at 2 would have gone unnoticed until one did.
 - `Cli.Tests` — **the content-freedom test**: `table/index.html` and `table/*.js` contain no `spell:` id, no
   class name, no Spell name and no stat number. A regex sweep over the shipped files, in the spirit of
   `tests/DownfallArena.Cli.Tests/Studio/StudioPageContractTests.cs:19-28`. This is the test that makes "a
