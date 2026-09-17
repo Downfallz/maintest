@@ -431,9 +431,12 @@ person tests the app itself between playtests.
 
 ## Open questions
 
-1. **Binding a LAN address with `HttpListener`.** A non-loopback prefix needs a URL reservation on Windows.
-   Binding an explicit interface address rather than `+` avoids it on the maintainer's machine; it is worth a
-   check before the first session on a phone.
+1. **Binding a LAN address with `HttpListener`.** ~~A non-loopback prefix needs a URL reservation on
+   Windows.~~ Settled in stage 2: `table --bind <address>` takes one explicit IPv4 interface address and
+   refuses a wildcard, which is what needs the reservation. It also refuses a shorthand (`192.168.1` is read
+   as 192.168.0.1 by `IPAddress`) and an IPv6 literal, whose bracketed prefix this runtime's `HttpListener`
+   cannot parse back. A LAN bind on the maintainer's own machine was checked; Windows is still unverified,
+   and an address the machine does not answer on is one line and exit 1 rather than a stack.
 2. **Two sessions at once.** One host, one session, is the assumption everywhere above. Two tables at a
    playtest evening means either two ports or a session id in every route.
 3. **Who the players were.** A seat name is free text in the stamp. Whether a playtest wants a person's name in

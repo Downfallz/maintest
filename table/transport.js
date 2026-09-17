@@ -34,13 +34,3 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
   };
 }
-
-// Every seat the link carries a token for, in board order. Hotseat is two people at one browser, so the page
-// holds both tokens and follows whichever seat the match asks; a link with one names one seat and the page
-// plays that one alone, on its own device. A page opened with neither has nothing to ask for.
-export function seatsFromLocation(search) {
-  const query = new URLSearchParams(search);
-  return ['player1', 'player2']
-    .map(seat => ({ seat, token: query.get(seat) }))
-    .filter(held => held.token);
-}

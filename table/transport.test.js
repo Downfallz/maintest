@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { httpTransport, seatsFromLocation } from './transport.js';
+import { httpTransport } from './transport.js';
 
 // The stub is the shape studio/backend.test.js uses: a recorded call and a canned answer, no network.
 function stub(answer = { status: 200, body: '{"seat":"player1"}' }) {
@@ -52,17 +52,4 @@ test('a refusal keeps the reason the host gave, whether it is json or a line of 
 test('a transport without a seat or a token refuses to exist', () => {
   assert.throws(() => httpTransport('player3', 'abc'), /neither player1 nor player2/);
   assert.throws(() => httpTransport('player1', ''), /token/);
-});
-
-test('every seat the link carries a token for is read off it, in board order', () => {
-  assert.deepEqual(seatsFromLocation('?player2=beef&player1=cafe'), [
-    { seat: 'player1', token: 'cafe' },
-    { seat: 'player2', token: 'beef' },
-  ]);
-});
-
-test('a link naming one seat holds one seat, and a link naming none holds nothing', () => {
-  assert.deepEqual(seatsFromLocation('?player2=beef'), [{ seat: 'player2', token: 'beef' }]);
-  assert.deepEqual(seatsFromLocation('?seat=player2'), []);
-  assert.deepEqual(seatsFromLocation(''), []);
 });

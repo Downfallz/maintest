@@ -1,16 +1,35 @@
-import { httpTransport, seatsFromLocation } from './transport.js';
+import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
+import { forget, heldSeats } from './session.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
 // by the engine's own gates. Nothing here decides anything, and nothing here knows a spell by name.
-const held = seatsFromLocation(globalThis.location?.search ?? '');
+const storage = kept();
+const held = heldSeats(globalThis.location?.search ?? '', storage);
 const element = id => document.getElementById(id);
 
 if (held.length === 0) {
-  element('phase').textContent = 'Open the link the host printed: it carries the seats and their tokens.';
+  element('phase').textContent = 'Type the code the host printed, or open the link it printed.';
 } else {
+  // The token is kept, so the address bar does not have to be. What is left is a page a reload brings back.
+  tidy();
   start(held.map(({ seat, token }) => ({ seat, transport: httpTransport(seat, token) })));
+}
+
+function kept() {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    // A browser that refuses storage refuses reading the property too.
+    return null;
+  }
+}
+
+function tidy() {
+  if (globalThis.location?.search && globalThis.history?.replaceState) {
+    globalThis.history.replaceState(null, '', globalThis.location.pathname);
+  }
 }
 
 function start(seats) {
@@ -35,6 +54,15 @@ async function refresh(state) {
   for (const seat of state.seats) {
     const answer = await seat.transport.seat();
     if (!answer.ok) {
+      // A token this host does not know is a seat from another session. Keeping it would mean answering 403
+      // for ever; dropping it is what makes the next code work.
+      if (answer.status === 403) {
+        forget(storage);
+        element('phase').textContent = 'This seat belongs to another table. Type the code this host printed.';
+        state.seats = [];
+        return;
+      }
+
       element('phase').textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
       return;
     }
@@ -42,7 +70,10 @@ async function refresh(state) {
     views.push({ ...seat, view: answer.body });
   }
 
-  render(state, views);
+  // Nothing left to render: every seat this page held was refused, and what it says is already on the screen.
+  if (views.length > 0) {
+    render(state, views);
+  }
 }
 
 const nameOf = seat => (seat === 'player1' ? 'Player 1' : 'Player 2');

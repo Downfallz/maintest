@@ -1,5 +1,6 @@
 using System.Globalization;
 using DownfallArena.Application.Agents;
+using DownfallArena.Cli.Hosting;
 
 namespace DownfallArena.Cli;
 
@@ -42,8 +43,14 @@ internal sealed record CliOptions
     /// <summary>Where the studio authors content from, and rebuilds the schema into (ADR 0015).</summary>
     public string Data { get; init; } = DefaultData;
 
-    /// <summary>The loopback port the studio listens on.</summary>
+    /// <summary>The port the studio and the table listen on.</summary>
     public int Port { get; init; } = DefaultPort;
+
+    /// <summary>
+    /// The interface address the table binds. The default is this machine and no other; a playtest on a phone
+    /// needs the address that phone can reach (ADR 0052). The studio never reads it (ADR 0023).
+    /// </summary>
+    public string Bind { get; init; } = HttpHost.Loopback;
 
     /// <summary>
     /// Whether the command line named an agent for a slot. The table seats a person in every slot it was not
@@ -80,7 +87,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address]";
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -104,7 +111,7 @@ internal sealed record CliOptions
             index += 2;
         }
 
-        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules"], StringComparer.Ordinal).FirstOrDefault();
+        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules", "--bind"], StringComparer.Ordinal).FirstOrDefault();
         if (unknown is not null)
         {
             throw new ArgumentException($"Unknown option '{unknown}'.");
@@ -126,6 +133,7 @@ internal sealed record CliOptions
             Player2Named = values.ContainsKey("--p2"),
             Handover = values.TryGetValue("--handover", out var handover) ? ParseHandover(handover) : null,
             Rules = values.GetValueOrDefault("--rules"),
+            Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
             Write = write,

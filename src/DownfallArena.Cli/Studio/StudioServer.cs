@@ -13,7 +13,7 @@ internal sealed class StudioServer : IDisposable
 
     private const string ComparePrefix = "/compare/";
 
-    private readonly LoopbackHost _host;
+    private readonly HttpHost _host;
     private readonly StudioApi _api;
     private readonly StudioFiles _files;
     private readonly string _viewerDirectory;
@@ -27,7 +27,9 @@ internal sealed class StudioServer : IDisposable
         _api = api;
         _files = files;
         _viewerDirectory = viewerDirectory;
-        _host = new LoopbackHost(port, AnswerAsync);
+        // The loopback address, never anything else: this API writes content files, deletes them, and takes a
+        // path from a request, which is what ADR 0023 refused to expose.
+        _host = new HttpHost(HttpHost.Loopback, port, AnswerAsync);
     }
 
     public string Url => _host.Url;
@@ -43,7 +45,7 @@ internal sealed class StudioServer : IDisposable
 
         if (path.StartsWith("/api/", StringComparison.Ordinal))
         {
-            return LoopbackHost.CrossSite(request.Headers["Sec-Fetch-Site"], method, request.ContentType, "studio") is { } refusal
+            return HttpHost.CrossSite(request.Headers["Sec-Fetch-Site"], method, request.ContentType, "studio") is { } refusal
                 ? refusal
                 : await _api.HandleAsync(method, path, body);
         }
