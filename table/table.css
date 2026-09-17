@@ -215,6 +215,10 @@ button.chosen { border-width: 2px; }
 
 .held.castable { opacity: 1; border-color: currentcolor; }
 
+/* Offered is narrower than castable: every row says what its creature could cast, but only the creature being
+   asked can be tapped right now. */
+.held.offered { cursor: pointer; box-shadow: 0 0 0 1px currentcolor inset; }
+
 .hand {
   display: flex;
   justify-content: space-between;

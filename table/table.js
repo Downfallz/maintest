@@ -241,7 +241,7 @@ function renderBoard(state, view) {
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
   revealed(state, board.revealedActions);
   element('backs').replaceChildren(backs(state, board, view.opponentIntents));
-  element('own-hand').replaceChildren(hand(state, board, view.options));
+  element('own-hand').replaceChildren(hand(state, view));
 }
 
 // The hand: every spell this seat's creatures know, drawn as the whole card, with the ones it could cast right
@@ -249,10 +249,17 @@ function renderBoard(state, view) {
 // for a spell that is not castable this is the card's only appearance on the screen -- the decision sheet will
 // never offer it -- and "what does this do and why can I not cast it" is a question a player answers by reading
 // the card. Dimmed, never hidden. What is castable comes from the options and nothing else.
-function hand(state, board, options) {
+//
+// It is also the picker. "Intent is the hand, filtered by the server" (playtest-app.md §3.2), so during an
+// Intent question the asked creature's castable cards are the tap surface and the sheet holds only the
+// confirmation -- the same shape targeting has. A second copy of each card in the sheet would be two of one
+// card on one screen, and the enabled-looking one in the hand doing nothing.
+function hand(state, view) {
+  const board = view.board;
+  const asked = isAsked(view) && view.waitingFor === 'Intent' ? view.waitingCreature : null;
   const box = document.createElement('div');
   box.className = 'hand-cards';
-  const rows = handRows(board.allies, options?.intent, board.intents);
+  const rows = handRows(board.allies, view.options?.intent, board.intents);
   box.hidden = rows.every(row => row.spells.length === 0);
 
   for (const row of rows) {
@@ -267,13 +274,25 @@ function hand(state, board, options) {
     const held = document.createElement('div');
     held.className = 'held-cards';
     for (const spell of row.spells) {
+      // Tappable only on the creature being asked: every row says what its creature could cast, which is what
+      // makes the hand readable, but only one creature is being asked at a time.
+      const offered = row.creature === asked && spell.castable;
       const face = document.createElement('div');
-      face.className = `card held${spell.castable ? ' castable' : ''}`;
+      face.className = `card held${spell.castable ? ' castable' : ''}${offered ? ' offered' : ''}${offered && spell.spell === state.chosen ? ' chosen' : ''}`;
       const parts = cardParts(state, spell.spell, '');
       if (parts === null) {
         face.textContent = spell.spell;
       } else {
         face.append(...parts);
+      }
+
+      if (offered) {
+        face.tabIndex = 0;
+        face.setAttribute('role', 'button');
+        face.addEventListener('click', () => {
+          state.chosen = spell.spell;
+          refresh(state);
+        });
       }
 
       held.append(face);
@@ -536,26 +555,20 @@ function buttonsFor(state, current) {
 }
 
 // An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
-// and there is no undo (playtest-app.md §3.3, §7), so the first tap chooses a card and the second commits it.
-// The chosen card stays on the screen while it is only chosen, which is what makes the second tap a reading of
-// the first rather than a formality.
+// and there is no undo (playtest-app.md §3.3, §7), so the first tap chooses a card in the hand and the second
+// commits it here. The chosen card stays on the screen, marked, which is what makes the second tap a reading
+// of the first rather than a formality.
 function intentButtons(state, current) {
   const view = current.view;
   const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
   const castable = option?.castableSpells ?? [];
   const chosen = castable.includes(state.chosen) ? state.chosen : null;
 
-  const cards = castable.map(spell => {
-    const face = card(state, spell, '', () => {
-      state.chosen = spell;
-      refresh(state);
-    });
-    if (spell === chosen) {
-      face.classList.add('chosen');
-    }
-
-    return face;
-  });
+  // No card a choice: the cards are in the hand, where their whole face is, and the hand is the picker
+  // (playtest-app.md §3.2). The sheet says what to tap and holds the commitment.
+  const asking = document.createElement('p');
+  asking.className = 'muted';
+  asking.textContent = `Tap a card in the hand of creature ${view.waitingCreature}.`;
 
   const name = chosen === null ? '' : state.cards.get(chosen)?.name ?? chosen;
   const confirm = button(chosen === null ? 'Choose a card' : `Declare ${name}`, () => {
@@ -563,7 +576,7 @@ function intentButtons(state, current) {
     submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: chosen });
   });
   confirm.disabled = chosen === null;
-  return [...cards, confirm];
+  return [asking, confirm];
 }
 
 // Toggling one target. It lives here rather than in the row so the count bound by `maxTargets` is applied in
