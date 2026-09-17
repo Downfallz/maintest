@@ -1,8 +1,11 @@
 using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Application.Tests.Matches.Feed;
 
@@ -66,24 +69,65 @@ public sealed class SeatVisibilityTests
         SeatVisibility.CanSee(passed, PlayerSlot.Player2).ShouldBeTrue();
     }
 
+    /// <summary>
+    /// The thirteen that are public, as instances rather than as type names: the arm has to be walked, not
+    /// just listed, or a test could pass over a table that denies everything.
+    /// </summary>
+    private static IReadOnlyList<IMatchEvent> Public =>
+    [
+        new RoundStarted(Match, Round),
+        new RoundEnded(Match, Round),
+        new SubPhaseEntered(Match, Round, RoundSubPhase.Evolution),
+        new TimelineBuilt(Match, Round, CombatTimeline.Of([new ActivationSlot(PlayerSlot.Player1, Creature, Speed.Quick, Initiative.Of(5))])),
+        new ActionRevealed(Match, Round, Action),
+        new CombatActionResolved(Match, Round, CombatResolution.Fizzle(Action, CombatErrors.AllTargetsInvalid), []),
+        new ConditionsExpired(Match, Round, new Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>>()),
+        new OngoingEffectsApplied(Match, Round, [], [], []),
+        new MatchStarted(Match, PlayerId.New(), PlayerId.New(), "content"),
+        new MatchEnded(Match, Round, new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination)),
+        new PlayerJoined(Match, PlayerSlot.Player1, PlayerId.New()),
+        new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, SpellId.Parse("spell:guard:v1"))),
+        new EvolutionPassed(Match, Round, PlayerSlot.Player1),
+    ];
+
+    public static TheoryData<IMatchEvent> EveryPublicEvent => new(Public);
+
     [Theory]
-    [InlineData(typeof(RoundStarted))]
-    [InlineData(typeof(RoundEnded))]
-    [InlineData(typeof(SubPhaseEntered))]
-    [InlineData(typeof(TimelineBuilt))]
-    [InlineData(typeof(ActionRevealed))]
-    [InlineData(typeof(CombatActionResolved))]
-    [InlineData(typeof(ConditionsExpired))]
-    [InlineData(typeof(OngoingEffectsApplied))]
-    [InlineData(typeof(MatchStarted))]
-    [InlineData(typeof(MatchEnded))]
-    [InlineData(typeof(PlayerJoined))]
-    public void What_happens_on_the_table_is_seen_by_both_seats(Type kind)
+    [MemberData(nameof(EveryPublicEvent))]
+    public void What_happens_on_the_table_is_seen_by_both_seats(IMatchEvent happened)
     {
-        SeatVisibility.Classified.ShouldContain(kind);
-        Hidden().ShouldNotContain(kind, $"{kind.Name} is public, so it is not one of the two hidden decisions");
+        SeatVisibility.CanSee(happened, PlayerSlot.Player1).ShouldBeTrue();
+        SeatVisibility.CanSee(happened, PlayerSlot.Player2).ShouldBeTrue();
+        Hidden().ShouldNotContain(happened.GetType(), $"{happened.GetType().Name} is public, so it is not one of the two hidden decisions");
+    }
+
+    /// <summary>Every event is either public or one of the two hidden ones; there is no third case.</summary>
+    [Fact]
+    public void The_public_events_and_the_hidden_ones_are_every_event_there_is()
+    {
+        var walked = Public.Select(happened => happened.GetType());
+
+        walked.Concat(Hidden()).ShouldBe(SeatVisibility.Classified, ignoreOrder: true);
+    }
+
+    /// <summary>
+    /// The default of the switch, walked by an event the table has never heard of. This is the arm that makes
+    /// the classification safe: an event nobody thought about is not served, and the test above is what makes
+    /// that silence loud. The stand-in lives here rather than in the domain, so the count above stays at 15.
+    /// </summary>
+    [Fact]
+    public void An_event_nobody_classified_is_shown_to_no_seat()
+    {
+        var unheardOf = new SomethingNewHappened(Match);
+
+        SeatVisibility.CanSee(unheardOf, PlayerSlot.Player1).ShouldBeFalse();
+        SeatVisibility.CanSee(unheardOf, PlayerSlot.Player2).ShouldBeFalse();
     }
 
     /// <summary>The two that are not public, named here so the list above cannot quietly grow.</summary>
     private static IReadOnlyList<Type> Hidden() => [typeof(IntentSubmitted), typeof(SpeedChoiceSubmitted)];
+
+    private static CombatAction Action => CombatAction.Bind(new CombatIntent(Creature, SpellId.Parse("spell:strike:v1")), [CreatureId.From(3)]);
+
+    private sealed record SomethingNewHappened(MatchId MatchId) : IMatchEvent;
 }
