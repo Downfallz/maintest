@@ -40,9 +40,18 @@ namespace DownfallArena.Application.Agents;
 /// timeline yet to play out.
 /// </para>
 /// </summary>
-public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, bool adversarial = false) : IPlayerAgent
+public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, bool adversarial = false, IPlayerAgent? inner = null) : IPlayerAgent
 {
-    private readonly HeuristicAgent _oneStep = new(weights, resources, rules);
+    /// <summary>
+    /// The agent that plays every seat this one has to guess: an ally that has not declared as the round is
+    /// played out, and the evolution and the speed, which are not combat moves. The heuristic agent on the
+    /// same weights unless a spec names another, which is what lets the search be built on a policy and so
+    /// lets the loop improve its own last output (ADR 0055). The evaluation is deliberately not its: a
+    /// clone's scores are logits and a value policy's are returns under its own baseline, and neither can be
+    /// summed over a round.
+    /// </summary>
+    private readonly IPlayerAgent _oneStep = inner ?? new HeuristicAgent(weights, resources, rules);
+
     private readonly ActionScorer _scorer = new(resources, rules, weights);
 
     public ScoringWeights Weights => weights;

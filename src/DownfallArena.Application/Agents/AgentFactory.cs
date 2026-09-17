@@ -21,6 +21,9 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
         return spec.Kind switch
         {
             AgentKind.Heuristic => spec with { Version = Weights(spec).Fingerprint },
+            // A searching agent built on another agent stamps as that agent, the same way an exploring one
+            // does: what it reads is the inner agent's file, not a weights file of its own (ADR 0055).
+            AgentKind.Lookahead or AgentKind.Minimax when Searched(spec) is { } searched => spec with { Version = Resolve(searched).Version },
             AgentKind.Lookahead or AgentKind.Minimax when spec.Path is not null => spec with { Version = Weights(spec).Fingerprint },
             AgentKind.Policy => spec with { Version = Policy(spec).Fingerprint },
             // An exploring agent that names an inner agent is as much that agent as a heuristic or policy
@@ -44,11 +47,36 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             AgentKind.Heuristic => new HeuristicAgent(Weights(spec), resources, rules),
             AgentKind.Policy => Trained(spec, rules),
             AgentKind.Explore => new ExploringAgent(Rate(spec), Explored(spec, rules, random), random),
-            AgentKind.Lookahead => new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules),
-            AgentKind.Minimax => new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules, adversarial: true),
+            AgentKind.Lookahead => Searching(spec, rules, random, adversarial: false),
+            AgentKind.Minimax => Searching(spec, rules, random, adversarial: true),
             _ => throw new InvalidOperationException($"Agent kind '{spec.Kind}' has no implementation."),
         };
     }
+
+    /// <summary>
+    /// A searching agent (ADR 0047), on the weights its path names or on the built-in ones, and playing the
+    /// seats it has to guess as the agent its path names instead when it names one (ADR 0055):
+    /// <c>lookahead:policy:models/clone/ci-138/policy.json</c> is the loop's own last output with a round
+    /// played out on top of it, which is the operator a loop needs to climb past what it imitates. A bare
+    /// path stays a weights file, so every spec written before this reads the same.
+    /// </summary>
+    private LookaheadAgent Searching(AgentSpec spec, RuleSet rules, IRandomSource random, bool adversarial)
+    {
+        if (Searched(spec) is { } searched)
+        {
+            return new LookaheadAgent(ScoringWeights.Default, resources, rules, adversarial, Create(searched, rules, random));
+        }
+
+        return new LookaheadAgent(spec.Path is null ? ScoringWeights.Default : Weights(spec), resources, rules, adversarial);
+    }
+
+    /// <summary>
+    /// The agent a searching spec is built on, or <c>null</c> when its path is a weights file or absent. Told
+    /// apart by whether the text names a kind, exactly as an exploring spec's inner agent is, so a weights
+    /// file called exactly <c>greedy</c> would have to be written <c>heuristic:greedy</c>.
+    /// </summary>
+    private static AgentSpec? Searched(AgentSpec spec) =>
+        spec.Path is { } path && NamesAKind(path) ? AgentSpec.Parse(path) : null;
 
     private ScoringWeights Weights(AgentSpec spec) =>
         weights.Load(spec.Path ?? throw new ArgumentException("A heuristic agent needs a weights file: 'heuristic:<path>'.", nameof(spec)));
