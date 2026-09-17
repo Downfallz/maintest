@@ -144,16 +144,19 @@ class _Model:
         return np.where(batch.mask, logits, -np.inf)
 
 
-def _batch_loss_and_gradients(
-    model: _Model, batch: _Batch, alpha: float
-) -> tuple[float, np.ndarray, np.ndarray, np.ndarray | None]:
+def _probabilities(model: _Model, batch: _Batch) -> np.ndarray:
+    """The model's probability of every padded candidate: the softmax over the candidates offered."""
     logits = model.logits(batch)
     top = logits.max(axis=1, keepdims=True)
     exponent = np.exp(logits - top)
-    total = exponent.sum(axis=1, keepdims=True)
-    probabilities = exponent / total
+    return exponent / exponent.sum(axis=1, keepdims=True)
+
+
+def _batch_gradients(
+    model: _Model, batch: _Batch, alpha: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+    probabilities = _probabilities(model, batch)
     taken = np.arange(len(batch.chosen))
-    loss = float(-(np.log(probabilities[taken, batch.chosen])).mean())
 
     # d loss / d logit: the probability, less one on the action taken, averaged over the batch.
     gradient = probabilities
@@ -172,7 +175,24 @@ def _batch_loss_and_gradients(
         # The same pull toward zero as the rows: a teacher that decides on the terms is separable on them,
         # and unpenalized weights would grow with every epoch rather than settle.
         terms_gradient = np.einsum("bc,bct->t", gradient, batch.terms) + alpha * model.candidate_weights
-    return loss, weights_gradient, bias_gradient, terms_gradient
+    return weights_gradient, bias_gradient, terms_gradient
+
+
+def _loss(
+    model: _Model, candidates: _Candidates, scaled: np.ndarray, steps: np.ndarray, batch_size: int
+) -> float:
+    """The negative log probability of the actions taken, under one model, over the steps given.
+
+    Read after an epoch's updates rather than accumulated during them: a mean of the mini-batch losses is a
+    mean over as many models as there were batches, none of them the one the epoch ends with and writes out,
+    and that number also breaks ties between epochs of equal accuracy.
+    """
+    total = 0.0
+    for start in range(0, len(steps), batch_size):
+        batch = candidates.batch(scaled, steps[start : start + batch_size])
+        taken = np.arange(len(batch.chosen))
+        total -= float(np.log(_probabilities(model, batch)[taken, batch.chosen]).sum())
+    return total / len(steps)
 
 
 def _folded(
@@ -233,13 +253,9 @@ def train_clone(
     progress.total = options.epochs
     for epoch in range(1, options.epochs + 1):
         order = rng.permutation(split.train)
-        losses: list[float] = []
         for start in range(0, len(order), options.batch_size):
             batch = candidates.batch(scaled, order[start : start + options.batch_size])
-            loss, weights_gradient, bias_gradient, terms_gradient = _batch_loss_and_gradients(
-                model, batch, options.alpha
-            )
-            losses.append(loss)
+            weights_gradient, bias_gradient, terms_gradient = _batch_gradients(model, batch, options.alpha)
             optimizers[0].update(model.weights, weights_gradient, options.learning_rate)
             optimizers[1].update(model.bias, bias_gradient, options.learning_rate)
             if (
@@ -248,7 +264,7 @@ def train_clone(
                 and model.candidate_weights is not None
             ):
                 terms_optimizer.update(model.candidate_weights, terms_gradient, options.learning_rate)
-        loss = float(np.mean(losses))
+        loss = _loss(model, candidates, scaled, split.train, options.batch_size)
         weights, bias, candidate_weights = _folded(model, scaling, term_scaling)
         scorer = LinearScorer(keys, weights, bias, UNSEEN_ACTION_SCORE, candidate_weights=candidate_weights)
         accuracy = legal_accuracy(scorer, dataset, scored)
