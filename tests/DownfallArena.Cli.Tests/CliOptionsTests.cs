@@ -72,4 +72,41 @@ public sealed class CliOptionsTests
         options.Traces.ShouldBe(2);
         options.Trace.ShouldBe("match.json");
     }
+
+    /// <summary>
+    /// The table's own three. An option the allowlist does not hold is refused as unknown, so a command line the
+    /// documents print would not run at all — which is how the missing <c>--rules</c> was found.
+    /// </summary>
+    [Fact]
+    public void The_table_takes_the_rule_set_the_round_to_hand_over_on_and_the_seats()
+    {
+        var options = CliOptions.Parse(["table", "--port", "5100", "--rules", "tabletop.json", "--handover", "10", "--p2", "greedy"]);
+
+        options.Rules.ShouldBe("tabletop.json");
+        options.Handover.ShouldBe(10);
+        options.Player2Named.ShouldBeTrue();
+        options.Player1Named.ShouldBeFalse();
+    }
+
+    /// <summary>A table told nothing plays the engine's default rule set, and seats a person in both slots.</summary>
+    [Fact]
+    public void A_table_told_nothing_names_no_rule_set_and_no_agent()
+    {
+        var options = CliOptions.Parse(["table"]);
+
+        options.Rules.ShouldBeNull();
+        options.Handover.ShouldBeNull();
+        options.Player1Named.ShouldBeFalse();
+        options.Player2Named.ShouldBeFalse();
+    }
+
+    /// <summary>Round zero is not a round; the table would hand over to nobody.</summary>
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-3")]
+    public void A_handover_round_that_does_not_exist_is_refused_while_parsing(string round)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--handover", round]))
+            .Message.ShouldContain("not a round to hand over on");
+    }
 }

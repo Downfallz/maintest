@@ -54,15 +54,15 @@ internal sealed class TableSession : IDisposable
     public bool IsOver => Outcome.IsCompleted;
 
     /// <summary>
-    /// Creates the match, seats both players, and starts playing. Both seats are seated before the first
-    /// decision is asked, so neither can be handed a question it has nobody to answer with.
+    /// Creates the match and starts playing the seats it is handed. They arrive already occupied, so neither
+    /// can be asked a question it has nobody to answer with.
     /// </summary>
     public static async Task<TableSession> StartAsync(
         IServiceProvider services,
         RuleSet rules,
         int seed,
-        IPlayerAgent player1,
-        IPlayerAgent player2,
+        SeatAgent player1,
+        SeatAgent player2,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -77,17 +77,17 @@ internal sealed class TableSession : IDisposable
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));
         Value(await join.HandleAsync(new JoinMatch(matchId, PlayerId.New(), roster), cancellationToken));
 
-        var seat1 = new SeatAgent(player1);
-        var seat2 = new SeatAgent(player2);
+        ArgumentNullException.ThrowIfNull(player1);
+        ArgumentNullException.ThrowIfNull(player2);
 
         // The driver is built here rather than resolved, because its handlers have to be the locked ones: two
         // threads share this match, and the container's driver would hand a host an unguarded read side.
         var gate = new TableGate();
         var queries = gate.Around(services.GetRequiredService<MatchQueryHandlers>());
         var driver = new MatchDriver(gate.Around(services.GetRequiredService<MatchCommandHandlers>()), queries);
-        var outcome = Task.Run(() => driver.PlayAsync(matchId, seat1, seat2, cancellationToken), cancellationToken);
+        var outcome = Task.Run(() => driver.PlayAsync(matchId, player1, player2, cancellationToken), cancellationToken);
 
-        return new TableSession(matchId, seat1, seat2, queries, gate, outcome);
+        return new TableSession(matchId, player1, player2, queries, gate, outcome);
     }
 
     /// <summary>The seat of a slot, so a caller says which player rather than which field.</summary>

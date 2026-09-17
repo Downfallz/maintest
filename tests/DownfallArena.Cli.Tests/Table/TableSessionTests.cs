@@ -31,7 +31,7 @@ public sealed class TableSessionTests : IDisposable
     public async Task Two_seats_play_a_match_through_the_engine_to_its_outcome()
     {
         var services = Built();
-        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, Bot(services), Bot(services), TestContext.Current.CancellationToken);
+        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, new SeatAgent(Bot(services)), new SeatAgent(Bot(services)), TestContext.Current.CancellationToken);
 
         var outcome = await session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
@@ -62,7 +62,7 @@ public sealed class TableSessionTests : IDisposable
         var services = Built();
         var first = new Counting(Bot(services));
         var second = new Counting(Bot(services));
-        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, first, Bot(services), TestContext.Current.CancellationToken);
+        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, new SeatAgent(first), new SeatAgent(Bot(services)), TestContext.Current.CancellationToken);
 
         first.Asked.WaitOne(TimeSpan.FromSeconds(30)).ShouldBeTrue("the first seat should have been asked something");
         session.Player1.Seat(second);

@@ -107,6 +107,11 @@ internal sealed class GameSession
                 return await EvaluateAsync();
             case "benchmark":
                 return await BenchmarkAsync();
+            case "table":
+                // The table is the one command that plays a rule set of its own: the board game is balanced
+                // for 8 to 16 rounds, not for the engine's thirty (docs/tabletop/plan.md). It falls back to the
+                // same default as every other command, and says so out loud rather than defaulting silently.
+                return await Table.TableHost.RunAsync(_services, _options, _options.Rules is { } rules ? Table.RuleSetFile.Read(rules) : _rules, _seed);
             default:
                 await Console.Error.WriteLineAsync($"Unknown command '{_options.Command}'. {CliOptions.Usage}");
                 return 2;
