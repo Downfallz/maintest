@@ -49,10 +49,10 @@ async function refresh(state) {
   if (state.sending) return;
 
   // Every seat this page holds, every poll: the host answers one seat per payload, and which one is being
-  // asked is exactly what the page cannot know without asking. Over a copy, because a seat can be dropped
-  // here.
+  // asked is exactly what the page cannot know without asking.
   const views = [];
-  for (const seat of [...state.seats]) {
+  const refused = [];
+  for (const seat of state.seats) {
     const answer = await seat.transport.seat();
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
@@ -60,8 +60,7 @@ async function refresh(state) {
     // same page, and it has already been taken out of the address bar, so forgetting it too would mean
     // reading it off the host's screen again.
     if (answer.status === 403) {
-      forget(storage, seat.seat);
-      state.seats = state.seats.filter(held => held.seat !== seat.seat);
+      refused.push(seat.seat);
       continue;
     }
 
@@ -71,6 +70,12 @@ async function refresh(state) {
     }
 
     views.push({ ...seat, view: answer.body });
+  }
+
+  // Dropped after the round of polls rather than inside it, so nothing this loop reads changes while it runs.
+  for (const seat of refused) {
+    forget(storage, seat);
+    state.seats = state.seats.filter(held => held.seat !== seat);
   }
 
   if (views.length === 0) {
