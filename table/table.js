@@ -2,7 +2,9 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
-import { chipText, conditionDock, healthShare, healthText, revealedText, statPairs } from './board.js';
+import { chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs } from './board.js';
+import { backText, handRows } from './hand.js';
+import { feedLine } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
 
@@ -154,7 +156,7 @@ function render(state, views) {
   renderTimeline(view.board);
   renderBoard(state, view);
   renderMat(state, view.board);
-  renderFeed(view.feed);
+  renderFeed(state, view.feed);
   renderDecision(state, current);
 }
 
@@ -190,11 +192,45 @@ function renderTimeline(board) {
 function renderBoard(state, view) {
   const board = view.board;
   element('board').replaceChildren(
-    hand(state, board, view.opponentIntents),
+    hand(state, board, view.options),
+    backs(state, board, view.opponentIntents),
     revealed(state, board.revealedActions),
     ...(board.allies ?? []).map(creature => line(creature, 'ally')),
     ...(board.enemies ?? []).map(creature => line(creature, 'enemy')),
   );
+}
+
+// The hand: every spell this seat's creatures know, as cards, with the ones it could cast right now marked
+// (hand.js). It is drawn whatever the sub-phase, because a card a player cannot cast is still a card they have
+// to be able to read -- and why it is unavailable is a question the board answers by showing it dimmed, never
+// by hiding it. What is castable comes from the options and nothing else; this page decides nothing.
+function hand(state, board, options) {
+  const box = document.createElement('div');
+  box.className = 'hand-cards';
+  const rows = handRows(board.allies, options?.intent, board.intents);
+  box.hidden = rows.every(row => row.spells.length === 0);
+
+  for (const row of rows) {
+    const one = document.createElement('div');
+    one.className = 'hand-row';
+
+    const who = document.createElement('span');
+    who.className = 'hand-who';
+    who.textContent = `${row.creature}${row.declared ? ' · declared' : ''}`;
+    one.append(who);
+
+    for (const held of row.spells) {
+      const face = state.cards.get(held.spell);
+      const chip = document.createElement('span');
+      chip.className = `held${held.castable ? ' castable' : ''}`;
+      chip.textContent = face ? `${cardTitle(face)} ${cardCost(face)}` : held.spell;
+      one.append(chip);
+    }
+
+    box.append(one);
+  }
+
+  return box;
 }
 
 // The actions that are already face up, in the order they were revealed (board.js). Nothing is drawn while
@@ -215,14 +251,14 @@ function revealed(state, actions) {
 
 // What is face down. This seat's own backs are its own to read; the other side's is a count and carries no
 // data at all -- that is the whole of the hidden information, and it is the server that keeps it so.
-function hand(state, board, opponentIntents) {
+function backs(state, board, opponentIntents) {
   const box = document.createElement('div');
   box.className = 'hand';
 
   const mine = document.createElement('div');
   mine.className = 'backs ally';
   mine.textContent = (board.intents ?? [])
-    .map(intent => `${intent.actor}: ${state.cards.get(intent.spell)?.name ?? intent.spell}`)
+    .map(intent => backText(intent, state.cards))
     .join(' · ') || 'nothing declared';
 
   const theirs = document.createElement('div');
@@ -260,7 +296,8 @@ function line(creature, which) {
   return box;
 }
 
-// The condition dock: chips grouped by what is left of them, permanent in their own group at the end.
+// The condition dock: the printed board's lanes, `new` first and permanent last, each chip carrying its kind,
+// its number and the cast that put it there (board.js).
 function dock(conditions) {
   const box = document.createElement('div');
   box.className = 'dock';
@@ -270,13 +307,21 @@ function dock(conditions) {
 
     const label = document.createElement('span');
     label.className = 'dock-rounds';
-    label.textContent = group.rounds === null ? 'permanent' : `${group.rounds}`;
+    label.textContent = group.lane === null ? 'permanent' : `${group.lane}`;
     one.append(label);
 
     for (const condition of group.conditions) {
       const chip = document.createElement('span');
       chip.className = 'chip';
       chip.textContent = chipText(condition);
+      const source = chipSource(condition);
+      if (source !== '') {
+        const from = document.createElement('span');
+        from.className = 'chip-source';
+        from.textContent = source;
+        chip.append(from);
+      }
+
       one.append(chip);
     }
 
@@ -319,11 +364,12 @@ function renderMat(state, board) {
   element('mat').replaceChildren(...rows);
 }
 
-// What has happened, as this seat may be told it. The kinds are the engine's own words, off the wire.
-function renderFeed(feed) {
+// What has happened, as this seat may be told it. The kinds are the engine's own words, off the wire, and a
+// resolution carries its fields -- the critical above all (feed.js).
+function renderFeed(state, feed) {
   const lines = (feed ?? []).slice(-12).reverse().map(entry => {
     const item = document.createElement('li');
-    item.textContent = `${entry.round ?? '—'} · ${entry.subPhase ?? ''} · ${entry.event?.kind ?? ''}`;
+    item.textContent = feedLine(entry, state.cards);
     return item;
   });
 

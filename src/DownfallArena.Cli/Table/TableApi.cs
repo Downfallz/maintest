@@ -5,6 +5,7 @@ using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Feed;
+using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
@@ -100,6 +101,19 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
     private static PlayerSlot Other(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
 
+    /// <summary>
+    /// How many of a board's intents are still face down. A round keeps every intent it was given
+    /// (<c>Round.IntentsOf</c>) and tracks what has been turned over separately, in the actions the reveal
+    /// cursor has reached, so the count of the one is not the count of the other from the first reveal
+    /// onwards. Subtracting here is what keeps the number and the reveal strip from contradicting each other
+    /// on the same screen: three face down beside two of them face up is a table nobody would believe.
+    /// </summary>
+    private static int StillFaceDown(PlayerBoardState board)
+    {
+        var revealed = board.RevealedActions.Select(action => action.Actor).ToHashSet();
+        return board.Intents.Count(intent => !revealed.Contains(intent.Actor));
+    }
+
     private TableSeat? Holder(string? token) =>
         string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
@@ -157,7 +171,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 waitingCreature = waiting?.Creature,
                 playedByBot = seat.Person is null,
                 over = session.IsOver,
-                opponentIntents = opponent.IsSuccess ? opponent.Value.Intents.Count : 0,
+                opponentIntents = opponent.IsSuccess ? StillFaceDown(opponent.Value) : 0,
 
                 // What has happened, as this seat may be told it: the boards the trace keeps beside every
                 // event are dropped here and the other seat's hidden decisions never reach the wire

@@ -26,38 +26,70 @@ export function statPairs(creature) {
   ];
 }
 
-// The condition dock: chips grouped by what is left of them, soonest first, with the permanent ones in their
-// own group at the end. Grouping by round is what makes a dock readable at a glance -- "these three go at the
-// end of this round" is the question a player actually asks of it, so the number a group carries has to be the
-// answer to it and not the field's raw value (see `expiresIn`).
+// The condition dock, as the printed board has it: four lanes, `new` then `3`, `2`, `1`, with the permanent
+// ones in a group of their own (components.md §3.2, playtest-app.md §3.1).
+//
+// The `new` lane is not decoration and it is not "recently applied". It is the geometry that makes "the first
+// countdown after an application does not count" a thing a player sees instead of a rule they have to recall
+// on the round they apply something: a token is placed in `new`, and at Cleanup it moves into the lane its
+// Duration names. Grouping by `remainingRounds` alone would put a fresh token beside a counted one of the same
+// number and say they go at the same time, which is a round out; folding freshness into the number instead
+// would be arithmetic the page did on the player's behalf, and it would dissolve the one lane the cardboard
+// has. So freshness picks the lane, and the lane is the answer.
 export function conditionDock(conditions) {
   const groups = new Map();
   for (const condition of conditions ?? []) {
-    const rounds = expiresIn(condition);
-    if (!groups.has(rounds)) groups.set(rounds, []);
-    groups.get(rounds).push(condition);
+    const lane = laneOf(condition);
+    if (!groups.has(lane)) groups.set(lane, []);
+    groups.get(lane).push(condition);
   }
 
-  const counted = [...groups.keys()].filter(rounds => rounds !== null).sort((a, b) => a - b);
-  const ordered = groups.has(null) ? [...counted, null] : counted;
-  return ordered.map(rounds => ({ rounds, conditions: groups.get(rounds) }));
+  return [...lanes(groups)].map(lane => ({ lane, conditions: groups.get(lane) }));
 }
 
-// How many cleanups a condition still survives, or null when it is permanent. A fresh condition is one whose
-// first countdown has not happened yet, and that first one does not count (Condition), so it outlives a
-// condition with the same `remainingRounds` by exactly one round. Docking them together would tell the player
-// they go at the same time, which is the one thing a dock must not get wrong; folding freshness into the
-// number instead is what puts each in the lane it actually leaves at.
-export function expiresIn(condition) {
-  const rounds = condition?.remainingRounds;
-  if (!Number.isInteger(rounds)) return null;
-  return rounds + (condition?.isFresh === true ? 1 : 0);
+// Which lane a condition sits in: `new` while its first countdown is still ahead of it, its remaining rounds
+// once that one has passed, and null when it never counts down at all.
+export function laneOf(condition) {
+  if (condition?.isFresh === true) return 'new';
+  return Number.isInteger(condition?.remainingRounds) ? condition.remainingRounds : null;
 }
 
-// What a chip says: the kind the host named it, and nothing this page made up. The words are the engine's.
+// The printed order, left to right: `new`, then the numbered lanes longest first, then permanent. Only the
+// lanes that hold something are drawn -- a phone has no room for four empty boxes a creature.
+function* lanes(groups) {
+  if (groups.has('new')) yield 'new';
+  const numbered = [...groups.keys()].filter(lane => typeof lane === 'number').sort((a, b) => b - a);
+  for (const lane of numbered) yield lane;
+  if (groups.has(null)) yield null;
+}
+
+// What a chip says: the kind the host named it and the number it carries, and nothing this page made up. The
+// words are the engine's. Two conditions of one kind and different sizes are two different things to plan
+// around, so a chip that printed only the kind would be a chip a player cannot use (playtest-app.md §3.1).
 export function chipText(condition) {
-  const kind = condition?.effect?.kind;
-  return typeof kind === 'string' ? kind : '';
+  const effect = condition?.effect;
+  const kind = typeof effect?.kind === 'string' ? effect.kind : '';
+  if (kind === '') return '';
+  const amount = amountOf(effect);
+  return amount === null ? kind : `${kind} ${amount}`;
+}
+
+// Which cast put it there, so a player can tell two identical chips apart and knows whose upkeep it is
+// (ADR 0027). Empty when nothing named a source, which is every condition a cast did not apply.
+export function chipSource(condition) {
+  const caster = condition?.source?.caster;
+  return caster === null || caster === undefined ? '' : `from ${caster}`;
+}
+
+// The one number a lasting effect carries, whatever it is called. Read off the payload rather than from a list
+// of effects here: a per-round effect names it `amountPerRound` and a flat one `amount`, and an effect that
+// carries no number at all has neither, which is a chip that is just its kind.
+function amountOf(effect) {
+  for (const field of ['amountPerRound', 'amount']) {
+    if (Number.isInteger(effect?.[field])) return effect[field];
+  }
+
+  return null;
 }
 
 function value(stat) {

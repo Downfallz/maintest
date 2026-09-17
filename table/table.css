@@ -183,6 +183,29 @@ button.chosen { border-width: 2px; }
 .tab.on { color: var(--ink); border-color: var(--ink); }
 
 /* What is face down: this seat's own backs read, the other side's counted. */
+/* The hand: one row a creature, its cards as chips. Dimmed is "known but not castable now", which is a state
+   the board has to show rather than hide -- a player asking why has to be able to read the card. */
+.hand-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+}
+
+.hand-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+
+.hand-who { color: var(--muted); min-width: 4.5rem; }
+
+.held {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  opacity: 0.45;
+}
+
+.held.castable { opacity: 1; border-color: currentcolor; }
+
 .hand {
   display: flex;
   justify-content: space-between;
@@ -250,6 +273,8 @@ button.chosen { border-width: 2px; }
   background: var(--line);
   font-size: 0.75rem;
 }
+
+.chip-source { margin-left: 4px; color: var(--muted); font-size: 0.65rem; }
 
 /* The talent mat. A pip per creature, filled when it knows the spell. */
 .band-row { margin-bottom: 10px; }

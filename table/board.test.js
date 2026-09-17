@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chipText, conditionDock, expiresIn, healthShare, healthText, revealedText, statPairs } from './board.js';
+import { chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, statPairs } from './board.js';
 
 const creature = { id: 1, health: 14, maxHealth: 20, energy: 2, totalDefense: 3, currentInitiative: 7 };
 
@@ -25,66 +25,59 @@ test('the stats a board carries are the printed ones, in the printed order', () 
   assert.deepEqual(statPairs(creature), [['energy', 2], ['defense', 3], ['initiative', 7]]);
 });
 
-// The question a player asks of a dock is "what goes away at the end of this round", so that is what it is
-// grouped by. Permanent is its own group and it is last: it answers the opposite question.
-test('the dock groups conditions by what is left of them, soonest first', () => {
+// The printed dock has four lanes -- `new`, `3`, `2`, `1` -- and the `new` lane is the geometry that makes
+// "the first countdown does not count" visible instead of remembered (components.md §3.2).
+test('a condition whose first countdown is still ahead of it sits in the new lane', () => {
+  assert.equal(laneOf({ remainingRounds: 3, isFresh: true }), 'new');
+  assert.equal(laneOf({ remainingRounds: 3, isFresh: false }), 3);
+  assert.equal(laneOf({ remainingRounds: 1 }), 1);
+  assert.equal(laneOf({ remainingRounds: null, isFresh: false }), null);
+  assert.equal(laneOf(undefined), null);
+});
+
+test('the dock reads new first, then the numbered lanes longest first, then permanent', () => {
   const dock = conditionDock([
-    { effect: { kind: 'Bleed' }, remainingRounds: 2 },
-    { effect: { kind: 'Stun' }, remainingRounds: 1 },
+    { effect: { kind: 'Bleed' }, remainingRounds: 1 },
     { effect: { kind: 'DefenseBuff' }, remainingRounds: null },
-    { effect: { kind: 'Regeneration' }, remainingRounds: 2 },
+    { effect: { kind: 'Regeneration' }, remainingRounds: 3, isFresh: true },
+    { effect: { kind: 'Stun' }, remainingRounds: 3 },
   ]);
 
-  assert.deepEqual(dock.map(group => group.rounds), [1, 2, null]);
-  assert.deepEqual(dock.map(group => group.conditions.length), [1, 2, 1]);
+  assert.deepEqual(dock.map(group => group.lane), ['new', 3, 1, null]);
+  assert.deepEqual(dock.map(group => group.conditions.map(chipText)), [['Regeneration'], ['Stun'], ['Bleed'], ['DefenseBuff']]);
 });
 
-test('a permanent condition is grouped even when it is the only one', () => {
-  const dock = conditionDock([{ effect: { kind: 'DefenseBuff' }, remainingRounds: null }]);
-
-  assert.deepEqual(dock.map(group => group.rounds), [null]);
-});
-
-test('a creature with nothing on it has an empty dock', () => {
-  assert.deepEqual(conditionDock([]), []);
-  assert.deepEqual(conditionDock(undefined), []);
-});
-
-// The chip says the kind the host named; the page has never heard of any of them.
-test('a chip prints the kind it was given and nothing it made up', () => {
-  assert.equal(chipText({ effect: { kind: 'Bleed' } }), 'Bleed');
-  assert.equal(chipText({ effect: {} }), '');
-  assert.equal(chipText(undefined), '');
-});
-
-// A fresh condition skips its first countdown, so it outlives one with the same `remainingRounds` by a round.
-// A dock that read the raw field would say the two go at the same time, which is the one thing it must not say.
-test('a condition that has not counted down yet is docked a round later than one that has', () => {
-  assert.equal(expiresIn({ remainingRounds: 2, isFresh: true }), 3);
-  assert.equal(expiresIn({ remainingRounds: 2, isFresh: false }), 2);
-  assert.equal(expiresIn({ remainingRounds: 2 }), 2);
-  assert.equal(expiresIn({ remainingRounds: null, isFresh: true }), null);
-  assert.equal(expiresIn(undefined), null);
-});
-
-test('a fresh condition and a stale one with the same rounds left are docked apart', () => {
+// A fresh condition outlives a counted one of the same number by a round, so sharing a lane would be a round
+// out. The lanes keep them apart without the page doing arithmetic on the player's behalf.
+test('a fresh condition and a counted one with the same rounds left are never in one lane', () => {
   const dock = conditionDock([
     { effect: { kind: 'Bleed' }, remainingRounds: 2, isFresh: true },
     { effect: { kind: 'Stun' }, remainingRounds: 2, isFresh: false },
   ]);
 
-  assert.deepEqual(dock.map(group => group.rounds), [2, 3]);
-  assert.deepEqual(dock.map(group => group.conditions.map(chipText)), [['Stun'], ['Bleed']]);
+  assert.deepEqual(dock.map(group => group.lane), ['new', 2]);
 });
 
-test('conditions that do expire together are docked together whatever their freshness says', () => {
-  const dock = conditionDock([
-    { effect: { kind: 'Bleed' }, remainingRounds: 2, isFresh: true },
-    { effect: { kind: 'Stun' }, remainingRounds: 3, isFresh: false },
-  ]);
+test('only the lanes that hold something are drawn, because a phone has no room for empty boxes', () => {
+  assert.deepEqual(conditionDock([{ effect: { kind: 'Stun' }, remainingRounds: 1 }]).map(group => group.lane), [1]);
+  assert.deepEqual(conditionDock([]), []);
+  assert.deepEqual(conditionDock(undefined), []);
+});
 
-  assert.deepEqual(dock.map(group => group.rounds), [3]);
-  assert.deepEqual(dock[0].conditions.map(chipText), ['Bleed', 'Stun']);
+// Two Bleeds of different sizes are two different things to plan around, and which cast put one there is whose
+// upkeep it is (ADR 0027). A chip that printed only the kind would be a chip a player cannot use.
+test('a chip carries the number its effect holds, whatever that field is called', () => {
+  assert.equal(chipText({ effect: { kind: 'Bleed', amountPerRound: 2 } }), 'Bleed 2');
+  assert.equal(chipText({ effect: { kind: 'DefenseBuff', amount: 3 } }), 'DefenseBuff 3');
+  assert.equal(chipText({ effect: { kind: 'Stun' } }), 'Stun');
+  assert.equal(chipText({ effect: {} }), '');
+  assert.equal(chipText(undefined), '');
+});
+
+test('a chip names the cast that put it there when one did', () => {
+  assert.equal(chipSource({ source: { caster: 5, spell: 'spell:healing_screech:v1' } }), 'from 5');
+  assert.equal(chipSource({ source: null }), '');
+  assert.equal(chipSource(undefined), '');
 });
 
 // The reveal is what the next player picks targets against, so it has to be on the screen and not only in the
