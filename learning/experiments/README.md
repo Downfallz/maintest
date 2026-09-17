@@ -43,5 +43,14 @@ the last one found, and the file is where a rung says what it is for before it i
 
 **A committed experiment cannot `apply`.** Pushing the proposal branch needs the credential the checkout keeps
 only on a dispatch, so a file asks for a *measurement* and a person asks for a commit: read the run summary,
-and dispatch the same parameters with `apply` checked if the set is worth keeping. A dispatch still wins field
-by field over the file, the way it does for the loop.
+and dispatch the same parameters with `apply` checked if the set is worth keeping.
+
+That review is the reason every field of the form defaults to **empty**. GitHub hands a dispatch the declared
+defaults whether or not anybody typed in them, so a non-empty default would make "check `apply` and press the
+button" search something other than the experiment just reviewed. Empty means "ask the file"; a field you fill
+in wins for that run; and `none` is how the form asks for *nothing* where the file names something — `initial:
+none` starts from the built-in weights, `check_opponent: none` runs no second check.
+
+The hold-out — both agents replayed on seeds no candidate saw, and against the check opponent — runs on **any
+run that found something better**, not only on one that applies it. It is the only part of a run that can say
+whether a set is worth keeping: the search's own numbers come from the seeds the winner was picked on.

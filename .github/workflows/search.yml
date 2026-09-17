@@ -16,31 +16,29 @@ on:
   workflow_dispatch:
     inputs:
       opponent:
-        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores the mean over them, and one that falls below the start against any of them ranks below every one that did not, so it cannot win by learning one of them (journal, 2026-09-16)"
-        default: greedy
+        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores the mean over them, and one that falls below the start against any of them ranks below every one that did not, so it cannot win by learning one of them (journal, 2026-09-16). Empty: what learning/experiments/search.json says, else greedy"
+        default: ""
       check_opponent:
-        description: "A second opponent the hold-out also replays both agents against, or empty for none. A set that beats the opponent it was searched against and falls against this one learned that opponent, not the game (journal, 2026-09-16)"
-        default: random
+        description: "A second opponent the hold-out also replays both agents against. A set that beats the opponent it was searched against and falls against this one learned that opponent, not the game (journal, 2026-09-16). Empty: what the experiment file says, else random; `none` for no check at all"
+        default: ""
       kind:
-        description: "The agent kind that plays each candidate: heuristic reads the weights one step, lookahead and minimax play the round out (docs/learning/agents.md)"
-        type: choice
-        options: [heuristic, lookahead, minimax]
-        default: heuristic
+        description: "The agent kind that plays each candidate: heuristic reads the weights one step, lookahead and minimax play the round out (docs/learning/agents.md). Empty: what the experiment file says, else heuristic"
+        default: ""
       initial:
-        description: "Weights the search starts from (empty: the built-in ones, which greedy plays)"
+        description: "Weights the search starts from. Empty: what the experiment file says, else the built-in ones, which greedy plays; `none` to start from the built-in ones whatever the file says"
         default: ""
       seeds:
-        description: "Seed file of every evaluation"
-        default: benchmarks/benchmark-seeds.json
+        description: "Seed file of every evaluation (empty: what the experiment file says, else benchmarks/benchmark-seeds.json)"
+        default: ""
       iterations:
-        description: "Rounds of the search"
-        default: "10"
+        description: "Rounds of the search (empty: what the experiment file says, else 10)"
+        default: ""
       population:
-        description: "Candidates played per round"
-        default: "16"
+        description: "Candidates played per round (empty: what the experiment file says, else 16)"
+        default: ""
       seed:
-        description: "Search seed"
-        default: "0"
+        description: "Search seed (empty: what the experiment file says, else 0)"
+        default: ""
       apply:
         description: "Commit the weights it found as their own file on a branch, or only report them"
         type: boolean
@@ -123,9 +121,12 @@ jobs:
               printf '%s' "$3"
             fi
           }
-          # `check_opponent` and `initial` are the two whose default is empty, so "typed nothing" and "asked
-          # for nothing" cannot be told apart on a dispatch; the file answers for them only when the dispatch
-          # left them empty, which is what every other key does too.
+          # Every field's default is empty, so an untouched form is not an override: GitHub hands a dispatch
+          # the declared defaults whether or not anybody typed in them, and a non-empty one here would mean
+          # that reviewing a committed experiment and then dispatching it with `apply` would search something
+          # else entirely (Codex's review of #137). Empty therefore means "ask the file", and `none` is how a
+          # form asks for nothing where the file names something -- the built-in weights, or no check at all.
+          none_is_nothing() { [[ "$1" == none ]] && printf '' || printf '%s' "$1"; }
           kind="$(knob kind "$IN_KIND" heuristic)"
           if [[ "$kind" == heuristic ]]; then
             name=search
@@ -134,9 +135,9 @@ jobs:
           fi
           resolved="$(
             printf 'OPPONENT=%s\n' "$(knob opponent "$IN_OPPONENT" greedy)"
-            printf 'CHECK=%s\n' "$(knob check_opponent "$IN_CHECK" random)"
+            printf 'CHECK=%s\n' "$(none_is_nothing "$(knob check_opponent "$IN_CHECK" random)")"
             printf 'KIND=%s\n' "$kind"
-            printf 'INITIAL=%s\n' "$(knob initial "$IN_INITIAL" '')"
+            printf 'INITIAL=%s\n' "$(none_is_nothing "$(knob initial "$IN_INITIAL" '')")"
             printf 'SEEDS=%s\n' "$(knob seeds "$IN_SEEDS" benchmarks/benchmark-seeds.json)"
             printf 'ITERATIONS=%s\n' "$(knob iterations "$IN_ITERATIONS" 10)"
             printf 'POPULATION=%s\n' "$(knob population "$IN_POPULATION" 16)"
@@ -251,6 +252,7 @@ jobs:
             echo "The search found better weights and was asked not to apply them. They are in the artifact."
           fi
 
+          echo "improved=$improved" >> "$GITHUB_OUTPUT"
           if [[ "$improved" == "true" && "$APPLY" == "true" ]]; then
             echo "applied=true" >> "$GITHUB_OUTPUT"
           else
@@ -272,8 +274,13 @@ jobs:
       # what it started from here has learned that opponent rather than the game. The lookahead weights of
       # search run 5 were that set, 0.84 against Greedy and 0.70 against Random where Greedy itself scores
       # 0.99 (journal, 2026-09-16), and this step would have said so in the run summary.
+      # On `improved` rather than on `applied`: this is the only step that says whether a set is worth
+      # applying, so a run that reports without applying -- every run a committed experiment asks for -- needs
+      # it most. Gating it on `apply` left those runs with nothing but the benchmark seeds the winner was
+      # picked on, which is the one reading the journal keeps saying not to trust (Codex's review of #137).
+      # Copying the file and pushing the branch stay apply-only, below.
       - name: Replay on seeds the search never saw
-        if: steps.found.outputs.applied == 'true'
+        if: steps.found.outputs.improved == 'true'
         id: holdout
         run: |
           matches="$(jq -r '.seeds | length' "$SEEDS")"
