@@ -13,16 +13,20 @@ on:
         description: "Search seed (the same seed on the same content returns the same moves)"
         default: "0"
       iterations:
-        description: "Rounds of neighbours after the opening sweep"
-        default: "24"
+        description: "Rounds of neighbours after the opening sweep. Six is what fits beside the sweep in the six hours GitHub gives a job, at 155 knobs and the measured 61.7 seconds a candidate; 24 is what ran before the panel doubled that cost, and tune 10 died at the ceiling with nothing to show"
+        default: "6"
       neighbours:
         description: "Candidates played per round"
         default: "6"
       max_changes:
         description: "Knobs one proposal may move at once"
         default: "12"
+      pairs:
+        description: "Also open on paired moves, two knobs of one spell stepped together for the spells no single step improved. Off by default since the catalogue reached 155 knobs: the pairs are built per spell and are not capped, and the opening sweep alone already takes four of the six hours a job gets"
+        type: boolean
+        default: false
       pair_depth:
-        description: "Steps one knob of a paired opening move may take (1 is the opening move alone)"
+        description: "Steps one knob of a paired opening move may take (1 is the opening move alone). Ignored unless `pairs` is on"
         default: "2"
       apply:
         description: "Open a pull request with the winning numbers, or only report them"
@@ -53,15 +57,28 @@ jobs:
     runs-on: ubuntu-latest
     # A candidate costs one content build plus one evaluation per agent the objective names. That was four
     # since ADR 0029, one per entry, and it is eight since ADR 0052 seated a panel of five on `exploit`: three
-    # entries of one agent and five of it. An evaluation is about 3.8 seconds on the benchmark seeds, since
-    # ADR 0030 plays its 400 matches at once, so a candidate is about 30 seconds and the default budget of 284
-    # candidates about 142 minutes, where the four evaluations before the panel made it 67.
+    # entries of one agent and five of it.
     #
-    # The ceiling below is headroom rather than an estimate, because a runner's speed is not a promise. It is
-    # the six hours GitHub gives a job: doubling what a candidate costs halved the margin the old 300 left, and
-    # a pass killed by the clock loses everything, since the proposal is written when the search finishes. A
-    # pass that wants more room spends it on fewer candidates (`--no-pairs`, `--pair-depth 1`) rather than on a
-    # longer job, and the panel is the knob if the cost becomes binding (ADR 0052).
+    # **On this runner a candidate is 61.7 seconds**, measured rather than derived: tune 10 played 349 of them
+    # in 5h59m at an even pace, candidate 1 at 1m01s. `data/balance/README.md` prices an evaluation at 3.8
+    # seconds and so a candidate at 30, which is that reading on a four-core machine; a GitHub runner is not
+    # one, and the number that has to fit a job is the runner's.
+    #
+    # And the opening sweep is no longer small. It is one candidate per legal single step of every playable
+    # knob, and the catalogue has grown to **155 knobs and 243 legal single steps** -- 4h10 of a six-hour job
+    # before a single round of the climb. So the budget is what changed, not the ceiling:
+    #
+    #   sweep 243 + the catalogue itself + 6 rounds of 6 = 280 candidates = about 4h48
+    #
+    # which leaves an hour for the setup, the hold-out and the gate. Tune 10 ran 24 rounds with the paired
+    # opening on, reached 349 candidates without finishing, and was killed at the ceiling **with nothing to
+    # show**, because the proposal is only written when the search ends.
+    #
+    # The paired opening is off by default for the same reason (Codex's review of #138). It builds every legal
+    # pair of one spell's knobs for every spell the sweep did not improve, in both directions, which is not
+    # capped and grows with the catalogue; there is no room for it beside a four-hour sweep. `pairs` turns it
+    # back on for a run that is willing to pay, and the panel is the other knob if the cost itself becomes
+    # binding (ADR 0052).
     timeout-minutes: 360
     steps:
       # Unlike the other workflows, this one pushes a branch, so it keeps the credentials the checkout sets up
@@ -117,10 +134,14 @@ jobs:
           NEIGHBOURS: ${{ inputs.neighbours }}
           MAX_CHANGES: ${{ inputs.max_changes }}
           PAIR_DEPTH: ${{ inputs.pair_depth }}
+          PAIRS: ${{ inputs.pairs }}
           APPLY: ${{ inputs.apply }}
         run: |
           arguments=(-o "$OUT" --seed "$SEED" --iterations "$ITERATIONS"
             --neighbours "$NEIGHBOURS" --max-changes "$MAX_CHANGES" --pair-depth "$PAIR_DEPTH")
+          if [[ "$PAIRS" != "true" ]]; then
+            arguments+=(--no-pairs)
+          fi
           if [[ "$APPLY" == "true" ]]; then
             arguments+=(--apply)
           fi
