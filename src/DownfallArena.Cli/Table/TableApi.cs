@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
 using DownfallArena.Application.Catalogue;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
@@ -21,7 +23,7 @@ namespace DownfallArena.Cli.Table;
 /// still the only thing that says what is legal. And it never invents a refusal: a tap that arrives after the
 /// screen moved on is late, not illegal, and says so with a 409 the page can act on.
 /// </remarks>
-internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue)
+internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events)
 {
     public const string TokenHeader = "X-Seat-Token";
 
@@ -36,7 +38,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// </summary>
     private string Tag => $"\"{catalogue.ContentHash}+{catalogue.Rules.TeamSize}-{catalogue.Rules.EnergyPerRound}-{catalogue.Rules.EvolutionPicksPerRound}-{catalogue.Rules.RoundCap}-{catalogue.Rules.CriticalMultiplier.ToString(CultureInfo.InvariantCulture)}\"";
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? ifNoneMatch = null)
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? ifNoneMatch = null, string? query = null)
     {
         if (Holder(token) is not { } holder)
         {
@@ -73,7 +75,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         return (method, segments) switch
         {
-            ("GET", [_]) => await SeatAsync(holder),
+            ("GET", [_]) => await SeatAsync(holder, Since(query)),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
@@ -96,6 +98,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         };
     }
 
+    private static PlayerSlot Other(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
+
     private TableSeat? Holder(string? token) =>
         string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
@@ -111,7 +115,17 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             ArtifactJson.LineOptions);
     }
 
-    private async Task<StudioResponse> SeatAsync(TableSeat seat)
+    /// <summary>
+    /// The sequence number a page has already seen everything below, off <c>?since=N</c>. Anything that is not
+    /// a number is nothing asked for: a feed from the start is the right answer to a query nobody meant.
+    /// </summary>
+    private static int Since(string? query)
+    {
+        var since = System.Web.HttpUtility.ParseQueryString(query ?? string.Empty)["since"];
+        return int.TryParse(since, CultureInfo.InvariantCulture, out var sequence) && sequence > 0 ? sequence : 0;
+    }
+
+    private async Task<StudioResponse> SeatAsync(TableSeat seat, int since)
     {
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
         if (board.IsFailure)
@@ -124,6 +138,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             return StudioResponse.OfPlainText(500, options.Error.Message);
         }
+
+        // How many cards the other side has face down, and nothing else about them. At a table that number is
+        // public -- face-down cards are countable -- so it is served, as a count computed here rather than as
+        // a list the client is trusted not to read (ADR 0054).
+        var opponent = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, Other(seat.Slot)));
 
         // The question the seat is blocked on, rather than what the sub-phase allows: a person acts when their
         // own seat is asked, and the two differ while the other seat is still deciding.
@@ -138,6 +157,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 waitingCreature = waiting?.Creature,
                 playedByBot = seat.Person is null,
                 over = session.IsOver,
+                opponentIntents = opponent.IsSuccess ? opponent.Value.Intents.Count : 0,
+
+                // What has happened, as this seat may be told it: the boards the trace keeps beside every
+                // event are dropped here and the other seat's hidden decisions never reach the wire
+                // (SeatVisibility). The trace itself is not served during a session.
+                feed = SeatFeedProjection.Build(events.EntriesOf(session.MatchId), seat.Slot, since),
             },
             ArtifactJson.LineOptions);
     }

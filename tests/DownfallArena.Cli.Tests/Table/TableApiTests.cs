@@ -1,6 +1,9 @@
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
@@ -89,6 +92,86 @@ public sealed class TableApiTests : IDisposable
     }
 
     /// <summary>
+    /// The feed a seat is served, on the bytes rather than on the object: the trace keeps both boards beside
+    /// every event on purpose, and a serializer that wrote one would leak the whole opposing hand at once.
+    /// </summary>
+    [Fact]
+    public async Task The_feed_carries_what_happened_and_never_the_boards_the_trace_keeps_beside_it()
+    {
+        var table = await Seated();
+
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+
+        var feed = body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..];
+        feed.ShouldContain("\"kind\"");
+        feed.ShouldContain("\"sequence\"");
+        feed.ShouldNotContain("\"allies\"");
+        feed.ShouldNotContain("\"enemies\"");
+        feed.ShouldNotContain("\"player1\":{");
+        feed.ShouldNotContain("\"player2\":{");
+    }
+
+    /// <summary>
+    /// The other seat's intents are the game's hidden information, and the feed is the one place they could
+    /// escape as plain text. Played for rather than asserted at a moment when there is nothing to hide.
+    /// </summary>
+    [Fact]
+    public async Task The_feed_never_carries_the_other_seat_s_intents()
+    {
+        var table = await Seated();
+        await PlayUpToTargeting(table);
+
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+
+        var feed = body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..];
+        feed.ShouldNotContain("IntentSubmitted\",\"matchId\":\"" + table.Session.MatchId + "\",\"roundId\":1,\"slot\":\"Player2\"");
+        feed.ShouldContain("IntentSubmitted");
+    }
+
+    /// <summary>
+    /// A page asks for what it has not seen. The numbers are the trace's, so they do not close up when an
+    /// event is filtered out -- which is what lets a seat ask for the next one without learning what it was
+    /// not shown.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_asks_for_the_feed_from_where_it_left_off()
+    {
+        var table = await Seated();
+
+        var all = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
+        var rest = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: $"?since={all[^1]}")));
+        var none = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: $"?since={all[^1] + 1}")));
+
+        all.ShouldNotBeEmpty();
+        all.ShouldBeInOrder();
+        rest.ShouldBe([all[^1]]);
+        none.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("?since=")]
+    [InlineData("?since=tomorrow")]
+    [InlineData("?since=-4")]
+    [InlineData("?other=3")]
+    public async Task A_query_that_asks_for_nothing_in_particular_is_the_feed_from_the_start(string query)
+    {
+        var table = await Seated();
+
+        var feed = Sequences(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: query)));
+
+        feed.ShouldNotBeEmpty();
+        feed[0].ShouldBe(0);
+    }
+
+    /// <summary>The sequence numbers a payload carries, in the order it carries them.</summary>
+    private static IReadOnlyList<int> Sequences(string body) =>
+    [
+        .. Regex.Matches(body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..], "\"sequence\":([0-9]+)")
+            .Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)),
+    ];
+
+    /// <summary>
     /// The deck, as the table is playing it. It is the same for both seats and hides nothing — what is hidden
     /// is which card a creature has face down — and it is what lets the page carry no content of its own.
     /// </summary>
@@ -161,7 +244,8 @@ public sealed class TableApiTests : IDisposable
             table.Session,
             table.Session.Queries,
             [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), rules));
+            CatalogueProjection.Build(_host!.Services.GetRequiredService<IGameResources>(), rules),
+            _host.Services.GetRequiredService<MatchTraceRecorder>());
 
     private static string Tag(StudioResponse response) =>
         response.Headers.ShouldNotBeNull().Single(header => header.Key == "ETag").Value;
@@ -290,7 +374,8 @@ public sealed class TableApiTests : IDisposable
             session,
             session.Queries,
             [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
-            CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), Rules));
+            CatalogueProjection.Build(_host.Services.GetRequiredService<IGameResources>(), Rules),
+            _host.Services.GetRequiredService<MatchTraceRecorder>());
 
         await Waiting(person, "Evolution");
         return (api, session, person, token);

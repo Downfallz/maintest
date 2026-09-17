@@ -63,13 +63,17 @@ export function cardsById(catalogue) {
 // earlier table -- kept in this browser, and ordered first -- and asking with that one alone would leave every
 // spell on the screen as its raw id for the whole session. Any seat will do: the catalogue is the same for
 // both, and nothing in it is hidden.
-export async function loadCards(seats) {
+export async function loadCatalogue(seats) {
   for (const seat of seats ?? []) {
     const answer = await seat.transport.catalogue();
     if (answer.ok) {
-      return cardsById(answer.body);
+      return answer.body;
     }
   }
 
-  return new Map();
+  return null;
+}
+
+export async function loadCards(seats) {
+  return cardsById(await loadCatalogue(seats));
 }

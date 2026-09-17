@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cardCost, cardHead, cardLines, cardTitle, cardsById, criticalLine, loadCards } from './card.js';
+import { cardCost, cardHead, cardLines, cardTitle, cardsById, criticalLine, loadCards, loadCatalogue } from './card.js';
 
 // A card as the host serves one. Every value here is arbitrary on purpose: the test holds that each one comes
 // out of the renderer, which is what "the page carries no content" means on this side of the wire.
@@ -95,4 +95,12 @@ test('a page whose every seat is refused draws no cards rather than failing', as
   assert.equal((await loadCards([refusing])).size, 0);
   assert.equal((await loadCards([])).size, 0);
   assert.equal((await loadCards(undefined)).size, 0);
+});
+
+test('the catalogue itself is what the mat and the rule line are drawn from', async () => {
+  const catalogue = await loadCatalogue([refusing, serving([card])]);
+
+  assert.deepEqual(catalogue.cards, [card]);
+  assert.equal(await loadCatalogue([refusing]), null);
+  assert.equal(await loadCatalogue([]), null);
 });

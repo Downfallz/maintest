@@ -10,6 +10,7 @@
     <header>
       <h1 id="seat">—</h1>
       <p id="phase" class="muted">Connecting…</p>
+      <p id="rules" class="muted"></p>
     </header>
 
     <!-- The pass-the-device screen. It is a screen and not a banner: on one phone it is the whole fence
@@ -21,7 +22,24 @@
     </section>
 
     <main id="table" hidden>
+      <!-- The initiative track: one strip, scrolling sideways, in the order the engine built. -->
+      <section id="timeline" class="strip" aria-label="Initiative"></section>
+
+      <!-- Two tabs and not two panels: the mat is touched once a round, during Evolution, and a phone has
+           one screen. -->
+      <nav class="tabs">
+        <button id="tab-board" type="button" class="tab on">Board</button>
+        <button id="tab-mat" type="button" class="tab">Talents</button>
+      </nav>
+
       <section id="board"></section>
+      <section id="mat" hidden></section>
+
+      <details id="log">
+        <summary>What has happened</summary>
+        <ol id="feed"></ol>
+      </details>
+
       <section id="decision" class="sheet">
         <h2 id="asking">Waiting for the other seat…</h2>
         <div id="choices"></div>

@@ -55,7 +55,7 @@ internal sealed class GameSession
     /// will <em>drain</em> it: <c>play</c> and <c>human</c> hand one match to <c>WriteTraceAsync</c>, and a
     /// recorded run hands every match to <see cref="MatchTraceRecorder.Complete"/> as long as it keeps at
     /// least one trace. Registering it for anything else is a leak rather than a waste, because only those
-    /// two paths ever make it forget a match: <c>--trace</c> is read by <c>play</c> alone, so
+    /// two paths ever make it forget a match, and the table, which plays one and exits: <c>--trace</c> is read by <c>play</c> alone, so
     /// <c>simulate --record … --traces 0 --trace f.json</c> would otherwise hold every event of every match
     /// in the batch. <c>--traces 0</c> is the case that matters for a large dataset either way: the two board
     /// projections per event are never built, rather than built and dropped. The combat counters listen for
@@ -65,7 +65,12 @@ internal sealed class GameSession
     {
         var tracesOneMatch = cliOptions.Command is "play" or "human" && cliOptions.Trace is not null;
         var tracesARun = cliOptions.Command is "simulate" && cliOptions.Record is not null && cliOptions.Traces != 0;
-        if (tracesOneMatch || tracesARun)
+
+        // The table is the third drain, and the one that reads the entries while they are still being made:
+        // its feed is what a seat is told happened (ADR 0054). It never forgets the match, which is a leak
+        // bounded by the shape of the command -- one host, one session, one process.
+        var showsAFeed = cliOptions.Command is "table";
+        if (tracesOneMatch || tracesARun || showsAFeed)
         {
             serviceCollection.AddSingleton<MatchTraceRecorder>();
             serviceCollection.AddSingleton<IDomainEventListener>(provider => provider.GetRequiredService<MatchTraceRecorder>());
