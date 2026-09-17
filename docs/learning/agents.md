@@ -188,7 +188,9 @@ candidate set against a fixed opponent on the benchmark seeds and keeps what win
 to `greedy.json` under its own name. `search-2.json` was the first of those: a searched set that beats `Greedy`
 on seeds it never saw, committed to be played and compared, not to be the baseline (the 2026-09-12 journal
 entry says what it buys and what it costs). **The balance objective's `exploit` evaluation plays a panel of
-them and reads its best exploiter** ([ADR 0052](../adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)):
+them and reads its best exploiter** ([ADR 0052](../adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)),
+and scores **how fast** that one wins rather than whether it does, ties going to the fastest
+([ADR 0053](../adr/0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md)):
 `search-4`, `mixture-mean`, `pressure-floor`, `stun-first` and `kill-first` today. It named one file until 2026-09-17,
 `pressure-floor` then, `search-4` before it and `search-3` before that, and the reason it no longer does is
 measured: one agent reads what that agent punishes, so the same one-spell move was worth 0.013 to `search-4`

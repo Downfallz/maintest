@@ -537,12 +537,16 @@ class EngineContentEvaluator:
         evaluation, its rounds and its spell outcomes included: what the term wants to know is how far the
         catalogue can be taken by a player who only wants to win, and the answer is the best of the ones
         asked, not the one that happens to be named in the file.
+
+        A tie goes to the fastest (ADR 0053). Several members take every match on the catalogues measured so
+        far, and the term is scored on the clock, so without this the reading would be decided by the order
+        of the list rather than by the play.
         """
         played = [
             self._play_one(name, agent, str(evaluation.get("p2", "greedy")), schema, index)
             for index, agent in enumerate(panel(evaluation, "p1"))
         ]
-        return max(played, key=lambda outcome: outcome.agent_a.win_rate.mean)
+        return max(played, key=lambda outcome: (outcome.agent_a.win_rate.mean, -outcome.average_rounds))
 
     def _play_one(self, name: str, p1: str, p2: str, schema: Path, index: int) -> Evaluation:
         suffix = f"-{index}" if index else ""

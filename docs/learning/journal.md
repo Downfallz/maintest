@@ -4,6 +4,29 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-17. The objective goes from 172.421 to 12.874 without a knob moving, because the term that was 94 % of it stopped being scored
+
+- **[ADR 0053](../adr/0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md), from the entry
+  below.** `exploit.winRateA` is pinned at 1.000 on every catalogue measured, so it is now played and
+  reported at weight 0, and `exploit.averageRounds` is scored instead with a floor of 8, the floor the mirror
+  is already held to. The panel of ADR 0052 breaks its ties by the fastest win, which it needs to: three
+  members take every match, and without it the order of the list decided the reading.
+
+  | on `7e199df4`, benchmark seeds | before | after |
+  | --- | --- | --- |
+  | objective | 172.421 | **12.874** |
+  | the exploit term | 162.00 `winRateA` 1.000 | 2.45, `averageRounds` 5.785 |
+  | the largest term | `exploit` at 94 % | `variety.tierUsageShare` at 6.05 |
+
+- **Nothing about the content moved**, so the content hash and the benchmark digest are where they were, and
+  no score from before today compares with one from after it. What changed is that every term can now be
+  moved by content: the Crushing Stomp move that was priced at 116 points, then 55, then 0 reads 2.38 here,
+  in the direction the content actually went.
+
+- **ADR 0044's moratorium is lifted with it.** The next thing this arm owes is the pass itself: one tuning
+  run under this objective, read and reported rather than applied, which says whether a term that finally
+  moves buys balance or buys rounds.
+
 ## 2026-09-17. The cell ADR 0044 was missing: a search fitted to the moved catalogue takes every match on both of them, so that content move is worth nothing at all and the exploit term is a constant
 
 - **The missing half, run.** The entry below measured four sets searched on `7e199df4` and replayed on the
