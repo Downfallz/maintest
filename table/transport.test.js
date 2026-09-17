@@ -53,3 +53,24 @@ test('a transport without a seat or a token refuses to exist', () => {
   assert.throws(() => httpTransport('player3', 'abc'), /neither player1 nor player2/);
   assert.throws(() => httpTransport('player1', ''), /token/);
 });
+
+// The seat route's one query parameter, and the only thing it trims: the board and the options come whole on
+// every poll because they are a snapshot, and the feed is a log the page already holds part of.
+test('a poll asks only for the feed entries it has not seen', async () => {
+  const { calls, fetchImpl } = stub();
+  const transport = httpTransport('player1', 'abc', fetchImpl);
+
+  await transport.seat(0);
+  await transport.seat(42);
+
+  assert.deepEqual(calls.map(call => call.path), ['/api/seat/player1', '/api/seat/player1?since=42']);
+});
+
+test('a poll with nothing held asks for the feed from the start', async () => {
+  const { calls, fetchImpl } = stub();
+  const transport = httpTransport('player1', 'abc', fetchImpl);
+
+  await transport.seat();
+
+  assert.deepEqual(calls.map(call => call.path), ['/api/seat/player1']);
+});

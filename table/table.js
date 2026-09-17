@@ -4,7 +4,7 @@ import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
 import { chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
 import { backText, handRows } from './hand.js';
-import { feedLine } from './feed.js';
+import { accumulate, feedLine, nextSince } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
 
@@ -14,6 +14,10 @@ import { drawn, matBands } from './mat.js';
 const storage = kept();
 const held = heldSeats(globalThis.location?.search ?? '', storage);
 const element = id => document.getElementById(id);
+
+// How many feed entries the page keeps. The log draws the last twelve; a few times that leaves room to scroll
+// back through the round without holding a whole match in memory on a phone.
+const FeedKept = 60;
 
 if (held.length === 0) {
   element('phase').textContent = 'Type the code the host printed, or open the link it printed.';
@@ -42,7 +46,7 @@ function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
-  const state = { seats, holder: null, shown: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board' };
+  const state = { seats, holder: null, shown: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
   load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -89,7 +93,10 @@ async function refresh(state) {
   const views = [];
   const refused = [];
   for (const seat of state.seats) {
-    const answer = await seat.transport.seat();
+    // Only the entries this page has not seen yet. The feed is the whole match's history and it only grows, so
+    // a poll every 700 ms that asked for all of it would serialize and download the match again each time --
+    // and over a half-hour session that is quadratic in the number of events, for twelve lines on screen.
+    const answer = await seat.transport.seat(nextSince(state.feeds.get(seat.seat)));
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
@@ -105,13 +112,16 @@ async function refresh(state) {
       return;
     }
 
-    views.push({ ...seat, view: answer.body });
+    const kept = accumulate(state.feeds.get(seat.seat), answer.body?.feed, FeedKept);
+    state.feeds.set(seat.seat, kept);
+    views.push({ ...seat, view: { ...answer.body, feed: kept } });
   }
 
   // Dropped after the round of polls rather than inside it, so nothing this loop reads changes while it runs.
   for (const seat of refused) {
     forget(storage, seat);
     state.seats = state.seats.filter(held => held.seat !== seat);
+    state.feeds.delete(seat);
   }
 
   // The catalogue may have been asked for through a seat this table has just refused. Now that only accepted
@@ -134,8 +144,14 @@ function render(state, views) {
   const current = activeSeat(views, state.holder);
   const view = current.view;
 
-  if (current.seat !== state.shown) {
+  // What the seat is being asked, as an identity. A choice belongs to one question and to no other: a decision
+  // refused as stale (409) leaves the choice standing, and the next question of the same seat is very often a
+  // different creature that knows the same spell -- which would arrive with a card already selected and one tap
+  // from being committed, through the confirmation that exists to stop exactly that.
+  const asked = `${current.seat}/${view.waitingFor ?? ''}/${view.waitingCreature ?? ''}`;
+  if (asked !== state.asked) {
     state.shown = current.seat;
+    state.asked = asked;
     state.picked = [];
     state.chosen = null;
   }
@@ -192,7 +208,7 @@ function renderTimeline(board) {
 
 function renderBoard(state, view) {
   const board = view.board;
-  const marks = { picked: state.picked, revealed: board.revealedActions };
+  const marks = { picked: state.picked, board };
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
   revealed(state, board.revealedActions);
@@ -278,7 +294,7 @@ function backs(state, board, opponentIntents) {
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
 function line(state, creature, which, marks) {
   const picked = (marks?.picked ?? []).includes(creature.id);
-  const casters = targetedBy(creature.id, marks?.revealed);
+  const casters = targetedBy(creature.id, marks?.board);
   const box = document.createElement('div');
   box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}`;
 

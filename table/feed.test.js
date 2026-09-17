@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { feedLine, outcomeText, resolutionText } from './feed.js';
+import { accumulate, feedLine, nextSince, outcomeText, resolutionText } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -105,4 +105,43 @@ test('a resolution the page has no card for still names its spell', () => {
   const unknown = { ...resolved, resolution: { ...resolved.resolution, action: { actor: 1, spell: 'spell:x:v1' } } };
 
   assert.equal(resolutionText(unknown, new Map()), '1: spell:x:v1 · no critical · Damage 3 on 1');
+});
+
+// The feed is the whole match's history and it only grows, so a poll that asked for all of it every 700 ms
+// would serialize and download the match again each time -- quadratic over a half-hour session, for twelve
+// lines on screen. The page asks for what it has not seen and keeps a bounded tail.
+test('the next request asks for one past the highest entry held', () => {
+  assert.equal(nextSince([{ sequence: 0 }, { sequence: 3 }, { sequence: 7 }]), 8);
+  assert.equal(nextSince([{ sequence: 0 }]), 1);
+  assert.equal(nextSince([]), 0);
+  assert.equal(nextSince(undefined), 0);
+});
+
+// Sequence numbers have gaps by design: the entries a seat may not see are filtered out and their numbers go
+// with them. So the cursor is the highest seen and never a count of what is held.
+test('a gap in the sequence numbers does not move the cursor back', () => {
+  assert.equal(nextSince([{ sequence: 0 }, { sequence: 5 }, { sequence: 12 }]), 13);
+});
+
+test('what arrives is appended to what was held, oldest first', () => {
+  const kept = accumulate([{ sequence: 0 }, { sequence: 1 }], [{ sequence: 2 }, { sequence: 3 }], 60);
+
+  assert.deepEqual(kept.map(entry => entry.sequence), [0, 1, 2, 3]);
+});
+
+test('an entry the page already holds is not added twice', () => {
+  const kept = accumulate([{ sequence: 0 }, { sequence: 1 }], [{ sequence: 1 }, { sequence: 2 }], 60);
+
+  assert.deepEqual(kept.map(entry => entry.sequence), [0, 1, 2]);
+});
+
+test('the kept history is bounded, and it is the newest that is kept', () => {
+  const kept = accumulate([{ sequence: 0 }, { sequence: 1 }, { sequence: 2 }], [{ sequence: 3 }], 2);
+
+  assert.deepEqual(kept.map(entry => entry.sequence), [2, 3]);
+});
+
+test('a first poll with nothing held keeps what arrives', () => {
+  assert.deepEqual(accumulate(undefined, [{ sequence: 0 }], 60).map(entry => entry.sequence), [0]);
+  assert.deepEqual(accumulate(undefined, undefined, 60), []);
 });

@@ -21,7 +21,10 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   }
 
   return {
-    seat: () => send('GET', `/api/seat/${seat}`),
+    // `since` is the first feed entry this page has not seen. It is the seat route's one query parameter and
+    // it only trims the feed: the board and the options come whole on every poll, because they are a snapshot
+    // and not a log.
+    seat: (since = 0) => send('GET', `/api/seat/${seat}${Number.isInteger(since) && since > 0 ? `?since=${since}` : ''}`),
     session: () => send('GET', '/api/session'),
     catalogue: () => send('GET', '/api/catalogue'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
