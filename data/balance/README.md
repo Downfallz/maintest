@@ -199,14 +199,17 @@ leaves a one-in-four chance that any given knob is never tried, and the first fu
 on `lightning_bolt`'s energy cost — one move worth more than everything the search did find. `--no-sweep`
 skips it when you want a quick look rather than an answer.
 
-Every candidate costs one content build plus one evaluation per entry of `objective.evaluations`. On the 200
-benchmark seeds an evaluation is about **3.8 seconds** on a four-core machine, so a candidate is about
-**14 seconds** across the four (ADR 0030 plays the 400 matches of an evaluation at once; it was 7 seconds an
-evaluation and 34 a candidate when they went one at a time). The sweep is up to two candidates per playable
+Every candidate costs one content build plus one evaluation per **agent** the objective names, which is eight
+since [ADR 0052](../../docs/adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md) seated a panel of five
+on `exploit`: three entries of one agent, and five of it. On the 200 benchmark seeds an evaluation is about
+**3.8 seconds** on a four-core machine, so a candidate is about **30 seconds** across the eight, where it was
+14 across the four (ADR 0030 plays the 400 matches of an evaluation at once; it was 7 seconds an evaluation
+and 34 a candidate when they went one at a time). The sweep is up to two candidates per playable
 knob — on the nine-spell core content that is 29 knobs and 41 legal single steps. The paired moves below add
 up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139 candidates. The workflow
-then climbs 24 rounds of 6, which is 284 candidates and about **67 minutes**; its timeout stays at 300, which
-is headroom rather than an estimate, because a runner's speed is not a promise. `--no-pairs` and
+then climbs 24 rounds of 6, which is 284 candidates and about **142 minutes**, where the same budget took 67
+before the panel; its timeout is the six hours GitHub gives a job, which is headroom rather than an estimate,
+because a runner's speed is not a promise and a pass killed by the clock loses everything. `--no-pairs` and
 `--pair-depth 1` are the switches if a run gets tight. Raise the budget rather than the step size: a wider
 step reaches further and reads worse in the diff.
 
