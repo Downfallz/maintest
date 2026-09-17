@@ -200,8 +200,10 @@ print(sorted(v.items()))"
 #  (0.767, 1), (0.8, 1)]
 ```
 
-**21 of 36 Spells roll. 15 never touch a die.** Eleven distinct chances are printed today, and the die's grid
-has to carry them. What each candidate costs, snapping each of the 21 to the nearest face:
+**21 of 36 Spells roll. 15 never touch a die.** Thirteen distinct chances are printed at content `7e199df4`,
+and the die's grid has to carry them. The table below is a reading, not a constant — the maintainer is tuning,
+so re-run the command rather than trusting the cells. What each candidate costs, snapping each of the 21 to
+the nearest face:
 
 ```bash
 python3 -c "
@@ -215,14 +217,15 @@ for d in (6,8,10,12,20,100):
 
 | Die | Spells whose chance moves | Worst move | Mean move | On the declared knob grid (step 0.05)? | What else it costs |
 | --- | --- | --- | --- | --- | --- |
-| d6 | 14 of 21 | 0.0833 (`crushing_stomp` 0.75 to 0.667) | 0.0262 | **No.** 1/6 is not a multiple of 0.05 | Six faces for eleven distinct chances, the largest mean error of the five, and a finest distinction of 16.7 points |
-| d8 | 13 | 0.05 (`enraged_charge` 0.8 to 0.75) | 0.0216 | **No** | Dominated by the d10 - the same 13 moves and the same worst move, at a larger mean error - and a die many households do not have |
-| d10 | 13 | 0.05 (`crushing_stomp` 0.75 to 0.8) | 0.0189 | **Yes**, 0.1 is a multiple of 0.05 | Ten faces for eleven chances, and it cannot express 0.75, where `crushing_stomp` sits today |
-| d12 | 13 | 0.0367 (`crazed_specter` 0.38 to 0.417) | 0.0140 | **No** | Values no declared knob can reach, and since tune run 8 it no longer buys the smallest mean error either |
+| d6 | 16 of 21 | 0.0833 | 0.0314 | **No.** 1/6 is not a multiple of 0.05 | Six faces for thirteen distinct chances, the largest mean error of the five, and a finest distinction of 16.7 points |
+| d8 | 15 | 0.05 | 0.0232 | **No** | Ties the d10 exactly at this content - same moves, same worst, same mean - so nothing separates them but the grid, which the d10 is on and it is not; and a die many households do not have |
+| d10 | 15 | 0.05 | 0.0232 | **Yes**, 0.1 is a multiple of 0.05 | Ten faces for thirteen chances, and it cannot express 0.75, where `crushing_stomp` sits today |
+| d12 | 15 | 0.0367 | 0.0180 | **No** | Values no declared knob can reach, and it no longer buys the smallest mean error either |
 | **d20** | **10** | **0.02** (`rejuvenate` 0.22 to 0.20) | **0.0091** | **Yes**, exactly the declared step | One die, one reading, thresholds in whole numbers |
 | d100 (2 dice) | 3 | 0.003 | 0.0004 | No, 0.01 | Two dice and a percentile read per cast, and it keeps the arbitrary precision fork B exists to remove |
 
-**Recommendation: a d20, and the card prints both the chance and the threshold** ("Critical 50% - d20: 11+",
+**Settled: a d20** ([d20-criticals.md](d20-criticals.md)), **and the card prints both the chance and the
+threshold** ("Critical 50% - d20: 11+",
 which is seven Spells as the catalogue stands). The recommendation survives tune run 8, and on better terms
 than it was made: the d20 now wins the error as well. It moves the fewest Spells (10 of 21), has the smallest
 worst move (0.02) and, since run 8 pulled `crazed_specter` and `protective_slam` off the d12 grid, the

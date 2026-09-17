@@ -21,9 +21,24 @@ But the reason to make it a **rule** rather than a one-off tuning pass is not th
 catalogue cannot stay on a grid it is not held to. Ten of the 36 Spells are off the twentieths today, and
 none of them got there by a balance pass choosing an odd number:
 
+The table below is a **reading of content `7e199df4`**, not a constant: the maintainer is tuning, and a pass
+moves these values. Regenerate it rather than trusting it, with
+
+```bash
+python3 -c "
+import json,glob,math
+for f in sorted(glob.glob('data/Spells/**/*.json',recursive=True)):
+    d=json.load(open(f)); c=d.get('criticalChance',0); s=math.floor(c*20+0.5)/20
+    if abs(c-s)>1e-9: print(f\"{d['name']:<20} {c} -> {s}\")"
+```
+
+Which rows it prints changes with every pass; **what does not change is that the rows exist**, because a knob
+moves a value by its step from wherever it sits. Ten Spells move at content `7e199df4`, as they did at
+`938bef5e`, and only Tornado's numbers differ between the two readings.
+
 | Spell | Now | Snapped | Move |
 | --- | --- | --- | --- |
-| Tornado | 0.33 | 0.35 | 0.020 |
+| Tornado | 0.38 | 0.40 | 0.020 |
 | Noxious Cure | 0.28 | 0.30 | 0.020 |
 | Crazed Specter | 0.38 | 0.40 | 0.020 |
 | Rejuvenate | 0.22 | 0.20 | 0.020 |

@@ -103,7 +103,7 @@ the two seats, and it is the same fence the cardboard has (playtest-app.md §4).
 **Piloting this stage earns**, both nearly free:
 
 - **Choose the opponent, either seat.** `--p1` and `--p2` take the specs the CLI already parses —
-  `random`, `greedy`, `heuristic:<weights.json>`, `policy:<policy.json>`, `explore:<rate>`
+  `random`, `greedy`, `heuristic:<weights.json>`, `lookahead`, `minimax`, `policy:<policy.json>`, `explore:<rate>`
   (`AgentSpec.cs:16-32`) — and `IAgentFactory.Create(spec, rules, random)` builds any of them
   (`AgentFactory.cs:29-44`). A seat is an `IPlayerAgent`, so this is one option and not a subsystem. It is
   also how one person tests the app between playtests.
