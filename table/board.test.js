@@ -74,10 +74,16 @@ test('a chip carries the number its effect holds, whatever that field is called'
   assert.equal(chipText(undefined), '');
 });
 
-test('a chip names the cast that put it there when one did', () => {
-  assert.equal(chipSource({ source: { caster: 5, spell: 'spell:healing_screech:v1' } }), 'from 5');
-  assert.equal(chipSource({ source: null }), '');
-  assert.equal(chipSource(undefined), '');
+// The source is the pair, not the caster: one creature can put two conditions of one kind on one target from
+// two different spells, and then the caster alone tells a player nothing that distinguishes them.
+test('a chip names the cast that put it there, caster and spell both', () => {
+  const cards = new Map([['spell:healing_screech:v1', { name: 'Healing Screech' }]]);
+
+  assert.equal(chipSource({ source: { caster: 5, spell: 'spell:healing_screech:v1' } }, cards), 'from 5 · Healing Screech');
+  assert.equal(chipSource({ source: { caster: 5, spell: 'spell:unknown:v1' } }, cards), 'from 5 · spell:unknown:v1');
+  assert.equal(chipSource({ source: { caster: 5 } }, cards), 'from 5');
+  assert.equal(chipSource({ source: null }, cards), '');
+  assert.equal(chipSource(undefined, cards), '');
 });
 
 // The reveal is what the next player picks targets against, so it has to be on the screen and not only in the

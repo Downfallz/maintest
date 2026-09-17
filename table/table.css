@@ -193,14 +193,23 @@ button.chosen { border-width: 2px; }
   font-size: 0.75rem;
 }
 
-.hand-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.hand-row { display: flex; flex-direction: column; gap: 2px; }
 
-.hand-who { color: var(--muted); min-width: 4.5rem; }
+.hand-who { color: var(--muted); }
+
+/* The cards scroll sideways rather than wrapping: at 360 px a wrapped hand of five faces is the whole screen,
+   and a row that scrolls keeps the boards below it reachable with one thumb. */
+.held-cards {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scroll-snap-type: x proximity;
+}
 
 .held {
-  padding: 1px 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  flex: 0 0 11rem;
+  scroll-snap-align: start;
   opacity: 0.45;
 }
 

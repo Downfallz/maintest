@@ -75,10 +75,18 @@ export function chipText(condition) {
 }
 
 // Which cast put it there, so a player can tell two identical chips apart and knows whose upkeep it is
-// (ADR 0027). Empty when nothing named a source, which is every condition a cast did not apply.
-export function chipSource(condition) {
-  const caster = condition?.source?.caster;
-  return caster === null || caster === undefined ? '' : `from ${caster}`;
+// (ADR 0027). The source is the pair -- the caster and the cast -- and one creature can put two of one kind on
+// one target from two different spells, so the caster alone does not tell them apart. Empty when nothing named
+// a source, which is every condition a cast did not apply.
+export function chipSource(condition, cards) {
+  const source = condition?.source;
+  if (source === null || source === undefined) return '';
+
+  const caster = source.caster === null || source.caster === undefined ? '' : `from ${source.caster}`;
+  const spell = source.spell === null || source.spell === undefined
+    ? ''
+    : cards?.get?.(source.spell)?.name ?? source.spell;
+  return [caster, spell].filter(part => part !== '').join(' · ');
 }
 
 // The one number a lasting effect carries, whatever it is called. Read off the payload rather than from a list

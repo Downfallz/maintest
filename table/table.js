@@ -195,15 +195,16 @@ function renderBoard(state, view) {
     hand(state, board, view.options),
     backs(state, board, view.opponentIntents),
     revealed(state, board.revealedActions),
-    ...(board.allies ?? []).map(creature => line(creature, 'ally')),
-    ...(board.enemies ?? []).map(creature => line(creature, 'enemy')),
+    ...(board.allies ?? []).map(creature => line(state, creature, 'ally')),
+    ...(board.enemies ?? []).map(creature => line(state, creature, 'enemy')),
   );
 }
 
-// The hand: every spell this seat's creatures know, as cards, with the ones it could cast right now marked
-// (hand.js). It is drawn whatever the sub-phase, because a card a player cannot cast is still a card they have
-// to be able to read -- and why it is unavailable is a question the board answers by showing it dimmed, never
-// by hiding it. What is castable comes from the options and nothing else; this page decides nothing.
+// The hand: every spell this seat's creatures know, drawn as the whole card, with the ones it could cast right
+// now marked (hand.js). It is drawn whatever the sub-phase, and it draws the full face and not a label, because
+// for a spell that is not castable this is the card's only appearance on the screen -- the decision sheet will
+// never offer it -- and "what does this do and why can I not cast it" is a question a player answers by reading
+// the card. Dimmed, never hidden. What is castable comes from the options and nothing else.
 function hand(state, board, options) {
   const box = document.createElement('div');
   box.className = 'hand-cards';
@@ -214,19 +215,27 @@ function hand(state, board, options) {
     const one = document.createElement('div');
     one.className = 'hand-row';
 
-    const who = document.createElement('span');
+    const who = document.createElement('div');
     who.className = 'hand-who';
     who.textContent = `${row.creature}${row.declared ? ' · declared' : ''}`;
     one.append(who);
 
-    for (const held of row.spells) {
-      const face = state.cards.get(held.spell);
-      const chip = document.createElement('span');
-      chip.className = `held${held.castable ? ' castable' : ''}`;
-      chip.textContent = face ? `${cardTitle(face)} ${cardCost(face)}` : held.spell;
-      one.append(chip);
+    const held = document.createElement('div');
+    held.className = 'held-cards';
+    for (const spell of row.spells) {
+      const face = document.createElement('div');
+      face.className = `card held${spell.castable ? ' castable' : ''}`;
+      const parts = cardParts(state, spell.spell, '');
+      if (parts === null) {
+        face.textContent = spell.spell;
+      } else {
+        face.append(...parts);
+      }
+
+      held.append(face);
     }
 
+    one.append(held);
     box.append(one);
   }
 
@@ -270,7 +279,7 @@ function backs(state, board, opponentIntents) {
 }
 
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
-function line(creature, which) {
+function line(state, creature, which) {
   const box = document.createElement('div');
   box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}`;
 
@@ -292,13 +301,13 @@ function line(creature, which) {
   stats.className = 'stats';
   stats.textContent = statPairs(creature).map(([name, value]) => `${name} ${value}`).join(' · ');
 
-  box.append(who, health, stats, dock(creature.conditions));
+  box.append(who, health, stats, dock(state, creature.conditions));
   return box;
 }
 
 // The condition dock: the printed board's lanes, `new` first and permanent last, each chip carrying its kind,
 // its number and the cast that put it there (board.js).
-function dock(conditions) {
+function dock(state, conditions) {
   const box = document.createElement('div');
   box.className = 'dock';
   for (const group of conditionDock(conditions)) {
@@ -314,7 +323,7 @@ function dock(conditions) {
       const chip = document.createElement('span');
       chip.className = 'chip';
       chip.textContent = chipText(condition);
-      const source = chipSource(condition);
+      const source = chipSource(condition, state.cards);
       if (source !== '') {
         const from = document.createElement('span');
         from.className = 'chip-source';
@@ -469,8 +478,8 @@ function targetButtons(state, current) {
 // A spell as the card the host serves, and as the id it was offered by when the catalogue has no card for it.
 // Nothing here knows what any of these words mean: they arrive rendered (card.js).
 function card(state, spell, prefix, onClick) {
-  const face = state.cards.get(spell);
-  if (!face) {
+  const parts = cardParts(state, spell, prefix);
+  if (parts === null) {
     return button([prefix, spell].filter(Boolean).join(' · '), onClick);
   }
 
@@ -478,6 +487,19 @@ function card(state, spell, prefix, onClick) {
   choice.type = 'button';
   choice.className = 'card';
   choice.addEventListener('click', onClick);
+  choice.append(...parts);
+  return choice;
+}
+
+// The face of a card, head and body, and null when the catalogue has no card for the spell. The hand and the
+// decision sheet both draw this: the same card, and only what happens when it is touched differs -- one is a
+// thing to read, the other a thing to tap. Every line of it comes from `card.js`, which is to say from the
+// host's projection of the content.
+function cardParts(state, spell, prefix) {
+  const face = state.cards.get(spell);
+  if (!face) {
+    return null;
+  }
 
   const head = document.createElement('div');
   head.className = 'card-head';
@@ -496,8 +518,7 @@ function card(state, spell, prefix, onClick) {
     body.append(row);
   }
 
-  choice.append(head, body);
-  return choice;
+  return [head, body];
 }
 
 function button(label, onClick) {

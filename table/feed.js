@@ -22,8 +22,16 @@ export function resolutionText(event, cards) {
   const spell = cards?.get?.(action.spell)?.name ?? action.spell ?? '';
 
   const parts = [`${action.actor ?? ''}: ${spell}`];
-  if (resolution.isCritical === true) parts.push('critical');
-  if (resolution.fizzled === true) parts.push(`fizzled: ${errorText(resolution.fizzleReason)}`);
+
+  // Said both ways, and not only when it landed. Stage 4 owes the line "whether it landed" (app-roadmap.md),
+  // and silence does not say that: a player who sees nothing cannot tell a roll that missed from a line that
+  // forgot to mention it, and the card they cast advertised a threshold they were watching for. A fizzle is
+  // the one resolution that never rolled, so it is the one that says nothing about the die.
+  if (resolution.fizzled === true) {
+    parts.push(`fizzled: ${errorText(resolution.fizzleReason)}`);
+  } else {
+    parts.push(resolution.isCritical === true ? 'critical' : 'no critical');
+  }
 
   const outcomes = (event?.appliedOutcomes ?? []).map(outcomeText).filter(Boolean);
   if (outcomes.length > 0) parts.push(outcomes.join(', '));

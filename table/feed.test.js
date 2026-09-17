@@ -34,10 +34,12 @@ test('a critical is on the resolution line, because no total on the board can sa
   assert.equal(resolutionText(critical, cards), '4: Throwing Star · critical · Damage 3 on 1');
 });
 
-test('a resolution that was not critical does not say it was', () => {
-  assert.equal(resolutionText(resolved, cards), '4: Throwing Star · Damage 3 on 1');
+// Said both ways. Silence would not tell a player whether the roll landed: it reads the same as a line that
+// forgot to mention it, and the card they cast advertised a threshold they were watching for.
+test('a resolution that was not critical says so rather than staying silent', () => {
+  assert.equal(resolutionText(resolved, cards), '4: Throwing Star · no critical · Damage 3 on 1');
   assert.equal(feedLine({ round: 1, subPhase: 'ActionResolution', event: resolved }, cards),
-    '1 · ActionResolution · CombatActionResolved — 4: Throwing Star · Damage 3 on 1');
+    '1 · ActionResolution · CombatActionResolved — 4: Throwing Star · no critical · Damage 3 on 1');
 });
 
 test('a fizzle says so and says why', () => {
@@ -54,6 +56,18 @@ test('a fizzle says so and says why', () => {
   assert.equal(resolutionText(fizzled, cards), '4: Throwing Star · fizzled: Every target was invalid.');
 });
 
+// A fizzle never rolled, so it is the one resolution that says nothing about the die: reporting "no critical"
+// there would be reporting a roll that did not happen.
+test('a fizzle says nothing about the die, because no die was rolled', () => {
+  const fizzled = {
+    ...resolved,
+    resolution: { ...resolved.resolution, fizzled: true, fizzleReason: { message: 'Nothing to hit.' } },
+    appliedOutcomes: [],
+  };
+
+  assert.ok(!resolutionText(fizzled, cards).includes('critical'));
+});
+
 // A target dropped at resolution time -- dead before the cast reached it -- is why a cast did less than the
 // card promised, so it is on the line rather than left to be inferred from the boards.
 test('targets dropped at resolution are named with their reason', () => {
@@ -65,7 +79,7 @@ test('targets dropped at resolution are named with their reason', () => {
     },
   };
 
-  assert.equal(resolutionText(dropped, cards), '4: Throwing Star · Damage 3 on 1 · dropped 2 (Creature 2 is dead.)');
+  assert.equal(resolutionText(dropped, cards), '4: Throwing Star · no critical · Damage 3 on 1 · dropped 2 (Creature 2 is dead.)');
 });
 
 test('a global targeting failure has no creature to name', () => {
@@ -74,7 +88,7 @@ test('a global targeting failure has no creature to name', () => {
     resolution: { ...resolved.resolution, droppedTargets: [{ target: null, error: { message: 'Nothing was left.' } }] },
   };
 
-  assert.equal(resolutionText(global, cards), '4: Throwing Star · Damage 3 on 1 · dropped Nothing was left.');
+  assert.equal(resolutionText(global, cards), '4: Throwing Star · no critical · Damage 3 on 1 · dropped Nothing was left.');
 });
 
 // The applied outcomes are what the board took, which can be less than the rules computed; that is the pair
@@ -90,5 +104,5 @@ test('an outcome is the engine kind without its type suffix, its number and its 
 test('a resolution the page has no card for still names its spell', () => {
   const unknown = { ...resolved, resolution: { ...resolved.resolution, action: { actor: 1, spell: 'spell:x:v1' } } };
 
-  assert.equal(resolutionText(unknown, new Map()), '1: spell:x:v1 · Damage 3 on 1');
+  assert.equal(resolutionText(unknown, new Map()), '1: spell:x:v1 · no critical · Damage 3 on 1');
 });
