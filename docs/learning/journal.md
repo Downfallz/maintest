@@ -25,8 +25,17 @@ first.
   visible to the two sets that were built on that spell: `pressure-floor` and `stun-first` are the ones
   that wait, bank energy and open with Crushing Stomp, and taking the spell away takes their game away.
   `search-4` barely notices, because it never played that line. So there is no reading of "how exploitable
-  this catalogue is" that does not name an exploiter, and ADR 0044's question has an answer: the term as
-  defined is a property of the pair.
+  this catalogue is" that does not name an exploiter: the term as defined is a property of the pair.
+
+- **Half of what ADR 0044 asked for, and the half it is.** That ADR asks for a search fitted to each
+  catalogue and then played across both; every set here was searched on `7e199df4` and replayed on the
+  moved one, which is the transfer half. It says how much of an agent's edge a content move takes away, and
+  nothing about what a search fitted to the moved catalogue would find there (Codex's review). That cell is
+  running: a search from `stun-first` against Greedy on the weakened catalogue, which is the same question
+  `search-3` and `search-4` were made to answer on theirs. Until it lands, every reading below is about
+  these four sets, and the claim "a content move buys less than one agent says" holds in the direction it
+  is used: a fresh exploiter can only find **more** than the best of four, never less, so the gradient
+  below is an upper bound on what the move is worth.
 
 - **And the ranking of exploiters changes with the content, which is the file's own rule measured for the
   first time.** On the current catalogue the two newest sets read 1.0000 and `search-4` 0.9275. On the moved
@@ -38,8 +47,10 @@ first.
 - **What that does to the gradient this journal reported yesterday.** The entry of 2026-09-17 on the
   exploiter refresh measured that move as worth 116 points of objective, read by `pressure-floor` alone.
   Read as the best of these four, the same move takes the term from 1.0000 to 0.9150 and the penalty from
-  162.00 to 106.58: **55 points, not 116**. A single-agent reading credits a content move for blinding that
-  one agent, and half the credit in that measurement was exactly that.
+  162.00 to 106.58: **at most 55 points, where one agent read 116**. A single-agent reading credits a
+  content move for blinding that one agent, and at least half the credit in that measurement was exactly
+  that. At most, because a set searched on the moved catalogue can only read higher than the best of these
+  four, which would leave the move worth less still.
 
 - **The mirrors, and a trend this journal claimed and does not have.** The same five agents against
   themselves on the benchmark seeds:
