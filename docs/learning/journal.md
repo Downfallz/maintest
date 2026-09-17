@@ -41,7 +41,8 @@ first.
 
 - **What this licenses.** Nothing new, which is the point of a third seed: the two-seed reading was written
   under ADR 0049's bar and now clears it. The clone side keeps `search-4` as its teacher, and the lever on
-  the clone is what it can see, not whom it copies (ADR 0051).
+  the clone is what it can see, not whom it copies: the candidate terms of ADR 0051, which lands with them
+  in pull request #116.
 
 ## 2026-09-17. The mean of five value fits scores 0.06 where the mean of three scored 0.48, and the jackknife says a mean moves by two thirds with the draw of its fits
 
