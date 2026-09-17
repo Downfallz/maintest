@@ -12,6 +12,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
+from typing import Any
 
 KNOBS_FILE = Path("data/balance/knobs.json")
 ALIASES_FILE = "aliases.json"
@@ -153,7 +154,7 @@ class Objective:
     """What balanced means: the evaluations to play, and the bands their metrics should land in."""
 
     seeds: str
-    evaluations: Mapping[str, Mapping[str, str]]
+    evaluations: Mapping[str, Mapping[str, Any]]
     targets: tuple[Target, ...]
 
     def breakdown(self, metrics: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
@@ -546,6 +547,17 @@ def _objective_problems(knobs: Knobs, root: Path | None) -> list[str]:
     return problems
 
 
+def panel(evaluation: Mapping[str, Any], side: str) -> tuple[str, ...]:
+    """The agents one side of an evaluation names: one spec, or the panel a list of them gives (ADR 0052).
+
+    A panel on ``p1`` is read as the best exploiter of the catalogue rather than as several evaluations: the
+    term wants a property of the content, and one agent only ever reads what that agent happens to punish.
+    """
+    spec = evaluation.get(side, "greedy")
+    specs = spec if isinstance(spec, (list, tuple)) else [spec]
+    return tuple(str(entry) for entry in specs)
+
+
 def _agent_problems(knobs: Knobs, root: Path) -> list[str]:
     """An evaluation naming a weights or policy file that is not there fails the engine, one candidate at a
     time, after a search has already started. The path is the engine's own, so it resolves from the repository
@@ -554,14 +566,21 @@ def _agent_problems(knobs: Knobs, root: Path) -> list[str]:
     problems = []
     for name, evaluation in sorted(knobs.objective.evaluations.items()):
         for side in ("p1", "p2"):
-            spec = str(evaluation.get(side, "greedy"))
-            path = _agent_file(spec)
-            if path is None:
-                continue
-            if not path:
-                problems.append(f"objective: evaluation '{name}' {side} is '{spec}', which names no file.")
-            elif not (root / path).is_file():
-                problems.append(f"objective: evaluation '{name}' {side} reads '{path}', which is not a file.")
+            specs = panel(evaluation, side)
+            if not specs:
+                problems.append(f"objective: evaluation '{name}' {side} names no agent at all.")
+            for spec in specs:
+                path = _agent_file(spec)
+                if path is None:
+                    continue
+                if not path:
+                    problems.append(
+                        f"objective: evaluation '{name}' {side} is '{spec}', which names no file."
+                    )
+                elif not (root / path).is_file():
+                    problems.append(
+                        f"objective: evaluation '{name}' {side} reads '{path}', which is not a file."
+                    )
     return problems
 
 

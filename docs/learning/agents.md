@@ -187,13 +187,15 @@ To move them, do not edit them by feel: run `search-weights` (`docs/learning/tra
 candidate set against a fixed opponent on the benchmark seeds and keeps what wins, and leave the result next
 to `greedy.json` under its own name. `search-2.json` was the first of those: a searched set that beats `Greedy`
 on seeds it never saw, committed to be played and compared, not to be the baseline (the 2026-09-12 journal
-entry says what it buys and what it costs). **`pressure-floor.json` is what the balance objective's `exploit`
-evaluation plays**, since 2026-09-17; `search-4.json` was, and `search-3.json` before it. That evaluation
-names a file, so it is the one reading that goes stale on its own: a tuning pass changes what there is to
-exploit, and an agent searched against a catalogue that no longer exists understates the gap rather than
-overstating it. `search-2` had gone four content changes without a refresh and read 0.182 where `search-3`
-read 0.745; on `7e199df4` the same term reads 0.9275 with `search-4` and 1.000 with `pressure-floor`.
-Refresh it from the newest search rather than keeping the old file. `mixture-mean.json` and `mixture-worst.json`
+entry says what it buys and what it costs). **The balance objective's `exploit` evaluation plays a panel of
+them and reads its best exploiter** ([ADR 0052](../adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)):
+`search-4`, `mixture-mean`, `pressure-floor` and `stun-first` today. It named one file until 2026-09-17,
+`pressure-floor` then, `search-4` before it and `search-3` before that, and the reason it no longer does is
+measured: one agent reads what that agent punishes, so the same one-spell move was worth 0.013 to `search-4`
+and 0.235 to `stun-first`, and on the moved catalogue `search-4` became the best exploiter of the two
+(journal, 2026-09-17). A set still goes stale when the content moves, which is why `search-2` read 0.182
+where `search-3` read 0.745 on the catalogue of the day; the answer is now to add the newest search to the
+panel rather than to replace what is there. `mixture-mean.json` and `mixture-worst.json`
 are the first sets searched against three opponents at once (`greedy`, `search-4` and `random`; journal,
 2026-09-16), and either beats `search-4` head to head on seeds the search never saw while beating Greedy and
 Random. `pressure-floor.json` is the first set searched with the ninth weight free, from `mixture-mean`

@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from itertools import combinations
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 
@@ -39,6 +39,7 @@ from downfall_learning.knobs import (
     load_weights,
     new_dominance,
     new_indistinguishable,
+    panel,
     read_value,
     with_value,
 )
@@ -529,16 +530,30 @@ class EngineContentEvaluator:
     def _build(self) -> None:
         self._run([*self._builder, str(self._candidate), str(self._candidate / "dst")], "The data builder")
 
-    def _play(self, name: str, evaluation: Mapping[str, str], schema: Path) -> Evaluation:
-        output = self._workdir / f"evaluation-{name}.json"
+    def _play(self, name: str, evaluation: Mapping[str, Any], schema: Path) -> Evaluation:
+        """The evaluation, or, where agent A is a panel, the reading of its best exploiter (ADR 0052).
+
+        Every agent of the panel is played and the one whose win rate is highest decides the whole
+        evaluation, its rounds and its spell outcomes included: what the term wants to know is how far the
+        catalogue can be taken by a player who only wants to win, and the answer is the best of the ones
+        asked, not the one that happens to be named in the file.
+        """
+        played = [
+            self._play_one(name, agent, str(evaluation.get("p2", "greedy")), schema, index)
+            for index, agent in enumerate(panel(evaluation, "p1"))
+        ]
+        return max(played, key=lambda outcome: outcome.agent_a.win_rate.mean)
+
+    def _play_one(self, name: str, p1: str, p2: str, schema: Path, index: int) -> Evaluation:
+        output = self._workdir / f"evaluation-{name}{f'-{index}' if index else ''}.json"
         self._run(
             [
                 *self._engine.command,
                 "evaluate",
                 "--p1",
-                str(evaluation.get("p1", "greedy")),
+                p1,
                 "--p2",
-                str(evaluation.get("p2", "greedy")),
+                p2,
                 "--seeds",
                 self._objective.seeds or self._engine.seeds,
                 "--schema",
@@ -546,7 +561,7 @@ class EngineContentEvaluator:
                 "--out",
                 str(output),
             ],
-            f"The evaluation '{name}'",
+            f"The evaluation '{name}' as '{p1}'",
         )
         self.calls += 1
         return load_evaluation(output)

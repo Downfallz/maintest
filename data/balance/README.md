@@ -109,13 +109,17 @@ Closing that gap by flattening the game fails `skill`; keeping one dominant line
 on `variety`. What the four together ask for is content where playing well matters, where more than one line
 wins, and where winning does not require abandoning the taste.
 
-`exploit` is the only evaluation that names a file. The agent goes stale when the content moves — a tuning
-pass changes what there is to exploit — so it is refreshed from the next `search-weights` run rather than
-kept. It names `pressure-floor.json` since 2026-09-17, and reads 1.000 on `7e199df4`: that agent takes every
-one of the 400 matches from Greedy, on the benchmark seeds and on 200 seeds nothing had played alike. The
-ceiling is not a plateau: one reachable move, Crushing Stomp at the weakest of its own bounds, reads 0.790
-and takes the objective from 172.42 to 64.13. The gradient is steep and it runs through the one spell the
-exploiter leans on, which is the sharpest form of the question ADR 0044 holds open. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
+`exploit` is the only evaluation that names files, and since [ADR 0052](../../docs/adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)
+it names a **panel**: every searched set that has beaten Greedy on this catalogue is played and the one with
+the highest win rate decides the evaluation, its rounds and its spell outcomes included. One agent only ever
+reads what that agent happens to punish — the same one-spell move was worth 0.013 to `search-4` and 0.235 to
+`stun-first`, and on the moved catalogue the ranking inverted (journal, 2026-09-17) — so a single reading
+credited a content change for blinding one agent. A set still goes stale when the content moves, but the
+answer is now to **add** the newest search to the panel rather than to replace the file: an older set costs
+one evaluation and is sometimes the only one that still sees the hole. On `7e199df4` the panel reads 1.000,
+and the one reachable move measured so far, Crushing Stomp at the weakest of its own bounds, takes it to
+0.915 and the objective from 172.42 to 124.63, where a single fresh agent read that same move as 64.13. A
+candidate therefore costs four evaluations here and seven in all, which is the price of the reading. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
 because otherwise the engine fails one candidate at a time, once a search has already started.
 
 Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth

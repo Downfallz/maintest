@@ -1296,3 +1296,63 @@ def test_a_pair_that_moves_nothing_at_all_is_not_stepped_further(tmp_path: Path)
     # proposals rather than as engine calls: stepping further is a proposal, and on content this deaf the
     # pair lands back on the catalogue the search started from, which is served without playing it again.
     assert len(result.candidates) == len(playable(knobs, content)) * 2 - 1 + 1 + 1
+
+
+PANEL_ENGINE = """
+import json
+import sys
+from pathlib import Path
+
+options = dict(zip(sys.argv[2::2], sys.argv[3::2]))
+rate = json.loads(Path(__file__).with_name("wins.json").read_text())[options["--p1"]]
+evaluation = json.loads(Path(__file__).with_name("template.json").read_text())
+for name in ("winRate", "score"):
+    evaluation["agentA"][name] = {"mean": rate, "low": rate, "high": rate}
+evaluation["averageRounds"] = 100.0 * rate
+Path(options["--out"]).write_text(json.dumps(evaluation))
+"""
+
+
+def panel_evaluator(tmp_path: Path, wins: Mapping[str, float]) -> EngineContentEvaluator:
+    """An evaluator whose engine gives each agent A the win rate ``wins`` names, and rounds to match."""
+    (tmp_path / "fake_builder.py").write_text(FAKE_BUILDER, encoding="utf-8")
+    engine = tmp_path / "fake_engine.py"
+    engine.write_text(PANEL_ENGINE, encoding="utf-8")
+    (tmp_path / "wins.json").write_text(json.dumps(dict(wins)), encoding="utf-8")
+    (tmp_path / "template.json").write_text(json.dumps(evaluation_json(0.5, 0.5)), encoding="utf-8")
+    data = tmp_path / "data"
+    data.mkdir()
+    content = content_tree(data)
+    objective = Objective(
+        seeds="seeds.json",
+        evaluations={"exploit": {"p1": list(wins), "p2": "greedy"}},
+        targets=(Target(metric="winRateA", on="exploit", maximum=0.55, scale=0.05, weight=2),),
+    )
+    host = ContentEngine(
+        engine=replace(EngineCommand(root=tmp_path), command=(sys.executable, str(engine))),
+        data=data,
+        workdir=tmp_path / "work",
+        builder=(sys.executable, str(tmp_path / "fake_builder.py")),
+    )
+    return EngineContentEvaluator(host, objective, content)
+
+
+def test_a_panel_on_agent_a_is_read_as_its_best_exploiter(tmp_path: Path) -> None:
+    """ADR 0052: one agent reads what that agent punishes, so the term takes the best of the panel."""
+    evaluator = panel_evaluator(tmp_path, {"greedy": 0.30, "random": 0.90, "explore:0.2": 0.55})
+
+    metrics = evaluator.evaluate(content_tree(tmp_path / "data").spells)
+
+    assert metrics["exploit"]["winRateA"] == pytest.approx(0.90)
+    # Every metric of the evaluation comes from that same agent's play, not only the win rate.
+    assert metrics["exploit"]["averageRounds"] == pytest.approx(90.0)
+    assert evaluator.calls == 3
+
+
+def test_one_agent_on_agent_a_still_plays_once(tmp_path: Path) -> None:
+    evaluator = panel_evaluator(tmp_path, {"greedy": 0.30})
+
+    metrics = evaluator.evaluate(content_tree(tmp_path / "data").spells)
+
+    assert metrics["exploit"]["winRateA"] == pytest.approx(0.30)
+    assert evaluator.calls == 1
