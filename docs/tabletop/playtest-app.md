@@ -1,7 +1,8 @@
 # The playtest app
 
-Status: **Specification** (2026-09-14). Phase 5 of [plan.md](plan.md). It names the host, the transport, the
-client's shape, what a session records, and what is not in the first version.
+Status: **Specification** (2026-09-14; citations re-verified 2026-09-17). Phase 5 of [plan.md](plan.md). It
+names the host, the transport, the client's shape, what a session records, and what is not in the first
+version. The build plan that follows from it is [app-roadmap.md](app-roadmap.md).
 
 ## What this is, and what it is not
 
@@ -19,7 +20,7 @@ What this document takes as given, from [plan.md](plan.md) and [components.md](c
 - A Match is **8 to 16 Rounds** and 15 to 30 minutes (plan.md:108-125). Wall-clock is the target the app is
   built to measure; the engine measures rounds and cannot measure minutes.
 - The components of phase 3 are the screen layout. The initiative track, the creature board, the condition
-  dock, the player area and the talent mat are specified in components.md:465-739, and the app renders those
+  dock, the player area and the talent mat are specified in components.md:491-764, and the app renders those
   objects rather than inventing a second visual language for the same game.
 - **Decision D is settled** (2026-09-14): hotseat, one screen, to start. Part 4 says what it buys and what it
   leaves for later.
@@ -45,7 +46,7 @@ The client renders. It does not decide. Concretely, the client must never:
 
 The client's whole job is layout, formatting and input. Anything it computes, it computes about pixels.
 
-If the app makes a rule feel wrong, the fix is an engine change with its own ADR (plan.md:222-231), never a
+If the app makes a rule feel wrong, the fix is an engine change with its own ADR (plan.md:224-231), never a
 patch in the client. A client that "corrects" a rule is the one failure this whole effort exists to prevent.
 
 ### 1.2 What answers "what can I do now"
@@ -58,7 +59,7 @@ accepted" (`PlayerOptions.cs:5-8`).
 | --- | --- | --- | --- |
 | `Evolution` | `PlayerOptionsKind.Evolution` | `EvolutionOptions(RemainingPicks, Creatures)` (`EvolutionOptions.cs:7`), each `EvolutionOption(Creature, UnlockableSpells)` (`EvolutionOption.cs:5`) | `EvolutionRules.Evaluate(...).RemainingPicksOf(slot)` (`PlayerOptionsProjection.cs:48`) |
 | `Speed` | `Speed` | `SpeedOptions(Missing)` (`SpeedOptions.cs:8`) | `SpeedRules.Evaluate(...).MissingOf(slot)` (`PlayerOptionsProjection.cs:70`) |
-| `IntentSelection` | `Intent` | `IntentOptions(Creatures)` (`IntentOptions.cs:7`), each `IntentOption(Creature, CastableSpells)` (`IntentOption.cs:5`) | `IntentRules.Evaluate(round).Missing` (`PlayerOptionsProjection.cs:79`) |
+| `IntentSelection` | `Intent` | `IntentOptions(Creatures)` (`IntentOptions.cs:6`), each `IntentOption(Creature, CastableSpells)` (`IntentOption.cs:5`) | `IntentRules.Evaluate(round).Missing` (`PlayerOptionsProjection.cs:79`) |
 | `RevealAndTarget` | `Target` | `TargetOptions(Actor, Spell, LegalTargets)` (`TargetOptions.cs:10`), with `MinTargets`, `MaxTargets`, `Candidates`, `IsCastable` (`LegalTargets.cs:8-10`) | `round.NextSlotToReveal` and `TargetingRules.LegalTargets` (`PlayerOptionsProjection.cs:89-107`) |
 | `ActionResolution` | `Resolution` | none | "A combat action waits for resolution; any host may drive it" (`PlayerOptionsKind.cs:20-21`) |
 | anything else | `Waiting` / `Ended` | none | `PlayerOptionsProjection.cs:22-31,44` |
@@ -69,7 +70,7 @@ round position, the timeline, the actions revealed so far — "public to both pl
 
 A Condition chip has everything it needs: `ConditionSnapshot(Effect, RemainingRounds, Source)`
 (`ConditionSnapshot.cs:6`), so a chip prints its kind, its amount, how many Rounds are left, and which cast put
-it there (ADR 0027). That is the condition dock of components.md:507-524 with no extra work.
+it there (ADR 0027). That is the condition dock of components.md:533-550 with no extra work.
 
 ### 1.3 What is missing today
 
@@ -77,11 +78,11 @@ Three things, all of them Application's, none of them a rule.
 
 | Missing | Why it is needed | Shape |
 | --- | --- | --- |
-| **A card projection** | `IntentOption.CastableSpells` and `EvolutionOption.UnlockableSpells` carry `SpellId`s and nothing else. The client cannot print a cost, an effect, a Duration or a Critical chance from an id. | A read-only projection over `IGameResources`: the card face of components.md:280-463, plus the enabled Talent tree for the mat. It reads the **built** catalogue, never the authored files: the studio's `/api/catalogue` answers `ContentStore.Read()` (`StudioApi.cs:197`), which lists documents a build prunes, including `Enabled = false` ones (`ContentStore.cs:382`). The printshop reads the same built schema (components.md:745-756), so the card on the screen and the card on the sheet cannot disagree. |
-| **A seat's view of the event stream** | `MatchTraceRecorder` keeps every event with **both** boards (`MatchTraceRecorder.cs:40-49`). `IntentSubmitted` carries the declared Spell and says so: "Hidden from the other player until revealed; the application layer decides who sees it" (`IntentSubmitted.cs:8-10`). `SpeedChoiceSubmitted` carries the Speed (`SpeedChoiceSubmitted.cs:10`). Neither may reach the other seat. | A projection from one `IMatchEvent` and one `PlayerSlot` to "this seat may see it, or not", **default-deny**: a closed switch over the fifteen events in `src/DownfallArena.Domain/Matches/Events/`, with a test that enumerates every `IMatchEvent` in the Domain assembly and fails when one is unclassified. Today exactly two events are private, and they are the same two `PlayerBoardStateProjection` already filters (`PlayerBoardStateProjection.cs:37-38`). |
+| **A card projection** | `IntentOption.CastableSpells` and `EvolutionOption.UnlockableSpells` carry `SpellId`s and nothing else. The client cannot print a cost, an effect, a Duration or a Critical chance from an id. | A read-only projection over `IGameResources`: the card face of components.md:290-489, plus the enabled Talent tree for the mat. It reads the **built** catalogue, never the authored files: the studio's `/api/catalogue` answers `ContentStore.Read()` (`StudioApi.cs:197`), which lists documents a build prunes, including `Enabled = false` ones (`ContentStore.cs:382`). The printshop reads the same built schema (components.md:771-781), so the card on the screen and the card on the sheet cannot disagree. A Critical chance prints as the threshold the card carries — `d20: 14+` ([d20-criticals.md](d20-criticals.md)) — and that threshold is a property of the **card** only because a Creature carries no chance of its own: the engine sums the two (`ResolutionRules.cs:56`) and `CreatureSnapshot` still has the field (`CreatureSnapshot.cs:35`). If a Creature ever carries one again, the threshold becomes a property of the caster and has to move out of this seat-independent, cacheable projection into the per-seat payload of 2.3. |
+| **A seat's view of the event stream** | `MatchTraceRecorder` keeps every event with **both** boards (`MatchTraceRecorder.cs:40-49`). `IntentSubmitted` carries the declared Spell and says so: "Hidden from the other player until revealed; the application layer decides who sees it" (`IntentSubmitted.cs:8-10`). `SpeedChoiceSubmitted` carries the Speed (`SpeedChoiceSubmitted.cs:10`). Neither may reach the other seat. | A projection from one `IMatchEvent` and one `PlayerSlot` to "this seat may see it, or not", **default-deny**: a closed switch over the fifteen events in `src/DownfallArena.Domain/Matches/Events/`, with a test that enumerates every `IMatchEvent` in the Domain assembly and fails when one is unclassified. Today exactly two events are private. The board projection filters a third, `EvolutionChoiceSubmitted` (`PlayerBoardStateProjection.cs:35`), but that one is public information anyway: both teams' snapshots are served whole (`PlayerBoardStateProjection.cs:19-20`) and a snapshot carries `KnownSpells` (`CreatureSnapshot.cs:39`), so an unlock is already on the opponent's board. Each arm of the switch carries its reason, because a default-deny table is only worth its test if every allow is argued. |
 | **A playtest note** | Nothing records how long a decision took, what a player got wrong, or which rule was looked up. Part 5.3. | A record beside `StepRecord`, written through the existing `IArtifactWriter` (`IArtifactWriter.cs:7-16`) and timed with `TimeProvider`, which Application already registers (architecture/overview.md:41-42). |
 
-**No new port.** Every adapter this app needs already has one: `IMatchRepository` (`IMatchRepository.cs:26-31`)
+**No new port.** Every adapter this app needs already has one: `IMatchRepository` (`IMatchRepository.cs:11,13`)
 for the match, `IArtifactWriter` for what a session writes, `IRandomSource` for the critical roll,
 `TimeProvider` for the clock. The three items above are projections and records, which Application owns
 outright. If a later version wants a session to survive a host restart, that is a file-backed adapter for
@@ -107,7 +108,7 @@ deletes them, and takes an agent spec like `heuristic:<path>` the engine then re
 for refusing to unbind it from the loopback address. The table host writes nothing but its own session
 directory, deletes nothing, and takes no path from a request. Keeping them apart is what makes 2.4 thinkable.
 
-The static client lives in `table/`, beside `viewer/`, `studio/` and the `printshop/` of components.md:781-791:
+The static client lives in `table/`, beside `viewer/`, `studio/` and the `printshop/` of components.md:807-817:
 `index.html`, one stylesheet, ES modules, no framework, no build step. Its transport is injected, as ADR 0024
 requires, and it is tested with `node --test table/*.test.js` alongside the studio's.
 
@@ -182,7 +183,7 @@ the same (`SpeedRules.cs:24-27`), and `SubmitAction` is documented "Only the own
 **What a client-side hide would allow.** Suppose the host sent one payload with both boards and the page hid
 the opponent's half. A player with the network tab open, or one who reads the DOM, learns two things before
 choosing: the opponent's six face-down intents, and their six Speed tokens. Those are the only two hidden
-decisions in the game (translation.md:84, translation.md:99; plan.md:78) and they are the ones the round is
+decisions in the game (translation.md:110, translation.md:95; plan.md:76-78) and they are the ones the round is
 built around. Knowing the enemy's Speeds, you build the timeline before choosing yours. Knowing that enemy
 Creature 4 declared a Stun, you pick Quick and target it first, or you simply pick a different Intent.
 
@@ -200,17 +201,17 @@ The objects of components.md, one for one, so a player who has seen the cardboar
 
 | Component | On screen | Source |
 | --- | --- | --- |
-| Initiative track, Quick band then Standard (components.md:582-600) | A horizontal strip of up to six chips under the header, with a divider between the Quick chips and the Standard ones, the acting slot highlighted | `PlayerBoardState.Timeline`, whose `ActivationSlot(Owner, Creature, Speed, Initiative)` carries the band and the value (`ActivationSlot.cs:9`) |
-| Creature board (components.md:470-505) | One row per Creature: its number, a Health bar with the number, Energy, total Defense, Current initiative, a Stun badge, a Speed badge once the timeline is built | `CreatureSnapshot` (`CreatureSnapshot.cs:11-45`) |
-| Condition dock, four lanes (components.md:507-524) | Chips grouped by remaining Rounds — `new`, `3`, `2`, `1` — with kind, amount and source, and permanent Conditions in their own group | `ConditionSnapshot(Effect, RemainingRounds, Source)` (`ConditionSnapshot.cs:6`); `RemainingRounds` is `null` when permanent (`Condition.cs:29-36`) |
-| The hand (components.md:623-654) | The seat's own Creatures' known Spells as cards, the castable ones enabled | `CreatureSnapshot.KnownSpells` (`CreatureSnapshot.cs:39`) for the hand, `IntentOption.CastableSpells` for what is enabled |
+| Initiative track, Quick band then Standard (components.md:608-626) | A horizontal strip of up to six chips under the header, with a divider between the Quick chips and the Standard ones, the acting slot highlighted | `PlayerBoardState.Timeline`, whose `ActivationSlot(Owner, Creature, Speed, Initiative)` carries the band and the value (`ActivationSlot.cs:9`) |
+| Creature board (components.md:496-531) | One row per Creature: its number, a Health bar with the number, Energy, total Defense, Current initiative, a Stun badge, a Speed badge once the timeline is built | `CreatureSnapshot` (`CreatureSnapshot.cs:11-45`) |
+| Condition dock, four lanes (components.md:533-550) | Chips grouped by remaining Rounds — `new`, `3`, `2`, `1` — with kind, amount and source, and permanent Conditions in their own group | `ConditionSnapshot(Effect, RemainingRounds, Source)` (`ConditionSnapshot.cs:6`); `RemainingRounds` is `null` when permanent (`Condition.cs:29-36`) |
+| The hand (components.md:649-679) | The seat's own Creatures' known Spells as cards, the castable ones enabled | `CreatureSnapshot.KnownSpells` (`CreatureSnapshot.cs:39`) for the hand, `IntentOption.CastableSpells` for what is enabled |
 | Face-down intent | A card back on each Creature that has declared. The seat's own back is tappable and reads its own card; the opponent's back carries no data at all | `PlayerBoardState.Intents` is the seat's own (`PlayerBoardState.cs:40-41`); the opponent's is a count, never a card |
-| Target markers and the `Targeted by` row (components.md:623-654) | Tapping a legal target marks it; each Creature row shows which casters point at it | `TargetOptions.LegalTargets` and `PlayerBoardState.RevealedActions` |
-| Talent mat (components.md:668-739) | A separate tab: three class bands, every Spell with a pip box per Creature, the gates printed on the band | The card projection of 1.3 for the tree, `KnownSpells` for the pips, `EvolutionOption.UnlockableSpells` for what is tappable now |
-| Round track (components.md:602-621) | `Round 7 of 16` in the header, with the Round's shape as a collapsible strip | `PlayerBoardState.RoundNumber`, `Phase`, `SubPhase`; the cap from the session stamp |
+| Target markers and the `Targeted by` row (components.md:649-679) | Tapping a legal target marks it; each Creature row shows which casters point at it | `TargetOptions.LegalTargets` and `PlayerBoardState.RevealedActions` |
+| Talent mat (components.md:694-764) | A separate tab: three class bands, every Spell with a pip box per Creature, the gates printed on the band | The card projection of 1.3 for the tree, `KnownSpells` for the pips, `EvolutionOption.UnlockableSpells` for what is tappable now |
+| Round track (components.md:628-647) | `Round 7 of 16` in the header, with the Round's shape as a collapsible strip | `PlayerBoardState.RoundNumber`, `Phase`, `SubPhase`; the cap from the session stamp |
 
 The player aid's two load-bearing orderings — healing before bleeding, and the critical applied before Defense
-is subtracted (components.md:619-621) — are on the round strip, because they are the two a player gets wrong.
+is subtracted (components.md:645-647) — are on the round strip, because they are the two a player gets wrong.
 
 ### 3.2 The decision
 
@@ -233,14 +234,14 @@ The target is a 360 to 400 pixel wide screen held in one hand.
 - **Numbers, not rails.** A 21-cell Health rail is a cardboard affordance for a marker. On a screen the same
   information is `14/20` and a bar, and it fits.
 - **The talent mat is a tab**, not a panel. It is the one component that is A4 portrait
-  (components.md:674-716) and it is only touched during Evolution.
+  (components.md:702) and it is only touched during Evolution.
 - **The decision sheet is pinned to the bottom** and sized in `dvh`, so the browser chrome does not eat it.
   The board scrolls behind it.
 - **Everything is a tap.** No hover, no drag, no keyboard. A long press is never the only way to do anything.
 - **Two taps to commit anything destructive**: an Intent and a target set are confirmed, because a mis-tap on a
   phone is the misplay this app will produce most, and there is no undo (Part 6).
 - **The chrome is legible in daylight**: the class colour is a strip *and* a printed class name, for the same
-  reason components.md:770-779 gives for the print sheets.
+  reason components.md:805 gives for the print sheets.
 
 ---
 
@@ -264,7 +265,7 @@ the browser on the machine running the engine. So the LAN bind is not what separ
 | Closeness to the cardboard | High. One table, one shared board, one device passed | Lower. Two people looking down at their own screens |
 
 **Why it is the right first target.** The thing being playtested is a board game. Its components put one shared board on
-the table and a mat in front of each player (components.md:582-654), and the reading we want — is this
+the table and a mat in front of each player (components.md:608-679), and the reading we want — is this
 teachable, is this 15 to 30 minutes, does the tenth Round still make sense — comes from two people at one
 table arguing about one board. A second screen changes the experiment before the first session.
 
@@ -308,10 +309,10 @@ studio's shape (`StudioRunner.cs:59-63`).
 Two details that matter for the dataset to be comparable with a bot run:
 
 - **The client may show three Creatures' Speeds at once; the seat submits one decision at a time.**
-  `RecordingAgent` records the candidates of the one Creature being asked (`RecordingAgent.cs:118-127` for
-  Speed, `:129-139` for Intent). A batch submit would write steps whose `candidates` span three Creatures, and
+  `RecordingAgent` records the candidates of the one Creature being asked (`RecordingAgent.cs:27-36` for
+  Speed, `:38-48` for Intent). A batch submit would write steps whose `candidates` span three Creatures, and
   the file would no longer line up with `runs/greedy`.
-- **`RecordingAgent` refuses an action the options did not offer** (`RecordingAgent.cs:155-161`). Combined with
+- **`RecordingAgent` refuses an action the options did not offer** (`RecordingAgent.cs:64-69`). Combined with
   the host's pre-check of 2.2, a human session cannot write a step whose `action` is not in its `candidates`.
 
 The stamp carries who played: `RunStamp.Player1Agent` is a string, and the console human is already stamped
@@ -328,7 +329,7 @@ because a bot batch never gets interrupted by dinner.
 Match (`viewer/README.md:12-13`). `notes.jsonl` is ignored: the viewer classifies a `.jsonl` by the fields of
 its first row and answers `unknown` for anything that is not a training run, a step or an episode
 (`viewer/index.html:58-64`). And `/session/{id}` serves the finished session through `ViewerPage.Render`
-(`ViewerPage.cs:20-27`), so a playtest ends on a link rather than on a file to drag.
+(`ViewerPage.cs:19-27`), so a playtest ends on a link rather than on a file to drag.
 
 ### 5.2 What a human game adds that a bot run does not
 
@@ -369,7 +370,7 @@ because a note that takes three taps is a note nobody writes.
 
 ## Part 6. The content hash and the rule set
 
-components.md:880-886 raises it and this app has the same problem: **the content hash does not cover the
+components.md:907-913 raises it and this app has the same problem: **the content hash does not cover the
 `RuleSet`.** The hash is over the consolidated catalogue (ADR 0009); the rule set is `RuleSet.Default`, a
 static in the Domain (`RuleSet.cs:20`), pinned for every command by another static
 (`GameSession.cs:30-31`). A session is reproducible against a hash **and** a rule set, or it is not
@@ -378,20 +379,29 @@ reproducible.
 What the app does about it:
 
 1. **It stamps both, on every artifact.** `RunStamp` already carries `ContentHash` and a `RuleSetStamp`
-   (`RunStamp.cs:14-16`), the five numbers as plain values (`RuleSetStamp.cs:84-90`). The viewer's comparison
+   (`RunStamp.cs:14-16`), the five numbers as plain values (`RuleSetStamp.cs:8`). The viewer's comparison
    already reports `rules` as its own axis (`RunStamp.cs:62`). Nothing is added; it only has to not be skipped.
 2. **It takes the rule set as an input, and never silently defaults.** `table --rules <file>` builds it through
    `RuleSet.Create` (`RuleSet.cs:35-47`). With no `--rules`, the setup screen says, in words, that it is playing
    `RuleSet.Default` with a 30-Round cap — which is the simulator's number and not the table's
-   (components.md:50-51).
+   (components.md:53-54).
 3. **The setup screen prints the same one line the print sheets carry.** Every sheet the generator emits
-   carries its content hash and its rule set (components.md:793-802). The app prints the same line, in the same
+   carries its content hash and its rule set (components.md:819-828). The app prints the same line, in the same
    order. Checking that a deck and an app are the same game is then one glance, by a human, which is the only
    check available until question 6 of components.md is answered.
 4. **It does not answer that question.** Whether the rule set becomes a document under `data/`, a `studio
    --export` output, or five flags is one decision for the generator and the app together, and it belongs
-   wherever components.md:880-886 is answered. What this app requires is only that **both** read the same
+   wherever components.md:907-913 is answered. What this app requires is only that **both** read the same
    answer: a printed deck and an app that disagree about the Round cap is a playtest of neither.
+
+**And when the content changes while a session is open.** It will, often: the maintainer is tuning toward
+8 to 16 Rounds. Nothing happens to the open session. `IGameResources` is resolved once, as a singleton, from
+the built schema (`InfrastructureServiceCollectionExtensions.cs:38-46`), the `Match` keeps the hash it was
+created with (`Match.cs:38,46`), and that hash is on every board the client fetches
+(`PlayerBoardState.cs:20`). The host **must not reload**: a Match whose rules changed mid-Round is a playtest
+of neither rule set. What it does instead is report the drift — `/api/session` compares
+`IGameResources.Version` with `data/dst/game.schema.sha256` on disk (`GameSchemaJson.cs:13`) and says, in one
+line, which content the session is playing and which is now on disk. A banner, not a refusal.
 
 ---
 
@@ -402,13 +412,13 @@ Stated, not implied.
 | Not in v1 | Why, and what it would cost later |
 | --- | --- |
 | **Two devices** | Part 4. A transport and token-distribution change, on an API that is already per seat. |
-| **Undo and rewind** | A `Match` has no undo, and `InMemoryMatchRepository` keeps no history. The way it would be done is a replay: a match is deterministic given its seed and its decision sequence, and `steps.jsonl` is that sequence, so an undo rebuilds the match and replays every step but the last. That is a decision of its own. In v1 a misplay stays on the board and becomes a `Misplay` note — which is what happened at the table, and therefore the truth. |
+| **Undo, rewind, and playing the current position out** | A `Match` has no undo, `InMemoryMatchRepository` keeps no history, and the aggregate cannot be copied: the repository holds the object itself (`InMemoryMatchRepository.cs:13,17-25`). So every one of these is the same mechanism — a **replay**, not a fork. A match is deterministic given its seed and its decision sequence, and `steps.jsonl` is that sequence, so an undo rebuilds the match and replays every step but the last, and "play this position out ten times with bots" replays the whole sequence into ten fresh matches. That replay is a decision of its own and it is not in v1. In v1 a misplay stays on the board and becomes a `Misplay` note — which is what happened at the table, and therefore the truth. |
 | **A session that survives a host restart** | The match lives in `InMemoryMatchRepository`. A restart abandons the session; the checkpointed trace (5.1) is what is left. A file-backed adapter for the existing `IMatchRepository` would fix it. |
 | **A push transport** | Part 2.3. |
 | **A per-event narration of resolution beyond the whitelist** | v1 shows the board before and after, plus the whitelisted events. Anything richer must pass the default-deny filter of 1.3 first. |
-| **A human-rolled die** | The engine rolls, through `IRandomSource`. Letting a player roll a physical d20 and type the face would be an adapter on that **existing** port, and it is the only way to playtest the die of decision B (plan.md:201-222) rather than the probability. It is out of v1 because which die is still open (components.md:840-848). v1 shows the printed chance and says whether the roll landed. |
+| **A human-rolled die** | The engine rolls, through `IRandomSource`. Letting a player roll a physical d20 and type the face would be an adapter on that **existing** port, and it is the only way to playtest the die of decision B (plan.md:201-222) rather than the probability. **Which die is settled — a d20, with every chance a whole number of twentieths ([d20-criticals.md](d20-criticals.md))** — so the reason it is still out of v1 is not the die but the record: a typed face is an input nothing replays from a seed, and a number a player can mistype with no undo. v1 prints the threshold the card carries (`d20: 14+`) and says whether the roll landed. It cannot print the face: `CombatResolution` carries `IsCritical` and not the value behind it (`CombatResolution.cs:43`), so a face would mean a Domain change with its own ADR. |
 | **Content editing** | That is the studio (ADR 0015). The table host reads the built schema and never writes content. |
-| **Printing** | That is the printshop of components.md:740-826. |
+| **Printing** | That is the printshop of components.md:766-860. |
 | **Accounts, matchmaking, a lobby, spectators, chat** | There is one session per host process, and two people who are in the same room. |
 | **Rendering `notes.jsonl` in the viewer** | The viewer ignores it today (5.1). A first pass of playtests should say what is worth charting before anything is charted. |
 | **Animation, art, sound, i18n** | None of them is the measurement. |
@@ -433,7 +443,7 @@ person tests the app itself between playtests.
 
 ## The ADR this becomes
 
-The text below is the decision record. It takes the next free number (0041 and 0042 are taken) and moves to
+The text below is the decision record. It takes the next free number (0043 is the highest taken, so 0044) and moves to
 `docs/adr/`, unchanged apart from its number, its date and its links.
 
 ---
