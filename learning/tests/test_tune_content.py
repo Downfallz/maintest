@@ -404,6 +404,58 @@ def test_the_proposal_is_written_as_the_content_tree_it_came_from(tmp_path: Path
         assert (tmp_path / "out" / "content" / "Spells" / "base" / name).exists()
 
 
+def test_a_search_hands_every_round_what_it_has_found_so_far(tmp_path: Path) -> None:
+    """The point of the checkpoint: a pass killed at its job timeout still reports what it had reached."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    reached: list[float] = []
+
+    options = TuneOptions(
+        iterations=4,
+        neighbours=2,
+        seed=3,
+        checkpoint=lambda partial: reached.append(partial.best.score),
+    )
+    tune_content(FakeEvaluator(), knobs, content, options)
+
+    # The opening pass and each of the four rounds, and a hill climb never goes back up.
+    assert len(reached) == 5
+    assert reached == sorted(reached, reverse=True)
+
+
+def test_a_checkpoint_is_written_as_the_search_still_running(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    result = tune_content(FakeEvaluator(), knobs, content, TuneOptions(iterations=4, neighbours=2, seed=3))
+
+    result.write(tmp_path / "out", tmp_path, complete=False)
+    partial = json.loads((tmp_path / "out" / "tune.json").read_text())
+    result.write(tmp_path / "out", tmp_path)
+    final = json.loads((tmp_path / "out" / "tune.json").read_text())
+
+    assert partial["complete"] is False
+    assert final["complete"] is True
+
+
+def test_writing_a_proposal_leaves_no_spell_the_proposal_does_not_change(tmp_path: Path) -> None:
+    """A later leader may move other spells than the checkpoint before it, and a file left behind would be
+    carried into ``data/`` by the copy that applies the proposal."""
+    knobs = load(tmp_path)
+    content = catalogue(tmp_path)
+    result = tune_content(FakeEvaluator(), knobs, content, TuneOptions(iterations=4, neighbours=2, seed=3))
+    result.write(tmp_path / "out", tmp_path)
+    stale = tmp_path / "out" / "content" / "Spells" / "base" / "not-in-this-proposal.json"
+    stale.write_text("{}\n", encoding="utf-8")
+
+    result.write(tmp_path / "out", tmp_path)
+
+    assert not stale.exists()
+    changed = {move.knob.spell for move in result.best.moves}
+    for alias in changed:
+        name = Path(content.files[alias]).name
+        assert (tmp_path / "out" / "content" / "Spells" / "base" / name).exists()
+
+
 def test_applying_a_proposal_writes_the_numbers_into_the_content(tmp_path: Path) -> None:
     knobs = load(tmp_path)
     content = catalogue(tmp_path)

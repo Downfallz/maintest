@@ -169,6 +169,18 @@ jobs:
             echo '```'
             cat "$OUT/tune.log" 2>/dev/null || echo 'The search wrote nothing.'
             echo '```'
+            # The search writes its leader after the opening pass and after every round, so a pass killed at
+            # the job timeout still leaves a real catalogue in the artifact. Saying so here is the difference
+            # between a proposal worth reading and one a reader would take for a finished search.
+            # `.complete // true` would read a finished pass here: jq's `//` treats `false` as empty, so the
+            # one value this has to catch is the one it would swallow. Ask the question that has no default.
+            if [[ "$(jq -r '.complete == false' "$OUT/tune.json" 2>/dev/null || echo false)" == "true" ]]; then
+              echo
+              echo "**The pass did not finish.** What is in the artifact is the best catalogue it had reached"
+              echo "when it was killed -- a real one the engine really played, from"
+              echo "$(jq -r '.played // 0' "$OUT/tune.json") candidate(s), but not the answer to the search that"
+              echo "was asked for. Read it, and lower the budget rather than re-running the same one."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       # Two separate questions, and reading one for the other is how a report-only run gets called a failed

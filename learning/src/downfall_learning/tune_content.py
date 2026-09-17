@@ -17,7 +17,7 @@ import math
 import re
 import shutil
 import subprocess
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import partial
 from itertools import combinations
@@ -200,6 +200,11 @@ class TuneOptions:
     sweep: bool = True
     pairs: bool = True
     pair_depth: int = PAIR_DEPTH
+    #: Handed the search so far after the opening pass and after every round. A pass costs hours and is
+    #: killed at a job's timeout rather than ended by it, with no signal a Python process is given a chance
+    #: to catch, so what it has found is put somewhere durable as it goes: tune 10 played 349 candidates
+    #: over six hours and reported none of them.
+    checkpoint: Callable[[TuneResult], None] | None = None
 
 
 @dataclass(frozen=True)
@@ -232,11 +237,14 @@ class TuneResult:
             candidate for candidate in self.candidates if _same(candidate.metrics, self.initial.metrics)
         )
 
-    def write(self, directory: Path, data_directory: Path) -> Path:
+    def write(self, directory: Path, data_directory: Path, complete: bool = True) -> Path:
         """Writes ``tune.json``, and the changed spells under ``content/`` as the content tree they came from.
 
         The spell files are written whole and in place-relative form, so applying the proposal is a copy over
         ``data/`` and reading the proposal is a diff.
+
+        ``complete`` is false when the search is still running and this is a checkpoint, so a reader can tell
+        the best of a finished search from the best a killed one had reached.
         """
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
@@ -244,15 +252,23 @@ class TuneResult:
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "improved": self.improved,
+            # False on a checkpoint. A partial proposal is still worth applying -- it is a real catalogue the
+            # engine really played -- but it is not the answer to the search that was asked for.
+            "complete": complete,
             # What the report's first line says, so the artifact and the report cannot disagree about how
             # much of the search the engine actually played.
             "played": self.played,
             "candidates": [candidate.to_json() for candidate in self.candidates],
         }
         (directory / "tune.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        # Emptied rather than written over: a later leader may move a different set of spells than the one
+        # the last checkpoint wrote, and a file left behind from that one would be a change the proposal
+        # does not make, carried into data/ by the copy that applies it.
+        content = directory / "content"
+        shutil.rmtree(content, ignore_errors=True)
         for alias in sorted({move.knob.spell for move in self.best.moves}):
             source = Path(self.files[alias]).resolve()
-            target = directory / "content" / source.relative_to(Path(data_directory).resolve())
+            target = content / source.relative_to(Path(data_directory).resolve())
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(json.dumps(self.spells[alias], indent=2) + "\n", encoding="utf-8")
         return directory
@@ -700,6 +716,9 @@ def tune_content(
 
     Every candidate is legal by construction — a proposal that breaks a constraint is redrawn before the
     engine ever sees it — so the budget is spent on content worth playing.
+
+    ``options.checkpoint``, when there is one, is handed the search so far after the opening pass and after
+    every round.
     """
     options = options or TuneOptions()
     progress = progress or silent()
@@ -715,6 +734,21 @@ def tune_content(
     best = first
     history: list[Candidate] = []
     favour: set[str] = set()
+
+    def so_far() -> TuneResult:
+        return TuneResult(
+            best=best,
+            initial=first,
+            candidates=tuple(history),
+            spells=apply_moves(content.spells, best.moves),
+            files=content.files,
+            played=evaluator.plays,
+        )
+
+    def record() -> None:
+        if options.checkpoint is not None:
+            options.checkpoint(so_far())
+
     if options.sweep:
         swept = _opening(evaluator, knobs, content, first, options)
         history.extend(swept)
@@ -726,6 +760,7 @@ def tune_content(
         }
         best = min([first, *swept], key=lambda candidate: candidate.score)
         progress.write(f"opening pass done · best {best.score:.2f} from {first.score:.2f}")
+        record()
     # Only now: the opening's size is not knowable before it runs, and the climb's is exact.
     progress.total = progress.done + (options.iterations * options.neighbours)
     for iteration in range(1, options.iterations + 1):
@@ -733,15 +768,9 @@ def tune_content(
         history.extend(neighbours)
         best = min([best, *neighbours], key=lambda candidate: candidate.score)
         progress.write(f"round {iteration}/{options.iterations} · best {best.score:.2f}")
+        record()
     progress.finish(f"best {best.score:.2f} from {first.score:.2f}")
-    return TuneResult(
-        best=best,
-        initial=first,
-        candidates=tuple(history),
-        spells=apply_moves(content.spells, best.moves),
-        files=content.files,
-        played=evaluator.plays,
-    )
+    return so_far()
 
 
 @dataclass(frozen=True)

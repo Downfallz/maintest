@@ -580,6 +580,9 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         sweep=arguments.sweep,
         pairs=arguments.pairs,
         pair_depth=arguments.pair_depth,
+        # The proposal is on disk from the opening pass on, because a pass that runs for hours is killed by a
+        # job timeout rather than ended by one, and the artifact is uploaded either way.
+        checkpoint=lambda reached: reached.write(arguments.output, arguments.data, complete=False),
     )
     result = tune_content(evaluator, knobs, content, options, _progress(arguments, "tune-content"))
     result.write(arguments.output, arguments.data)
