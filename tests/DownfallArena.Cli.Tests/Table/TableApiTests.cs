@@ -22,7 +22,7 @@ namespace DownfallArena.Cli.Tests.Table;
 /// boundary: a token answers for its own seat and for nothing else, and a late tap is a refusal rather than
 /// the end of the session.
 /// </summary>
-public sealed class TableApiTests : IDisposable
+public sealed partial class TableApiTests : IDisposable
 {
     private static readonly RuleSet Rules = RuleSet.Create(2, 2, 1, 6, 2.0);
 
@@ -167,9 +167,12 @@ public sealed class TableApiTests : IDisposable
     /// <summary>The sequence numbers a payload carries, in the order it carries them.</summary>
     private static IReadOnlyList<int> Sequences(string body) =>
     [
-        .. Regex.Matches(body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..], "\"sequence\":([0-9]+)")
+        .. Sequence().Matches(body[body.IndexOf("\"feed\"", StringComparison.Ordinal)..])
             .Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)),
     ];
+
+    [GeneratedRegex("\"sequence\":([0-9]+)")]
+    private static partial Regex Sequence();
 
     /// <summary>
     /// The deck, as the table is playing it. It is the same for both seats and hides nothing — what is hidden

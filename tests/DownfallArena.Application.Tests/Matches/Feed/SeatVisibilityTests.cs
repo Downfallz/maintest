@@ -92,8 +92,10 @@ public sealed class SeatVisibilityTests
 
     public static TheoryData<IMatchEvent> EveryPublicEvent => new(Public);
 
+    // Discovery enumeration off: the rows are domain events, which are not xUnit-serializable, and trying to
+    // name them one by one in a test explorer is the only thing that wants them to be (xUnit1045).
     [Theory]
-    [MemberData(nameof(EveryPublicEvent))]
+    [MemberData(nameof(EveryPublicEvent), DisableDiscoveryEnumeration = true)]
     public void What_happens_on_the_table_is_seen_by_both_seats(IMatchEvent happened)
     {
         SeatVisibility.CanSee(happened, PlayerSlot.Player1).ShouldBeTrue();
