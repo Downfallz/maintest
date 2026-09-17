@@ -7,7 +7,14 @@ import pytest
 from conftest import SPELL_A, SPELL_B, write_run
 from downfall_learning.artifacts import build_dataset, load_run
 from downfall_learning.report import TrainingLog
-from downfall_learning.train_clone import CloneOptions, train_clone
+from downfall_learning.train_clone import (
+    CloneOptions,
+    _Batch,
+    _log_probabilities,
+    _Model,
+    _probabilities,
+    train_clone,
+)
 from downfall_learning.training import TrainingError
 
 
@@ -73,6 +80,27 @@ def test_the_reported_loss_is_the_loss_of_the_weights_the_epoch_kept(tmp_path: P
         chosen = dataset.candidates[index].index(dataset.actions[index])
         taken.append(scores[chosen] - np.log(np.exp(scores - scores.max()).sum()) - scores.max())
     assert policy.metrics["loss"] == pytest.approx(-float(np.mean(taken)))
+
+
+def test_a_probability_too_small_to_hold_is_still_a_number_in_the_loss() -> None:
+    """A close copy puts a probability under the smallest float there is on the odd action taken anyway.
+
+    ci-131 read `loss inf` from its fourth epoch on: the log of a probability that had already rounded to
+    zero. That is not a large loss, it is no loss at all -- it loses the tie-break between epochs of equal
+    accuracy, and it wrote `Infinity` into a policy file the engine then refused to read.
+    """
+    model = _Model(weights=np.array([[1.0], [0.0]]), bias=np.zeros(2), candidate_weights=None)
+    batch = _Batch(
+        scaled=np.array([[1000.0]]),
+        rows=np.array([[0, 1]]),
+        mask=np.array([[True, True]]),
+        chosen=np.array([1]),
+        terms=None,
+    )
+
+    assert _probabilities(model, batch)[0, 1] == 0.0
+    # The taken candidate's logit is 1000 below the other's, so its log probability is 1000 below zero.
+    assert _log_probabilities(model, batch)[0, 1] == pytest.approx(-1000.0)
 
 
 def test_without_a_validation_share_the_training_steps_are_scored(tmp_path: Path) -> None:
