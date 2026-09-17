@@ -23,7 +23,8 @@ src/
   DownfallArena.Application    Use cases, ports (interfaces owned here), projections, agents, simulation, learning encodings. Depends on Domain.
   DownfallArena.Infrastructure Adapters implementing the ports. Depends on Application.
   DownfallArena.Cli            Composition root and hosts: the console commands (play, human, simulate, evaluate,
-                               benchmark) and the content studio's HTTP host (ADR 0015).
+                               benchmark), the content studio's HTTP host (ADR 0015) and the table's
+                               (docs/tabletop/playtest-app.md). Both are one loopback host plus a route table.
 tools/
   DownfallArena.DataBuilder    Consolidates data/ into data/dst/game.schema.json with a content hash (ADR 0009).
 data/                          Authored game content (creatures, spells, talent trees, aliases), and the balance knobs
@@ -31,6 +32,7 @@ data/                          Authored game content (creatures, spells, talent 
 benchmarks/                    The fixed benchmark seeds and one outcome digest per content hash, verified in CI. See benchmarks/README.md.
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
+table/                         Static HTML table: the page two people play a tabletop match on, served by `table` (docs/tabletop/playtest-app.md).
 learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
 scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md), and
@@ -60,7 +62,7 @@ dotnet build --no-restore                 # warnings are errors
 dotnet test --no-build                    # Microsoft.Testing.Platform runner (see global.json)
 dotnet test --no-build -- --coverage      # with code coverage
 dotnet format --verify-no-changes         # what CI runs; use `dotnet format` to fix
-node --test studio/*.test.js              # the studio page's own tests (ADR 0024); needs no install
+node --test studio/*.test.js table/*.test.js   # the static pages' own tests (ADR 0024); needs no install
 dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst   # validate and consolidate content
 dotnet run --project src/DownfallArena.Cli -- play --seed 1             # bot vs bot with a log (needs data/dst)
 dotnet run --project src/DownfallArena.Cli -- human                     # you against a random bot
@@ -70,6 +72,7 @@ dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.
 dotnet run --project src/DownfallArena.Cli -- evaluate --p1 greedy --p2 random --seeds benchmarks/benchmark-seeds.json   # agents: random, greedy, lookahead[:<weights.json>], minimax[:<weights.json>], heuristic:<weights.json>, policy:<policy.json>, explore:<rate>[:<agent>] (explore deviates from greedy, or from the agent named: heuristic:<weights.json>, policy:<policy.json>, or a bare path as the weights shorthand)
 dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the benchmark digest (CI does); --write regenerates it
 dotnet run --project src/DownfallArena.Cli -- studio               # the content studio on http://127.0.0.1:5099 (studio/README.md)
+dotnet run --project src/DownfallArena.Cli -- table --rules <file> --p2 greedy   # two people at one screen, or one against a bot (docs/tabletop/app-roadmap.md); --handover N starts as bots and hands over at round N
 dotnet run --project src/DownfallArena.Cli -- studio --export site/data  # what the published studio reads, as files (ADR 0023)
 uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)   # the Python side
 uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md); --kind lookahead|minimax tunes them for that reading instead; --opponent greedy,heuristic:<w.json>,random scores each candidate as the mean over the list, ranking any candidate that falls below the start against one of them last, so it cannot learn one opponent
@@ -92,7 +95,7 @@ scripts/iterate.sh --clone-control                                   # plus a cl
 ```
 
 Run build, tests, and format check before declaring any task done; when `learning/` changes, also run its
-ruff check, ruff format check, and pytest; when `studio/` changes, also run `node --test studio/*.test.js`. CI runs exactly these, then sends the build and the coverage
+ruff check, ruff format check, and pytest; when `studio/` or `table/` changes, also run `node --test studio/*.test.js table/*.test.js`. CI runs exactly these, then sends the build and the coverage
 reports (C# and Python) to SonarCloud with the scanner for .NET (`.config/dotnet-tools.json`). The Sonar
 quality gate covers C#, Python, shell scripts, and workflows, and must pass on every pull request.
 
