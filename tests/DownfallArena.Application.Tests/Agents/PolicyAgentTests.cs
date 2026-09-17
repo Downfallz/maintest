@@ -177,6 +177,54 @@ public sealed class PolicyAgentTests
         (policy with { Baseline = new PolicyBaseline { Weights = new double[Schema.Length], Bias = 0.0 } }).Validated().Baseline.ShouldNotBeNull();
     }
 
+    /// <summary>
+    /// ADR 0051: a policy with no row of its own and the built-in weights as candidate weights reads every
+    /// candidate the way the heuristic does, so it takes the heuristic's combat decisions. Here creature 1 can
+    /// Strike creature 3 at twenty or creature 4 at three: the kill scores best on the terms and on nothing else.
+    /// </summary>
+    [Fact]
+    public void Candidate_weights_make_a_policy_play_the_terms_the_heuristic_reads()
+    {
+        var policy = Policy() with { Fallback = 0.0, CandidateTermNames = ScoreTerms.Names, CandidateWeights = [.. ScoringWeights.Default.Named.Select(weight => weight.Value)] };
+        var board = Board(enemyHealth: 20, fourthHealth: 3);
+        var heuristic = new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules);
+        var targets = new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
+        var intent = new IntentOption(Two, [TestContent.Rend, TestContent.Strike]);
+
+        Agent(policy).DecideTargets(board, targets).ShouldBe([Four]);
+        Agent(policy).DecideTargets(board, targets).ShouldBe(heuristic.DecideTargets(board, targets));
+        Agent(policy).DecideIntent(board, intent).ShouldBe(heuristic.DecideIntent(board, intent));
+        Agent(Policy() with { Fallback = 0.0 }).DecideTargets(board, targets).ShouldBe([Three], "without candidate weights every target scores the fallback and the first wins");
+    }
+
+    [Fact]
+    public void Candidate_weights_add_to_a_keys_own_score_and_to_the_fallback_alike()
+    {
+        var policy = Policy((RendIntent, 2.0)) with { CandidateTermNames = ScoreTerms.Names, CandidateWeights = [1.0, 0, 0, 0, 0, 0, 0, 0, 0] };
+        var features = new float[Schema.Length];
+        var terms = new float[ScoreTerms.Count];
+        terms[0] = 3.5f;
+
+        policy.Score(RendIntent, features, terms).ShouldBe(2.0 + 3.5, 1e-9);
+        policy.Score("never-seen", features, terms).ShouldBe(policy.Fallback + 3.5, 1e-9);
+        policy.Score(RendIntent, features).ShouldBe(2.0, "read without terms, a key scores as before");
+        Should.Throw<ArgumentException>(() => policy.Score(RendIntent, features, [1f]));
+    }
+
+    [Fact]
+    public void Candidate_weights_are_validated_against_the_engines_own_terms()
+    {
+        var policy = Policy((RendIntent, 1.0));
+        var weights = new double[ScoreTerms.Count];
+
+        (policy with { CandidateTermNames = ScoreTerms.Names, CandidateWeights = weights }).Validated().ReadsCandidateTerms.ShouldBeTrue();
+        policy.Validated().ReadsCandidateTerms.ShouldBeFalse();
+        Should.Throw<InvalidDataException>(() => (policy with { CandidateWeights = weights }).Validated()).Message.ShouldContain("together");
+        Should.Throw<InvalidDataException>(() => (policy with { CandidateTermNames = [.. ScoreTerms.Names.Reverse()], CandidateWeights = weights }).Validated()).Message.ShouldContain("this engine reads");
+        Should.Throw<InvalidDataException>(() => (policy with { CandidateTermNames = ScoreTerms.Names, CandidateWeights = [1.0] }).Validated()).Message.ShouldContain("one finite candidate weight");
+        Should.Throw<InvalidDataException>(() => (policy with { CandidateTermNames = ScoreTerms.Names, CandidateWeights = [.. weights.Select((_, index) => index == 0 ? double.NaN : 0.0)] }).Validated());
+    }
+
     [Fact]
     public void Invalid_inputs_are_rejected()
     {
@@ -212,7 +260,7 @@ public sealed class PolicyAgentTests
     }
 
     private static PolicyAgent Agent(PolicyFile policy) =>
-        new(policy.Validated(), new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema));
+        new(policy.Validated(), new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema), new CandidateTerms(TestContent.Resources, Rules));
 
     /// <summary>A policy under the test schema: the given keys with their bias, every weight zero, no fallback score.</summary>
     private static PolicyFile Policy(params (string Key, double Bias)[] keys) => Policy(Schema, keys);
@@ -245,12 +293,12 @@ public sealed class PolicyAgentTests
     }
 
     /// <summary>Creatures 1 (Strike) and 2 (Strike, Rend) of player 1 facing creatures 3 and 4 of player 2.</summary>
-    private static PlayerBoardState Board(int enemyHealth)
+    private static PlayerBoardState Board(int enemyHealth, int? fourthHealth = null)
     {
         var one = Boards.Creature(1, PlayerSlot.Player1);
         var two = Boards.Creature(2, PlayerSlot.Player1) with { KnownSpells = new HashSet<SpellId> { TestContent.Strike, TestContent.Rend } };
         var three = Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(enemyHealth) };
-        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(enemyHealth) };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(fourthHealth ?? enemyHealth) };
         return Boards.Board(PlayerSlot.Player1, [one, two], [three, four]);
     }
 }

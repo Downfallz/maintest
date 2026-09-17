@@ -94,6 +94,7 @@ public sealed class ViewerSamplesTests
             RunStamp.Create(new EngineVersion("abc123def456", false), resources, rules, schema, "Random", "Random", 1),
             new ObservationBuilder(schema, resources),
             new ActionEncoder(schema),
+            new CandidateTerms(resources, rules),
             TimeProvider.System,
             provider.GetRequiredService<MatchTraceRecorder>());
         var roster = Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize).ToList();

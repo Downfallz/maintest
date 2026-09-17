@@ -8,8 +8,11 @@ namespace DownfallArena.Application.Agents;
 /// one bias per action key, read under one feature schema. The score of a candidate action is its row's dot
 /// product with the observation plus its bias, or <see cref="Fallback"/> when the policy never saw that key.
 /// A <c>value</c> policy also carries a <see cref="PolicyBaseline"/>, added to every score (ADR 0016); a file
-/// without one scores exactly as before. No ML runtime: a <c>clone</c> policy holds classifier logits, a
-/// <c>value</c> policy predicted returns, and both are read the same way.
+/// without one scores exactly as before. A policy may also carry <see cref="CandidateWeights"/>, one per
+/// scorer term, whose dot product with a candidate's terms is added to its score (ADR 0051): the part of a
+/// decision the heuristic reads and no row over the board can express; a file without them scores as before.
+/// No ML runtime: a <c>clone</c> policy holds classifier logits, a <c>value</c> policy predicted returns, and
+/// both are read the same way.
 /// </summary>
 public sealed record PolicyFile
 {
@@ -37,6 +40,15 @@ public sealed record PolicyFile
 
     /// <summary>What the position alone is worth, added to every score; absent on a policy trained without one.</summary>
     public PolicyBaseline? Baseline { get; init; }
+
+    /// <summary>The name of each candidate term the policy weighs, in order; absent with <see cref="CandidateWeights"/>.</summary>
+    public IReadOnlyList<string>? CandidateTermNames { get; init; }
+
+    /// <summary>One weight per candidate term, shared by every action key; absent on a policy trained without them.</summary>
+    public IReadOnlyList<double>? CandidateWeights { get; init; }
+
+    /// <summary>Whether a candidate's terms move its score, so an agent only reads them when they do.</summary>
+    public bool ReadsCandidateTerms => CandidateWeights is not null;
 
     /// <summary>Eight hex digits of the file's content, the version a policy agent's spec carries.</summary>
     public required string Fingerprint { get; init; }
@@ -83,8 +95,34 @@ public sealed record PolicyFile
         }
 
         ValidateBaseline();
+        ValidateCandidateWeights();
 
         return this;
+    }
+
+    private void ValidateCandidateWeights()
+    {
+        if (CandidateWeights is null && CandidateTermNames is null)
+        {
+            return;
+        }
+
+        if (CandidateWeights is null || CandidateTermNames is null)
+        {
+            throw new InvalidDataException("The policy's candidate weights and candidate term names come together or not at all.");
+        }
+
+        // The names are the engine's own, in its order: a file naming other terms, or the same in another
+        // order, would weigh numbers it was not trained on.
+        if (!CandidateTermNames.SequenceEqual(ScoreTerms.Names, StringComparer.Ordinal))
+        {
+            throw new InvalidDataException($"The policy weighs candidate terms '{string.Join(", ", CandidateTermNames)}'; this engine reads '{string.Join(", ", ScoreTerms.Names)}'.");
+        }
+
+        if (CandidateWeights.Count != CandidateTermNames.Count || CandidateWeights.Any(value => !double.IsFinite(value)))
+        {
+            throw new InvalidDataException("The policy needs one finite candidate weight per candidate term.");
+        }
     }
 
     private void ValidateBaseline()
@@ -106,10 +144,18 @@ public sealed record PolicyFile
     }
 
     /// <summary>
-    /// The score of an action key on an observation: the baseline, when there is one, plus its row against
-    /// the features, or plus the fallback when the policy never saw that key.
+    /// The score of an action key on an observation without its terms: the baseline, when there is one, plus
+    /// its row against the features, or plus the fallback when the policy never saw that key. What a policy
+    /// that weighs candidate terms scores here is the part of the score the board alone gives.
     /// </summary>
-    public double Score(string key, IReadOnlyList<float> features)
+    public double Score(string key, IReadOnlyList<float> features) => Score(key, features, null);
+
+    /// <summary>
+    /// The same, plus the candidate's terms at the candidate weights when the policy carries them (ADR 0051).
+    /// The terms are read for a key the policy never saw as well: what an action does is known whether or not
+    /// its key was, which is the point of weighing it. Terms handed to a policy that weighs none are ignored.
+    /// </summary>
+    public double Score(string key, IReadOnlyList<float> features, IReadOnlyList<float>? terms)
     {
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(features);
@@ -117,7 +163,7 @@ public sealed record PolicyFile
         var known = Index().TryGetValue(key, out var row);
         if (!known && Baseline is null)
         {
-            return Fallback;
+            return Fallback + TermsValue(terms);
         }
 
         if (features.Count != FeatureNames.Count)
@@ -125,7 +171,7 @@ public sealed record PolicyFile
             throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"The observation has {features.Count} features, the policy {FeatureNames.Count}."), nameof(features));
         }
 
-        var score = Baseline?.Value(features) ?? 0.0;
+        var score = (Baseline?.Value(features) ?? 0.0) + TermsValue(terms);
         if (!known)
         {
             return score + Fallback;
@@ -139,6 +185,27 @@ public sealed record PolicyFile
         }
 
         return score;
+    }
+
+    private double TermsValue(IReadOnlyList<float>? terms)
+    {
+        if (CandidateWeights is null || terms is null)
+        {
+            return 0.0;
+        }
+
+        if (terms.Count != CandidateWeights.Count)
+        {
+            throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"The policy weighs {CandidateWeights.Count} candidate terms and was handed {terms.Count}."), nameof(terms));
+        }
+
+        var value = 0.0;
+        for (var index = 0; index < terms.Count; index++)
+        {
+            value += CandidateWeights[index] * terms[index];
+        }
+
+        return value;
     }
 
     private Dictionary<string, int> Index()
