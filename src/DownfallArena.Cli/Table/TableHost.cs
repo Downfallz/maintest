@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using DownfallArena.Application.Agents;
-using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,9 +31,11 @@ internal static class TableHost
 
         var seat1 = Seat(PlayerSlot.Player1, options.Player1Named, options.Player1, options, rules, agents, random, stopping.Token);
         var seat2 = Seat(PlayerSlot.Player2, options.Player2Named, options.Player2, options, rules, agents, random, stopping.Token);
-        var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, stopping.Token);
+        using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, stopping.Token);
 
-        var api = new TableApi(session, services.GetRequiredService<MatchQueryHandlers>(), [seat1.Seat, seat2.Seat]);
+        // The session's own read side, not the container's: it is the one behind the lock the driver writes
+        // through, and a page polls it while the match is advancing.
+        var api = new TableApi(session, session.Queries, [seat1.Seat, seat2.Seat]);
         using var server = new TableServer(options.Port, api, new TableFiles(TableDirectory));
 
         Console.WriteLine($"Table on {server.Url}");

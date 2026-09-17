@@ -37,7 +37,7 @@ internal sealed record TableDecisionBody
                 return PlayerDecision.Pass;
             case "Evolution" when Creature is { } creature && Spell is { } spell:
                 return PlayerDecision.Unlock(CreatureId.From(creature), SpellId.Parse(spell));
-            case "Speed" when Creature is { } creature && Enum.TryParse<Speed>(Speed, out var speed):
+            case "Speed" when Creature is { } creature && Enum.TryParse<Speed>(Speed, out var speed) && Enum.IsDefined(speed):
                 return PlayerDecision.ChooseSpeed(CreatureId.From(creature), speed);
             case "Intent" when Creature is { } creature && Spell is { } spell:
                 return PlayerDecision.DeclareIntent(CreatureId.From(creature), SpellId.Parse(spell));

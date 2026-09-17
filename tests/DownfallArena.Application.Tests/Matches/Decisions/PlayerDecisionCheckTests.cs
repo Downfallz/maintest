@@ -70,6 +70,22 @@ public sealed class PlayerDecisionCheckTests
         PlayerDecisionCheck.Validate(options, PlayerDecision.ChooseSpeed(Theirs, Speed.Standard)).Error.ShouldBe(DecisionErrors.CreatureNotOffered);
     }
 
+    /// <summary>
+    /// A host parses a speed off a request, and `Enum.TryParse` takes "7" as happily as "Quick". An undefined
+    /// value passes every gate after this one and reaches the timeline builder, where its number becomes a
+    /// priority band nobody wrote.
+    /// </summary>
+    [Fact]
+    public void A_speed_that_is_neither_quick_nor_standard_is_refused()
+    {
+        var options = new PlayerOptions { Kind = PlayerOptionsKind.Speed, Speed = new SpeedOptions([Mine]) };
+
+        var refused = PlayerDecisionCheck.Validate(options, PlayerDecision.ChooseSpeed(Mine, (Speed)7));
+
+        refused.IsFailure.ShouldBeTrue();
+        refused.Error.ShouldBe(DecisionErrors.NoSpeedChosen);
+    }
+
     [Fact]
     public void An_intent_is_accepted_only_for_a_spell_the_creature_can_afford()
     {

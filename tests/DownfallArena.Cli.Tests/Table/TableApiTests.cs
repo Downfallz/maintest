@@ -184,7 +184,7 @@ public sealed class TableApiTests : IDisposable
         const string token = "token-of-player-1";
         var api = new TableApi(
             session,
-            _host.Services.GetRequiredService<MatchQueryHandlers>(),
+            session.Queries,
             [new TableSeat(PlayerSlot.Player1, token, person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)]);
 
         await Waiting(person, "Evolution");
