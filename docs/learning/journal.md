@@ -26,20 +26,30 @@ first.
   does not lose or draw a single one of its eight hundred. The other three evaluations read identically
   either side of the change, as they must: no agent of theirs moved.
 
-- **The term is now a flag and not a gradient, and that is the honest state.** At 1.000 every catalogue a
-  tuning pass can reach reads the ceiling, so the penalty is one constant for every candidate and the search
-  cannot climb it. It was barely a gradient at 0.9275: both readings sit far outside a band of 0.55, and the
-  difference between them is smaller than what the term would have to move to matter. What is bought is the
-  reading itself. Nothing in this repository could previously say "this catalogue loses every match to a
-  player who only wants to win", and the objective now says it, in the file that decides what tuning is for.
-  ADR 0044 asks whether this term measures the agent rather than the content; the two windows above narrow
-  that question rather than answering it, since the ceiling is reached on seeds the agent never saw.
+- **The ceiling is not a plateau, and I had to be told to check.** The first draft of this entry said the
+  term was now a flag rather than a gradient, on the grounds that every reachable catalogue would read 1.000.
+  That was asserted, not measured (Codex's review). Measured: move one spell to the weakest of its own bounds
+  and score again.
 
-- **What this licenses, and what it does not.** No tuning pass is run here, and the knobs are untouched.
-  A pass run against this objective now optimizes the other targets under a constant exploit penalty, which
-  is what it was nearly doing already. The term regains a gradient only if a catalogue appears that a
-  searched set cannot sweep, and the first move toward one is not a knob but the question ADR 0044 asks.
-  The entry below, written this morning, named `search-3` as the agent the objective played; it read a stale
+  | catalogue, benchmark seeds | `exploit` | objective | `exploit` penalty | the rest |
+  | --- | --- | --- | --- | --- |
+  | `7e199df4` as it stands | 1.000 | 172.42 | 162.00 | 10.42 |
+  | Crushing Stomp at its weakest bounds | **0.790** | **64.13** | 46.08 | 18.05 |
+
+  Cost 4 to 5, damage 7 to 4, two rounds of stun to one, critical chance 0.75 to 0.40, every step inside the
+  bounds `knobs.json` already allows. The term moves 21 points of win rate and the objective 108, of which
+  116 is bought here and about 8 is paid on the variety targets. So the gradient is steep, it exists at the
+  ceiling, and it runs through one card: the spell `pressure-floor` casts 1696 times against Greedy in the
+  entry below, where Greedy casts Throwing Star.
+
+- **What this licenses, and what it does not.** No tuning pass is run here and no knob is touched, and that
+  restraint matters more after the measurement than before it. A pass run against this objective now has a
+  116-point reason to gut Crushing Stomp, a spell whose own entry keeps "damage and stun together" and "the
+  most expensive cast in the catalogue" as the things that make it itself. Whether that is the content being
+  unhealthy or the agent having a favourite is precisely what ADR 0044 holds open, and the honest reading of
+  this entry is that refreshing the agent sharpened the question rather than answering it. The two seed
+  windows do rule out one answer: the ceiling is not the agent remembering seeds it was searched on. The
+  entry of this morning, written below, named `search-3` as the agent the objective played; it read a stale
   `docs/learning/agents.md`, the file named `search-4`, and both are corrected here.
 
 ## 2026-09-17. With the ninth weight free, the search under the floor finds a set that beats every agent on the board on unseen seeds, and it plays a stun lock the catalogue allows
