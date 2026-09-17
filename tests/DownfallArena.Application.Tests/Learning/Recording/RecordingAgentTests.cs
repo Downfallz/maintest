@@ -16,6 +16,7 @@ public sealed class RecordingAgentTests
     private static readonly FeatureSchema Schema = FeatureSchema.Build(TestContent.Resources, MatchStore.TwoOnTwo());
     private static readonly ObservationBuilder Observations = new(Schema, TestContent.Resources);
     private static readonly ActionEncoder Actions = new(Schema);
+    private static readonly CandidateTerms Terms = new(TestContent.Resources, MatchStore.TwoOnTwo());
 
     [Fact]
     public async Task Every_decision_becomes_a_step_whose_action_is_among_the_candidates()
@@ -28,8 +29,8 @@ public sealed class RecordingAgentTests
 
         var outcome = await Handlers.Driver(store.Workflow).PlayAsync(
             match.Id,
-            new RecordingAgent(player1, Observations, Actions, steps),
-            new RecordingAgent(player2, Observations, Actions, steps),
+            new RecordingAgent(player1, Observations, Actions, Terms, steps),
+            new RecordingAgent(player2, Observations, Actions, Terms, steps),
             TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue();
@@ -38,6 +39,8 @@ public sealed class RecordingAgentTests
         steps.ShouldAllBe(step => step.MatchId == match.Id);
         steps.ShouldAllBe(step => step.Candidates.Contains(step.Action));
         steps.ShouldAllBe(step => step.Observation.Features.Count == Schema.Length && step.Observation.SchemaId == Schema.Id);
+        steps.ShouldAllBe(step => step.CandidateTerms.Count == step.Candidates.Count, "one term vector per candidate (ADR 0051)");
+        steps.ShouldAllBe(step => step.CandidateTerms.All(terms => terms.Count == ScoreTerms.Count));
         steps.ShouldAllBe(step => step.Round >= 1 && step.SubPhase != null);
         new[] { ActionKind.Evolve, ActionKind.Speed, ActionKind.Intent, ActionKind.Targets }.ShouldBeSubsetOf(steps.Select(step => step.Kind).Distinct());
     }
@@ -51,7 +54,7 @@ public sealed class RecordingAgentTests
         var board = Board();
         var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
 
-        var decision = new RecordingAgent(inner, Observations, Actions, steps).DecideEvolution(board, options);
+        var decision = new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideEvolution(board, options);
 
         decision.IsPass.ShouldBeTrue();
         var step = steps.ShouldHaveSingleItem();
@@ -59,6 +62,8 @@ public sealed class RecordingAgentTests
         step.Action.ShouldBe("pass");
         step.Code.ShouldBe(ActionCode.Pass);
         step.Candidates.ShouldBe(["evolve:0:spell:guard:v1", "pass"]);
+        step.CandidateTerms.Count.ShouldBe(2);
+        step.CandidateTerms[1].ShouldAllBe(term => term == 0f, "a pass reads zero on every term");
         step.Slot.ShouldBe(PlayerSlot.Player1);
         step.Round.ShouldBe(1);
         step.SubPhase.ShouldBe(RoundSubPhase.Evolution);
@@ -73,7 +78,7 @@ public sealed class RecordingAgentTests
         inner.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(TestContent.Strike);
         inner.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns([CreatureId.From(4)]);
         var steps = new List<StepRecord>();
-        var agent = new RecordingAgent(inner, Observations, Actions, steps);
+        var agent = new RecordingAgent(inner, Observations, Actions, Terms, steps);
         var board = Board();
 
         agent.DecideSpeed(board, CreatureId.From(2)).ShouldBe(Speed.Quick);
@@ -97,7 +102,7 @@ public sealed class RecordingAgentTests
         var steps = new List<StepRecord>();
         var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
 
-        var exception = Should.Throw<InvalidOperationException>(() => new RecordingAgent(inner, Observations, Actions, steps).DecideEvolution(Board(), options));
+        var exception = Should.Throw<InvalidOperationException>(() => new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideEvolution(Board(), options));
 
         exception.Message.ShouldContain("evolve:0:spell:slam:v1");
         steps.ShouldBeEmpty();
@@ -106,7 +111,7 @@ public sealed class RecordingAgentTests
     [Fact]
     public void Invalid_inputs_are_rejected()
     {
-        var agent = new RecordingAgent(new RandomAgent(new TestRandom(1)), Observations, Actions, []);
+        var agent = new RecordingAgent(new RandomAgent(new TestRandom(1)), Observations, Actions, Terms, []);
         var board = Board();
 
         Should.Throw<ArgumentNullException>(() => agent.DecideEvolution(null!, new EvolutionOptions(1, [])));

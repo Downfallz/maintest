@@ -63,7 +63,9 @@ def legal_accuracy(scorer: LinearScorer, dataset: Dataset, index: np.ndarray) ->
     if len(index) == 0:
         return float("nan")
     hits = sum(
-        scorer.choose(dataset.observations[i], dataset.candidates[i]) == dataset.actions[i] for i in index
+        scorer.choose(dataset.observations[i], dataset.candidates[i], dataset.terms_of(i))
+        == dataset.actions[i]
+        for i in index
     )
     return hits / len(index)
 

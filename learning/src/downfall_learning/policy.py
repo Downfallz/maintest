@@ -6,6 +6,12 @@ A ``value`` policy also carries a baseline, one row over the features shared by 
 (ADR 0016): its value is added to every score, so a score stays a predicted return while each action row
 carries only the part its own action is responsible for. A file without a baseline reads as a zero baseline,
 and since the baseline is the same for every candidate it never changes which one wins.
+
+A policy may also carry one weight per **candidate term** (ADR 0051): the scorer's own quantities of each
+candidate -- damage, kill, heal, ... -- that the engine records beside every step and computes for every
+candidate it scores. Their dot product with the candidate weights is added to that candidate's score, known
+key or not, so a policy can read what an action would do to the board, which no row over the board can
+express. A file without candidate weights reads as before, and terms handed to it are ignored.
 The agent, here or in the engine's ``PolicyAgent``, picks the best-scoring candidate, the first on a tie.
 ``clone`` policies hold classifier logits, ``value`` policies predicted returns; both are read the same way.
 """
@@ -81,13 +87,18 @@ class LinearScorer:
     bias: np.ndarray
     fallback: float
     baseline: Baseline | None = None
+    candidate_weights: np.ndarray | None = None
 
     @cached_property
     def key_index(self) -> dict[str, int]:
         return {key: index for index, key in enumerate(self.action_keys)}
 
-    def scores(self, observation: np.ndarray, candidates: Sequence[str]) -> np.ndarray:
-        """One score per candidate: its row's dot product with the observation, or ``fallback``."""
+    def scores(
+        self, observation: np.ndarray, candidates: Sequence[str], terms: np.ndarray | None = None
+    ) -> np.ndarray:
+        """One score per candidate: its row's dot product with the observation, or ``fallback``, plus its
+        terms at the candidate weights when the scorer has them and ``terms`` (a row per candidate) is given.
+        """
         scores = np.full(len(candidates), self.fallback, dtype=float)
         index = self.key_index
         rows = [(position, index[key]) for position, key in enumerate(candidates) if key in index]
@@ -97,12 +108,22 @@ class LinearScorer:
         # The same number for every candidate, so it never changes the winner; it makes a score a return.
         if self.baseline is not None:
             scores += self.baseline.value(observation)
+        if self.candidate_weights is not None and terms is not None:
+            terms = np.asarray(terms, dtype=float)
+            if terms.shape != (len(candidates), len(self.candidate_weights)):
+                raise ValueError(
+                    f"The candidate terms are {terms.shape}, expected one row per candidate of "
+                    f"{len(self.candidate_weights)} terms."
+                )
+            scores += terms @ self.candidate_weights
         return scores
 
-    def choose(self, observation: np.ndarray, candidates: Sequence[str]) -> str:
+    def choose(
+        self, observation: np.ndarray, candidates: Sequence[str], terms: np.ndarray | None = None
+    ) -> str:
         if not candidates:
             raise ValueError("No candidate to choose from.")
-        return candidates[int(np.argmax(self.scores(observation, candidates)))]
+        return candidates[int(np.argmax(self.scores(observation, candidates, terms)))]
 
 
 @dataclass(frozen=True, eq=False)
@@ -118,6 +139,9 @@ class Policy:
     trained_at: str
     baseline: Baseline | None = None
     metrics: Mapping[str, float] = field(default_factory=dict)
+    # The candidate terms the policy weighs, by name and in order, and one weight each (ADR 0051).
+    candidate_names: tuple[str, ...] = ()
+    candidate_weights: np.ndarray | None = None
 
     def __post_init__(self) -> None:
         if self.kind not in KINDS:
@@ -133,6 +157,20 @@ class Policy:
         if not (np.all(np.isfinite(self.weights)) and np.all(np.isfinite(self.bias))):
             raise ValueError("Weights and bias must be finite.")
         self._check_baseline()
+        self._check_candidate_weights()
+
+    def _check_candidate_weights(self) -> None:
+        if self.candidate_weights is None:
+            if self.candidate_names:
+                raise ValueError("Candidate term names without candidate weights.")
+            return
+        if self.candidate_weights.shape != (len(self.candidate_names),):
+            raise ValueError(
+                f"The candidate weights are {self.candidate_weights.shape}, expected one per named term "
+                f"({len(self.candidate_names)})."
+            )
+        if not np.all(np.isfinite(self.candidate_weights)):
+            raise ValueError("The candidate weights must be finite.")
 
     def _check_baseline(self) -> None:
         if self.baseline is None:
@@ -150,17 +188,23 @@ class Policy:
 
     @property
     def scorer(self) -> LinearScorer:
-        return LinearScorer(self.action_keys, self.weights, self.bias, self.fallback, self.baseline)
+        return LinearScorer(
+            self.action_keys, self.weights, self.bias, self.fallback, self.baseline, self.candidate_weights
+        )
 
-    def scores(self, observation: Sequence[float], candidates: Sequence[str]) -> np.ndarray:
+    def scores(
+        self, observation: Sequence[float], candidates: Sequence[str], terms: np.ndarray | None = None
+    ) -> np.ndarray:
         vector = np.asarray(observation, dtype=float)
         if vector.shape != (len(self.feature_names),):
             width = len(self.feature_names)
             raise SchemaError(f"The observation has {vector.shape[0]} features, the policy {width}.")
-        return self.scorer.scores(vector, candidates)
+        return self.scorer.scores(vector, candidates, terms)
 
-    def choose(self, observation: Sequence[float], candidates: Sequence[str]) -> str:
-        return candidates[int(np.argmax(self.scores(observation, candidates)))]
+    def choose(
+        self, observation: Sequence[float], candidates: Sequence[str], terms: np.ndarray | None = None
+    ) -> str:
+        return candidates[int(np.argmax(self.scores(observation, candidates, terms)))]
 
     def to_json(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -178,6 +222,9 @@ class Policy:
         }
         if self.baseline is not None:
             data["baseline"] = self.baseline.to_json()
+        if self.candidate_weights is not None:
+            data["candidateTermNames"] = list(self.candidate_names)
+            data["candidateWeights"] = _rounded(self.candidate_weights)
         return data
 
     @classmethod
@@ -195,6 +242,12 @@ class Policy:
                 trained_at=str(data["trainedAt"]),
                 baseline=Baseline.from_json(data["baseline"]) if data.get("baseline") else None,
                 metrics={str(key): float(value) for key, value in data.get("metrics", {}).items()},
+                candidate_names=tuple(str(name) for name in data.get("candidateTermNames", ())),
+                candidate_weights=(
+                    np.asarray(data["candidateWeights"], dtype=float)
+                    if data.get("candidateWeights") is not None
+                    else None
+                ),
             )
         except KeyError as error:
             raise ValueError(f"A policy needs the field {error}.") from None

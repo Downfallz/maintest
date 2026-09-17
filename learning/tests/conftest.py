@@ -54,6 +54,9 @@ def rule_prefer_a_when_healthier(observation: np.ndarray) -> str:
     return SPELL_A if observation[3] > observation[5] else SPELL_B
 
 
+TERM_NAMES = ("damage", "kill", "heal", "stun", "bleed", "defense", "energy", "initiative", "pressure")
+
+
 def write_run(
     directory: Path,
     matches: int = 12,
@@ -62,12 +65,20 @@ def write_run(
     rule: Callable[[np.ndarray], str] = rule_prefer_a_when_healthier,
     stamp: Mapping[str, Any] | None = None,
     with_evolution: bool = True,
+    with_terms: bool = False,
+    rule_on_terms: bool = False,
 ) -> Path:
     """Writes a run whose intents follow ``rule`` and whose returns follow the health margin of the episode.
 
     Every step of an episode shares the episode's observation, so a value regression per action key can
     recover the return from the observation: agent A's return is ``0.9 x (own health - enemy health)`` when
     it took spell A and the opposite when it took spell B, which the rule makes positive either way.
+
+    With ``with_terms`` every step carries one term vector per candidate (ADR 0051), the ``kill`` term drawn
+    at random for each intent candidate and zero elsewhere. With ``rule_on_terms`` the intent taken is the
+    candidate with the higher kill term rather than what ``rule`` says of the observation, and the return is
+    half that term averaged over the episode's intents: what a learner can only recover from the terms, and
+    exactly the taken term's half when the episode has one intent.
     """
     rng = np.random.default_rng(seed)
     stamp = dict(stamp or stamp_json())
@@ -84,11 +95,18 @@ def write_run(
             action = rule(own)
             margin = own[3] - own[5]
             return_value = 0.9 * margin if action == SPELL_A else -0.9 * margin
-            step = _StepWriter(match_id, slot, stamp["featureSchema"], own)
+            step = _StepWriter(match_id, slot, stamp["featureSchema"], own, with_terms)
             if with_evolution:
                 steps.append(step.write("Evolution", "Evolve", (UNLOCK, "pass"), UNLOCK))
+            taken_kills: list[float] = []
             for _ in range(steps_per_episode):
-                steps.append(step.write("Intent", "Intent", (SPELL_A, SPELL_B), action))
+                kills = rng.integers(0, 2, size=2).astype(float) if with_terms else None
+                if rule_on_terms and kills is not None:
+                    action = (SPELL_A, SPELL_B)[int(np.argmax(kills))]
+                    taken_kills.append(float(kills.max()))
+                steps.append(step.write("Intent", "Intent", (SPELL_A, SPELL_B), action, kills))
+            if taken_kills:
+                return_value = 0.5 * float(np.mean(taken_kills))
             episodes.append(
                 {
                     "matchId": match_id,
@@ -108,6 +126,7 @@ def write_run(
         "schemaId": stamp["featureSchema"],
         "schemaVersion": stamp["featureSchema"].split("+")[0],
         "featureNames": list(FEATURE_NAMES),
+        "candidateTermNames": list(TERM_NAMES) if with_terms else [],
         "matches": matches,
         "steps": len(steps),
         "episodes": len(episodes),
@@ -135,10 +154,18 @@ class _StepWriter:
     slot: str
     schema_id: str
     observation: np.ndarray
+    with_terms: bool = False
 
-    def write(self, sub_phase: str, kind: str, candidates: tuple[str, ...], action: str) -> dict[str, Any]:
+    def write(
+        self,
+        sub_phase: str,
+        kind: str,
+        candidates: tuple[str, ...],
+        action: str,
+        kills: np.ndarray | None = None,
+    ) -> dict[str, Any]:
         features = [round(float(value), 4) for value in self.observation]
-        return {
+        step = {
             "matchId": self.match_id,
             "slot": self.slot,
             "round": 1,
@@ -149,6 +176,12 @@ class _StepWriter:
             "action": action,
             "code": {"kind": kind, "actingSlot": 0, "spellIndex": 0, "speed": -1, "targetMask": 0},
         }
+        if self.with_terms:
+            terms = np.zeros((len(candidates), len(TERM_NAMES)))
+            if kills is not None:
+                terms[:, TERM_NAMES.index("kill")] = kills
+            step["candidateTerms"] = terms.tolist()
+        return step
 
 
 def evaluation_json(
