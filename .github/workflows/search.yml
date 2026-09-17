@@ -45,6 +45,15 @@ on:
         description: "Commit the weights it found as their own file on a branch, or only report them"
         type: boolean
         default: false
+  # A committed experiment is a run, the way learning/experiments/next.json asks the loop for one: open a pull
+  # request that touches learning/experiments/search.json and this searches with what the file says, so the
+  # parameters of every search stay in git next to the entry that reports it, and asking for one needs no
+  # button. A dispatch still wins field by field. What a committed experiment cannot do is `apply`: pushing
+  # the proposal branch needs the credential the checkout keeps only on a dispatch, so a file asks for a
+  # measurement and a person asks for a commit.
+  pull_request:
+    paths:
+      - "learning/experiments/search.json"
 
 # Pushing the proposal branch, and nothing else. GitHub Actions permissions cannot be conditional, so this is
 # `write` even on a report-only run; the checkout below is what actually decides whether a credential is on
@@ -61,10 +70,6 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   BRANCH: search/${{ github.run_number }}
-  # The searched set, under its own name next to greedy.json (docs/learning/agents.md). Weights searched for
-  # a reading other than the one-step one carry that reading's name, because they are only meaningful played
-  # by it: `lookahead-12.json` is for `lookahead:`, not for `heuristic:`.
-  FOUND: learning/weights/${{ inputs.kind == 'heuristic' && 'search' || inputs.kind }}-${{ github.run_number }}.json
   # Under runs/, which .gitignore covers: inside the workspace for the artifact, invisible to git.
   OUT: runs/search-${{ github.run_number }}
 
@@ -86,6 +91,68 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+
+      # What this run searches with, resolved once and read from the environment by every step after it: a
+      # typed dispatch field wins, then learning/experiments/search.json, then the default. The same shape as
+      # iterate.yml's knobs, and for the same reason -- a run asked for by a commit records what it asked for.
+      #
+      # FOUND lands here rather than in the job's env because it is named after `kind`, which a dispatch may
+      # leave empty. The searched set goes next to greedy.json under its own name (docs/learning/agents.md),
+      # and weights searched for a reading other than the one-step one carry that reading's name, because
+      # they are only meaningful played by it: `lookahead-12.json` is for `lookahead:`, not for `heuristic:`.
+      - name: Read the experiment
+        env:
+          IN_OPPONENT: ${{ inputs.opponent }}
+          IN_CHECK: ${{ inputs.check_opponent }}
+          IN_KIND: ${{ inputs.kind }}
+          IN_INITIAL: ${{ inputs.initial }}
+          IN_SEEDS: ${{ inputs.seeds }}
+          IN_ITERATIONS: ${{ inputs.iterations }}
+          IN_POPULATION: ${{ inputs.population }}
+          IN_SEED: ${{ inputs.seed }}
+        run: |
+          plan=learning/experiments/search.json
+          knob() {
+            # knob <key> <typed> <default>: what the dispatch typed, else the file, else the default.
+            if [[ -n "$2" ]]; then
+              printf '%s' "$2"
+            elif [[ -f "$plan" ]]; then
+              jq -r --arg key "$1" --arg fallback "$3" \
+                'if (has($key) and .[$key] != null) then (.[$key] | tostring) else $fallback end' "$plan"
+            else
+              printf '%s' "$3"
+            fi
+          }
+          # `check_opponent` and `initial` are the two whose default is empty, so "typed nothing" and "asked
+          # for nothing" cannot be told apart on a dispatch; the file answers for them only when the dispatch
+          # left them empty, which is what every other key does too.
+          kind="$(knob kind "$IN_KIND" heuristic)"
+          if [[ "$kind" == heuristic ]]; then
+            name=search
+          else
+            name="$kind"
+          fi
+          resolved="$(
+            printf 'OPPONENT=%s\n' "$(knob opponent "$IN_OPPONENT" greedy)"
+            printf 'CHECK=%s\n' "$(knob check_opponent "$IN_CHECK" random)"
+            printf 'KIND=%s\n' "$kind"
+            printf 'INITIAL=%s\n' "$(knob initial "$IN_INITIAL" '')"
+            printf 'SEEDS=%s\n' "$(knob seeds "$IN_SEEDS" benchmarks/benchmark-seeds.json)"
+            printf 'ITERATIONS=%s\n' "$(knob iterations "$IN_ITERATIONS" 10)"
+            printf 'POPULATION=%s\n' "$(knob population "$IN_POPULATION" 16)"
+            printf 'SEED=%s\n' "$(knob seed "$IN_SEED" 0)"
+            printf 'FOUND=learning/weights/%s-%s.json\n' "$name" "$GITHUB_RUN_NUMBER"
+          )"
+          # The experiment's own paragraph, on one line so it survives the environment file, printed in the
+          # summary under the parameters. A dispatch has nowhere to type one, so this comes from the file only.
+          why=''
+          if [[ -f "$plan" ]]; then
+            why="$(jq -r '.why // "" | gsub("\\s+"; " ")' "$plan")"
+          fi
+          printf 'WHY=%s\n' "$why" >> "$GITHUB_ENV"
+          printf '%s\n' "$resolved" >> "$GITHUB_ENV"
+          echo "This run searches with:"
+          printf '%s\n' "$resolved"
 
       - name: Install uv and the dependencies of the learning project
         run: |
@@ -109,14 +176,6 @@ jobs:
       # search against a set stronger than Greedy begins the climb from behind whatever it is trying to beat,
       # and run 5 cannot build on run 4. The CLI has always taken `--initial`; only this form did not pass it.
       - name: Search
-        env:
-          OPPONENT: ${{ inputs.opponent }}
-          KIND: ${{ inputs.kind }}
-          INITIAL: ${{ inputs.initial }}
-          SEEDS: ${{ inputs.seeds }}
-          ITERATIONS: ${{ inputs.iterations }}
-          POPULATION: ${{ inputs.population }}
-          SEED: ${{ inputs.seed }}
         run: |
           mkdir -p "$OUT"
           start=()
@@ -137,12 +196,6 @@ jobs:
       - name: Put the weights in the run summary
         if: always()
         env:
-          OPPONENT: ${{ inputs.opponent }}
-          INITIAL: ${{ inputs.initial }}
-          SEEDS: ${{ inputs.seeds }}
-          ITERATIONS: ${{ inputs.iterations }}
-          POPULATION: ${{ inputs.population }}
-          SEED: ${{ inputs.seed }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
           {
@@ -151,6 +204,10 @@ jobs:
             echo "Against \`$OPPONENT\` on \`$SEEDS\`, $ITERATIONS rounds of $POPULATION, seed \`$SEED\`,"
             echo "starting from \`${INITIAL:-the built-in weights}\`."
             echo
+            if [[ -n "${WHY:-}" ]]; then
+              echo "$WHY"
+              echo
+            fi
             echo '```'
             cat "$OUT/search.log" 2>/dev/null || echo 'The search wrote nothing.'
             echo '```'
@@ -218,12 +275,6 @@ jobs:
       - name: Replay on seeds the search never saw
         if: steps.found.outputs.applied == 'true'
         id: holdout
-        env:
-          OPPONENT: ${{ inputs.opponent }}
-          CHECK: ${{ inputs.check_opponent }}
-          KIND: ${{ inputs.kind }}
-          INITIAL: ${{ inputs.initial }}
-          SEEDS: ${{ inputs.seeds }}
         run: |
           matches="$(jq -r '.seeds | length' "$SEEDS")"
           start="$(jq -r --argjson n "$matches" '
@@ -353,14 +404,6 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_NUMBER: ${{ github.run_number }}
           BASE: ${{ github.ref_name }}
-          OPPONENT: ${{ inputs.opponent }}
-          CHECK: ${{ inputs.check_opponent }}
-          KIND: ${{ inputs.kind }}
-          INITIAL: ${{ inputs.initial }}
-          SEEDS: ${{ inputs.seeds }}
-          ITERATIONS: ${{ inputs.iterations }}
-          POPULATION: ${{ inputs.population }}
-          SEED: ${{ inputs.seed }}
           HOLDOUT_FOUND: ${{ steps.holdout.outputs.found }}
           HOLDOUT_BASELINE: ${{ steps.holdout.outputs.baseline }}
           HOLDOUT_CHECK_FOUND: ${{ steps.holdout.outputs.check_found }}
