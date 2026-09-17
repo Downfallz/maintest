@@ -196,7 +196,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             // two the share of the target's health the hit takes, at the pressure price: how much closer it
             // brings that creature to a kill (ADR 0050). Every term is signed the same way, so a hit an ally
             // takes counts against on all three.
-            terms += new ScoreTerms(Damage: hit.Sign * hit.Effective, Kill: hit.Kills ? hit.Sign : 0, 0, 0, 0, 0, 0, 0, Pressure: hit.Sign * hit.Share);
+            terms += ScoreTerms.Zero with { Damage = hit.Sign * hit.Effective, Kill = hit.Kills ? hit.Sign : 0, Pressure = hit.Sign * hit.Share };
         }
 
         var remaining = RemainingHealth(resolution, creatures, gone);

@@ -1,6 +1,7 @@
 """ADR 0051: the scorer's terms of every candidate, read from a run, scored by a policy, learned by both."""
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -74,6 +75,23 @@ def test_a_step_whose_terms_do_not_match_its_candidates_is_refused(tmp_path: Pat
     (directory / "steps.jsonl").write_text("\n".join([json.dumps(first), *lines[1:]]) + "\n")
 
     with pytest.raises(ArtifactError, match="one row per candidate"):
+        load_run(directory)
+
+
+@pytest.mark.parametrize(
+    ("damage", "message"),
+    [([[1.0, 2.0], [3.0]], "rectangle"), ("x", "rectangle"), ([[float("nan")] * 9] * 2, "not finite")],
+)
+def test_a_step_whose_terms_are_not_numbers_is_refused_with_its_index(
+    tmp_path: Path, damage: object, message: str
+) -> None:
+    directory = write_run(tmp_path / "run", matches=2, with_terms=True)
+    lines = (directory / "steps.jsonl").read_text().splitlines()
+    second = json.loads(lines[1])
+    second["candidateTerms"] = damage
+    (directory / "steps.jsonl").write_text("\n".join([lines[0], json.dumps(second), *lines[2:]]) + "\n")
+
+    with pytest.raises(ArtifactError, match=f"Step 2 of .*{message}"):
         load_run(directory)
 
 
@@ -183,7 +201,7 @@ def test_cloning_without_terms_cannot_learn_that_rule(tmp_path: Path) -> None:
     """The observation is random and the action follows the terms: without them there is nothing to fit."""
     run = write_run(tmp_path / "run", matches=80, with_terms=True, rule_on_terms=True)
     dataset = build_dataset([load_run(run)], kinds=["Intent"])
-    blind = dataset.__class__(**{**dataset.__dict__, "term_names": (), "candidate_terms": ()})
+    blind = replace(dataset, term_names=(), candidate_terms=())
 
     policy = train_clone(blind, CloneOptions(epochs=5, alpha=1e-3, seed=1))
 

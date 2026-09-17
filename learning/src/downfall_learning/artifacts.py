@@ -132,7 +132,12 @@ def _candidate_terms(values: Any, candidates: int, term_count: int) -> np.ndarra
         if term_count:
             raise ArtifactError("The run names candidate terms and this step carries none.")
         return None
-    terms = np.asarray(values, dtype=float)
+    try:
+        terms = np.asarray(values, dtype=float)
+    except (TypeError, ValueError):
+        raise ArtifactError("A step's candidate terms are not a rectangle of numbers.") from None
+    if not np.all(np.isfinite(terms)):
+        raise ArtifactError("A step's candidate terms hold a value that is not finite.")
     if terms.ndim != 2 or terms.shape != (candidates, term_count):
         raise ArtifactError(
             f"A step's candidate terms are {terms.shape}, not ({candidates}, {term_count}): one row per "

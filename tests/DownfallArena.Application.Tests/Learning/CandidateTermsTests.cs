@@ -34,6 +34,48 @@ public sealed class CandidateTermsTests
         ScoreTerms.Count.ShouldBe(9);
     }
 
+    /// <summary>
+    /// The array a dataset records and the names it is read back under come from two hand-written lists, so
+    /// the Python side would train on mislabeled columns if either were reordered: every term applied under a
+    /// unit weight of its own name reads back as itself, and only itself.
+    /// </summary>
+    [Fact]
+    public void Every_term_reads_back_under_the_weight_of_its_own_name_and_no_other()
+    {
+        var ordinal = new ScoreTerms(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ordinal.ToArray().ShouldBe(new ScoringWeights(1, 2, 3, 4, 5, 6, 7, 8, 9).Named.Select(weight => weight.Value));
+
+        for (var index = 0; index < ScoreTerms.Count; index++)
+        {
+            var unit = new double[ScoreTerms.Count];
+            unit[index] = 1.0;
+            var term = new ScoreTerms(unit[0], unit[1], unit[2], unit[3], unit[4], unit[5], unit[6], unit[7], unit[8]);
+            new ScoringWeights(1, 2, 3, 4, 5, 6, 7, 8, 9).Apply(term).ShouldBe(index + 1, $"the term named {ScoreTerms.Names[index]}");
+        }
+    }
+
+    /// <summary>
+    /// The reading is the built-in weights' whatever agent is recorded: under weights that prize damage and
+    /// not the kill, the best target set for Strike is the healthy creature, but the intent's recorded terms
+    /// are the kill's, the set Greedy binds. A policy trained on such a teacher reads a fixed target set.
+    /// </summary>
+    [Fact]
+    public void An_intents_terms_are_read_under_the_built_in_weights_whatever_the_teacher_plays()
+    {
+        var board = Board(enemyHealth: 20, fourthHealth: 3);
+        var damageOnly = ScoringWeights.Default with { Kill = 0.0, Pressure = 0.0 };
+        var scorer = new ActionScorer(TestContent.Resources, Rules, damageOnly);
+        var creatures = Foresight.Creatures(board);
+        var actor = creatures.First(creature => creature.Id == One);
+
+        var terms = Terms.Intent(board, new IntentOption(One, [TestContent.Strike]));
+
+        var recorded = damageOnly.Apply(Vector(terms[0]));
+        var ownBest = scorer.Best(actor, TestContent.Strike, creatures)!.Value.Score;
+        terms[0][Index("kill")].ShouldBe(1f, 1e-5f, "the recorded set is the kill Greedy binds");
+        ownBest.ShouldBeGreaterThan(recorded, "under its own weights the teacher binds the healthy creature for more damage");
+    }
+
     [Fact]
     public void An_intents_terms_are_those_of_the_target_set_the_built_in_weights_would_bind()
     {
@@ -136,10 +178,12 @@ public sealed class CandidateTermsTests
         Should.Throw<ArgumentNullException>(() => Terms.Targets(board, null!));
     }
 
-    private static double Apply(IReadOnlyList<float> terms)
+    private static double Apply(IReadOnlyList<float> terms) => ScoringWeights.Default.Apply(Vector(terms));
+
+    private static ScoreTerms Vector(IReadOnlyList<float> terms)
     {
         var values = terms.Select(term => (double)term).ToArray();
-        return ScoringWeights.Default.Apply(new ScoreTerms(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]));
+        return new ScoreTerms(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7], values[8]);
     }
 
     private static int Index(string name) => CandidateTerms.Names.ToList().IndexOf(name);

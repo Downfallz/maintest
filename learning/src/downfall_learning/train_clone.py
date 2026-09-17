@@ -169,7 +169,9 @@ def _batch_loss_and_gradients(
     bias_gradient = by_key.sum(axis=0)
     terms_gradient = None
     if batch.terms is not None and model.candidate_weights is not None:
-        terms_gradient = np.einsum("bc,bct->t", gradient, batch.terms)
+        # The same pull toward zero as the rows: a teacher that decides on the terms is separable on them,
+        # and unpenalized weights would grow with every epoch rather than settle.
+        terms_gradient = np.einsum("bc,bct->t", gradient, batch.terms) + alpha * model.candidate_weights
     return loss, weights_gradient, bias_gradient, terms_gradient
 
 

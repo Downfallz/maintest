@@ -20,6 +20,12 @@ namespace DownfallArena.Application.Learning;
 /// initiative it buys and the cost it cannot cover. A speed choice and a pass have no reading and score zero
 /// on every term.
 /// </para>
+/// <para>
+/// The reading is the built-in weights' whatever agent is recorded or played, so a dataset and the policy
+/// trained on it read the same numbers. An intent's terms are therefore one fixed target set's, the one
+/// Greedy would bind, and a heuristic agent playing other weights may bind another: its intent scores best
+/// under its own weights among the terms it read, not always among the terms recorded here.
+/// </para>
 /// </summary>
 public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
 {
@@ -77,23 +83,6 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         var creatures = Foresight.Creatures(board);
         var gone = _foresight.GoneBeforeThisSlot(board, creatures);
         return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures, gone)))];
-    }
-
-    /// <summary>The terms of one target set already bound, for an agent scoring that candidate.</summary>
-    public IReadOnlyList<float> Target(PlayerBoardState board, TargetOptions options, IReadOnlyList<CreatureId> targets, IReadOnlySet<CreatureId> gone)
-    {
-        ArgumentNullException.ThrowIfNull(board);
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(targets);
-
-        return Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), Foresight.Creatures(board), gone));
-    }
-
-    /// <summary>What the revealed actions will kill before this slot resolves, read once for every target set of a decision.</summary>
-    public IReadOnlySet<CreatureId> GoneBeforeThisSlot(PlayerBoardState board)
-    {
-        ArgumentNullException.ThrowIfNull(board);
-        return _foresight.GoneBeforeThisSlot(board, Foresight.Creatures(board));
     }
 
     private static float[] Vector(ScoreTerms terms) => [.. terms.ToArray().Select(value => (float)value)];

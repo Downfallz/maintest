@@ -46,7 +46,9 @@ the built-in weights and whose rows are zero therefore plays the heuristic's com
 manifest gains `candidateTermNames`; `policy.json` gains `candidateTermNames` and `candidateWeights`. The
 feature schema stays `features:v5`: the terms belong to the candidate, not to the board, and travel as a
 second channel next to the observation, so every dataset and every model recorded before this ADR loads
-unchanged, a run without terms trains exactly as before, and a policy without weights scores the keys alone.
+unchanged and plays as before, `train-value` on a run without terms fits exactly what it fitted, and a policy
+without weights scores the keys alone. `train-clone` is a different learner with or without terms (below), so
+its `loss` and `accuracy` on a run without them are not comparable with the journal's before this ADR.
 A reader refuses a step missing the terms its run names, terms that do not match the step's candidates, runs
 naming different terms loaded together, and a policy naming the terms in another order than the engine's.
 
@@ -69,9 +71,17 @@ recorded them, so a policy plays identically on both sides; a policy without the
   and every dataset since it load as before, and every committed policy plays as before.
 - Good: the terms are shared by every key, so they are fitted on every step rather than on the sixty a key
   has (ADR 0045), which is where the value fit was starving.
-- Bad: a step is wider. Nine floats per candidate: a tenth of the viewer's sample run on disk, at under two
-  candidates a step, and more where a decision offers more. The terms are read once per decision, which is
-  what the heuristic already pays.
+- Bad: a step is wider. Nine floats per candidate: under a tenth of the viewer's sample run on disk, at under
+  two candidates a step, and more where a decision offers more. The recorder reads the terms beside the
+  agent it wraps, so a heuristic teacher pays its one-step reading twice and a random one pays it for the
+  first time.
+- Bad: the reading is the built-in weights', whatever agent is recorded, so that a dataset and the policy
+  trained on it read the same numbers without carrying weights of their own. A target set's terms are its
+  own under any weights; an intent's are one fixed target set's, the one Greedy would bind, and a heuristic
+  teacher playing other weights may bind another. The invariant above is exact for Greedy and a reading of
+  the board, not of the teacher, for `search-4` or `mixture-mean`; if a clone of such a teacher stays capped
+  with the terms, reading them under the teacher's weights, recorded in the manifest and carried by the
+  policy, is the next change.
 - Bad: the clone no longer uses `SGDClassifier`; the optimizer, the batching and the fold of the scaling
   into the file are this project's, and their correctness rests on the tests that recover a planted rule from
   the terms and refuse to without them.
