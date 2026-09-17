@@ -205,6 +205,7 @@ def test_the_search_anchors_its_floor_on_what_it_started_from(tmp_path: Path, fa
     assert set(evaluator.floor) == {"greedy", "random"}
     assert evaluator.floor["greedy"] == pytest.approx(0.95)
     assert result.initial.score.mean == pytest.approx(1.0)
+    assert result.floor == evaluator.floor
 
 
 def _even(score: float) -> Score:
@@ -214,6 +215,49 @@ def _even(score: float) -> Score:
 def test_an_empty_opponent_list_is_refused() -> None:
     with pytest.raises(ValueError, match="opponent is empty"):
         EngineCommand(opponent=" , ")
+
+
+def test_a_candidate_played_against_several_opponents_keeps_its_score_per_opponent() -> None:
+    against_greedy = Score.of(Evaluation.from_json(evaluation_json(0.4, 0.3)))
+    against_random = Score.of(Evaluation.from_json(evaluation_json(0.8, 0.9)))
+    candidate = Candidate(1, TARGET, Score.mixture([("greedy", against_greedy), ("random", against_random)]))
+
+    parts = candidate.to_json()["parts"]
+
+    assert parts["greedy"]["score"] == pytest.approx(0.4)
+    assert parts["greedy"]["winRate"] == pytest.approx(0.3)
+    assert parts["random"]["score"] == pytest.approx(0.8)
+    assert parts["random"]["low"] == pytest.approx(0.75)
+
+
+def test_a_candidate_played_against_one_opponent_has_no_parts() -> None:
+    candidate = Candidate(1, TARGET, _even(0.6))
+
+    assert "parts" not in candidate.to_json()
+
+
+def test_a_falling_candidate_names_the_opponent_it_fell_against(tmp_path: Path) -> None:
+    """A search that found nothing under its floor could only be read by replaying its best fallers."""
+    floor = {"greedy": 0.55, "random": 0.75}
+    fell = Candidate(2, TARGET, Score.mixture([("greedy", _even(0.5)), ("random", _even(0.9))], floor))
+    result = SearchResult(best=fell, candidates=(fell,), initial=fell, floor=floor)
+
+    summary = json.loads((result.write(tmp_path / "search") / "search.json").read_text())
+
+    written = summary["candidates"][0]
+    assert written["score"] == pytest.approx(-0.05)
+    assert written["parts"]["greedy"]["score"] == pytest.approx(0.5)
+    assert summary["floor"] == {"greedy": pytest.approx(0.55), "random": pytest.approx(0.75)}
+
+
+def test_a_search_against_one_opponent_writes_no_floor(tmp_path: Path) -> None:
+    best = Candidate(1, TARGET, _even(0.6))
+
+    summary = json.loads(
+        (SearchResult(best, (best,), best).write(tmp_path / "search") / "search.json").read_text()
+    )
+
+    assert "floor" not in summary
 
 
 def test_the_result_writes_one_evaluation_per_opponent_of_a_mixture(tmp_path: Path) -> None:

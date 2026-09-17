@@ -349,7 +349,7 @@ class Candidate:
     score: Score
 
     def to_json(self) -> dict[str, object]:
-        return {
+        entry: dict[str, object] = {
             "iteration": self.iteration,
             "weights": dict(self.weights),
             "score": self.score.mean,
@@ -358,6 +358,20 @@ class Candidate:
             "winRate": self.score.win_rate,
             "matches": self.score.matches,
         }
+        # Against several opponents the score is a mean or a shortfall, and neither says which opponent a
+        # candidate fell against or gained on: a search that found nothing under its floor could only be read
+        # by replaying its best fallers (journal, 2026-09-16). One row per opponent says it.
+        if self.score.parts:
+            entry["parts"] = {
+                opponent: {
+                    "score": part.mean,
+                    "low": part.low,
+                    "high": part.high,
+                    "winRate": part.win_rate,
+                }
+                for opponent, part in self.score.parts
+            }
+        return entry
 
 
 @dataclass(frozen=True)
@@ -365,20 +379,25 @@ class SearchResult:
     best: Candidate
     candidates: tuple[Candidate, ...]
     initial: Candidate
+    # Per opponent, what a candidate had to hold to score its mean rather than its shortfall; ``None`` when
+    # the search played one opponent or never anchored.
+    floor: Mapping[str, float] | None = None
 
     def write(self, directory: Path, kind: str = "heuristic") -> Path:
-        """Writes ``weights.json`` (the best), ``search.json`` (every candidate, and the agent kind that
-        played them: weights searched for one reading are only meaningful played by it), the best
-        evaluation."""
+        """Writes ``weights.json`` (the best), ``search.json`` (every candidate with its score per
+        opponent, the floor they were held to, and the agent kind that played them: weights searched for
+        one reading are only meaningful played by it), the best evaluation."""
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         write_weights(directory / "weights.json", self.best.weights)
-        summary = {
+        summary: dict[str, object] = {
             "kind": kind,
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "candidates": [candidate.to_json() for candidate in self.candidates],
         }
+        if self.floor is not None:
+            summary["floor"] = dict(self.floor)
         (directory / "search.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
         if self.best.score.evaluation is not None:
             raw = json.dumps(self.best.score.evaluation.raw, indent=2) + "\n"
@@ -555,7 +574,8 @@ def search_weights(
     if log is not None and best.iteration > 0:
         log.mark_best(best.iteration)
     progress.finish(f"best {best.score.mean:.4f} from {first.score.mean:.4f}")
-    return SearchResult(best=best, candidates=tuple(candidates), initial=first)
+    floor = getattr(evaluator, "floor", None)
+    return SearchResult(best=best, candidates=tuple(candidates), initial=first, floor=floor)
 
 
 def stamp_of(score: Score) -> RunStamp | None:
