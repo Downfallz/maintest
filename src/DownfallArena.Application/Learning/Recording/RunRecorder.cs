@@ -28,6 +28,7 @@ public sealed class RunRecorder(
     RunStamp stamp,
     ObservationBuilder observations,
     ActionEncoder actions,
+    CandidateTerms terms,
     TimeProvider timeProvider,
     MatchTraceRecorder? traces = null,
     int traceLimit = int.MaxValue) : IMatchRecorder
@@ -79,7 +80,7 @@ public sealed class RunRecorder(
             _steps[matchId] = steps;
         }
 
-        return new RecordingAgent(agent, observations, actions, steps);
+        return new RecordingAgent(agent, observations, actions, terms, steps);
     }
 
     public async Task MatchPlayedAsync(MatchId matchId, int seed, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
@@ -125,6 +126,7 @@ public sealed class RunRecorder(
                 SchemaId = observations.Schema.Id,
                 SchemaVersion = observations.Schema.Version,
                 FeatureNames = observations.Schema.FeatureNames,
+                CandidateTermNames = CandidateTerms.Names,
                 Matches = Matches,
                 Steps = Steps,
                 Episodes = Episodes,

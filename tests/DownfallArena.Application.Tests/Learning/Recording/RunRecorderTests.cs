@@ -79,6 +79,7 @@ public sealed class RunRecorderTests
         manifest.SchemaId.ShouldBe(Schema.Id);
         manifest.SchemaVersion.ShouldBe("features:v5");
         manifest.FeatureNames.ShouldBe(Schema.FeatureNames);
+        manifest.CandidateTermNames.ShouldBe(ScoreTerms.Names);
         manifest.Matches.ShouldBe(2);
         manifest.Traces.ShouldBeTrue();
 
@@ -213,7 +214,7 @@ public sealed class RunRecorderTests
     }
 
     private static RunRecorder Recorder(MemoryArtifactWriter writer, MatchTraceRecorder? traces, int traceLimit = int.MaxValue) =>
-        new(writer, Stamp, new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema), new FixedTimeProvider(FixedTimeProvider.Default), traces, traceLimit);
+        new(writer, Stamp, new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema), new CandidateTerms(TestContent.Resources, Rules), new FixedTimeProvider(FixedTimeProvider.Default), traces, traceLimit);
 
     private static SimulationScenario Scenario(int matches) => new()
     {

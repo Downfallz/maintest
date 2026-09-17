@@ -24,6 +24,12 @@ public sealed record StepRecord
     /// <summary>The keys of every action the options offered, in candidate order.</summary>
     public required IReadOnlyList<string> Candidates { get; init; }
 
+    /// <summary>
+    /// The scorer's terms of every candidate, one vector per entry of <see cref="Candidates"/> in the same order,
+    /// each in the order the manifest's term names list (ADR 0051).
+    /// </summary>
+    public required IReadOnlyList<IReadOnlyList<float>> CandidateTerms { get; init; }
+
     /// <summary>The key of the chosen action, always one of <see cref="Candidates"/>.</summary>
     public required string Action { get; init; }
 

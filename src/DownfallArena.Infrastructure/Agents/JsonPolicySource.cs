@@ -44,6 +44,8 @@ public sealed class JsonPolicySource : IPolicySource
             Bias = Field<double[]>(root, "bias", path),
             Fallback = Number(root, "fallback", path),
             Baseline = ReadBaseline(root, path),
+            CandidateTermNames = Optional<string[]>(root, "candidateTermNames", path),
+            CandidateWeights = Optional<double[]>(root, "candidateWeights", path),
             Fingerprint = Convert.ToHexStringLower(SHA256.HashData(bytes))[..8],
         }.Validated();
     }
@@ -67,6 +69,13 @@ public sealed class JsonPolicySource : IPolicySource
             Bias = Number(element, "bias", path),
         };
     }
+
+    /// <summary>A field a file written before ADR 0051 does not carry: absent or null reads as none.</summary>
+    private static TValue? Optional<TValue>(JsonElement root, string name, string path)
+        where TValue : class =>
+        root.TryGetProperty(name, out var element) && element.ValueKind != JsonValueKind.Null
+            ? Field<TValue>(root, name, path)
+            : null;
 
     private static JsonElement Element(JsonElement root, string name, string path) =>
         root.TryGetProperty(name, out var element) && element.ValueKind != JsonValueKind.Null

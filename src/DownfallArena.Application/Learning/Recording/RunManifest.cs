@@ -16,6 +16,9 @@ public sealed record RunManifest
 
     public required IReadOnlyList<string> FeatureNames { get; init; }
 
+    /// <summary>The name of every entry of a candidate's terms, in order (ADR 0051): the scoring weight names.</summary>
+    public required IReadOnlyList<string> CandidateTermNames { get; init; }
+
     public required int Matches { get; init; }
 
     public required int Steps { get; init; }

@@ -31,6 +31,11 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
   Publishing a `base_initiative` feature for that corner would need a new version of its own, and the corner
   was not worth one. It stayed out of `features:v2` for the same reason. Revisit if a policy is ever trained
   on content where a creature is routinely debuffed past zero.
+- **The candidate terms are not features** (ADR 0051). A step's `candidateTerms` are one vector per
+  candidate action, the scorer's terms of that action, and belong to the candidate rather than to the board;
+  the observation stays the board alone. They travel beside the observation as a second channel named by
+  the manifest's `candidateTermNames`, so `features:v5` and every dataset and model that carries it are
+  untouched, and a run recorded before them still loads without a version bump.
 
 ## Versions
 

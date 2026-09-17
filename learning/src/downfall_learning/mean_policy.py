@@ -25,24 +25,33 @@ from downfall_learning.policy import Baseline, Policy
 from downfall_learning.training import now_iso
 
 
+def _check_alike(first: Policy, policy: Policy) -> None:
+    """Refuses two policies whose mean would be nothing: another kind, schema, shape, or provenance."""
+    if policy.kind != first.kind:
+        raise ValueError(f"The policies are not all of one kind ({first.kind} and {policy.kind}).")
+    if policy.schema_id != first.schema_id or policy.feature_names != first.feature_names:
+        raise ValueError("The policies were not observed under one feature schema.")
+    if (policy.baseline is None) != (first.baseline is None):
+        raise ValueError("Some of the policies carry a baseline and some do not.")
+    if (policy.candidate_weights is None) != (first.candidate_weights is None):
+        raise ValueError("Some of the policies weigh candidate terms and some do not.")
+    if policy.candidate_names != first.candidate_names:
+        raise ValueError("The policies name their candidate terms differently.")
+    # The seed is the one axis on which the fits of one turn differ by design; anything else means the
+    # policies were trained under different engines, contents, rules or agents, and their mean is nothing.
+    differences = first.stamp.differences_from(policy.stamp)
+    differences = [line for line in differences if not line.startswith("seed")]
+    if differences:
+        raise ValueError("The policies' stamps differ on " + "; ".join(differences) + ".")
+
+
 def mean_policy(policies: Sequence[Policy]) -> Policy:
     """One policy scoring every candidate as the mean of the policies given."""
     if len(policies) < 2:
         raise ValueError("A mean needs at least two policies.")
     first = policies[0]
     for policy in policies[1:]:
-        if policy.kind != first.kind:
-            raise ValueError(f"The policies are not all of one kind ({first.kind} and {policy.kind}).")
-        if policy.schema_id != first.schema_id or policy.feature_names != first.feature_names:
-            raise ValueError("The policies were not observed under one feature schema.")
-        if (policy.baseline is None) != (first.baseline is None):
-            raise ValueError("Some of the policies carry a baseline and some do not.")
-        # The seed is the one axis on which the fits of one turn differ by design; anything else means the
-        # policies were trained under different engines, contents, rules or agents, and their mean is nothing.
-        differences = first.stamp.differences_from(policy.stamp)
-        differences = [line for line in differences if not line.startswith("seed")]
-        if differences:
-            raise ValueError("The policies' stamps differ on " + "; ".join(differences) + ".")
+        _check_alike(first, policy)
 
     keys = tuple(sorted(set().union(*(policy.action_keys for policy in policies))))
     weights = np.zeros((len(keys), len(first.feature_names)))
@@ -67,6 +76,11 @@ def mean_policy(policies: Sequence[Policy]) -> Policy:
             np.mean([one.weights for one in baselines], axis=0),
             float(np.mean([one.bias for one in baselines])),
         )
+    candidate_weights = None
+    if first.candidate_weights is not None:
+        candidate_weights = np.mean(
+            [policy.candidate_weights for policy in policies if policy.candidate_weights is not None], axis=0
+        )
     return Policy(
         kind=first.kind,
         stamp=first.stamp,
@@ -80,4 +94,6 @@ def mean_policy(policies: Sequence[Policy]) -> Policy:
         baseline=baseline,
         # The fit metrics of the parts describe the parts; the mean has none of its own until it is played.
         metrics={"averaged": float(count), "actions": float(len(keys))},
+        candidate_names=first.candidate_names,
+        candidate_weights=candidate_weights,
     )
