@@ -221,7 +221,21 @@ public static class CatalogueProjection
             return 1;
         }
 
-        var tier = 1 + offers.Min((TalentPrerequisites[] gate) => gate.Max((TalentPrerequisites prerequisites) => Behind(prerequisites, gates, tiers, walking)));
+        // Loops rather than a Min over a Max: this walk is recursive, and a lambda inside it is one the compiler
+        // binds once per path through the tree (CS9236). A loop has nothing to bind, and reads no worse.
+        var shallowest = int.MaxValue;
+        foreach (var gate in offers)
+        {
+            var deepest = 0;
+            foreach (var prerequisites in gate)
+            {
+                deepest = Math.Max(deepest, Behind(prerequisites, gates, tiers, walking));
+            }
+
+            shallowest = Math.Min(shallowest, deepest);
+        }
+
+        var tier = shallowest == int.MaxValue ? 1 : 1 + shallowest;
         walking.Remove(spell);
         tiers[spell] = tier;
         return tier;
@@ -230,8 +244,18 @@ public static class CatalogueProjection
     /// <summary>How deep one gate reaches: its <c>allOf</c> at its deepest, its <c>anyOf</c> at its shallowest.</summary>
     private static int Behind(TalentPrerequisites prerequisites, Dictionary<SpellId, List<TalentPrerequisites[]>> gates, Dictionary<SpellId, int> tiers, HashSet<SpellId> walking)
     {
-        var all = prerequisites.AllOf.Count == 0 ? 0 : prerequisites.AllOf.Max((SpellId required) => Tier(required, gates, tiers, walking));
-        var any = prerequisites.AnyOf.Count == 0 ? 0 : prerequisites.AnyOf.Min((SpellId required) => Tier(required, gates, tiers, walking));
-        return Math.Max(all, any);
+        var all = 0;
+        foreach (var required in prerequisites.AllOf)
+        {
+            all = Math.Max(all, Tier(required, gates, tiers, walking));
+        }
+
+        var any = int.MaxValue;
+        foreach (var required in prerequisites.AnyOf)
+        {
+            any = Math.Min(any, Tier(required, gates, tiers, walking));
+        }
+
+        return any == int.MaxValue ? all : Math.Max(all, any);
     }
 }
