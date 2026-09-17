@@ -4,7 +4,7 @@ import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
 import { backText, faceDown, handRows } from './hand.js';
-import { accumulate, feedLine, nextSince } from './feed.js';
+import { accumulate, feedLine } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
 
@@ -117,7 +117,7 @@ async function refresh(state) {
     // Only the entries this page has not seen yet. The feed is the whole match's history and it only grows, so
     // a poll every 700 ms that asked for all of it would serialize and download the match again each time --
     // and over a half-hour session that is quadratic in the number of events, for twelve lines on screen.
-    const answer = await seat.transport.seat(nextSince(state.feeds.get(seat.seat)));
+    const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0);
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
@@ -133,8 +133,12 @@ async function refresh(state) {
       return;
     }
 
-    const kept = accumulate(state.feeds.get(seat.seat), answer.body?.feed, FeedKept);
-    state.feeds.set(seat.seat, kept);
+    // The cursor is the host's `feedNext`, not the highest entry on the screen: the two differ whenever the
+    // end of the trace is the other seat's own decisions, which this seat is never shown.
+    const held = state.feeds.get(seat.seat);
+    const kept = accumulate(held?.entries, answer.body?.feed, FeedKept);
+    const next = Number.isInteger(answer.body?.feedNext) ? answer.body.feedNext : held?.next ?? 0;
+    state.feeds.set(seat.seat, { entries: kept, next });
     views.push({ ...seat, view: { ...answer.body, feed: kept } });
   }
 

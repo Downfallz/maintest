@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, nextSince, outcomeText, resolutionText } from './feed.js';
+import { accumulate, feedLine, outcomeText, resolutionText } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -108,21 +108,10 @@ test('a resolution the page has no card for still names its spell', () => {
 });
 
 // The feed is the whole match's history and it only grows, so a poll that asked for all of it every 700 ms
-// would serialize and download the match again each time -- quadratic over a half-hour session, for twelve
-// lines on screen. The page asks for what it has not seen and keeps a bounded tail.
-test('the next request asks for one past the highest entry held', () => {
-  assert.equal(nextSince([{ sequence: 0 }, { sequence: 3 }, { sequence: 7 }]), 8);
-  assert.equal(nextSince([{ sequence: 0 }]), 1);
-  assert.equal(nextSince([]), 0);
-  assert.equal(nextSince(undefined), 0);
-});
-
-// Sequence numbers have gaps by design: the entries a seat may not see are filtered out and their numbers go
-// with them. So the cursor is the highest seen and never a count of what is held.
-test('a gap in the sequence numbers does not move the cursor back', () => {
-  assert.equal(nextSince([{ sequence: 0 }, { sequence: 5 }, { sequence: 12 }]), 13);
-});
-
+// would serialize and download the match again each time. The page asks from the cursor the host hands back in
+// `feedNext` and keeps a bounded tail; the cursor is the host's and not the highest entry the page was shown,
+// because a seat's own decisions are filtered out of the other seat's feed and a run of them at the end of the
+// trace reaches nobody at all.
 test('what arrives is appended to what was held, oldest first', () => {
   const kept = accumulate([{ sequence: 0 }, { sequence: 1 }], [{ sequence: 2 }, { sequence: 3 }], 60);
 

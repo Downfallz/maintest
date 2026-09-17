@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using DownfallArena.Application.Agents;
@@ -6,6 +7,7 @@ using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Feed;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
@@ -165,6 +167,13 @@ public sealed partial class TableApiTests : IDisposable
         feed[0].ShouldBe(0);
     }
 
+    /// <summary>The cursor the host says to resume from.</summary>
+    private static string NextCursor(string body) =>
+        Cursor().Match(body).Groups[1].Value;
+
+    [GeneratedRegex("\"feedNext\":([0-9]+)")]
+    private static partial Regex Cursor();
+
     /// <summary>The sequence numbers a payload carries, in the order it carries them.</summary>
     private static IReadOnlyList<int> Sequences(string body) =>
     [
@@ -243,20 +252,22 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
-    /// The tag carries the build too. The catalogue is not the content: it is this build's projection of it —
-    /// the card words are written by <c>CatalogueProjection</c> and the round shape is read off
-    /// <c>RoundSubPhase</c>. So a host upgraded over the same content and the same rules serves a different
-    /// answer, and without the build in the tag a browser would keep the old one until its cache was cleared.
+    /// The tag is a hash of the bytes served, not a list of the stamps that went into them, and that is the
+    /// contract rather than an implementation detail. This answer carries the content hash, the rule set and
+    /// this build's projection of both — the card words <c>CatalogueProjection</c> writes and the round shape
+    /// it reads off <c>RoundSubPhase</c> — so a tag assembled from stamps has to be kept in step with whatever
+    /// the projection grows next. Even the engine version cannot close it: a dirty tree stamps the same
+    /// <c>&lt;commit&gt;-dirty</c> whatever is edited in it, which is the state this app is developed in.
     /// </summary>
     [Fact]
-    public async Task The_tag_carries_the_build_that_projected_the_catalogue()
+    public async Task The_tag_is_the_hash_of_the_catalogue_that_was_served()
     {
         var table = await Seated();
 
-        var tag = Tag(await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token);
 
-        tag.ShouldContain(EngineVersion.Current.ToString());
-        tag.ShouldContain(_host!.Services.GetRequiredService<IGameResources>().Version);
+        answer.Status.ShouldBe(200);
+        Tag(answer).ShouldBe($"\"{Convert.ToHexStringLower(SHA256.HashData(answer.Body.ToArray()))}\"");
     }
 
     /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>
@@ -330,6 +341,35 @@ public sealed partial class TableApiTests : IDisposable
 
         answer.Status.ShouldBe(204);
         await Waiting(table.Person, "Speed");
+    }
+
+    /// <summary>
+    /// Where to resume is the host's to say, and it is the end of what the host looked at rather than the end
+    /// of what this seat was shown. A seat's own decisions are filtered out of the other seat's feed, so a run
+    /// of them reaches nobody — and a page taking its cursor from the highest entry it was shown would sit
+    /// before such a run and ask for it again on every poll, for as long as the other player took to decide.
+    /// </summary>
+    [Fact]
+    public async Task The_cursor_the_host_hands_back_counts_what_it_looked_at_not_what_it_showed()
+    {
+        var table = await Seated();
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+        await AnswerEach(table, PlayerOptionsKind.Speed, creature => $$"""{"kind":"Speed","creature":{{creature}},"speed":"Quick"}""", until: PlayerOptionsKind.Intent);
+
+        var trace = _host!.Services.GetRequiredService<MatchTraceRecorder>().EntriesOf(table.Session.MatchId);
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player2", string.Empty, "token-of-player-2"));
+
+        // Player 1's speed choices are in the trace and player 2 may see none of them, so the two counts differ
+        // — which is the whole reason the cursor cannot be read off the feed.
+        var shown = Sequences(body);
+        trace.ShouldContain(entry => !SeatVisibility.CanSee(entry.Event, PlayerSlot.Player2));
+        shown.Count.ShouldBeLessThan(trace.Count);
+        int.Parse(NextCursor(body), CultureInfo.InvariantCulture).ShouldBe(trace.Count);
+
+        // And asking again from it is answered with nothing rather than with the entries it could not show.
+        var again = Text(await table.Api.HandleAsync("GET", "/api/seat/player2", string.Empty, "token-of-player-2", query: $"?since={trace.Count}"));
+        Sequences(again).ShouldBeEmpty();
+        NextCursor(again).ShouldBe(trace.Count.ToString(CultureInfo.InvariantCulture));
     }
 
     /// <summary>

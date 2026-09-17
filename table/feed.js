@@ -62,19 +62,6 @@ function errorText(error) {
   return error?.message ?? error?.code ?? 'no reason given';
 }
 
-// The sequence to ask the host for next: one past the highest entry this page holds, or 0 when it holds none.
-// The host's `since` is inclusive, so asking for the highest again would fetch a line already on the screen.
-// Trace sequence numbers have gaps by design -- the entries this seat may not see are filtered out and their
-// numbers go with them -- so this is the highest seen and never a count.
-export function nextSince(kept) {
-  let highest = -1;
-  for (const entry of kept ?? []) {
-    if (Number.isInteger(entry?.sequence) && entry.sequence > highest) highest = entry.sequence;
-  }
-
-  return highest + 1;
-}
-
 // What the page holds after a poll: what it held, plus what arrived, bounded to the last `limit`. Bounded
 // because the log shows twelve lines and a match is thousands of events; an entry already held is not added
 // twice, so a poll that re-sends one -- a request that crossed a reload, say -- cannot double a line.
