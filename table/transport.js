@@ -23,6 +23,7 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   return {
     seat: () => send('GET', `/api/seat/${seat}`),
     session: () => send('GET', '/api/session'),
+    catalogue: () => send('GET', '/api/catalogue'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
   };
 }

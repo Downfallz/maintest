@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Driving;
 using DownfallArena.Application.Matches.Queries;
@@ -19,13 +20,19 @@ namespace DownfallArena.Cli.Table;
 /// still the only thing that says what is legal. And it never invents a refusal: a tap that arrives after the
 /// screen moved on is late, not illegal, and says so with a 409 the page can act on.
 /// </remarks>
-internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats)
+internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue)
 {
     public const string TokenHeader = "X-Seat-Token";
 
     private const string SeatPrefix = "/api/seat/";
 
-    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token)
+    /// <summary>
+    /// The content hash, as an entity tag. The catalogue cannot change while a host is running — it is built
+    /// from the resources the match is playing — so a page fetches it once and is answered 304 ever after.
+    /// </summary>
+    private string Tag => $"\"{catalogue.ContentHash}\"";
+
+    public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? ifNoneMatch = null)
     {
         if (Holder(token) is not { } holder)
         {
@@ -35,6 +42,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         if (path == "/api/session" && method == "GET")
         {
             return Session();
+        }
+
+        if (path == "/api/catalogue" && method == "GET")
+        {
+            return Catalogue(ifNoneMatch);
         }
 
         if (!path.StartsWith(SeatPrefix, StringComparison.Ordinal))
@@ -60,6 +72,23 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             ("GET", [_]) => await SeatAsync(holder),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
+        };
+    }
+
+    /// <summary>
+    /// Every card of the catalogue the match is playing. It is the same for both seats and hides nothing: a
+    /// deck is public, and what is hidden is which card a creature has face down (ADR 0054).
+    /// </summary>
+    private StudioResponse Catalogue(string? ifNoneMatch)
+    {
+        if (string.Equals(ifNoneMatch, Tag, StringComparison.Ordinal))
+        {
+            return new StudioResponse(304, StudioResponse.Plain, [], [new KeyValuePair<string, string>("ETag", Tag)]);
+        }
+
+        return StudioResponse.OfJson(catalogue, ArtifactJson.LineOptions) with
+        {
+            Headers = [new KeyValuePair<string, string>("ETag", Tag)],
         };
     }
 

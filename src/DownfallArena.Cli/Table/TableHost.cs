@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Catalogue;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Randomness;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -37,7 +39,10 @@ internal static class TableHost
         // The session's own read side, not the container's: it is the one behind the lock the driver writes
         // through, and a page polls it while the match is advancing.
         var seats = new[] { seat1.Seat, seat2.Seat };
-        var api = new TableApi(session, session.Queries, seats);
+        // Built once, from the resources this match is playing: a card the page prints is the card the engine
+        // resolves, and a tuning pass is a rebuild and a restart rather than a change to the page (ADR 0054).
+        var catalogue = CatalogueProjection.Build(services.GetRequiredService<IGameResources>(), rules);
+        var api = new TableApi(session, session.Queries, seats, catalogue);
         var codes = new JoinCodes(seats);
         using var server = new TableServer(options.Bind, options.Port, api, new TableFiles(TableDirectory), codes);
 
