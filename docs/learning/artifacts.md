@@ -53,6 +53,7 @@ Defined once in `ArtifactJson` (Infrastructure) and shared by every file:
 | `createdAt` | When the run started (UTC). |
 | `schemaId`, `schemaVersion` | The feature schema of every step (`docs/learning/features.md`). |
 | `featureNames` | The name of every index of an observation, so a reader needs no engine to label columns. |
+| `candidateTermNames` | The name of every index of a step's `candidateTerms`, the scoring weight names in the engine's order ([ADR 0051](../adr/0051-the-policy-sees-what-the-heuristic-sees.md)). Empty in a run recorded before them, and every step of such a run carries no `candidateTerms`. |
 | `matches`, `steps`, `episodes` | Counts, final once the run finished. |
 | `traces` | Whether `traces/` was written at all. It does not say how many: a capped run holds a sample, and a reader that counts anything over them (the viewer's fizzle and crit tiles) prints the denominator it actually had. The rates an evaluation reports are counted over every match and never over traces. |
 
@@ -68,6 +69,7 @@ One line per decision of one player (`RecordingAgent`):
 | `observation` | `schemaId` and `features`, the observation of the board at that decision. |
 | `candidates` | The keys of every action the options offered, in candidate order. |
 | `action` | The key of the chosen action, always one of `candidates`. |
+| `candidateTerms` | One number list per candidate, in candidate order, indexed like the manifest's `candidateTermNames`: the scorer's terms of that action, what the heuristic weighs before it decides (ADR 0051). An intent carries the terms of the target set the built-in weights would bind for it; a target set its own; an unlock its combat estimate, the initiative it buys and the cost it cannot cover; a speed choice and a pass all zeros. Absent from a run whose manifest names no terms. |
 | `code` | The numeric form of the chosen action: `kind`, `actingSlot`, `spellIndex`, `speed`, `targetMask`. |
 
 The board is the one the driver handed to the agent: during the speed and intent sub-phases it is the same
@@ -132,7 +134,10 @@ iteration by the lowest loss.
 A trained policy: the run stamp of its data, the feature schema, the action keys, one weight row and one
 bias per key, and a fallback score. A `value` policy also carries an optional `baseline` object, one
 `weights` row over the features and one `bias`, whose value is added to every score (ADR 0016); a file
-without it reads as a baseline of zero, so policies written before it still load. The fields and how a
+without it reads as a baseline of zero, so policies written before it still load. A policy trained on a run
+that records `candidateTerms` also carries `candidateTermNames` and `candidateWeights`, one weight per term
+shared by every key, added to a candidate's score on its own terms (ADR 0051); a file without them scores
+the keys alone, and a file naming terms in another order than the engine's is refused. The fields and how a
 reader scores candidates are in `docs/learning/training.md`; committed under `models/<name>/<version>/`.
 
 ## `report.json` (written by the Python side, L7)

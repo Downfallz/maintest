@@ -27,6 +27,13 @@ The file the two produce is identical in shape: ``share="kind"`` writes its kind
 kind, so ``policy.json``, its readers and the engine's ``PolicyAgent`` are untouched. That the file then holds
 a handful of distinct rows copied hundreds of times is the size follow-up models/README.md names, not a reason
 to change the format before knowing whether the model is better.
+
+**What the candidate terms add is fitted first, the way the baseline is (ADR 0051).** On a dataset that
+records them, one ridge over the terms of the action taken -- damage, kill, heal, ... as the scorer read them
+-- is fitted to the advantages of every training step, and the action rows are then fitted on what that
+leaves. The terms are the part of a decision the observation cannot express, and they are shared by every
+action key, so they are fitted on every step rather than on the sixty a key has; the rows keep only what the
+board says beyond what the action does. A dataset without terms trains exactly as before.
 """
 
 from __future__ import annotations
@@ -149,6 +156,35 @@ class _Fitting:
 
 
 @dataclass(frozen=True)
+class _TermsFit:
+    """What the candidate terms explain of the advantages: one weight per term, and what it leaves."""
+
+    weights: np.ndarray
+    residual: np.ndarray
+    r2: float
+
+
+def _terms(
+    dataset: Dataset, advantages: np.ndarray, train: np.ndarray, scored: np.ndarray, alpha: float
+) -> _TermsFit:
+    """One ridge over the terms of the action taken, on every training step, folded onto raw terms.
+
+    The intercept is left to the rows: what it holds is the mean advantage, which every key's bias and the
+    fallback carry already, and a constant is the same for every candidate of a decision.
+    """
+    chosen = dataset.chosen_terms()
+    scaling = Scaling.fit(chosen[train])
+    model = Ridge(alpha=alpha).fit(scaling.apply(chosen[train]), advantages[train])
+    weights, offset = scaling.fold(np.asarray(model.coef_), np.array([model.intercept_]))
+    explained = chosen @ weights
+    residual = advantages - explained
+    variance = float(np.var(advantages[scored]))
+    misfit = float(np.mean((advantages[scored] - explained[scored] - offset[0]) ** 2))
+    r2 = 1.0 - misfit / variance if variance > 0 else float("nan")
+    return _TermsFit(weights, residual, r2)
+
+
+@dataclass(frozen=True)
 class _Fitted:
     """One row and one scalar per action key, and how many regressions they came from."""
 
@@ -221,6 +257,14 @@ def _per_kind(fitting: _Fitting) -> _Fitted:
     return _Fitted(weights, bias, fitted, len(shared))
 
 
+def _chosen_terms(dataset: Dataset, index: int) -> np.ndarray | None:
+    """The one-row terms of the action taken at a step, in the shape the scorer takes, or None."""
+    terms = dataset.terms_of(index)
+    if terms is None:
+        return None
+    return terms[[dataset.candidates[index].index(dataset.actions[index])]]
+
+
 def train_value(
     dataset: Dataset, options: ValueOptions | None = None, log: TrainingLog | None = None
 ) -> Policy:
@@ -252,6 +296,12 @@ def train_value(
     # alike, so it can never change which one wins, and clipping it there would change nothing.
     values = _reachable(baseline.values(dataset.observations), dataset.returns[split.train])
     advantages = _advantages(dataset, values, options)
+    scored = split.validation if len(split.validation) > 0 else split.train
+
+    # What the action's own terms explain comes off first (ADR 0051); the rows see what is left of it.
+    terms = _terms(dataset, advantages, split.train, scored, options.alpha) if dataset.has_terms else None
+    if terms is not None:
+        advantages = terms.residual
     fallback = float(advantages[split.train].mean())
 
     if options.share not in SHARES:
@@ -270,15 +320,20 @@ def train_value(
     result = _per_kind(fitting) if options.share == "kind" else _per_action(fitting)
     weights, bias, fitted, groups = result.weights, result.bias, result.fitted, result.regressions
 
-    scored = split.validation if len(split.validation) > 0 else split.train
     # The action rows alone, plus the value they were actually fitted against. Reconstructing a score from
     # the written `baseline` instead would add an unclipped value to rows fitted against a clipped one, and
     # be wrong by exactly the overshoot -- on the steps the clip exists for, and nowhere else. `accuracy` is
     # the same either way: a baseline adds one number to every candidate of a decision and cannot move an
     # argmax, which is also why the file may keep carrying the bare fit.
-    scorer = LinearScorer(keys, weights, bias, fallback)
+    candidate_weights = None if terms is None else terms.weights
+    scorer = LinearScorer(keys, weights, bias, fallback, candidate_weights=candidate_weights)
     predictions = (
-        np.array([scorer.scores(dataset.observations[i], [dataset.actions[i]])[0] for i in scored])
+        np.array(
+            [
+                scorer.scores(dataset.observations[i], [dataset.actions[i]], _chosen_terms(dataset, i))[0]
+                for i in scored
+            ]
+        )
         + values[scored]
     )
     # Still measured against the episode return, which is what it always measured. Below lambda 1 the action
@@ -307,10 +362,15 @@ def train_value(
         fallback=fallback,
         trained_at=now_iso(),
         baseline=baseline,
+        candidate_names=dataset.term_names if terms is not None else (),
+        candidate_weights=candidate_weights,
         metrics={
             "loss": loss,
             "r2": r2,
             "baselineR2": baseline_r2,
+            # What the terms of the action taken explain of the advantages, on the same held-out steps, before
+            # any row is fitted: the share of a decision the observation could not have carried (ADR 0051).
+            "termsR2": terms.r2 if terms is not None else float("nan"),
             "accuracy": accuracy,
             # How many action keys got a regression of their own; the rest keep a mean and cannot tell two
             # states apart. Raising min_samples starves rows, so this number says whether a weak fit is the

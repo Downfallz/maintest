@@ -125,9 +125,9 @@ replays. The report says how many the engine actually had to play.
 | Command | Needs | Writes | How |
 | --- | --- | --- | --- |
 | `search-weights -o <dir>` | the built engine and `data/dst`, no dataset | `weights.json`, `search.json` (every candidate, with its score per opponent and the floor it was held to when there were several), `evaluation.json`, `training.jsonl` | Cross-entropy method over the eight scoring weights. Each candidate is a weights file evaluated by the engine's `evaluate` as `<kind>:<file>` against `--opponent` (default `greedy`; several separated by commas score the mean over them, one evaluation each, under a floor: a candidate that falls below the start's interval against any of them ranks below every candidate that did not, so it cannot win by learning one opponent, which a plain mean would let it (1.0, 0.5 and 0.5 average above 0.6, 0.6 and 0.6) and which the worst matchup prevented by flattening every matchup instead (journal, 2026-09-16)) on `--seeds` (default the benchmark seeds), mirrored, where `--kind` is `heuristic` (the default, one step), `lookahead` or `minimax` (the round played out; ADR 0047): weights searched for one reading are only meaningful played by it, and `search.json` records the kind; the fitness is the mean score. The mean of the elite becomes the next mean, its spread the next spread; the current mean is always in the population, so the best is never lost. |
-| `train-clone <runs> -o <dir>` | a recorded run (`simulate --record`) | `policy.json`, `training.jsonl` | Behaviour cloning: a linear classifier from observation to action key (`SGDClassifier`, log loss), one epoch per iteration, keeping the epoch whose choice among the candidates matches the data best on held-out matches. |
+| `train-clone <runs> -o <dir>` | a recorded run (`simulate --record`) | `policy.json`, `training.jsonl` | Behaviour cloning as a conditional logit (ADR 0051): the policy's own score of every candidate the step offered, a softmax over those candidates alone, and the loss is the negative log probability of the action taken, minimized by Adam in mini-batches, one epoch per iteration, keeping the epoch whose choice among the candidates matches the data best on held-out matches. On a run that records `candidateTerms` the model also carries one weight per term, shared by every key, so a candidate is scored on what it does and not only on what the board is. |
 | `mean-policy <models...> -o <dir>` | two or more trained policies of one kind, schema and content | `policy.json` | A policy is linear, so the mean of several is exactly a policy that scores every candidate as the mean of their scores; a key one of them never saw counts as that one's `fallback`. Every policy given weighs the same, nothing is chosen, so it stays off the test set. The loop plays the mean of its seeds' value fits as its last step. |
-| `train-value <runs> -o <dir>` | a recorded run, ideally an explored one (below) | `policy.json`, `training.jsonl` | Value regression in two parts (ADR 0016): one baseline over the observation alone, fitted on every step, then one ridge regression per action key over what the baseline leaves. A score is the baseline plus the action's row, so it still predicts the return, and the agent takes the candidate that scores best. A key seen fewer than `--min-samples` times keeps its mean, and an unseen key the mean of the data — both on top of the baseline. |
+| `train-value <runs> -o <dir>` | a recorded run, ideally an explored one (below) | `policy.json`, `training.jsonl` | Value regression in two parts (ADR 0016): one baseline over the observation alone, fitted on every step, then one ridge regression per action key over what the baseline leaves. A score is the baseline plus the action's row, so it still predicts the return, and the agent takes the candidate that scores best. A key seen fewer than `--min-samples` times keeps its mean, and an unseen key the mean of the data — both on top of the baseline. On a run that records `candidateTerms`, one ridge over the terms of the action taken is fitted to the advantages first, on every training step, and the rows are fitted on what it leaves (ADR 0051); `termsR2` in the metrics is what the terms alone explain on the held-out steps. |
 
 Matches are held out whole (`--validation`, default one in five), so a validation step never comes from a
 match the model saw. Features are standardized for the optimizer and the scaling is folded back into the
@@ -241,7 +241,8 @@ the return rather than the teacher's choice, and not as a way to distil a clone 
 
 `policy:<file>` seats a `PolicyAgent` in the engine: every decision builds the observation of the board,
 lists the candidate actions the options offer in the order a dataset records them, scores each key with the
-policy's row (or its fallback), and takes the best, the first on a tie. `AgentFactory` refuses a policy whose
+policy's row (or its fallback), adds the candidate's terms under the policy's candidate weights when it
+carries any (ADR 0051), and takes the best, the first on a tie. `AgentFactory` refuses a policy whose
 schema id is not the one the current content and rule set give, with a message naming both ids; the spec is
 stamped `Policy:<path>@<fingerprint>`, eight hex digits of the file's bytes.
 
@@ -267,12 +268,16 @@ A policy is a linear scorer over action keys, read without an ML runtime:
 | `actionKeys` | One entry per row, the action keys the policy knows (`docs/learning/features.md`, action encoding). |
 | `weights`, `bias` | One row and one bias per action key, written to six decimals (`WEIGHT_DECIMALS`). |
 | `fallback` | The score of a candidate action the policy never saw. |
+| `candidateTermNames`, `candidateWeights` | Optional (ADR 0051): the scoring weight names in the engine's order, and one weight per term shared by every key. A reader refuses names in another order, and a policy without them scores the keys alone. |
 | `trainedAt`, `metrics` | When, and what the training measured (loss, accuracy, r2, step counts). |
 
 To choose: for each candidate action the options offer, its row's dot product with the observation plus
-its bias, or `fallback` when the policy has no row for that key; the best-scoring candidate wins, the first
-on a tie. `Policy.choose` does it in Python; the engine's `PolicyAgent` (L7) will do the same, so a policy
-plays identically on both sides.
+its bias, or `fallback` when the policy has no row for that key, plus, when the policy carries
+`candidateWeights`, their dot product with that candidate's terms as the engine reads them (`CandidateTerms`,
+the same numbers a dataset records); the best-scoring candidate wins, the first on a tie. `Policy.choose`
+does it in Python; the engine's `PolicyAgent` does the same, so a policy plays identically on both sides.
+A policy whose candidate weights are the built-in scoring weights and whose rows are zero plays the
+heuristic's combat decisions exactly, which is the invariant the terms rest on.
 
 A weight keeps six decimals because a committed policy is read back for the life of its catalogue and what
 git stores for one is what compounds: `ci-69` is 0.57 MB compressed at full precision and **0.30 MB** at six
