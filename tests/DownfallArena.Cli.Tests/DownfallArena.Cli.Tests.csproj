@@ -16,6 +16,9 @@
     <!-- Every module beside the page, by pattern rather than by name: a list per file is a list that goes stale,
          and StudioFilesTests asserts the served set against whatever lands here. Tests are not part of the page. -->
     <Content Include="..\..\studio\*.js" Exclude="..\..\studio\*.test.js" Link="studio\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\table\index.html" Link="table\index.html" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\table\table.css" Link="table\table.css" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\table\*.js" Exclude="..\..\table\*.test.js" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\.github\workflows\pages.yml" Link="pages.yml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

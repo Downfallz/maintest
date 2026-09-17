@@ -1,0 +1,94 @@
+/* Designed at 360 px and widened from there: the phone is the target, the desktop is the same page with room
+   to breathe. Nothing here is a second layout. */
+:root {
+  color-scheme: light dark;
+  --ink: #1a1a1a;
+  --paper: #fbfbf9;
+  --line: #d6d3cc;
+  --muted: #6b6b6b;
+  --refused: #a33;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #eceae6;
+    --paper: #16181a;
+    --line: #35393d;
+    --muted: #9aa0a6;
+    --refused: #e88;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+h1 { font-size: 1.1rem; margin: 0; }
+h2 { font-size: 1rem; margin: 0 0 8px; }
+.muted { color: var(--muted); margin: 4px 0 12px; font-size: 0.9rem; }
+.problem { color: var(--refused); font-size: 0.9rem; }
+
+.creature {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.creature.enemy { border-style: dashed; }
+.creature.dead { opacity: 0.45; }
+.creature .stats { color: var(--muted); font-size: 0.85rem; }
+
+/* The one decision, at the bottom where a thumb is. `dvh` rather than `vh` so a phone's shrinking toolbar
+   does not push the buttons under it. */
+.sheet {
+  position: sticky;
+  bottom: 0;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  max-height: 60dvh;
+  overflow-y: auto;
+}
+
+button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: default; }
+button.chosen { border-width: 2px; }
+
+#pass {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+#pass[hidden] { display: none; }
+.pass-line { color: var(--muted); margin: 0; }
+.pass-seat { font-size: 1.6rem; margin: 0 0 16px; }
+#pass button { width: auto; min-width: 200px; text-align: center; }
