@@ -1,66 +1,77 @@
-import { httpTransport, seatFromLocation } from './transport.js';
+import { httpTransport, seatsFromLocation } from './transport.js';
+import { activeSeat, isAsked, needsPass } from './seats.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
 // by the engine's own gates. Nothing here decides anything, and nothing here knows a spell by name.
-const identity = seatFromLocation(globalThis.location?.search ?? '');
+const held = seatsFromLocation(globalThis.location?.search ?? '');
 const element = id => document.getElementById(id);
 
-if (!identity) {
-  element('phase').textContent = 'Open the link the host printed: it carries this seat and its token.';
+if (held.length === 0) {
+  element('phase').textContent = 'Open the link the host printed: it carries the seats and their tokens.';
 } else {
-  start(httpTransport(identity.seat, identity.token));
+  start(held.map(({ seat, token }) => ({ seat, transport: httpTransport(seat, token) })));
 }
 
-function start(transport) {
-  const state = { seat: identity.seat, passed: false, waitingFor: null, sending: false };
-  element('seat').textContent = identity.seat === 'player1' ? 'Player 1' : 'Player 2';
+function start(seats) {
+  // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
+  // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
+  const state = { seats, holder: null, shown: null, sending: false, picked: [] };
   element('pass-ready').addEventListener('click', () => {
-    state.passed = true;
-    refresh(transport, state);
+    state.holder = element('pass-ready').dataset.seat ?? state.holder;
+    refresh(state);
   });
 
-  refresh(transport, state);
-  setInterval(() => refresh(transport, state), 700);
+  refresh(state);
+  setInterval(() => refresh(state), 700);
 }
 
-async function refresh(transport, state) {
+async function refresh(state) {
   if (state.sending) return;
 
-  const answer = await transport.seat();
-  if (!answer.ok) {
-    element('phase').textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
-    return;
+  // Every seat this page holds, every poll: the host answers one seat per payload, and which one is being
+  // asked is exactly what the page cannot know without asking.
+  const views = [];
+  for (const seat of state.seats) {
+    const answer = await seat.transport.seat();
+    if (!answer.ok) {
+      element('phase').textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+      return;
+    }
+
+    views.push({ ...seat, view: answer.body });
   }
 
-  render(transport, state, answer.body);
+  render(state, views);
 }
 
-function render(transport, state, view) {
-  const asked = view.waitingFor !== null && view.waitingFor !== undefined;
+const nameOf = seat => (seat === 'player1' ? 'Player 1' : 'Player 2');
 
-  // The device is passed when this seat is asked something new. Until the player says they are the one
-  // holding it, the board stays behind the pass screen.
-  if (asked && view.waitingFor !== state.waitingFor) {
-    state.waitingFor = view.waitingFor;
-    state.passed = false;
-  }
-  if (!asked) {
-    state.waitingFor = null;
+function render(state, views) {
+  const current = activeSeat(views, state.holder);
+  const view = current.view;
+
+  if (current.seat !== state.shown) {
+    state.shown = current.seat;
+    state.picked = [];
   }
 
-  const hide = asked && !state.passed;
-  element('pass').hidden = !hide;
-  element('table').hidden = hide;
-  element('pass-seat').textContent = element('seat').textContent;
-  element('pass-seat-again').textContent = element('seat').textContent;
-  if (hide) return;
+  // Until the player being asked says they are the one holding the device, the board stays behind the pass
+  // screen (seats.js).
+  const fence = needsPass(current, state.holder);
+  element('seat').textContent = nameOf(current.seat);
+  element('pass-seat').textContent = nameOf(current.seat);
+  element('pass-seat-again').textContent = nameOf(current.seat);
+  element('pass-ready').dataset.seat = current.seat;
+  element('pass').hidden = !fence;
+  element('table').hidden = fence;
+  if (fence) return;
 
   element('phase').textContent = view.over
     ? 'The match is over.'
     : `Round ${view.board.roundNumber ?? '—'} · ${view.board.subPhase ?? '—'}`;
   renderBoard(view.board);
-  renderDecision(transport, state, view);
+  renderDecision(state, current);
 }
 
 function renderBoard(board) {
@@ -80,7 +91,8 @@ function line(creature, side) {
   return box;
 }
 
-function renderDecision(transport, state, view) {
+function renderDecision(state, current) {
+  const view = current.view;
   const asking = element('asking');
   const choices = element('choices');
   element('problem').hidden = true;
@@ -97,14 +109,14 @@ function renderDecision(transport, state, view) {
     return;
   }
 
-  if (!view.waitingFor) {
+  if (!isAsked(view)) {
     asking.textContent = 'Waiting for the other seat…';
     choices.replaceChildren();
     return;
   }
 
   asking.textContent = titleOf(view);
-  choices.replaceChildren(...buttonsFor(transport, state, view));
+  choices.replaceChildren(...buttonsFor(state, current));
 }
 
 function titleOf(view) {
@@ -119,8 +131,9 @@ function titleOf(view) {
 
 // One button per thing the options offer, and nothing else. A screen that offered more than the options do
 // would be inventing a rule; a screen that offered less would be hiding one.
-function buttonsFor(transport, state, view) {
-  const send = decision => () => submit(transport, state, decision);
+function buttonsFor(state, current) {
+  const view = current.view;
+  const send = decision => () => submit(state, current, decision);
   switch (view.waitingFor) {
     case 'Evolution': {
       const unlocks = (view.options.evolution?.creatures ?? []).flatMap(creature =>
@@ -137,34 +150,33 @@ function buttonsFor(transport, state, view) {
         button(spell, send({ kind: 'Intent', creature: view.waitingCreature, spell })));
     }
     case 'Target':
-      return targetButtons(transport, state, view);
+      return targetButtons(state, current);
     default:
       return [];
   }
 }
 
-function targetButtons(transport, state, view) {
-  const legal = view.options.target?.legalTargets ?? { candidates: [], minTargets: 0, maxTargets: 0 };
-  state.picked ??= [];
+function targetButtons(state, current) {
+  const legal = current.view.options.target?.legalTargets ?? { candidates: [], minTargets: 0, maxTargets: 0 };
   const picked = state.picked;
 
   // A spell with nothing left to hit is revealed with no targets and fizzles, so binding none is the action
   // rather than a dead end (docs/tabletop/rulebook.md, 6.2).
   if (legal.candidates.length < legal.minTargets) {
-    return [button('No legal target — cast anyway', () => submit(transport, state, { kind: 'Target', targets: [] }))];
+    return [button('No legal target — cast anyway', () => submit(state, current, { kind: 'Target', targets: [] }))];
   }
 
   const buttons = legal.candidates.map(candidate => {
     const chosen = picked.includes(candidate);
     const face = button(`${chosen ? '✓ ' : ''}Creature ${candidate}`, () => {
       state.picked = chosen ? picked.filter(one => one !== candidate) : [...picked, candidate].slice(0, legal.maxTargets);
-      refresh(transport, state);
+      refresh(state);
     });
     if (chosen) face.classList.add('chosen');
     return face;
   });
 
-  const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => submit(transport, state, { kind: 'Target', targets: picked }));
+  const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => submit(state, current, { kind: 'Target', targets: picked }));
   confirm.disabled = picked.length < legal.minTargets;
   return [...buttons, confirm];
 }
@@ -177,10 +189,10 @@ function button(label, onClick) {
   return face;
 }
 
-async function submit(transport, state, decision) {
+async function submit(state, current, decision) {
   state.sending = true;
   try {
-    const answer = await transport.decide(decision);
+    const answer = await current.transport.decide(decision);
     if (!answer.ok) {
       const problem = element('problem');
       problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
@@ -193,5 +205,5 @@ async function submit(transport, state, decision) {
     state.sending = false;
   }
 
-  await refresh(transport, state);
+  await refresh(state);
 }

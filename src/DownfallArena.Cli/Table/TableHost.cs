@@ -39,11 +39,24 @@ internal static class TableHost
         using var server = new TableServer(options.Port, api, new TableFiles(TableDirectory));
 
         Console.WriteLine($"Table on {server.Url}");
-        foreach (var seat in new[] { seat1.Seat, seat2.Seat })
+
+        // The rule set is named before anything is played. The board game is balanced for 8 to 16 rounds and
+        // the engine's default caps at thirty, so a table that took one silently would be testing another
+        // game (docs/tabletop/playtest-app.md, decision 2).
+        Console.WriteLine($"  {RuleSetFile.Describe(rules, options.Rules)}");
+        var seats = new[] { seat1.Seat, seat2.Seat };
+        foreach (var seat in seats)
         {
-            Console.WriteLine(seat.Person is null
-                ? $"  {seat.Name}: {Describe(seat.Slot, options)}"
-                : $"  {seat.Name}: {server.Url}?seat={seat.Name}&token={seat.Token}");
+            Console.WriteLine($"  {seat.Name}: {(seat.Person is null ? Describe(seat.Slot, options) : "a person")}");
+        }
+
+        // One link, carrying the token of every seat a person holds. Hotseat is one browser: the page follows
+        // whichever seat the match asks next, and a link naming one seat would go dead at the first question
+        // asked of the other. A bot's token is not on it -- nobody needs to read a bot's board.
+        var people = seats.Where(seat => seat.Person is not null).ToList();
+        if (people.Count > 0)
+        {
+            Console.WriteLine($"  Play on {server.Url}?{string.Join('&', people.Select(seat => $"{seat.Name}={seat.Token}"))}");
         }
 
         ConsoleCancelEventHandler stop = (_, eventArgs) =>

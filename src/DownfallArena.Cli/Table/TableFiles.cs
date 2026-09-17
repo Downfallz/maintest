@@ -30,6 +30,7 @@ internal sealed class TableFiles
             ["/table.css"] = (Path.Combine(tableDirectory, "table.css"), Css),
             ["/table.js"] = (Path.Combine(tableDirectory, "table.js"), JavaScript),
             ["/transport.js"] = (Path.Combine(tableDirectory, "transport.js"), JavaScript),
+            ["/seats.js"] = (Path.Combine(tableDirectory, "seats.js"), JavaScript),
         };
     }
 

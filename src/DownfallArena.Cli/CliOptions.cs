@@ -55,6 +55,12 @@ internal sealed record CliOptions
     public bool Player2Named { get; init; }
 
     /// <summary>
+    /// The rule set a table plays, as a path. The board game is balanced for 8 to 16 rounds and the engine's
+    /// default is thirty, so a playtest that quietly took the default would be a playtest of another game.
+    /// </summary>
+    public string? Rules { get; init; }
+
+    /// <summary>
     /// The round the people take over on. Both seats play as bots until it starts, so a playtest can begin at
     /// the tenth round, which is the one nobody reaches by hand. None means they play from the first.
     /// </summary>
@@ -74,7 +80,7 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file]";
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -98,7 +104,7 @@ internal sealed record CliOptions
             index += 2;
         }
 
-        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover"], StringComparer.Ordinal).FirstOrDefault();
+        var unknown = values.Keys.Except(["--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2", "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules"], StringComparer.Ordinal).FirstOrDefault();
         if (unknown is not null)
         {
             throw new ArgumentException($"Unknown option '{unknown}'.");
@@ -119,6 +125,7 @@ internal sealed record CliOptions
             Player1Named = values.ContainsKey("--p1"),
             Player2Named = values.ContainsKey("--p2"),
             Handover = values.TryGetValue("--handover", out var handover) ? ParseHandover(handover) : null,
+            Rules = values.GetValueOrDefault("--rules"),
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
             Write = write,

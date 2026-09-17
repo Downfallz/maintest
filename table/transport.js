@@ -35,11 +35,12 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   };
 }
 
-// The seat and token the host printed, read off the link it printed with them. A page opened without them has
-// nothing to ask for and says so rather than guessing.
-export function seatFromLocation(search) {
+// Every seat the link carries a token for, in board order. Hotseat is two people at one browser, so the page
+// holds both tokens and follows whichever seat the match asks; a link with one names one seat and the page
+// plays that one alone, on its own device. A page opened with neither has nothing to ask for.
+export function seatsFromLocation(search) {
   const query = new URLSearchParams(search);
-  const seat = query.get('seat');
-  const token = query.get('token');
-  return seat && token ? { seat, token } : null;
+  return ['player1', 'player2']
+    .map(seat => ({ seat, token: query.get(seat) }))
+    .filter(held => held.token);
 }
