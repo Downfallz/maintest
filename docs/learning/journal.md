@@ -4,6 +4,44 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-17. The tuner's exploiter is refreshed to `pressure-floor`, and the term it feeds reads its ceiling: the catalogue loses every match to a searched set
+
+- **What moved.** `data/balance/knobs.json` seats `pressure-floor.json` as agent A of the `exploit`
+  evaluation, where it seated `search-4.json`. That is the refresh the file has asked for in its own words
+  since the term existed: an agent searched against a catalogue that no longer exists understates the gap,
+  so it comes from the newest search run rather than being kept. `pressure-floor` is that run (the entry
+  below), and it was searched against this very content, `7e199df4`.
+
+- **What it reads, on the content as it stands, nothing else changed.** `score-content` plays the four
+  evaluations of the objective with no search, twice over: on the benchmark seeds the objective names, and
+  on 200 seeds nothing in this project had ever played (7770001 onward), which the exploiter was not
+  searched on either.
+
+  | exploit agent | benchmark seeds | untouched seeds | objective, benchmark | objective, untouched |
+  | --- | --- | --- | --- | --- |
+  | `search-4` (was) | 0.9275 | 0.9225 | 124.43 | 133.78 |
+  | **`pressure-floor` (is)** | **1.0000** | **1.0000** | **172.42** | **184.78** |
+
+  One thousand six hundred matches against Greedy across the two windows and the two agents, and the new one
+  does not lose or draw a single one of its eight hundred. The other three evaluations read identically
+  either side of the change, as they must: no agent of theirs moved.
+
+- **The term is now a flag and not a gradient, and that is the honest state.** At 1.000 every catalogue a
+  tuning pass can reach reads the ceiling, so the penalty is one constant for every candidate and the search
+  cannot climb it. It was barely a gradient at 0.9275: both readings sit far outside a band of 0.55, and the
+  difference between them is smaller than what the term would have to move to matter. What is bought is the
+  reading itself. Nothing in this repository could previously say "this catalogue loses every match to a
+  player who only wants to win", and the objective now says it, in the file that decides what tuning is for.
+  ADR 0044 asks whether this term measures the agent rather than the content; the two windows above narrow
+  that question rather than answering it, since the ceiling is reached on seeds the agent never saw.
+
+- **What this licenses, and what it does not.** No tuning pass is run here, and the knobs are untouched.
+  A pass run against this objective now optimizes the other targets under a constant exploit penalty, which
+  is what it was nearly doing already. The term regains a gradient only if a catalogue appears that a
+  searched set cannot sweep, and the first move toward one is not a knob but the question ADR 0044 asks.
+  The entry below, written this morning, named `search-3` as the agent the objective played; it read a stale
+  `docs/learning/agents.md`, the file named `search-4`, and both are corrected here.
+
 ## 2026-09-17. With the ninth weight free, the search under the floor finds a set that beats every agent on the board on unseen seeds, and it plays a stun lock the catalogue allows
 
 - **The search ADR 0050 asked for.** `search-weights` from `mixture-mean` with `pressure` set to 1.0, nine
@@ -58,11 +96,11 @@ first.
   compared, and it is two things at once. For the ladder it is the top rung, and the next search starts
   from it with it in the panel: a set that beats every agent on the board is beaten next by the one searched
   against it, or it is not, and only that search says which. For the content it is the exploit reading the
-  tuner has been missing: `search-3` is what the balance objective's `exploit` evaluation plays (ADR 0021,
-  `docs/learning/agents.md`), and an agent that reads 0.745 there while this one wins every match against
-  Greedy understates the gap by the whole of it. A Crushing Stomp that stuns for two rounds at 75 % critical
-  is what the tuner should see; refreshing the exploit set to this one is a content decision and is not
-  taken here. For the loop it changes nothing yet: a clone is capped by what it can see (ADR 0051), and a
+  tuner has been missing: `search-4` is what the balance objective's `exploit` evaluation plays (ADR 0021,
+  `data/balance/knobs.json`; this sentence first named `search-3`, from a stale `docs/learning/agents.md`),
+  and an agent that reads 0.9275 there while this one wins every match against Greedy understates the gap by
+  what is left of it. A Crushing Stomp that stuns for two rounds at 75 % critical is what the tuner should
+  see; refreshing the exploit set to this one is a content decision, taken in the entry above. For the loop it changes nothing yet: a clone is capped by what it can see (ADR 0051), and a
   teacher whose edge is in waiting for a four-cost stun is a harder one to copy from the board than
   `mixture-mean` was.
 

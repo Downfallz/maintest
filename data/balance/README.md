@@ -111,7 +111,10 @@ wins, and where winning does not require abandoning the taste.
 
 `exploit` is the only evaluation that names a file. The agent goes stale when the content moves — a tuning
 pass changes what there is to exploit — so it is refreshed from the next `search-weights` run rather than
-kept. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
+kept. It names `pressure-floor.json` since 2026-09-17, and reads 1.000 on `7e199df4`: that agent takes every
+one of the 400 matches from Greedy, on the benchmark seeds and on 200 seeds nothing had played alike. The
+term is therefore a flag rather than a gradient — it reads its ceiling for every catalogue a tuning pass can
+reach — and what it flags is that this catalogue is fully exploitable by a searched set. `check-knobs` refuses a knobs file whose evaluation names a weights or policy file that is not there,
 because otherwise the engine fails one candidate at a time, once a search has already started.
 
 Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
