@@ -83,6 +83,7 @@ public sealed class FileArtifactWriterTests
         Should.Throw<ArgumentException>(() => new FileArtifactWriter(" "));
         Directory.EnumerateFileSystemEntries(directory.Path).ShouldBeEmpty();
     }
+
     /// <summary>
     /// Two taps at a table arrive on two request threads, and both land in the same file. Before the writer
     /// serialized its own writes this lost lines rather than failing: the share mode is advisory on Unix, so
@@ -115,5 +116,4 @@ public sealed class FileArtifactWriterTests
             }
         }
     }
-
 }

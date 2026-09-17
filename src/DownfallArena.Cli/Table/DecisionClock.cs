@@ -7,10 +7,13 @@ namespace DownfallArena.Cli.Table;
 /// from (<c>docs/tabletop/playtest-app.md</c>, 5.3).
 /// </summary>
 /// <remarks>
-/// The moment that counts is the moment the options were <em>served</em>, not the moment the engine asked
-/// them: the driver may ask a seat while nobody is looking at the screen, and a duration that includes the
-/// walk back to the table measures the room rather than the decision. So the first poll that carries a
-/// question stamps it, later polls of the same question leave the stamp alone, and answering it clears it.
+/// The moment that counts is the moment the options were <em>served to somebody looking at them</em>, not the
+/// moment the engine asked them. The driver may ask a seat while nobody is looking at the screen, and in
+/// hotseat the page polls both seats on a timer while only one of them is on screen and the other is behind
+/// the pass-the-device screen: a duration started by a background poll would measure the handover -- the walk
+/// round the table, picking the phone up, tapping ready -- and not the decision. So only a poll that says it
+/// is rendering that seat stamps it, later polls of the same question leave the stamp alone, and answering it
+/// takes it away.
 /// </remarks>
 internal sealed class DecisionClock(TimeProvider clock)
 {
@@ -41,16 +44,28 @@ internal sealed class DecisionClock(TimeProvider clock)
     }
 
     /// <summary>
-    /// The moment the question a seat just answered was served, and forgets it. A decision that arrived
-    /// without the options ever being served is timed at zero rather than against the wall clock: it means
-    /// nobody read a screen, which is a scripted seat and not a person taking no time.
+    /// The moment the question a seat just answered was served, and forgets it.
     /// </summary>
-    public DateTimeOffset Answered(PlayerSlot slot)
+    /// <remarks>
+    /// The question has to be named, and not merely the seat. A decision releases the driver before the host
+    /// has finished writing it down, so the engine can have asked the next question -- and a poll can have
+    /// stamped it -- before this is reached. Taking whatever stamp is there would then time this decision at
+    /// nothing and leave the next one with no stamp at all, so it would be timed short too: one race, two
+    /// wrong durations. When the stamp is not this decision's it is left where it is and this one is timed at
+    /// zero, which loses one duration and keeps the next honest. Zero is also the answer when the options were
+    /// never served to anybody, which means a scripted seat rather than a person who took no time.
+    /// </remarks>
+    public DateTimeOffset Answered(PlayerSlot slot, HumanSeat.Question? answered)
     {
         lock (_gate)
         {
-            var served = _served.Remove(slot, out var stamped) ? stamped.At : clock.GetUtcNow();
-            return served;
+            if (answered is not null && _served.TryGetValue(slot, out var stamped) && stamped.Question == answered)
+            {
+                _served.Remove(slot);
+                return stamped.At;
+            }
+
+            return clock.GetUtcNow();
         }
     }
 

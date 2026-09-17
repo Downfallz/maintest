@@ -67,23 +67,29 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     }
 
     /// <summary>
-    /// The trace of a match as it stands, without forgetting it. What a session checkpointed mid-match writes,
-    /// so a table abandoned at Round 9 leaves a readable partial trace rather than nothing
-    /// (<c>docs/tabletop/app-roadmap.md</c>, stage 5). A bot batch never needed this because a bot batch is
-    /// never interrupted by dinner.
+    /// The trace of a match as it stands, without forgetting it, or <c>null</c> when this recorder does not
+    /// hold that match. What a session checkpointed mid-match writes, so a table abandoned at Round 9 leaves a
+    /// readable partial trace rather than nothing (<c>docs/tabletop/app-roadmap.md</c>, stage 5). A bot batch
+    /// never needed this because a bot batch is never interrupted by dinner.
     /// </summary>
-    public MatchTrace Snapshot(MatchId matchId, RunStamp stamp, int? seed)
+    /// <remarks>
+    /// Null rather than an empty trace, and that distinction is the whole reason for the return type. A match
+    /// this recorder never heard of and a match it has already handed to <see cref="Complete" /> both have no
+    /// entries here, and the second one has a finished trace written somewhere. A caller that checkpoints by
+    /// overwriting a file would replace that trace with an empty one, with nothing left to say it had.
+    /// </remarks>
+    public MatchTrace? Snapshot(MatchId matchId, RunStamp stamp, int? seed)
     {
         ArgumentNullException.ThrowIfNull(stamp);
 
-        return Trace(matchId, stamp, seed, EntriesOf(matchId));
+        return _entries.TryGetValue(matchId, out var recorded) ? Trace(matchId, stamp, seed, recorded.Snapshot(0)) : null;
     }
 
     /// <summary>
     /// One definition of what a trace is, so a checkpoint and a finished match cannot disagree about it. The
     /// outcome is the last entry's, which is null until the match has one.
     /// </summary>
-    private static MatchTrace Trace(MatchId matchId, RunStamp stamp, int? seed, IReadOnlyList<TraceEntry> entries) =>
+    private static MatchTrace Trace(MatchId matchId, RunStamp stamp, int? seed, List<TraceEntry> entries) =>
         new()
         {
             MatchId = matchId,

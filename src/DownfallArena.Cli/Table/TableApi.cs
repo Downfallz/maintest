@@ -33,10 +33,17 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     public const string TokenHeader = "X-Seat-Token";
 
     /// <summary>
-    /// Whether the match has stopped being played. The session page is fenced on it, because the trace it
-    /// carries holds both seats' boards.
+    /// Whether the match reached an outcome. Stronger than "stopped being played" on purpose: a driver task
+    /// that faulted or was cancelled is also complete, and the session page is fenced on this because the
+    /// trace it carries holds both seats' boards. Nothing about a match that broke says the hidden half of it
+    /// may now be read.
     /// </summary>
-    public bool IsOver => session.IsOver;
+    public bool IsDecided => Decided is not null;
+
+    private MatchOutcome? Decided =>
+        session.IsOver && session.Outcome.IsCompletedSuccessfully && session.Outcome.Result.IsSuccess
+            ? session.Outcome.Result.Value
+            : null;
 
     private const string SeatPrefix = "/api/seat/";
 
@@ -106,7 +113,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         return (method, segments) switch
         {
-            ("GET", [_]) => await SeatAsync(holder, Since(query)),
+            ("GET", [_]) => await SeatAsync(holder, Since(query), Shown(query)),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
@@ -143,16 +150,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
     /// <summary>What both seats may know: whose match this is, and whether it is over.</summary>
-    private StudioResponse Session()
-    {
-        var outcome = session.IsOver && session.Outcome.IsCompletedSuccessfully && session.Outcome.Result.IsSuccess
-            ? session.Outcome.Result.Value
-            : null;
-
-        return StudioResponse.OfJson(
-            new { matchId = session.MatchId, over = session.IsOver, outcome },
+    private StudioResponse Session() =>
+        StudioResponse.OfJson(
+            new { matchId = session.MatchId, over = session.IsOver, outcome = Decided },
             ArtifactJson.LineOptions);
-    }
 
     /// <summary>
     /// The sequence number a page has already seen everything below, off <c>?since=N</c>. Anything that is not
@@ -164,7 +165,15 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         return int.TryParse(since, CultureInfo.InvariantCulture, out var sequence) && sequence > 0 ? sequence : 0;
     }
 
-    private async Task<StudioResponse> SeatAsync(TableSeat seat, int since)
+    /// <summary>
+    /// Whether this poll is the page drawing that seat's screen, off <c>?shown=1</c>. It is the difference
+    /// between a person reading their options and the page keeping both seats' payloads warm on a timer, and
+    /// only the first one starts a decision's clock (<see cref="DecisionClock" />).
+    /// </summary>
+    private static bool Shown(string? query) =>
+        System.Web.HttpUtility.ParseQueryString(query ?? string.Empty)["shown"] == "1";
+
+    private async Task<StudioResponse> SeatAsync(TableSeat seat, int since, bool shown)
     {
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
         if (board.IsFailure)
@@ -192,9 +201,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var waiting = seat.Person?.Waiting;
 
         // The moment this seat was shown what it is being asked, which is what a decision's duration is
-        // measured from. Serving is the event, not the engine's asking: the two differ by however long nobody
-        // was looking at the screen.
-        run?.Served(seat.Slot, waiting);
+        // measured from. Only a poll that is drawing this seat counts: in hotseat the page polls both seats on
+        // a timer while one of them is behind the pass screen, and a clock started there would measure the
+        // handover rather than the decision. A background poll leaves the stamp exactly as it found it.
+        if (shown)
+        {
+            run?.Served(seat.Slot, waiting);
+        }
 
         return StudioResponse.OfJson(
             new
@@ -263,6 +276,16 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return await RefuseAsync(seat.Slot, check.Error);
         }
 
+        // Where this decision is being made, taken before it is handed over. Submitting releases the driver,
+        // which moves the round on, so anything read afterwards is where the match *went*: the step in
+        // steps.jsonl carries where it was, and the two files this session says are aligned would disagree
+        // about where every decision happened. The sub-phase is the one the options themselves name -- these
+        // are the options the decision was just validated against, so it is the question's own answer to
+        // "where", not a second reading that could have moved. The round comes off the board, before the tap.
+        var subPhase = options.Value.SubPhase;
+        var round = (await WhereAsync(seat.Slot)).Round;
+        var answered = person.Waiting;
+
         // Checked against the options, and still refused: the seat moved on between the two. That is the race
         // the driver would have thrown on, answered as the late tap it is.
         if (!person.Submit(decision))
@@ -270,17 +293,36 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        if (run is { } recording)
+        await RecordAsync(seat.Slot, round, subPhase, answered);
+        return new StudioResponse(204, StudioResponse.Plain, []);
+    }
+
+    /// <summary>
+    /// Writes the decision down, and never changes the answer. The decision has landed by the time this runs
+    /// and cannot be taken back, so a session that fails to record it must not become a 500: the page would
+    /// show the seat a failure for a decision the aggregate accepted, and the next tap on a board that has
+    /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
+    /// rather than the player's.
+    /// </summary>
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered)
+    {
+        if (run is not { } recording)
         {
-            var (round, subPhase) = await WhereAsync(seat.Slot);
-            await recording.DecidedAsync(session.MatchId, seat.Slot, round, subPhase, CancellationToken.None);
+            return;
+        }
+
+        try
+        {
+            await recording.DecidedAsync(session.MatchId, slot, round, subPhase, answered, CancellationToken.None);
 
             // The trace, as far as the match has got. After the decision rather than before it, so a session
             // abandoned here leaves the board the last tap produced and not the one before it.
             await recording.CheckpointAsync(session.MatchId, CancellationToken.None);
         }
-
-        return new StudioResponse(204, StudioResponse.Plain, []);
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        {
+            await Console.Error.WriteLineAsync($"The session could not record a decision of {TableSeat.NameOf(slot)}: {exception.Message}");
+        }
     }
 
     private static readonly DomainError Late = new("Seat.NotWaiting", "This seat is not waiting for that decision any more.");

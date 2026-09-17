@@ -71,9 +71,16 @@ internal sealed class TableServer : IDisposable
             return StudioResponse.OfPlainText(404, $"This host is playing session {run.SessionId}, not '{id}'. One session per process (ADR 0054).");
         }
 
-        if (!_api.IsOver)
+        if (!_api.IsDecided)
         {
             return StudioResponse.OfPlainText(409, "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.");
+        }
+
+        // Decided is not the same as written down. The host closes the dataset after the outcome, and a page
+        // served in that window would show a run whose manifest still says it played nothing.
+        if (!run.IsClosed)
+        {
+            return StudioResponse.OfPlainText(409, "The session has just ended and is still being written. Ask again in a moment.");
         }
 
         try
@@ -97,19 +104,26 @@ internal sealed class TableServer : IDisposable
             return _codes.Answer(path);
         }
 
+        if (!path.StartsWith("/api/", StringComparison.Ordinal) && !path.StartsWith(SessionPrefix, StringComparison.Ordinal))
+        {
+            return _files.Get(path);
+        }
+
+        // Both the API and the session page go behind the same-origin fence. The session page especially: it
+        // carries the trace, so a page a player has open elsewhere must not be able to frame it and read the
+        // half of the match its seat never saw. A top-level navigation sends `none` and is allowed; a frame on
+        // another site sends `cross-site` and is not.
+        var method = request.HttpMethod;
+        if (HttpHost.CrossSite(request.Headers["Sec-Fetch-Site"], method, request.ContentType, "table") is { } refusal)
+        {
+            return refusal;
+        }
+
         if (path.StartsWith(SessionPrefix, StringComparison.Ordinal))
         {
             return SessionPage(path[SessionPrefix.Length..].TrimEnd('/'));
         }
 
-        if (!path.StartsWith("/api/", StringComparison.Ordinal))
-        {
-            return _files.Get(path);
-        }
-
-        var method = request.HttpMethod;
-        return HttpHost.CrossSite(request.Headers["Sec-Fetch-Site"], method, request.ContentType, "table") is { } refusal
-            ? refusal
-            : await _api.HandleAsync(method, path, body, request.Headers[TableApi.TokenHeader], request.Headers["If-None-Match"], request.Url?.Query);
+        return await _api.HandleAsync(method, path, body, request.Headers[TableApi.TokenHeader], request.Headers["If-None-Match"], request.Url?.Query);
     }
 }

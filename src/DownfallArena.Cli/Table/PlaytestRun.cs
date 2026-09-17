@@ -71,6 +71,13 @@ internal sealed class PlaytestRun
     public string Directory { get; }
 
     /// <summary>
+    /// Whether the dataset has been closed: the episodes written and the manifest rewritten with its counts.
+    /// Until then the directory holds the zero-count manifest it was opened with, so a page that showed the
+    /// session would be showing a run that says it played nothing.
+    /// </summary>
+    public bool IsClosed { get; private set; }
+
+    /// <summary>
     /// Opens a session under <paramref name="root" />. The rule set is the table's own, so the feature schema
     /// is built from it rather than from the engine default: a dataset whose schema describes a different
     /// rule set than the match played is a dataset that trains on a mislabelled board.
@@ -136,9 +143,12 @@ internal sealed class PlaytestRun
     /// </summary>
     public void Served(PlayerSlot slot, HumanSeat.Question? question) => _served.Served(slot, question);
 
-    /// <summary>A decision was accepted, timed from when this seat's options were served.</summary>
-    public Task DecidedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, CancellationToken cancellationToken = default) =>
-        NoteAsync(PlaytestNote.Decision(SessionId, matchId, slot, round, subPhase, _served.Answered(slot), _clock), cancellationToken);
+    /// <summary>
+    /// A decision was accepted, timed from when this seat's options were served. The question it answered is
+    /// named so the clock cannot hand back the stamp of the next one.
+    /// </summary>
+    public Task DecidedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered, CancellationToken cancellationToken = default) =>
+        NoteAsync(PlaytestNote.Decision(SessionId, matchId, slot, round, subPhase, _served.Answered(slot, answered), _clock), cancellationToken);
 
     /// <summary>
     /// A decision was refused. The clock is left alone: the seat is still being asked the same question, and
@@ -158,8 +168,21 @@ internal sealed class PlaytestRun
     /// Rewrites the trace as it stands. Called after every accepted decision, which is cheap next to a person
     /// thinking and is the difference between an abandoned session being readable and being nothing.
     /// </summary>
-    public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default) =>
-        _writer.WriteJsonAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", _events.Snapshot(matchId, _stamp, _seed), cancellationToken);
+    /// <remarks>
+    /// It does nothing once the session has been closed, and that is not an optimisation. A decision can still
+    /// be in flight when the match ends -- the request thread parks on a board query behind the driver's own
+    /// writes, the host closes the session, and only then does the request reach here -- and by that point
+    /// <see cref="MatchTraceRecorder.Complete" /> has handed the finished trace over and forgotten the match.
+    /// Writing then would truncate the real trace to an empty one. The recorder answering null for a match it
+    /// no longer holds is what makes that impossible rather than merely unlikely.
+    /// </remarks>
+    public async Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default)
+    {
+        if (_events.Snapshot(matchId, _stamp, _seed) is { } trace)
+        {
+            await _writer.WriteJsonAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken);
+        }
+    }
 
     /// <summary>
     /// Closes the session: the episodes, the final trace, and the manifest with its counts. The board is the
@@ -169,6 +192,7 @@ internal sealed class PlaytestRun
     {
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);
+        IsClosed = true;
     }
 
     /// <summary>

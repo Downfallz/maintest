@@ -74,14 +74,16 @@ public sealed class PlaytestRunTests : IDisposable
     }
 
     /// <summary>
-    /// A session nobody finished. The manifest is the one written when it opened, which says "this was
-    /// abandoned" out loud; a manifest counting the steps of an unfinished match would read like a finished one.
+    /// A session nobody finished: a person is still being asked something when the table is walked away from.
+    /// The trace is readable and shorter than a finished one, and the manifest is the one written when the
+    /// session opened -- which says "this was abandoned" out loud, where a manifest counting the steps of an
+    /// unfinished match would read exactly like a finished one.
     /// </summary>
     [Fact]
     public async Task An_abandoned_session_keeps_its_zero_count_manifest_and_a_readable_partial_trace()
     {
-        var (run, session) = await Started();
-        await session.Outcome;
+        var (run, session, person) = await StartedWithAPerson();
+        await Waiting(person, "Evolution");
         await run.CheckpointAsync(session.MatchId, TestContext.Current.CancellationToken);
 
         var manifest = Read(run, "manifest.json");
@@ -90,6 +92,12 @@ public sealed class PlaytestRunTests : IDisposable
 
         var trace = Read(run, Path.Combine("traces", $"{session.MatchId}.json"));
         trace.GetProperty("entries").GetArrayLength().ShouldBeGreaterThan(0);
+        trace.GetProperty("outcome").ValueKind.ShouldBe(JsonValueKind.Null);
+
+        // Every step of an abandoned session is lost: RunRecorder holds them until the match is closed. The
+        // notes and the trace survive, the dataset does not, and a reader who finds nine rounds of trace
+        // beside an empty steps.jsonl should know that is the design and not a bug.
+        File.ReadAllText(Path.Combine(run.Directory, "steps.jsonl")).ShouldBeEmpty();
     }
 
     /// <summary>The stamp is what tells two sessions apart, and a rule set is half of what makes one reproducible.</summary>
@@ -121,6 +129,26 @@ public sealed class PlaytestRunTests : IDisposable
         catalogue.GetProperty("contentHash").GetString().ShouldNotBeNullOrWhiteSpace();
     }
 
+    /// <summary>
+    /// A decision in flight when the match ends: the request thread is parked on a query behind the driver's
+    /// own writes, the host closes the session, and only then does the request reach its checkpoint. The
+    /// recorder has forgotten the match by then, so a checkpoint that still wrote would replace the real trace
+    /// with an empty one, with nothing to say it had.
+    /// </summary>
+    [Fact]
+    public async Task A_checkpoint_after_the_session_closed_cannot_replace_the_trace_it_wrote()
+    {
+        var (run, session) = await Started();
+        await session.Outcome;
+        await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
+        var written = Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength();
+
+        await run.CheckpointAsync(session.MatchId, TestContext.Current.CancellationToken);
+
+        written.ShouldBeGreaterThan(0);
+        Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(written);
+    }
+
     private static async Task<PlayerBoardState> Board(TableSession session)
     {
         var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
@@ -131,11 +159,35 @@ public sealed class PlaytestRunTests : IDisposable
     private static JsonElement Read(PlaytestRun run, string relativePath) =>
         JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Directory, relativePath))).RootElement;
 
+    /// <summary>A session that stops at the first question, because a person is holding one of the seats.</summary>
+    private async Task<(PlaytestRun Run, TableSession Session, HumanSeat Person)> StartedWithAPerson()
+    {
+        var person = new HumanSeat(_stopping.Token);
+        var (run, session) = await Started(seat1: new SeatAgent(person));
+        return (run, session, person);
+    }
+
+    /// <summary>The seat blocks on another thread, so a test waits for the question rather than assuming it.</summary>
+    private static async Task Waiting(HumanSeat person, string kind)
+    {
+        for (var attempt = 0; attempt < 300; attempt++)
+        {
+            if (person.Waiting?.Kind.ToString() == kind)
+            {
+                return;
+            }
+
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        throw new InvalidOperationException($"The seat never waited for {kind}; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
+    }
+
     /// <summary>
-    /// A session with a bot in each seat, which is the one that plays itself to an outcome without a tap. What
-    /// it exercises is the recording, and the recording does not know who is seated.
+    /// A session with a bot in each seat by default, which is the one that plays itself to an outcome without
+    /// a tap. What it exercises is the recording, and the recording does not know who is seated.
     /// </summary>
-    private async Task<(PlaytestRun Run, TableSession Session)> Started(string player1Agent = "greedy")
+    private async Task<(PlaytestRun Run, TableSession Session)> Started(string player1Agent = "greedy", SeatAgent? seat1 = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -159,7 +211,7 @@ public sealed class PlaytestRunTests : IDisposable
             _host.Services,
             Rules,
             seed: 7,
-            new SeatAgent(Bot(resources)),
+            seat1 ?? new SeatAgent(Bot(resources)),
             new SeatAgent(Bot(resources)),
             run.Wrap,
             _stopping.Token);

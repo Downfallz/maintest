@@ -51,6 +51,11 @@ readable partial trace. Its manifest is only rewritten with the final counts whe
 outcome: a session nobody finished keeps the zero-count manifest it was opened with, which is how an
 abandoned session says so rather than reading like a finished one.
 
+**An abandoned session keeps its notes and its trace and loses its dataset.** Steps are held in memory until
+the match is closed, so `steps.jsonl` and `episodes.jsonl` of an interrupted session are empty. Nine rounds of
+trace beside an empty `steps.jsonl` is that, and not a bug — a human session that was not played to the end
+teaches the learning pipeline nothing, and what it still has to say is in `notes.jsonl`.
+
 The manifest is written twice: when the run starts, with zero counts, so an interrupted run still says what
 it was; and when it finishes, with the final counts. Starting a run empties `steps.jsonl` and `episodes.jsonl`,
 and `simulate --record` refuses a directory that is not empty, so two runs never mix.
@@ -186,9 +191,14 @@ One line per note, written through `IArtifactWriter.AppendJsonLinesAsync` and ti
 | `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed. A tap carries none. |
 
 `Decision` and `Refused` are the host's own account of what happened and it refuses to accept either from a
-client; the other three come from the page, for the seat whose token posted them. Alignment with `steps.jsonl`
-is by order: the *n*-th `Decision` note of a seat is the *n*-th step of that seat, because both are appended in
-the order that seat decided. No identifier is added to a step for it.
+client; the other three come from the page, for the seat whose token posted them. No identifier is added to a
+step to tie the two files together: alignment is by order, because both are appended in the order that seat
+decided.
+
+That alignment holds **for a seat a person played throughout, and only for such a seat.** A `Decision` note is
+written when a person's tap is accepted, while a step is recorded for whoever was seated — so `table --p2
+greedy` gives player 2 steps and no notes at all, and `table --handover 10` gives player 1 nine rounds of steps
+before its first note. Join the two files only for a seat the run stamp says a person held from the start.
 
 ## `traces/<match-id>.json`
 

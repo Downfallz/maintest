@@ -47,7 +47,7 @@ function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
-  const state = { seats, holder: null, shown: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
+  const state = { seats, holder: null, shown: null, displayed: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
   load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -92,7 +92,7 @@ function start(seats) {
 // nothing about the board changes because one was written.
 async function note(state, body) {
   const line = element('noted');
-  const current = state.seats.find(seat => seat.seat === state.shown) ?? state.seats[0];
+  const current = state.seats.find(seat => seat.seat === state.shown);
   if (!body || !current) {
     line.textContent = NOTHING_TO_RECORD;
     line.hidden = false;
@@ -153,7 +153,11 @@ async function refresh(state) {
     // Only the entries this page has not seen yet. The feed is the whole match's history and it only grows, so
     // a poll every 700 ms that asked for all of it would serialize and download the match again each time --
     // and over a half-hour session that is quadratic in the number of events, for twelve lines on screen.
-    const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0);
+    // `displayed` is the seat whose screen was actually up at the end of the last render: not merely the seat
+    // the host is asking, because until the person being asked taps through the pass screen nobody is reading
+    // it. The host times a decision from the poll that says so (DecisionClock), so a background poll of the
+    // other seat must not claim to be one.
+    const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0, state.displayed === seat.seat);
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
@@ -220,6 +224,10 @@ function render(state, views) {
   // Until the player being asked says they are the one holding the device, the board stays behind the pass
   // screen (seats.js).
   const fence = needsPass(current, state.holder);
+
+  // What the next poll will tell the host is on screen. Nothing, while the pass screen is up: the board is
+  // behind it and the person being asked has not picked the device up yet.
+  state.displayed = fence ? null : current.seat;
   element('seat').textContent = nameOf(current.seat);
   element('pass-seat').textContent = nameOf(current.seat);
   element('pass-seat-again').textContent = nameOf(current.seat);

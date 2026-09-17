@@ -12,8 +12,11 @@ namespace DownfallArena.Application.Learning.Recording;
 /// </summary>
 /// <remarks>
 /// It carries no identifier of its own and none is added to <see cref="StepRecord" />: the alignment with
-/// <c>steps.jsonl</c> is by order, because the <i>n</i>-th <see cref="NoteKind.Decision" /> note of a seat is
-/// the <i>n</i>-th step of that seat — both are appended in the order that seat decided.
+/// <c>steps.jsonl</c> is by order, because both are appended in the order that seat decided. That holds for a
+/// seat a person played throughout, and only for such a seat: a <see cref="NoteKind.Decision" /> note is
+/// written when a person's tap is accepted, while a step is recorded for whoever was seated, so a bot seat and
+/// the rounds before a handover are steps with no note beside them. A reader joining the two files has to know
+/// which seat a person held, which is what the session's run stamp says.
 /// </remarks>
 public sealed record PlaytestNote
 {

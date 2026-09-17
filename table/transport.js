@@ -21,10 +21,12 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   }
 
   return {
-    // `since` is the first feed entry this page has not seen. It is the seat route's one query parameter and
-    // it only trims the feed: the board and the options come whole on every poll, because they are a snapshot
-    // and not a log.
-    seat: (since = 0) => send('GET', `/api/seat/${seat}${query(since)}`),
+    // `since` is the first feed entry this page has not seen, and it only trims the feed: the board and the
+    // options come whole on every poll, because they are a snapshot and not a log. `shown` says this poll is
+    // the page drawing that seat's screen rather than keeping its payload warm, which is what the host starts
+    // a decision's clock on -- in hotseat the other seat is polled on the same timer from behind the pass
+    // screen, and a clock started there would time the handover.
+    seat: (since = 0, shown = false) => send('GET', `/api/seat/${seat}${query(since, shown)}`),
     session: () => send('GET', '/api/session'),
     catalogue: () => send('GET', '/api/catalogue'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
@@ -35,10 +37,13 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
   };
 }
 
-// The one query the seat route takes, or nothing. Zero and a first poll are the same request: the feed from
-// the start, which is what `since` already means on the host.
-function query(since) {
-  return Number.isInteger(since) && since > 0 ? `?since=${since}` : '';
+// What the seat route is asked for, or nothing. Zero and a first poll are the same request: the feed from the
+// start, which is what `since` already means on the host.
+function query(since, shown) {
+  const asked = [];
+  if (Number.isInteger(since) && since > 0) asked.push(`since=${since}`);
+  if (shown) asked.push('shown=1');
+  return asked.length > 0 ? `?${asked.join('&')}` : '';
 }
 
 // A host answers a refusal as JSON when it has a code to give and as a line of text when it does not; the page

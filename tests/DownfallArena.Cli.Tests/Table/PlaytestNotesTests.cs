@@ -51,7 +51,7 @@ public sealed class PlaytestNotesTests : IDisposable
     {
         var table = await Recording();
 
-        await Get(table);
+        await Shown(table);
         _clock.Advance(TimeSpan.FromMilliseconds(1500));
         await Post(table, """{"kind":"Evolution","pass":true}""");
 
@@ -60,6 +60,68 @@ public sealed class PlaytestNotesTests : IDisposable
         note.GetProperty("slot").GetString().ShouldBe("Player1");
         note.GetProperty("subPhase").GetString().ShouldBe("Evolution");
         note.GetProperty("sessionId").GetString().ShouldBe(table.Run.SessionId);
+    }
+
+    /// <summary>
+    /// In hotseat the page polls both seats on a timer while one of them is behind the pass screen, so a poll
+    /// that is not drawing the seat must not start its clock: the duration would include the walk round the
+    /// table, picking the phone up and tapping ready. Here the background polls happen and then the screen is
+    /// served, and only the last of the three is what the decision is timed from.
+    /// </summary>
+    [Fact]
+    public async Task A_poll_that_is_not_drawing_the_seat_does_not_start_its_clock()
+    {
+        var table = await Recording();
+
+        await Get(table);
+        _clock.Advance(TimeSpan.FromSeconds(30));
+        await Get(table);
+        _clock.Advance(TimeSpan.FromSeconds(30));
+        await Shown(table);
+        _clock.Advance(TimeSpan.FromMilliseconds(400));
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+
+        Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
+            .GetProperty("elapsedMs").GetInt64().ShouldBe(400);
+    }
+
+    /// <summary>A person reading the same question while the page polls keeps the moment it was first shown.</summary>
+    [Fact]
+    public async Task Polling_the_same_question_again_keeps_the_moment_it_was_first_shown()
+    {
+        var table = await Recording();
+
+        await Shown(table);
+        _clock.Advance(TimeSpan.FromMilliseconds(700));
+        await Shown(table);
+        _clock.Advance(TimeSpan.FromMilliseconds(700));
+        await Shown(table);
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+
+        Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
+            .GetProperty("elapsedMs").GetInt64().ShouldBe(1400);
+    }
+
+    /// <summary>
+    /// A decision is noted where it was asked, not where the match went once it was accepted. The sub-phase is
+    /// the one the options the decision was validated against named, which is why this holds by construction
+    /// rather than by winning a race: submitting releases the driver, and anything read afterwards may already
+    /// be the next sub-phase. There is deliberately no test here for that race -- with a bot in the other seat
+    /// the driver advances in microseconds, so a test that asserted on it would pass or fail by timing, which
+    /// is worse than no test. What is asserted is the contract: the note says what the options said.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_is_noted_in_the_sub_phase_its_options_named()
+    {
+        var table = await Recording();
+        var served = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: "?shown=1");
+        var asked = JsonDocument.Parse(Text(served)).RootElement.GetProperty("options").GetProperty("subPhase").GetString();
+
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+
+        asked.ShouldBe("Evolution");
+        Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
+            .GetProperty("subPhase").GetString().ShouldBe(asked);
     }
 
     /// <summary>A rule that confused somebody and left no trace is the failure this prevents.</summary>
@@ -168,9 +230,13 @@ public sealed class PlaytestNotesTests : IDisposable
             .Where(line => line.Length > 0)
             .Select(line => JsonDocument.Parse(line).RootElement);
 
-    private static async Task Get((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table)
+    /// <summary>A poll that is drawing the seat, which is the one the host times a decision from.</summary>
+    private static Task Shown((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table) =>
+        Get(table, "?shown=1");
+
+    private static async Task Get((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table, string query = "")
     {
-        var answer = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
+        var answer = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: query);
         answer.Status.ShouldBe(200, Text(answer));
     }
 

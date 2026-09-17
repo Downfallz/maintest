@@ -68,7 +68,26 @@ test('a transport without a seat or a token refuses to exist', () => {
   assert.throws(() => httpTransport('player1', ''), /token/);
 });
 
-// The seat route's one query parameter, and the only thing it trims: the board and the options come whole on
+// The flag the host starts a decision's clock on. A poll that is not drawing the seat must not carry it, or
+// the duration measures the handover in hotseat instead of the decision.
+test('a poll says whether it is the page drawing that seat', async () => {
+  const { calls, fetchImpl } = stub();
+  const transport = httpTransport('player1', 'abc', fetchImpl);
+
+  await transport.seat(0, true);
+  await transport.seat(4, true);
+  await transport.seat(4, false);
+  await transport.seat(0, false);
+
+  assert.deepEqual(calls.map(call => call.path), [
+    '/api/seat/player1?shown=1',
+    '/api/seat/player1?since=4&shown=1',
+    '/api/seat/player1?since=4',
+    '/api/seat/player1',
+  ]);
+});
+
+// The seat route's other query parameter, and the only thing it trims: the board and the options come whole on
 // every poll because they are a snapshot, and the feed is a log the page already holds part of.
 test('a poll asks only for the feed entries it has not seen', async () => {
   const { calls, fetchImpl } = stub();

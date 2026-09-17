@@ -115,9 +115,9 @@ public sealed class ArtifactJsonTests
         Should.Throw<NotSupportedException>(() => JsonSerializer.Deserialize<SpellId>("\"spell:strike:v1\"", ArtifactJson.LineOptions));
         Should.Throw<NotSupportedException>(() => JsonSerializer.Deserialize<Effect>("{}", ArtifactJson.LineOptions));
     }
+
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
     }
-
 }
