@@ -47,8 +47,9 @@ first.
   compared. `greedy.json` is untouched and the digest is unmoved. Three things follow. The ladder still
   climbs, so the next search starts here with this in the panel, and the entry above says the clone can now
   copy 99 % of a teacher, which makes "what is a clone of the strongest agent worth" a measurement rather
-  than a guess. The tuner's exploit reading, refreshed this morning to `pressure-floor`, is already stale by
-  one rung. And the mirror's slide is the thing to watch: if every rung of this ladder is a first-mover's
+  than a guess. The tuner's exploit evaluation still names `search-4` in `data/balance/knobs.json`: the
+  refresh to `pressure-floor` is open in pull request #121 and unmerged, and it will land one rung behind
+  this set. And the mirror's slide is the thing to watch: if every rung of this ladder is a first-mover's
   game, then what the search is finding is not strength but a way to spend the first move, and the panel of
   opponents cannot see the difference.
 
