@@ -49,14 +49,15 @@ public sealed class AgentSpecTests
     /// every stamp naming these weights no longer matches them, so it has to be deliberate. It was
     /// <c>7aff3a10</c> until ADR 0028 moved the defense price from 0.5 to 0.65, <c>a4e83485</c> until
     /// ADR 0032 moved the initiative price from 0.5 to 2.1, <c>93f3683c</c> until ADR 0037 moved the energy
-    /// price from 0.2 to 0.3, and <c>1933f3ae</c> until ADR 0040 removed the <c>fizzle</c> weight entirely --
-    /// the first time the list got shorter rather than a number moving. Each came with a journal entry and a
-    /// regenerated benchmark digest.
+    /// price from 0.2 to 0.3, <c>1933f3ae</c> until ADR 0040 removed the <c>fizzle</c> weight entirely --
+    /// the first time the list got shorter rather than a number moving -- and <c>362b0496</c> until ADR 0050
+    /// added the <c>pressure</c> weight at zero: the list got longer and no decision moved, so the digest
+    /// stayed and only the stamp changed. Each came with a journal entry or an ADR.
     /// </summary>
     [Fact]
     public void The_built_in_weights_keep_the_fingerprint_committed_stamps_were_written_with()
     {
-        ScoringWeights.Default.Fingerprint.ShouldBe("362b0496");
+        ScoringWeights.Default.Fingerprint.ShouldBe("5833ff4d");
     }
 
     [Fact]

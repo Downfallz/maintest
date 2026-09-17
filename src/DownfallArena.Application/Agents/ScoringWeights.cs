@@ -17,7 +17,8 @@ public sealed record ScoringWeights(
     double Bleed,
     double Defense,
     double Energy,
-    double Initiative)
+    double Initiative,
+    double Pressure)
 {
     /// <summary>
     /// The greedy agent's weights: a kill is worth five damage, a stun three, energy kept, two thirds of a
@@ -44,8 +45,16 @@ public sealed record ScoringWeights(
     /// the mirror's first-mover share, not a stronger agent: at 0.3 the same two bots decide less of the
     /// match by going first, and a 0.3 agent against a 0.2 one is a dead heat.
     /// </para>
+    /// <para>
+    /// <c>Pressure</c> prices how much closer a hit brings its target to a kill: the share of the health the
+    /// target had that the hit takes, so three points on a creature at four count nearly a whole share and
+    /// three on a creature at twenty a fraction. <c>Damage</c> reads every point the same wherever it lands and
+    /// <c>Kill</c> pays only once the last point lands; between the two the bot could not tell a hit that sets
+    /// a kill up from one that does not, which is what a search of the other eight weights had no term for
+    /// (journal, 2026-09-16). At zero it changes nothing; ADR 0050 has the sweep.
+    /// </para>
     /// </summary>
-    public static ScoringWeights Default { get; } = new(Damage: 1.0, Kill: 5.0, Heal: 0.8, Stun: 3.0, Bleed: 0.8, Defense: 0.65, Energy: 0.3, Initiative: 2.1);
+    public static ScoringWeights Default { get; } = new(Damage: 1.0, Kill: 5.0, Heal: 0.8, Stun: 3.0, Bleed: 0.8, Defense: 0.65, Energy: 0.3, Initiative: 2.1, Pressure: 0.0);
 
     /// <summary>
     /// The weights under the names a weights file uses, in the order the fingerprint hashes them. One list, so
@@ -55,6 +64,7 @@ public sealed record ScoringWeights(
     [
         ("damage", Damage), ("kill", Kill), ("heal", Heal), ("stun", Stun),
         ("bleed", Bleed), ("defense", Defense), ("energy", Energy), ("initiative", Initiative),
+        ("pressure", Pressure),
     ];
 
     /// <summary>Eight hex digits that change with any weight, the version a heuristic agent's spec carries.</summary>
