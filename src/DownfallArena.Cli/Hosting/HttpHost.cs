@@ -32,6 +32,14 @@ internal sealed class HttpHost : IDisposable
 
         _answer = answer;
         IsLoopback = OnlyThisMachine(address);
+
+        // Plain HTTP, and it stays plain. HTTPS here would mean a certificate two phones on a home network
+        // trust, which is a certificate authority to run for an evening of playtesting; what it would protect
+        // is a seat token on a link between a laptop and a phone in the same room. ADR 0052 accepted that
+        // trade where it accepted leaving the loopback address, and the fence it named is the seat token,
+        // required on every route. The studio never comes here for anything but 127.0.0.1 (ADR 0023).
+        // Sonar's S5332 says this line is insecure and is right about the protocol; it is ignored for this
+        // file alone, in ci.yml, where the reasoning is written out beside the repository's one other ignore.
         Url = $"http://{Bindable(address)}:{port}/";
         _listener.Prefixes.Add(Url);
     }
