@@ -20,8 +20,15 @@ first.
 
 - **Nothing about the content moved**, so the content hash and the benchmark digest are where they were, and
   no score from before today compares with one from after it. What changed is that every term can now be
-  moved by content: the Crushing Stomp move that was priced at 116 points, then 55, then 0 reads 2.38 here,
-  in the direction the content actually went.
+  moved by content. The weakened catalogue, scored through the tuner's own path with the committed panel
+  rather than by refitting an agent to it: `winRateA` 1.000 for 162.00, the same to the decimal as the
+  catalogue it was meant to differ from, and the clock 7.553 rounds against 5.785, 0.10 against 2.45. The
+  move that was priced at 116 points, then 55, then 0 is worth **2.35** on the axis that moves.
+
+- **And the objective now answers that candidate correctly.** Under the old target the weakened catalogue
+  scored 180.15 against 172.42, a difference made entirely of variety terms that 162.00 of constant was
+  drowning. Under this one it scores 18.15 against 12.874, and the reason it loses — `tierWinSpread` 0.392
+  against 0.264, `spellsBarelyCast` 6 against 4 — reads off the score itself.
 
 - **ADR 0044's moratorium is lifted with it.** The next thing this arm owes is the pass itself: one tuning
   run under this objective, read and reported rather than applied, which says whether a term that finally
