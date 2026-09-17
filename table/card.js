@@ -20,7 +20,7 @@ export function cardCost(card) {
 // gate graph: the page says "Tier 3" and has no idea what is behind it.
 export function cardHead(card) {
   const tier = Number.isInteger(card?.tier) && card.tier > 0 ? `Tier ${card.tier}` : '';
-  return [card?.creatureClass, tier].filter(part => part).join(' · ');
+  return [card?.creatureClass, tier].filter(Boolean).join(' · ');
 }
 
 // The body of the card, in the order the printed one reads: who it hits, what it does to them, what it does to
@@ -33,7 +33,7 @@ export function cardLines(card) {
     criticalLine(card),
     unlockLine(card),
     requiresLine(card),
-  ].filter(line => line);
+  ].filter(Boolean);
 }
 
 // The chance, and the face of the die when the chance is a twentieth. The threshold is the host's: whether a

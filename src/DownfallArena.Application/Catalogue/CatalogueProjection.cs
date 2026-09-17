@@ -108,9 +108,12 @@ public static class CatalogueProjection
             return $"One {one}";
         }
 
-        return targeting.MaxTargets is { } bound
-            ? $"Up to {bound.ToString(CultureInfo.InvariantCulture)} {(bound == 1 ? one : many)}"
-            : $"Every {one}";
+        if (targeting.MaxTargets is not { } bound)
+        {
+            return $"Every {one}";
+        }
+
+        return $"Up to {bound.ToString(CultureInfo.InvariantCulture)} {(bound == 1 ? one : many)}";
     }
 
     /// <summary>

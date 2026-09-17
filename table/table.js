@@ -242,7 +242,7 @@ function targetButtons(state, current) {
 function card(state, spell, prefix, onClick) {
   const face = state.cards.get(spell);
   if (!face) {
-    return button([prefix, spell].filter(part => part).join(' · '), onClick);
+    return button([prefix, spell].filter(Boolean).join(' · '), onClick);
   }
 
   const choice = document.createElement('button');
@@ -252,7 +252,7 @@ function card(state, spell, prefix, onClick) {
 
   const head = document.createElement('div');
   head.className = 'card-head';
-  head.textContent = [prefix, cardTitle(face), cardHead(face)].filter(part => part).join(' · ');
+  head.textContent = [prefix, cardTitle(face), cardHead(face)].filter(Boolean).join(' · ');
 
   const cost = document.createElement('span');
   cost.className = 'card-cost';
