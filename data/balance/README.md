@@ -91,8 +91,10 @@ Zero is on target and lower is better. A metric no evaluation measured is listed
 counted as zero. Four evaluations are played on the benchmark seeds. `mirror` (greedy against greedy) reads
 who wins, how long a match lasts and how often it runs out of rounds, with skill held equal. `variety`
 (`explore:0.2` against itself) reads whether the content offers a choice. `skill` (greedy against random)
-checks that the content still rewards playing well. `exploit` (a searched weights file against greedy) reads
-how far a player who only wants to win gets against the way the game is meant to be played.
+checks that the content still rewards playing well. `exploit` (a panel of searched weights files against
+greedy) reads how far a player who only wants to win gets against the way the game is meant to be played —
+scored on **how fast** the best of the panel closes it out, since 2026-09-17, because whether it wins at all
+stopped being able to tell two catalogues apart ([ADR 0053](../../docs/adr/0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md)).
 
 `variety` exists because `Greedy` takes an argmax: two spells of near equal value do not split the casts, the
 marginally better one takes nearly all of them, and no content makes the largest share fall below about a
@@ -111,15 +113,19 @@ wins, and where winning does not require abandoning the taste.
 
 `exploit` is the only evaluation that names files, and since [ADR 0052](../../docs/adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)
 it names a **panel**: every searched set that has beaten Greedy on this catalogue is played and the one with
-the highest win rate decides the evaluation, its rounds and its spell outcomes included. One agent only ever
+the highest win rate decides the evaluation, its rounds and its spell outcomes included, ties going to the
+fastest win (ADR 0053). One agent only ever
 reads what that agent happens to punish — the same one-spell move was worth 0.013 to `search-4` and 0.235 to
 `stun-first`, and on the moved catalogue the ranking inverted (journal, 2026-09-17) — so a single reading
 credited a content change for blinding one agent. A set still goes stale when the content moves, but the
 answer is now to **add** the newest search to the panel rather than to replace the file: an older set costs
 one evaluation and is sometimes the only one that still sees the hole. On `7e199df4` the panel reads 1.000,
-and the one reachable move measured so far, Crushing Stomp at the weakest of its own bounds, takes it to
-0.915 and the objective from 172.42 to 124.63, where a single fresh agent read that same move as 64.13. A
-candidate therefore costs four evaluations here and seven in all, which is the price of the reading. Only
+and so does the one reachable move measured so far — Crushing Stomp at the weakest of its own bounds — once a
+set is searched against that catalogue too, which is why the win rate is no longer what this term scores: the
+panel closes the current catalogue in 5.785 rounds and the moved one in 7.63, and **that** is what the
+objective reads (ADR 0053, and the 2026-09-17 entries for how the three earlier prices of that same move,
+116, 55 and 0, were each an artefact of which agent was asked). A candidate costs five evaluations here and
+eight in all, which is the price of the reading. Only
 agent A is read as a panel: agent B is the opponent it is measured against, and `check-knobs` refuses a list
 there. It also refuses an empty panel, and a knobs file whose evaluation names a weights or policy file that
 is not there, because otherwise the engine fails one candidate at a time, once a search has already started.
