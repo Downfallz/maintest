@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Android head (ADR 0055): the `table` page on a phone, against an engine in the same process.
+    Deliberately OUTSIDE DownfallArena.slnx -- a net10.0-android project makes `dotnet build` fail for anyone
+    without the android workload, and the solution is what every contributor and the CI gate build.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DownfallArena.Table.Android</RootNamespace>
+    <ApplicationId>com.downfallarena.table</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\DownfallArena.Cli\DownfallArena.Cli.csproj" />
+  </ItemGroup>
+
+</Project>
