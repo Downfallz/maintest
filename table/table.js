@@ -7,6 +7,7 @@ import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
+import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, tappedNote } from './notes.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -65,8 +66,43 @@ function start(seats) {
     });
   }
 
+  // The two one-tap notes, built once. They read the state at the moment they are tapped, so the note lands
+  // against whichever seat is on screen then rather than whichever was when the page loaded.
+  element('note-buttons').replaceChildren(...TAPPED.map(({ kind, label }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', () => note(state, tappedNote(kind)));
+    return button;
+  }));
+
+  element('comment-save').addEventListener('click', async () => {
+    const box = element('comment-text');
+    if (await note(state, commentNote(box.value))) {
+      box.value = '';
+    }
+  });
+
   refresh(state);
   setInterval(() => refresh(state), 700);
+}
+
+// A note is the one thing in a session nothing else can reconstruct, so a refused one says so on screen
+// instead of disappearing. It does not go through `submit`: a note is not a decision, it cannot be late, and
+// nothing about the board changes because one was written.
+async function note(state, body) {
+  const line = element('noted');
+  const current = state.seats.find(seat => seat.seat === state.shown) ?? state.seats[0];
+  if (!body || !current) {
+    line.textContent = NOTHING_TO_RECORD;
+    line.hidden = false;
+    return false;
+  }
+
+  const answer = await current.transport.note(body);
+  line.textContent = answer.ok ? noted(body.kind) : (answer.body?.message ?? `The host answered ${answer.status}.`);
+  line.hidden = false;
+  return answer.ok;
 }
 
 // The catalogue the match is playing, through any seat this page holds: it is the same for both, and it is
@@ -200,6 +236,14 @@ function render(state, views) {
   renderMat(state, view.board);
   renderFeed(state, view.feed);
   renderDecision(state, current);
+  renderNotes(view);
+}
+
+// The notes, and the comment box only once the match is decided: asking for prose while somebody is deciding
+// is asking them to stop playing.
+function renderNotes(view) {
+  element('notes').hidden = false;
+  element('comment').hidden = !commentIsOpen(view);
 }
 
 // The initiative track: the engine's order, banded by speed, scrolling sideways at 360 px. The strip never

@@ -41,6 +41,20 @@ test('a decision is posted as json, which is also what the host requires of a wr
   assert.equal(answer.body, null);
 });
 
+// One route for both seats, because the seat a note belongs to is the token's and not the path's.
+test('a note is posted to one route, carrying the seat token that wrote it', async () => {
+  const { calls, fetchImpl } = stub({ status: 204, body: '' });
+  const transport = httpTransport('player2', 'abc', fetchImpl);
+
+  const answer = await transport.note({ kind: 'Lookup', text: '' });
+
+  assert.equal(calls[0].path, '/api/notes');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { kind: 'Lookup', text: '' });
+  assert.equal(answer.status, 204);
+});
+
 test('a refusal keeps the reason the host gave, whether it is json or a line of text', async () => {
   const late = httpTransport('player1', 'abc', stub({ status: 409, body: '{"error":"Seat.NotWaiting"}' }).fetchImpl);
   const plain = httpTransport('player1', 'abc', stub({ status: 403, body: 'This token is player2\'s.' }).fetchImpl);

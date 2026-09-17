@@ -353,3 +353,25 @@ button.chosen { border-width: 2px; }
 
 #log { margin: 10px 0; font-size: 0.8rem; color: var(--muted); }
 #feed { margin: 4px 0 0; padding-left: 1.2rem; }
+
+/* The notes. Quieter than the decision sheet on purpose: it is beside the game and never in front of it, so
+   the two taps read as available rather than as something being asked of a player mid-round. */
+.notes {
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.notes button { font-size: 0.9rem; color: var(--muted); }
+.notes label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; }
+.notes textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}

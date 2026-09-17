@@ -61,6 +61,11 @@ internal static class TableHost
 
         using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, run.Wrap, stopping.Token);
 
+        // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
+        // session abandoned at its first question is then a readable directory rather than one missing a file,
+        // and every checkpoint after this one overwrites it.
+        await run.CheckpointAsync(session.MatchId, stopping.Token);
+
         // The session's own read side, not the container's: it is the one behind the lock the driver writes
         // through, and a page polls it while the match is advancing.
         var seats = new[] { seat1.Seat, seat2.Seat };
@@ -81,10 +86,14 @@ internal static class TableHost
             var serving = server.RunAsync(stopping.Token);
             await Task.WhenAny(serving, session.Outcome);
 
+            // Closed the moment the match has an outcome rather than when the host stops. The host keeps
+            // serving so two people can read the end screen and write a comment, and a session page opened
+            // from there has to show a finished run rather than the zero-count manifest it was opened with.
+            await CloseAsync(run, session);
+
             // The match is over, but the page has not read the outcome yet. Serving stops on Ctrl+C, which is
             // also how a session that ended badly is left readable rather than vanishing.
             await serving;
-            await CloseAsync(run, session);
             return 0;
         }
         catch (System.Net.HttpListenerException exception)

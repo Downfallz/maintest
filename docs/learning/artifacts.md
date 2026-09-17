@@ -9,13 +9,16 @@ the run stamp, directly or through its manifest.
 ```bash
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random-vs-random
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json
+dotnet run --project src/DownfallArena.Cli -- table --rules <file> --who mk   # a playtest session, into runs/playtest/<id>/
 ```
 
 `simulate --record <dir>` writes the dataset and, by default, one trace per match under `<dir>`;
 `--traces <n>` keeps only the first `n` of them and `--traces 0` keeps none, which is what a dataset large
 enough to train on wants: a trace is about twenty times the disk of the steps from the same match and no
-learner reads one. `play --trace <file>` writes the trace of that one match. `runs/` is git-ignored:
-artifacts are outputs, not sources.
+learner reads one. `play --trace <file>` writes the trace of that one match. `table` records the session two people played into
+`runs/playtest/<session-id>/`, or under whatever `--record` names instead; `--who <initials>` puts them in the
+stamp as `human:<initials>` so two sessions played by different people differ on the agents axis rather than
+looking like the same player. `runs/` is git-ignored: artifacts are outputs, not sources.
 
 ## Run directory
 
@@ -26,6 +29,27 @@ artifacts are outputs, not sources.
   episodes.jsonl         one episode per line (two per match)
   traces/<match-id>.json one trace per match, up to what --traces allows
 ```
+
+A playtest session (ADR 0054) is that directory exactly, plus two files a bot run does not need:
+
+```
+runs/playtest/<session-id>/
+  ... the four above, for the one match that was played ...
+  notes.jsonl            one note per line: how long a decision took, a refusal, a lookup, a misplay, a comment
+  catalogue.json         the card faces the match was played with
+```
+
+Both exist because a human session cannot be regenerated. A bot run is a seed and a content hash, so it is
+replayed rather than kept; a session two people played once is not, and a trace read a year later carries
+Spell **ids** against a catalogue that has been tuned twenty times since — `spell:pummel:v1` would be a string
+whose cost and effects are gone, or silently different. `catalogue.json` is written once when the session
+opens, so the hash says *which* content and the file says *what it was*. The viewer ignores both today and
+opens the directory as a Batch and its trace as a Match, with no change to it.
+
+A session's trace is rewritten after every accepted decision, so a table abandoned at Round 9 leaves a
+readable partial trace. Its manifest is only rewritten with the final counts when the match reaches an
+outcome: a session nobody finished keeps the zero-count manifest it was opened with, which is how an
+abandoned session says so rather than reading like a finished one.
 
 The manifest is written twice: when the run starts, with zero counts, so an interrupted run still says what
 it was; and when it finishes, with the final counts. Starting a run empties `steps.jsonl` and `episodes.jsonl`,
@@ -146,6 +170,25 @@ The summary of one iteration under `runs/<run-id>/`: the run's stamp and, per ev
 `runs/<run-id>/evaluations/`, the agents, the matches, and the balance metrics (`winRateA` with its interval,
 `scoreA`, `player1WinShare`, `drawRate`, `averageRounds`, `roundCapShare`, spell entropies, fizzle rates).
 `docs/learning/training.md` says how it is built and compared.
+
+## `notes.jsonl` (a playtest session only)
+
+One line per note, written through `IArtifactWriter.AppendJsonLinesAsync` and timed with `TimeProvider`.
+
+| Field | Meaning |
+| --- | --- |
+| `sessionId`, `matchId`, `slot` | Which session, which match, which seat. |
+| `round`, `subPhase` | Where in the match, as in `steps.jsonl`. |
+| `at` | When, in UTC. |
+| `kind` | `Decision`, `Refused`, `Lookup`, `Misplay` or `Comment`. |
+| `elapsedMs` | For a `Decision`: from the moment that seat's options were **served** to the moment the decision was accepted. Served, not asked: the engine may ask a seat while nobody is looking at the screen, and the difference is the walk back to the table. |
+| `code`, `message` | For a `Refused`: the `DomainError` the aggregate or the host's pre-check returned. |
+| `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed. A tap carries none. |
+
+`Decision` and `Refused` are the host's own account of what happened and it refuses to accept either from a
+client; the other three come from the page, for the seat whose token posted them. Alignment with `steps.jsonl`
+is by order: the *n*-th `Decision` note of a seat is the *n*-th step of that seat, because both are appended in
+the order that seat decided. No identifier is added to a step for it.
 
 ## `traces/<match-id>.json`
 

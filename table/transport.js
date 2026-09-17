@@ -28,6 +28,10 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
     session: () => send('GET', '/api/session'),
     catalogue: () => send('GET', '/api/catalogue'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
+
+    // A note goes to one route for both seats: the host records it against whichever seat's token carried it,
+    // so nobody can file a misplay against the other player.
+    note: note => send('POST', '/api/notes', note),
   };
 }
 
