@@ -207,16 +207,28 @@ on `exploit`: three entries of one agent, and five of it. On the 200 benchmark s
 and 34 a candidate when they went one at a time). The sweep is up to two candidates per playable
 knob — on the nine-spell core content that is 29 knobs and 41 legal single steps. The paired moves below add
 up to 80 more, and the deepening up to 18 on top, so the opening tops out at 139 candidates. The workflow
-then climbs 12 rounds of 6, which this model puts at 211 candidates.
+then climbs.
 
-**On a GitHub runner the model is optimistic twice over, and the first pass under the panel died of it.** Tune
-10 ran 24 rounds and played **349 candidates in 5h59m** — 61.7 seconds each, not 30, and more candidates than
-the count above predicts, because a deepened pair is a candidate the arithmetic does not see. It was killed at
-the six-hour ceiling with nothing to show, since the proposal is only written when the search finishes. So 3.8
-seconds is what an evaluation costs *here*, on four cores, and the runner is the machine a workflow has to fit:
-twelve rounds is about 260 candidates and four and a half hours there, which is why that is now the default.
-`--no-pairs` and `--pair-depth 1` are the switches if a run gets tight, and raising the budget is worth doing
-only against a measured pace rather than against this paragraph's. `--no-pairs` and
+**Those counts are from the nine-spell core content and the catalogue has outgrown them.** Today it is **155
+playable knobs and 243 legal single steps**, so the opening sweep alone is 243 candidates. And on a GitHub
+runner a candidate is **61.7 seconds**, not 14: tune 10 played 349 of them in 5h59m at an even pace. The 3.8
+seconds above is what an evaluation costs *here*, on four cores; the runner is the machine a workflow has to
+fit, and there the sweep alone is **4h10 of a six-hour job**.
+
+So the workflow's defaults are what fits rather than what used to:
+
+| | candidates | at 61.7 s |
+| --- | --- | --- |
+| the opening sweep | 243 | 4h10 |
+| plus the catalogue itself and 6 rounds of 6 | 280 | **4h48** |
+| 24 rounds, as tune 10 ran it, paired opening on | killed at 349 | **> 6h, nothing kept** |
+
+Tune 10 was killed at the ceiling with nothing to show, since the proposal is only written when the search
+finishes. The paired opening is off by default for the same reason: it builds every legal pair of one spell's
+knobs for every spell the sweep did not improve, in both directions, which is not capped and grows with the
+catalogue. The `pairs` field turns it back on for a run willing to pay for it, `--no-sweep` skips the opening
+when you want a quick look rather than an answer, and raising any budget is worth doing against a measured
+pace rather than against this paragraph's. `--no-pairs` and
 `--pair-depth 1` are the switches if a run gets tight. Raise the budget rather than the step size: a wider
 step reaches further and reads worse in the diff.
 
