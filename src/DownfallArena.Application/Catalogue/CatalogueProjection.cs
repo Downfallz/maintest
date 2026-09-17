@@ -221,7 +221,7 @@ public static class CatalogueProjection
             return 1;
         }
 
-        var tier = 1 + offers.Min(gate => gate.Max(prerequisites => Behind(prerequisites, gates, tiers, walking)));
+        var tier = 1 + offers.Min((TalentPrerequisites[] gate) => gate.Max((TalentPrerequisites prerequisites) => Behind(prerequisites, gates, tiers, walking)));
         walking.Remove(spell);
         tiers[spell] = tier;
         return tier;
@@ -230,8 +230,8 @@ public static class CatalogueProjection
     /// <summary>How deep one gate reaches: its <c>allOf</c> at its deepest, its <c>anyOf</c> at its shallowest.</summary>
     private static int Behind(TalentPrerequisites prerequisites, Dictionary<SpellId, List<TalentPrerequisites[]>> gates, Dictionary<SpellId, int> tiers, HashSet<SpellId> walking)
     {
-        var all = prerequisites.AllOf.Count == 0 ? 0 : prerequisites.AllOf.Max(required => Tier(required, gates, tiers, walking));
-        var any = prerequisites.AnyOf.Count == 0 ? 0 : prerequisites.AnyOf.Min(required => Tier(required, gates, tiers, walking));
+        var all = prerequisites.AllOf.Count == 0 ? 0 : prerequisites.AllOf.Max((SpellId required) => Tier(required, gates, tiers, walking));
+        var any = prerequisites.AnyOf.Count == 0 ? 0 : prerequisites.AnyOf.Min((SpellId required) => Tier(required, gates, tiers, walking));
         return Math.Max(all, any);
     }
 }
