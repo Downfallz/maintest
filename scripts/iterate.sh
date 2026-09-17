@@ -12,8 +12,9 @@ Usage: scripts/iterate.sh [options]
 
 One turn of the learning loop into runs/<run-id>/: the baselines once, then per dataset seed a recorded
 dataset, two trained policies, their evaluations and a report, then the spread across the seeds, and last the
-seeds' value fits averaged into one policy and played (runs/<id>/mean/, one sample, outside the spread). Needs
-the .NET SDK (global.json) and uv. Every evaluation plays the 200 benchmark seeds, mirrored. Around ten
+seeds' value fits averaged into one policy and played (runs/<id>/mean/, one sample, outside the spread), with
+the jackknife of that mean from three seeds up (runs/<id>/mean/without-<seed>/, runs/<id>/mean/jackknife.json:
+how far the mean's score moves with the draw of its fits). Needs the .NET SDK (global.json) and uv. Every evaluation plays the 200 benchmark seeds, mirrored. Around ten
 minutes per seed, so half an hour at the default three (ADR 0049).
 
 Where things go
@@ -384,6 +385,31 @@ if (( ${#seed_list[@]} > 1 )); then
   if [[ -n "$baseline" ]]; then
     evaluate_policy "$run/mean/value" "$baseline" "$run/mean/evaluations/value-vs-baseline.json" --no-log
   fi
+fi
+
+# The mean is one sample too, and a turn is compared with the one before it on that sample. The jackknife
+# says how far it moves with the draw of its fits: the mean is rebuilt once per seed with that seed's fit
+# left out, each is played against the same opponents but Random, and the spread of those replicates,
+# scaled, is the standard error of the mean of all of them. Two seeds would leave single fits, which are the
+# spread above, so this needs three.
+if (( ${#seed_list[@]} > 2 )); then
+  step "11. The ${#seed_list[@]} means that leave one seed out, for the jackknife of the mean"
+  for left_out in "${seed_list[@]}"; do
+    without=()
+    for seed in "${seed_list[@]}"; do
+      if [[ "$seed" != "$left_out" ]]; then
+        without+=("$run/seeds/$seed/value")
+      fi
+    done
+    replicate="$run/mean/without-$left_out"
+    mkdir -p "$replicate/evaluations"
+    "${learning[@]}" mean-policy "${without[@]}" -o "$replicate/value"
+    evaluate_policy "$replicate/value" greedy "$replicate/evaluations/value-vs-greedy.json" --no-log
+    if [[ -n "$baseline" ]]; then
+      evaluate_policy "$replicate/value" "$baseline" "$replicate/evaluations/value-vs-baseline.json" --no-log
+    fi
+  done
+  "${learning[@]}" jackknife "$run"
 fi
 
 page="$root/$run/seeds/${seed_list[0]}/report.html"

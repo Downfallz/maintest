@@ -308,6 +308,11 @@ and leaves everything under `runs/<id>/`:
    and play it against the same opponents into `mean/evaluations/`. It is not in the spread and not gated: it
    is one policy, so its three numbers are one sample each, and the question they answer is whether the fits'
    disagreement in play (journal, 2026-09-16) is variance a mean removes or a place the mean collapses too.
+6. With three seeds or more, the jackknife of that mean: one mean per seed with that seed's fit left out,
+   under `mean/without-<seed>/`, each played against Greedy and the baseline, and `mean/jackknife.json`
+   (`jackknife`) with the standard error those replicates give the mean's score and an interval of two errors
+   each way. That is how far the mean's number moves with the draw of its fits, which the spread across the
+   seeds does not say: two turns' means differ when their intervals are clear of each other, not before.
 
 **Read the spread, not a seed.** One seed is a sample: three runs of one configuration differing only in the
 dataset seed scored 0.6625, 0.0975 and 0.30375 against `search-4` (`ci-88`, `ci-90`, `ci-91`), a 56-point
