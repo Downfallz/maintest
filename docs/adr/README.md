@@ -57,3 +57,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0049](0049-one-seed-is-not-a-measurement.md) | One seed is not a measurement | Accepted |
 | [0050](0050-price-how-close-a-hit-brings-its-target-to-a-kill.md) | Price how close a hit brings its target to a kill, and leave the baseline at zero | Accepted |
 | [0051](0051-the-policy-sees-what-the-heuristic-sees.md) | The policy sees what the heuristic sees | Accepted |
+| [0052](0052-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |

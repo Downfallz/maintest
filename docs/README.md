@@ -21,6 +21,7 @@
 | [tabletop/player-aid.md](tabletop/player-aid.md) | One page: the round sequence, the timeline order, condition timing, what a critical multiplies. |
 | [tabletop/d20-criticals.md](tabletop/d20-criticals.md) | Draft: every critical chance is a twentieth, why the offsets are legacy rather than tuning, and where the rule would be enforced. |
 | [tabletop/playtest-app.md](tabletop/playtest-app.md) | The playtest app's specification: what the client may never decide, the hidden-information boundary, and what a session records. |
+| [tabletop/app-roadmap.md](tabletop/app-roadmap.md) | The app in seven stages: what each one ships, what it is tested with, and what a reviewer checks. |
 | [../studio/README.md](../studio/README.md) | The content studio: browse, edit, version and try the game content. |
 | [../viewer/README.md](../viewer/README.md) | The viewer: traces, batches, evaluations, training runs and comparisons. |
 
