@@ -38,6 +38,31 @@ first.
   measured; the split says the term as calibrated cannot be satisfied by content at all, which is a stronger
   reason not to tune against it than the one that stopped it.
 
+- **The instrument is saturated at both ends, and the same 200 seeds show it.** Against Greedy on the
+  current catalogue the top of the panel ties at every match, and the two readings the same evaluation
+  already carries do not:
+
+  | exploit agent, against Greedy | win rate | rounds | health left |
+  | --- | --- | --- | --- |
+  | `stun-first` | 1.0000 | 5.79 | 41.00 |
+  | `pressure-floor` | 1.0000 | 6.00 | 41.00 |
+  | `kill-first` | 1.0000 | 7.16 | 47.83 |
+  | `search-4` | 0.9275 | 7.34 | 19.75 |
+  | `mixture-mean` | 0.8300 | 9.44 | 20.52 |
+
+  Three sets read the same number and end the match a round and a half apart. Turn the opponent up instead
+  and the panel falls off the other end: against `stun-first`, `pressure-floor` takes 0.175, `mixture-mean`
+  0.098, `search-4` 0.063, and `kill-first` — which takes every match from Greedy on **both** catalogues —
+  takes 0.005, one match in 200. So the term does not read a property of the catalogue at either setting.
+  It reads the distance between two fixed agents, and at the distance the objective uses, the scale has no
+  room left above it.
+
+- **What does move is the clock.** The best exploiter needs 5.79 rounds on the current catalogue and 7.63 on
+  the weakened one, a third longer, while the win rate reads 1.0000 on both. The evaluation has been
+  carrying that number the whole time. A metric that is still moving where `winRateA` is pinned is the
+  obvious candidate for what this term should read, and choosing it is a decision with an ADR to write, not
+  an entry to file.
+
 - **What this does not say.** One spell, one direction, one step, on a catalogue nudged rather than rebuilt:
   a different move might be beyond a fitted set's reach, and nothing here measures that. And 1.0000 against
   Greedy says as much about Greedy as about the content — the term compares a searched set against the
