@@ -247,6 +247,13 @@ changed spell files under the same tree they came from, so applying a proposal i
 a diff. `--apply` does that copy. Nothing else is written to `data/`: the search works on a copy in
 `<output>/work`.
 
+Both are written **after the opening pass and after every round**, not only at the end. A pass that takes
+hours is killed by a job timeout rather than ended by one, and a killed process gets no chance to write
+anything, so tune 10 played 349 candidates over six hours and reported none of them. What is on disk at any
+moment is the leader as it stands: a real catalogue the engine really played, and one worth applying.
+`tune.json` carries `"complete": false` while the search is still running, which is how a reader tells the
+answer to a finished search from the best a killed one had reached — the run summary says so too.
+
 **Run more than one seed.** A hill climb keeps only what improves, so which knobs it happens to draw first
 decides what it finds. On this catalogue, `--seed 1` at the full budget draws 32 candidates and improves
 nothing, while `--seed 11` finds a move in its first two: Ice Spear's Spell initiative from 2 to 1, and the
