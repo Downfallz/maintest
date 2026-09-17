@@ -108,8 +108,19 @@ clean threshold:
 
 Eleven values become nine, and every one of them is a number a player reads off the die without arithmetic.
 
+**A Creature has no Critical chance, and it stays at zero.** ADR 0042 set it to zero and deliberately left the
+mechanism standing, so a Creature that crits more than another remained possible. That door is closed: no
+Creature carries a chance, and the rule keeps it authored at zero. Twentieth plus zero is a twentieth, so the
+grid holds without depending on it.
+
+This is what lets the card be read literally. The engine still sums the Creature's chance with the Spell's, so
+until now every document had to carry the nuance — *the card's number is the whole chance because this
+content's Creature is at zero*. It is a rule now rather than a property of one Creature definition, and three
+documents can drop the clause when this is built: the rulebook's §6.7 and Part 9, the player aid's critical
+paragraph, and the audit's `ActionResolution` row.
+
 ## Still open
 
-- **Whether a Creature's chance is allowed back.** It is zero today (ADR 0042). The rule covers it either way;
-  the question is whether a Creature that crits more than another is still wanted, because that is the thing
-  that made the printed chance and the rolled chance differ in the first place.
+Nothing. What is left is the work: snap the ten Spells, move `lightning_bolt`'s band floor, teach the data
+builder and `check-knobs` the grid, and pay the usual price of a content change — a new hash, a regenerated
+digest, a journal entry, and the four readings saying what the snap cost.
