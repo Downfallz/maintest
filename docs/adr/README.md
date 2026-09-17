@@ -58,4 +58,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0050](0050-price-how-close-a-hit-brings-its-target-to-a-kill.md) | Price how close a hit brings its target to a kill, and leave the baseline at zero | Accepted |
 | [0051](0051-the-policy-sees-what-the-heuristic-sees.md) | The policy sees what the heuristic sees | Accepted |
 | [0052](0052-read-the-exploit-term-as-the-best-of-a-panel.md) | Read the exploit term as the best of a panel, not as one named agent | Accepted |
-| [0053](0053-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
+| [0053](0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md) | Score the exploit term on how fast the best exploiter wins, not on whether it wins | Accepted |
+| [0054](0054-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |

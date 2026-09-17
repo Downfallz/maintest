@@ -7,7 +7,7 @@ namespace DownfallArena.Cli.Hosting;
 /// <summary>
 /// An HTTP host on one interface address: the listener, the accept loop, the body, and the one answer written
 /// back. The studio binds the loopback address and nothing else (ADR 0015, ADR 0023); the table binds what it
-/// is told, because two people passing a phone need a host the phone can reach (ADR 0053).
+/// is told, because two people passing a phone need a host the phone can reach (ADR 0054).
 /// </summary>
 /// <remarks>
 /// The two hosts of this CLI are this plus a route table, and what differs between them is only which routes
@@ -35,7 +35,7 @@ internal sealed class HttpHost : IDisposable
 
         // Plain HTTP, and it stays plain. HTTPS here would mean a certificate two phones on a home network
         // trust, which is a certificate authority to run for an evening of playtesting; what it would protect
-        // is a seat token on a link between a laptop and a phone in the same room. ADR 0053 accepted that
+        // is a seat token on a link between a laptop and a phone in the same room. ADR 0054 accepted that
         // trade where it accepted leaving the loopback address, and the fence it named is the seat token,
         // required on every route. The studio never comes here for anything but 127.0.0.1 (ADR 0023).
         // Sonar's S5332 says this line is insecure and is right about the protocol; it is ignored for this
@@ -53,7 +53,7 @@ internal sealed class HttpHost : IDisposable
     /// The address, refused here when it is not one this host can bind, so a typo is one line at start-up
     /// rather than a listener exception. Three things are refused and each for its own reason. A wildcard
     /// (<c>0.0.0.0</c>, <c>::</c>) needs a URL reservation on Windows where an explicit interface address needs
-    /// none (ADR 0053, open question 1). A shorthand form is refused although <see cref="IPAddress" /> accepts
+    /// none (ADR 0054, open question 1). A shorthand form is refused although <see cref="IPAddress" /> accepts
     /// it, because "192.168.1" parses as 192.168.0.1: a host that binds an address the player did not type is
     /// worse than one that will not start. And an IPv6 literal is refused because this runtime's
     /// <see cref="HttpListener" /> cannot parse back the bracketed prefix it would be given — it is a playtest
@@ -124,7 +124,7 @@ internal sealed class HttpHost : IDisposable
     /// requiring it on a write is the fence. <c>Sec-Fetch-Site</c> closes the same door from the other side when
     /// the browser sends it; a client that sends neither (curl) is not a browser being used against its owner,
     /// and keeps working. On the table this is the outer fence only: the seat token is the one that matters,
-    /// and it is required on every route whatever address the host is on (ADR 0053).
+    /// and it is required on every route whatever address the host is on (ADR 0054).
     /// </summary>
     /// <param name="what">The host, as its own refusal names it.</param>
     public static StudioResponse? CrossSite(string? secFetchSite, string method, string? contentType, string what)

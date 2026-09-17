@@ -218,7 +218,7 @@ class Policy:
             "bias": _rounded(self.bias),
             "fallback": self.fallback,
             "trainedAt": self.trained_at,
-            "metrics": dict(self.metrics),
+            "metrics": {name: value for name, value in self.metrics.items() if np.isfinite(value)},
         }
         if self.baseline is not None:
             data["baseline"] = self.baseline.to_json()
@@ -256,9 +256,28 @@ class Policy:
         return policy
 
     def save(self, path: Path) -> Path:
+        """Write the policy, and never a number no reader of this file accepts.
+
+        `json.dumps` writes `Infinity` and `NaN` by default, which is not JSON and which the engine's reader
+        refuses: ci-131 trained a clone whose reported loss had overflowed and the turn died minutes later
+        inside another command, on `'I' is an invalid start of a value`, with every model already fitted.
+
+        A metric that is not finite is not a measurement -- an r-squared is undefined where the target does
+        not vary, and the loss that broke ci-131 was the log of a probability that had rounded to zero -- so
+        `to_json` leaves it out, and its absence is the signal. Everything else is the model itself, where a
+        number that is not finite is a broken fit rather than a missing reading, and `allow_nan=False` makes
+        it fail here rather than in a file nothing can read.
+        """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.to_json(), indent=2) + "\n", encoding="utf-8")
+        try:
+            text = json.dumps(self.to_json(), indent=2, allow_nan=False)
+        except ValueError as error:
+            raise ValueError(
+                f"This {self.kind} policy holds a number that is not finite, so '{path}' would be a file "
+                f"the engine cannot read: {error}."
+            ) from None
+        path.write_text(text + "\n", encoding="utf-8")
         return path
 
     @classmethod

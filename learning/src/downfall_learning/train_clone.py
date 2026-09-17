@@ -152,6 +152,21 @@ def _probabilities(model: _Model, batch: _Batch) -> np.ndarray:
     return exponent / exponent.sum(axis=1, keepdims=True)
 
 
+def _log_probabilities(model: _Model, batch: _Batch) -> np.ndarray:
+    """The same, in logs, and never the log of a probability that has already rounded to zero.
+
+    A clone that copies its teacher closely puts a probability below the smallest float there is on the odd
+    action the teacher took anyway, `_probabilities` rounds it to zero, and its log is minus infinity. That
+    is not a large loss, it is no loss at all: ci-131 reported `loss inf` from the fourth epoch, lost the
+    tie-break between epochs of equal accuracy, and wrote `Infinity` into a policy file the engine then
+    refused to parse at all. Subtracting the log of the sum keeps the same number in a form that cannot
+    round away, because the largest term of that sum is one.
+    """
+    logits = model.logits(batch)
+    top = logits.max(axis=1, keepdims=True)
+    return logits - (top + np.log(np.exp(logits - top).sum(axis=1, keepdims=True)))
+
+
 def _batch_gradients(
     model: _Model, batch: _Batch, alpha: float
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
@@ -191,7 +206,7 @@ def _loss(
     for start in range(0, len(steps), batch_size):
         batch = candidates.batch(scaled, steps[start : start + batch_size])
         taken = np.arange(len(batch.chosen))
-        total -= float(np.log(_probabilities(model, batch)[taken, batch.chosen]).sum())
+        total -= float(_log_probabilities(model, batch)[taken, batch.chosen].sum())
     return total / len(steps)
 
 

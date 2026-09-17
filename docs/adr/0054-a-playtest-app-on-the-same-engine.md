@@ -1,4 +1,4 @@
-# 0053. A playtest app: the tabletop rule set on a screen, through the same engine
+# 0054. A playtest app: the tabletop rule set on a screen, through the same engine
 
 Date: 2026-09-17
 Status: Accepted

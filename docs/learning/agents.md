@@ -188,8 +188,10 @@ candidate set against a fixed opponent on the benchmark seeds and keeps what win
 to `greedy.json` under its own name. `search-2.json` was the first of those: a searched set that beats `Greedy`
 on seeds it never saw, committed to be played and compared, not to be the baseline (the 2026-09-12 journal
 entry says what it buys and what it costs). **The balance objective's `exploit` evaluation plays a panel of
-them and reads its best exploiter** ([ADR 0052](../adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)):
-`search-4`, `mixture-mean`, `pressure-floor` and `stun-first` today. It named one file until 2026-09-17,
+them and reads its best exploiter** ([ADR 0052](../adr/0052-read-the-exploit-term-as-the-best-of-a-panel.md)),
+and scores **how fast** that one wins rather than whether it does, ties going to the fastest
+([ADR 0053](../adr/0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md)):
+`search-4`, `mixture-mean`, `pressure-floor`, `stun-first` and `kill-first` today. It named one file until 2026-09-17,
 `pressure-floor` then, `search-4` before it and `search-3` before that, and the reason it no longer does is
 measured: one agent reads what that agent punishes, so the same one-spell move was worth 0.013 to `search-4`
 and 0.235 to `stun-first`, and on the moved catalogue `search-4` became the best exploiter of the two
@@ -208,7 +210,12 @@ with it in the panel (journal, 2026-09-17): the first set in which `stun` is the
 `kill`, and on 200 seeds nothing had played it beats `pressure-floor` 0.80, `search-4` 0.97 and
 `mixture-mean` 0.93 while taking every match from Greedy and Random. Its own mirror is worse still, the
 first mover taking 0.925 of it, so the ladder's top two rungs are agents to play and not baselines to
-balance against. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+balance against. `kill-first.json` is the only set here searched against a catalogue other than the
+committed one — the weakened Crushing Stomp of the 2026-09-17 saturation entry — and it is on the ladder for
+what that measured rather than for a rung: `stun` 0.70 where `stun-first` carries 10.21 and `kill` 18.01
+above everything, a different route to the same result. On 200 seeds nothing had played it takes every match
+from Greedy on **both** catalogues, where `stun-first` takes 0.72 of them on the moved one, which is why a
+content move that blinds one set is not a content move that makes the game less exploitable. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor

@@ -1304,17 +1304,21 @@ import sys
 from pathlib import Path
 
 options = dict(zip(sys.argv[2::2], sys.argv[3::2]))
-rate = json.loads(Path(__file__).with_name("wins.json").read_text())[options["--p1"]]
+entry = json.loads(Path(__file__).with_name("wins.json").read_text())[options["--p1"]]
+rate, rounds = entry if isinstance(entry, list) else (entry, 100.0 * entry)
 evaluation = json.loads(Path(__file__).with_name("template.json").read_text())
 for name in ("winRate", "score"):
     evaluation["agentA"][name] = {"mean": rate, "low": rate, "high": rate}
-evaluation["averageRounds"] = 100.0 * rate
+evaluation["averageRounds"] = rounds
 Path(options["--out"]).write_text(json.dumps(evaluation))
 """
 
 
-def panel_evaluator(tmp_path: Path, wins: Mapping[str, float]) -> EngineContentEvaluator:
-    """An evaluator whose engine gives each agent A the win rate ``wins`` names, and rounds to match."""
+def panel_evaluator(
+    tmp_path: Path, wins: Mapping[str, float | tuple[float, float]]
+) -> EngineContentEvaluator:
+    """An evaluator whose engine gives each agent A what ``wins`` names: a win rate, with rounds to match,
+    or a (win rate, rounds) pair where the two have to be set apart."""
     (tmp_path / "fake_builder.py").write_text(FAKE_BUILDER, encoding="utf-8")
     engine = tmp_path / "fake_engine.py"
     engine.write_text(PANEL_ENGINE, encoding="utf-8")
@@ -1347,6 +1351,19 @@ def test_a_panel_on_agent_a_is_read_as_its_best_exploiter(tmp_path: Path) -> Non
     # Every metric of the evaluation comes from that same agent's play, not only the win rate.
     assert metrics["exploit"]["averageRounds"] == pytest.approx(90.0)
     assert evaluator.calls == 3
+
+
+def test_a_tie_at_the_top_of_the_panel_goes_to_the_fastest_win(tmp_path: Path) -> None:
+    """ADR 0053: the term is scored on the clock, and several members take every match on the catalogues
+    measured so far, so a tie must be broken by the play rather than by the order of the list."""
+    evaluator = panel_evaluator(
+        tmp_path, {"greedy": (1.0, 9.0), "random": (1.0, 6.0), "explore:0.2": (0.8, 2.0)}
+    )
+
+    metrics = evaluator.evaluate(content_tree(tmp_path / "data").spells)
+
+    assert metrics["exploit"]["winRateA"] == pytest.approx(1.0)
+    assert metrics["exploit"]["averageRounds"] == pytest.approx(6.0)
 
 
 def test_one_agent_on_agent_a_still_plays_once(tmp_path: Path) -> None:
