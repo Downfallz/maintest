@@ -1,6 +1,7 @@
 # Every critical chance is a twentieth
 
-Status: **Draft, for discussion** (2026-09-17). Not a numbered ADR: this branch claims no ADR number. When the
+Status: **Draft, settled, not built** (2026-09-17). Every question this document opened has an answer; what
+is left is the work. Not a numbered ADR: this branch claims no ADR number. When the
 rule is settled and built, this text moves into `docs/adr/` with the next free number.
 
 ## The rule, in one sentence
@@ -25,13 +26,13 @@ none of them got there by a balance pass choosing an odd number:
 | Tornado | 0.33 | 0.35 | 0.020 |
 | Noxious Cure | 0.28 | 0.30 | 0.020 |
 | Crazed Specter | 0.38 | 0.40 | 0.020 |
-| Revenant Guards | 0.33 | 0.35 | 0.020 |
 | Rejuvenate | 0.22 | 0.20 | 0.020 |
 | Toxic Waves | 0.33 | 0.35 | 0.020 |
 | Engulfing Flames | 0.33 | 0.35 | 0.020 |
 | Protective Slam | 0.283 | 0.30 | 0.017 |
 | Pummel | 0.767 | 0.75 | 0.017 |
 | Lightning Bolt | 0.617 | 0.60 | 0.017 |
+| Revenant Guards | 0.33 | **0** | — (see below) |
 
 Read the values, not the table: 0.33, 0.667 and 0.717 are the legacy prototype's thirds, carried over by the
 port (`docs/domain/spells.md`). A knob moves a value **by** its step, from wherever the value already is. So a
@@ -70,17 +71,45 @@ The rule is worth nothing if it is only written down. Three places can hold it, 
 Recommended: **1 and 2**. The rule lives where content is validated, and the search space is shaped so it
 cannot produce what validation would reject.
 
-## Open questions
+## Settled
 
-- **Rounding.** Nearest twentieth, and a tie (an exact 0.025 step) rounds where? Up is one rule, and the ten
-  moves above contain no tie, so it costs nothing to say it now.
-- **Revenant Guards.** It prints 0.33 — 0.35 after the snap — and a critical multiplies a target's damage and
-  a direct heal (ADR 0033). This Spell has neither: two Defense buffs and a Bleed on its caster. Its own
-  `knobs.json` note says the chance is deliberately not a knob for that reason. So the snap would put a
-  number on a card where the die can change nothing. Set it to zero and the card says "no critical roll",
-  which is the truth, or leave it and accept a printed chance that does nothing.
-- **The threshold on the card.** A chance of 0.35 is "14 or more on a d20" the way `components.md` writes it.
-  Card, player aid and rulebook must state one convention and never the other.
+**Rounding: to the nearest twentieth, and a tie rounds up.** None of the ten moves is a tie, so the rule costs
+nothing today and exists so that the next pass cannot ask. One warning for whoever builds it: `round()` in
+both Python and .NET rounds a tie to even, so `round(0.025 * 20) / 20` is `0.0`, not `0.05`. The rule is
+`floor(x * 20 + 0.5) / 20`.
+
+**Revenant Guards prints no chance at all.** Not 0.35: **0**. A critical multiplies a target's Damage and a
+direct Heal (ADR 0033), and this Spell has neither — two Defense buffs and a Bleed on its caster — which is
+why `knobs.json` already refuses it a critical knob. Snapping it would print a number on a card where the die
+cannot change anything. The Spell itself may be reworked later; until then the card tells the truth.
+
+**The threshold on the card is the one `components.md` already writes**: a chance of 0.35 is `d20: 14+`. Card,
+player aid and rulebook state that one and never its complement.
+
+**Where the rule is enforced: the data builder and `check-knobs`** — options 1 and 2 above, not the
+`CriticalChance` type. Taken as recommended; say so if you want it elsewhere.
+
+### What the catalogue looks like afterwards
+
+Sixteen of the 36 Spells never touch the die, and the twenty that do carry **nine distinct chances**, each a
+clean threshold:
+
+| Chance | Faces | Card |
+| --- | --- | --- |
+| 0.20 | 4 | `d20: 17+` |
+| 0.30 | 6 | `d20: 15+` |
+| 0.35 | 7 | `d20: 14+` |
+| 0.40 | 8 | `d20: 13+` |
+| 0.45 | 9 | `d20: 12+` |
+| 0.50 | 10 | `d20: 11+` |
+| 0.60 | 12 | `d20: 9+` |
+| 0.75 | 15 | `d20: 6+` |
+| 0.80 | 16 | `d20: 5+` |
+
+Eleven values become nine, and every one of them is a number a player reads off the die without arithmetic.
+
+## Still open
+
 - **Whether a Creature's chance is allowed back.** It is zero today (ADR 0042). The rule covers it either way;
   the question is whether a Creature that crits more than another is still wanted, because that is the thing
   that made the printed chance and the rolled chance differ in the first place.
