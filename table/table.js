@@ -2,7 +2,7 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
-import { chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs } from './board.js';
+import { chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
 import { backText, handRows } from './hand.js';
 import { feedLine } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
@@ -42,7 +42,7 @@ function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
-  const state = { seats, holder: null, shown: null, sending: false, picked: [], cards: new Map(), catalogue: null, tab: 'board' };
+  const state = { seats, holder: null, shown: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board' };
   load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -137,6 +137,7 @@ function render(state, views) {
   if (current.seat !== state.shown) {
     state.shown = current.seat;
     state.picked = [];
+    state.chosen = null;
   }
 
   // Until the player being asked says they are the one holding the device, the board stays behind the pass
@@ -191,13 +192,12 @@ function renderTimeline(board) {
 
 function renderBoard(state, view) {
   const board = view.board;
-  element('board').replaceChildren(
-    hand(state, board, view.options),
-    backs(state, board, view.opponentIntents),
-    revealed(state, board.revealedActions),
-    ...(board.allies ?? []).map(creature => line(state, creature, 'ally')),
-    ...(board.enemies ?? []).map(creature => line(state, creature, 'enemy')),
-  );
+  const marks = { picked: state.picked, revealed: board.revealedActions };
+  element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
+  element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
+  revealed(state, board.revealedActions);
+  element('backs').replaceChildren(backs(state, board, view.opponentIntents));
+  element('own-hand').replaceChildren(hand(state, board, view.options));
 }
 
 // The hand: every spell this seat's creatures know, drawn as the whole card, with the ones it could cast right
@@ -245,17 +245,14 @@ function hand(state, board, options) {
 // The actions that are already face up, in the order they were revealed (board.js). Nothing is drawn while
 // none is, so the board of a planning phase is the board it was.
 function revealed(state, actions) {
-  const box = document.createElement('div');
-  box.className = 'revealed';
+  const box = element('revealed');
   box.hidden = (actions ?? []).length === 0;
-  for (const action of actions ?? []) {
+  box.replaceChildren(...(actions ?? []).map(action => {
     const one = document.createElement('div');
     one.className = 'revealed-action';
     one.textContent = revealedText(action, state.cards);
-    box.append(one);
-  }
-
-  return box;
+    return one;
+  }));
 }
 
 // What is face down. This seat's own backs are its own to read; the other side's is a count and carries no
@@ -279,9 +276,11 @@ function backs(state, board, opponentIntents) {
 }
 
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
-function line(state, creature, which) {
+function line(state, creature, which, marks) {
+  const picked = (marks?.picked ?? []).includes(creature.id);
+  const casters = targetedBy(creature.id, marks?.revealed);
   const box = document.createElement('div');
-  box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}`;
+  box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}`;
 
   const who = document.createElement('div');
   who.className = 'who';
@@ -302,6 +301,31 @@ function line(state, creature, which) {
   stats.textContent = statPairs(creature).map(([name, value]) => `${name} ${value}`).join(' · ');
 
   box.append(who, health, stats, dock(state, creature.conditions));
+
+  // The markers, on the row rather than only in the sheet: a target is chosen against this creature's health,
+  // its defense and what is already on it, so the choice has to be visible where those numbers are
+  // (playtest-app.md §3.1). `picked` is what this seat has tapped and not yet sent; `Targeted by` is every
+  // caster already pointing at it, which is what the printed board's row of boxes holds.
+  if (picked || casters.length > 0) {
+    const markers = document.createElement('div');
+    markers.className = 'markers';
+    if (picked) {
+      const mine = document.createElement('span');
+      mine.className = 'marker picked';
+      mine.textContent = 'picked';
+      markers.append(mine);
+    }
+
+    for (const caster of casters) {
+      const marker = document.createElement('span');
+      marker.className = 'marker';
+      marker.textContent = `${caster}`;
+      markers.append(marker);
+    }
+
+    box.append(markers);
+  }
+
   return box;
 }
 
@@ -438,16 +462,42 @@ function buttonsFor(state, current) {
     case 'Speed':
       return ['Quick', 'Standard'].map(speed =>
         button(speed, send({ kind: 'Speed', creature: view.waitingCreature, speed })));
-    case 'Intent': {
-      const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
-      return (option?.castableSpells ?? []).map(spell =>
-        card(state, spell, '', send({ kind: 'Intent', creature: view.waitingCreature, spell })));
-    }
+    case 'Intent':
+      return intentButtons(state, current);
     case 'Target':
       return targetButtons(state, current);
     default:
       return [];
   }
+}
+
+// An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
+// and there is no undo (playtest-app.md §3.3, §7), so the first tap chooses a card and the second commits it.
+// The chosen card stays on the screen while it is only chosen, which is what makes the second tap a reading of
+// the first rather than a formality.
+function intentButtons(state, current) {
+  const view = current.view;
+  const option = (view.options.intent?.creatures ?? []).find(candidate => candidate.creature === view.waitingCreature);
+  const castable = option?.castableSpells ?? [];
+  const chosen = castable.includes(state.chosen) ? state.chosen : null;
+
+  const cards = castable.map(spell => {
+    const face = card(state, spell, '', () => {
+      state.chosen = spell;
+      refresh(state);
+    });
+    if (spell === chosen) {
+      face.classList.add('chosen');
+    }
+
+    return face;
+  });
+
+  const name = chosen === null ? '' : state.cards.get(chosen)?.name ?? chosen;
+  const confirm = button(chosen === null ? 'Choose a card' : `Declare ${name}`, () =>
+    submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: chosen }));
+  confirm.disabled = chosen === null;
+  return [...cards, confirm];
 }
 
 function targetButtons(state, current) {
@@ -541,6 +591,7 @@ async function submit(state, current, decision) {
     }
 
     state.picked = [];
+    state.chosen = null;
   } finally {
     state.sending = false;
   }

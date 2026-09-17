@@ -22,9 +22,6 @@
     </section>
 
     <main id="table" hidden>
-      <!-- The initiative track: one strip, scrolling sideways, in the order the engine built. -->
-      <section id="timeline" class="strip" aria-label="Initiative"></section>
-
       <!-- Two tabs and not two panels: the mat is touched once a round, during Evolution, and a phone has
            one screen. -->
       <nav class="tabs">
@@ -32,7 +29,18 @@
         <button id="tab-mat" type="button" class="tab">Talents</button>
       </nav>
 
-      <section id="board"></section>
+      <!-- One column, in the order playtest-app.md §3.3 gives: the enemy team, the initiative strip, your
+           team, your hand. The enemies are at the top because they are what a decision is about, and the hand
+           is at the bottom because it is the tallest thing on the page -- a hand above the boards means
+           scrolling past five card faces to read the health a target choice depends on. -->
+      <section id="board">
+        <div id="enemies"></div>
+        <section id="timeline" class="strip" aria-label="Initiative"></section>
+        <div id="allies"></div>
+        <div id="revealed" class="revealed" hidden></div>
+        <div id="backs"></div>
+        <div id="own-hand"></div>
+      </section>
       <section id="mat" hidden></section>
 
       <details id="log">

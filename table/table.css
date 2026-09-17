@@ -285,6 +285,23 @@ button.chosen { border-width: 2px; }
 
 .chip-source { margin-left: 4px; color: var(--muted); font-size: 0.65rem; }
 
+/* The markers, on the row: what this seat has tapped and not yet sent, and every caster already pointing at
+   this creature -- the printed board's `Targeted by` row of one box a caster. */
+.markers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+.marker {
+  min-width: 1.25rem;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  text-align: center;
+  font-size: 0.7rem;
+}
+
+.marker.picked { border-color: currentcolor; font-weight: 600; }
+
+.creature.picked { outline: 2px solid currentcolor; outline-offset: -2px; }
+
 /* The talent mat. A pip per creature, filled when it knows the spell. */
 .band-row { margin-bottom: 10px; }
 

@@ -114,3 +114,14 @@ export function revealedText(action, cards) {
   const targets = (action?.targets ?? []).join(', ');
   return targets === '' ? `${actor}: ${spell}` : `${actor}: ${spell} → ${targets}`;
 }
+
+// Which casters point at a creature, from the actions already face up. The printed board has a `Targeted by`
+// row of one box a caster (components.md §3.7), and it is there because reveal-and-target walks the whole
+// timeline before anything resolves: six casts' markers are on the table at once, and "who is pointing at me"
+// is what a player reads before choosing their own. A caster appearing twice is impossible -- a cast cannot
+// name one target twice -- so this is a list and not a count.
+export function targetedBy(creature, revealedActions) {
+  return (revealedActions ?? [])
+    .filter(action => (action?.targets ?? []).includes(creature))
+    .map(action => action?.actor);
+}

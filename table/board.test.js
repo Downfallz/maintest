@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, statPairs } from './board.js';
+import { chipSource, chipText, conditionDock, healthShare, healthText, laneOf, revealedText, statPairs, targetedBy } from './board.js';
 
 const creature = { id: 1, health: 14, maxHealth: 20, energy: 2, totalDefense: 3, currentInitiative: 7 };
 
@@ -103,4 +103,30 @@ test('a revealed action the page has no card for still names its spell', () => {
 test('a revealed action with no targets is printed without an arrow', () => {
   assert.equal(revealedText({ actor: 1, spell: 'Pummel', targets: [] }, new Map()), '1: Pummel');
   assert.equal(revealedText(undefined, undefined), ': ');
+});
+
+// Reveal-and-target walks the whole timeline before anything resolves, so every cast's markers are on the
+// table at once and "who is pointing at me" is what a player reads before choosing their own.
+test('a creature row names every caster already pointing at it', () => {
+  const revealed = [
+    { actor: 1, spell: 's', targets: [4, 5] },
+    { actor: 2, spell: 's', targets: [4] },
+    { actor: 3, spell: 's', targets: [6] },
+  ];
+
+  assert.deepEqual(targetedBy(4, revealed), [1, 2]);
+  assert.deepEqual(targetedBy(5, revealed), [1]);
+  assert.deepEqual(targetedBy(6, revealed), [3]);
+});
+
+test('a creature nothing points at has no markers, and neither does an empty board', () => {
+  assert.deepEqual(targetedBy(9, [{ actor: 1, spell: 's', targets: [4] }]), []);
+  assert.deepEqual(targetedBy(4, []), []);
+  assert.deepEqual(targetedBy(4, undefined), []);
+});
+
+// A cast with nothing left to hit is revealed with no targets: it points at nobody rather than at everybody.
+test('a revealed cast with no targets points at nothing', () => {
+  assert.deepEqual(targetedBy(4, [{ actor: 1, spell: 's', targets: [] }]), []);
+  assert.deepEqual(targetedBy(4, [{ actor: 1, spell: 's' }]), []);
 });
