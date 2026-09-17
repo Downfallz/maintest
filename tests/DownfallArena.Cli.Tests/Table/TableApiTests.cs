@@ -267,7 +267,7 @@ public sealed partial class TableApiTests : IDisposable
         var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token);
 
         answer.Status.ShouldBe(200);
-        Tag(answer).ShouldBe($"\"{Convert.ToHexStringLower(SHA256.HashData(answer.Body.ToArray()))}\"");
+        Tag(answer).ShouldBe($"\"{Convert.ToHexStringLower(SHA256.HashData(answer.Body))}\"");
     }
 
     /// <summary>The same table, built again: the same content and the same rules answer the same tag.</summary>
