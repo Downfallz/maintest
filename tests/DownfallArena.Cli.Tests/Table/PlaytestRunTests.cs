@@ -210,6 +210,54 @@ public sealed class PlaytestRunTests : IDisposable
         return board.Value;
     }
 
+    /// <summary>
+    /// A seat that changed hands mid-match says so on every step, so a fast-forwarded session can be split
+    /// into the bot's opening and the person's play.
+    /// </summary>
+    /// <remarks>
+    /// This is the whole point of the field, and the lie it replaces was already in the repository: a
+    /// <c>--handover</c> session records the bot's rounds and the person's rounds into one
+    /// <c>steps.jsonl</c> under one run stamp, with nothing on the line to tell them apart. A clone fitted on
+    /// it would learn the bot's opening as human play. Both seats here are bots, because what is being tested
+    /// is who the recorder <em>names</em>, and a person in the seat would only add a thread to block on.
+    /// </remarks>
+    [Fact]
+    public async Task A_seat_handed_over_mid_match_names_the_bot_and_the_person_on_their_own_steps()
+    {
+        const int HandsOverAt = 3;
+        var (run, session) = await Started(seat1: resources =>
+        {
+            var bot = new Occupant(Bot(resources), "greedy");
+            var person = new Occupant(Bot(resources), "human:mk");
+            var seat = new SeatAgent(bot);
+            seat.Seat(person with { Agent = new HandoverAgent(seat, bot, person, HandsOverAt) });
+            return seat;
+        });
+        await session.Outcome;
+        await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
+
+        var mine = Lines(run, "steps.jsonl")
+            .Where(step => step.GetProperty("slot").GetString() == "Player1")
+            .Select(step => (Round: step.GetProperty("round").GetInt32(), By: step.GetProperty("decidedBy").GetString()))
+            .ToList();
+
+        mine.ShouldNotBeEmpty();
+        mine.Where(step => step.Round < HandsOverAt).ShouldAllBe(step => step.By == "greedy");
+        mine.Where(step => step.Round >= HandsOverAt).ShouldAllBe(step => step.By == "human:mk");
+        mine.ShouldContain(step => step.By == "greedy", "the bot played the rounds before the handover");
+        mine.ShouldContain(step => step.By == "human:mk", "the person played the rounds after it");
+
+        // The other seat never changed hands, and says the one name it always had.
+        Lines(run, "steps.jsonl")
+            .Where(step => step.GetProperty("slot").GetString() == "Player2")
+            .ShouldAllBe(step => step.GetProperty("decidedBy").GetString() == "greedy");
+    }
+
+    private static IReadOnlyList<JsonElement> Lines(PlaytestRun run, string relativePath) =>
+        [.. File.ReadAllLines(Path.Combine(run.Directory, relativePath))
+            .Where(line => line.Length > 0)
+            .Select(line => JsonDocument.Parse(line).RootElement)];
+
     private static JsonElement Read(PlaytestRun run, string relativePath) =>
         JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Directory, relativePath))).RootElement;
 
@@ -217,7 +265,7 @@ public sealed class PlaytestRunTests : IDisposable
     private async Task<(PlaytestRun Run, TableSession Session, HumanSeat Person)> StartedWithAPerson()
     {
         var person = new HumanSeat(_stopping.Token);
-        var (run, session) = await Started(seat1: new SeatAgent(person));
+        var (run, session) = await Started(seat1: _ => new SeatAgent(new Occupant(person, "human:mk")));
         return (run, session, person);
     }
 
@@ -241,7 +289,9 @@ public sealed class PlaytestRunTests : IDisposable
     /// A session with a bot in each seat by default, which is the one that plays itself to an outcome without
     /// a tap. What it exercises is the recording, and the recording does not know who is seated.
     /// </summary>
-    private async Task<(PlaytestRun Run, TableSession Session)> Started(string player1Agent = "greedy", SeatAgent? seat1 = null)
+    private async Task<(PlaytestRun Run, TableSession Session)> Started(
+        string player1Agent = "greedy",
+        Func<IGameResources, SeatAgent>? seat1 = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -261,8 +311,8 @@ public sealed class PlaytestRunTests : IDisposable
             _host.Services,
             Rules,
             seed: 7,
-            seat1 ?? new SeatAgent(Bot(resources)),
-            new SeatAgent(Bot(resources)),
+            seat1?.Invoke(resources) ?? new SeatAgent(new Occupant(Bot(resources), "greedy")),
+            new SeatAgent(new Occupant(Bot(resources), "greedy")),
             run.Wrap,
             _stopping.Token);
 

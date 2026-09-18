@@ -31,7 +31,7 @@ public sealed class TableSessionTests : IDisposable
     public async Task Two_seats_play_a_match_through_the_engine_to_its_outcome()
     {
         var services = Built();
-        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, new SeatAgent(Bot(services)), new SeatAgent(Bot(services)), cancellationToken: TestContext.Current.CancellationToken);
+        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, new SeatAgent(new Occupant(Bot(services), "greedy")), new SeatAgent(new Occupant(Bot(services), "greedy")), cancellationToken: TestContext.Current.CancellationToken);
 
         var outcome = await session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
@@ -43,8 +43,8 @@ public sealed class TableSessionTests : IDisposable
     [Fact]
     public void A_seat_forwards_every_decision_to_whoever_is_seated()
     {
-        var first = new Counting(new Refusing());
-        var second = new Counting(new Refusing());
+        var first = new Occupant(new Counting(new Refusing()), "first");
+        var second = new Occupant(new Counting(new Refusing()), "second");
         var seat = new SeatAgent(first);
 
         seat.Seated.ShouldBeSameAs(first);
@@ -62,10 +62,10 @@ public sealed class TableSessionTests : IDisposable
         var services = Built();
         var first = new Counting(Bot(services));
         var second = new Counting(Bot(services));
-        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, new SeatAgent(first), new SeatAgent(Bot(services)), cancellationToken: TestContext.Current.CancellationToken);
+        using var session = await TableSession.StartAsync(services, RuleSet.Create(2, 2, 1, 6, 2.0), seed: 7, new SeatAgent(new Occupant(first, "first")), new SeatAgent(new Occupant(Bot(services), "greedy")), cancellationToken: TestContext.Current.CancellationToken);
 
         first.Asked.WaitOne(TimeSpan.FromSeconds(30)).ShouldBeTrue("the first seat should have been asked something");
-        session.Player1.Seat(second);
+        session.Player1.Seat(new Occupant(second, "second"));
         var outcome = await session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         outcome.IsSuccess.ShouldBeTrue(outcome.IsFailure ? outcome.Error.Message : null);

@@ -123,6 +123,66 @@ public sealed class RecordingAgentTests
         Should.Throw<ArgumentNullException>(() => agent.DecideTargets(board, null!));
     }
 
+    /// <summary>
+    /// A step says who decided it, and the recorder asks rather than assumes: who is playing a seat can change
+    /// between one decision and the next, so the name is not a property of the run.
+    /// </summary>
+    [Fact]
+    public void A_step_names_whoever_decided_it()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
+        var steps = new List<StepRecord>();
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+        var recording = new RecordingAgent(inner, Observations, Actions, Terms, steps, _ => "human:mk");
+
+        recording.DecideEvolution(Board(), options);
+
+        steps.ShouldHaveSingleItem().DecidedBy.ShouldBe("human:mk");
+    }
+
+    /// <summary>
+    /// Nothing named the decider, so the step claims nothing. Null has to survive to the file: a reader that
+    /// saw a bot's name here would fold the run into a training set, and one that saw nothing knows not to.
+    /// </summary>
+    [Fact]
+    public void A_step_nobody_named_a_decider_for_claims_none()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
+        var steps = new List<StepRecord>();
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+
+        new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideEvolution(Board(), options);
+
+        steps.ShouldHaveSingleItem().DecidedBy.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// The decider is named before the decision is handed over, not after it. Deciding is exactly where a seat
+    /// changes hands -- a handover seats the person on the very question it hands over -- so a name read
+    /// afterwards belongs to whoever holds the seat by then, which can be somebody who answered nothing.
+    /// </summary>
+    [Fact]
+    public void A_step_is_named_before_the_decision_is_made_and_not_after_it()
+    {
+        var seated = "greedy";
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
+            .Returns(_ =>
+            {
+                // What a handover does while it answers: whoever comes next is seated during this decision.
+                seated = "human:mk";
+                return EvolutionDecision.Pass;
+            });
+        var steps = new List<StepRecord>();
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+
+        new RecordingAgent(inner, Observations, Actions, Terms, steps, _ => seated).DecideEvolution(Board(), options);
+
+        steps.ShouldHaveSingleItem().DecidedBy.ShouldBe("greedy");
+    }
+
     private static PlayerBoardState Board() => PlayerBoardStateProjection.Build(new MatchStore().Started(), PlayerSlot.Player1);
 
     private sealed class CountingAgent(IPlayerAgent inner) : IPlayerAgent

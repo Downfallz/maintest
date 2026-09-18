@@ -18,32 +18,46 @@ namespace DownfallArena.Cli.Table;
 /// </remarks>
 internal sealed class SeatAgent : IPlayerAgent
 {
-    private IPlayerAgent _seated;
+    private Occupant _seated;
 
-    public SeatAgent(IPlayerAgent seated)
+    public SeatAgent(Occupant seated)
     {
         ArgumentNullException.ThrowIfNull(seated);
         _seated = seated;
     }
 
-    /// <summary>Who decides for this seat right now.</summary>
-    public IPlayerAgent Seated => Volatile.Read(ref _seated);
+    /// <summary>Who is sitting here right now, and the name a record calls them by.</summary>
+    public Occupant Seated => Volatile.Read(ref _seated);
 
     /// <summary>
-    /// Hands the seat to someone else and returns who held it. It takes effect at the next decision the match
+    /// Hands the seat to somebody else and returns who held it. It takes effect at the next decision the match
     /// asks of this seat: a swap made while the seat is blocked on a person leaves that question with them.
     /// </summary>
-    public IPlayerAgent Seat(IPlayerAgent next)
+    public Occupant Seat(Occupant next)
     {
         ArgumentNullException.ThrowIfNull(next);
         return Interlocked.Exchange(ref _seated, next);
     }
 
-    public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => Seated.DecideEvolution(board, options);
+    /// <summary>
+    /// Who would decide this board, without deciding it: whoever is seated, or whoever they would pass it to.
+    /// </summary>
+    /// <remarks>
+    /// A seat can hold an occupant that routes by the board rather than playing -- a handover plays the early
+    /// rounds as a bot and the rest as a person, and holds both. Naming the router would name neither of them,
+    /// so the question is passed down to it and answered by the same rule that would route the decision.
+    /// </remarks>
+    public Occupant DeciderOf(PlayerBoardState board)
+    {
+        var seated = Seated;
+        return seated.Agent is IRouteDecisions router ? router.DeciderOf(board) : seated;
+    }
 
-    public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Seated.DecideSpeed(board, creature);
+    public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => Seated.Agent.DecideEvolution(board, options);
 
-    public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Seated.DecideIntent(board, intentOption);
+    public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Seated.Agent.DecideSpeed(board, creature);
 
-    public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Seated.DecideTargets(board, options);
+    public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Seated.Agent.DecideIntent(board, intentOption);
+
+    public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Seated.Agent.DecideTargets(board, options);
 }

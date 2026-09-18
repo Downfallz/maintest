@@ -70,7 +70,18 @@ public sealed class RunRecorder(
         await WriteManifestAsync(cancellationToken);
     }
 
-    public IPlayerAgent Wrap(MatchId matchId, IPlayerAgent agent)
+    /// <summary>
+    /// What <see cref="IMatchRecorder" /> asks for: a seat that cannot change hands, so no step is named.
+    /// </summary>
+    public IPlayerAgent Wrap(MatchId matchId, IPlayerAgent agent) => Wrap(matchId, agent, decidedBy: null);
+
+    /// <param name="decidedBy">
+    /// What to call whoever decides a board, asked at every decision because a seat can change hands while a
+    /// match runs. It is not on the port: a batch runner plays fixed agents and has nothing to name. Null
+    /// records no name at all, which a reader must be able to tell from a bot's name -- not knowing who
+    /// decided is not a claim that a bot did.
+    /// </param>
+    public IPlayerAgent Wrap(MatchId matchId, IPlayerAgent agent, Func<PlayerBoardState, string?>? decidedBy)
     {
         ArgumentNullException.ThrowIfNull(agent);
 
@@ -80,7 +91,7 @@ public sealed class RunRecorder(
             _steps[matchId] = steps;
         }
 
-        return new RecordingAgent(agent, observations, actions, terms, steps);
+        return new RecordingAgent(agent, observations, actions, terms, steps, decidedBy);
     }
 
     public async Task MatchPlayedAsync(MatchId matchId, int seed, PlayerBoardState player1Board, CancellationToken cancellationToken = default)

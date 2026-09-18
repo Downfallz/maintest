@@ -21,6 +21,10 @@ from downfall_learning.stamps import RunStamp
 
 MANIFEST_FILE = "manifest.json"
 STEPS_FILE = "steps.jsonl"
+
+# What a step's ``decidedBy`` starts with when a person decided it: the table writes ``human`` or
+# ``human:<initials>``, and the run stamp spells a swapped seat the same way (docs/learning/artifacts.md).
+PERSON = "human"
 EPISODES_FILE = "episodes.jsonl"
 
 
@@ -81,6 +85,11 @@ class Step:
     # One row per candidate, in candidate order: the scorer's terms of that action (ADR 0051), or None on
     # a step recorded before the engine wrote them.
     candidate_terms: np.ndarray | None = None
+    # Who decided this step, named the way a stamp names an agent (``Greedy``, ``human:mk``), or None on a
+    # run recorded before the field existed. A seat changes hands while a match runs -- a handover plays the
+    # early rounds as a bot -- so this is the only thing that separates a fast-forwarded session's human play
+    # from the bot's opening. None is "nobody said", which is not the same claim as "a bot did".
+    decided_by: str | None = None
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any], features: np.ndarray, term_count: int = 0) -> Step:
@@ -111,6 +120,7 @@ class Step:
                 candidate_terms=_candidate_terms(
                     data.get("candidateTerms"), len(data["candidates"]), term_count
                 ),
+                decided_by=_decided_by(data.get("decidedBy")),
             )
         except KeyError as error:
             raise ArtifactError(f"A step needs the field {error}.") from None
@@ -119,11 +129,21 @@ class Step:
         return step
 
     @property
+    def by_a_person(self) -> bool:
+        """Whether a person decided this step, which only a run that says so can answer."""
+        return self.decided_by is not None and self.decided_by.split(":", 1)[0] == PERSON
+
+    @property
     def chosen_terms(self) -> np.ndarray | None:
         """The terms of the action that was taken, or None when the step carries no terms."""
         if self.candidate_terms is None:
             return None
         return self.candidate_terms[self.candidates.index(self.action)]
+
+
+def _decided_by(value: Any) -> str | None:
+    """The decider's name, interned like every other string a step repeats across a whole run."""
+    return None if value is None else sys.intern(str(value))
 
 
 def _candidate_terms(values: Any, candidates: int, term_count: int) -> np.ndarray | None:
@@ -430,10 +450,19 @@ class _Selection:
     candidate_terms: list[np.ndarray | None]
 
 
-def _select(run: Run, wanted: set[str] | None) -> _Selection:
+def _select(run: Run, wanted: set[str] | None, people_only: bool = False) -> _Selection:
     """The steps of ``run`` whose kind is wanted, with the return of each one's episode joined in."""
     episode_returns = run.returns()
-    rows = [index for index, step in enumerate(run.steps) if wanted is None or step.kind in wanted]
+    if people_only and not any(step.decided_by is not None for step in run.steps):
+        raise ArtifactError(
+            "Only a person's steps were asked for, and this run does not say who decided any of them. "
+            "A run recorded before decidedBy existed cannot answer, and an empty dataset would not say so."
+        )
+    rows = [
+        index
+        for index, step in enumerate(run.steps)
+        if (wanted is None or step.kind in wanted) and (not people_only or step.by_a_person)
+    ]
     steps = [run.steps[index] for index in rows]
     orphan = next((step for step in steps if (step.match_id, step.slot) not in episode_returns), None)
     if orphan is not None:
@@ -451,13 +480,25 @@ def _select(run: Run, wanted: set[str] | None) -> _Selection:
     )
 
 
-def build_dataset(runs: Sequence[Run], kinds: Iterable[str] | None = None) -> Dataset:
-    """Joins the steps of the runs with the returns of their episodes; ``kinds`` keeps only those kinds."""
+def build_dataset(
+    runs: Sequence[Run], kinds: Iterable[str] | None = None, *, people_only: bool = False
+) -> Dataset:
+    """Joins the steps of the runs with the returns of their episodes; ``kinds`` keeps only those kinds.
+
+    ``people_only`` keeps only the steps a person decided. It is what a playtest session is for: a seat that
+    was fast-forwarded holds a bot's opening and a person's endgame under one stamp, and a clone fitted on
+    both would learn the bot as human play. A run that does not say who decided is refused rather than
+    silently contributing nothing.
+    """
     if not runs:
         raise ArtifactError("No run given.")
-    selections = [_select(run, None if kinds is None else set(kinds)) for run in runs]
+    selections = [_select(run, None if kinds is None else set(kinds), people_only) for run in runs]
     if not any(selection.actions for selection in selections):
-        raise ArtifactError("The runs hold no step of the wanted kinds.")
+        raise ArtifactError(
+            "The runs hold no step a person decided of the wanted kinds."
+            if people_only
+            else "The runs hold no step of the wanted kinds."
+        )
     blocks = [selection.observations for selection in selections]
     first = runs[0]
     return Dataset(

@@ -168,7 +168,16 @@ internal sealed class PlaytestRun
     /// It goes <em>around</em> the seat rather than inside it, so a handover swaps who is seated without
     /// swapping the recording out with them.
     /// </summary>
-    public IPlayerAgent Wrap(MatchId matchId, SeatAgent seat) => _recorder.Wrap(matchId, seat);
+    /// <remarks>
+    /// The seat is also what names the decider of every step: it is the thing a handover or a swap changes,
+    /// so asking it is asking the one place that knows. Working it out here instead would be a second copy of
+    /// the seating rule, kept in a file that has no reason to be edited when the seating changes.
+    /// </remarks>
+    public IPlayerAgent Wrap(MatchId matchId, SeatAgent seat)
+    {
+        ArgumentNullException.ThrowIfNull(seat);
+        return _recorder.Wrap(matchId, seat, board => seat.DeciderOf(board).Name);
+    }
 
     /// <summary>
     /// Records that a seat has been shown what it is being asked, which is what the next decision's duration
