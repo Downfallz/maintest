@@ -4,7 +4,7 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-18. The inner agent of a search is worth 44 points with the evaluation held fixed, and search helps or hurts depending which agent it is given: +0.110 on a weak one, −0.170 on the strongest one this repository has
+## 2026-09-18. Search costs `stun-first` seventeen points, the one comparison here a paired test cannot overturn; the rest of the panel is readings this repository has no tooling to settle, which is the finding underneath the finding
 
 - **The measurement began as a design question.** The next build named in the entry below was targeted
   coverage: record the boards a search hands its inner agent and label them with `ActionScorer.Best`, which
@@ -21,16 +21,22 @@ first.
   | `policy:ci-69` | 0.8350 (0.7969 to 0.8731) |
   | `heuristic:search-4` | **0.9125** (0.8827 to 0.9423) |
 
-  44 points from one component, with everything else fixed. The default guesser is at the bottom of it, below
-  every alternative tried and not above a random one.
+  The readings span 44 points from one component with everything else fixed, and the default guesser sits at
+  the bottom of that span. Whether any one pair of these rows differs is a question this panel cannot answer,
+  for the reason below; what it can say is that the spread is far larger than anyone had reason to expect
+  from a component nobody treated as load-bearing, and that the default is not at the top of it.
 
   **What this table cannot be read to say, and a first draft of this entry said anyway.** The default and
   random rows overlap, and overlapping marginal intervals do not establish equivalence — least of all here,
   where every row plays the same fixed benchmark seeds and the results are therefore correlated. This
   repository already says so in `search_weights.py`. Establishing "no better than random" needs a per-seed
   paired difference or a stated equivalence margin, and `evaluate` reports only aggregates, so the paired
-  test cannot be run without new code. The rows that are *disjoint* are safe to read as differences; the
-  overlapping ones are not.
+  test cannot be run without new code. And a first draft of this correction replaced that with a rule of its
+  own -- that *disjoint* intervals are safe to read as differences -- which contradicts the same passage:
+  "two intervals clear of each other is not proof of one either". Every comparison in this entry is between
+  agents played on one fixed seed file, so **none of these marginal intervals settles a difference in either
+  direction**, and the entry now says that of its own tables rather than inventing a threshold that suits
+  them.
 
   **It also cannot be read as a verdict on `ActionScorer.Best` as a labeller**, which is what the draft used
   it for. Swapping the inner agent changes three things at once — the evolution, the speed, and an ally's
@@ -45,13 +51,18 @@ first.
   | inner agent | alone | searched (built-in evaluation) | what search did |
   | --- | --- | --- | --- |
   | Greedy | 0.5000 | 0.4763 (0.4251 to 0.5274) | not measurable here |
-  | `policy:ci-69` | 0.7250 (0.6775 to 0.7725) | **0.8350** (0.7969 to 0.8731) | **+0.110, disjoint** |
+  | `policy:ci-69` | 0.7250 (0.6775 to 0.7725) | **0.8350** (0.7969 to 0.8731) | +0.110, **not settled** |
   | `heuristic:search-4` | 0.9300 (0.9031 to 0.9569) | 0.9125 (0.8827 to 0.9423) | not measurable, overlapping |
-  | `heuristic:stun-first` | **1.0000** | **0.8300** (0.7948 to 0.8652) | **−0.170, disjoint** |
+  | `heuristic:stun-first` | **1.0000** | **0.8300** (0.7948 to 0.8652) | **−0.170, settled below** |
 
-  Search lifts `ci-69` and costs `stun-first` seventeen points — a set that takes every match from Greedy on
-  its own. Both of those are disjoint and safe. The middle row is not: `search-4` searched and unsearched
-  overlap, so this line says nothing about it either way.
+  **One row of this table is settled and the others are not, and the reason is arithmetic rather than an
+  interval.** `stun-first` unsearched scores exactly 1.0000 -- it wins all 400 matches -- so the per-seed
+  paired difference against its searched self is at most zero on *every* seed by construction, and strictly
+  negative on the 17 % it then loses. No new tooling is needed to read that one: search costs the strongest
+  agent this repository has, and it costs it on a comparison a paired test cannot overturn. The `ci-69` row
+  is a different matter: +0.110 between two interior numbers on shared seeds is exactly the case the standard
+  above refuses, and it stays unsettled until the paired reading exists. `search-4` and Greedy overlap and say
+  nothing either way.
 
   A tempting story is that search pulls play toward the level of its own evaluation, from below and from
   above. **This table refuses it**: the searched scores do not converge on one level at all — 0.8300, 0.8350
@@ -70,8 +81,9 @@ first.
   | `lookahead:heuristic:search-4` — built-in evaluation | 0.9125 (0.8827 to 0.9423) |
   | `lookahead:learning/weights/search-4.json` — its own | 0.9200 (0.8910 to 0.9490) |
 
-  Thirteen points for `stun-first` on disjoint intervals, from changing nothing but the yardstick; for
-  `search-4` the two overlap and the line says nothing. The largest penalty falls on the agent whose
+  Thirteen points for `stun-first` from changing nothing but the yardstick, and unsettled for the same reason
+  as the rows above -- two interior numbers on one seed file; for `search-4` the two overlap and the line says
+  nothing. The largest penalty falls on the agent whose
   valuation differs most from the built-in one — `stun-first` is the set that prices a stun above a kill, and
   greedy-ish weights read that play differently. Even at 0.9600 it is below the 1.0000 it scores unsearched.
 
@@ -84,11 +96,18 @@ first.
   whether a clone fitted on the query boards can take it is exactly the open question. Nothing in this entry
   retires it.
 
+- **The tooling gap this entry ran into is the one worth closing first.** Every comparison above is between
+  agents played on one fixed seed file, and `evaluate` reports only aggregates -- `winRate` and `score` as
+  mean, low and high, with no per-seed breakdown -- so the paired reading the repository's own standard calls
+  for cannot be computed from its output at all. That is why a panel of nine evaluations settles exactly one
+  comparison, and it settles that one by arithmetic rather than by statistics. Until `evaluate` emits a score
+  per seed, every future entry hits this same wall, and the wall is a few lines of output away.
+
 - **What is open, and what the table cannot answer.** There is no spec for the cell that should be best: a
   *policy* as the guesser with a *strong weight set* as the evaluation. `lookahead:policy:<file>` gives the
   built-in evaluation and `lookahead:<weights>` gives one agent both jobs, so "the clone guesses, `stun-first`
-  judges" cannot be written. The guesser is worth 44 points across this panel and the evaluation 13 on the
-  row where it is measurable, and **whether they compose is unmeasured**, because the engine cannot be asked.
+  judges" cannot be written. The guesser spans 44 points across this panel and the evaluation 13 on one row,
+  and **whether they compose is unmeasured**, because the engine cannot be asked.
 
 ## 2026-09-18. Searching over the clone `ci-149` produced is 15 points *worse* than searching over the one it was searched from, and the fix is the dataset: a clone's job inside a search is to guess, not to play, and the two are separate enough that copy accuracy does not predict either
 
