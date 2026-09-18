@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "build the content (run this first)": {
+      "commandName": "Project",
+      "commandLineArgs": "data data/dst",
+      "workingDirectory": "../.."
+    }
+  }
+}

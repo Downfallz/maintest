@@ -1,0 +1,49 @@
+{
+  "profiles": {
+    "table (hotseat)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --who mk",
+      "workingDirectory": "../.."
+    },
+    "table (against Greedy)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --who mk",
+      "workingDirectory": "../.."
+    },
+    "table (bots until round 3, then you)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --handover 3 --who mk",
+      "workingDirectory": "../.."
+    },
+    "table (on a phone — put this machine's address in --bind)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --who mk --bind 192.168.1.42",
+      "workingDirectory": "../.."
+    },
+    "table (recording nothing)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --no-record",
+      "workingDirectory": "../.."
+    },
+    "studio": {
+      "commandName": "Project",
+      "commandLineArgs": "studio",
+      "workingDirectory": "../.."
+    },
+    "play (bot against bot)": {
+      "commandName": "Project",
+      "commandLineArgs": "play --seed 1",
+      "workingDirectory": "../.."
+    },
+    "human (you against a random bot)": {
+      "commandName": "Project",
+      "commandLineArgs": "human",
+      "workingDirectory": "../.."
+    },
+    "benchmark (what CI verifies)": {
+      "commandName": "Project",
+      "commandLineArgs": "benchmark",
+      "workingDirectory": "../.."
+    }
+  }
+}

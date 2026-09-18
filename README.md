@@ -35,6 +35,21 @@ scripts/iterate.sh                                                   # one full 
 
 Requires the .NET SDK version in `global.json`. A devcontainer is provided in `.devcontainer/`.
 
+### From an IDE
+
+`DownfallArena.slnx` is the XML solution format, which needs Visual Studio 2022 17.13 or newer. The Test
+Explorer needs *Options → Test → Use testing platform server mode*, because the runner is
+Microsoft.Testing.Platform (`global.json`).
+
+Both runnable projects carry launch profiles, so a command is chosen from the dropdown rather than typed:
+`build the content (run this first)` on the DataBuilder, and one per thing you can do on the Cli — a hotseat
+table, a table against Greedy, one that plays itself until round 3 and hands over, one bound for a phone, the
+studio, a bot match, the benchmark. They all run from the repository root, because the game schema is found at
+`data/dst/game.schema.json` relative to it.
+
+Build the content first. `data/dst/` is generated and git-ignored, and nothing that reads the catalogue —
+`play`, `human`, `table`, `studio` — starts without it.
+
 ## Layout
 
 | Path | Purpose |

@@ -1,0 +1,7 @@
+{
+  "teamSize": 3,
+  "energyPerRound": 2,
+  "evolutionPicksPerRound": 2,
+  "roundCap": 12,
+  "criticalMultiplier": 2.0
+}
