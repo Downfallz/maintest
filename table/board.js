@@ -167,3 +167,19 @@ export function standing(board) {
 
   return (board?.revealedActions ?? []).filter(action => !resolved.has(action?.actor));
 }
+
+// Keep only public actions: never consult intents or infer a choice from the creature's spellbook.
+// Resolution events also recover the previous round after reload, without retaining another seat's state.
+export function liveChoice(creature, board, entries) {
+  const round = board?.roundNumber;
+  const events = (entries ?? []).filter(entry => entry?.event?.kind === 'CombatActionResolved' &&
+    entry.event.resolution?.action?.actor === creature?.id);
+  const roundOf = entry => entry.event.roundId ?? entry.round;
+  const resolved = events.filter(entry => roundOf(entry) === round).at(-1)?.event.resolution;
+  const action = (board?.revealedActions ?? []).find(one => one.actor === creature?.id) ?? resolved?.action;
+  const index = (board?.timeline ?? []).findIndex(slot => slot.creature === creature?.id);
+  const status = !action ? 'Hidden until reveal' : resolved?.fizzled ? 'Fizzled' : resolved?.isCritical ? 'Critical'
+    : resolved || (index >= 0 && index < (board?.resolveCursor ?? 0)) ? 'Resolved' : 'Revealed';
+  const previous = events.filter(entry => roundOf(entry) === round - 1).at(-1);
+  return { round, action, status, previous: previous ? { round: roundOf(previous), action: previous.event.resolution.action } : null };
+}

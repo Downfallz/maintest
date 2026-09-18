@@ -99,3 +99,46 @@ test('class accents depend on the class name and stay stable across card locatio
   assert.notEqual(classColour('North'), classColour('South'));
   assert.match(classColour('North'), /^hsl\(\d+ 48% 68%\)$/);
 });
+
+test('hierarchy follows explicit parent codes even when nodes arrive out of order and names repeat across trees', async () => {
+  const { talentForest } = await import('./mat.js');
+  const catalogue = { trees: [
+    { tree: 'a', code: 'leaf', parentCode: 'branch', depth: 3, spells: [] },
+    { tree: 'b', code: 'root', parentCode: null, depth: 1, spells: [] },
+    { tree: 'a', code: 'root', parentCode: null, depth: 1, spells: [] },
+    { tree: 'a', code: 'branch', parentCode: 'root', depth: 2, spells: [] },
+  ] };
+  const roots = talentForest(catalogue);
+  assert.equal(roots.length, 2);
+  assert.equal(roots[0].children.length, 0);
+  assert.equal(roots[1].children[0].children[0].code, 'leaf');
+  assert.equal(roots[1].children[0].children[0].depth, 3);
+});
+
+test('invalid ancestry remains disconnected instead of creating cycles or invented edges', async () => {
+  const { talentForest } = await import('./mat.js');
+  const roots = talentForest({ trees: [
+    { tree: 'a', code: 'one', parentCode: 'two', depth: 1 },
+    { tree: 'a', code: 'two', parentCode: 'one', depth: 1 },
+    { tree: 'a', code: 'orphan', parentCode: 'missing', depth: 3 },
+  ] });
+  assert.equal(roots.length, 3); assert.ok(roots.every(one => one.children.length === 0));
+});
+
+test('each authored family has a coherent range shared by its cards and descendant nodes', async () => {
+  const { talentPalette, classColour } = await import('./mat.js');
+  const catalogue = { trees: [
+    { tree: 'a', code: 'root', parentCode: null, depth: 1 },
+    ...['cool', 'leaf', 'ember'].flatMap((family, index) => [
+      { tree: 'a', code: family, parentCode: 'root', depth: 2, spells: [family] },
+      { tree: 'a', code: `${family}-child`, parentCode: family, depth: 3, spells: [`child-${index}`] },
+    ]),
+  ] };
+  const cards = new Map(['cool', 'leaf', 'ember', 'child-0', 'child-1', 'child-2'].map(id => [id, { creatureClass: id }]));
+  const palette = talentPalette(catalogue, cards);
+  assert.equal(classColour('cool', palette), '#89b8ee');
+  assert.equal(classColour('leaf', palette), '#b6cb78');
+  assert.equal(classColour('ember', palette), '#e5a36f');
+  assert.equal(classColour('child-0', palette), palette.get('a/cool-child'));
+  assert.equal(classColour('child-2', palette), '#e68573');
+});

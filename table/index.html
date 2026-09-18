@@ -35,7 +35,7 @@
         </details>
         <nav class="tabs" aria-label="Table views">
           <button id="tab-board" type="button" class="tab on" aria-controls="board" aria-pressed="true">Battlefield</button>
-          <button id="tab-mat" type="button" class="tab" aria-controls="mat" aria-pressed="false">Talents</button>
+          <button id="tab-mat" type="button" class="tab" aria-controls="mat" aria-pressed="false">Talent atlas ↗</button>
           <span class="table-caption">Plan. Reveal. Resolve.</span>
         </nav>
         <section id="board" aria-label="Battlefield">
@@ -54,12 +54,20 @@
             <div id="allies" class="team-grid"></div>
           </section>
           <div id="backs"></div>
-          <section class="hand-section" aria-labelledby="hand-heading">
-            <div class="section-heading"><h2 id="hand-heading">Your spellbook</h2><button id="hand-talents" type="button" class="reference-link">Explore classes &amp; tiers →</button></div>
-            <div id="own-hand"></div>
-          </section>
         </section>
-        <section id="mat" aria-label="Talent catalogue" hidden></section>
+        <section class="hand-section" aria-labelledby="hand-heading">
+          <div class="section-heading"><h2 id="hand-heading">Your spellbook</h2><button id="hand-talents" type="button" class="reference-link">Explore classes &amp; tiers →</button></div>
+          <div id="own-hand"></div>
+        </section>
+        <section id="talent-window" class="talent-window" role="dialog" aria-modal="false" aria-labelledby="talent-title" hidden>
+          <header class="window-bar">
+            <button id="talent-grip" type="button" title="Drag to move; arrow keys move the window"><span id="talent-title">Talent atlas</span><span class="window-hint">Drag to move · arrows also work</span></button>
+            <button id="talent-reset" type="button" aria-label="Reset window position" title="Reset position">↺</button>
+            <button id="talent-max" type="button" aria-label="Maximize talent atlas" aria-pressed="false" title="Maximize / restore">□</button>
+            <button id="talent-close" type="button" aria-label="Close talent atlas" title="Close (Escape)">×</button>
+          </header>
+          <section id="mat" aria-label="Talent catalogue"></section>
+        </section>
         <section id="notes" class="notes" hidden>
           <h2>Playtest notes</h2>
           <div id="note-buttons" class="note-buttons"></div>
@@ -78,6 +86,12 @@
           <div class="decision-heading"><span class="eyebrow">Your next move</span><span id="decision-state" class="status-tag">Waiting</span></div>
           <h2 id="asking" aria-live="polite">Waiting for the other seat…</h2>
           <div id="choices"></div>
+          <details id="shortcuts" class="shortcuts">
+            <summary>Keyboard shortcuts <kbd>?</kbd></summary>
+            <p id="shortcut-context"></p>
+            <p><kbd>T</kbd> Talent atlas · <kbd>Esc</kbd> Close / clear selection</p>
+            <p>In the atlas: <kbd>1–9</kbd> Choose creature. Use Tab and Enter to inspect classes and unlock spells.</p>
+          </details>
           <p id="problem" class="problem" role="alert" hidden></p>
         </section>
 

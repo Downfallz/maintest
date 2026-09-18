@@ -192,3 +192,114 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
   .talent-toolbar h2 { font-size: 23px; }
   .turn-order { width: 24px; height: 24px; font-size: 12px; }
 }
+
+/* A movable reference, with the battlefield and its decision still behind it. */
+.talent-window { position: fixed; z-index: 30; left: 24px; top: 96px; width: min(1280px, calc(100vw - 48px)); height: min(800px, calc(100dvh - 120px)); min-width: 480px; min-height: 320px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); display: flex; flex-direction: column; background: #15201d; border: 1px solid #7c8165; border-radius: 13px; box-shadow: 0 20px 80px #000b; overflow: hidden; resize: both; }
+.window-bar { display: flex; align-items: center; gap: 5px; padding: 7px 10px; border-bottom: 1px solid #505e4b; background: #25332b; flex: none; }
+.window-bar button { background: transparent; border: 0; padding: 7px 12px; font-size: 20px; }
+#talent-grip { flex: 1; text-align: left; cursor: grab; touch-action: none; }
+#talent-grip:active { cursor: grabbing; }
+#talent-title { font: 23px Georgia, serif; color: var(--gold); }
+.window-hint { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; }
+.talent-window #mat { overflow: auto; padding: 18px; flex: 1; min-height: 0; scrollbar-width: thin; }
+.talent-window.maximized { left: 8px !important; top: 8px !important; width: calc(100vw - 16px) !important; height: calc(100dvh - 16px) !important; resize: none; }
+.talent-window .talent-toolbar { grid-template-columns: 1fr 230px; gap: 10px 20px; padding: 0 0 16px; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: 8px; }
+.talent-toolbar h2 { font-size: 22px; }
+.talent-toolbar .muted { grid-column: 1; grid-row: 2; max-width: 80ch; }
+.talent-toolbar .creature-picker { grid-column: 2; grid-row: 1; }
+.talent-toolbar select { grid-column: 2; grid-row: 2; }
+.tree-map { overflow-x: auto; padding: 12px 4px 18px; scrollbar-width: thin; }
+.tree-map ul { display: flex; margin: 0; padding: 24px 0 0; position: relative; list-style: none; }
+.tree-map li { flex: 1; position: relative; padding: 24px 5px 0; text-align: center; min-width: 122px; }
+.tree-map li::before, .tree-map li::after { content: ''; position: absolute; top: 0; width: 50%; height: 24px; border-top: 1px solid #7b8d80; }
+.tree-map li::before { right: 50%; }
+.tree-map li::after { left: 50%; border-left: 1px solid #7b8d80; }
+.tree-map li:only-child::before, .tree-map li:only-child::after { display: none; }
+.tree-map li:first-child::before, .tree-map li:last-child::after { border: 0; }
+.tree-map li:last-child::before { border-right: 1px solid #7b8d80; border-radius: 0 7px 0 0; }
+.tree-map li:first-child::after { border-radius: 7px 0 0 0; }
+.tree-map ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 24px; border-left: 1px solid #7b8d80; }
+.tree-map .tree-roots { padding-top: 0; }
+.tree-roots > li { padding-top: 0; }
+.tree-node { width: 100%; max-width: 200px; min-height: 94px; padding: 12px 9px; border: 1px solid var(--class-color); border-top: 3px solid var(--class-color); border-radius: 9px; background: #22312b; text-align: center; }
+.tree-node.selected { background: #35453a; outline: 2px solid var(--class-color); outline-offset: 3px; }
+.tree-title { display: block; color: var(--class-color); font: 17px Georgia, serif; overflow-wrap: anywhere; }
+.tree-progress { display: block; color: #cfdbcf; font-size: 10px; margin-top: 8px; }
+.tree-offer { display: block; color: var(--muted); font-size: 10px; margin-top: 5px; }
+.tree-node.unlockable .tree-offer { color: var(--gold); }
+.atlas-prompt { text-align: center; padding: 22px; color: var(--muted); border: 1px dashed var(--line); border-radius: 9px; font-size: 12px; }
+.talent-inspector { border-top: 1px solid var(--line); padding-top: 16px; }
+.talent-inspector .talent-lane { margin: 0; }
+.atlas-unlock { width: 100%; margin-top: 14px; text-align: center; background: #354b36; color: #f1f2e9; border-color: #627b59; font-size: 12px; }
+@media (min-width: 1100px) {
+  body:has(#table) { overflow: hidden; padding: 0 22px; }
+  .masthead { min-height: 82px; }
+  #table { margin-top: 14px; height: calc(100dvh - 110px); gap: 18px; }
+  .play-area { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { flex: none; margin-bottom: 12px; }
+  #board { flex: 1; min-height: 150px; overflow-y: auto; scrollbar-width: thin; padding: 3px 6px 10px 3px; }
+  .hand-section { flex: none; max-height: 37dvh; overflow-y: auto; padding-top: 10px; scrollbar-width: thin; }
+  .hand-section > .section-heading { margin-bottom: 4px; }
+  .held { flex-basis: 225px; }
+  .held-cards { padding-bottom: 6px; }
+  .creature { padding: 11px; }
+  .who { margin-bottom: 8px; }
+  .health { margin-bottom: 8px; }
+  .stats { gap: 5px; }
+  .stat strong { font-size: 19px; }
+  .stat span { font-size: 9px; }
+  .badges { margin-top: 7px; }
+  .section-heading { margin-bottom: 8px; }
+  .initiative-section { margin: 10px 0; padding: 9px 12px; }
+  .enemy-books { display: flex; gap: 10px; }
+  .enemy-book { flex: 1; }
+  .enemy-book summary { font-size: 10px; padding: 8px 0; min-height: 32px; }
+  .enemy-book[open] .held-cards { max-height: 235px; overflow-y: auto; }
+  .notes { padding-top: 8px; }
+  #log { margin-top: 7px; flex: none; max-height: 20dvh; overflow-y: auto; }
+  #log summary { min-height: 30px; padding: 7px 0; }
+  .round-recap { flex: none; max-height: 34dvh; overflow-y: auto; margin-bottom: 10px; }
+  .round-recap summary { padding: 10px 16px; }
+  #recap-actions { max-height: 22dvh; }
+}
+@media (max-width: 1099px) {
+  .talent-window { inset: 8px; width: calc(100vw - 16px); height: calc(100dvh - 16px); min-width: 0; min-height: 0; resize: none; }
+  .window-hint, #talent-reset, #talent-max { display: none; }
+  #talent-grip { cursor: default; }
+  .talent-window #mat { padding: 12px; }
+  .talent-window .talent-toolbar { grid-template-columns: 1fr; }
+  .talent-toolbar .muted, .talent-toolbar .creature-picker, .talent-toolbar select { grid-column: auto; grid-row: auto; }
+  .tree-map { max-height: 55dvh; }
+}
+.shortcuts { border-top: 1px solid var(--line); margin-top: 12px; color: var(--muted); font-size: 11px; }
+.shortcuts summary { padding: 10px 0; min-height: 36px; }
+.shortcuts p { line-height: 1.7; margin-bottom: 6px; }
+kbd { font: 10px ui-monospace, monospace; border: 1px solid #70816e; border-radius: 4px; padding: 2px 5px; color: var(--ink); }
+.shortcut-number { display: inline-grid; place-items: center; width: 21px; height: 21px; border: 1px solid currentColor; border-radius: 5px; margin-left: auto; font: 11px ui-monospace, monospace; opacity: 0.8; }
+@media (pointer: coarse) { .shortcuts { display: none; } }
+.round-choice { grid-column: 1 / -1; border-top: 1px solid #65554c; padding-top: 9px; margin-top: 9px; font-size: 11px; }
+.choice-round { display: block; font-size: 9px; color: var(--muted); letter-spacing: 0.5px; }
+.choice-spell { display: block; margin-top: 5px; color: #f0c7a0; font: 17px Georgia, serif; }
+.choice-targets, .choice-previous { display: block; margin-top: 5px; line-height: 1.5; color: #c9b8ad; overflow-wrap: anywhere; }
+.choice-previous { font-size: 10px; color: var(--muted); }
+@media (min-width: 1100px) {
+  .hand-section { max-height: 32dvh; }
+  .creature { display: grid; grid-template-columns: minmax(0, 1fr) 88px; gap: 5px 8px; }
+  .who { margin: 0; gap: 7px; }
+  .creature-name { font-size: 13px; }
+  .creature-id { min-width: 26px; height: 28px; font-size: 12px; }
+  .creature-label { font-size: 9px; }
+  .health { grid-column: 1; margin: 0; height: 19px; }
+  .stats { grid-column: 2; grid-row: 1 / 3; align-self: center; gap: 3px; }
+  .stat strong { font-size: 16px; }
+  .stat span { font-size: 8px; }
+  .badges, .dock, .markers { grid-column: 1 / -1; margin-top: 0; }
+  .round-choice { margin-top: 2px; padding-top: 6px; }
+  .choice-spell { font-size: 15px; }
+}
+@media (min-width: 1100px) {
+  .creature { grid-template-columns: minmax(0, 1fr) 106px; }
+  .stats { gap: 4px; }
+}
+.held { display: flex; flex-direction: column; }
+.held > .card-availability { order: -1; margin: 0 0 9px; }

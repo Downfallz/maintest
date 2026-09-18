@@ -233,7 +233,8 @@ A Spell with no legal target is offered anyway, and says it will fizzle, because
 
 ### 3.3 A phone
 
-The target is a 360 to 400 pixel wide screen held in one hand.
+Desktop is now the primary interaction target (maintainer direction, 2026-09-18). Phones remain playable.
+The following original mobile constraints still describe the narrow-screen fallback.
 
 - **One column.** Nothing side by side. The enemy team, the initiative strip, your team, your hand, in that
   order, scrolling.
@@ -251,7 +252,7 @@ The target is a 360 to 400 pixel wide screen held in one hand.
 
 ---
 
-### Responsive presentation (2026-09-18)
+### Desktop workspace and responsive fallback (2026-09-18)
 
 The table now uses a wider desktop layout with the decision sheet beside the board, while keeping a
 bounded sticky bottom sheet and the same board reading order on phones. Evolution groups unlocks by
@@ -260,13 +261,22 @@ scrolls to that hand when needed. Cards and legal targets support keyboard activ
 an existing selection confirms it; the explicit confirmation buttons remain. Selected targets have separate
 removal buttons so a multi-target set can still be corrected.
 
-Class accents follow cards between the hand, Evolution and Talents. The reference groups each class by
-server-computed tier, with exact prerequisite wording, per-creature knowledge and server-offered unlocks.
-Tiers read across on desktop and stack on phones. Battlefield cards show the creature’s one-based position
-in the host timeline, and expandable enemy spellbooks show only the public known-spell snapshot.
-These are presentation and input changes only: every offered option, card face, stat and ordering still
-comes from the host. The opaque hotseat handover remains the privacy boundary. See [table/README.md](../../table/README.md) for the interaction and
-test details.
+The desktop battlefield now scrolls independently above a persistent spellbook dock, with decisions in
+its sidebar. Talents opens a movable, resizable, maximizable non-modal atlas; a phone gets a full-screen
+panel. The atlas draws base, families and specializations as connected rows using explicit `ParentCode`
+values added to `TalentBand`. Node ancestry is separate from the exact spell prerequisites on each card.
+The first-level authored families receive cool, leaf and ember palettes, inherited by their specializations
+and shared across all card surfaces. Selecting a class shows its spells and current host-offered unlocks;
+a legal Evolution pick can be submitted directly from this inspector.
+
+Keyboard shortcuts select numbered options, confirm with Enter, toggle the atlas with T, and close or clear
+with Escape. They ignore text entry, repeat events and modifier chords and use the same asking and submission
+guards as pointer input. Battlefield cards keep the creature's timeline position; enemy cards also retain
+public speed, revealed spell, targets and resolution state. Hidden choices stay hidden. The previous round's
+public action is labelled separately at the next round, using the retained public resolution feed.
+
+Every offered option, card face, stat and ordering still comes from the host. The opaque hotseat handover
+remains the privacy boundary. See [table/README.md](../../table/README.md) for controls and verification.
 
 ---
 

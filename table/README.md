@@ -1,7 +1,7 @@
 # Downfall Arena table
 
-A static, responsive tabletop client served by the existing .NET table host. No framework, build step,
-external fonts, or runtime dependencies. Game rules, legal options and card text still come from the host.
+A static tabletop client designed primarily for desktop, with responsive phone controls, served by the
+existing .NET table host. No framework, build step, external fonts, or runtime dependencies. Game rules, legal options and card text still come from the host.
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- table --p2 greedy
@@ -12,8 +12,8 @@ hotseat link. See [the playtest specification](../docs/tabletop/playtest-app.md)
 
 ## Preview
 
-Illustrative browser fixture, not a recorded match. Card text and creature names in the actual app are
-provided by the running host.
+Earlier visual baseline, before the desktop workspace and floating atlas. These illustrative fixtures are
+not recorded matches. Card text and creature names in the actual app come from the running host.
 
 ![Desktop tabletop preview](../docs/tabletop/images/table-ui-desktop.png)
 
@@ -25,8 +25,8 @@ provided by the running host.
   applied outcomes, in resolution order. Reopen it throughout the next round; it stays available after the
   match ends. Critical casts, failed casts and skipped targets are labelled as well as coloured.
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
-- On desktop, the next decision stays alongside the board. On phones, it stays in a bounded bottom sheet;
-  the board and long lists of unlocks scroll independently.
+- Desktop is the primary workspace: the battlefield scrolls independently above a persistent spellbook
+  dock, with decisions alongside. Phones retain a bounded bottom decision sheet and ordinary page scrolling.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's unlocks at a time. Choose its numbered button, then the spell to unlock.
@@ -37,14 +37,23 @@ provided by the running host.
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
   spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
   Enter or Space works too; holding a key or tapping while a request is pending never submits again.
-- The Talents reference groups classes by colour and spells by the host's tiers. Filter by class and inspect
-  each creature's known spells, exact prerequisites and current unlock offers. Desktop tiers read left to
-  right; phone tiers stack. The same class accents appear on hand and unlock cards. Open the reference from
-  the spellbook or Evolution sheet; a new Speed, Intent or Target question returns to the battlefield.
+- The Talent atlas opens over the battlefield as a non-modal window: drag its title, resize its corner,
+  maximize, reset or close it. Arrow keys on the title move it as well. Phones use a full-screen panel.
+- The atlas draws the actual class hierarchy in three rows for the current catalogue: base, families and
+  specializations. Parent links come explicitly from the catalogue projection. Select a class for its full
+  spell cards, tiers and exact prerequisites. Branch lines show class ancestry, not individual spell gates.
+- The authored first-level families use coherent cool, leaf and ember palettes, with shades inherited by
+  specializations. These accents follow every card into the spellbook and unlock picker.
+- Inspect each creature's known and currently offered spells. Legal Evolution unlocks can be taken directly
+  from the atlas; availability still comes exclusively from the pending host options. New Speed, Intent and
+  Target questions close the atlas to expose the battlefield.
 - Every battlefield creature receives a circular turn number once the host has built the timeline. The
   number follows the full server order, including ties; the active reveal/resolution slot is highlighted.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
+- Enemy battlefield cards show public speed plus the current round's revealed spell, targets and resolution
+  status. Before reveal, the spell stays hidden. At the next round, the previous public action is explicitly
+  labelled “Last round” until a new one is revealed; it is recovered from the seat's public feed on reload.
 - Round guide contains the host's round order and rule stamp. Match activity and playtest notes stay below
   the spellbook. The opaque handover screen remains the hotseat privacy boundary.
 
@@ -52,6 +61,23 @@ An unchanged poll leaves the DOM alone. Local selection does not wait for anothe
 scroll positions and keyboard focus survive a redraw, and a refusal stays visible until a successful
 submission or a new question. Only one poll runs at a time, and an old response cannot redraw a board after
 a decision has been sent.
+
+## Keyboard
+
+| Key | Action |
+| --- | --- |
+| 1 / 2 during Speed | Quick / Standard |
+| 1–9 during Intent or Target | Select the numbered card or legal target; repeated numbers do not commit |
+| Enter | Confirm the selected intent or valid target set; activate a focused button normally |
+| 1–9 during Evolution or in the atlas | Choose the creature to evolve or inspect |
+| T | Open / close the Talent atlas |
+| Escape | Close the atlas; otherwise clear the pending card/target selection |
+| ? | Show / hide contextual shortcut help |
+| Tab, Enter / Space | Navigate and activate controls, including class nodes and unlocks |
+| Arrow keys on the atlas title | Move the desktop window |
+
+Shortcuts ignore text fields, selectors, contenteditable areas, modifier chords, key repeats, in-flight
+requests and the hotseat fence. Card and target numbers match the host's option order.
 
 ## Verification
 
@@ -65,7 +91,8 @@ dotnet format --verify-no-changes
 `table.test.js` runs the shipped renderer in a minimal DOM double using Node's standard library. It covers
 stable polling, keyboard selection, asking identity, target bounds, creature-specific unlock lists, the
 handover fence, visible refusals, request failures, in-flight poll ordering, decision scrolling, second-tap
-confirmation, public opponent books, talent filters and server-derived turn numbers. The feed tests also cover
+confirmation, public opponent books, live public actions, talent filters, keyboard guards and server-derived
+turn numbers. Hierarchy and palette tests cover reordered nodes, tree-scoped parents and descendant shades. The feed tests also cover
 completed-round recap formatting, event round identity, applied outcomes, failed casts and independent
 two-round retention. It complements the existing
 projection and transport tests; it does not replace a visual browser check.

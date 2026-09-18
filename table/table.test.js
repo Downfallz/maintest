@@ -347,7 +347,7 @@ function talentFixture(p) {
 }
 
 test('the talent reference follows the inspected creature and the class filter immediately', () => {
-  const p = page(); talentFixture(p); p.draw();
+  const p = page(); talentFixture(p); p.state.inspectClass = 'South'; p.draw();
   const toolbar = p.nodes.mat.children[0];
   const south = p.nodes.mat.children[2];
   assert.match(south.textContent, /SouthTier 3○ Not learned/);
@@ -355,16 +355,19 @@ test('the talent reference follows the inspected creature and the class filter i
   toolbar.children[2].children[1].events.click();
   assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
   const filter = p.nodes.mat.children[0].children[3];
-  filter.value = 'South'; filter.events.change();
-  assert.equal(p.nodes.mat.children.length, 2);
-  assert.match(p.nodes.mat.children[1].textContent, /South/);
-  assert.doesNotMatch(p.nodes.mat.children[1].textContent, /North/);
+  filter.value = 'North'; filter.events.change();
+  assert.match(p.nodes.mat.children[2].textContent, /North/);
+  const again = p.nodes.mat.children[0].children[3]; again.value = 'South'; again.events.change();
+  assert.equal(p.nodes.mat.children.length, 3);
+  assert.match(p.nodes.mat.children[2].textContent, /South/);
+  assert.doesNotMatch(p.nodes.mat.children[2].textContent, /North/);
 });
 
-test('the talent reference uses the selected evolution creature and exposes no extra unlock action', () => {
+test('the talent inspector uses the selected evolution creature and offers only its legal unlocks', () => {
   const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution';
   p.view.options = { evolution: { creatures: [{ creature: 1, unlockableSpells: ['two'] }, { creature: 3, unlockableSpells: [] }] } };
-  p.draw(); assert.match(p.nodes.mat.children[2].textContent, /Unlock now/);
+  p.state.inspectClass = 'South'; p.draw(); assert.match(p.nodes.mat.children[2].textContent, /Unlock now/);
+  assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 1);
   p.nodes.choices.children[0].children[1].events.click();
   assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
   assert.doesNotMatch(p.nodes.mat.textContent, /Unlock now/);
@@ -400,6 +403,89 @@ test('battlefield turn badges appear only after the timeline exists and follow i
 test('the initial talent preview follows the first offered evolution creature even if an earlier ally is absent from options', () => {
   const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution'; p.view.waitingCreature = null;
   p.view.options = { evolution: { creatures: [{ creature: 3, unlockableSpells: ['one'] }] } }; p.draw();
-  assert.match(p.nodes.mat.children[1].textContent, /Unlock now/);
+  const filter = p.nodes.mat.children[0].children[3]; filter.value = 'North'; filter.events.change();
+  assert.match(p.nodes.mat.children[2].textContent, /Unlock now/);
+  p.state.inspectClass = 'South'; p.draw();
   assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
+});
+
+const keyEvent = (key, extra = {}) => ({ key, preventDefault() {}, ...extra });
+
+test('number shortcuts select without committing and Enter submits the selected card once', async () => {
+  const p = page(); const sent = [];
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  await p.context.keyboardDecision(p.state, keyEvent('2'));
+  await p.context.keyboardDecision(p.state, keyEvent('2'));
+  assert.equal(p.state.chosen, 'two'); assert.equal(sent.length, 0);
+  await p.context.keyboardDecision(p.state, keyEvent('Enter'));
+  assert.equal(sent.length, 1); assert.equal(sent[0].spell, 'two');
+});
+
+test('typing, modifiers, held keys and the handover fence cannot invoke gameplay shortcuts', async () => {
+  const p = page(); p.draw();
+  for (const extra of [{ repeat: true }, { ctrlKey: true }, { metaKey: true }, { altKey: true }, { isComposing: true },
+    { target: { tagName: 'TEXTAREA' } }, { target: { tagName: 'SELECT' } }, { target: { isContentEditable: true } }]) {
+    await p.context.keyboardDecision(p.state, keyEvent('1', extra));
+    assert.equal(p.state.chosen, null);
+  }
+  p.state.holder = 'player2'; await p.context.keyboardDecision(p.state, keyEvent('1'));
+  assert.equal(p.state.chosen, null);
+});
+
+test('target shortcuts respect the minimum and Escape clears the unsubmitted selection', async () => {
+  const p = page(); const sent = []; p.view.waitingFor = 'Target';
+  p.view.options = { target: { legalTargets: { candidates: [2, 1], minTargets: 2, maxTargets: 2 } } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  await p.context.keyboardDecision(p.state, keyEvent('1'));
+  await p.context.keyboardDecision(p.state, keyEvent('Enter')); assert.equal(sent.length, 0);
+  await p.context.keyboardDecision(p.state, keyEvent('2'));
+  await p.context.keyboardDecision(p.state, keyEvent('Enter')); assert.deepEqual([...sent[0].targets], [2, 1]);
+  await p.context.keyboardDecision(p.state, keyEvent('Escape')); assert.equal(p.state.picked.length, 0);
+});
+
+test('the atlas leaves the battlefield visible and Escape closes it without losing the card selection', async () => {
+  const p = page(); p.draw(); p.state.chosen = 'one';
+  await p.context.keyboardDecision(p.state, keyEvent('t'));
+  assert.equal(p.nodes['talent-window'].hidden, false); assert.equal(p.nodes.board.hidden, false);
+  await p.context.keyboardDecision(p.state, keyEvent('Escape'));
+  assert.equal(p.nodes['talent-window'].hidden, true); assert.equal(p.state.chosen, 'one');
+});
+
+test('Enter on a focused control is left to that control instead of activating twice', async () => {
+  const p = page(); p.draw(); p.state.chosen = 'one';
+  await p.context.keyboardDecision(p.state, keyEvent('Enter', { target: { closest: () => ({}) } }));
+  assert.equal(p.state.sending, false);
+});
+
+test('speed shortcuts submit the named speed and atlas numbers only change the inspected creature', async () => {
+  const p = page(); const sent = []; p.view.waitingFor = 'Speed'; p.view.options = { speed: {} };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  await p.context.keyboardDecision(p.state, keyEvent('2')); assert.equal(sent[0].speed, 'Standard');
+  await p.context.keyboardDecision(p.state, keyEvent('t'));
+  await p.context.keyboardDecision(p.state, keyEvent('1'));
+  assert.equal(p.state.inspectCreature, 1); assert.equal(sent.length, 1);
+});
+
+test('enemy cards show public speed and the revealed spell while keeping the new round distinct', () => {
+  const p = page(); p.view.board.timeline = [{ creature: 2, speed: 'Quick' }]; p.draw();
+  assert.match(p.nodes.enemies.textContent, /Speed · Quick/);
+  assert.match(p.nodes.enemies.textContent, /Hidden until reveal/);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /First card/);
+  p.view.board.revealedActions = [{ actor: 2, spell: 'one', targets: [1] }]; p.draw();
+  assert.match(p.nodes.enemies.textContent, /Round 1 · RevealedFirst card→ First #1/);
+  p.view.board.roundNumber = 2; p.view.board.revealedActions = []; p.view.board.timeline = [];
+  p.view.roundEvents = [{ round: 2, event: { kind: 'CombatActionResolved', roundId: 1, resolution: { action: { actor: 2, spell: 'one', targets: [1] } } } }]; p.draw();
+  assert.match(p.nodes.enemies.textContent, /Round 2 · Hidden until revealLast round \(1\): First card/);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /Speed · Quick/);
+});
+
+test('an atlas unlock uses the guarded current asking and rejects a stale inspector control', async () => {
+  const p = page(); talentFixture(p); const sent = []; p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { creatures: [{ creature: 1, unlockableSpells: ['two'] }] } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
+  p.state.inspectClass = 'South'; p.draw();
+  const unlock = p.nodes.mat.children[2].querySelectorAll('button')[0];
+  await unlock.events.click(); assert.equal(sent.length, 1); assert.equal(sent[0].creature, 1); assert.equal(sent[0].spell, 'two');
+  p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
+  await unlock.events.click(); assert.equal(sent.length, 1);
 });

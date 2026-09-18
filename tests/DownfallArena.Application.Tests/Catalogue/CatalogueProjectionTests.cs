@@ -161,6 +161,26 @@ public sealed class CatalogueProjectionTests
         View.Trees.ShouldContain(band => band.Depth == 1);
     }
 
+    [Fact]
+    public void Bands_carry_their_actual_parent_within_each_tree()
+    {
+        var bands = View.Trees;
+
+        foreach (var tree in TestContent.Resources.TalentTrees)
+        {
+            bands.Single(band => band.Tree == tree.Id && band.Code == tree.Root.Code).ParentCode.ShouldBeNull();
+            foreach (var node in tree.Nodes)
+            {
+                foreach (var child in node.Children)
+                {
+                    var band = bands.Single(candidate => candidate.Tree == tree.Id && candidate.Code == child.Code);
+                    band.ParentCode.ShouldBe(node.Code);
+                    band.Depth.ShouldBe(bands.Single(parent => parent.Tree == tree.Id && parent.Code == node.Code).Depth + 1);
+                }
+            }
+        }
+    }
+
     /// <summary>The gate is on the card, so a pick can be checked without the talent mat.</summary>
     [Fact]
     public void A_card_names_the_spells_that_gate_it_by_name_rather_than_by_id()

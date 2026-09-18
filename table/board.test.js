@@ -223,3 +223,26 @@ test('turn numbers follow server order even with tied or higher initiative elsew
   assert.equal(turnOrder({ id: 4 }, board), null);
   assert.equal(turnOrder({ id: 1 }, { timeline: [] }), null);
 });
+
+test('live enemy choices stay hidden until revealed, then persist through resolution', async () => {
+  const { liveChoice } = await import('./board.js');
+  const creature = { id: 4, knownSpells: ['secret'] };
+  const board = { roundNumber: 3, timeline: [{ creature: 4, speed: 'Quick' }], intents: [{ actor: 4, spell: 'secret' }], revealedActions: [], resolveCursor: 0 };
+  assert.equal(liveChoice(creature, board, []).action, undefined);
+  assert.equal(liveChoice(creature, board, []).status, 'Hidden until reveal');
+  board.revealedActions = [{ actor: 4, spell: 'shown', targets: [1] }];
+  assert.equal(liveChoice(creature, board, []).status, 'Revealed');
+  board.resolveCursor = 1;
+  assert.equal(liveChoice(creature, board, []).status, 'Resolved');
+  assert.equal(liveChoice(creature, board, []).action.spell, 'shown');
+});
+
+test('a previous-round enemy choice is labelled separately and event round identity wins over poll round', async () => {
+  const { liveChoice } = await import('./board.js');
+  const entries = [{ round: 4, event: { kind: 'CombatActionResolved', roundId: 3, resolution: { action: { actor: 4, spell: 'last', targets: [1] }, isCritical: true } } }];
+  const choice = liveChoice({ id: 4 }, { roundNumber: 4 }, entries);
+  assert.equal(choice.action, undefined); assert.equal(choice.previous.round, 3); assert.equal(choice.previous.action.spell, 'last');
+  assert.equal(liveChoice({ id: 5 }, { roundNumber: 4 }, entries).previous, null);
+  assert.equal(liveChoice({ id: 4 }, { roundNumber: 5 }, entries).previous, null);
+  assert.equal(liveChoice({ id: 4 }, { roundNumber: 3 }, entries).status, 'Critical');
+});

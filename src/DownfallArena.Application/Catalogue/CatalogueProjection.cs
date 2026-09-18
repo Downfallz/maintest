@@ -182,10 +182,10 @@ public static class CatalogueProjection
         .. resources.TalentTrees.SelectMany(tree => Bands(tree, tree.Root, depth: 1)),
     ];
 
-    private static IEnumerable<TalentBand> Bands(TalentTree tree, TalentNode node, int depth)
+    private static IEnumerable<TalentBand> Bands(TalentTree tree, TalentNode node, int depth, string? parentCode = null)
     {
-        yield return new TalentBand(tree.Id, tree.Name, node.Code, node.Name, depth, [.. node.Spells.Select(spell => spell.Id)]);
-        foreach (var band in node.Children.SelectMany(child => Bands(tree, child, depth + 1)))
+        yield return new TalentBand(tree.Id, tree.Name, node.Code, node.Name, depth, [.. node.Spells.Select(spell => spell.Id)], parentCode);
+        foreach (var band in node.Children.SelectMany(child => Bands(tree, child, depth + 1, node.Code)))
         {
             yield return band;
         }

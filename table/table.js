@@ -2,11 +2,11 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
-import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy, turnOrder } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy, turnOrder, liveChoice } from './board.js';
 import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine, retainRoundEvents, roundRecap } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
-import { classColour, talentClasses } from './mat.js';
+import { classColour, talentClasses, talentForest, talentPalette } from './mat.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -55,6 +55,8 @@ function start(seats) {
     cards: new Map(), catalogue: null, tab: 'board', feeds: new Map(),
   };
   load(state);
+  setupTalentWindow(state);
+  document.addEventListener('keydown', event => keyboardDecision(state, event));
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
     redraw(state);
@@ -64,7 +66,7 @@ function start(seats) {
   // the time; switching draws from what the last poll already fetched, so it never waits.
   for (const [tab, name] of [['tab-board', 'board'], ['tab-mat', 'mat']]) {
     element(tab).addEventListener('click', () => {
-      showTab(state, name);
+      if (name === 'mat') openTalents(state); else closeTalents(state);
     });
   }
 
@@ -278,8 +280,9 @@ function showTab(state, name) {
   for (const [id, panel] of [['tab-board', 'board'], ['tab-mat', 'mat']]) {
     element(id).classList.toggle('on', name === panel);
     element(id).setAttribute('aria-pressed', String(name === panel));
-    element(panel).hidden = name !== panel;
+    if (panel === 'board') element(panel).hidden = false;
   }
+  element('talent-window').hidden = name !== 'mat';
 }
 
 function selectable(face, selected, onClick) {
@@ -370,6 +373,7 @@ function render(state, views) {
   element('phase').textContent = view.over
     ? 'The match is over.'
     : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`;
+  state.palette = talentPalette(state.catalogue, state.cards);
   renderTimeline(view.board);
   renderBoard(state, current);
   renderMat(state, current);
@@ -377,6 +381,10 @@ function render(state, views) {
   renderRecap(state, view);
   renderDecision(state, current);
   renderNotes(view);
+  element('shortcut-context').textContent = view.waitingFor === 'Speed'
+    ? '1 Quick · 2 Standard' : view.waitingFor === 'Evolution'
+      ? '1–9 Choose creature · Tab to an unlock · Enter to choose'
+      : '1–9 Select card / target · Enter to confirm';
   restorePosition(saved);
   guideDecision(state, current);
 }
@@ -454,6 +462,7 @@ function renderBoard(state, current) {
   const marks = {
     picked: state.picked,
     board,
+    roundEvents: view.roundEvents,
     active: isAsked(view) ? view.waitingCreature : null,
     candidates: isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
     onPick: candidate => pick(state, current, candidate),
@@ -540,6 +549,9 @@ function heldCard(state, spell, offered, creature, current, reference) {
   availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Tap again to declare' : 'Select card →') : reference ? 'Spell reference' : spell.castable ? 'Available' : 'Not available now';
   face.append(availability);
   if (offered) {
+    const offeredSpells = current.view.options.intent?.creatures?.find(one => one.creature === creature)?.castableSpells ?? [];
+    const number = offeredSpells.indexOf(spell.spell) + 1;
+    if (number > 0 && number <= 9) availability.textContent = `[${number}] ${availability.textContent}`;
     face.dataset.focus = `card-${creature}-${spell.spell}`;
     selectable(face, spell.spell === state.chosen, () => chooseCard(state, current, spell.spell));
   }
@@ -604,6 +616,10 @@ function line(state, creature, which, marks) {
   const label = document.createElement('span');
   label.className = 'creature-label';
   label.textContent = creature.isAlive === false ? 'Defeated' : legal ? (picked ? (marks.canConfirm ? 'Tap again to cast' : 'Selected · choose more targets') : 'Select target') : creature.id === marks?.active ? 'Acting now' : which === 'ally' ? 'Your creature' : 'Opponent creature';
+  if (legal) {
+    const number = marks.candidates.indexOf(creature.id) + 1;
+    if (number <= 9) label.textContent += ` · [${number}]`;
+  }
   name.append(label);
   who.append(id, name);
 
@@ -648,11 +664,13 @@ function line(state, creature, which, marks) {
   for (const badge of badges(creature, marks?.board?.timeline)) {
     const one = document.createElement('span');
     one.className = 'badge';
-    one.textContent = badge;
+    const speed = marks?.board?.timeline?.find(slot => slot.creature === creature.id)?.speed;
+    one.textContent = badge === speed ? `Speed · ${badge}` : badge;
     tags.append(one);
   }
 
   box.append(who, health, stats, tags, dock(state, creature.conditions));
+  if (which === 'enemy') box.append(enemyChoice(state, creature, marks?.board, marks?.roundEvents));
 
   // The markers, on the row rather than only in the sheet: a target is chosen against this creature's health,
   // its defense and what is already on it, so the choice has to be visible where those numbers are
@@ -749,8 +767,10 @@ function enemyBooks(state, current) {
 }
 
 function openTalents(state) {
+  state.talentOpener = document.activeElement;
   showTab(state, 'mat');
-  element('mat').scrollIntoView({ block: 'start', behavior: 'instant' });
+  state.clampTalentWindow?.();
+  element('talent-grip').focus({ preventScroll: true });
 }
 
 // The reference is grouped by class and server-computed tier. Prerequisites stay on each full card;
@@ -766,10 +786,10 @@ function renderMat(state, current) {
   const toolbar = document.createElement('div');
   toolbar.className = 'talent-toolbar';
   const heading = document.createElement('h2');
-  heading.textContent = 'Plan your next unlock';
+  heading.textContent = 'Choose your path';
   const help = document.createElement('p');
   help.className = 'muted';
-  help.textContent = 'Follow each class through its tiers. Read Requires on each card for the exact path, including prerequisites from other classes. Availability is shown during your evolution pick.';
+  help.textContent = 'Base → families → specializations. Select a class to inspect its spells. Branch lines show class ancestry; Requires on each card gives the exact unlock conditions.';
   const picker = document.createElement('div');
   picker.className = 'creature-picker';
   picker.setAttribute('aria-label', 'Inspect talent progress');
@@ -796,15 +816,34 @@ function renderMat(state, current) {
   filter.value = classes.some(group => group.name === state.inspectClass) ? state.inspectClass : '';
   filter.addEventListener('change', () => { state.inspectClass = filter.value; redraw(state); });
   toolbar.append(heading, help, picker, filter);
-  const rows = classes.filter(group => !filter.value || group.name === filter.value).map(group => talentLane(state, group));
+  const forest = talentForest(state.catalogue);
+  const graph = document.createElement('div');
+  graph.className = 'tree-map';
+  graph.dataset.scroll = 'talent-map';
+  graph.setAttribute('aria-label', 'Class hierarchy');
+  const roots = document.createElement('ul');
+  roots.className = 'tree-roots';
+  roots.append(...forest.map(node => treeNode(state, node, classes, creature)));
+  graph.append(roots);
+  // The overview is compact; full spell faces appear for the selected class only.
+  const selected = classes.find(group => group.name === filter.value);
+  const detail = document.createElement('div');
+  detail.className = 'talent-inspector';
+  if (selected) detail.append(talentLane(state, selected, current, creature));
+  else {
+    const prompt = document.createElement('p');
+    prompt.className = 'atlas-prompt';
+    prompt.textContent = 'Select a class above to see its spells, tiers and next unlocks.';
+    detail.append(prompt);
+  }
   if (classes.length === 0) help.textContent = 'The talent catalogue is not available yet.';
-  element('mat').replaceChildren(toolbar, ...rows);
+  element('mat').replaceChildren(toolbar, graph, detail);
 }
 
-function talentLane(state, group) {
+function talentLane(state, group, current, creature) {
   const lane = document.createElement('section');
   lane.className = 'talent-lane';
-  lane.style.setProperty('--class-color', classColour(group.name));
+  lane.style.setProperty('--class-color', classColour(group.name, state.palette));
   const title = document.createElement('h2');
   title.className = 'talent-class';
   title.textContent = group.name;
@@ -826,6 +865,18 @@ function talentLane(state, group) {
       const parts = cardParts(state, spell.spell, '');
       if (parts) face.append(status, ...parts);
       else { face.textContent = spell.spell; face.append(status); }
+      if (spell.status === 'available') {
+        const unlock = button(`Unlock for creature ${creature.id}`, () => {
+          if (!canInteract(state, current, 'Evolution')) return;
+          const offer = current.view.options.evolution?.creatures?.find(one => one.creature === creature.id);
+          if (offer?.unlockableSpells?.includes(spell.spell)) {
+            return submit(state, current, { kind: 'Evolution', creature: creature.id, spell: spell.spell });
+          }
+        });
+        unlock.disabled = state.sending;
+        unlock.className = 'atlas-unlock';
+        face.append(unlock);
+      }
       column.append(face);
     }
     columns.append(column);
@@ -1167,7 +1218,7 @@ function cardParts(state, spell, prefix) {
   head.className = 'card-head';
   if (face.creatureClass) {
     head.classList.toggle('class-accent', true);
-    head.style.setProperty('--class-color', classColour(face.creatureClass));
+    head.style.setProperty('--class-color', classColour(face.creatureClass, state.palette));
   }
   const title = document.createElement('div');
   title.className = 'card-title';
@@ -1242,4 +1293,201 @@ async function submit(state, current, decision) {
   }
 
   await refresh(state);
+}
+
+function treeNode(state, node, classes, creature) {
+  const branch = document.createElement('li');
+  branch.style.setProperty('--class-color', state.palette?.get(node.key) ?? '#c9c2a8');
+  const spells = new Set(node.spells ?? []);
+  const group = classes.find(one => one.tiers.some(tier => tier.spells.some(spell => spells.has(spell.spell))));
+  const known = (creature?.knownSpells ?? []).filter(spell => spells.has(spell)).length;
+  const offered = classes.flatMap(one => one.tiers.flatMap(tier => tier.spells))
+    .filter(spell => spells.has(spell.spell) && spell.status === 'available').length;
+  const pick = button('', () => {
+    if (!group) return;
+    state.inspectClass = group.name;
+    redraw(state);
+  });
+  pick.className = `tree-node${group?.name === state.inspectClass ? ' selected' : ''}${offered ? ' unlockable' : ''}`;
+  pick.dataset.focus = `tree-${node.key}`;
+  pick.setAttribute('aria-pressed', String(group?.name === state.inspectClass));
+  pick.disabled = !group;
+  const title = document.createElement('strong');
+  title.className = 'tree-title';
+  title.textContent = node.name;
+  const progress = document.createElement('span');
+  progress.className = 'tree-progress';
+  progress.textContent = `${known}/${spells.size} known`;
+  const status = document.createElement('span');
+  status.className = 'tree-offer';
+  status.textContent = offered ? `+ ${offered} unlock${offered === 1 ? '' : 's'}` : known === spells.size && spells.size ? 'Complete' : 'Explore spells';
+  pick.append(title, progress, status);
+  branch.append(pick);
+  if (node.children.length) {
+    const children = document.createElement('ul');
+    children.append(...node.children.map(child => treeNode(state, child, classes, creature)));
+    branch.append(children);
+  }
+  return branch;
+}
+
+function closeTalents(state) {
+  showTab(state, 'board');
+  if (state.talentOpener?.isConnected) state.talentOpener.focus({ preventScroll: true });
+  else element('tab-mat').focus({ preventScroll: true });
+}
+
+// Only the title grip moves the window. Card clicks and scrolling keep their ordinary meaning.
+function setupTalentWindow(state) {
+  const panel = element('talent-window');
+  const grip = element('talent-grip');
+  let drag = null;
+  const desktop = () => globalThis.innerWidth >= 1100;
+  const move = (left, top) => {
+    const rect = panel.getBoundingClientRect();
+    panel.style.left = `${Math.max(8, Math.min(left, globalThis.innerWidth - rect.width - 8))}px`;
+    panel.style.top = `${Math.max(8, Math.min(top, globalThis.innerHeight - rect.height - 8))}px`;
+  };
+  state.clampTalentWindow = () => {
+    if (!desktop() || panel.hidden || panel.classList.contains('maximized')) return;
+    const rect = panel.getBoundingClientRect();
+    move(rect.left, rect.top);
+  };
+  if (globalThis.ResizeObserver) new ResizeObserver(state.clampTalentWindow).observe(panel);
+  const reset = () => {
+    panel.style.left = ''; panel.style.top = ''; panel.style.width = ''; panel.style.height = '';
+    panel.classList.toggle('maximized', false);
+    element('talent-max').setAttribute('aria-pressed', 'false');
+  };
+  grip.addEventListener('pointerdown', event => {
+    if (!desktop() || panel.classList.contains('maximized') || event.button !== 0) return;
+    const rect = panel.getBoundingClientRect();
+    drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+    grip.setPointerCapture(event.pointerId);
+  });
+  grip.addEventListener('pointermove', event => {
+    if (drag) move(drag.left + event.clientX - drag.x, drag.top + event.clientY - drag.y);
+  });
+  for (const kind of ['pointerup', 'pointercancel', 'lostpointercapture']) grip.addEventListener(kind, () => { drag = null; });
+  grip.addEventListener('keydown', event => {
+    if (!desktop() || panel.classList.contains('maximized')) return;
+    const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    const rect = panel.getBoundingClientRect();
+    move(rect.left + direction[0] * 20, rect.top + direction[1] * 20);
+  });
+  element('talent-reset').addEventListener('click', reset);
+  element('talent-max').addEventListener('click', () => {
+    const maximized = !panel.classList.contains('maximized');
+    panel.classList.toggle('maximized', maximized);
+    element('talent-max').setAttribute('aria-pressed', String(maximized));
+  });
+  element('talent-close').addEventListener('click', () => closeTalents(state));
+  panel.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeTalents(state); }
+  });
+  globalThis.addEventListener('resize', () => {
+    if (!desktop()) reset();
+    else if (!panel.hidden) {
+      const rect = panel.getBoundingClientRect();
+      move(rect.left, rect.top);
+    }
+  });
+}
+
+// Keyboard shortcuts use the same guards and submission path as pointer input. Number keys select;
+// repeating the same number never commits a card or target by accident. Enter is the explicit commit.
+function keyboardDecision(state, event) {
+  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+  const target = event.target;
+  if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName?.toUpperCase())) return;
+  const current = activeSeat(state.views, state.holder);
+  if (!current || needsPass(current, state.holder) || state.sending) return;
+  const key = event.key.toLowerCase();
+  if (key === '?') {
+    event.preventDefault();
+    element('shortcuts').open = !element('shortcuts').open;
+    return;
+  }
+  if (key === 't') {
+    event.preventDefault();
+    if (state.tab === 'mat') closeTalents(state); else openTalents(state);
+    return;
+  }
+  if (key === 'escape') {
+    event.preventDefault();
+    if (state.tab === 'mat') closeTalents(state);
+    else { state.chosen = null; state.picked = []; redraw(state); }
+    return;
+  }
+  const number = /^[1-9]$/.test(key) ? Number(key) - 1 : null;
+  const view = current.view;
+  if (state.tab === 'mat' || view.waitingFor === 'Evolution') {
+    if (number === null) return;
+    const id = state.tab === 'mat' ? view.board.allies?.[number]?.id : view.options.evolution?.creatures?.[number]?.creature;
+    if (id === undefined) return;
+    event.preventDefault();
+    state.inspectCreature = id;
+    if (view.options.evolution?.creatures?.some(one => one.creature === id)) state.evolving = id;
+    redraw(state);
+    return;
+  }
+  if (!canInteract(state, current, view.waitingFor)) return;
+  if (number !== null) {
+    event.preventDefault();
+    if (view.waitingFor === 'Speed' && number < 2) {
+      return submit(state, current, { kind: 'Speed', creature: view.waitingCreature, speed: number === 0 ? 'Quick' : 'Standard' });
+    }
+    if (view.waitingFor === 'Intent') {
+      const spell = view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature)?.castableSpells?.[number];
+      if (spell) { state.chosen = spell; redraw(state); }
+    }
+    if (view.waitingFor === 'Target') {
+      const candidates = view.options.target?.legalTargets?.candidates ?? [];
+      const id = candidates[number];
+      if (id !== undefined && !state.picked.includes(id)) pick(state, current, id);
+    }
+    return;
+  }
+  // A focused control already handles Enter; the global shortcut must not add a second activation.
+  if (key !== 'enter' || target?.closest?.('button, summary, [role="button"]')) return;
+  event.preventDefault();
+  if (view.waitingFor === 'Intent') return declareChosen(state, current);
+  if (view.waitingFor === 'Target') return castTargets(state, current);
+}
+
+function enemyChoice(state, creature, board, entries) {
+  const choice = liveChoice(creature, board, entries);
+  const box = document.createElement('div');
+  box.className = `round-choice ${choice.action ? 'public' : 'hidden-choice'}`;
+  const heading = document.createElement('span');
+  heading.className = 'choice-round';
+  heading.textContent = `Round ${choice.round ?? '—'} · ${choice.status}`;
+  box.append(heading);
+  const describe = action => {
+    const name = state.cards.get(action.spell)?.name ?? action.spell;
+    const targets = (action.targets ?? []).map(id => {
+      const target = [...(board?.allies ?? []), ...(board?.enemies ?? [])].find(one => one.id === id);
+      return target?.name ? `${target.name} #${id}` : `#${id}`;
+    });
+    return { name, targets: targets.length ? `→ ${targets.join(', ')}` : 'No targets' };
+  };
+  if (choice.action) {
+    const text = describe(choice.action);
+    const name = document.createElement('strong');
+    name.className = 'choice-spell';
+    name.textContent = text.name;
+    const targets = document.createElement('span');
+    targets.className = 'choice-targets';
+    targets.textContent = text.targets;
+    box.append(name, targets);
+  } else if (choice.previous) {
+    const text = describe(choice.previous.action);
+    const last = document.createElement('span');
+    last.className = 'choice-previous';
+    last.textContent = `Last round (${choice.previous.round}): ${text.name} ${text.targets}`;
+    box.append(last);
+  }
+  return box;
 }
