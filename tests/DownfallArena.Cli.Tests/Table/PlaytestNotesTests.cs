@@ -140,6 +140,36 @@ public sealed class PlaytestNotesTests : IDisposable
             .GetProperty("elapsedMs").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
+    /// <summary>
+    /// An acknowledgement of a different asking is not this one's. One seat is asked several questions in a
+    /// row, so a page that named the wrong one -- or a stale one still in flight -- must not start this
+    /// question's clock, or the duration begins before anybody saw it.
+    /// </summary>
+    [Fact]
+    public async Task An_acknowledgement_of_another_asking_does_not_start_this_ones_clock()
+    {
+        var table = await Recording();
+
+        await Get(table, $"?shown={(table.Person.Waiting?.Asked ?? 0) + 99}");
+        _clock.Advance(TimeSpan.FromSeconds(30));
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+
+        Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
+            .GetProperty("elapsedMs").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>The page is told which asking it is drawing, or it cannot acknowledge one.</summary>
+    [Fact]
+    public async Task A_seat_is_served_the_asking_it_is_waiting_on()
+    {
+        var table = await Recording();
+
+        var served = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
+
+        JsonDocument.Parse(Text(served)).RootElement.GetProperty("waitingAsked").GetInt64()
+            .ShouldBe(table.Person.Waiting!.Asked);
+    }
+
     /// <summary>A rule that confused somebody and left no trace is the failure this prevents.</summary>
     [Fact]
     public async Task A_refused_decision_is_noted_with_the_error_that_refused_it()
@@ -246,9 +276,12 @@ public sealed class PlaytestNotesTests : IDisposable
             .Where(line => line.Length > 0)
             .Select(line => JsonDocument.Parse(line).RootElement);
 
-    /// <summary>A poll that is drawing the seat, which is the one the host times a decision from.</summary>
+    /// <summary>
+    /// The page saying it has drawn what this seat is being asked, which is what the host times a decision
+    /// from. It names the asking, so acknowledging one question never starts another's clock.
+    /// </summary>
     private static Task Shown((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table) =>
-        Get(table, "?shown=1");
+        Get(table, $"?shown={table.Person.Waiting?.Asked}");
 
     private static async Task Get((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table, string query = "")
     {

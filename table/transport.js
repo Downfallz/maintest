@@ -22,11 +22,11 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
 
   return {
     // `since` is the first feed entry this page has not seen, and it only trims the feed: the board and the
-    // options come whole on every poll, because they are a snapshot and not a log. `shown` says this poll is
-    // the page drawing that seat's screen rather than keeping its payload warm, which is what the host starts
-    // a decision's clock on -- in hotseat the other seat is polled on the same timer from behind the pass
-    // screen, and a clock started there would time the handover.
-    seat: (since = 0, shown = false) => send('GET', `/api/seat/${seat}${query(since, shown)}`),
+    // options come whole on every poll, because they are a snapshot and not a log. `shown` is the asking this
+    // page has just drawn, sent back to say a person is now looking at it -- which is what the host starts a
+    // decision's clock on. An ordinary poll sends none: the poll that *fetches* a question cannot also be the
+    // word that it was seen, because that answer still has to arrive and be drawn.
+    seat: (since = 0, shown = null) => send('GET', `/api/seat/${seat}${query(since, shown)}`),
     session: () => send('GET', '/api/session'),
     catalogue: () => send('GET', '/api/catalogue'),
     decide: decision => send('POST', `/api/seat/${seat}/decision`, decision),
@@ -42,7 +42,7 @@ export function httpTransport(seat, token, fetchImpl = globalThis.fetch.bind(glo
 function query(since, shown) {
   const asked = [];
   if (Number.isInteger(since) && since > 0) asked.push(`since=${since}`);
-  if (shown) asked.push('shown=1');
+  if (Number.isInteger(shown)) asked.push(`shown=${shown}`);
   return asked.length > 0 ? `?${asked.join('&')}` : '';
 }
 

@@ -68,23 +68,33 @@ test('a transport without a seat or a token refuses to exist', () => {
   assert.throws(() => httpTransport('player1', ''), /token/);
 });
 
-// The flag the host starts a decision's clock on. A poll that is not drawing the seat must not carry it, or
-// the duration measures the handover in hotseat instead of the decision.
-test('a poll says whether it is the page drawing that seat', async () => {
+// What the host starts a decision's clock on: the page naming the asking it has drawn. It is the asking and
+// not a flag, because one seat is asked several questions in a row and the second must not inherit the first's
+// moment. An ordinary poll names none.
+test('a poll names the asking the page has drawn, or names none', async () => {
   const { calls, fetchImpl } = stub();
   const transport = httpTransport('player1', 'abc', fetchImpl);
 
-  await transport.seat(0, true);
-  await transport.seat(4, true);
-  await transport.seat(4, false);
-  await transport.seat(0, false);
+  await transport.seat(0, 7);
+  await transport.seat(4, 8);
+  await transport.seat(4);
+  await transport.seat(0);
 
   assert.deepEqual(calls.map(call => call.path), [
-    '/api/seat/player1?shown=1',
-    '/api/seat/player1?since=4&shown=1',
+    '/api/seat/player1?shown=7',
+    '/api/seat/player1?since=4&shown=8',
     '/api/seat/player1?since=4',
     '/api/seat/player1',
   ]);
+});
+
+// Zero is an asking like any other, so it must not be dropped the way a falsy flag would have been.
+test('the first asking is acknowledged even when it is numbered zero', async () => {
+  const { calls, fetchImpl } = stub();
+
+  await httpTransport('player1', 'abc', fetchImpl).seat(0, 0);
+
+  assert.equal(calls[0].path, '/api/seat/player1?shown=0');
 });
 
 // The seat route's other query parameter, and the only thing it trims: the board and the options come whole on

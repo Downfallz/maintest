@@ -166,14 +166,20 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     }
 
     /// <summary>
-    /// Whether this poll is the page drawing that seat's screen, off <c>?shown=1</c>. It is the difference
-    /// between a person reading their options and the page keeping both seats' payloads warm on a timer, and
-    /// only the first one starts a decision's clock (<see cref="DecisionClock" />).
+    /// Which asking this poll says the page has drawn, off <c>?shown=N</c>, or null for an ordinary poll.
     /// </summary>
-    private static bool Shown(string? query) =>
-        System.Web.HttpUtility.ParseQueryString(query ?? string.Empty)["shown"] == "1";
+    /// <remarks>
+    /// It names the asking and not merely the seat, because a seat is asked several questions in a row and
+    /// the host must not start a clock on the second one while it is still serving it. A poll that fetched a
+    /// question cannot also be the acknowledgement that it was drawn: that answer still has to reach a phone
+    /// and be rendered, and on a slow link the difference is the network, not the player.
+    /// </remarks>
+    private static long? Shown(string? query) =>
+        long.TryParse(System.Web.HttpUtility.ParseQueryString(query ?? string.Empty)["shown"], CultureInfo.InvariantCulture, out var asked)
+            ? asked
+            : null;
 
-    private async Task<StudioResponse> SeatAsync(TableSeat seat, int since, bool shown)
+    private async Task<StudioResponse> SeatAsync(TableSeat seat, int since, long? shown)
     {
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
         if (board.IsFailure)
@@ -201,12 +207,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var waiting = seat.Person?.Waiting;
 
         // The moment this seat was shown what it is being asked, which is what a decision's duration is
-        // measured from. Only a poll that is drawing this seat counts: in hotseat the page polls both seats on
-        // a timer while one of them is behind the pass screen, and a clock started there would measure the
-        // handover rather than the decision. A background poll leaves the stamp exactly as it found it.
-        if (shown)
+        // measured from. Only the page's own acknowledgement of *this* asking counts. Anything else leaves the
+        // stamp exactly as it found it: a poll of the other seat from behind the pass screen would time the
+        // handover, and the poll that fetches a question is too early to be the moment it was read.
+        if (shown is { } drawn && waiting is { } asking && drawn == asking.Asked)
         {
-            run?.Served(seat.Slot, waiting);
+            run?.Served(seat.Slot, asking);
         }
 
         return StudioResponse.OfJson(
@@ -217,6 +223,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 options = options.Value,
                 waitingFor = waiting?.Kind.ToString(),
                 waitingCreature = waiting?.Creature,
+
+                // Which asking this is. The page sends it back once it has drawn it, and that is what starts
+                // the clock: two questions of the same shape in a row are two askings, and the second must not
+                // inherit the first's moment.
+                waitingAsked = waiting?.Asked,
                 playedByBot = seat.Person is null,
                 over = session.IsOver,
 

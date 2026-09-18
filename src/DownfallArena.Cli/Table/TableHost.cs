@@ -201,7 +201,13 @@ internal static class TableHost
             return Describe(slot, options);
         }
 
-        return options.Who is { Length: > 0 } who ? $"human:{who}" : "human";
+        var person = options.Who is { Length: > 0 } who ? $"human:{who}" : "human";
+
+        // A handover seat is a person's seat only from the round it names. A bot plays it until then, and the
+        // recorder wraps the seat rather than whoever is in it, so those decisions are steps under this stamp.
+        // Calling the whole thing `human` would attribute a bot's play to the person and make the agents axis
+        // say the wrong thing about the one seat where it is least obvious.
+        return options.Handover is { } round ? $"{Describe(slot, options)}>{person}@{round}" : person;
     }
 
     /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>

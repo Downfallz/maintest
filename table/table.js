@@ -47,7 +47,7 @@ function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
-  const state = { seats, holder: null, shown: null, displayed: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
+  const state = { seats, holder: null, shown: null, acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
   load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -90,7 +90,7 @@ function start(seats) {
 // Tells the host this seat's question is now in front of somebody. It is the ordinary seat poll with the flag
 // set, and its answer is dropped: the board on screen is the one this render already has, and the feed cursor
 // is deliberately not advanced, so nothing this call fetches is lost -- the next poll asks for it again.
-function announce(state, current) {
+function announce(state, current, drawn) {
   const since = state.feeds.get(current.seat)?.next ?? 0;
 
   // Kept, because a decision must not overtake it. The controls stay live -- disabling them for a round trip
@@ -98,7 +98,7 @@ function announce(state, current) {
   // inside the window is delayed by the request it would otherwise have raced rather than being refused. If
   // it were raced and lost, the host would have no moment for this question and would record the duration as
   // unknown, which is honest but is one measurement gone.
-  state.announced = current.transport.seat(since, true).catch(() => {
+  state.announced = current.transport.seat(since, drawn).catch(() => {
     // A page that cannot reach its host has a louder problem than a clock, and the next poll reports it.
   });
 }
@@ -169,11 +169,10 @@ async function refresh(state) {
     // Only the entries this page has not seen yet. The feed is the whole match's history and it only grows, so
     // a poll every 700 ms that asked for all of it would serialize and download the match again each time --
     // and over a half-hour session that is quadratic in the number of events, for twelve lines on screen.
-    // `displayed` is the seat whose screen was actually up at the end of the last render: not merely the seat
-    // the host is asking, because until the person being asked taps through the pass screen nobody is reading
-    // it. The host times a decision from the poll that says so (DecisionClock), so a background poll of the
-    // other seat must not claim to be one.
-    const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0, state.displayed === seat.seat);
+    // An ordinary poll acknowledges nothing. What the host times a decision from is the page saying it has
+    // *drawn* an asking, which is sent from the render below -- this request is the one fetching the question,
+    // and its answer still has to arrive and be laid out before anybody has read anything.
+    const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0);
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
@@ -241,17 +240,16 @@ function render(state, views) {
   // screen (seats.js).
   const fence = needsPass(current, state.holder);
 
-  // What the host is told is on screen. Nothing, while the pass screen is up: the board is behind it and the
-  // person being asked has not picked the device up yet. The moment it comes down, the host is told straight
-  // away rather than on the next poll — the poll that fetched this board was sent while the fence was still
-  // up, so waiting would start the decision's clock up to a polling interval late, and a decision faster than
-  // that would be recorded as having taken no time at all.
-  const showing = fence ? null : current.seat;
-  if (showing !== null && showing !== state.displayed) {
-    announce(state, current);
+  // What the host is told has been drawn, and it is the asking rather than the seat. One seat is asked several
+  // questions in a row -- two Evolution picks are two askings of the same shape -- so acknowledging per seat
+  // would let the host start the second one's clock while it was still serving it, with the network and the
+  // layout inside the player's duration. Nothing is acknowledged while the pass screen is up: the board is
+  // behind it and the person being asked has not picked the device up yet.
+  const drawn = fence ? null : view.waitingAsked ?? null;
+  if (drawn !== null && drawn !== state.acknowledged) {
+    state.acknowledged = drawn;
+    announce(state, current, drawn);
   }
-
-  state.displayed = showing;
   element('seat').textContent = nameOf(current.seat);
   element('pass-seat').textContent = nameOf(current.seat);
   element('pass-seat-again').textContent = nameOf(current.seat);
