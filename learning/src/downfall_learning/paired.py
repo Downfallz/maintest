@@ -22,6 +22,15 @@ What it refuses, and why:
   nobody asked on a subset nobody chose.
 - **Different content.** A score against one catalogue and a score against another are not comparable at all,
   and the content hash is in both stamps.
+- **Different rules.** The content hash covers the catalogue and not the rules it is played under, so a round
+  cap or a critical multiplier that moved would open a gap that has nothing to do with the agents.
+- **Fewer than two seeds.** One observation estimates no variance, so the difference has no interval and
+  settles nothing. Reporting it with a degenerate interval would turn one seed into certainty, which is the
+  thing this module exists to stop (ADR 0049).
+
+A different *engine build* is reported rather than refused: ``ci-150`` reproduced ``ci-149`` to sixteen
+decimal places on a different one, so a rebuild is not on its own a reason to discard a comparison -- it is a
+reason to say so, because it need not be.
 
 What it cannot check for you: whether the comparison means anything. Two files of ``X vs Greedy`` and
 ``Y vs Greedy`` differ by the agent, which is the usual question; ``X vs Greedy`` against ``X vs Random``
@@ -75,6 +84,8 @@ class PairedDifference:
     agent_b: str
     opponent_a: str
     opponent_b: str
+    engine_a: str
+    engine_b: str
     seeds: int
     mean_a: float
     mean_b: float
@@ -100,6 +111,8 @@ class PairedDifference:
             "agentB": self.agent_b,
             "opponentOfA": self.opponent_a,
             "opponentOfB": self.opponent_b,
+            "engineOfA": self.engine_a,
+            "engineOfB": self.engine_b,
             "seeds": self.seeds,
             "scoreA": self.mean_a,
             "scoreB": self.mean_b,
@@ -112,12 +125,26 @@ class PairedDifference:
 
 
 def compare(first: Evaluation, second: Evaluation) -> PairedDifference:
-    """The paired difference of agent A's score between two evaluations of the same seeds and content."""
+    """The paired difference of agent A's score between two evaluations of the same game and seeds."""
     if first.stamp.content_hash != second.stamp.content_hash:
         raise ArtifactError(
             "These evaluations played different content "
             f"({first.stamp.content_hash[:12]} and {second.stamp.content_hash[:12]}), so their scores are "
             "not comparable at all, paired or otherwise."
+        )
+
+    # The content hash covers the catalogue and not the rules it is played under. A round cap or a critical
+    # multiplier that moved changes the game itself, and the gap it opens has nothing to do with the agents --
+    # which is exactly the difference this module exists to attribute to them.
+    if dict(first.stamp.rule_set) != dict(second.stamp.rule_set):
+        changed = sorted(
+            key
+            for key in dict(first.stamp.rule_set).keys() | dict(second.stamp.rule_set).keys()
+            if dict(first.stamp.rule_set).get(key) != dict(second.stamp.rule_set).get(key)
+        )
+        raise ArtifactError(
+            f"These evaluations played different rules ({', '.join(changed)}), so a difference between them "
+            "is about the game as much as about the agents."
         )
 
     left, right = scores_by_seed(first), scores_by_seed(second)
@@ -129,18 +156,27 @@ def compare(first: Evaluation, second: Evaluation) -> PairedDifference:
             f"Only in the first: {only_left[:5]}. Only in the second: {only_right[:5]}."
         )
 
+    # One observation cannot estimate how much it would have moved, so there is no interval to report and no
+    # question to settle. Reporting the difference with a degenerate interval would turn one seed into
+    # certainty, which is the thing this module exists to stop (ADR 0049).
+    if len(left) < 2:
+        raise ArtifactError(
+            f"A paired reading needs at least two seeds; these carry {len(left)}. One observation estimates "
+            "no variance, so the difference has no interval and settles nothing (ADR 0049)."
+        )
+
     seeds = sorted(left)
     differences = [left[seed] - right[seed] for seed in seeds]
     count = len(differences)
     mean = sum(differences) / count
-    # The sample variance, and zero when one seed leaves nothing to vary: the interval is then degenerate at
-    # the difference, which is honest rather than infinite.
-    variance = 0.0 if count < 2 else sum((value - mean) ** 2 for value in differences) / (count - 1)
+    variance = sum((value - mean) ** 2 for value in differences) / (count - 1)
     return PairedDifference(
         agent_a=first.agent_a.agent,
         agent_b=second.agent_a.agent,
         opponent_a=first.agent_b.agent,
         opponent_b=second.agent_b.agent,
+        engine_a=first.stamp.engine_version,
+        engine_b=second.stamp.engine_version,
         seeds=count,
         mean_a=sum(left[seed] for seed in seeds) / count,
         mean_b=sum(right[seed] for seed in seeds) / count,
@@ -174,6 +210,18 @@ def format_paired(result: PairedDifference) -> str:
                 "",
                 "  The two played different opponents, so this difference is about the opponent as much as",
                 "  about the agent. Read it as such, or compare against one opponent.",
+            ]
+        )
+    # Reported rather than refused: two builds of the engine can play a seed identically -- ci-150 reproduced
+    # ci-149 to sixteen decimal places on a different one -- so a rebuild is not on its own a reason to throw
+    # a comparison away. It is a reason to say so, because it need not be.
+    if result.engine_a != result.engine_b:
+        lines.extend(
+            [
+                "",
+                f"  The two were played by different engine builds ({result.engine_a} and "
+                f"{result.engine_b}).",
+                "  Rebuilding need not change how a seed plays, and often does not, but it can.",
             ]
         )
     return "\n".join(lines)

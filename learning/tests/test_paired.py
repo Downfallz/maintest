@@ -153,3 +153,37 @@ def test_the_result_is_written_where_it_is_asked_for(tmp_path: Path) -> None:
     written = json.loads((tmp_path / "out" / "paired.json").read_text())
     assert written["difference"] == pytest.approx(result.difference)
     assert written["settled"] is True
+
+
+def test_one_seed_is_refused_rather_than_called_certain(tmp_path: Path) -> None:
+    """The module exists to stop one observation becoming a result; it must not do it itself (ADR 0049)."""
+    first = evaluation(tmp_path / "a.json", {1: 1.0})
+    second = evaluation(tmp_path / "b.json", {1: 0.0})
+
+    with pytest.raises(ArtifactError, match="at least two seeds"):
+        compare(load_evaluation(first), load_evaluation(second))
+
+
+def test_different_rules_are_refused(tmp_path: Path) -> None:
+    """The content hash covers the catalogue, not the rules: a moved round cap opens a gap of its own."""
+    first = evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0})
+    second = evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0})
+    data = json.loads(second.read_text())
+    data["stamp"]["ruleSet"] = {"roundCap": 30}
+    second.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match=r"different rules.*roundCap"):
+        compare(load_evaluation(first), load_evaluation(second))
+
+
+def test_a_different_engine_build_is_reported_and_not_refused(tmp_path: Path) -> None:
+    """A rebuild need not change how a seed plays -- ci-150 reproduced ci-149 exactly on another build."""
+    first = evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0})
+    second = evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0})
+    data = json.loads(second.read_text())
+    data["stamp"]["engineVersion"] = "another"
+    second.write_text(json.dumps(data), encoding="utf-8")
+
+    report = format_paired(compare(load_evaluation(first), load_evaluation(second)))
+
+    assert "different engine builds" in report
