@@ -62,6 +62,20 @@ public sealed record PlaytestNote
     public string? Text { get; init; }
 
     /// <summary>
+    /// For a <see cref="NoteKind.Decision" />: which question of this seat it answered, counted by the seat in
+    /// the order the engine asked them.
+    /// </summary>
+    /// <remarks>
+    /// It is what a reader orders decisions by, and file order is not. Two decisions of one seat can be
+    /// accepted in one order and written down in the other: accepting releases the engine, so a thread can be
+    /// descheduled between its decision being taken and its note being appended while the next decision's
+    /// thread runs to completion. Fighting for the file's order would mean holding a lock across the engine
+    /// and the disk; carrying the number instead costs a field and makes the order explicit rather than
+    /// positional, which is also what a reader joining these notes to <c>steps.jsonl</c> actually needs.
+    /// </remarks>
+    public long? Asked { get; init; }
+
+    /// <summary>
     /// A decision that was accepted, timed from when its options were served. The elapsed time is read off the
     /// same <paramref name="timeProvider" /> as <see cref="At" />, so a test that moves the clock moves both
     /// and a session recorded under a frozen clock reports zero rather than a wall-clock accident.
@@ -77,7 +91,7 @@ public sealed record PlaytestNote
     /// clock read at this point would put engine time inside a duration that measures a person reading a
     /// screen, and would date the note after the thing it records.
     /// </param>
-    public static PlaytestNote Decision(NotePlace where, DateTimeOffset? servedAt, DateTimeOffset acceptedAt)
+    public static PlaytestNote Decision(NotePlace where, DateTimeOffset? servedAt, DateTimeOffset acceptedAt, long? asked)
     {
         ArgumentNullException.ThrowIfNull(where);
 
@@ -94,6 +108,7 @@ public sealed record PlaytestNote
             // Never negative: a served moment in the future is a clock that moved, not a decision taken before
             // it was asked, and a negative duration in a dataset is worse than a zero.
             ElapsedMs = servedAt is { } served ? (long)Math.Max(0, (at - served).TotalMilliseconds) : null,
+            Asked = asked,
         };
     }
 

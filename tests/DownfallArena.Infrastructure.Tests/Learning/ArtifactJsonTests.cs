@@ -49,11 +49,12 @@ public sealed class ArtifactJsonTests
         var note = PlaytestNote.Decision(
             new NotePlace("2026-09-17T203000Z-ab12", Match, PlayerSlot.Player2, 3, RoundSubPhase.IntentSelection),
             new DateTimeOffset(2026, 9, 17, 20, 29, 58, TimeSpan.Zero),
-            new DateTimeOffset(2026, 9, 17, 20, 30, 0, TimeSpan.Zero));
+            new DateTimeOffset(2026, 9, 17, 20, 30, 0, TimeSpan.Zero),
+            asked: 5);
 
         var json = JsonSerializer.Serialize(note, ArtifactJson.LineOptions);
 
-        json.ShouldBe("""{"sessionId":"2026-09-17T203000Z-ab12","matchId":"00000000-0000-0000-0000-00000000abcd","slot":"Player2","round":3,"subPhase":"IntentSelection","at":"2026-09-17T20:30:00+00:00","kind":"Decision","elapsedMs":2000,"code":null,"message":null,"text":null}""");
+        json.ShouldBe("""{"sessionId":"2026-09-17T203000Z-ab12","matchId":"00000000-0000-0000-0000-00000000abcd","slot":"Player2","round":3,"subPhase":"IntentSelection","at":"2026-09-17T20:30:00+00:00","kind":"Decision","elapsedMs":2000,"code":null,"message":null,"text":null,"asked":5}""");
     }
 
     [Fact]

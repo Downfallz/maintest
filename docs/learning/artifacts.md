@@ -193,11 +193,16 @@ One line per note, written through `IArtifactWriter.AppendJsonLinesAsync` and ti
 | `elapsedMs` | For a `Decision`: from the moment that seat's options were **served** to the moment the decision was accepted. Served, not asked: the engine may ask a seat while nobody is looking at the screen, and the difference is the walk back to the table. Null when nothing can say the options ever reached a person — a bot seat, or a decision that beat the page's own word that the board was up. Never zero for that case: zero is a measurement and reads exactly like an instant decision. |
 | `code`, `message` | For a `Refused`: the `DomainError` the aggregate or the host's pre-check returned. |
 | `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed. A tap carries none. |
+| `asked` | For a `Decision`: which question of that seat it answered, counted by the seat in the order the engine asked them. **This, and not the line's position in the file, is the order to read decisions in.** |
 
 `Decision` and `Refused` are the host's own account of what happened and it refuses to accept either from a
 client; the other three come from the page, for the seat whose token posted them. No identifier is added to a
-step to tie the two files together: alignment is by order, because both are appended in the order that seat
-decided.
+step to tie the two files together: alignment is by order — the *n*-th decision of a seat is its *n*-th step.
+
+**Order decisions by `asked`, not by where they sit in the file.** A decision releases the engine before its
+note is written, so two decisions of one seat can be accepted in one order and appended in the other when a
+thread is descheduled between the two. `asked` is the order the engine asked them in, which is the order
+`steps.jsonl` is in.
 
 That alignment holds **for a seat a person played throughout, and only for such a seat.** A `Decision` note is
 written when a person's tap is accepted, while a step is recorded for whoever was seated — so `table --p2

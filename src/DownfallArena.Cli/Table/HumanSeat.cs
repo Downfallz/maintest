@@ -42,13 +42,21 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     /// Answers the question the seat is waiting on. False when it is waiting for nothing, or for something
     /// else — a tap on a screen that has moved on is late, not illegal, and the host answers it as such.
     /// </summary>
-    public bool Submit(PlayerDecision decision)
+    /// <param name="asked">
+    /// Which asking the caller believes it is answering. Checked here, under the same lock that hands the
+    /// answer over, because anywhere else it is a check and then a gap: two callers can both read the seat's
+    /// current question, both agree it is theirs, and the first can advance the driver to the next question of
+    /// the same shape while the second is still on its way. <see cref="Question.Answers" /> would then accept
+    /// that second tap for a question nobody meant it for — a pick spent by accident, or a choice the round no
+    /// longer allows handed to the driver.
+    /// </param>
+    public bool Submit(PlayerDecision decision, long asked)
     {
         ArgumentNullException.ThrowIfNull(decision);
 
         lock (_gate)
         {
-            if (_question is not { } question || _answer is not { } answer || !question.Answers(decision))
+            if (_question is not { } question || _answer is not { } answer || question.Asked != asked || !question.Answers(decision))
             {
                 return false;
             }

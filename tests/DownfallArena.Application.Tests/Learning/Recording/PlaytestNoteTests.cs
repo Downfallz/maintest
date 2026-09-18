@@ -21,7 +21,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_note_is_timed_from_the_moment_the_options_were_served()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 3, RoundSubPhase.IntentSelection), Now.AddMilliseconds(-1500), Now);
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 3, RoundSubPhase.IntentSelection), Now.AddMilliseconds(-1500), Now, asked: 4);
 
         note.At.ShouldBe(Now);
         note.ElapsedMs.ShouldBe(1500);
@@ -32,7 +32,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_note_never_reports_a_negative_duration()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player2, 1, RoundSubPhase.Speed), Now.AddSeconds(5), Now);
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player2, 1, RoundSubPhase.Speed), Now.AddSeconds(5), Now, asked: 4);
 
         note.ElapsedMs.ShouldBe(0);
     }
@@ -45,17 +45,30 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_nobody_can_time_is_recorded_as_unknown_and_not_as_no_time()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 5, RoundSubPhase.Speed), servedAt: null, Now);
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 5, RoundSubPhase.Speed), servedAt: null, Now, asked: 4);
 
         note.ElapsedMs.ShouldBeNull();
         note.Kind.ShouldBe(NoteKind.Decision);
         note.At.ShouldBe(Now);
     }
 
+    /// <summary>
+    /// A decision names the question it answered, and a reader orders decisions by that rather than by where
+    /// they landed in the file: two of one seat's decisions can be accepted in one order and appended in the
+    /// other, because accepting releases the engine before the note is written.
+    /// </summary>
+    [Fact]
+    public void A_decision_note_names_the_asking_it_answered()
+    {
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 3, RoundSubPhase.Speed), Now, Now, asked: 12);
+
+        note.Asked.ShouldBe(12);
+    }
+
     [Fact]
     public void A_decision_note_carries_no_error_and_no_text()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 2, RoundSubPhase.Evolution), Now, Now);
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 2, RoundSubPhase.Evolution), Now, Now, asked: 4);
 
         note.Code.ShouldBeNull();
         note.Message.ShouldBeNull();

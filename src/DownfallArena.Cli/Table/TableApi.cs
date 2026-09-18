@@ -293,11 +293,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         }
 
         // The question this answers has to be the question the seat is on. `Question.Answers` compares the kind
-        // and the creature, which two consecutive Evolution picks share, so without this a decision validated
-        // against the first could be applied to the second -- by a second client on the same token, or by a
-        // tap that took the slow path while the driver moved on. Refused as late, which is what it is.
+        // and the creature, which two consecutive Evolution picks share, so without an asking a decision
+        // validated against the first could be applied to the second. Read here to fail early and to have
+        // something to record, but *checked* inside the seat, under the lock that hands the answer over: here
+        // it would be a check and then a gap, and two callers could both pass it before either submitted.
         var waiting = person.Waiting;
-        if (posted.Asked != waiting?.Asked)
+        if (posted.Asked is not { } asking)
         {
             return await RefuseAsync(seat.Slot, Late);
         }
@@ -330,7 +331,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         // Checked against the options, and still refused: the seat moved on between the two. That is the race
         // the driver would have thrown on, answered as the late tap it is.
-        if (!person.Submit(decision))
+        if (!person.Submit(decision, asking))
         {
             return await RefuseAsync(seat.Slot, Late);
         }
