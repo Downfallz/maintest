@@ -51,8 +51,9 @@ the implementation effort is **not** estimated, because nothing here has been bu
    found a cycle, against the source components of the condensation graph taken whole plus a draw, since a
    cyclic pool has no top 4 and picking one by rating is the very thing a cycle forbids. Sampled because the
    whole pool would take ~195 min against `search.yml`'s 180-minute limit; six opponents land near two hours.
-   This replaces Greedy, which `stun-first` beats in every match and which therefore cannot rank anything
-   above itself any more.
+   But early on that source set is most of the pool, so the full-pool cost is the *expected* early case and
+   **raising the timeout is part of this step**, not a contingency after it. This replaces Greedy, which
+   `stun-first` beats in every match and which therefore cannot rank anything above itself any more.
 2. **A2 — the ratchet.** The sample only *ranks*; it never admits. The search's top *m* finalists (m ≈ 5) are
    played against every pool member — ~73 s each — and one is admitted only if, against **every** incumbent,
    its paired difference shows no settled loss *and* has a lower bound above −δ, plus at least one settled
@@ -60,10 +61,12 @@ the implementation effort is **not** estimated, because nothing here has been bu
    second one that says nothing. Testing five finalists at once inflates that 95 %, so the bounds are either
    corrected for the family or one finalist is chosen first and gated alone — an open trade, not a detail.
    The gate's seeds must also be fresh **per rung**, not merely unused by the current search: the loop's own
-   output feeds the next rung, so a fixed hold-out window is fitted a little more with every turn. An
-   admitted finalist is written to `learning/weights/` and the next rung starts from it. **That sentence is
-   the loop.** Everything it needs already exists, except the gate, which this plan has got wrong four times
-   and hands to an ADR.
+   output feeds the next rung, so a fixed hold-out window is fitted a little more with every turn. Fresh
+   windows are not enough either — a 5 % gate run ten times is a ~40 % chance of one false admission, and the
+   loop climbs on from it — so a **sealed block gates every N rungs and rolls back** what it refuses, or the
+   loop spends an alpha budget across rungs instead of 5 % each. An admitted finalist is written to
+   `learning/weights/` and the next rung starts from it. **That sentence is the loop.** Everything it needs
+   already exists, except the gate, which this plan has got wrong four times and hands to an ADR.
 3. **A3 — a stop.** N rungs with nothing admitted ends the loop, so it stops burning runner hours restating a
    fixed point. It records every finalist that failed, against whom and by how much. It does **not** say why
    the loop stopped: the four possible causes are not distinguishable from what it observes, so it is a halt,
@@ -282,10 +285,25 @@ version of it. The loop would report a rising score on a test set it had been qu
 
 So the gate needs seeds that are fresh **per rung**, not merely fresh per search: a window advanced by the
 rung index, recorded with the admission so a window is never reused. The seed space is large enough that this
-does not run out. And because a fresh window each time still lets errors accumulate across rungs, a second
-block is **sealed**: never used for admission, played only every N rungs to audit how far the loop has
-drifted from what it claims. That audit is the only reading that stays honest indefinitely, and it is worth
-more than any single rung's gate.
+does not run out.
+
+**Fresh windows fix reuse and not repetition, which is the larger problem.** A gate that is wrong 5 % of the
+time is wrong 5 % of the time *per rung*, and a loop is many rungs: at ten, the chance of at least one false
+admission is 1 − 0.95¹⁰ ≈ **40 %**. Every window being new does nothing about that — the errors are
+independent, which is exactly why they accumulate. And a false admission is not a bad rung that passes and is
+forgotten; it becomes the starting point of the next one, so the loop keeps climbing from it.
+
+That also disposes of the audit as this paragraph first proposed it. A sealed block **played only to measure
+drift** reports the damage after the candidate and its descendants are in the lineage, which is a
+post-mortem, not a ratchet. So the sealed block has to **gate**: every N rungs the current agent is played on
+it, and an agent that fails is removed along with the admissions that followed it, the loop restarting from
+the last one the sealed block passed. Rolling back N rungs is expensive and that is the point — it bounds how
+far a false admission can carry.
+
+The alternative, and they are not exclusive, is to stop spending a fresh 5 % per rung: an **alpha budget
+across the loop**, or a confidence sequence that stays valid however many times it is read. A loop meant to
+run indefinitely cannot use a fixed per-test rate and call the result a ratchet. Which of the two, and what N
+is, belongs to the same ADR as the gate.
 
 "Written to `learning/weights/`, and the next rung starts from it" is the whole loop. Everything it needs
 exists.
@@ -335,8 +353,21 @@ beats into — are exactly the agents nothing outside them defeats, and they are
 So: **the panel is the union of the condensation's source components, taken whole, plus a draw from the rest
 up to the budget.** Whole, because inside a component nothing orders anybody. The union rather than one of
 them, because an incomplete relation can leave several sources and choosing between them needs precisely the
-rating that does not exist. If that union exceeds the panel budget the rung costs more or the budget moves —
-a real cost, and the price of a pool that cannot be ranked.
+rating that does not exist.
+
+**And that union is normally most of the pool, which a draft of this paragraph waved away.** A singleton with
+no incoming settled edge is a source component, so every agent nobody has yet settled a win against is in it.
+Early in the loop — where the settled relation is sparse even after the round robin, because a round robin
+plays every pair but settles only the separable ones — that is most of the ten. So the cyclic branch is not a
+rare fallback: it is the ordinary state of the first several rungs, and "the rung costs more or the budget
+moves" is not an executable step, it is the 195-minute full-pool search that does not fit in 180 minutes
+arriving by another door.
+
+Two consequences the plan takes rather than dodges. **Raising `search.yml`'s timeout is part of A1, not a
+contingency** — the step must budget for the full pool because that is the expected early case, not the worst
+one. And a source set covering most of the pool is itself a **reading**: it says the agents are not yet
+separable at 200 seeds, and the answer to that is more seeds per matchup rather than more opponents per
+candidate. A rung facing a near-total source set should deepen before it widens.
 
 **The gate.** "Beats the pool on the mean" can promote an agent that loses to half of it. An earlier draft
 answered with a set of agents "not beaten by any other member", which is worse than imprecise: under
@@ -466,8 +497,8 @@ from. The acceptance criterion has to be grounded outside the fit.
 
 - **Produces**: a value fitted on search targets, playable as `lookahead:<value>` once the evaluation can be
   named (see "what is missing" below).
-- **Falsified by**: the fitted evaluation failing **A2's own gate against every hand-written set in the
-  pool**, with the guesser and every other role held fixed so only the evaluation differs. Not the built-in
+- **Judged by**: **A2's own gate against every hand-written set in the pool**, with the guesser and every
+  other role held fixed so only the evaluation differs. Not the built-in
   weights: `stun-first` already beats those by a settled 0.1300, so a learned evaluation could clear that bar
   and still be weaker than what a person wrote. And not "the champion" either, which an earlier draft named:
   if the pool is cyclic there is no unique strongest hand-written set — the section above rejects exactly
@@ -475,6 +506,12 @@ from. The acceptance criterion has to be grounded outside the fit.
   Line A builds is already the right shape for this, so B1 uses it rather than inventing a second one. And
   not an r-squared in either direction: a low one does not condemn the fit and a high one is what distilling
   the scorer looks like.
+- **Falsified by**: not one rejection. A2 refusing a fitted evaluation says the same four things A3's counter
+  says — the fit is weak, the seeds lack power against one incumbent, the finalist selection missed a viable
+  fit, or the approach is wrong — and the section above spent a round removing exactly that inference from
+  A3. Line B may not inherit it one page later. B1 is falsified by **several fits across the encodings and
+  targets it has to offer**, all refused, with the coverage stated: what was tried and what was not. One
+  rejection is a result about one fit.
 - **Watch for**: a fit whose ranking of rounds agrees with `ActionScorer`'s almost everywhere. That is the
   signature of compression, and it is measurable directly — compare the two orders on held-out rounds before
   spending a league run on it.
