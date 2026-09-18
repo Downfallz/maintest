@@ -21,7 +21,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_note_is_timed_from_the_moment_the_options_were_served()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 3, RoundSubPhase.IntentSelection), Now.AddMilliseconds(-1500), new FixedClock(Now));
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 3, RoundSubPhase.IntentSelection), Now.AddMilliseconds(-1500), Now);
 
         note.At.ShouldBe(Now);
         note.ElapsedMs.ShouldBe(1500);
@@ -32,7 +32,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_note_never_reports_a_negative_duration()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player2, 1, RoundSubPhase.Speed), Now.AddSeconds(5), new FixedClock(Now));
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player2, 1, RoundSubPhase.Speed), Now.AddSeconds(5), Now);
 
         note.ElapsedMs.ShouldBe(0);
     }
@@ -45,7 +45,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_nobody_can_time_is_recorded_as_unknown_and_not_as_no_time()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 5, RoundSubPhase.Speed), servedAt: null, new FixedClock(Now));
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 5, RoundSubPhase.Speed), servedAt: null, Now);
 
         note.ElapsedMs.ShouldBeNull();
         note.Kind.ShouldBe(NoteKind.Decision);
@@ -55,7 +55,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_note_carries_no_error_and_no_text()
     {
-        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 2, RoundSubPhase.Evolution), Now, new FixedClock(Now));
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 2, RoundSubPhase.Evolution), Now, Now);
 
         note.Code.ShouldBeNull();
         note.Message.ShouldBeNull();
@@ -98,10 +98,13 @@ public sealed class PlaytestNoteTests
             () => PlaytestNote.Typed(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), kind, "anything", new FixedClock(Now)));
     }
 
+    /// <summary>
+    /// A decision is dated by the moment its caller read at acceptance, so it needs no clock of its own; the
+    /// two kinds the host writes after the fact still do.
+    /// </summary>
     [Fact]
-    public void Every_note_needs_a_clock()
+    public void Every_note_the_host_times_itself_needs_a_clock()
     {
-        Should.Throw<ArgumentNullException>(() => PlaytestNote.Decision(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), Now, null!));
         Should.Throw<ArgumentNullException>(() => PlaytestNote.Refused(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), new DomainError("a", "b"), null!));
         Should.Throw<ArgumentNullException>(() => PlaytestNote.Typed(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), NoteKind.Lookup, "t", null!));
     }

@@ -71,12 +71,17 @@ public sealed record PlaytestNote
     /// an unknown duration rather than as no time at all: zero is a measurement, indistinguishable from a
     /// decision taken instantly, so a hole in the stamping would hide in the data rather than show.
     /// </param>
-    public static PlaytestNote Decision(NotePlace where, DateTimeOffset? servedAt, TimeProvider timeProvider)
+    /// <param name="acceptedAt">
+    /// When the decision was accepted, read by the caller at that moment rather than here. Accepting a
+    /// decision releases the engine, which can run a whole command before the caller is scheduled again, so a
+    /// clock read at this point would put engine time inside a duration that measures a person reading a
+    /// screen, and would date the note after the thing it records.
+    /// </param>
+    public static PlaytestNote Decision(NotePlace where, DateTimeOffset? servedAt, DateTimeOffset acceptedAt)
     {
         ArgumentNullException.ThrowIfNull(where);
-        ArgumentNullException.ThrowIfNull(timeProvider);
 
-        var at = timeProvider.GetUtcNow();
+        var at = acceptedAt;
         return new PlaytestNote
         {
             SessionId = where.SessionId,

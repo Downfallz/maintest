@@ -301,6 +301,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // tell whether the driver has applied it yet.
         var traced = run?.TraceLength(session.MatchId) ?? 0;
 
+        // Declared before the decision is handed over, and held until its note is written. The match can end
+        // on this very tap, and the host would otherwise close the session while this thread is still on its
+        // way to writing it down -- showing a finished session whose last decision is missing.
+        using var accepting = run?.Accepting();
+
         // Checked against the options, and still refused: the seat moved on between the two. That is the race
         // the driver would have thrown on, answered as the late tap it is.
         if (!person.Submit(decision))
@@ -308,7 +313,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        await RecordAsync(seat.Slot, round, subPhase, answered, servedAt, traced);
+        // The moment of acceptance, read here and not further down. Submitting releases the driver, which can
+        // run a whole command before this thread is scheduled again, so a clock read inside the recording
+        // would date the note after the thing it records and put engine time inside the player's duration.
+        var accepted = run is null ? null : new AcceptedDecision(answered, servedAt, run.Now());
+
+        await RecordAsync(seat.Slot, round, subPhase, accepted, traced);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
@@ -319,16 +329,16 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
     /// rather than the player's.
     /// </summary>
-    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered, DateTimeOffset? servedAt, int traced)
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, int traced)
     {
-        if (run is not { } recording)
+        if (run is not { } recording || accepted is null)
         {
             return;
         }
 
         try
         {
-            await recording.DecidedAsync(session.MatchId, slot, round, subPhase, answered, servedAt, CancellationToken.None);
+            await recording.DecidedAsync(session.MatchId, slot, round, subPhase, accepted, CancellationToken.None);
 
             // The trace, as far as the match has got -- and not until the command this decision caused has
             // finished raising everything it raises.

@@ -51,6 +51,11 @@ internal sealed class PlaytestRun
     // What orders a checkpoint against the closing of the session. Both write the same trace file, and which
     // of them lands last decides whether the session keeps the match it played or a snapshot of half of it.
     private readonly Lock _ordering = new();
+
+    // Decisions accepted whose notes have not been written yet. The match can end on a tap, and the thread
+    // that accepted that tap is still on its way to writing it down while the host is already closing the
+    // session -- so closing waits for these, or the finished session it shows is missing its last decision.
+    private int _recording;
     private readonly int _seed;
 
     private PlaytestRun(
@@ -156,6 +161,15 @@ internal sealed class PlaytestRun
     /// </summary>
     public DateTimeOffset? ServedAt(PlayerSlot slot, HumanSeat.Question? question) => _served.ServedAt(slot, question);
 
+    /// <summary>This session's clock, so a caller reads the moment of an event where the event happens.</summary>
+    public DateTimeOffset Now() => _clock.GetUtcNow();
+
+    /// <summary>
+    /// Declares that a decision is being accepted and will be written down. Held from before the decision
+    /// reaches the seat until its note is written, so closing the session cannot step over it.
+    /// </summary>
+    public IDisposable Accepting() => new Acceptance(this);
+
     /// <summary>
     /// A decision was accepted, timed from <paramref name="servedAt" /> -- the moment the caller read off
     /// <see cref="ServedAt" /> before submitting it. Null means nothing knows when the options reached a
@@ -167,12 +181,15 @@ internal sealed class PlaytestRun
         PlayerSlot slot,
         int? round,
         RoundSubPhase? subPhase,
-        HumanSeat.Question? answered,
-        DateTimeOffset? servedAt,
+        AcceptedDecision accepted,
         CancellationToken cancellationToken = default)
     {
-        _served.Answered(slot, answered);
-        return NoteAsync(PlaytestNote.Decision(Where(matchId, slot, round, subPhase), servedAt, _clock), cancellationToken);
+        ArgumentNullException.ThrowIfNull(accepted);
+
+        _served.Answered(slot, accepted.Answered);
+        return NoteAsync(
+            PlaytestNote.Decision(Where(matchId, slot, round, subPhase), accepted.ServedAt, accepted.AcceptedAt),
+            cancellationToken);
     }
 
     /// <summary>
@@ -185,6 +202,28 @@ internal sealed class PlaytestRun
     /// <summary>A note a player produced with one tap, or typed on the end screen.</summary>
     public Task TypedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, NoteKind kind, string text, CancellationToken cancellationToken = default) =>
         NoteAsync(PlaytestNote.Typed(Where(matchId, slot, round, subPhase), kind, text, _clock), cancellationToken);
+
+    /// <summary>One decision on its way from accepted to written down.</summary>
+    private sealed class Acceptance : IDisposable
+    {
+        private readonly PlaytestRun _run;
+        private bool _done;
+
+        public Acceptance(PlaytestRun run)
+        {
+            _run = run;
+            Interlocked.Increment(ref run._recording);
+        }
+
+        public void Dispose()
+        {
+            if (!_done)
+            {
+                _done = true;
+                Interlocked.Decrement(ref _run._recording);
+            }
+        }
+    }
 
     /// <summary>Where a note is being taken, which only this session can say, because only it knows its own id.</summary>
     private NotePlace Where(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase) =>
@@ -260,6 +299,16 @@ internal sealed class PlaytestRun
         lock (_ordering)
         {
             _closing = true;
+        }
+
+        // Decisions already accepted finish being written down first. The match can end on a tap, and the
+        // thread that took that tap is still on its way here -- a session closed over it would be shown as
+        // finished with its last decision missing from notes.jsonl and present in steps.jsonl. Bounded for the
+        // same reason as everything else on this path: a thread that is not coming back must not hold a table
+        // open.
+        for (var waited = TimeSpan.Zero; Volatile.Read(ref _recording) > 0 && waited < GrowthWait; waited += GrowthStep)
+        {
+            await Task.Delay(GrowthStep, _clock, cancellationToken);
         }
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);

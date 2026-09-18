@@ -49,7 +49,7 @@ public sealed class ArtifactJsonTests
         var note = PlaytestNote.Decision(
             new NotePlace("2026-09-17T203000Z-ab12", Match, PlayerSlot.Player2, 3, RoundSubPhase.IntentSelection),
             new DateTimeOffset(2026, 9, 17, 20, 29, 58, TimeSpan.Zero),
-            new FixedClock(new DateTimeOffset(2026, 9, 17, 20, 30, 0, TimeSpan.Zero)));
+            new DateTimeOffset(2026, 9, 17, 20, 30, 0, TimeSpan.Zero));
 
         var json = JsonSerializer.Serialize(note, ArtifactJson.LineOptions);
 
@@ -112,8 +112,4 @@ public sealed class ArtifactJsonTests
         Should.Throw<NotSupportedException>(() => JsonSerializer.Deserialize<Effect>("{}", ArtifactJson.LineOptions));
     }
 
-    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => now;
-    }
 }
