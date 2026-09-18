@@ -23,7 +23,11 @@ and is the reason the rest of this plan is phrased the way it is.
 
 **Two rungs of the loop have been climbed by hand.** `pressure-floor` was searched from `mixture-mean`, and
 `stun-first` from `pressure-floor` *with `pressure-floor` in its panel* — which is A1 and A2 performed
-manually, once, and it produced the strongest agent here.
+manually, once, and it produced the strongest agent here. The second link carries its evidence: on 200 seeds
+nothing in this project had played, `stun-first` beats `pressure-floor` **0.8037, interval 0.762 to 0.846**
+(journal, 2026-09-16). That is already a paired reading — a head-to-head's interval is built over per-seed
+means of the two mirrored matches — so it is the instrument this plan insists on, not a marginal score that
+happens to look large.
 
 An earlier version of this section claimed a seven-rung chain, `greedy → search-2 → … → stun-first`. The
 history does not support it: `search-2`, `search-3` and `search-4` are **independent** searches, each started
