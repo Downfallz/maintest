@@ -280,7 +280,7 @@ internal sealed class PlaytestRun
     /// </remarks>
     public IReadOnlyList<TraceEntry> Entries(MatchId matchId, int since) =>
         _kept is { } final
-            ? final.Skip(Math.Clamp(since, 0, final.Count)).ToList()
+            ? [.. final.Skip(Math.Clamp(since, 0, final.Count))]
             : _events.EntriesOf(matchId, since);
 
     /// <summary>
