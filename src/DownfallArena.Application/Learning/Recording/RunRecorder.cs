@@ -48,7 +48,34 @@ public sealed class RunRecorder(
     /// </summary>
     public bool AllowsParallelMatches => false;
 
-    public RunStamp Stamp => stamp;
+    public RunStamp Stamp => Volatile.Read(ref _stamp);
+
+    private RunStamp _stamp = stamp;
+
+    /// <summary>
+    /// Records that a seat changed hands, by growing that seat's name in the run stamp.
+    /// </summary>
+    /// <remarks>
+    /// <c>greedy</c> becomes <c>greedy&gt;human:mk@10</c>, and a seat that changes twice says so twice. The
+    /// point is <c>compare-stamps</c>: the agents axis is what decides whether two runs are comparable and
+    /// whether a session may be folded into a training set by name, and a seat that played as two different
+    /// players is not the seat its first name describes. The steps carry who decided each one
+    /// (<see cref="StepRecord.DecidedBy" />); this is the summary that stops a reader needing to look.
+    /// </remarks>
+    public void Reseated(PlayerSlot slot, string name, int? round)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        lock (_seats)
+        {
+            var at = round is { } number ? $"{name}@{number}" : name;
+            _stamp = slot == PlayerSlot.Player1
+                ? _stamp with { Player1Agent = $"{_stamp.Player1Agent}>{at}" }
+                : _stamp with { Player2Agent = $"{_stamp.Player2Agent}>{at}" };
+        }
+    }
+
+    private readonly Lock _seats = new();
 
     public int Matches { get; private set; }
 
@@ -111,7 +138,7 @@ public sealed class RunRecorder(
         if (traces is { } tracer)
         {
             // Completed whether or not it is written: Complete is what makes the recorder forget the match.
-            var trace = tracer.Complete(matchId, stamp, seed);
+            var trace = tracer.Complete(matchId, Stamp, seed);
             if (Traces < traceLimit)
             {
                 await writer.WriteJsonAsync($"{TracesDirectory}/{matchId}.json", trace, cancellationToken);
@@ -132,7 +159,7 @@ public sealed class RunRecorder(
             ManifestFile,
             new RunManifest
             {
-                Stamp = stamp,
+                Stamp = Stamp,
                 CreatedAt = _createdAt,
                 SchemaId = observations.Schema.Id,
                 SchemaVersion = observations.Schema.Version,

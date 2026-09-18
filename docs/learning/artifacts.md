@@ -82,7 +82,7 @@ Defined once in `ArtifactJson` (Infrastructure) and shared by every file:
 
 | Field | Meaning |
 | --- | --- |
-| `stamp` | The run stamp: `engineVersion`, `contentHash`, `ruleSet` (team size, energy, picks, round cap, critical multiplier), `featureSchema` (the schema id), `player1Agent`, `player2Agent`, `baseSeed`. |
+| `stamp` | The run stamp: `engineVersion`, `contentHash`, `ruleSet` (team size, energy, picks, round cap, critical multiplier), `featureSchema` (the schema id), `player1Agent`, `player2Agent`, `baseSeed`. A seat that changed hands mid-match grows its name as it happens — `Greedy>human:mk@10`, and again for a second swap — so `compare-stamps` reads a seat played by two agents as what it is. It grows on the **landing**, never on the asking: a swap the match never reached would otherwise name a player who never played. |
 | `createdAt` | When the run started (UTC). |
 | `schemaId`, `schemaVersion` | The feature schema of every step (`docs/learning/features.md`). |
 | `featureNames` | The name of every index of an observation, so a reader needs no engine to label columns. |
@@ -190,11 +190,18 @@ One line per note, written through `IArtifactWriter.AppendJsonLinesAsync` and ti
 | `sessionId`, `matchId`, `slot` | Which session, which match, which seat. |
 | `round`, `subPhase` | Where in the match, as in `steps.jsonl`. |
 | `at` | When, in UTC. |
-| `kind` | `Decision`, `Refused`, `Lookup`, `Misplay` or `Comment`. |
+| `kind` | `Decision`, `Refused`, `Seat`, `Lookup`, `Misplay` or `Comment`. |
 | `elapsedMs` | For a `Decision`: from the moment that seat's options were **served** to the moment the decision was accepted. Served, not asked: the engine may ask a seat while nobody is looking at the screen, and the difference is the walk back to the table. Null when nothing can say the options ever reached a person — a bot seat, or a decision that beat the page's own word that the board was up. Never zero for that case: zero is a measurement and reads exactly like an instant decision. |
 | `code`, `message` | For a `Refused`: the `DomainError` the aggregate or the host's pre-check returned. |
 | `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed. A tap carries none. |
+| `from`, `to` | For a `Seat`: what the seat's occupant was called before the swap, and what the one taking it is called. |
+| `atRound` | For a `Seat`: the round the swap takes effect at the top of, always later than `round`. A seat changes hands only where a round begins — the driver asks one seat for several decisions inside a sub-phase, so a swap landing between two of them would split it between two players — and the host refuses a swap naming the round being played (`Table.SwapMidRound`). |
 | `asked` | For a `Decision`: which question of that seat it answered, counted by the seat in the order the engine asked them. **This, and not the line's position in the file, is the order to read decisions in.** |
+
+**A `Seat` note records the asking, not the landing.** A swap names a round the match has not reached, so it
+takes effect later and never takes effect at all if the match ends first — the note says what the operator
+asked for, beside their lookups and misplays. What was actually played is on the steps, where every one
+carries its own `decidedBy`, and in the run stamp, which grows only when a seat really changes hands.
 
 `Decision` and `Refused` are the host's own account of what happened and it refuses to accept either from a
 client; the other three come from the page, for the seat whose token posted them. No identifier is added to a

@@ -227,10 +227,8 @@ public sealed class PlaytestRunTests : IDisposable
         const int HandsOverAt = 3;
         var (run, session) = await Started(seat1: resources =>
         {
-            var bot = new Occupant(Bot(resources), "greedy");
-            var person = new Occupant(Bot(resources), "human:mk");
-            var seat = new SeatAgent(bot);
-            seat.Seat(person with { Agent = new HandoverAgent(seat, bot, person, HandsOverAt) });
+            var seat = new SeatAgent(new Occupant(Bot(resources), "greedy"));
+            seat.SwapAt(new Occupant(Bot(resources), "human:mk"), HandsOverAt);
             return seat;
         });
         await session.Outcome;

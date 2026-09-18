@@ -45,6 +45,8 @@ internal sealed class PlaytestRun
     private readonly RunRecorder _recorder;
     private readonly MatchTraceRecorder _events;
     private readonly RunStamp _stamp;
+    private readonly Lock _seatedGate = new();
+    private readonly Dictionary<PlayerSlot, string> _playing = [];
     private readonly TimeProvider _clock;
     private readonly DecisionClock _served;
 
@@ -178,7 +180,54 @@ internal sealed class PlaytestRun
     public IPlayerAgent Wrap(MatchId matchId, SeatAgent seat)
     {
         ArgumentNullException.ThrowIfNull(seat);
-        return _recorder.Wrap(matchId, seat, seat.Deciding);
+        return _recorder.Wrap(matchId, seat, board =>
+        {
+            var decider = seat.Deciding(board);
+            Reseated(board.Slot, decider.Name, board.RoundNumber);
+            return decider;
+        });
+    }
+
+    /// <summary>
+    /// Notices that a seat has actually changed hands and grows the run stamp to say so.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Here rather than where a swap is asked for, because the two are different events: a swap names a round
+    /// the match has not reached, and the match can end before it. A stamp written from the asking would name
+    /// a player who never played, in the one axis <c>compare-stamps</c> reads to decide whether two runs are
+    /// comparable. This runs at the first decision the new occupant makes, which is the earliest moment the
+    /// claim is true.
+    /// </para>
+    /// <para>
+    /// It only ever appends, so a seat that changed twice says so twice, and the stamp reads in the order it
+    /// happened. Nothing is written here: the manifest is rewritten when the session closes, and an abandoned
+    /// session keeps the opening one, which names exactly the occupants that had played by then.
+    /// </para>
+    /// </remarks>
+    private void Reseated(PlayerSlot slot, string? name, int? round)
+    {
+        if (name is null)
+        {
+            return;
+        }
+
+        lock (_seatedGate)
+        {
+            if (!_playing.TryGetValue(slot, out var held))
+            {
+                _playing[slot] = name;
+                return;
+            }
+
+            if (held == name)
+            {
+                return;
+            }
+
+            _playing[slot] = name;
+            _recorder.Reseated(slot, name, round);
+        }
     }
 
     /// <summary>
@@ -230,6 +279,17 @@ internal sealed class PlaytestRun
     /// </summary>
     public Task RefusedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, DomainError error, CancellationToken cancellationToken = default) =>
         NoteAsync(PlaytestNote.Refused(Where(matchId, slot, round, subPhase), error, _clock), cancellationToken);
+
+    /// <summary>
+    /// The pilot asked this seat to change hands at the top of a later round.
+    /// </summary>
+    /// <remarks>
+    /// Of the asking, and dated where the match is now — not where the swap will land. The two rounds are
+    /// both on the note and they answer different questions: this one puts the note beside the decisions that
+    /// prompted it, and <c>atRound</c> says where it takes effect.
+    /// </remarks>
+    public Task SeatedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, string from, string to, int atRound, CancellationToken cancellationToken = default) =>
+        NoteAsync(PlaytestNote.Seated(Where(matchId, slot, round, subPhase), from, to, atRound, _clock), cancellationToken);
 
     /// <summary>A note a player produced with one tap, or typed on the end screen.</summary>
     public Task TypedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, NoteKind kind, string text, CancellationToken cancellationToken = default) =>

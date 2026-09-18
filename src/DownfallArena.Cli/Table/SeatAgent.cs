@@ -19,7 +19,9 @@ namespace DownfallArena.Cli.Table;
 /// </remarks>
 internal sealed class SeatAgent : IPlayerAgent
 {
+    private readonly Lock _gate = new();
     private Occupant _seated;
+    private Swap? _swap;
 
     public SeatAgent(Occupant seated)
     {
@@ -28,16 +30,70 @@ internal sealed class SeatAgent : IPlayerAgent
     }
 
     /// <summary>Who is sitting here right now, and the name a record calls them by.</summary>
-    public Occupant Seated => Volatile.Read(ref _seated);
+    public Occupant Seated
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _seated;
+            }
+        }
+    }
+
+    /// <summary>The swap this seat is waiting to make, or none.</summary>
+    public Swap? Pending
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _swap;
+            }
+        }
+    }
 
     /// <summary>
-    /// Hands the seat to somebody else and returns who held it. It takes effect at the next decision the match
-    /// asks of this seat: a swap made while the seat is blocked on a person leaves that question with them.
+    /// Hands the seat to somebody else now and returns who held it. It takes effect at the next decision the
+    /// match asks of this seat: a swap made while the seat is blocked on a person leaves that question with
+    /// them.
     /// </summary>
     public Occupant Seat(Occupant next)
     {
         ArgumentNullException.ThrowIfNull(next);
-        return Interlocked.Exchange(ref _seated, next);
+        lock (_gate)
+        {
+            var held = _seated;
+            _seated = next;
+            _swap = null;
+            return held;
+        }
+    }
+
+    /// <summary>
+    /// Hands the seat over at the top of a round rather than now, and returns the swap this replaces.
+    /// </summary>
+    /// <remarks>
+    /// Why a round and not an instant: the driver asks one seat for several decisions inside one sub-phase --
+    /// a speed for each creature, then an intent for each -- so a seat that changed hands between two
+    /// creatures of the same team would split that sub-phase between two players and make the round
+    /// unreadable (<c>docs/tabletop/app-roadmap.md</c>, stage 6; <c>MatchDriver.ActAsync</c>). Naming a round
+    /// instead of an instant is what makes that impossible rather than unlikely: the board carries the round,
+    /// so the swap lands where a round begins however long the request waited.
+    /// <para>
+    /// A seat holds one pending swap. A second replaces the first, which is what an operator changing their
+    /// mind means, and is the only reading that keeps "who is seated" answerable without walking a chain.
+    /// </para>
+    /// </remarks>
+    public Swap? SwapAt(Occupant next, int round)
+    {
+        ArgumentNullException.ThrowIfNull(next);
+        lock (_gate)
+        {
+            var replaced = _swap;
+            _swap = new Swap(next, round);
+            return replaced;
+        }
     }
 
     /// <summary>
@@ -48,29 +104,34 @@ internal sealed class SeatAgent : IPlayerAgent
     /// One reading is the whole point. Naming the occupant and then asking the seat again are two reads of
     /// something another thread can change in between -- the pilot swaps a seat while the driver is deciding
     /// -- and a swap landing between them writes one occupant's name on another's decision. Taking the
-    /// occupant once and handing out both means the answer and the name always describe the same player. A
-    /// swap that arrives after this read is a swap that arrives after this question, which is what a seat
-    /// already promises.
+    /// occupant once and handing out both means the answer and the name always describe the same player.
     /// </para>
     /// <para>
-    /// The agent handed out is the occupant itself and not this seat, because calling the seat would be the
-    /// second read this exists to avoid. The name may still come from further down: an occupant that routes
-    /// by the board rather than playing -- a handover holds both players -- is asked who it would route to,
-    /// by the same rule that will route the decision.
+    /// A pending swap is also applied here, under the same lock, because this is the only moment that holds
+    /// both the board and the seat: the board says which round the match has reached, and the seat is what the
+    /// swap changes. Applying it anywhere else would be a decision about a round taken without one.
     /// </para>
     /// </remarks>
     public Decider Deciding(PlayerBoardState board)
     {
-        var seated = Seated;
-        var decider = seated.Agent is IRouteDecisions router ? router.DeciderOf(board) : seated;
-        return new Decider(seated.Agent, decider.Name);
+        ArgumentNullException.ThrowIfNull(board);
+        lock (_gate)
+        {
+            if (_swap is { } swap && board.RoundNumber is { } round && round >= swap.Round)
+            {
+                _seated = swap.Next;
+                _swap = null;
+            }
+
+            return new Decider(_seated.Agent, _seated.Name);
+        }
     }
 
-    public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => Seated.Agent.DecideEvolution(board, options);
+    public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => Deciding(board).Agent.DecideEvolution(board, options);
 
-    public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Seated.Agent.DecideSpeed(board, creature);
+    public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Deciding(board).Agent.DecideSpeed(board, creature);
 
-    public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Seated.Agent.DecideIntent(board, intentOption);
+    public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Deciding(board).Agent.DecideIntent(board, intentOption);
 
-    public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Seated.Agent.DecideTargets(board, options);
+    public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Deciding(board).Agent.DecideTargets(board, options);
 }

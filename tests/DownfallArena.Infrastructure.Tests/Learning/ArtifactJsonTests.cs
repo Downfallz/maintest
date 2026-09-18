@@ -54,7 +54,7 @@ public sealed class ArtifactJsonTests
 
         var json = JsonSerializer.Serialize(note, ArtifactJson.LineOptions);
 
-        json.ShouldBe("""{"sessionId":"2026-09-17T203000Z-ab12","matchId":"00000000-0000-0000-0000-00000000abcd","slot":"Player2","round":3,"subPhase":"IntentSelection","at":"2026-09-17T20:30:00+00:00","kind":"Decision","elapsedMs":2000,"code":null,"message":null,"text":null,"asked":5}""");
+        json.ShouldBe("""{"sessionId":"2026-09-17T203000Z-ab12","matchId":"00000000-0000-0000-0000-00000000abcd","slot":"Player2","round":3,"subPhase":"IntentSelection","at":"2026-09-17T20:30:00+00:00","kind":"Decision","elapsedMs":2000,"code":null,"message":null,"text":null,"from":null,"to":null,"atRound":null,"asked":5}""");
     }
 
     [Fact]
