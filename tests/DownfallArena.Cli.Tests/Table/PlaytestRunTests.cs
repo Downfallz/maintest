@@ -134,6 +134,26 @@ public sealed class PlaytestRunTests : IDisposable
         Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(length);
     }
 
+    /// <summary>
+    /// Closing a session makes the recorder forget the match, and the host goes on serving because two people
+    /// are still reading the end of what they played. The feed would go empty at that moment and never
+    /// recover, taking the deciding blow and the outcome off both screens, so the entries survive the closing.
+    /// </summary>
+    [Fact]
+    public async Task The_feed_survives_the_session_being_closed()
+    {
+        var (run, session) = await Started();
+        await session.Outcome;
+        var live = run.Entries(session.MatchId, 0).Count;
+        live.ShouldBeGreaterThan(0);
+
+        await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
+
+        _host!.Services.GetRequiredService<MatchTraceRecorder>().EntriesOf(session.MatchId).ShouldBeEmpty("the recorder has handed the match over");
+        run.Entries(session.MatchId, 0).Count.ShouldBe(live, "and the session still has it for the page");
+        run.Entries(session.MatchId, live - 1).Count.ShouldBe(1, "a page resuming from its cursor gets the tail, not everything");
+    }
+
     /// <summary>The stamp is what tells two sessions apart, and a rule set is half of what makes one reproducible.</summary>
     [Fact]
     public async Task A_session_stamps_the_rule_set_it_played_and_who_played_it()
