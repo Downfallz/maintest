@@ -518,6 +518,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return StudioResponse.OfPlainText(400, "A swap names the agent taking the seat and the round it takes it from.");
         }
 
+        // Cheap early out only. The real one is below: resolving a file-backed agent takes long enough for a
+        // bot match to finish underneath it, and a swap accepted for a match that has ended is a 200 for
+        // something that can never happen.
         if (session.IsOver)
         {
             return Refused(NoRoundsLeft);
@@ -528,28 +531,60 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return Refused(new DomainError(NoSuchAgent, $"Nobody called '{wanted}' can sit in {TableSeat.NameOf(slot)}."));
         }
 
-        // The round is not checked here. Reading the board and then installing the swap are two steps against
-        // a match that is moving, and resolving the agent above is long enough to be overtaken: the driver can
-        // enter the very round this names before the swap arrives, which is the split the check exists to
-        // prevent. The seat checks and installs under one lock, because the seat is what sees rounds go by.
+        // Nothing about the seat is read here. The round it has reached, who is sitting in it and whether the
+        // swap is taken are one answer from one locked step inside the seat: read separately, a pending swap
+        // landing in between would name the wrong occupant as the one replaced, against a round the match had
+        // already left.
         var seat = session.Seat(slot);
-        var held = seat.Seated.Name;
-        if (seat.SwapAt(next, round) is { } refusal)
+        var outcome = seat.SwapAt(next, round);
+        if (!outcome.Taken)
         {
+            var floor = outcome.Reached is { } reached ? reached + 1 : 1;
             return Refused(new DomainError(
                 MidRound,
-                $"Round {refusal.Reached} is being played; a seat changes hands at the top of a round, so name {refusal.Reached + 1} or later."));
+                outcome.Reached is { } playing
+                    ? $"Round {playing} is being played; a seat changes hands at the top of a round, so name {floor} or later."
+                    : "A seat changes hands at the top of a round, so name round 1 or later."));
         }
 
-        // The note is of the asking, and the asking is all that has happened: the swap lands later, and never
-        // at all if the match ends first. What actually gets played is on the steps, one `decidedBy` each.
-        if (run is { } recording)
+        // Checked again, now that the seat has taken it. A match that ended while the agent was being resolved
+        // leaves this swap installed and inert -- nothing will ask that seat again -- and the operator is told
+        // the truth rather than a 200 for a seat that will never change.
+        if (session.IsOver)
         {
-            var (at, subPhase) = await WhereAsync(slot);
-            await recording.SeatedAsync(session.MatchId, slot, at, subPhase, new SeatChange(held, next.Name, round), CancellationToken.None);
+            return Refused(NoRoundsLeft);
         }
 
+        var held = outcome.Held.Name;
+        await NoteSwapAsync(slot, outcome.Reached, new SeatChange(held, next.Name, round));
         return StudioResponse.OfJson(new { slot = TableSeat.NameOf(slot), from = held, to = next.Name, round }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>
+    /// Writes the swap down, and never takes it back. The seat has taken it by the time this runs, so a
+    /// session that fails to record it must not become a 500: the operator would be told their request failed
+    /// while the seat still changes hands, and a retry would replace a pending swap they think they never
+    /// made. A lost line goes to the console, where it is the operator's problem rather than the match's.
+    /// </summary>
+    private async Task NoteSwapAsync(PlayerSlot slot, int? round, SeatChange change)
+    {
+        if (run is not { } recording)
+        {
+            return;
+        }
+
+        try
+        {
+            // The round is the seat's own, read as the swap was taken. A board read here would be after the
+            // fact: the driver can enter the round this names before it answers, and the note would then say
+            // it was asked for at or after the round it lands at. There is no sub-phase, because a swap is not
+            // made at one -- it is an operator's action against a round.
+            await recording.SeatedAsync(session.MatchId, slot, round, change, CancellationToken.None);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException)
+        {
+            Console.WriteLine($"  The seat change {change.From} -> {change.To} at round {change.AtRound} could not be written down: {failure.Message}");
+        }
     }
 
     private static StudioResponse Refused(DomainError error) =>

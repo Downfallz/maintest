@@ -79,14 +79,41 @@ public sealed class TableSessionTests : IDisposable
         var seat = new SeatAgent(new Occupant(new Counting(new Refusing()), "first"));
         var next = new Occupant(new Counting(new Refusing()), "second");
 
-        // Nothing has been asked yet, so no round has begun for this seat and any round will do.
-        seat.SwapAt(next, round: 1).ShouldBeNull();
+        // Nothing has been asked yet, so no round has begun for this seat and any round from the first will do.
+        seat.SwapAt(next, round: 1).Taken.ShouldBeTrue();
+
+        // A round that does not exist is refused even then: "not yet reached" would otherwise make round zero
+        // land on the seat's very first decision, which is not what naming a round means.
+        seat.SwapAt(next, round: 0).Taken.ShouldBeFalse();
+        seat.SwapAt(next, round: -3).Taken.ShouldBeFalse();
 
         seat.Deciding(BoardIn(round: 4));
 
-        seat.SwapAt(next, round: 4)!.Reached.ShouldBe(4);
-        seat.SwapAt(next, round: 2)!.Reached.ShouldBe(4);
-        seat.SwapAt(next, round: 5).ShouldBeNull();
+        seat.SwapAt(next, round: 4).Taken.ShouldBeFalse();
+        seat.SwapAt(next, round: 2).Taken.ShouldBeFalse();
+        seat.SwapAt(next, round: 4).Reached.ShouldBe(4);
+        seat.SwapAt(next, round: 5).Taken.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The seat says who it would replace as it takes the swap, not who held it a moment earlier.
+    /// </summary>
+    /// <remarks>
+    /// A pending swap can land between a caller reading the seat and installing the next one, and the record
+    /// would then name a player who had already been replaced as the one being replaced now.
+    /// </remarks>
+    [Fact]
+    public void A_seat_names_who_it_replaces_as_it_takes_the_swap()
+    {
+        var seat = new SeatAgent(new Occupant(new Counting(new Refusing()), "first"));
+        var second = new Occupant(new Counting(new Refusing()), "second");
+        var third = new Occupant(new Counting(new Refusing()), "third");
+
+        seat.SwapAt(second, round: 2).Held.Name.ShouldBe("first");
+        seat.Deciding(BoardIn(round: 2));
+
+        // The first swap has landed, so the next one replaces the occupant it left behind.
+        seat.SwapAt(third, round: 3).Held.Name.ShouldBe("second");
     }
 
     /// <summary>A seat that has seen a round does not forget it because a later board reads lower.</summary>
@@ -98,7 +125,9 @@ public sealed class TableSessionTests : IDisposable
         seat.Deciding(BoardIn(round: 6));
         seat.Deciding(BoardIn(round: 3));
 
-        seat.SwapAt(new Occupant(new Counting(new Refusing()), "second"), round: 5)!.Reached.ShouldBe(6);
+        var outcome = seat.SwapAt(new Occupant(new Counting(new Refusing()), "second"), round: 5);
+        outcome.Taken.ShouldBeFalse();
+        outcome.Reached.ShouldBe(6);
     }
 
     /// <summary>

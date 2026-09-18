@@ -219,6 +219,36 @@ public sealed class TablePilotTests : IDisposable
         Lines(table.Run, "notes.jsonl").ShouldContain(line => line.GetProperty("kind").GetString() == "Seat");
     }
 
+    /// <summary>A match that has ended has no round left to change a seat for, and says so.</summary>
+    /// <remarks>
+    /// Checked again after the seat has taken the swap, not only before resolving the agent: resolving a
+    /// file-backed agent takes long enough for a bot match to finish underneath it, and a 200 for a seat that
+    /// can never change is a lie the operator has no way to notice.
+    /// </remarks>
+    [Fact]
+    public async Task A_swap_on_a_match_that_has_ended_is_refused()
+    {
+        var table = await Started();
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        var answer = await Swap(table, "player1", agent: "random", round: 99);
+
+        answer.Status.ShouldBe(409, Text(answer));
+        JsonDocument.Parse(Text(answer)).RootElement.GetProperty("error").GetString().ShouldBe("Table.MatchOver");
+    }
+
+    /// <summary>A round that does not exist is refused, whatever the seat has or has not been asked.</summary>
+    [Fact]
+    public async Task A_swap_naming_a_round_that_does_not_exist_is_refused()
+    {
+        var table = await Started();
+
+        var answer = await Swap(table, "player2", agent: "random", round: 0);
+
+        answer.Status.ShouldBe(409, Text(answer));
+        JsonDocument.Parse(Text(answer)).RootElement.GetProperty("error").GetString().ShouldBe("Table.SwapMidRound");
+    }
+
     private static Task<StudioResponse> Swap(Table table, string slot, string agent, int round) =>
         table.Api.HandleAsync("POST", $"/api/pilot/seats/{slot}", $$"""{"agent":"{{agent}}","round":{{round}}}""", PilotToken);
 

@@ -195,8 +195,10 @@ One line per note, written through `IArtifactWriter.AppendJsonLinesAsync` and ti
 | `code`, `message` | For a `Refused`: the `DomainError` the aggregate or the host's pre-check returned. |
 | `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed. A tap carries none. |
 | `from`, `to` | For a `Seat`: what the seat's occupant was called before the swap, and what the one taking it is called. |
-| `atRound` | For a `Seat`: the round the swap takes effect at the top of, always later than `round`. A seat changes hands only where a round begins — the driver asks one seat for several decisions inside a sub-phase, so a swap landing between two of them would split it between two players — and the host refuses a swap naming the round being played (`Table.SwapMidRound`). |
+| `atRound` | For a `Seat`: the round the swap takes effect at the top of, always later than `round`, and never lower than 1. A seat changes hands only where a round begins — the driver asks one seat for several decisions inside a sub-phase, so a swap landing between two of them would split it between two players — and the host refuses a swap naming the round being played (`Table.SwapMidRound`). |
 | `asked` | For a `Decision`: which question of that seat it answered, counted by the seat in the order the engine asked them. **This, and not the line's position in the file, is the order to read decisions in.** |
+
+A `Seat` note carries no `subPhase`: a swap is not made at one, it is an operator's action against a round.
 
 **A `Seat` note records the asking, not the landing.** A swap names a round the match has not reached, so it
 takes effect later and never takes effect at all if the match ends first — the note says what the operator

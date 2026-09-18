@@ -95,22 +95,28 @@ internal sealed class SeatAgent : IPlayerAgent
     /// mind means, and is the only reading that keeps "who is seated" answerable without walking a chain.
     /// </para>
     /// </remarks>
-    public SwapRefusal? SwapAt(Occupant next, int round)
+    public SwapOutcome SwapAt(Occupant next, int round)
     {
         ArgumentNullException.ThrowIfNull(next);
         lock (_gate)
         {
-            // Nothing has been asked of this seat yet, so no round has begun for it and any round will do.
-            // That is what makes `--handover 1` a swap like any other rather than a special case.
-            if (_reached is { } reached && round <= reached)
+            // Nothing has been asked of this seat yet, so no round has begun for it and any round from the
+            // first will do. That is what makes `--handover 1` a swap like any other rather than a special
+            // case -- and why the floor is checked here too: without it a round of zero would be "not yet
+            // reached" and would land on the seat's very first decision, which is not what naming a round
+            // means.
+            if (round < FirstRound || (_reached is { } reached && round <= reached))
             {
-                return new SwapRefusal(reached);
+                return new SwapOutcome(_seated, _reached, Taken: false);
             }
 
             _swap = new Swap(next, round);
-            return null;
+            return new SwapOutcome(_seated, _reached, Taken: true);
         }
     }
+
+    /// <summary>The first round a match has, and so the earliest a seat can be named for.</summary>
+    private const int FirstRound = 1;
 
     /// <summary>
     /// Who to ask for this board and what a record should call them, as one reading of the seat.

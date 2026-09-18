@@ -286,14 +286,15 @@ internal sealed class PlaytestRun
     /// The pilot asked this seat to change hands at the top of a later round.
     /// </summary>
     /// <remarks>
-    /// Of the asking, and dated where the match is now — not where the swap will land. The two rounds are
-    /// both on the note and they answer different questions: this one puts the note beside the decisions that
-    /// prompted it, and <c>atRound</c> says where it takes effect.
+    /// Of the asking, and dated where the match had got to when the seat took it — not where the swap will
+    /// land. The two rounds are both on the note and they answer different questions: this one puts the note
+    /// beside the decisions that prompted it, and <c>atRound</c> says where it takes effect. There is no
+    /// sub-phase, because a swap is not made at one: it is an operator's action against a round.
     /// </remarks>
-    public Task SeatedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, SeatChange change, CancellationToken cancellationToken = default)
+    public Task SeatedAsync(MatchId matchId, PlayerSlot slot, int? round, SeatChange change, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(change);
-        return NoteAsync(PlaytestNote.Seated(Where(matchId, slot, round, subPhase), change.From, change.To, change.AtRound, _clock), cancellationToken);
+        return NoteAsync(PlaytestNote.Seated(Where(matchId, slot, round, subPhase: null), change.From, change.To, change.AtRound, _clock), cancellationToken);
     }
 
     /// <summary>A note a player produced with one tap, or typed on the end screen.</summary>
