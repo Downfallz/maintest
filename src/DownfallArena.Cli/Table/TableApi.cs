@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning;
@@ -492,30 +493,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return StudioResponse.OfPlainText(404, "This table has no pilot.");
         }
 
-        if (string.IsNullOrWhiteSpace(token) || !CryptographicOperations.FixedTimeEquals(
-                System.Text.Encoding.UTF8.GetBytes(token), System.Text.Encoding.UTF8.GetBytes(flying.Token)))
+        if (Asked(method, rest, body, token, flying, out var slot, out var wanted, out var round) is { } refusal)
         {
-            return StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's.");
-        }
-
-        if (method != "POST" || TableSeat.SlotOf(rest.TrimEnd('/')) is not { } slot)
-        {
-            return StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{rest}");
-        }
-
-        TableSwapBody? posted;
-        try
-        {
-            posted = JsonSerializer.Deserialize<TableSwapBody>(body, ArtifactJson.LineOptions);
-        }
-        catch (JsonException exception)
-        {
-            return StudioResponse.OfPlainText(400, exception.Message);
-        }
-
-        if (posted?.Agent is not { Length: > 0 } wanted || posted.Round is not { } round)
-        {
-            return StudioResponse.OfPlainText(400, "A swap names the agent taking the seat and the round it takes it from.");
+            return refusal;
         }
 
         // Cheap early out only. The real one is below: resolving a file-backed agent takes long enough for a
@@ -558,6 +538,59 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var held = outcome.Held.Name;
         await NoteSwapAsync(slot, outcome.Reached, new SeatChange(held, next.Name, round));
         return StudioResponse.OfJson(new { slot = TableSeat.NameOf(slot), from = held, to = next.Name, round }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>
+    /// What the pilot asked for, or the refusal that says why there is nothing to ask. Everything here is
+    /// about the request alone: whether it carries the pilot's token, whether it names a seat, and whether it
+    /// says what it wants. Nothing about the match or the seat is touched, which is what keeps the swap itself
+    /// a short read of one moving thing rather than a long one.
+    /// </summary>
+    private static StudioResponse? Asked(
+        string method,
+        string rest,
+        string body,
+        string? token,
+        TablePilot flying,
+        out PlayerSlot slot,
+        out string wanted,
+        out int round)
+    {
+        slot = default;
+        wanted = string.Empty;
+        round = 0;
+
+        // Compared in fixed time, because a token is guessed one character at a time or not at all.
+        if (string.IsNullOrWhiteSpace(token) || !CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(flying.Token)))
+        {
+            return StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's.");
+        }
+
+        if (method != "POST" || TableSeat.SlotOf(rest.TrimEnd('/')) is not { } named)
+        {
+            return StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{rest}");
+        }
+
+        TableSwapBody? posted;
+        try
+        {
+            posted = JsonSerializer.Deserialize<TableSwapBody>(body, ArtifactJson.LineOptions);
+        }
+        catch (JsonException exception)
+        {
+            return StudioResponse.OfPlainText(400, exception.Message);
+        }
+
+        if (posted?.Agent is not { Length: > 0 } agent || posted.Round is not { } wantedRound)
+        {
+            return StudioResponse.OfPlainText(400, "A swap names the agent taking the seat and the round it takes it from.");
+        }
+
+        slot = named;
+        wanted = agent;
+        round = wantedRound;
+        return null;
     }
 
     /// <summary>
