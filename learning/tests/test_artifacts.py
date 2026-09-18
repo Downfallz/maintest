@@ -161,6 +161,61 @@ def test_the_dataset_can_keep_only_some_kinds(tmp_path: Path) -> None:
         build_dataset([run], kinds=["Targets"])
 
 
+def _hand_over(directory: Path, at: int) -> None:
+    """Stamps a run's steps the way a handover session records them: a bot, then a person from ``at``."""
+    lines = (directory / "steps.jsonl").read_text().splitlines()
+    stamped = []
+    for index, line in enumerate(lines):
+        step = json.loads(line)
+        step["decidedBy"] = "human:mk" if index >= at else "greedy"
+        stamped.append(json.dumps(step))
+    (directory / "steps.jsonl").write_text("\n".join(stamped) + "\n")
+
+
+def test_a_run_says_who_decided_each_step_when_it_knows(tmp_path: Path) -> None:
+    directory = write_run(tmp_path / "run", matches=2)
+    _hand_over(directory, at=4)
+
+    run = load_run(directory)
+
+    assert [step.decided_by for step in run.steps[:5]] == ["greedy"] * 4 + ["human:mk"]
+    assert [step.by_a_person for step in run.steps[:5]] == [False] * 4 + [True]
+
+
+def test_a_run_recorded_before_the_field_existed_reads_as_it_always_did(tmp_path: Path) -> None:
+    run = load_run(write_run(tmp_path / "run", matches=2))
+
+    dataset = build_dataset([run])
+
+    # None is "nobody said", and it must not read as a bot: by_a_person is False either way, so the claim
+    # a caller is allowed to make about such a run is none at all.
+    assert all(step.decided_by is None for step in run.steps)
+    assert not any(step.by_a_person for step in run.steps)
+    assert len(dataset) == len(run.steps)
+
+
+def test_a_fast_forwarded_run_can_contribute_only_the_steps_a_person_decided(tmp_path: Path) -> None:
+    directory = write_run(tmp_path / "run", matches=2)
+    _hand_over(directory, at=4)
+    run = load_run(directory)
+
+    everything = build_dataset([run])
+    people = build_dataset([run], people_only=True)
+
+    assert len(people) == len(run.steps) - 4
+    assert len(everything) == len(run.steps)
+    assert np.array_equal(people.observations, everything.observations[4:])
+
+
+def test_only_a_persons_steps_of_a_run_that_does_not_say_is_refused(tmp_path: Path) -> None:
+    run = load_run(write_run(tmp_path / "run", matches=2))
+
+    # Not an empty dataset: a run that cannot answer the question must say so, because a clone fitted on
+    # nothing at all is the failure this filter exists to prevent.
+    with pytest.raises(ArtifactError, match="does not say who decided"):
+        build_dataset([run], people_only=True)
+
+
 def test_a_step_without_an_episode_is_refused(tmp_path: Path) -> None:
     directory = write_run(tmp_path / "run", matches=1)
     (directory / "episodes.jsonl").write_text("")

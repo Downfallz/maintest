@@ -123,6 +123,71 @@ public sealed class RecordingAgentTests
         Should.Throw<ArgumentNullException>(() => agent.DecideTargets(board, null!));
     }
 
+    /// <summary>
+    /// A step says who decided it, and the recorder asks rather than assumes: who is playing a seat can change
+    /// between one decision and the next, so the name is not a property of the run.
+    /// </summary>
+    [Fact]
+    public void A_step_names_whoever_decided_it()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
+        var steps = new List<StepRecord>();
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+        var recording = new RecordingAgent(inner, Observations, Actions, Terms, steps, _ => new Decider(inner, "human:mk"));
+
+        recording.DecideEvolution(Board(), options);
+
+        steps.ShouldHaveSingleItem().DecidedBy.ShouldBe("human:mk");
+    }
+
+    /// <summary>
+    /// Nothing named the decider, so the step claims nothing. Null has to survive to the file: a reader that
+    /// saw a bot's name here would fold the run into a training set, and one that saw nothing knows not to.
+    /// </summary>
+    [Fact]
+    public void A_step_nobody_named_a_decider_for_claims_none()
+    {
+        var inner = Substitute.For<IPlayerAgent>();
+        inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
+        var steps = new List<StepRecord>();
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+
+        new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideEvolution(Board(), options);
+
+        steps.ShouldHaveSingleItem().DecidedBy.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// The agent named is the agent asked, so a step cannot carry one player's name over another's decision.
+    /// </summary>
+    /// <remarks>
+    /// Naming a decider and then asking the wrapped agent would be two readings of a seat, and a seat changes
+    /// hands while a match runs: the pilot swaps one while the driver is deciding, and a swap landing between
+    /// the two reads would be invisible in the record. Here the wrapped agent and the named one answer
+    /// differently, so a recorder that asked the wrapped one would write a step the named one did not make.
+    /// </remarks>
+    [Fact]
+    public void A_step_is_answered_by_the_agent_it_names()
+    {
+        var wrapped = Substitute.For<IPlayerAgent>();
+        wrapped.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
+            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.Guard)));
+        var named = Substitute.For<IPlayerAgent>();
+        named.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
+        var steps = new List<StepRecord>();
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+
+        var decision = new RecordingAgent(inner: wrapped, Observations, Actions, Terms, steps, _ => new Decider(named, "human:mk"))
+            .DecideEvolution(Board(), options);
+
+        decision.IsPass.ShouldBeTrue("the named agent is the one that answered");
+        wrapped.DidNotReceive().DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>());
+        var step = steps.ShouldHaveSingleItem();
+        step.DecidedBy.ShouldBe("human:mk");
+        step.Kind.ShouldBe(ActionKind.Pass);
+    }
+
     private static PlayerBoardState Board() => PlayerBoardStateProjection.Build(new MatchStore().Started(), PlayerSlot.Player1);
 
     private sealed class CountingAgent(IPlayerAgent inner) : IPlayerAgent

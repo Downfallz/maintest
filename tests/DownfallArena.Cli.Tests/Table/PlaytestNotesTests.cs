@@ -348,7 +348,7 @@ public sealed class PlaytestNotesTests : IDisposable
             clock ?? _clock);
         await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);
 
-        var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(person), new SeatAgent(bot), run.Wrap, _stopping.Token);
+        var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(new Occupant(person, "human:mk")), new SeatAgent(new Occupant(bot, "greedy")), run.Wrap, _stopping.Token);
         const string token = "token-of-player-1";
         var api = new TableApi(
             session,

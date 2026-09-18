@@ -201,7 +201,7 @@ internal static class TableHost
             return Describe(slot, options);
         }
 
-        var person = options.Who is { Length: > 0 } who ? $"human:{who}" : "human";
+        var person = PersonName(options);
 
         // A handover seat is a person's seat only from the round it names. A bot plays it until then, and the
         // recorder wraps the seat rather than whoever is in it, so those decisions are steps under this stamp.
@@ -209,6 +209,12 @@ internal static class TableHost
         // say the wrong thing about the one seat where it is least obvious.
         return options.Handover is { } round ? $"{Describe(slot, options)}>{person}@{round}" : person;
     }
+
+    /// <summary>
+    /// What a record calls the person at this table. One helper rather than one expression per caller: the run
+    /// stamp and every step's <c>decidedBy</c> have to agree, and a name spelled twice is a name that drifts.
+    /// </summary>
+    private static string PersonName(CliOptions options) => options.Who is { Length: > 0 } who ? $"human:{who}" : "human";
 
     /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>
     private static string Elsewhere()
@@ -228,23 +234,26 @@ internal static class TableHost
         CancellationToken cancellation)
     {
         var (named, spec) = Chosen(slot, options);
-        var bot = agents.Create(spec, rules, random);
+        var bot = new Occupant(agents.Create(spec, rules, random), spec.ToString());
         if (named)
         {
             return (new SeatAgent(bot), new TableSeat(slot, Token(), Person: null));
         }
 
-        var person = new HumanSeat(cancellation);
+        var human = new HumanSeat(cancellation);
+        var person = new Occupant(human, PersonName(options));
         var seat = new SeatAgent(person);
 
         // A handover seats the bot first and swaps at the round it names; without one the person plays from
-        // the first decision.
+        // the first decision. The handover is seated under the person's name only so that a seat nobody asked
+        // about reads as theirs; who actually decides a board is the handover's own answer, which is what a
+        // step is stamped with.
         if (options.Handover is { } round)
         {
-            seat.Seat(new HandoverAgent(seat, bot, person, round));
+            seat.Seat(person with { Agent = new HandoverAgent(seat, bot, person, round) });
         }
 
-        return (seat, new TableSeat(slot, Token(), person));
+        return (seat, new TableSeat(slot, Token(), human));
     }
 
     /// <summary>

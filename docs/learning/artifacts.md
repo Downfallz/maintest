@@ -104,6 +104,7 @@ One line per decision of one player (`RecordingAgent`):
 | `action` | The key of the chosen action, always one of `candidates`. |
 | `candidateTerms` | One number list per candidate, in candidate order, indexed like the manifest's `candidateTermNames`: the scorer's terms of that action, what the heuristic weighs before it decides (ADR 0051). An intent carries the terms of the target set the built-in weights would bind for it; a target set its own; an unlock its combat estimate, the initiative it buys and the cost it cannot cover; a speed choice and a pass all zeros. Absent from a run whose manifest names no terms. |
 | `code` | The numeric form of the chosen action: `kind`, `actingSlot`, `spellIndex`, `speed`, `targetMask`. |
+| `decidedBy` | Who decided this step, named the way a stamp names an agent — an agent by its spec (`Greedy`, `Random`), a person as `human` or `human:<initials>` — or `null` when nothing told the recorder. A seat changes hands while a match runs — a `--handover` table plays the early rounds as a bot and the rest as a person — and the run stamp is one string for the whole run, so this is the only thing that separates the two halves of such a session. `null` is *nobody said*, which a reader must not read as *a bot did*: a run recorded before this field carries `null` on every step and can answer nothing about who played it. The Python side reads it as `Step.decided_by`, asks `Step.by_a_person`, and `build_dataset(..., people_only=True)` keeps only a person's steps and **refuses** a run that cannot say, rather than quietly contributing nothing. |
 
 The board is the one the driver handed to the agent: during the speed and intent sub-phases it is the same
 board for every creature asked, so consecutive steps can share an observation.
@@ -204,10 +205,16 @@ note is written, so two decisions of one seat can be accepted in one order and a
 thread is descheduled between the two. `asked` is the order the engine asked them in, which is the order
 `steps.jsonl` is in.
 
-That alignment holds **for a seat a person played throughout, and only for such a seat.** A `Decision` note is
-written when a person's tap is accepted, while a step is recorded for whoever was seated — so `table --p2
-greedy` gives player 2 steps and no notes at all, and `table --handover 10` gives player 1 nine rounds of steps
-before its first note. Join the two files only for a seat the run stamp says a person held from the start.
+That alignment is between a seat's notes and **the steps that seat's person decided**, which is not all of its
+steps. A `Decision` note is written when a person's tap is accepted, while a step is recorded for whoever was
+seated — so `table --p2 greedy` gives player 2 steps and no notes at all, and `table --handover 10` gives
+player 1 nine rounds of steps before its first note.
+
+`decidedBy` is what makes that joinable rather than merely scoped: take the seat's steps whose `decidedBy`
+names a person, in order, and they line up with that seat's `Decision` notes in `asked` order. Before the
+field existed the run stamp was the only guide and it speaks for a whole run, which is why the rule used to be
+*join only a seat a person held from the start*. A run whose steps carry `null` is still such a run, and the
+old rule is the one that applies to it.
 
 ## `traces/<match-id>.json`
 

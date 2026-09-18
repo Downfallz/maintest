@@ -15,24 +15,31 @@ namespace DownfallArena.Cli.Table;
 /// (<c>docs/tabletop/app-roadmap.md</c>). It needs no clock and no polling — every decision the match asks
 /// carries the board, and the board carries the round.
 /// </remarks>
-internal sealed class HandoverAgent(SeatAgent seat, IPlayerAgent bot, IPlayerAgent person, int round) : IPlayerAgent
+internal sealed class HandoverAgent(SeatAgent seat, Occupant bot, Occupant person, int round) : IPlayerAgent, IRouteDecisions
 {
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) =>
-        Deciding(board).DecideEvolution(board, options);
+        Deciding(board).Agent.DecideEvolution(board, options);
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
-        Deciding(board).DecideSpeed(board, creature);
+        Deciding(board).Agent.DecideSpeed(board, creature);
 
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) =>
-        Deciding(board).DecideIntent(board, intentOption);
+        Deciding(board).Agent.DecideIntent(board, intentOption);
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) =>
-        Deciding(board).DecideTargets(board, options);
+        Deciding(board).Agent.DecideTargets(board, options);
 
-    private IPlayerAgent Deciding(PlayerBoardState board)
+    /// <summary>Who this board goes to, worked out and nothing else: no seating, no decision.</summary>
+    public Occupant DeciderOf(PlayerBoardState board)
     {
         ArgumentNullException.ThrowIfNull(board);
-        if (board.RoundNumber is not { } current || current < round)
+        return board.RoundNumber is { } current && current >= round ? person : bot;
+    }
+
+    private Occupant Deciding(PlayerBoardState board)
+    {
+        var deciding = DeciderOf(board);
+        if (deciding == bot)
         {
             return bot;
         }
