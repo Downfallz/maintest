@@ -17,8 +17,13 @@ provided by the running host.
 
 ![Desktop tabletop preview](../docs/tabletop/images/table-ui-desktop.png)
 
+![Completed-round recap (illustrative fixture)](../docs/tabletop/images/round-recap.png)
+
 ## Playing
 
+- A completed round opens a colour-coded recap above the board: caster, spell, chosen targets and actual
+  applied outcomes, in resolution order. Reopen it throughout the next round; it stays available after the
+  match ends. Critical casts, failed casts and skipped targets are labelled as well as coloured.
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
 - On desktop, the next decision stays alongside the board. On phones, it stays in a bounded bottom sheet;
   the board and long lists of unlocks scroll independently.
@@ -47,7 +52,9 @@ dotnet format --verify-no-changes
 
 `table.test.js` runs the shipped renderer in a minimal DOM double using Node's standard library. It covers
 stable polling, keyboard selection, asking identity, target bounds, creature-specific unlock lists, the
-handover fence, visible refusals, request failures and in-flight poll ordering. It complements the existing
+handover fence, visible refusals, request failures and in-flight poll ordering. The feed tests also cover
+completed-round recap formatting, event round identity, applied outcomes, failed casts and independent
+two-round retention. It complements the existing
 projection and transport tests; it does not replace a visual browser check.
 
 For a browser check, exercise Evolution, Speed, Intent and Target, pass the device between seats, inspect

@@ -71,3 +71,88 @@ export function accumulate(kept, arriving, limit) {
   const all = [...(kept ?? []), ...fresh];
   return Number.isInteger(limit) && limit > 0 && all.length > limit ? all.slice(all.length - limit) : all;
 }
+
+// Kept separately from the short activity log, per seat, before that log is trimmed. Only public combat
+// events enter a recap. A first poll can contain a whole match; retain just the current and previous round.
+export function retainRoundEvents(kept, arriving, currentRound) {
+  const relevant = entry => entry?.event?.kind === 'CombatActionResolved' || entry?.event?.kind === 'RoundEnded';
+  const events = accumulate(kept, (arriving ?? []).filter(relevant));
+  const latest = Math.max(Number.isInteger(currentRound) ? currentRound : 0, ...events.map(eventRound));
+  return events.filter(entry => eventRound(entry) >= latest - 1 && eventRound(entry) <= latest)
+    .sort((left, right) => left.sequence - right.sequence);
+}
+
+// Trace snapshots are taken after a command. Finalizing a round also starts the next, so a RoundEnded
+// entry can carry the next snapshot's round number. The event's own roundId is the authoritative number.
+function eventRound(entry) {
+  return entry?.event?.roundId ?? entry?.round ?? 0;
+}
+
+export function roundRecap(entries, board, cards) {
+  const completed = (entries ?? []).filter(entry => entry?.event?.kind === 'RoundEnded').map(eventRound);
+  if (completed.length === 0) return null;
+  const round = Math.max(...completed);
+  const actions = (entries ?? [])
+    .filter(entry => eventRound(entry) === round && entry?.event?.kind === 'CombatActionResolved')
+    .map(entry => recapAction(entry, board, cards));
+  return { round, actions };
+}
+
+function recapCreature(id, board) {
+  const ally = (board?.allies ?? []).find(creature => creature.id === id);
+  const enemy = (board?.enemies ?? []).find(creature => creature.id === id);
+  const creature = ally ?? enemy;
+  return {
+    label: creature?.name ? `${creature.name} · #${id}` : `Creature ${id ?? '?'}`,
+    side: ally ? 'ally' : enemy ? 'enemy' : 'neutral',
+  };
+}
+
+function recapAction(entry, board, cards) {
+  const event = entry.event;
+  const resolution = event.resolution ?? {};
+  const action = resolution.action ?? {};
+  return {
+    sequence: entry.sequence,
+    actor: recapCreature(action.actor, board),
+    spell: cards?.get?.(action.spell)?.name ?? action.spell ?? 'Unknown spell',
+    targets: (action.targets ?? []).map(id => recapCreature(id, board)),
+    status: resolution.fizzled ? 'Fizzled' : resolution.isCritical ? 'Critical' : 'Resolved',
+    reason: resolution.fizzled ? errorText(resolution.fizzleReason) : '',
+    effects: (event.appliedOutcomes ?? []).map(outcome => ({
+      target: recapCreature(outcome.target, board),
+      text: recapEffectText(outcome),
+      tone: outcomeTone(outcome.kind),
+    })),
+    dropped: (resolution.droppedTargets ?? []).map(failure =>
+      `${failure.target == null ? '' : `${recapCreature(failure.target, board).label}: `}${errorText(failure.error)}`),
+  };
+}
+
+function recapEffectText(outcome) {
+  const effect = outcome?.effect;
+  const kind = effect?.kind ?? (outcome?.kind ?? '').replace(/Outcome$/, '');
+  const amount = effect?.amount ?? effect?.amountPerRound ?? outcome?.amount;
+  const duration = effect?.duration;
+  const lasting = duration?.isPermanent === true ? 'permanent'
+    : Number.isInteger(duration?.rounds) ? `${duration.rounds} ${duration.rounds === 1 ? 'round' : 'rounds'}` : '';
+  const label = (kind || 'Effect').replace(/([a-z])([A-Z])/g, '$1 $2');
+  const perRound = Number.isInteger(effect?.amountPerRound) && !Number.isInteger(effect?.amount) ? ' / round' : '';
+  return [
+    `${label}${Number.isInteger(amount) ? ` ${amount}${perRound}` : ''}${outcome?.critical ? '!' : ''}`,
+    lasting,
+    outcome?.onCaster ? 'caster' : '',
+  ].filter(Boolean).join(' · ');
+}
+
+// These are visual categories of wire outcome types, never predictions from a spell's rules.
+function outcomeTone(kind) {
+  switch (kind) {
+    case 'DamageOutcome': return 'harm';
+    case 'HealOutcome': return 'recovery';
+    case 'EnergyOutcome':
+    case 'EnergyDrainOutcome': return 'energy';
+    case 'ConditionOutcome': return 'condition';
+    default: return 'neutral';
+  }
+}

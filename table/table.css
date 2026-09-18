@@ -121,3 +121,31 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 
 /* Keep the revealed spell prominent while the player chooses its targets. */
 #decision[data-kind="Target"] #asking { font-size: 32px; color: var(--gold); overflow-wrap: anywhere; }
+
+/* Public, completed casts remain readable while the next round is being planned. */
+.round-recap { margin-bottom: 22px; border: 1px solid #766441; border-radius: 12px; background: #202a22; overflow: hidden; }
+.round-recap summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 20px; list-style: none; }
+.round-recap summary::-webkit-details-marker { display: none; }
+.round-recap summary::after { content: '+'; color: var(--gold); font-size: 22px; }
+.round-recap[open] summary::after { content: '−'; }
+.round-recap summary > span:first-child { flex: 1; }
+#recap-title { display: block; color: var(--gold); font: 25px Georgia, serif; margin-top: 6px; }
+#recap-actions { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0 16px 16px; max-height: 52dvh; overflow-y: auto; scrollbar-width: thin; }
+.recap-action { padding: 14px 16px; border: 1px solid var(--line); border-left: 3px solid var(--muted); border-radius: 8px; background: #152019; min-width: 0; }
+.recap-action.ally { border-left-color: var(--ally); }.recap-action.enemy { border-left-color: var(--enemy); }
+.recap-action-head { display: flex; gap: 12px; justify-content: space-between; align-items: start; }
+.recap-spell { font: 20px Georgia, serif; overflow-wrap: anywhere; }
+.recap-status { flex: none; font-size: 10px; padding: 4px 7px; border-radius: 4px; background: #ffffff0a; color: var(--muted); }
+.recap-status.critical { color: #ffe0a4; background: #65501f; }.recap-status.fizzled { color: #f6b6ac; background: #502f2d; }
+.recap-path { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 10px 0; font-size: 12px; color: var(--muted); }
+.recap-person { overflow-wrap: anywhere; }.recap-person.ally { color: var(--ally); }.recap-person.enemy { color: var(--enemy); }
+.recap-effects { display: flex; flex-wrap: wrap; gap: 6px; }
+.recap-effect { padding: 6px 9px; border-radius: 5px; font-size: 12px; line-height: 1.5; background: #303a32; overflow-wrap: anywhere; }
+.recap-effect.harm { color: #ffbbb4; background: #472a29; }.recap-effect.recovery { color: #b0edc2; background: #23452e; }
+.recap-effect.energy { color: #b4d7ff; background: #253a50; }.recap-effect.condition { color: #dfc4fa; background: #3f3050; }
+.recap-skipped { margin-top: 8px; color: var(--enemy); font-size: 12px; line-height: 1.5; }
+@media (max-width: 760px) {
+  .round-recap summary { padding: 14px; gap: 8px; }.round-recap .eyebrow { font-size: 8px; letter-spacing: 1px; }
+  #recap-title { font-size: 23px; }#recap-count { max-width: 85px; text-align: center; }
+  #recap-actions { padding: 0 10px 10px; max-height: 45dvh; }.recap-action { padding: 12px; }
+}

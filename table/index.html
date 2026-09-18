@@ -29,6 +29,10 @@
 
     <main id="table" hidden>
       <div class="play-area">
+        <details id="recap" class="round-recap" hidden>
+          <summary><span><span class="eyebrow">Last round · in resolution order</span><strong id="recap-title">Round recap</strong></span><span id="recap-count" class="status-tag"></span></summary>
+          <ol id="recap-actions"></ol>
+        </details>
         <nav class="tabs" aria-label="Table views">
           <button id="tab-board" type="button" class="tab on" aria-controls="board" aria-pressed="true">Battlefield</button>
           <button id="tab-mat" type="button" class="tab" aria-controls="mat" aria-pressed="false">Talents</button>

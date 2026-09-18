@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, outcomeText, resolutionText } from './feed.js';
+import { accumulate, feedLine, outcomeText, resolutionText, retainRoundEvents, roundRecap } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -133,4 +133,76 @@ test('the kept history is bounded, and it is the newest that is kept', () => {
 test('a first poll with nothing held keeps what arrives', () => {
   assert.deepEqual(accumulate(undefined, [{ sequence: 0 }], 60).map(entry => entry.sequence), [0]);
   assert.deepEqual(accumulate(undefined, undefined, 60), []);
+});
+
+// Recaps keep their own two-round history; the short activity feed may already have discarded these casts.
+test('the recap uses the event round id when the snapshot has advanced to the next round', () => {
+  const entries = [
+    { sequence: 1, round: 2, event: { ...resolved, roundId: 2 } },
+    { sequence: 2, round: 3, event: { kind: 'RoundEnded', roundId: 2 } },
+  ];
+  const recap = roundRecap(entries, { allies: [{ id: 4, name: 'Caster' }], enemies: [{ id: 1, name: 'Target' }] }, cards);
+  assert.equal(recap.round, 2);
+  assert.equal(recap.actions[0].actor.label, 'Caster · #4');
+  assert.equal(recap.actions[0].actor.side, 'ally');
+  assert.equal(recap.actions[0].targets[0].side, 'enemy');
+  assert.equal(recap.actions[0].spell, 'Throwing Star');
+  assert.equal(recap.actions[0].effects[0].text, 'Damage 3');
+  assert.equal(recap.actions[0].effects[0].tone, 'harm');
+});
+
+test('unfinished and private decisions never appear as resolved casts', () => {
+  assert.equal(roundRecap([{ sequence: 1, round: 1, event: resolved }], {}, cards), null);
+  const events = retainRoundEvents([], [
+    { sequence: 1, round: 2, event: { kind: 'IntentSubmitted', roundId: 2, spell: 'hidden' } },
+    { sequence: 2, round: 2, event: { kind: 'RoundEnded', roundId: 1 } },
+  ], 2);
+  assert.equal(roundRecap(events, {}, cards).actions.length, 0);
+});
+
+test('recap retention survives long rounds, deduplicates and discards older rounds', () => {
+  const entries = Array.from({ length: 90 }, (_, sequence) => ({ sequence, round: 2, event: { ...resolved, roundId: 2 } }));
+  entries.push({ sequence: 90, round: 3, event: { kind: 'RoundEnded', roundId: 2 } });
+  const kept = retainRoundEvents([], entries, 3);
+  assert.equal(roundRecap(retainRoundEvents(kept, entries, 3), {}, cards).actions.length, 90);
+  assert.equal(retainRoundEvents(kept, [], 4).length, 0);
+});
+
+test('a newer completed round replaces the previous recap, including the final round', () => {
+  const entries = [1, 2].flatMap(round => [
+    { sequence: round * 2, round, event: { ...resolved, roundId: round } },
+    { sequence: round * 2 + 1, round, event: { kind: 'RoundEnded', roundId: round } },
+  ]);
+  assert.equal(roundRecap(entries, {}, cards).round, 2);
+  assert.equal(roundRecap(entries, {}, cards).actions.length, 1);
+});
+
+test('recap formats applied values, lasting effects, caster effects and skipped targets', () => {
+  const event = { ...resolved, roundId: 1, resolution: { ...resolved.resolution, isCritical: true,
+    outcomes: [{ kind: 'DamageOutcome', target: 1, amount: 999 }],
+    droppedTargets: [{ target: 2, error: { message: 'Already defeated.' } }],
+  }, appliedOutcomes: [
+    { kind: 'HealOutcome', target: 4, amount: 2, onCaster: true },
+    { kind: 'ConditionOutcome', target: 1, effect: { kind: 'Bleed', amountPerRound: 3, duration: { rounds: 2 } } },
+    { kind: 'EnergyDrainOutcome', target: 1, amount: 1 },
+    { kind: 'FutureOutcome', target: 1, amount: 0 },
+  ] };
+  const recap = roundRecap([{ sequence: 1, round: 1, event }, { sequence: 2, round: 1, event: { kind: 'RoundEnded', roundId: 1 } }], {}, cards);
+  const action = recap.actions[0];
+  assert.equal(action.status, 'Critical');
+  assert.equal(action.effects[0].text, 'Heal 2 · caster');
+  assert.equal(action.effects[0].tone, 'recovery');
+  assert.equal(action.effects[1].text, 'Bleed 3 / round · 2 rounds');
+  assert.equal(action.effects[2].tone, 'energy');
+  assert.equal(action.effects[3].text, 'Future 0');
+  assert.match(action.dropped[0], /Already defeated/);
+  assert.ok(!JSON.stringify(recap).includes('999'));
+});
+
+test('a fizzled cast names its reason instead of reporting a critical', () => {
+  const event = { ...resolved, roundId: 1, resolution: { ...resolved.resolution, fizzled: true, isCritical: true, fizzleReason: { message: 'Cannot act.' } }, appliedOutcomes: [] };
+  const recap = roundRecap([{ sequence: 0, round: 1, event }, { sequence: 1, round: 1, event: { kind: 'RoundEnded', roundId: 1 } }], {}, new Map());
+  assert.equal(recap.actions[0].status, 'Fizzled');
+  assert.equal(recap.actions[0].reason, 'Cannot act.');
+  assert.equal(recap.actions[0].spell, 'spell:throwing_star:v1');
 });
