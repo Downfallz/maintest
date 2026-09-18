@@ -86,3 +86,18 @@ def test_a_repeated_seed_is_refused(tmp_path: Path) -> None:
 
     assert result.returncode == 2
     assert "repeats a seed" in result.stderr
+
+
+def test_cloning_on_the_exploring_dataset_without_one_is_refused(tmp_path: Path) -> None:
+    """Refused rather than ignored: falling back to the pure dataset would fit the opposite of what was
+    asked and report it as an ordinary turn."""
+    result = iterate("--matches", "10", "--clone-on-explore", tmp_path=tmp_path)
+
+    assert result.returncode == 2
+    assert "needs --explore" in result.stderr
+
+
+def test_cloning_on_the_exploring_dataset_is_accepted_with_one(tmp_path: Path) -> None:
+    result = iterate("--matches", "10", "--explore", "0.2", "--clone-on-explore", tmp_path=tmp_path)
+
+    assert result.returncode == 0, result.stderr

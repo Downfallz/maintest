@@ -107,6 +107,18 @@ The clone policy (train-clone: imitates the recorded bot's choices)
                          arrived with a new learner, so a clone that reads them cannot be compared with a
                          turn from before them: this pays one more fit per seed and makes the comparison
                          one dataset, one learner, terms on and off. Nothing gates on it; it is a control.
+  --clone-on-explore     fit the clone on the exploring dataset rather than the pure one. Needs --explore.
+                         Use it when the clone is going to be an inner agent of a searching one rather than
+                         a player: a searching agent asks its inner agent to *guess* -- an ally's undeclared
+                         intent, the evolution, the speed -- on hypothetical boards the recorded games never
+                         visit, and a clone of pure self-play has never seen them. Measured on the ci-69
+                         clone as the teacher: the two clones play the same alone (0.4662 and 0.4763 against
+                         Greedy, intervals overlapping) and search over them reads 0.8488 against 0.6875,
+                         intervals apart, because the exploring dataset covers 508 distinct actions where
+                         the pure one covers 104 (journal, 2026-09-18). It is the wrong flag for a clone
+                         that is the player: a clone of a bot wrong on purpose part of the time is not the
+                         baseline the report compares run to run, which is why the pure dataset stays the
+                         default.
 
 Both
   --validation <share>   share of matches held out to check the models (default 0.2)
@@ -135,6 +147,7 @@ value_baseline_alpha=
 clone_epochs=20
 clone_alpha=0.0001
 clone_control=false
+clone_on_explore=false
 validation=0.2
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -158,6 +171,7 @@ while [[ $# -gt 0 ]]; do
     --clone-epochs) clone_epochs="$2"; shift 2 ;;
     --clone-alpha) clone_alpha="$2"; shift 2 ;;
     --clone-control) clone_control=true; shift ;;
+    --clone-on-explore) clone_on_explore=true; shift ;;
     --validation) validation="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option '$1'." >&2; usage >&2; exit 2 ;;
@@ -186,6 +200,12 @@ if ! [[ "$matches" =~ ^[0-9]+$ ]] || (( 10#$matches < 1 )); then
   exit 2
 fi
 matches=$((10#$matches))
+# Refused rather than ignored: the dataset a clone is fitted on is the one thing --clone-on-explore exists to
+# change, so falling back to the pure one would train the opposite of what was asked and report it as normal.
+if [[ "$clone_on_explore" == true && -z "$explore" ]]; then
+  echo "--clone-on-explore needs --explore: there is no exploring dataset to fit the clone on without it." >&2
+  exit 2
+fi
 # The default is spaced by the match count, because the seeds of a list have to be (the check below says why).
 if [[ -z "$seeds_requested" ]]; then
   seeds_requested="1 $((1 + matches)) $((1 + 2 * matches))"
@@ -314,10 +334,13 @@ for seed in "${seed_list[@]}"; do
   "${cli[@]}" simulate --p1 "$teacher" --p2 "$teacher" --matches "$matches" --seed "$seed" \
     --traces "$traces" --record "$seed_run/dataset" --out "$seed_run/dataset.csv"
 
-  # The value policy trains on the explored dataset when there is one, the clone always on the pure one: a
-  # clone of a bot that is wrong on purpose part of the time is not the baseline the report compares run to
-  # run.
+  # The value policy trains on the explored dataset when there is one, and the clone on the pure one unless
+  # --clone-on-explore says otherwise: a clone of a bot that is wrong on purpose part of the time is not the
+  # baseline the report compares run to run, so the pure dataset stays the default for a clone that is going
+  # to be *played*. A clone that is going to be the inner agent of a searching one wants the opposite, and
+  # that is what the flag is for (journal, 2026-09-18).
   value_dataset="$seed_run/dataset"
+  clone_dataset="$seed_run/dataset"
   if [[ -n "$explore" ]]; then
     # The exploring agent deviates from the teacher, not from Greedy: whatever follows the rate is read as a
     # whole agent spec, so any teacher can be explored -- including a policy, which is what lets a turn record
@@ -332,19 +355,24 @@ for seed in "${seed_list[@]}"; do
     "${cli[@]}" simulate --p1 "$explorer" --p2 "$explorer" --matches "$matches" --seed "$seed" \
       --traces "$traces" --record "$seed_run/dataset-explore" --out "$seed_run/dataset-explore.csv"
     value_dataset="$seed_run/dataset-explore"
+    if [[ "$clone_on_explore" == true ]]; then
+      clone_dataset="$seed_run/dataset-explore"
+    fi
   fi
 
-  step "5. [seed $seed] Train the value policy on '$value_dataset' and the clone on '$seed_run/dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}; epochs $clone_epochs, alpha $clone_alpha)"
+  step "5. [seed $seed] Train the value policy on '$value_dataset' and the clone on '$clone_dataset' (alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}; epochs $clone_epochs, alpha $clone_alpha)"
   "${learning[@]}" train-value "$value_dataset" -o "$seed_run/value" --alpha "$value_alpha" --min-samples "$value_min_samples" --share "$value_share" --gae-lambda "$value_lambda" --discount "$value_discount" --validation "$validation" "${baseline_alpha_arguments[@]}"
-  "${learning[@]}" train-clone "$seed_run/dataset" -o "$seed_run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
+  "${learning[@]}" train-clone "$clone_dataset" -o "$seed_run/clone" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation"
 
   models=(value clone)
   if [[ "$clone_control" == true ]]; then
     # The same dataset and the same learner with the terms dropped, so the two clone rows differ by the
     # terms and nothing else. Without it a turn cannot tell what the terms bought from what the conditional
-    # logit bought, since ADR 0051 brought both at once.
-    step "5b. [seed $seed] Train the control clone, blind to the candidate terms"
-    "${learning[@]}" train-clone "$seed_run/dataset" -o "$seed_run/clone-blind" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation" --ignore-terms
+    # logit bought, since ADR 0051 brought both at once. `$clone_dataset` and not the pure one: whichever
+    # dataset the treatment was fitted on, the control has to be fitted on it too, or the two rows differ by
+    # the terms *and* the distribution and the control measures neither.
+    step "5b. [seed $seed] Train the control clone on '$clone_dataset', blind to the candidate terms"
+    "${learning[@]}" train-clone "$clone_dataset" -o "$seed_run/clone-blind" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation" --ignore-terms
     models+=(clone-blind)
   fi
 
