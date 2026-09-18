@@ -74,9 +74,12 @@ on:
       - "scripts/iterate.sh"
       - ".github/workflows/iterate.yml"
   # An experiment is asked for by committing it: a pull request that changes the file runs the loop with it.
+  # The file, not the directory: `learning/experiments/**` also matched the README beside it, so a
+  # documentation edit spent a full turn replaying a 5000-match experiment nobody had changed. search.yml
+  # names `search.json` for the same reason.
   pull_request:
     paths:
-      - "learning/experiments/**"
+      - "learning/experiments/next.json"
 
 # Pushing the proposal branch, and nothing else, the way search.yml does it. GitHub Actions permissions cannot
 # be conditional, so this is `write` even on a report-only run; the checkout below is what decides whether a
