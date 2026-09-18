@@ -257,7 +257,11 @@ public sealed class PlaytestNotesTests : IDisposable
         var resources = _host.Services.GetRequiredService<IGameResources>();
         var person = new HumanSeat(_stopping.Token);
         var bot = new GreedyAgent(resources, Rules);
-        var run = PlaytestRun.Open(_runs, resources, Rules, seed: 7, "human:mk", "greedy", _host.Services.GetRequiredService<MatchTraceRecorder>(), _clock);
+        var run = PlaytestRun.Open(
+            _runs,
+            new PlaytestSetup(resources, Rules, Seed: 7, "human:mk", "greedy"),
+            _host.Services.GetRequiredService<MatchTraceRecorder>(),
+            _clock);
         await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);
 
         var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(person), new SeatAgent(bot), run.Wrap, _stopping.Token);

@@ -47,11 +47,7 @@ public sealed class ArtifactJsonTests
     public void A_playtest_note_is_a_line_of_the_same_dialect()
     {
         var note = PlaytestNote.Decision(
-            "2026-09-17T203000Z-ab12",
-            Match,
-            PlayerSlot.Player2,
-            3,
-            RoundSubPhase.IntentSelection,
+            new NotePlace("2026-09-17T203000Z-ab12", Match, PlayerSlot.Player2, 3, RoundSubPhase.IntentSelection),
             new DateTimeOffset(2026, 9, 17, 20, 29, 58, TimeSpan.Zero),
             new FixedClock(new DateTimeOffset(2026, 9, 17, 20, 30, 0, TimeSpan.Zero)));
 

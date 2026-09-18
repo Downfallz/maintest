@@ -50,11 +50,12 @@ internal static class TableHost
         // abandoned at its first question still says what it was (ADR 0054, stage 5).
         var run = PlaytestRun.Open(
             options.Record ?? DefaultRunsDirectory,
-            resources,
-            rules,
-            seed,
-            Stamped(PlayerSlot.Player1, seat1.Seat, options),
-            Stamped(PlayerSlot.Player2, seat2.Seat, options),
+            new PlaytestSetup(
+                resources,
+                rules,
+                seed,
+                Stamped(PlayerSlot.Player1, seat1.Seat, options),
+                Stamped(PlayerSlot.Player2, seat2.Seat, options)),
             events,
             services.GetRequiredService<TimeProvider>());
         await run.StartAsync(catalogue, stopping.Token);
@@ -174,10 +175,15 @@ internal static class TableHost
     /// <c>--who</c> gave, when it gave any — for a person, so <c>compare-stamps</c> reports the agents axis
     /// between two sessions played by different people.
     /// </summary>
-    private static string Stamped(PlayerSlot slot, TableSeat seat, CliOptions options) =>
-        seat.Person is null
-            ? Describe(slot, options)
-            : options.Who is { Length: > 0 } who ? $"human:{who}" : "human";
+    private static string Stamped(PlayerSlot slot, TableSeat seat, CliOptions options)
+    {
+        if (seat.Person is null)
+        {
+            return Describe(slot, options);
+        }
+
+        return options.Who is { Length: > 0 } who ? $"human:{who}" : "human";
+    }
 
     /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>
     private static string Elsewhere()

@@ -100,7 +100,7 @@ public sealed class FileArtifactWriterTests
             await writer.StartJsonLinesAsync("notes.jsonl", TestContext.Current.CancellationToken);
 
             var appends = Enumerable.Range(0, 40).Select(line => Task.Run(
-                () => writer.AppendJsonLinesAsync("notes.jsonl", new[] { new { line } }, TestContext.Current.CancellationToken),
+                () => writer.AppendJsonLinesAsync("notes.jsonl", [new { line }], TestContext.Current.CancellationToken),
                 TestContext.Current.CancellationToken));
             await Task.WhenAll(appends);
 

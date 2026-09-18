@@ -16,10 +16,12 @@ public sealed class PlaytestNoteTests
     private static readonly MatchId Match = MatchId.New();
     private const string Session = "2026-09-17T203000Z-ab12";
 
+    private static NotePlace Where(PlayerSlot slot, int round, RoundSubPhase subPhase) => new(Session, Match, slot, round, subPhase);
+
     [Fact]
     public void A_decision_note_is_timed_from_the_moment_the_options_were_served()
     {
-        var note = PlaytestNote.Decision(Session, Match, PlayerSlot.Player1, 3, RoundSubPhase.IntentSelection, Now.AddMilliseconds(-1500), new FixedClock(Now));
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 3, RoundSubPhase.IntentSelection), Now.AddMilliseconds(-1500), new FixedClock(Now));
 
         note.At.ShouldBe(Now);
         note.ElapsedMs.ShouldBe(1500);
@@ -30,7 +32,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_note_never_reports_a_negative_duration()
     {
-        var note = PlaytestNote.Decision(Session, Match, PlayerSlot.Player2, 1, RoundSubPhase.Speed, Now.AddSeconds(5), new FixedClock(Now));
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player2, 1, RoundSubPhase.Speed), Now.AddSeconds(5), new FixedClock(Now));
 
         note.ElapsedMs.ShouldBe(0);
     }
@@ -38,7 +40,7 @@ public sealed class PlaytestNoteTests
     [Fact]
     public void A_decision_note_carries_no_error_and_no_text()
     {
-        var note = PlaytestNote.Decision(Session, Match, PlayerSlot.Player1, 2, RoundSubPhase.Evolution, Now, new FixedClock(Now));
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 2, RoundSubPhase.Evolution), Now, new FixedClock(Now));
 
         note.Code.ShouldBeNull();
         note.Message.ShouldBeNull();
@@ -50,7 +52,7 @@ public sealed class PlaytestNoteTests
     {
         var error = new DomainError("Round.NotAcceptingIntents", "The round is not accepting intents.");
 
-        var note = PlaytestNote.Refused(Session, Match, PlayerSlot.Player1, 4, RoundSubPhase.IntentSelection, error, new FixedClock(Now));
+        var note = PlaytestNote.Refused(Where(PlayerSlot.Player1, 4, RoundSubPhase.IntentSelection), error, new FixedClock(Now));
 
         note.Kind.ShouldBe(NoteKind.Refused);
         note.Code.ShouldBe("Round.NotAcceptingIntents");
@@ -64,7 +66,7 @@ public sealed class PlaytestNoteTests
     [InlineData(NoteKind.Comment)]
     public void A_note_a_player_typed_carries_what_they_wrote(NoteKind kind)
     {
-        var note = PlaytestNote.Typed(Session, Match, PlayerSlot.Player2, 6, RoundSubPhase.ActionResolution, kind, "who wins an initiative tie", new FixedClock(Now));
+        var note = PlaytestNote.Typed(Where(PlayerSlot.Player2, 6, RoundSubPhase.ActionResolution), kind, "who wins an initiative tie", new FixedClock(Now));
 
         note.Kind.ShouldBe(kind);
         note.Text.ShouldBe("who wins an initiative tie");
@@ -78,15 +80,15 @@ public sealed class PlaytestNoteTests
     public void A_kind_the_host_writes_cannot_be_typed_by_a_player(NoteKind kind)
     {
         Should.Throw<ArgumentOutOfRangeException>(
-            () => PlaytestNote.Typed(Session, Match, PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection, kind, "anything", new FixedClock(Now)));
+            () => PlaytestNote.Typed(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), kind, "anything", new FixedClock(Now)));
     }
 
     [Fact]
     public void Every_note_needs_a_clock()
     {
-        Should.Throw<ArgumentNullException>(() => PlaytestNote.Decision(Session, Match, PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection, Now, null!));
-        Should.Throw<ArgumentNullException>(() => PlaytestNote.Refused(Session, Match, PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection, new DomainError("a", "b"), null!));
-        Should.Throw<ArgumentNullException>(() => PlaytestNote.Typed(Session, Match, PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection, NoteKind.Lookup, "t", null!));
+        Should.Throw<ArgumentNullException>(() => PlaytestNote.Decision(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), Now, null!));
+        Should.Throw<ArgumentNullException>(() => PlaytestNote.Refused(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), new DomainError("a", "b"), null!));
+        Should.Throw<ArgumentNullException>(() => PlaytestNote.Typed(Where(PlayerSlot.Player1, 1, RoundSubPhase.IntentSelection), NoteKind.Lookup, "t", null!));
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

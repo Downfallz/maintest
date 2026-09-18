@@ -198,11 +198,7 @@ public sealed class PlaytestRunTests : IDisposable
         var resources = _host.Services.GetRequiredService<IGameResources>();
         var run = PlaytestRun.Open(
             _runs,
-            resources,
-            Rules,
-            seed: 7,
-            player1Agent,
-            "greedy",
+            new PlaytestSetup(resources, Rules, Seed: 7, player1Agent, "greedy"),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
             TimeProvider.System);
         await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);

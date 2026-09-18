@@ -44,7 +44,6 @@ internal sealed class PlaytestRun
     private readonly int _seed;
 
     private PlaytestRun(
-        string sessionId,
         string directory,
         IArtifactWriter writer,
         RunRecorder recorder,
@@ -53,7 +52,6 @@ internal sealed class PlaytestRun
         TimeProvider clock,
         int seed)
     {
-        SessionId = sessionId;
         Directory = directory;
         _writer = writer;
         _recorder = recorder;
@@ -64,8 +62,11 @@ internal sealed class PlaytestRun
         _seed = seed;
     }
 
-    /// <summary>The name of this session's directory, and the id every note carries.</summary>
-    public string SessionId { get; }
+    /// <summary>
+    /// The name of this session's directory, and the id every note carries. Read off the directory rather than
+    /// kept beside it: they are the same thing, and two fields holding it are two fields that can disagree.
+    /// </summary>
+    public string SessionId => Path.GetFileName(Directory);
 
     /// <summary>Where the session is being written, which its players are told before the first tap.</summary>
     public string Directory { get; }
@@ -82,41 +83,31 @@ internal sealed class PlaytestRun
     /// is built from it rather than from the engine default: a dataset whose schema describes a different
     /// rule set than the match played is a dataset that trains on a mislabelled board.
     /// </summary>
-    public static PlaytestRun Open(
-        string root,
-        IGameResources resources,
-        RuleSet rules,
-        int seed,
-        string player1Agent,
-        string player2Agent,
-        MatchTraceRecorder events,
-        TimeProvider clock)
+    public static PlaytestRun Open(string root, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
-        ArgumentNullException.ThrowIfNull(resources);
-        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(clock);
 
-        var sessionId = Name(clock);
-        var directory = Path.Combine(root, sessionId);
+        var directory = Path.Combine(root, Name(clock));
         var writer = new FileArtifactWriter(directory);
-        var schema = FeatureSchema.Build(resources, rules);
-        var stamp = RunStamp.Create(EngineVersion.Current, resources, rules, schema, player1Agent, player2Agent, seed);
+        var schema = FeatureSchema.Build(setup.Resources, setup.Rules);
+        var stamp = RunStamp.Create(EngineVersion.Current, setup.Resources, setup.Rules, schema, setup.Player1Agent, setup.Player2Agent, setup.Seed);
 
         // One trace, because a session is one match: the limit is what stops the recorder from being asked for
         // a second one it never had.
         var recorder = new RunRecorder(
             writer,
             stamp,
-            new ObservationBuilder(schema, resources),
+            new ObservationBuilder(schema, setup.Resources),
             new ActionEncoder(schema),
-            new CandidateTerms(resources, rules),
+            new CandidateTerms(setup.Resources, setup.Rules),
             clock,
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(sessionId, directory, writer, recorder, events, stamp, clock, seed);
+        return new PlaytestRun(directory, writer, recorder, events, stamp, clock, setup.Seed);
     }
 
     /// <summary>
@@ -148,18 +139,22 @@ internal sealed class PlaytestRun
     /// named so the clock cannot hand back the stamp of the next one.
     /// </summary>
     public Task DecidedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered, CancellationToken cancellationToken = default) =>
-        NoteAsync(PlaytestNote.Decision(SessionId, matchId, slot, round, subPhase, _served.Answered(slot, answered), _clock), cancellationToken);
+        NoteAsync(PlaytestNote.Decision(Where(matchId, slot, round, subPhase), _served.Answered(slot, answered), _clock), cancellationToken);
 
     /// <summary>
     /// A decision was refused. The clock is left alone: the seat is still being asked the same question, and
     /// the time a player spent being refused is part of how long that question took them.
     /// </summary>
     public Task RefusedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, DomainError error, CancellationToken cancellationToken = default) =>
-        NoteAsync(PlaytestNote.Refused(SessionId, matchId, slot, round, subPhase, error, _clock), cancellationToken);
+        NoteAsync(PlaytestNote.Refused(Where(matchId, slot, round, subPhase), error, _clock), cancellationToken);
 
     /// <summary>A note a player produced with one tap, or typed on the end screen.</summary>
     public Task TypedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, NoteKind kind, string text, CancellationToken cancellationToken = default) =>
-        NoteAsync(PlaytestNote.Typed(SessionId, matchId, slot, round, subPhase, kind, text, _clock), cancellationToken);
+        NoteAsync(PlaytestNote.Typed(Where(matchId, slot, round, subPhase), kind, text, _clock), cancellationToken);
+
+    /// <summary>Where a note is being taken, which only this session can say, because only it knows its own id.</summary>
+    private NotePlace Where(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase) =>
+        new(SessionId, matchId, slot, round, subPhase);
 
     private Task NoteAsync(PlaytestNote note, CancellationToken cancellationToken) =>
         _writer.AppendJsonLinesAsync(NotesFile, [note], cancellationToken);

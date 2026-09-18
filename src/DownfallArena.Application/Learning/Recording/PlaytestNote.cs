@@ -26,6 +26,10 @@ public sealed record PlaytestNote
     /// </summary>
     public required string SessionId { get; init; }
 
+    // The five above are written flat, and a reader of notes.jsonl finds the round on the line rather than
+    // inside an object. They arrive as one NotePlace, because five arguments in the same order at every call
+    // site is how the wrong seat ends up on a note.
+
     public required MatchId MatchId { get; init; }
 
     public required PlayerSlot Slot { get; init; }
@@ -60,25 +64,19 @@ public sealed record PlaytestNote
     /// same <paramref name="timeProvider" /> as <see cref="At" />, so a test that moves the clock moves both
     /// and a session recorded under a frozen clock reports zero rather than a wall-clock accident.
     /// </summary>
-    public static PlaytestNote Decision(
-        string sessionId,
-        MatchId matchId,
-        PlayerSlot slot,
-        int? round,
-        RoundSubPhase? subPhase,
-        DateTimeOffset servedAt,
-        TimeProvider timeProvider)
+    public static PlaytestNote Decision(NotePlace where, DateTimeOffset servedAt, TimeProvider timeProvider)
     {
+        ArgumentNullException.ThrowIfNull(where);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         var at = timeProvider.GetUtcNow();
         return new PlaytestNote
         {
-            SessionId = sessionId,
-            MatchId = matchId,
-            Slot = slot,
-            Round = round,
-            SubPhase = subPhase,
+            SessionId = where.SessionId,
+            MatchId = where.MatchId,
+            Slot = where.Slot,
+            Round = where.Round,
+            SubPhase = where.SubPhase,
             At = at,
             Kind = NoteKind.Decision,
             // Never negative: a served moment in the future is a clock that moved, not a decision taken before
@@ -88,24 +86,18 @@ public sealed record PlaytestNote
     }
 
     /// <summary>A decision that was refused, with the error whoever refused it gave.</summary>
-    public static PlaytestNote Refused(
-        string sessionId,
-        MatchId matchId,
-        PlayerSlot slot,
-        int? round,
-        RoundSubPhase? subPhase,
-        DomainError error,
-        TimeProvider timeProvider)
+    public static PlaytestNote Refused(NotePlace where, DomainError error, TimeProvider timeProvider)
     {
+        ArgumentNullException.ThrowIfNull(where);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         return new PlaytestNote
         {
-            SessionId = sessionId,
-            MatchId = matchId,
-            Slot = slot,
-            Round = round,
-            SubPhase = subPhase,
+            SessionId = where.SessionId,
+            MatchId = where.MatchId,
+            Slot = where.Slot,
+            Round = where.Round,
+            SubPhase = where.SubPhase,
             At = timeProvider.GetUtcNow(),
             Kind = NoteKind.Refused,
             Code = error.Code,
@@ -117,16 +109,9 @@ public sealed record PlaytestNote
     /// A note a player produced: a lookup, a misplay or a comment. The kind is checked here rather than
     /// trusted, because the three that a person can write are exactly the three the host must not invent.
     /// </summary>
-    public static PlaytestNote Typed(
-        string sessionId,
-        MatchId matchId,
-        PlayerSlot slot,
-        int? round,
-        RoundSubPhase? subPhase,
-        NoteKind kind,
-        string text,
-        TimeProvider timeProvider)
+    public static PlaytestNote Typed(NotePlace where, NoteKind kind, string text, TimeProvider timeProvider)
     {
+        ArgumentNullException.ThrowIfNull(where);
         ArgumentNullException.ThrowIfNull(timeProvider);
         if (kind is not (NoteKind.Lookup or NoteKind.Misplay or NoteKind.Comment))
         {
@@ -135,11 +120,11 @@ public sealed record PlaytestNote
 
         return new PlaytestNote
         {
-            SessionId = sessionId,
-            MatchId = matchId,
-            Slot = slot,
-            Round = round,
-            SubPhase = subPhase,
+            SessionId = where.SessionId,
+            MatchId = where.MatchId,
+            Slot = where.Slot,
+            Round = where.Round,
+            SubPhase = where.SubPhase,
             At = timeProvider.GetUtcNow(),
             Kind = kind,
             Text = text,
