@@ -286,6 +286,12 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var round = (await WhereAsync(seat.Slot)).Round;
         var answered = person.Waiting;
 
+        // And when this seat's screen was served, read now rather than after the submit. Submitting releases
+        // the driver, which can ask this seat the next question and have a poll stamp it before the recording
+        // gets here -- and a seat has one stamp, so the new question's replaces the answered one's. Read
+        // afterwards, the decision would be timed at nothing.
+        var servedAt = run?.ServedAt(seat.Slot, answered);
+
         // Checked against the options, and still refused: the seat moved on between the two. That is the race
         // the driver would have thrown on, answered as the late tap it is.
         if (!person.Submit(decision))
@@ -293,7 +299,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        await RecordAsync(seat.Slot, round, subPhase, answered);
+        await RecordAsync(seat.Slot, round, subPhase, answered, servedAt);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
@@ -304,7 +310,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
     /// rather than the player's.
     /// </summary>
-    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered)
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered, DateTimeOffset? servedAt)
     {
         if (run is not { } recording)
         {
@@ -313,7 +319,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         try
         {
-            await recording.DecidedAsync(session.MatchId, slot, round, subPhase, answered, CancellationToken.None);
+            await recording.DecidedAsync(session.MatchId, slot, round, subPhase, answered, servedAt, CancellationToken.None);
 
             // The trace, as far as the match has got. After the decision rather than before it, so a session
             // abandoned here leaves the board the last tap produced and not the one before it.

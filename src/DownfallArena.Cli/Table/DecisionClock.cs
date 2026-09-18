@@ -44,28 +44,38 @@ internal sealed class DecisionClock(TimeProvider clock)
     }
 
     /// <summary>
-    /// The moment the question a seat just answered was served, and forgets it.
+    /// When this question was put in front of the person, or <c>null</c> if it never was.
     /// </summary>
     /// <remarks>
-    /// The question has to be named, and not merely the seat. A decision releases the driver before the host
-    /// has finished writing it down, so the engine can have asked the next question -- and a poll can have
-    /// stamped it -- before this is reached. Taking whatever stamp is there would then time this decision at
-    /// nothing and leave the next one with no stamp at all, so it would be timed short too: one race, two
-    /// wrong durations. When the stamp is not this decision's it is left where it is and this one is timed at
-    /// zero, which loses one duration and keeps the next honest. Zero is also the answer when the options were
-    /// never served to anybody, which means a scripted seat rather than a person who took no time.
+    /// Read before the decision is handed over, and that is the whole reason this is separate from
+    /// <see cref="Answered" />. Submitting releases the driver, which can ask the seat the next question and
+    /// have a poll stamp it before the host has finished writing the first one down -- and a stamp is one per
+    /// seat, so the new question's stamp replaces the answered one's. Reading it first means the race can cost
+    /// the *next* duration a poll of accuracy, and never costs this one its whole duration.
     /// </remarks>
-    public DateTimeOffset Answered(PlayerSlot slot, HumanSeat.Question? answered)
+    public DateTimeOffset? ServedAt(PlayerSlot slot, HumanSeat.Question? question)
+    {
+        lock (_gate)
+        {
+            return question is not null && _served.TryGetValue(slot, out var stamped) && stamped.Question == question
+                ? stamped.At
+                : null;
+        }
+    }
+
+    /// <summary>
+    /// Forgets the stamp of the question a seat has answered, so whatever it is asked next is timed from its
+    /// own serving. The question has to be named: if the next one has already been stamped, that stamp is the
+    /// next one's and taking it would leave that decision timed from nothing.
+    /// </summary>
+    public void Answered(PlayerSlot slot, HumanSeat.Question? answered)
     {
         lock (_gate)
         {
             if (answered is not null && _served.TryGetValue(slot, out var stamped) && stamped.Question == answered)
             {
                 _served.Remove(slot);
-                return stamped.At;
             }
-
-            return clock.GetUtcNow();
         }
     }
 

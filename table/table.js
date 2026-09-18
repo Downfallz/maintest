@@ -87,6 +87,16 @@ function start(seats) {
   setInterval(() => refresh(state), 700);
 }
 
+// Tells the host this seat's question is now in front of somebody. It is the ordinary seat poll with the flag
+// set, and its answer is dropped: the board on screen is the one this render already has, and the feed cursor
+// is deliberately not advanced, so nothing this call fetches is lost -- the next poll asks for it again.
+function announce(state, current) {
+  const since = state.feeds.get(current.seat)?.next ?? 0;
+  current.transport.seat(since, true).catch(() => {
+    // A page that cannot reach its host has a louder problem than a clock, and the next poll reports it.
+  });
+}
+
 // A note is the one thing in a session nothing else can reconstruct, so a refused one says so on screen
 // instead of disappearing. It does not go through `submit`: a note is not a decision, it cannot be late, and
 // nothing about the board changes because one was written.
@@ -225,9 +235,17 @@ function render(state, views) {
   // screen (seats.js).
   const fence = needsPass(current, state.holder);
 
-  // What the next poll will tell the host is on screen. Nothing, while the pass screen is up: the board is
-  // behind it and the person being asked has not picked the device up yet.
-  state.displayed = fence ? null : current.seat;
+  // What the host is told is on screen. Nothing, while the pass screen is up: the board is behind it and the
+  // person being asked has not picked the device up yet. The moment it comes down, the host is told straight
+  // away rather than on the next poll — the poll that fetched this board was sent while the fence was still
+  // up, so waiting would start the decision's clock up to a polling interval late, and a decision faster than
+  // that would be recorded as having taken no time at all.
+  const showing = fence ? null : current.seat;
+  if (showing !== null && showing !== state.displayed) {
+    announce(state, current);
+  }
+
+  state.displayed = showing;
   element('seat').textContent = nameOf(current.seat);
   element('pass-seat').textContent = nameOf(current.seat);
   element('pass-seat-again').textContent = nameOf(current.seat);

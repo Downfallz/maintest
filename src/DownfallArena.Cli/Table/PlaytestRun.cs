@@ -41,6 +41,10 @@ internal sealed class PlaytestRun
     private readonly RunStamp _stamp;
     private readonly TimeProvider _clock;
     private readonly DecisionClock _served;
+
+    // What orders a checkpoint against the closing of the session. Both write the same trace file, and which
+    // of them lands last decides whether the session keeps the match it played or a snapshot of half of it.
+    private readonly Lock _ordering = new();
     private readonly int _seed;
 
     private PlaytestRun(
@@ -72,9 +76,9 @@ internal sealed class PlaytestRun
     public string Directory { get; }
 
     /// <summary>
-    /// Whether the dataset has been closed: the episodes written and the manifest rewritten with its counts.
-    /// Until then the directory holds the zero-count manifest it was opened with, so a page that showed the
-    /// session would be showing a run that says it played nothing.
+    /// Whether the session has been closed: no further checkpoint will be written, and the episodes and the
+    /// manifest with its counts are being or have been written. A page that showed the session before this
+    /// would be showing a run that says it played nothing.
     /// </summary>
     public bool IsClosed { get; private set; }
 
@@ -135,11 +139,29 @@ internal sealed class PlaytestRun
     public void Served(PlayerSlot slot, HumanSeat.Question? question) => _served.Served(slot, question);
 
     /// <summary>
-    /// A decision was accepted, timed from when this seat's options were served. The question it answered is
-    /// named so the clock cannot hand back the stamp of the next one.
+    /// When this seat's current options were served, read before the decision is handed over so a question
+    /// asked in its wake cannot take the moment with it.
     /// </summary>
-    public Task DecidedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered, CancellationToken cancellationToken = default) =>
-        NoteAsync(PlaytestNote.Decision(Where(matchId, slot, round, subPhase), _served.Answered(slot, answered), _clock), cancellationToken);
+    public DateTimeOffset? ServedAt(PlayerSlot slot, HumanSeat.Question? question) => _served.ServedAt(slot, question);
+
+    /// <summary>
+    /// A decision was accepted, timed from <paramref name="servedAt" /> -- the moment the caller read off
+    /// <see cref="ServedAt" /> before submitting it. Null means the options were never served to anybody, which
+    /// is a scripted seat rather than a person who took no time, and is recorded as no time rather than as a
+    /// number off the wall clock.
+    /// </summary>
+    public Task DecidedAsync(
+        MatchId matchId,
+        PlayerSlot slot,
+        int? round,
+        RoundSubPhase? subPhase,
+        HumanSeat.Question? answered,
+        DateTimeOffset? servedAt,
+        CancellationToken cancellationToken = default)
+    {
+        _served.Answered(slot, answered);
+        return NoteAsync(PlaytestNote.Decision(Where(matchId, slot, round, subPhase), servedAt ?? _clock.GetUtcNow(), _clock), cancellationToken);
+    }
 
     /// <summary>
     /// A decision was refused. The clock is left alone: the seat is still being asked the same question, and
@@ -171,11 +193,24 @@ internal sealed class PlaytestRun
     /// Writing then would truncate the real trace to an empty one. The recorder answering null for a match it
     /// no longer holds is what makes that impossible rather than merely unlikely.
     /// </remarks>
-    public async Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default)
+    public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default)
     {
-        if (_events.Snapshot(matchId, _stamp, _seed) is { } trace)
+        // Reading the trace and queueing its write happen together, under the same lock the closing takes. The
+        // null above is not enough on its own: a checkpoint can read a partial trace while the match is still
+        // held, lose its thread before it queues anything, and resume after the finished trace has been
+        // written -- and because the writer orders by when a write was queued and not by when its content was
+        // read, the stale partial one would land last. Nothing is awaited in here, so the lock is held for a
+        // copy and an enqueue.
+        lock (_ordering)
         {
-            await _writer.WriteJsonAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken);
+            if (IsClosed)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _events.Snapshot(matchId, _stamp, _seed) is { } trace
+                ? _writer.WriteJsonAsync($"{RunRecorder.TracesDirectory}/{matchId}.json", trace, cancellationToken)
+                : Task.CompletedTask;
         }
     }
 
@@ -185,9 +220,16 @@ internal sealed class PlaytestRun
     /// </summary>
     public async Task FinishAsync(MatchId matchId, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
     {
+        // Closed before anything final is written, not after. A checkpoint already inside the lock queues its
+        // write first and the finished trace lands on top of it; one arriving afterwards finds the session
+        // closed and does nothing. The order is the point: the last write to the trace has to be the final one.
+        lock (_ordering)
+        {
+            IsClosed = true;
+        }
+
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);
-        IsClosed = true;
     }
 
     /// <summary>

@@ -25,7 +25,7 @@ public sealed class DecisionClockTests
         stopwatch.Served(PlayerSlot.Player1, Evolution);
         clock.Advance(TimeSpan.FromSeconds(4));
 
-        stopwatch.Answered(PlayerSlot.Player1, Evolution).ShouldBe(Start);
+        stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBe(Start);
     }
 
     /// <summary>A person reading the same question while the page polls every 700 ms keeps their own start.</summary>
@@ -40,7 +40,7 @@ public sealed class DecisionClockTests
         stopwatch.Served(PlayerSlot.Player1, Evolution);
         clock.Advance(TimeSpan.FromSeconds(2));
 
-        stopwatch.Answered(PlayerSlot.Player1, Evolution).ShouldBe(Start);
+        stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBe(Start);
     }
 
     /// <summary>
@@ -57,13 +57,16 @@ public sealed class DecisionClockTests
         stopwatch.Served(PlayerSlot.Player1, Evolution);
         clock.Advance(TimeSpan.FromSeconds(5));
 
-        // The driver has moved on and a poll has already stamped the next question.
+        // The driver has moved on and a poll has already stamped the next question, which replaced this
+        // seat's one stamp. A caller reading the moment only now has already lost it -- which is why the
+        // moment is read before the decision is handed over, and why this returns nothing rather than lying.
         stopwatch.Served(PlayerSlot.Player1, SpeedOfOne);
-        var answeredTheFirst = stopwatch.Answered(PlayerSlot.Player1, Evolution);
-        clock.Advance(TimeSpan.FromSeconds(3));
 
-        answeredTheFirst.ShouldBe(clock.GetUtcNow().AddSeconds(-3), "a stamp that is not this decision's is not taken");
-        stopwatch.Answered(PlayerSlot.Player1, SpeedOfOne).ShouldBe(Start.AddSeconds(5), "the next question keeps the moment it was served");
+        stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBeNull();
+
+        // And forgetting the answered question must not take the next one's moment with it.
+        stopwatch.Answered(PlayerSlot.Player1, Evolution);
+        stopwatch.ServedAt(PlayerSlot.Player1, SpeedOfOne).ShouldBe(Start.AddSeconds(5));
     }
 
     /// <summary>A refusal leaves the seat on the same question, so the time spent being refused is part of it.</summary>
@@ -77,7 +80,7 @@ public sealed class DecisionClockTests
         clock.Advance(TimeSpan.FromSeconds(6));
         stopwatch.Served(PlayerSlot.Player1, Evolution);
 
-        stopwatch.Answered(PlayerSlot.Player1, Evolution).ShouldBe(Start);
+        stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBe(Start);
     }
 
     /// <summary>
@@ -97,7 +100,7 @@ public sealed class DecisionClockTests
         stopwatch.Served(PlayerSlot.Player1, Evolution);
         clock.Advance(TimeSpan.FromSeconds(1));
 
-        stopwatch.Answered(PlayerSlot.Player1, Evolution).ShouldBe(Start.AddMinutes(3));
+        stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBe(Start.AddMinutes(3));
     }
 
     /// <summary>One seat's poll cannot start or take the other seat's clock; hotseat depends on it.</summary>
@@ -111,8 +114,8 @@ public sealed class DecisionClockTests
         clock.Advance(TimeSpan.FromSeconds(10));
         stopwatch.Served(PlayerSlot.Player2, Evolution);
 
-        stopwatch.Answered(PlayerSlot.Player2, Evolution).ShouldBe(Start.AddSeconds(10));
-        stopwatch.Answered(PlayerSlot.Player1, Evolution).ShouldBe(Start);
+        stopwatch.ServedAt(PlayerSlot.Player2, Evolution).ShouldBe(Start.AddSeconds(10));
+        stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBe(Start);
     }
 
     /// <summary>
@@ -129,19 +132,34 @@ public sealed class DecisionClockTests
         clock.Advance(TimeSpan.FromSeconds(8));
         stopwatch.Served(PlayerSlot.Player1, question: null);
 
-        stopwatch.Answered(PlayerSlot.Player1, Evolution).ShouldBe(clock.GetUtcNow());
+        stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBeNull();
     }
 
     /// <summary>
-    /// Nothing was ever served: a scripted seat, or a client posting without reading. Zero rather than a
-    /// number off the wall clock, because "a person took no time" is a claim and this is the absence of one.
+    /// Nothing was ever served: a scripted seat, or a client posting without reading. Nothing rather than a
+    /// moment, because "a person took no time" is a claim and this is the absence of one.
     /// </summary>
     [Fact]
-    public void A_decision_whose_options_were_never_served_is_timed_at_the_moment_it_arrived()
+    public void A_decision_whose_options_were_never_served_has_no_moment_to_be_timed_from()
+    {
+        new DecisionClock(new SteppingClock(Start)).ServedAt(PlayerSlot.Player1, Evolution).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Answering a question the seat is not on leaves the stamp alone. It is the other half of the race above:
+    /// the host reads the moment first and forgets it after, and a forget that fired on the wrong question
+    /// would cost the next decision its start.
+    /// </summary>
+    [Fact]
+    public void Forgetting_a_question_the_seat_is_no_longer_on_leaves_the_current_one_alone()
     {
         var clock = new SteppingClock(Start);
+        var stopwatch = new DecisionClock(clock);
+        stopwatch.Served(PlayerSlot.Player1, SpeedOfOne);
 
-        new DecisionClock(clock).Answered(PlayerSlot.Player1, Evolution).ShouldBe(Start);
+        stopwatch.Answered(PlayerSlot.Player1, Evolution);
+
+        stopwatch.ServedAt(PlayerSlot.Player1, SpeedOfOne).ShouldBe(Start);
     }
 
     private sealed class SteppingClock(DateTimeOffset start) : TimeProvider
