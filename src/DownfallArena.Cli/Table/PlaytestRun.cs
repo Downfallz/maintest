@@ -35,6 +35,12 @@ internal sealed class PlaytestRun
     public const string NotesFile = "notes.jsonl";
     public const string CatalogueFile = "catalogue.json";
 
+    // How long a checkpoint waits for the decision it follows to reach the trace, and how often it looks. The
+    // driver applies one command in microseconds, so this is all but always over on the first look; the bound
+    // exists so that a driver which is not coming back costs a stale trace rather than a hanging tap.
+    private static readonly TimeSpan GrowthWait = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan GrowthStep = TimeSpan.FromMilliseconds(5);
+
     private readonly IArtifactWriter _writer;
     private readonly RunRecorder _recorder;
     private readonly MatchTraceRecorder _events;
@@ -199,6 +205,30 @@ internal sealed class PlaytestRun
     /// Writing then would truncate the real trace to an empty one. The recorder answering null for a match it
     /// no longer holds is what makes that impossible rather than merely unlikely.
     /// </remarks>
+    /// <summary>How far the trace has got, so a caller can tell when something it set in motion has reached it.</summary>
+    public int TraceLength(MatchId matchId) => _events.Length(matchId);
+
+    /// <summary>
+    /// Checkpoints once the trace has grown past <paramref name="beyond" />, or once the wait runs out.
+    /// </summary>
+    /// <remarks>
+    /// A decision is applied on the driver's own thread, and the seat that was holding it is released
+    /// asynchronously -- so the request thread that accepted the tap runs on ahead and would otherwise
+    /// checkpoint a trace from before the decision it just recorded a note for. An abandoned session would
+    /// then hold a note saying something happened and a trace that does not show it, which is the one pairing
+    /// this file exists to keep honest. Waiting is for the driver to apply one command, which is microseconds;
+    /// the bound is there so a driver that stalls costs a stale trace rather than a player's tap hanging.
+    /// </remarks>
+    public async Task CheckpointAfterAsync(MatchId matchId, int beyond, CancellationToken cancellationToken = default)
+    {
+        for (var waited = TimeSpan.Zero; _events.Length(matchId) <= beyond && waited < GrowthWait; waited += GrowthStep)
+        {
+            await Task.Delay(GrowthStep, _clock, cancellationToken);
+        }
+
+        await CheckpointAsync(matchId, cancellationToken);
+    }
+
     public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default)
     {
         // Reading the trace and queueing its write happen together, under the same lock the closing takes. The

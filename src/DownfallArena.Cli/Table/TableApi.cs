@@ -297,6 +297,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // afterwards, the decision would be timed at nothing.
         var servedAt = run?.ServedAt(seat.Slot, answered);
 
+        // How far the trace has got before this decision is handed over, so the checkpoint that follows can
+        // tell whether the driver has applied it yet.
+        var traced = run?.TraceLength(session.MatchId) ?? 0;
+
         // Checked against the options, and still refused: the seat moved on between the two. That is the race
         // the driver would have thrown on, answered as the late tap it is.
         if (!person.Submit(decision))
@@ -304,7 +308,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        await RecordAsync(seat.Slot, round, subPhase, answered, servedAt);
+        await RecordAsync(seat.Slot, round, subPhase, answered, servedAt, traced);
         return new StudioResponse(204, StudioResponse.Plain, []);
     }
 
@@ -315,7 +319,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
     /// rather than the player's.
     /// </summary>
-    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered, DateTimeOffset? servedAt)
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, HumanSeat.Question? answered, DateTimeOffset? servedAt, int traced)
     {
         if (run is not { } recording)
         {
@@ -326,9 +330,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             await recording.DecidedAsync(session.MatchId, slot, round, subPhase, answered, servedAt, CancellationToken.None);
 
-            // The trace, as far as the match has got. After the decision rather than before it, so a session
-            // abandoned here leaves the board the last tap produced and not the one before it.
-            await recording.CheckpointAsync(session.MatchId, CancellationToken.None);
+            // The trace, as far as the match has got -- and not until the decision has actually reached it.
+            // Submitting releases the driver asynchronously, so this thread is ahead of the command it caused,
+            // and a checkpoint taken now would show the board from before the tap it has just written a note
+            // about.
+            await recording.CheckpointAfterAsync(session.MatchId, traced, CancellationToken.None);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {

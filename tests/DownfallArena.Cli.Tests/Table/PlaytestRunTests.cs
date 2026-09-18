@@ -100,6 +100,39 @@ public sealed class PlaytestRunTests : IDisposable
         File.ReadAllText(Path.Combine(run.Directory, "steps.jsonl")).ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// A checkpoint that follows a decision waits for that decision to reach the trace. The driver applies it
+    /// on its own thread and releases the seat asynchronously, so the thread that accepted the tap is ahead of
+    /// the command it caused: checkpointing straight away would write the board from before it.
+    /// </summary>
+    [Fact]
+    public async Task A_checkpoint_waits_for_what_it_follows_to_reach_the_trace()
+    {
+        var (run, session) = await Started();
+        await session.Outcome;
+        var length = run.TraceLength(session.MatchId);
+
+        await run.CheckpointAfterAsync(session.MatchId, beyond: length - 1, TestContext.Current.CancellationToken);
+
+        Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(length);
+    }
+
+    /// <summary>
+    /// And it is bounded. Nothing else is coming here, so the wait runs out and the trace is written as it
+    /// stands: a stale trace is the cost of a driver that never came back, and a hanging tap is not.
+    /// </summary>
+    [Fact]
+    public async Task A_checkpoint_that_waits_in_vain_still_writes_what_there_is()
+    {
+        var (run, session) = await Started();
+        await session.Outcome;
+        var length = run.TraceLength(session.MatchId);
+
+        await run.CheckpointAfterAsync(session.MatchId, beyond: length + 10, TestContext.Current.CancellationToken);
+
+        Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(length);
+    }
+
     /// <summary>The stamp is what tells two sessions apart, and a rule set is half of what makes one reproducible.</summary>
     [Fact]
     public async Task A_session_stamps_the_rule_set_it_played_and_who_played_it()

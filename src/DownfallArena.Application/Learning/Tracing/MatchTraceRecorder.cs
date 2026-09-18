@@ -57,6 +57,13 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     public IReadOnlyList<TraceEntry> EntriesOf(MatchId matchId, int since = 0) =>
         _entries.GetValueOrDefault(matchId)?.Snapshot(since) ?? [];
 
+    /// <summary>
+    /// How many entries a match has so far, without copying any of them. What a caller watches to know that
+    /// something it set in motion has actually reached the trace: a decision handed to a seat is applied on
+    /// the driver's own thread, so the caller is ahead of it until this grows.
+    /// </summary>
+    public int Length(MatchId matchId) => _entries.GetValueOrDefault(matchId)?.Count ?? 0;
+
     /// <summary>The trace of a match, which the recorder then forgets.</summary>
     public MatchTrace Complete(MatchId matchId, RunStamp stamp, int? seed)
     {
@@ -104,6 +111,18 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     {
         private readonly Lock _gate = new();
         private readonly List<TraceEntry> _entries = [];
+
+        /// <summary>How many entries have been appended, read under the same lock they are appended behind.</summary>
+        public int Count
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _entries.Count;
+                }
+            }
+        }
 
         /// <summary>Appends the event with the boards after it, numbered where it landed.</summary>
         public void Add(IMatchEvent matchEvent, PlayerBoardState player1, PlayerBoardState player2)
