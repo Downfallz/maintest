@@ -15,9 +15,21 @@ CONTENT = "7e199df428bccfd0ea882e218ef225a5a3872b4122d0763e5583c44f581cd9ff"
 
 
 def evaluation(
-    path: Path, scores: dict[int, float], agent: str = "A", opponent: str = "Greedy", content: str = CONTENT
+    path: Path,
+    scores: dict[int, float],
+    agent: str = "A",
+    opponent: str = "Greedy",
+    content: str = CONTENT,
+    rule_set: dict[str, int] | None = None,
+    engine: str = "test",
+    with_pairs: bool = True,
 ) -> Path:
-    """An evaluation.json with the fields the loader needs and the pairs the paired reading uses."""
+    """An evaluation.json with the fields the loader needs and the pairs the paired reading uses.
+
+    Everything a test varies is an argument, so a file is written once and never read back and rewritten:
+    the round trip is what taint analysis reads as a path flowing from input into a write (S2083), and a
+    helper that takes the variation has no round trip to flag.
+    """
     mean = sum(scores.values()) / len(scores)
     report = {
         "agent": agent,
@@ -34,9 +46,9 @@ def evaluation(
         json.dumps(
             {
                 "stamp": {
-                    "engineVersion": "test",
+                    "engineVersion": engine,
                     "contentHash": content,
-                    "ruleSet": {},
+                    "ruleSet": rule_set or {},
                     "featureSchema": "features:v5",
                     "player1Agent": agent,
                     "player2Agent": opponent,
@@ -48,7 +60,11 @@ def evaluation(
                 "draws": 0,
                 "averageRounds": 7.0,
                 "roundCapShare": 0.0,
-                "pairs": [{"seed": seed, "scoreOfA": score} for seed, score in scores.items()],
+                **(
+                    {"pairs": [{"seed": seed, "scoreOfA": score} for seed, score in scores.items()]}
+                    if with_pairs
+                    else {}
+                ),
             }
         ),
         encoding="utf-8",
@@ -109,29 +125,26 @@ def test_the_interval_is_the_mean_difference_plus_or_minus_z_standard_errors(tmp
 
 def test_different_seeds_are_refused_rather_than_intersected(tmp_path: Path) -> None:
     """Intersecting would answer a question nobody asked on a subset nobody chose."""
-    first = evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0, 3: 1.0})
-    second = evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0, 9: 0.0})
+    first = load_evaluation(evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0, 3: 1.0}))
+    second = load_evaluation(evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0, 9: 0.0}))
 
     with pytest.raises(ArtifactError, match="different seeds"):
-        compare(load_evaluation(first), load_evaluation(second))
+        compare(first, second)
 
 
 def test_different_content_is_refused(tmp_path: Path) -> None:
-    first = evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0})
-    second = evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0}, content="0" * 64)
+    first = load_evaluation(evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0}))
+    second = load_evaluation(evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0}, content="0" * 64))
 
     with pytest.raises(ArtifactError, match="different content"):
-        compare(load_evaluation(first), load_evaluation(second))
+        compare(first, second)
 
 
 def test_an_evaluation_without_pairs_says_so(tmp_path: Path) -> None:
-    path = evaluation(tmp_path / "a.json", {1: 1.0})
-    data = json.loads(path.read_text())
-    del data["pairs"]
-    path.write_text(json.dumps(data), encoding="utf-8")
+    loaded = load_evaluation(evaluation(tmp_path / "a.json", {1: 1.0}, with_pairs=False))
 
     with pytest.raises(ArtifactError, match="no 'pairs'"):
-        scores_by_seed(load_evaluation(path))
+        scores_by_seed(loaded)
 
 
 def test_two_opponents_are_named_so_the_reader_sees_what_was_compared(tmp_path: Path) -> None:
@@ -157,33 +170,27 @@ def test_the_result_is_written_where_it_is_asked_for(tmp_path: Path) -> None:
 
 def test_one_seed_is_refused_rather_than_called_certain(tmp_path: Path) -> None:
     """The module exists to stop one observation becoming a result; it must not do it itself (ADR 0049)."""
-    first = evaluation(tmp_path / "a.json", {1: 1.0})
-    second = evaluation(tmp_path / "b.json", {1: 0.0})
+    first = load_evaluation(evaluation(tmp_path / "a.json", {1: 1.0}))
+    second = load_evaluation(evaluation(tmp_path / "b.json", {1: 0.0}))
 
     with pytest.raises(ArtifactError, match="at least two seeds"):
-        compare(load_evaluation(first), load_evaluation(second))
+        compare(first, second)
 
 
 def test_different_rules_are_refused(tmp_path: Path) -> None:
     """The content hash covers the catalogue, not the rules: a moved round cap opens a gap of its own."""
-    first = evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0})
-    second = evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0})
-    data = json.loads(second.read_text())
-    data["stamp"]["ruleSet"] = {"roundCap": 30}
-    second.write_text(json.dumps(data), encoding="utf-8")
+    first = load_evaluation(evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0}))
+    second = load_evaluation(evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0}, rule_set={"roundCap": 30}))
 
     with pytest.raises(ArtifactError, match=r"different rules.*roundCap"):
-        compare(load_evaluation(first), load_evaluation(second))
+        compare(first, second)
 
 
 def test_a_different_engine_build_is_reported_and_not_refused(tmp_path: Path) -> None:
     """A rebuild need not change how a seed plays -- ci-150 reproduced ci-149 exactly on another build."""
-    first = evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0})
-    second = evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0})
-    data = json.loads(second.read_text())
-    data["stamp"]["engineVersion"] = "another"
-    second.write_text(json.dumps(data), encoding="utf-8")
+    first = load_evaluation(evaluation(tmp_path / "a.json", {1: 1.0, 2: 1.0}))
+    second = load_evaluation(evaluation(tmp_path / "b.json", {1: 0.0, 2: 0.0}, engine="another"))
 
-    report = format_paired(compare(load_evaluation(first), load_evaluation(second)))
+    report = format_paired(compare(first, second))
 
     assert "different engine builds" in report
