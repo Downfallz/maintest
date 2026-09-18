@@ -33,7 +33,8 @@ benchmarks/                    The fixed benchmark seeds and one outcome digest 
 viewer/                        Static HTML viewer for learning artifacts (traces, batches, training runs). See viewer/README.md.
 studio/                        Static HTML content studio: browse, edit, version and try the game content. See studio/README.md.
 table/                         Static HTML table: the page two people play a tabletop match on, served by `table` (docs/tabletop/playtest-app.md).
-learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md.
+learning/                      The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/training.md,
+                               and docs/learning/plan.md for where the loop is going and what has been refuted on the way.
 models/                        Trained policies (policy.json, small, committed with their evaluation). See models/README.md.
 scripts/                       iterate.sh, one turn of the learning loop (docs/learning/training.md), and
                                sweep-weight.py, which measures one agent scoring weight alone (ADR 0037).
