@@ -493,10 +493,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return StudioResponse.OfPlainText(404, "This table has no pilot.");
         }
 
-        if (Asked(method, rest, body, token, flying, out var slot, out var wanted, out var round) is { } refusal)
+        var asked = Asked(method, rest, body, token, flying);
+        if (asked.Refusal is { } refusal)
         {
             return refusal;
         }
+
+        var (_, slot, wanted, round) = asked;
 
         // Cheap early out only. The real one is below: resolving a file-backed agent takes long enough for a
         // bot match to finish underneath it, and a swap accepted for a match that has ended is a 200 for
@@ -546,30 +549,18 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// says what it wants. Nothing about the match or the seat is touched, which is what keeps the swap itself
     /// a short read of one moving thing rather than a long one.
     /// </summary>
-    private static StudioResponse? Asked(
-        string method,
-        string rest,
-        string body,
-        string? token,
-        TablePilot flying,
-        out PlayerSlot slot,
-        out string wanted,
-        out int round)
+    private static SwapAsked Asked(string method, string rest, string body, string? token, TablePilot flying)
     {
-        slot = default;
-        wanted = string.Empty;
-        round = 0;
-
         // Compared in fixed time, because a token is guessed one character at a time or not at all.
         if (string.IsNullOrWhiteSpace(token) || !CryptographicOperations.FixedTimeEquals(
                 Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(flying.Token)))
         {
-            return StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's.");
+            return SwapAsked.No(StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's."));
         }
 
         if (method != "POST" || TableSeat.SlotOf(rest.TrimEnd('/')) is not { } named)
         {
-            return StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{rest}");
+            return SwapAsked.No(StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{rest}"));
         }
 
         TableSwapBody? posted;
@@ -579,18 +570,15 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         }
         catch (JsonException exception)
         {
-            return StudioResponse.OfPlainText(400, exception.Message);
+            return SwapAsked.No(StudioResponse.OfPlainText(400, exception.Message));
         }
 
         if (posted?.Agent is not { Length: > 0 } agent || posted.Round is not { } wantedRound)
         {
-            return StudioResponse.OfPlainText(400, "A swap names the agent taking the seat and the round it takes it from.");
+            return SwapAsked.No(StudioResponse.OfPlainText(400, "A swap names the agent taking the seat and the round it takes it from."));
         }
 
-        slot = named;
-        wanted = agent;
-        round = wantedRound;
-        return null;
+        return new SwapAsked(Refusal: null, named, agent, wantedRound);
     }
 
     /// <summary>
