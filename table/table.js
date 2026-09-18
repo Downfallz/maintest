@@ -66,10 +66,13 @@ function start(seats) {
   // the time; switching draws from what the last poll already fetched, so it never waits.
   for (const [tab, name] of [['tab-board', 'board'], ['tab-mat', 'mat']]) {
     element(tab).addEventListener('click', () => {
-      if (name === 'mat') openTalents(state); else closeTalents(state);
+      if (name === 'mat') openTalents(state);
+      else { closeTalents(state); element('board').scrollIntoView({ block: 'start', behavior: 'instant' }); }
     });
   }
 
+  element('hand-board').addEventListener('click', () => element('board').scrollIntoView({ block: 'start', behavior: 'instant' }));
+  element('board-move').addEventListener('click', () => element('decision').scrollIntoView({ block: 'start', behavior: 'instant' }));
   element('hand-talents').addEventListener('click', () => openTalents(state));
 
   // The two one-tap notes, built once. They read the state at the moment they are tapped, so the note lands
@@ -380,10 +383,13 @@ function render(state, views) {
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
+  const targetOffset = view.waitingFor === 'Target' && globalThis.innerWidth > 760
+    ? element('decision').getBoundingClientRect().height + 30 : 18;
+  element('board').style.setProperty('--target-offset', `${targetOffset}px`);
   renderNotes(view);
   element('shortcut-context').textContent = view.waitingFor === 'Speed'
     ? '1 Quick · 2 Standard' : view.waitingFor === 'Evolution'
-      ? '1–9 Choose creature · Tab to an unlock · Enter to choose'
+      ? '← → Choose creature · ↓ Browse spells · Enter to choose'
       : '1–9 Select card / target · Enter to confirm';
   restorePosition(saved);
   guideDecision(state, current);
@@ -395,14 +401,10 @@ function guideDecision(state, current) {
   if (state.guidedAsking === state.asked || current.view.over || current.view.playedByBot) return;
   state.guidedAsking = state.asked;
   const kind = current.view.waitingFor;
-  const anchor = kind === 'Speed' || kind === 'Intent' ? state.activeHand : kind === 'Target' ? state.targetAnchor : null;
+  const anchor = ['Speed', 'Intent'].includes(kind) ? element('planning') : kind === 'Target' ? element('decision') : null;
   if (!anchor) return;
   const rect = anchor.getBoundingClientRect();
-  const sheet = element('decision').getBoundingClientRect();
-  let bottom = globalThis.innerHeight;
-  // The mobile sheet obscures part of the board; the desktop sidebar does not.
-  if (sheet.left < rect.right && sheet.right > rect.left && sheet.top > 0 && sheet.top < bottom) bottom = sheet.top - 16;
-  if (rect.top < 16 || rect.bottom > bottom) {
+  if (rect.top < 16 || rect.bottom > globalThis.innerHeight) {
     anchor.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
 }
@@ -494,7 +496,8 @@ function hand(state, current) {
   const box = document.createElement('div');
   box.className = 'hand-cards';
   box.hidden = rows.every(row => row.spells.length === 0);
-  box.append(...rows.map(row => handRow(state, row, asked, current)));
+  const ordered = [...rows.filter(row => row.creature === asked), ...rows.filter(row => row.creature !== asked)];
+  box.append(...ordered.map(row => handRow(state, row, asked, current)));
   return box;
 }
 
@@ -985,6 +988,8 @@ function recapRow(action) {
 
 function renderDecision(state, current) {
   const view = current.view;
+  element('planning').dataset.kind = view.waitingFor ?? 'Waiting';
+  element('decision-context').textContent = '';
   const asking = element('asking');
   const choices = element('choices');
   element('problem').hidden = !state.error;
@@ -1010,6 +1015,10 @@ function renderDecision(state, current) {
     return;
   }
 
+  const actor = (view.board.allies ?? []).find(creature => creature.id === view.waitingCreature);
+  element('decision-context').textContent = actor
+    ? `${actor.name || 'Creature'} #${actor.id} · ${healthText(actor)} HP · ${actor.energy ?? 0} energy`
+    : '';
   asking.textContent = titleOf(state, view);
   choices.replaceChildren(...buttonsFor(state, current));
 }
@@ -1017,8 +1026,8 @@ function renderDecision(state, current) {
 function titleOf(state, view) {
   switch (view.waitingFor) {
     case 'Evolution': return `Unlock a spell · ${view.options.evolution?.remainingPicks ?? 0} pick(s) left`;
-    case 'Speed': return `Speed of creature ${view.waitingCreature}`;
-    case 'Intent': return `What does creature ${view.waitingCreature} do?`;
+    case 'Speed': return 'Choose your speed';
+    case 'Intent': return 'Choose your spell';
     case 'Target': {
       const spell = view.options.target?.spell;
       return cardTitle(state.cards.get(spell)) || spell || 'Choose targets';
@@ -1037,8 +1046,11 @@ function buttonsFor(state, current) {
       return evolutionButtons(state, current);
     }
     case 'Speed':
-      return ['Quick', 'Standard'].map(speed =>
-        button(speed, send({ kind: 'Speed', creature: view.waitingCreature, speed })));
+      return ['Quick', 'Standard'].map(speed => {
+        const choice = button(speed, send({ kind: 'Speed', creature: view.waitingCreature, speed }));
+        choice.dataset.focus = `speed-${speed}`;
+        return choice;
+      });
     case 'Intent':
       return intentButtons(state, current);
     case 'Target':
@@ -1070,7 +1082,9 @@ function evolutionButtons(state, current) {
   const cards = document.createElement('div');
   cards.className = 'choice-cards';
   for (const spell of selected?.unlockableSpells ?? []) {
-    cards.append(card(state, spell, '', () => submit(state, current, { kind: 'Evolution', creature: selected.creature, spell })));
+    const choice = card(state, spell, '', () => submit(state, current, { kind: 'Evolution', creature: selected.creature, spell }));
+    choice.dataset.focus = `evolve-spell-${selected.creature}-${spell}`;
+    cards.append(choice);
   }
   const hint = document.createElement('p');
   hint.className = 'choice-help';
@@ -1399,12 +1413,13 @@ function setupTalentWindow(state) {
 // Keyboard shortcuts use the same guards and submission path as pointer input. Number keys select;
 // repeating the same number never commits a card or target by accident. Enter is the explicit commit.
 function keyboardDecision(state, event) {
-  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+  if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
   const target = event.target;
   if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName?.toUpperCase())) return;
   const current = activeSeat(state.views, state.holder);
   if (!current || needsPass(current, state.holder) || state.sending) return;
   const key = event.key.toLowerCase();
+  if (key.startsWith('arrow')) { navigateChoices(state, current, event); return; }
   if (key === '?') {
     event.preventDefault();
     element('shortcuts').open = !element('shortcuts').open;
@@ -1490,4 +1505,64 @@ function enemyChoice(state, creature, board, entries) {
     box.append(last);
   }
   return box;
+}
+
+// Arrow navigation moves visible focus. It never declares or casts; the focused control owns Enter.
+function navigateChoices(state, current, event) {
+  const view = current.view;
+  if (state.tab !== 'mat' && !canInteract(state, current, view.waitingFor)) return;
+  const all = [...document.querySelectorAll('[data-focus]')];
+  const active = document.activeElement;
+  const nodes = prefix => all.filter(node => node.dataset.focus.startsWith(prefix) && !node.disabled);
+  const focus = node => {
+    event.preventDefault();
+    node?.focus();
+    node?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  };
+  const atlas = state.tab === 'mat';
+  const evolving = view.waitingFor === 'Evolution';
+  if (atlas || evolving) {
+    const picker = nodes(atlas ? 'talent-creature-' : 'evolve-').filter(node => !node.dataset.focus.startsWith('evolve-spell-'));
+    const cards = nodes(atlas ? 'tree-' : 'evolve-spell-');
+    const inCards = cards.includes(active);
+    if (!inCards) {
+      if (event.key === 'ArrowDown') { focus(cards[0]); return; }
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key) || !picker.length) return;
+      const selected = picker.findIndex(node => node.getAttribute('aria-pressed') === 'true');
+      const index = picker.includes(active) ? picker.indexOf(active) : Math.max(0, selected);
+      const next = picker[(index + (event.key === 'ArrowRight' ? 1 : -1) + picker.length) % picker.length];
+      event.preventDefault();
+      const identity = next.dataset.focus;
+      next.click();
+      [...document.querySelectorAll('[data-focus]')].find(node => node.dataset.focus === identity)?.focus();
+      return;
+    }
+    const next = arrowNeighbour(cards, active, event.key);
+    if (event.key === 'ArrowUp' && !next) focus(picker.find(node => node.getAttribute('aria-pressed') === 'true') ?? picker[0]);
+    else focus(next ?? active);
+    return;
+  }
+  const prefix = { Speed: 'speed-', Intent: 'card-', Target: 'target-' }[view.waitingFor];
+  if (!prefix) return;
+  const controls = nodes(prefix);
+  if (!controls.length) return;
+  focus(controls.includes(active) ? arrowNeighbour(controls, active, event.key) ?? active : controls[0]);
+}
+
+function arrowNeighbour(controls, active, key) {
+  const rect = active.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const horizontal = key === 'ArrowLeft' || key === 'ArrowRight';
+  const forward = key === 'ArrowRight' || key === 'ArrowDown';
+  const positioned = controls.map(node => ({ node, rect: node.getBoundingClientRect() }));
+  if (horizontal) {
+    const sameRow = positioned.filter(one => Math.abs(one.rect.top - rect.top) < 10).map(one => one.node);
+    const row = sameRow.length > 1 ? sameRow : controls;
+    const index = row.indexOf(active);
+    return row[(index + (forward ? 1 : -1) + row.length) % row.length];
+  }
+  const candidates = positioned.filter(one => forward ? one.rect.top > rect.top + 10 : one.rect.top < rect.top - 10);
+  candidates.sort((a, b) => Math.abs(a.rect.top - rect.top) - Math.abs(b.rect.top - rect.top) ||
+    Math.abs(a.rect.left + a.rect.width / 2 - x) - Math.abs(b.rect.left + b.rect.width / 2 - x));
+  return candidates[0]?.node;
 }

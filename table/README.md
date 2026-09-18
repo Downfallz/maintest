@@ -25,14 +25,17 @@ not recorded matches. Card text and creature names in the actual app come from t
   applied outcomes, in resolution order. Reopen it throughout the next round; it stays available after the
   match ends. Critical casts, failed casts and skipped targets are labelled as well as coloured.
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
-- Desktop is the primary workspace: the battlefield scrolls independently above a persistent spellbook
-  dock, with decisions alongside. Phones retain a bounded bottom decision sheet and ordinary page scrolling.
+- Desktop is the primary workspace: a full-width planning panel groups the main decision with the acting
+  spellbook. The page scrolls normally; the battlefield and desktop cards have no clipped inner scrolling
+  panes. Cards wrap into rows, and the active creature appears first. Battlefield / Your move links jump
+  between planning and the board. Phones use the same flow with a horizontal card hand.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's unlocks at a time. Choose its numbered button, then the spell to unlock.
 - Speed opens the acting creature's spellbook as a readable reference. Each new Speed or Intent question
-  scrolls to that hand if it is outside the usable viewport; a Target question brings a legal creature into
-  view. Later polls and local selection preserve deliberate scrolling. Other hands remain expandable.
+  brings the decision and hand into view together when needed; a Target question brings its heading into
+  view, with the target controls staying above the battlefield on desktop. Later polls and local selection
+  preserve deliberate scrolling. Other hands remain expandable.
 - Tap a spell once to select it, then again to declare it. Tap a selected target again to cast on the entire
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
   spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
@@ -74,10 +77,15 @@ a decision has been sent.
 | Escape | Close the atlas; otherwise clear the pending card/target selection |
 | ? | Show / hide contextual shortcut help |
 | Tab, Enter / Space | Navigate and activate controls, including class nodes and unlocks |
+| ← / → | Switch Evolution creatures, or focus the next speed, spell or legal target |
+| ↓ from an Evolution creature | Focus its first offered spell |
+| ↑ / ↓ within choices | Move to the closest choice in the preceding / following visual row; ↑ from the first Evolution row returns to the creature picker |
+| Enter on a spell / target | First selects, then confirms the existing selection; Evolution unlocks use their normal single activation |
 | Arrow keys on the atlas title | Move the desktop window |
 
 Shortcuts ignore text fields, selectors, contenteditable areas, modifier chords, key repeats, in-flight
-requests and the hotseat fence. Card and target numbers match the host's option order.
+requests and the hotseat fence. Card and target numbers match the host's option order. Arrows follow the visible layout; they never cast or
+declare on their own and do not change the engine's acting creature.
 
 ## Verification
 

@@ -231,37 +231,6 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 .talent-inspector { border-top: 1px solid var(--line); padding-top: 16px; }
 .talent-inspector .talent-lane { margin: 0; }
 .atlas-unlock { width: 100%; margin-top: 14px; text-align: center; background: #354b36; color: #f1f2e9; border-color: #627b59; font-size: 12px; }
-@media (min-width: 1100px) {
-  body:has(#table) { overflow: hidden; padding: 0 22px; }
-  .masthead { min-height: 82px; }
-  #table { margin-top: 14px; height: calc(100dvh - 110px); gap: 18px; }
-  .play-area { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-  .tabs { flex: none; margin-bottom: 12px; }
-  #board { flex: 1; min-height: 150px; overflow-y: auto; scrollbar-width: thin; padding: 3px 6px 10px 3px; }
-  .hand-section { flex: none; max-height: 37dvh; overflow-y: auto; padding-top: 10px; scrollbar-width: thin; }
-  .hand-section > .section-heading { margin-bottom: 4px; }
-  .held { flex-basis: 225px; }
-  .held-cards { padding-bottom: 6px; }
-  .creature { padding: 11px; }
-  .who { margin-bottom: 8px; }
-  .health { margin-bottom: 8px; }
-  .stats { gap: 5px; }
-  .stat strong { font-size: 19px; }
-  .stat span { font-size: 9px; }
-  .badges { margin-top: 7px; }
-  .section-heading { margin-bottom: 8px; }
-  .initiative-section { margin: 10px 0; padding: 9px 12px; }
-  .enemy-books { display: flex; gap: 10px; }
-  .enemy-book { flex: 1; }
-  .enemy-book summary { font-size: 10px; padding: 8px 0; min-height: 32px; }
-  .enemy-book[open] .held-cards { max-height: 235px; overflow-y: auto; }
-  .notes { padding-top: 8px; }
-  #log { margin-top: 7px; flex: none; max-height: 20dvh; overflow-y: auto; }
-  #log summary { min-height: 30px; padding: 7px 0; }
-  .round-recap { flex: none; max-height: 34dvh; overflow-y: auto; margin-bottom: 10px; }
-  .round-recap summary { padding: 10px 16px; }
-  #recap-actions { max-height: 22dvh; }
-}
 @media (max-width: 1099px) {
   .talent-window { inset: 8px; width: calc(100vw - 16px); height: calc(100dvh - 16px); min-width: 0; min-height: 0; resize: none; }
   .window-hint, #talent-reset, #talent-max { display: none; }
@@ -283,7 +252,6 @@ kbd { font: 10px ui-monospace, monospace; border: 1px solid #70816e; border-radi
 .choice-targets, .choice-previous { display: block; margin-top: 5px; line-height: 1.5; color: #c9b8ad; overflow-wrap: anywhere; }
 .choice-previous { font-size: 10px; color: var(--muted); }
 @media (min-width: 1100px) {
-  .hand-section { max-height: 32dvh; }
   .creature { display: grid; grid-template-columns: minmax(0, 1fr) 88px; gap: 5px 8px; }
   .who { margin: 0; gap: 7px; }
   .creature-name { font-size: 13px; }
@@ -303,3 +271,65 @@ kbd { font: 10px ui-monospace, monospace; border: 1px solid #70816e; border-radi
 }
 .held { display: flex; flex-direction: column; }
 .held > .card-availability { order: -1; margin: 0 0 9px; }
+
+/* The page is the scrolling surface. Planning gets the full width and keeps controls with the cards. */
+body:has(#table) { overflow: auto; }
+#table { display: block; height: auto; max-width: 1440px; margin: 22px auto 0; }
+.play-area { display: flex; flex-direction: column; height: auto; overflow: visible; gap: 24px; }
+.tabs { order: -3; margin-bottom: 0; }
+.round-recap { order: -2; margin-bottom: 0; }
+#planning { display: contents; }
+.action-area { order: 1; position: static; width: 100%; }
+#board { order: 2; overflow: visible; min-height: 0; padding: 0; scroll-margin-top: 20px; }
+.hand-section { order: 3; max-height: none; overflow: visible; }
+#notes { order: 4; }
+#log { order: 5; }
+#planning:is([data-kind="Speed"], [data-kind="Intent"]) { display: block; order: 1; padding: 24px; border: 1px solid #697051; border-radius: 16px; background: linear-gradient(135deg, #2a362a, #1b2922 65%); box-shadow: 0 16px 45px #0002; scroll-margin-top: 18px; }
+#decision { max-height: none; overflow: visible; padding: 24px; display: grid; grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr); gap: 8px 36px; scroll-margin-top: 18px; }
+#planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision { padding: 0 0 16px; background: transparent; border: 0; box-shadow: none; }
+#decision .decision-heading { grid-column: 1; margin-bottom: 5px; justify-content: flex-start; }
+#decision #asking { grid-column: 1; font-size: clamp(28px, 3vw, 40px); text-wrap: initial; margin: 0; align-self: center; }
+.decision-context { grid-column: 1; color: #c7d4c4; font-size: 14px; margin: 6px 0 8px; }
+.decision-context:empty { display: none; }
+#choices { grid-column: 2; grid-row: 1 / span 3; align-content: center; }
+#decision .shortcuts, #decision .problem { grid-column: 1 / -1; margin-top: 5px; }
+#decision[data-kind="Speed"] #choices { grid-template-columns: 1fr 1fr; gap: 14px; }
+#decision[data-kind="Speed"] #choices > button { min-height: 96px; font-size: 24px; border-radius: 12px; }
+#decision[data-kind="Speed"] #choices > button::before { display: block; font: 11px ui-monospace, monospace; opacity: 0.65; margin-bottom: 8px; }
+#decision[data-kind="Speed"] #choices > button:first-child::before { content: '1'; }
+#decision[data-kind="Speed"] #choices > button:nth-child(2)::before { content: '2'; }
+#decision[data-kind="Intent"] #choices > button { min-height: 56px; font-size: 17px; }
+#decision[data-kind="Evolution"] { grid-template-columns: 1fr; }
+#decision[data-kind="Evolution"] #choices { grid-column: 1; grid-row: auto; grid-template-columns: 1fr 1fr; }
+#decision[data-kind="Evolution"] .creature-picker, #decision[data-kind="Evolution"] .choice-help, #decision[data-kind="Evolution"] .choice-cards { grid-column: 1 / -1; }
+#decision[data-kind="Evolution"] .choice-cards { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+#planning .hand-section { padding-top: 16px; }
+.hand-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hand-row.active .hand-who { font-size: 13px; margin: 5px 0 12px; }
+.hand-row.active { margin-bottom: 14px; }
+#own-hand .held-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr)); overflow: visible; padding: 4px 3px 12px; align-items: stretch; }
+#own-hand .held { min-width: 0; padding: 18px; }
+#own-hand .card-title { font-size: 21px; }
+#own-hand .card-body { font-size: 12px; line-height: 1.7; }
+#own-hand .card-availability { font-size: 11px; }
+.enemy-books { display: flex; gap: 14px; }
+.enemy-book { flex: 1; }
+.enemy-book .held-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); overflow: visible; }
+@media (min-width: 761px) {
+  .play-area:has(#decision[data-kind="Target"]) .action-area { position: sticky; top: 10px; z-index: 10; }
+}
+@media (max-width: 760px) {
+  .play-area { gap: 18px; }
+  #planning:is([data-kind="Speed"], [data-kind="Intent"]) { padding: 16px; }
+  #decision { grid-template-columns: 1fr; padding: 18px; gap: 10px; }
+  #decision #asking { font-size: 30px; }
+  #choices { grid-column: 1; grid-row: auto; }
+  #decision[data-kind="Speed"] #choices > button { min-height: 76px; font-size: 21px; }
+  #own-hand .held-cards { display: flex; overflow-x: auto; }
+  #own-hand .held { flex: 0 0 240px; }
+  .enemy-books { display: block; }
+  #decision[data-kind="Evolution"] #choices { grid-template-columns: 1fr; }
+  .hand-actions .reference-link { font-size: 11px; padding: 8px; }
+}
+
+.creature.legal { scroll-margin-top: var(--target-offset, 18px); }

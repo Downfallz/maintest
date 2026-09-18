@@ -36,6 +36,8 @@ class Element {
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.text = ''; this.children = children; }
   setAttribute(key, value) { this.attributes[key] = value; }
+  getAttribute(key) { return this.attributes[key]; }
+  click() { return this.events.click?.(); }
   addEventListener(key, action) { this.events[key] = action; }
   focus() { this.owner.activeElement = this; }
   scrollIntoView() { this.scrolledIntoView = true; }
@@ -248,22 +250,23 @@ test('speed selection opens the acting spellbook as readable reference without o
   assert.match(row.textContent, /choose speed/);
   assert.match(held(p).children[0].className, /reference/);
   assert.equal(held(p).children[0].events.click, undefined);
-  assert.equal(row.scrolledIntoView, true);
+  assert.equal(p.nodes.planning.scrolledIntoView, true);
 });
 
-test('a new intent scrolls to its hand once and selection does not scroll it again', () => {
+test('a new intent brings its controls and hand into view together, once', () => {
   const p = page(); p.draw();
-  assert.equal(p.state.activeHand.scrolledIntoView, true);
+  assert.equal(p.nodes.planning.scrolledIntoView, true);
+  p.nodes.planning.scrolledIntoView = false;
   held(p).children[0].events.click();
-  assert.equal(p.state.activeHand.scrolledIntoView, undefined);
+  assert.equal(p.nodes.planning.scrolledIntoView, false);
   p.view.waitingAsked += 1; p.draw();
-  assert.equal(p.state.activeHand.scrolledIntoView, true);
+  assert.equal(p.nodes.planning.scrolledIntoView, true);
 });
 
 test('an already visible hand does not move when the question changes', () => {
   const p = page(); p.context.innerHeight = 2000;
   p.nodes.decision.getBoundingClientRect = () => ({ top: 20, bottom: 300, left: 700, right: 1000 }); p.draw();
-  assert.equal(p.state.activeHand.scrolledIntoView, undefined);
+  assert.equal(p.nodes.planning.scrolledIntoView, undefined);
 });
 
 test('tapping a selected card declares that card once with the asking identity', async () => {
@@ -488,4 +491,50 @@ test('an atlas unlock uses the guarded current asking and rejects a stale inspec
   await unlock.events.click(); assert.equal(sent.length, 1); assert.equal(sent[0].creature, 1); assert.equal(sent[0].spell, 'two');
   p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
   await unlock.events.click(); assert.equal(sent.length, 1);
+});
+
+test('the acting creature appears first in the planning spellbook with its context', () => {
+  const p = page(); p.view.board.allies.push({ id: 3, name: 'Third', health: 12, maxHealth: 20, energy: 5, knownSpells: ['two'] });
+  p.view.waitingFor = 'Speed'; p.view.waitingCreature = 3; p.view.options = { speed: {} }; p.draw();
+  assert.match(p.nodes['own-hand'].children[0].children[0].textContent, /Creature 3/);
+  assert.match(p.nodes['decision-context'].textContent, /Third #3 · 12\/20 HP · 5 energy/);
+  assert.equal(p.nodes.asking.textContent, 'Choose your speed');
+});
+
+test('arrows switch the evolution creature and move into its offered spells without submitting', () => {
+  const p = page(); p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { creatures: [{ creature: 1, unlockableSpells: ['one'] }, { creature: 3, unlockableSpells: ['two'] }] } }; p.draw();
+  p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));
+  assert.equal(p.state.evolving, 3); assert.equal(p.document.activeElement.dataset.focus, 'evolve-3');
+  p.context.keyboardDecision(p.state, keyEvent('ArrowDown'));
+  assert.equal(p.document.activeElement.dataset.focus, 'evolve-spell-3-two'); assert.equal(p.state.sending, false);
+  p.context.keyboardDecision(p.state, keyEvent('ArrowUp'));
+  assert.equal(p.document.activeElement.dataset.focus, 'evolve-3');
+});
+
+test('arrows focus spell and target controls without selecting or casting them', () => {
+  const p = page(); p.draw();
+  p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));
+  assert.equal(p.document.activeElement.dataset.focus, 'card-1-one');
+  p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));
+  assert.equal(p.document.activeElement.dataset.focus, 'card-1-two');
+  assert.equal(p.state.chosen, null); assert.equal(p.state.sending, false);
+  p.view.waitingFor = 'Target'; p.view.waitingAsked++;
+  p.view.options = { target: { legalTargets: { candidates: [1, 2], minTargets: 1, maxTargets: 1 } } }; p.draw();
+  p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));
+  assert.match(p.document.activeElement.dataset.focus, /^target-/); assert.equal(p.state.picked.length, 0);
+});
+
+test('vertical arrow navigation chooses the closest card in the next visual row', () => {
+  const p = page(); const nodes = [new Element(), new Element(), new Element(), new Element()];
+  nodes.forEach((node, index) => { node.getBoundingClientRect = () => ({ left: index % 2 * 200, top: Math.floor(index / 2) * 300, width: 180 }); });
+  assert.equal(p.context.arrowNeighbour(nodes, nodes[1], 'ArrowDown'), nodes[3]);
+  assert.equal(p.context.arrowNeighbour(nodes, nodes[2], 'ArrowUp'), nodes[0]);
+});
+
+test('left and right traverse choices when a narrow layout has only one item per row', () => {
+  const p = page(); const nodes = [new Element(), new Element()];
+  nodes.forEach((node, index) => { node.getBoundingClientRect = () => ({ left: 0, top: index * 150, width: 300 }); });
+  assert.equal(p.context.arrowNeighbour(nodes, nodes[0], 'ArrowRight'), nodes[1]);
+  assert.equal(p.context.arrowNeighbour(nodes, nodes[1], 'ArrowLeft'), nodes[0]);
 });
