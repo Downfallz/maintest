@@ -39,6 +39,13 @@ internal sealed class TableFiles
             ["/hand.js"] = (Path.Combine(tableDirectory, "hand.js"), JavaScript),
             ["/feed.js"] = (Path.Combine(tableDirectory, "feed.js"), JavaScript),
             ["/notes.js"] = (Path.Combine(tableDirectory, "notes.js"), JavaScript),
+
+            // The pilot's own page. It is a route of this host rather than a second one, because it reads the
+            // same session -- and it is reached only by somebody holding the pilot token, which the console
+            // prints and no player's link carries.
+            ["/pilot"] = (Path.Combine(tableDirectory, "pilot.html"), StudioResponse.Html),
+            ["/pilot.css"] = (Path.Combine(tableDirectory, "pilot.css"), Css),
+            ["/pilot.js"] = (Path.Combine(tableDirectory, "pilot.js"), JavaScript),
         };
     }
 

@@ -249,6 +249,123 @@ public sealed class TablePilotTests : IDisposable
         JsonDocument.Parse(Text(answer)).RootElement.GetProperty("error").GetString().ShouldBe("Table.SwapMidRound");
     }
 
+    /// <summary>
+    /// What the pilot is served: the session, the seats and who is playing them.
+    /// </summary>
+    [Fact]
+    public async Task The_pilot_is_shown_who_is_playing_each_seat()
+    {
+        var table = await Started();
+
+        var answer = await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, PilotToken);
+
+        answer.Status.ShouldBe(200, Text(answer));
+        var view = JsonDocument.Parse(Text(answer)).RootElement;
+        view.GetProperty("over").GetBoolean().ShouldBeFalse();
+        view.GetProperty("round").GetInt32().ShouldBe(1);
+        var seats = view.GetProperty("seats").EnumerateArray().ToList();
+        seats.Count.ShouldBe(2);
+        seats[0].GetProperty("slot").GetString().ShouldBe("player1");
+        seats[0].GetProperty("seated").GetString().ShouldBe("Greedy");
+        seats[0].GetProperty("pending").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// A seat's pending swap is on the view, which is the whole reason the view exists.
+    /// </summary>
+    /// <remarks>
+    /// A seat holds one pending swap and a second replaces it. An operator who cannot see the pending one
+    /// overwrites it without knowing, and the swap they thought they had made never happens.
+    /// </remarks>
+    [Fact]
+    public async Task The_pilot_is_shown_the_swap_a_seat_is_waiting_to_make()
+    {
+        var table = await Started();
+        (await Swap(table, "player1", agent: "random", round: 4)).Status.ShouldBe(200);
+
+        var answer = await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, PilotToken);
+
+        var pending = JsonDocument.Parse(Text(answer)).RootElement
+            .GetProperty("seats").EnumerateArray()
+            .First(seat => seat.GetProperty("slot").GetString() == "player1")
+            .GetProperty("pending");
+        pending.GetProperty("to").GetString().ShouldBe("Random");
+        pending.GetProperty("round").GetInt32().ShouldBe(4);
+    }
+
+    /// <summary>
+    /// The pilot's view carries no board, and this reads the bytes rather than the object.
+    /// </summary>
+    /// <remarks>
+    /// In hotseat the operator is usually also one of the two players, so a payload carrying both boards would
+    /// hand that person their opponent's six face-down Intents — the leak of <c>playtest-app.md</c> §2.4,
+    /// arriving through the back door on the operator's own screen. Asserting on the serialized bytes is the
+    /// only form of this test worth having: a field added to the view later is caught here, where a test that
+    /// checked named properties would pass and leak.
+    /// </remarks>
+    [Fact]
+    public async Task The_pilot_view_carries_no_board_no_hand_and_no_intent()
+    {
+        var table = await Started();
+
+        var served = Text(await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, PilotToken));
+
+        // Every field the payload carries, at every depth, held against the whole list. Searching the bytes for
+        // words instead does not work and is worth saying why: `subPhase` is legitimately `IntentSelection` and
+        // `waitingFor` is legitimately `Intent`, so a search for "intent" fails on the name of a sub-phase both
+        // players can see. The shape is the thing to pin — a field added later is not on this list.
+        using var document = JsonDocument.Parse(served);
+        Fields(document.RootElement).ShouldBe(
+            [
+                "matchId", "over", "outcome", "round", "subPhase", "seats",
+                "slot", "seated", "hasPerson", "waitingFor", "waitingCreature", "pending",
+            ],
+            ignoreOrder: true);
+    }
+
+    /// <summary>Every property name in a payload, at every depth, so a field added later has nowhere to hide.</summary>
+    private static SortedSet<string> Fields(JsonElement element)
+    {
+        var found = new SortedSet<string>(StringComparer.Ordinal);
+        Walk(element, found);
+        return found;
+
+        static void Walk(JsonElement at, SortedSet<string> found)
+        {
+            switch (at.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    foreach (var property in at.EnumerateObject())
+                    {
+                        found.Add(property.Name);
+                        Walk(property.Value, found);
+                    }
+
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var item in at.EnumerateArray())
+                    {
+                        Walk(item, found);
+                    }
+
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    /// <summary>A seat token cannot read the pilot's view, and the pilot's cannot read a seat's.</summary>
+    [Fact]
+    public async Task The_pilot_view_is_the_pilot_token_and_nothing_else()
+    {
+        var table = await Started();
+
+        (await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, SeatToken)).Status.ShouldBe(403);
+        (await table.Api.HandleAsync("GET", "/api/pilot", string.Empty, null)).Status.ShouldBe(403);
+        (await table.Api.HandleAsync("GET", "/api/pilot/nowhere", string.Empty, PilotToken)).Status.ShouldBe(404);
+    }
+
     private static Task<StudioResponse> Swap(Table table, string slot, string agent, int round) =>
         table.Api.HandleAsync("POST", $"/api/pilot/seats/{slot}", $$"""{"agent":"{{agent}}","round":{{round}}}""", PilotToken);
 
