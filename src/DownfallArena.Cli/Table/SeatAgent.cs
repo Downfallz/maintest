@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning.Recording;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.SharedKernel.Identifiers;
@@ -40,17 +41,29 @@ internal sealed class SeatAgent : IPlayerAgent
     }
 
     /// <summary>
-    /// Who would decide this board, without deciding it: whoever is seated, or whoever they would pass it to.
+    /// Who to ask for this board and what a record should call them, as one reading of the seat.
     /// </summary>
     /// <remarks>
-    /// A seat can hold an occupant that routes by the board rather than playing -- a handover plays the early
-    /// rounds as a bot and the rest as a person, and holds both. Naming the router would name neither of them,
-    /// so the question is passed down to it and answered by the same rule that would route the decision.
+    /// <para>
+    /// One reading is the whole point. Naming the occupant and then asking the seat again are two reads of
+    /// something another thread can change in between -- the pilot swaps a seat while the driver is deciding
+    /// -- and a swap landing between them writes one occupant's name on another's decision. Taking the
+    /// occupant once and handing out both means the answer and the name always describe the same player. A
+    /// swap that arrives after this read is a swap that arrives after this question, which is what a seat
+    /// already promises.
+    /// </para>
+    /// <para>
+    /// The agent handed out is the occupant itself and not this seat, because calling the seat would be the
+    /// second read this exists to avoid. The name may still come from further down: an occupant that routes
+    /// by the board rather than playing -- a handover holds both players -- is asked who it would route to,
+    /// by the same rule that will route the decision.
+    /// </para>
     /// </remarks>
-    public Occupant DeciderOf(PlayerBoardState board)
+    public Decider Deciding(PlayerBoardState board)
     {
         var seated = Seated;
-        return seated.Agent is IRouteDecisions router ? router.DeciderOf(board) : seated;
+        var decider = seated.Agent is IRouteDecisions router ? router.DeciderOf(board) : seated;
+        return new Decider(seated.Agent, decider.Name);
     }
 
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => Seated.Agent.DecideEvolution(board, options);

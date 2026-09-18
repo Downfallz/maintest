@@ -16,7 +16,7 @@ public sealed class RecordingAgent(
     ActionEncoder actions,
     CandidateTerms terms,
     ICollection<StepRecord> steps,
-    Func<PlayerBoardState, string?>? decidedBy = null) : IPlayerAgent
+    Func<PlayerBoardState, Decider>? deciding = null) : IPlayerAgent
 {
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
@@ -25,9 +25,9 @@ public sealed class RecordingAgent(
 
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Evolution, SubPhase = board.SubPhase, Evolution = options });
-        var who = Decider(board);
-        var decision = inner.DecideEvolution(board, options);
-        Record(board, candidates, terms.Evolution(board, options), decision.Choice is { } choice ? actions.Evolve(slots, choice) : ActionEncoder.Pass(), who);
+        var (who, named) = Deciding(board);
+        var decision = who.DecideEvolution(board, options);
+        Record(board, candidates, terms.Evolution(board, options), decision.Choice is { } choice ? actions.Evolve(slots, choice) : ActionEncoder.Pass(), named);
         return decision;
     }
 
@@ -37,9 +37,9 @@ public sealed class RecordingAgent(
 
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Speed, SubPhase = board.SubPhase, Speed = new SpeedOptions([creature]) });
-        var who = Decider(board);
-        var speed = inner.DecideSpeed(board, creature);
-        Record(board, candidates, CandidateTerms.Speed(), ActionEncoder.Speed(slots, new SpeedChoice(creature, speed)), who);
+        var (who, named) = Deciding(board);
+        var speed = who.DecideSpeed(board, creature);
+        Record(board, candidates, CandidateTerms.Speed(), ActionEncoder.Speed(slots, new SpeedChoice(creature, speed)), named);
         return speed;
     }
 
@@ -50,9 +50,9 @@ public sealed class RecordingAgent(
 
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Intent, SubPhase = board.SubPhase, Intent = new IntentOptions([intentOption]) });
-        var who = Decider(board);
-        var spell = inner.DecideIntent(board, intentOption);
-        Record(board, candidates, terms.Intent(board, intentOption), actions.Intent(slots, new CombatIntent(intentOption.Creature, spell)), who);
+        var (who, named) = Deciding(board);
+        var spell = who.DecideIntent(board, intentOption);
+        Record(board, candidates, terms.Intent(board, intentOption), actions.Intent(slots, new CombatIntent(intentOption.Creature, spell)), named);
         return spell;
     }
 
@@ -63,26 +63,27 @@ public sealed class RecordingAgent(
 
         var slots = Slots(board);
         var candidates = actions.Candidates(slots, new PlayerOptions { Kind = PlayerOptionsKind.Target, SubPhase = board.SubPhase, Target = options });
-        var who = Decider(board);
-        var targets = inner.DecideTargets(board, options);
-        Record(board, candidates, terms.Targets(board, options), actions.Targets(slots, options.Actor, options.Spell, targets), who);
+        var (who, named) = Deciding(board);
+        var targets = who.DecideTargets(board, options);
+        Record(board, candidates, terms.Targets(board, options), actions.Targets(slots, options.Actor, options.Spell, targets), named);
         return targets;
     }
 
     private BoardSlots Slots(PlayerBoardState board) => BoardSlots.Of(board, observations.Schema.TeamSize);
 
     /// <summary>
-    /// Who would decide this board, asked before the decision is made rather than after it.
+    /// Who to ask for this board and what to call them, as one reading rather than two.
     /// </summary>
     /// <remarks>
-    /// Deciding is where a seat changes hands: a handover seats the person on the very question it hands
-    /// over, and a seat that is blocked on a person can be swapped from under them while they think -- and
-    /// that question is still theirs. Asked afterwards, this would name whoever holds the seat by then, which
-    /// is a different person than the one who answered.
+    /// Naming the decider and then asking the wrapped agent would read a seat twice, and a seat changes hands
+    /// while a match runs: a swap landing between the two reads puts one occupant's name on another's
+    /// decision. So the answer carries the agent as well as the name, and this asks that agent rather than
+    /// looking the seat up again. Without a source of deciders there is nothing to name and nothing that
+    /// moves, so the wrapped agent answers under no name at all.
     /// </remarks>
-    private string? Decider(PlayerBoardState board) => decidedBy?.Invoke(board);
+    private Decider Deciding(PlayerBoardState board) => deciding?.Invoke(board) ?? new Decider(inner, null);
 
-    private void Record(PlayerBoardState board, IReadOnlyList<EncodedAction> candidates, IReadOnlyList<IReadOnlyList<float>> candidateTerms, EncodedAction chosen, string? who)
+    private void Record(PlayerBoardState board, IReadOnlyList<EncodedAction> candidates, IReadOnlyList<IReadOnlyList<float>> candidateTerms, EncodedAction chosen, string? decidedBy)
     {
         if (!candidates.Contains(chosen))
         {
@@ -106,7 +107,7 @@ public sealed class RecordingAgent(
             CandidateTerms = candidateTerms,
             Action = chosen.Key,
             Code = chosen.Code,
-            DecidedBy = who,
+            DecidedBy = decidedBy,
         });
     }
 }

@@ -134,7 +134,7 @@ public sealed class RecordingAgentTests
         inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         var steps = new List<StepRecord>();
         var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
-        var recording = new RecordingAgent(inner, Observations, Actions, Terms, steps, _ => "human:mk");
+        var recording = new RecordingAgent(inner, Observations, Actions, Terms, steps, _ => new Decider(inner, "human:mk"));
 
         recording.DecideEvolution(Board(), options);
 
@@ -159,28 +159,33 @@ public sealed class RecordingAgentTests
     }
 
     /// <summary>
-    /// The decider is named before the decision is handed over, not after it. Deciding is exactly where a seat
-    /// changes hands -- a handover seats the person on the very question it hands over -- so a name read
-    /// afterwards belongs to whoever holds the seat by then, which can be somebody who answered nothing.
+    /// The agent named is the agent asked, so a step cannot carry one player's name over another's decision.
     /// </summary>
+    /// <remarks>
+    /// Naming a decider and then asking the wrapped agent would be two readings of a seat, and a seat changes
+    /// hands while a match runs: the pilot swaps one while the driver is deciding, and a swap landing between
+    /// the two reads would be invisible in the record. Here the wrapped agent and the named one answer
+    /// differently, so a recorder that asked the wrapped one would write a step the named one did not make.
+    /// </remarks>
     [Fact]
-    public void A_step_is_named_before_the_decision_is_made_and_not_after_it()
+    public void A_step_is_answered_by_the_agent_it_names()
     {
-        var seated = "greedy";
-        var inner = Substitute.For<IPlayerAgent>();
-        inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
-            .Returns(_ =>
-            {
-                // What a handover does while it answers: whoever comes next is seated during this decision.
-                seated = "human:mk";
-                return EvolutionDecision.Pass;
-            });
+        var wrapped = Substitute.For<IPlayerAgent>();
+        wrapped.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
+            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.Guard)));
+        var named = Substitute.For<IPlayerAgent>();
+        named.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         var steps = new List<StepRecord>();
         var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
 
-        new RecordingAgent(inner, Observations, Actions, Terms, steps, _ => seated).DecideEvolution(Board(), options);
+        var decision = new RecordingAgent(inner: wrapped, Observations, Actions, Terms, steps, _ => new Decider(named, "human:mk"))
+            .DecideEvolution(Board(), options);
 
-        steps.ShouldHaveSingleItem().DecidedBy.ShouldBe("greedy");
+        decision.IsPass.ShouldBeTrue("the named agent is the one that answered");
+        wrapped.DidNotReceive().DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>());
+        var step = steps.ShouldHaveSingleItem();
+        step.DecidedBy.ShouldBe("human:mk");
+        step.Kind.ShouldBe(ActionKind.Pass);
     }
 
     private static PlayerBoardState Board() => PlayerBoardStateProjection.Build(new MatchStore().Started(), PlayerSlot.Player1);
