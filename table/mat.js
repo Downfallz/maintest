@@ -32,3 +32,37 @@ export function matBands(catalogue, creatures, cards) {
 export function drawn(bands) {
   return (bands ?? []).filter(band => band.spells.length > 0);
 }
+
+// Class identity is shared by the hand, unlock picker and reference. Names remain the primary label;
+// the accent is a stable visual cue, independent of which cards this creature has learned.
+export function classColour(name) {
+  let hash = 0;
+  for (const letter of String(name ?? '')) hash = (hash * 31 + letter.codePointAt(0)) >>> 0;
+  return `hsl(${hash % 360} 48% 68%)`;
+}
+
+// The host supplies tiers and prerequisite wording. Group them for reading, without inferring edges
+// from prose or treating a tier as an unlock rule. Only Evolution options can say "available now".
+export function talentClasses(catalogue, cards, creature, evolution) {
+  const known = new Set(creature?.knownSpells ?? []);
+  const offered = new Set(evolution?.creatures?.find(one => one.creature === creature?.id)?.unlockableSpells ?? []);
+  const classes = new Map();
+  const seen = new Set();
+  for (const band of catalogue?.trees ?? []) {
+    for (const spell of band.spells ?? []) {
+      if (seen.has(spell)) continue;
+      seen.add(spell);
+      const face = cards?.get(spell);
+      const name = face?.creatureClass || band.name || 'Unclassified';
+      if (!classes.has(name)) classes.set(name, new Map());
+      const tier = Number.isInteger(face?.tier) && face.tier > 0 ? face.tier : 0;
+      const tiers = classes.get(name);
+      if (!tiers.has(tier)) tiers.set(tier, []);
+      tiers.get(tier).push({ spell, status: known.has(spell) ? 'known' : offered.has(spell) ? 'available' : 'future' });
+    }
+  }
+  return [...classes].map(([name, tiers]) => ({
+    name,
+    tiers: [...tiers].sort(([a], [b]) => a - b).map(([tier, spells]) => ({ tier, spells })),
+  }));
+}

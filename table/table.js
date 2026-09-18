@@ -2,11 +2,11 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
-import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy, turnOrder } from './board.js';
 import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine, retainRoundEvents, roundRecap } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
-import { drawn, matBands } from './mat.js';
+import { classColour, talentClasses } from './mat.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -67,6 +67,8 @@ function start(seats) {
       showTab(state, name);
     });
   }
+
+  element('hand-talents').addEventListener('click', () => openTalents(state));
 
   // The two one-tap notes, built once. They read the state at the moment they are tapped, so the note lands
   // against whichever seat is on screen then rather than whichever was when the page loaded.
@@ -288,7 +290,7 @@ function selectable(face, selected, onClick) {
   face.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      onClick();
+      if (!event.repeat) onClick();
     }
   });
 }
@@ -328,8 +330,9 @@ function render(state, views) {
     state.chosen = null;
     state.error = '';
     state.evolving = null;
+    state.inspectCreature = null;
     element('decision').scrollTop = 0;
-    if (view.waitingFor === 'Intent' || view.waitingFor === 'Target') showTab(state, 'board');
+    if (['Speed', 'Intent', 'Target'].includes(view.waitingFor)) showTab(state, 'board');
   }
 
   // Until the player being asked says they are the one holding the device, the board stays behind the pass
@@ -349,7 +352,7 @@ function render(state, views) {
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.catalogue, state.error]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.inspectCreature, state.inspectClass, state.catalogue, state.error]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -368,13 +371,41 @@ function render(state, views) {
     ? 'The match is over.'
     : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`;
   renderTimeline(view.board);
-  renderBoard(state, view);
-  renderMat(state, view.board);
+  renderBoard(state, current);
+  renderMat(state, current);
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
   renderNotes(view);
   restorePosition(saved);
+  guideDecision(state, current);
+}
+
+// Guide each new question once, after the handover fence is down. Polls and local selections never
+// pull the player back after they deliberately scroll elsewhere to inspect the board.
+function guideDecision(state, current) {
+  if (state.guidedAsking === state.asked || current.view.over || current.view.playedByBot) return;
+  state.guidedAsking = state.asked;
+  const kind = current.view.waitingFor;
+  const anchor = kind === 'Speed' || kind === 'Intent' ? state.activeHand : kind === 'Target' ? state.targetAnchor : null;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const sheet = element('decision').getBoundingClientRect();
+  let bottom = globalThis.innerHeight;
+  // The mobile sheet obscures part of the board; the desktop sidebar does not.
+  if (sheet.left < rect.right && sheet.right > rect.left && sheet.top > 0 && sheet.top < bottom) bottom = sheet.top - 16;
+  if (rect.top < 16 || rect.bottom > bottom) {
+    anchor.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+}
+
+// A handler can outlive its DOM node or its question. Only the visible seat's current asking may act.
+function canInteract(state, current, kind) {
+  const active = activeSeat(state.views, state.holder);
+  return !state.sending && !current.view.over && !current.view.playedByBot &&
+    current.view.waitingFor === kind && current.seat === state.shown &&
+    active?.seat === current.seat && active.view.waitingAsked === current.view.waitingAsked &&
+    !needsPass(current, state.holder);
 }
 
 // The notes, and the comment box only once the match is decided: asking for prose while somebody is deciding
@@ -414,8 +445,10 @@ function renderTimeline(board) {
   element('timeline').replaceChildren(...strip);
 }
 
-function renderBoard(state, view) {
+function renderBoard(state, current) {
+  const view = current.view;
   const board = view.board;
+  state.targetAnchor = null;
   // What a row may do and say this poll. Targeting is a tap on a legal creature (playtest-app.md §3.2), so
   // the candidates the options offer are the rows that are tappable, and no others.
   const marks = {
@@ -423,13 +456,15 @@ function renderBoard(state, view) {
     board,
     active: isAsked(view) ? view.waitingCreature : null,
     candidates: isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
-    onPick: candidate => pick(state, view, candidate),
+    onPick: candidate => pick(state, current, candidate),
+    canConfirm: canCastTargets(state, view),
   };
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
+  enemyBooks(state, current);
   revealed(state, board.revealedActions);
   element('backs').replaceChildren(backs(state, board, view.opponentIntents));
-  element('own-hand').replaceChildren(hand(state, view));
+  element('own-hand').replaceChildren(hand(state, current));
 }
 
 // The hand: every spell this seat's creatures know, drawn as the whole card, with the ones it could cast right
@@ -442,19 +477,22 @@ function renderBoard(state, view) {
 // Intent question the asked creature's castable cards are the tap surface and the sheet holds only the
 // confirmation -- the same shape targeting has. A second copy of each card in the sheet would be two of one
 // card on one screen, and the enabled-looking one in the hand doing nothing.
-function hand(state, view) {
-  const asked = isAsked(view) && view.waitingFor === 'Intent' ? view.waitingCreature : null;
+function hand(state, current) {
+  const view = current.view;
+  state.activeHand = null;
+  const asked = isAsked(view) && ['Speed', 'Intent'].includes(view.waitingFor) ? view.waitingCreature : null;
   const rows = handRows(view.board.allies, view.options?.intent, view.board.intents);
   const box = document.createElement('div');
   box.className = 'hand-cards';
   box.hidden = rows.every(row => row.spells.length === 0);
-  box.append(...rows.map(row => handRow(state, row, asked)));
+  box.append(...rows.map(row => handRow(state, row, asked, current)));
   return box;
 }
 
 // One creature's row: who it is, whether it has declared, and its cards.
-function handRow(state, row, asked) {
+function handRow(state, row, asked, current) {
   const active = row.creature === asked;
+  const reference = current.view.waitingFor === 'Speed';
   const one = document.createElement(active ? 'div' : 'details');
   state.expandedHands ??= new Set();
   if (!active) {
@@ -464,18 +502,19 @@ function handRow(state, row, asked) {
       else state.expandedHands.delete(row.creature);
     });
   }
-  one.className = `hand-row${row.creature === asked ? ' active' : ''}`;
+  one.className = `hand-row${active ? ' active' : ''}`;
+  if (active) state.activeHand = one;
 
   const who = document.createElement(active ? 'div' : 'summary');
   who.className = 'hand-who';
-  who.textContent = `Creature ${row.creature}${row.creature === asked ? ' · choose a card' : row.declared ? ' · declared' : ''}`;
+  who.textContent = `Creature ${row.creature}${active ? (reference ? ' · choose speed · spell reference' : ' · choose a card') : row.declared ? ' · declared' : ''}`;
 
   const held = document.createElement('div');
   held.className = 'held-cards';
   held.dataset.scroll = `hand-${row.creature}`;
   // Tappable only on the creature being asked: every row says what its creature could cast, which is what
   // makes the hand readable, but only one creature is being asked at a time.
-  held.append(...row.spells.map(spell => heldCard(state, spell, row.creature === asked && spell.castable, row.creature)));
+  held.append(...row.spells.map(spell => heldCard(state, spell, active && !reference && spell.castable, row.creature, current, reference)));
 
   one.append(who, held);
   return one;
@@ -483,9 +522,9 @@ function handRow(state, row, asked) {
 
 // One card in the hand: its whole face, dimmed when the creature cannot cast it, and a tap surface when it is
 // the one being asked for.
-function heldCard(state, spell, offered, creature) {
+function heldCard(state, spell, offered, creature, current, reference) {
   const face = document.createElement('div');
-  face.className = ['card held', spell.castable ? 'castable' : '', offered ? 'offered' : '', offered && spell.spell === state.chosen ? 'chosen' : '']
+  face.className = ['card held', reference ? 'reference' : '', spell.castable ? 'castable' : '', offered ? 'offered' : '', offered && spell.spell === state.chosen ? 'chosen' : '']
     .filter(Boolean)
     .join(' ');
 
@@ -498,14 +537,11 @@ function heldCard(state, spell, offered, creature) {
 
   const availability = document.createElement('span');
   availability.className = 'card-availability';
-  availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Selected' : 'Select card →') : spell.castable ? 'Available' : 'Not available now';
+  availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Tap again to declare' : 'Select card →') : reference ? 'Spell reference' : spell.castable ? 'Available' : 'Not available now';
   face.append(availability);
   if (offered) {
     face.dataset.focus = `card-${creature}-${spell.spell}`;
-    selectable(face, spell.spell === state.chosen, () => {
-      state.chosen = spell.spell;
-      redraw(state);
-    });
+    selectable(face, spell.spell === state.chosen, () => chooseCard(state, current, spell.spell));
   }
 
   return face;
@@ -552,6 +588,7 @@ function line(state, creature, which, marks) {
   const box = document.createElement('div');
   box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}${legal ? ' legal' : ''}${creature.id === marks?.active ? ' active' : ''}`;
   if (legal) {
+    state.targetAnchor ??= box;
     box.dataset.focus = `target-${creature.id}`;
     selectable(box, picked, () => marks.onPick(creature.id));
   }
@@ -566,7 +603,7 @@ function line(state, creature, which, marks) {
   name.textContent = creature.name || `Creature ${creature.id}`;
   const label = document.createElement('span');
   label.className = 'creature-label';
-  label.textContent = creature.isAlive === false ? 'Defeated' : legal ? (picked ? 'Selected target' : 'Select target') : creature.id === marks?.active ? 'Acting now' : which === 'ally' ? 'Your creature' : 'Opponent creature';
+  label.textContent = creature.isAlive === false ? 'Defeated' : legal ? (picked ? (marks.canConfirm ? 'Tap again to cast' : 'Selected · choose more targets') : 'Select target') : creature.id === marks?.active ? 'Acting now' : which === 'ally' ? 'Your creature' : 'Opponent creature';
   name.append(label);
   who.append(id, name);
 
@@ -594,6 +631,19 @@ function line(state, creature, which, marks) {
   }
   const tags = document.createElement('div');
   tags.className = 'badges';
+
+  const order = turnOrder(creature, marks?.board);
+  if (order !== null) {
+    const turn = document.createElement('span');
+    turn.className = 'turn-label';
+    turn.textContent = 'Turn ';
+    const number = document.createElement('span');
+    number.className = `turn-order${order - 1 === cursorOf(marks?.board) ? ' now' : ''}`;
+    number.textContent = order;
+    number.setAttribute('aria-label', `Acts ${order} of ${marks.board.timeline.length}`);
+    turn.append(number);
+    tags.append(turn);
+  }
 
   for (const badge of badges(creature, marks?.board?.timeline)) {
     const one = document.createElement('span');
@@ -666,44 +716,122 @@ function dock(state, conditions) {
   return box;
 }
 
-// The talent mat, as a tab: every band, every spell, a pip per creature that knows it (mat.js).
-function renderMat(state, board) {
-  const rows = drawn(matBands(state.catalogue, board.allies, state.cards)).map(band => {
-    const box = document.createElement('div');
-    box.className = 'band-row';
-
-    const name = document.createElement('div');
-    name.className = 'band-name';
-    name.textContent = `${band.name} · ${band.depth}`;
-    box.append(name);
-
-    for (const spell of band.spells) {
-      const row = document.createElement('div');
-      row.className = 'mat-spell';
-      const label = document.createElement('span');
-      label.textContent = spell.name;
-      row.append(label);
-      if (spell.requires !== '') {
-        const gate = document.createElement('span');
-        gate.className = 'gate';
-        gate.textContent = spell.requires;
-        row.append(gate);
-      }
-
-      for (const pip of spell.pips) {
-        const dot = document.createElement('span');
-        dot.className = `pip${pip.known ? ' known' : ''}`;
-        dot.textContent = `${pip.creature}`;
-        row.append(dot);
-      }
-
-      box.append(row);
+// Inspect public knowledge independently of the opponent's still-secret choice for this round.
+function enemyBooks(state, current) {
+  state.expandedEnemyHands ??= new Set();
+  const rows = (current.view.board.enemies ?? []).map(creature => {
+    const key = `${current.seat}/${creature.id}`;
+    const row = document.createElement('details');
+    row.className = 'hand-row enemy-book';
+    row.open = state.expandedEnemyHands.has(key);
+    row.addEventListener('toggle', () => {
+      if (row.open) state.expandedEnemyHands.add(key);
+      else state.expandedEnemyHands.delete(key);
+    });
+    const spells = creature.knownSpells ?? [];
+    const title = document.createElement('summary');
+    title.className = 'hand-who';
+    title.textContent = `${creature.name || 'Creature'} #${creature.id} · ${spells.length} revealed spells`;
+    const cards = document.createElement('div');
+    cards.className = 'held-cards';
+    cards.dataset.scroll = `enemy-hand-${key}`;
+    cards.append(...spells.map(spell => heldCard(state, { spell, castable: false }, false, creature.id, current, true)));
+    if (spells.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'muted';
+      empty.textContent = 'No spells revealed yet.';
+      cards.append(empty);
     }
-
-    return box;
+    row.append(title, cards);
+    return row;
   });
+  element('enemy-hand').replaceChildren(...rows);
+}
 
-  element('mat').replaceChildren(...rows);
+function openTalents(state) {
+  showTab(state, 'mat');
+  element('mat').scrollIntoView({ block: 'start', behavior: 'instant' });
+}
+
+// The reference is grouped by class and server-computed tier. Prerequisites stay on each full card;
+// tier columns indicate progression, never an invented prerequisite connection.
+function renderMat(state, current) {
+  const view = current.view;
+  const allies = view.board.allies ?? [];
+  const firstOffered = view.waitingFor === 'Evolution' ? view.options.evolution?.creatures?.[0]?.creature : null;
+  const preferred = state.inspectCreature ?? state.evolving ?? firstOffered ?? view.waitingCreature;
+  const creature = allies.find(one => one.id === preferred) ?? allies[0];
+  const evolution = isAsked(view) && view.waitingFor === 'Evolution' ? view.options.evolution : null;
+  const classes = talentClasses(state.catalogue, state.cards, creature, evolution);
+  const toolbar = document.createElement('div');
+  toolbar.className = 'talent-toolbar';
+  const heading = document.createElement('h2');
+  heading.textContent = 'Plan your next unlock';
+  const help = document.createElement('p');
+  help.className = 'muted';
+  help.textContent = 'Follow each class through its tiers. Read Requires on each card for the exact path, including prerequisites from other classes. Availability is shown during your evolution pick.';
+  const picker = document.createElement('div');
+  picker.className = 'creature-picker';
+  picker.setAttribute('aria-label', 'Inspect talent progress');
+  for (const ally of allies) {
+    const choice = button(`Creature ${ally.id}`, () => {
+      state.inspectCreature = ally.id;
+      if (evolution?.creatures?.some(one => one.creature === ally.id)) state.evolving = ally.id;
+      redraw(state);
+    });
+    choice.classList.toggle('chosen', ally === creature);
+    choice.setAttribute('aria-pressed', String(ally === creature));
+    choice.dataset.focus = `talent-creature-${ally.id}`;
+    picker.append(choice);
+  }
+  const filter = document.createElement('select');
+  filter.setAttribute('aria-label', 'Filter by class');
+  filter.dataset.focus = 'talent-class';
+  for (const name of ['', ...classes.map(group => group.name)]) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name || 'All classes';
+    filter.append(option);
+  }
+  filter.value = classes.some(group => group.name === state.inspectClass) ? state.inspectClass : '';
+  filter.addEventListener('change', () => { state.inspectClass = filter.value; redraw(state); });
+  toolbar.append(heading, help, picker, filter);
+  const rows = classes.filter(group => !filter.value || group.name === filter.value).map(group => talentLane(state, group));
+  if (classes.length === 0) help.textContent = 'The talent catalogue is not available yet.';
+  element('mat').replaceChildren(toolbar, ...rows);
+}
+
+function talentLane(state, group) {
+  const lane = document.createElement('section');
+  lane.className = 'talent-lane';
+  lane.style.setProperty('--class-color', classColour(group.name));
+  const title = document.createElement('h2');
+  title.className = 'talent-class';
+  title.textContent = group.name;
+  const columns = document.createElement('div');
+  columns.className = 'talent-tiers';
+  columns.dataset.scroll = `talent-${group.name}`;
+  for (const tier of group.tiers) {
+    const column = document.createElement('div');
+    column.className = 'talent-tier';
+    const heading = document.createElement('h3');
+    heading.textContent = tier.tier ? `Tier ${tier.tier}` : 'Unranked';
+    column.append(heading);
+    for (const spell of tier.spells) {
+      const face = document.createElement('article');
+      face.className = `card talent-card ${spell.status}`;
+      const status = document.createElement('span');
+      status.className = 'talent-status';
+      status.textContent = spell.status === 'known' ? '✓ Known' : spell.status === 'available' ? '+ Unlock now' : '○ Not learned';
+      const parts = cardParts(state, spell.spell, '');
+      if (parts) face.append(status, ...parts);
+      else { face.textContent = spell.spell; face.append(status); }
+      column.append(face);
+    }
+    columns.append(column);
+  }
+  lane.append(title, columns);
+  return lane;
 }
 
 // What has happened, as this seat may be told it. The kinds are the engine's own words, off the wire, and a
@@ -880,6 +1008,7 @@ function evolutionButtons(state, current) {
   for (const creature of creatures) {
     const choice = button(`Creature ${creature.creature}`, () => {
       state.evolving = creature.creature;
+      state.inspectCreature = creature.creature;
       redraw(state);
     });
     choice.classList.toggle('chosen', creature === selected);
@@ -897,12 +1026,14 @@ function evolutionButtons(state, current) {
   hint.textContent = cards.children.length ? 'Choose a creature, then tap a spell to unlock it.' : 'No spells to unlock for this creature. Choose another creature or pass.';
   const pass = button('Pass this pick', () => submit(state, current, { kind: 'Evolution', pass: true }));
   pass.className = 'secondary';
-  return [picker, hint, cards, pass];
+  const explore = button('Explore classes & tiers →', () => openTalents(state));
+  explore.className = 'secondary';
+  return [picker, hint, explore, cards, pass];
 }
 
 // An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
 // and there is no undo (playtest-app.md §3.3, §7), so the first tap chooses a card in the hand and the second
-// commits it here. The chosen card stays on the screen, marked, which is what makes the second tap a reading
+// confirms it, on that same card or here. The chosen card stays on the screen, marked, which is what makes the second tap a reading
 // of the first rather than a formality.
 function intentButtons(state, current) {
   const view = current.view;
@@ -914,25 +1045,68 @@ function intentButtons(state, current) {
   // (playtest-app.md §3.2). The sheet says what to tap and holds the commitment.
   const asking = document.createElement('p');
   asking.className = 'muted';
-  asking.textContent = `Tap a card in the hand of creature ${view.waitingCreature}.`;
+  asking.textContent = `Tap a card for creature ${view.waitingCreature}, then tap it again to declare. You can also use the button below.`;
 
   const name = chosen === null ? '' : state.cards.get(chosen)?.name ?? chosen;
   const confirm = button(chosen === null ? 'Choose a card' : `Declare ${name}`, () => {
     confirm.disabled = true;
-    submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: chosen });
+    declareChosen(state, current);
   });
   confirm.disabled = chosen === null;
   return [asking, confirm];
 }
 
-// Toggling one target. It lives here rather than in the row so the count bound by `maxTargets` is applied in
-// one place: the row is a tap surface and the sheet holds `done`, and they cannot disagree about what is picked.
-function pick(state, view, candidate) {
-  const legal = view.options.target?.legalTargets ?? { candidates: [], maxTargets: 0 };
-  state.picked = state.picked.includes(candidate)
-    ? state.picked.filter(one => one !== candidate)
-    : [...state.picked, candidate].slice(0, legal.maxTargets);
+function chooseCard(state, current, spell) {
+  if (!canInteract(state, current, 'Intent')) return;
+  const option = current.view.options.intent?.creatures?.find(one => one.creature === current.view.waitingCreature);
+  if (!option?.castableSpells?.includes(spell)) return;
+  if (state.chosen === spell) return declareChosen(state, current);
+  state.chosen = spell;
   redraw(state);
+}
+
+function declareChosen(state, current) {
+  if (!canInteract(state, current, 'Intent')) return;
+  const view = current.view;
+  const option = view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature);
+  if (!option?.castableSpells?.includes(state.chosen)) return;
+  return submit(state, current, { kind: 'Intent', creature: view.waitingCreature, spell: state.chosen });
+}
+
+// The host's candidate set and bounds apply equally to the board shortcut and the sheet's confirmation.
+function canCastTargets(state, view) {
+  const legal = view.options?.target?.legalTargets;
+  return Boolean(legal) && state.picked.length >= legal.minTargets && state.picked.length <= legal.maxTargets &&
+    state.picked.every(id => legal.candidates.includes(id));
+}
+
+function castTargets(state, current) {
+  if (!canInteract(state, current, 'Target') || !canCastTargets(state, current.view)) return;
+  return submit(state, current, { kind: 'Target', targets: [...state.picked] });
+}
+
+function pick(state, current, candidate) {
+  if (!canInteract(state, current, 'Target')) return;
+  const legal = current.view.options.target?.legalTargets;
+  if (!legal?.candidates.includes(candidate)) return;
+  if (state.picked.includes(candidate)) return castTargets(state, current);
+  if (legal.maxTargets === 1) state.picked = [candidate];
+  else if (state.picked.length < legal.maxTargets) state.picked = [...state.picked, candidate];
+  redraw(state);
+}
+
+function targetRemovals(state, current) {
+  const selected = document.createElement('div');
+  selected.className = 'target-removals';
+  for (const id of state.picked) {
+    const remove = button(`Remove creature ${id} ×`, () => {
+      if (!canInteract(state, current, 'Target')) return;
+      state.picked = state.picked.filter(candidate => candidate !== id);
+      redraw(state);
+    });
+    selected.append(remove);
+  }
+  return selected;
 }
 
 function targetButtons(state, current) {
@@ -953,14 +1127,14 @@ function targetButtons(state, current) {
   const asking = document.createElement('p');
   asking.className = 'muted';
   const howMany = legal.minTargets === legal.maxTargets ? `${legal.maxTargets}` : `${legal.minTargets} to ${legal.maxTargets}`;
-  asking.textContent = `Select ${howMany} target(s) on the battlefield. ${picked.length} selected.`;
+  asking.textContent = `Select ${howMany} target(s). ${picked.length} selected. Tap a selected target again to cast on the selected group, or use Cast below. Use Remove to change your selection.`;
 
   const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => {
     confirm.disabled = true;
-    submit(state, current, { kind: 'Target', targets: picked });
+    castTargets(state, current);
   });
-  confirm.disabled = picked.length < legal.minTargets;
-  return [context, asking, confirm];
+  confirm.disabled = !canCastTargets(state, current.view);
+  return [context, asking, targetRemovals(state, current), confirm];
 }
 
 // A spell as the card the host serves, and as the id it was offered by when the catalogue has no card for it.
@@ -991,6 +1165,10 @@ function cardParts(state, spell, prefix) {
 
   const head = document.createElement('div');
   head.className = 'card-head';
+  if (face.creatureClass) {
+    head.classList.toggle('class-accent', true);
+    head.style.setProperty('--class-color', classColour(face.creatureClass));
+  }
   const title = document.createElement('div');
   title.className = 'card-title';
   title.textContent = cardTitle(face);

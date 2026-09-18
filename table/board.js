@@ -41,6 +41,12 @@ export function badges(creature, timeline) {
   return found;
 }
 
+// A position, not an initiative score. Preserve the engine's tie-breaking and speed order exactly.
+export function turnOrder(creature, board) {
+  const index = (board?.timeline ?? []).findIndex(slot => slot.creature === creature?.id);
+  return index < 0 ? null : index + 1;
+}
+
 // The condition dock, as the printed board has it: four lanes, `new` then `3`, `2`, `1`, with the permanent
 // ones in a group of their own (components.md §3.2, playtest-app.md §3.1).
 //

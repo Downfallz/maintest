@@ -30,9 +30,21 @@ provided by the running host.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's unlocks at a time. Choose its numbered button, then the spell to unlock.
-- The acting creature's hand is open. Other hands are expandable, including cards unavailable this turn.
-- Intent and targeting still require confirmation. Cards and legal targets accept Enter or Space as well
-  as a tap. The Talents tab is a reference; a new intent or target question returns to the battlefield.
+- Speed opens the acting creature's spellbook as a readable reference. Each new Speed or Intent question
+  scrolls to that hand if it is outside the usable viewport; a Target question brings a legal creature into
+  view. Later polls and local selection preserve deliberate scrolling. Other hands remain expandable.
+- Tap a spell once to select it, then again to declare it. Tap a selected target again to cast on the entire
+  selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
+  spells also let you switch by tapping another creature. Declare and Cast buttons remain available.
+  Enter or Space works too; holding a key or tapping while a request is pending never submits again.
+- The Talents reference groups classes by colour and spells by the host's tiers. Filter by class and inspect
+  each creature's known spells, exact prerequisites and current unlock offers. Desktop tiers read left to
+  right; phone tiers stack. The same class accents appear on hand and unlock cards. Open the reference from
+  the spellbook or Evolution sheet; a new Speed, Intent or Target question returns to the battlefield.
+- Every battlefield creature receives a circular turn number once the host has built the timeline. The
+  number follows the full server order, including ties; the active reveal/resolution slot is highlighted.
+- Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
+  These reference cards never select an action and never expose the opponent's face-down choice.
 - Round guide contains the host's round order and rule stamp. Match activity and playtest notes stay below
   the spellbook. The opaque handover screen remains the hotseat privacy boundary.
 
@@ -52,7 +64,8 @@ dotnet format --verify-no-changes
 
 `table.test.js` runs the shipped renderer in a minimal DOM double using Node's standard library. It covers
 stable polling, keyboard selection, asking identity, target bounds, creature-specific unlock lists, the
-handover fence, visible refusals, request failures and in-flight poll ordering. The feed tests also cover
+handover fence, visible refusals, request failures, in-flight poll ordering, decision scrolling, second-tap
+confirmation, public opponent books, talent filters and server-derived turn numbers. The feed tests also cover
 completed-round recap formatting, event round identity, applied outcomes, failed casts and independent
 two-round retention. It complements the existing
 projection and transport tests; it does not replace a visual browser check.

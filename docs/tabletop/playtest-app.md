@@ -255,10 +255,17 @@ The target is a 360 to 400 pixel wide screen held in one hand.
 
 The table now uses a wider desktop layout with the decision sheet beside the board, while keeping a
 bounded sticky bottom sheet and the same board reading order on phones. Evolution groups unlocks by
-creature. The acting creature’s hand stays open; the other hands can be expanded. Cards and legal targets
-also support keyboard activation. These are presentation and input changes only: every offered option,
-card face, stat and ordering still comes from the host. The opaque hotseat handover and the confirmation
-of intents and targets are unchanged. See [table/README.md](../../table/README.md) for the interaction and
+creature. Speed opens the acting creature’s spellbook as a reference, and a new Speed or Intent question
+scrolls to that hand when needed. Cards and legal targets support keyboard activation and a second tap on
+an existing selection confirms it; the explicit confirmation buttons remain. Selected targets have separate
+removal buttons so a multi-target set can still be corrected.
+
+Class accents follow cards between the hand, Evolution and Talents. The reference groups each class by
+server-computed tier, with exact prerequisite wording, per-creature knowledge and server-offered unlocks.
+Tiers read across on desktop and stack on phones. Battlefield cards show the creature’s one-based position
+in the host timeline, and expandable enemy spellbooks show only the public known-spell snapshot.
+These are presentation and input changes only: every offered option, card face, stat and ordering still
+comes from the host. The opaque hotseat handover remains the privacy boundary. See [table/README.md](../../table/README.md) for the interaction and
 test details.
 
 ---

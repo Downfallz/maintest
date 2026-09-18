@@ -213,3 +213,13 @@ test('a row with no timeline yet badges only what it knows', () => {
 test('a creature the timeline does not carry gets no speed badge', () => {
   assert.deepEqual(badges({ id: 9, isStunned: false }, [{ creature: 1, speed: 'Quick' }]), []);
 });
+
+test('turn numbers follow server order even with tied or higher initiative elsewhere', async () => {
+  const { turnOrder } = await import('./board.js');
+  const board = { timeline: [{ creature: 3, initiative: 1 }, { creature: 1, initiative: 9 }, { creature: 2, initiative: 9 }] };
+  assert.equal(turnOrder({ id: 1 }, board), 2);
+  assert.equal(turnOrder({ id: 3 }, board), 1);
+  assert.equal(turnOrder({ id: 2 }, board), 3);
+  assert.equal(turnOrder({ id: 4 }, board), null);
+  assert.equal(turnOrder({ id: 1 }, { timeline: [] }), null);
+});

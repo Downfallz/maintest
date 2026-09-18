@@ -65,3 +65,37 @@ test('a spell the catalogue has no card for carries no gate rather than an undef
 
   assert.deepEqual(matBands(catalogue, [], new Map())[0].spells.map(spell => spell.requires), ['']);
 });
+
+// Arbitrary classes and non-contiguous tiers ensure the page reads the host rather than a fixed tree.
+test('class lanes use card tiers, deduplicate placements and preserve prerequisite text on the card', async () => {
+  const { talentClasses } = await import('./mat.js');
+  const cards = new Map([
+    ['a', { creatureClass: 'North', tier: 3, requires: 'one of B or C' }],
+    ['b', { creatureClass: 'South', tier: 1 }],
+    ['c', { creatureClass: 'North', tier: 1 }],
+  ]);
+  const catalogue = { trees: [{ name: 'Node', depth: 9, spells: ['a', 'b', 'c', 'a'] }] };
+  const lanes = talentClasses(catalogue, cards, { id: 1, knownSpells: ['c'] }, { creatures: [{ creature: 1, unlockableSpells: ['a'] }] });
+  assert.deepEqual(lanes, [
+    { name: 'North', tiers: [{ tier: 1, spells: [{ spell: 'c', status: 'known' }] }, { tier: 3, spells: [{ spell: 'a', status: 'available' }] }] },
+    { name: 'South', tiers: [{ tier: 1, spells: [{ spell: 'b', status: 'future' }] }] },
+  ]);
+  assert.equal(cards.get('a').requires, 'one of B or C');
+});
+
+test('another creature and an absent evolution offer cannot make a talent available', async () => {
+  const { talentClasses } = await import('./mat.js');
+  const catalogue = { trees: [{ name: 'Node', spells: ['a'] }] };
+  const cards = new Map([['a', { creatureClass: 'North', tier: 2 }]]);
+  for (const evolution of [null, { creatures: [{ creature: 2, unlockableSpells: ['a'] }] }]) {
+    assert.equal(talentClasses(catalogue, cards, { id: 1 }, evolution)[0].tiers[0].spells[0].status, 'future');
+  }
+  assert.deepEqual(talentClasses(null, null, null, null), []);
+});
+
+test('class accents depend on the class name and stay stable across card locations', async () => {
+  const { classColour } = await import('./mat.js');
+  assert.equal(classColour('North'), classColour('North'));
+  assert.notEqual(classColour('North'), classColour('South'));
+  assert.match(classColour('North'), /^hsl\(\d+ 48% 68%\)$/);
+});

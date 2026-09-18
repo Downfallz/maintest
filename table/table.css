@@ -90,7 +90,7 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 .card-cost { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #b3b7a4; background: #d3d8c3; border-radius: 50%; font-size: 14px; font-weight: 750; }
 .card-body { margin-top: 13px; padding-top: 11px; border-top: 1px solid #c8c9b6; font-size: 11px; color: #414f41; line-height: 1.65; }.card-body div + div { margin-top: 3px; }
 .held { flex: 0 0 205px; scroll-snap-align: start; background: #252d26; border-color: #4a5547; color: #c4cebc; }.held .card-meta, .held .card-body { color: #b0baa8; }.held .card-body { border-color: #485143; }.held .card-cost { background: #323f2e; border-color: #53604c; }
-.held.castable { background: #e8e5d7; border-color: #c9c4ac; color: #27332b; }.held.castable .card-meta, .held.castable .card-body { color: #414f41; }.held.castable .card-body { border-color: #c8c9b6; }.held.castable .card-cost { background: #d3d8c3; border-color: #b3b7a4; }
+.held:is(.castable, .reference) { background: #e8e5d7; border-color: #c9c4ac; color: #27332b; }.held:is(.castable, .reference) .card-meta, .held:is(.castable, .reference) .card-body { color: #414f41; }.held:is(.castable, .reference) .card-body { border-color: #c8c9b6; }.held:is(.castable, .reference) .card-cost { background: #d3d8c3; border-color: #b3b7a4; }
 .held.offered { cursor: pointer; }.held.chosen { outline: 3px solid var(--gold); outline-offset: 0; }
 .card-availability { display: block; margin-top: 12px; font-size: 10px; font-weight: 650; }
 .action-area { position: sticky; top: 22px; }.sheet { padding: 22px; background: #222d25; border: 1px solid #667051; border-radius: 13px; box-shadow: 0 15px 35px #0002; max-height: calc(100dvh - 44px); overflow-y: auto; scrollbar-width: thin; }
@@ -148,4 +148,47 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
   .round-recap summary { padding: 14px; gap: 8px; }.round-recap .eyebrow { font-size: 8px; letter-spacing: 1px; }
   #recap-title { font-size: 23px; }#recap-count { max-width: 85px; text-align: center; }
   #recap-actions { padding: 0 10px 10px; max-height: 45dvh; }.recap-action { padding: 12px; }
+}
+
+.hand-row.active, .creature.legal { scroll-margin-top: 18px; }
+.held.reference .card-availability { color: #4b604f; }
+.target-removals { display: flex; flex-wrap: wrap; gap: 6px; }
+.target-removals:empty { display: none; }
+.target-removals button { min-height: 44px; padding: 8px 10px; font-size: 11px; background: transparent; color: var(--muted); }
+
+/* Class colour follows the same card from reference to unlock picker to hand. */
+.class-accent { border-top: 4px solid var(--class-color); padding-top: 10px; }
+.class-accent .card-meta { font-size: 11px; font-weight: 700; }
+.reference-link { background: transparent; color: var(--gold); font-size: 12px; padding: 8px 10px; }
+.enemy-books { margin-top: 10px; }
+.enemy-book { border-color: #614a44; }
+.enemy-book > summary { color: var(--enemy); font-size: 12px; }
+.turn-label { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; }
+.turn-order { display: inline-grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; border: 1px solid #b3c4b7; color: #f1f2e9; background: #19251f; font-size: 14px; font-weight: 750; }
+.turn-order.now { background: var(--gold); color: #2b251a; border-color: var(--gold); }
+.talent-toolbar { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin-bottom: 24px; }
+.talent-toolbar h2 { font: 25px Georgia, serif; color: var(--gold); }
+.talent-toolbar select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; color: var(--ink); background: var(--raised); }
+.talent-toolbar select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.talent-lane { min-width: 0; margin-bottom: 26px; border: 1px solid var(--line); border-left: 4px solid var(--class-color); border-radius: 10px; padding: 18px; background: #19231e; }
+.talent-class { font: 22px Georgia, serif; color: var(--class-color); margin-bottom: 8px; }
+.talent-tiers { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(215px, 1fr); overflow-x: auto; gap: 16px; padding-bottom: 8px; scrollbar-width: thin; }
+.talent-tier { min-width: 0; }
+.talent-tier h3 { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.talent-card { margin-bottom: 12px; }
+.talent-card.available { box-shadow: 0 0 0 2px var(--gold); }
+.talent-card.future { background: #29352e; border-color: #566458; color: var(--ink); }
+.talent-card.future .card-meta, .talent-card.future .card-body { color: #c0cbbf; }
+.talent-card.future .card-body { border-color: #526052; }
+.talent-card.future .card-cost { color: #27332b; }
+.talent-status { display: block; font-size: 10px; font-weight: 750; margin-bottom: 12px; color: #315640; }
+.talent-card.available .talent-status { color: #70500e; }
+.talent-card.future .talent-status { color: #c0cbbf; }
+#mat { scroll-margin-top: 18px; min-width: 0; }
+@media (max-width: 760px) {
+  .talent-lane { padding: 14px; }
+  .talent-tiers { grid-auto-flow: row; grid-auto-columns: auto; overflow: visible; }
+  .talent-toolbar { padding: 16px; }
+  .talent-toolbar h2 { font-size: 23px; }
+  .turn-order { width: 24px; height: 24px; font-size: 12px; }
 }

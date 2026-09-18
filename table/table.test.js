@@ -21,7 +21,7 @@ class Element {
     this.dataset = {};
     this.attributes = {};
     this.events = {};
-    this.style = {};
+    this.style = { setProperty(name, value) { this[name] = value; } };
     this.className = '';
     this.scrollLeft = 0;
     this.hidden = false;
@@ -39,6 +39,7 @@ class Element {
   addEventListener(key, action) { this.events[key] = action; }
   focus() { this.owner.activeElement = this; }
   scrollIntoView() { this.scrolledIntoView = true; }
+  getBoundingClientRect() { return { top: 1200, bottom: 1460, left: 0, right: 600, height: 260 }; }
   querySelectorAll(selector) {
     return this.children.flatMap(child => [
       ...(selector === 'button' ? child.tagName === 'button' : selector === '[data-focus]' ? child.dataset.focus : child.dataset.scroll) ? [child] : [],
@@ -58,7 +59,7 @@ function page() {
   };
   for (const node of Object.values(nodes)) node.owner = document;
   const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes,
-    document, URLSearchParams, console, location: { search: '' }, setInterval: () => {},
+    document, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
   });
   const script = readFileSync(new URL('./table.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
   vm.runInContext(script, context);
@@ -238,4 +239,167 @@ test('a full previous round survives trimming the short activity log on a late f
   p.state.holder = 'player1'; p.context.redraw(p.state);
   assert.equal(p.nodes['recap-actions'].children.length, 70);
   assert.match(p.nodes['recap-actions'].textContent, /First card/);
+});
+
+test('speed selection opens the acting spellbook as readable reference without offering a cast', () => {
+  const p = page(); p.view.waitingFor = 'Speed'; p.view.options = { speed: { missing: [1] } }; p.draw();
+  const row = p.nodes['own-hand'].children[0].children[0];
+  assert.match(row.className, /active/);
+  assert.match(row.textContent, /choose speed/);
+  assert.match(held(p).children[0].className, /reference/);
+  assert.equal(held(p).children[0].events.click, undefined);
+  assert.equal(row.scrolledIntoView, true);
+});
+
+test('a new intent scrolls to its hand once and selection does not scroll it again', () => {
+  const p = page(); p.draw();
+  assert.equal(p.state.activeHand.scrolledIntoView, true);
+  held(p).children[0].events.click();
+  assert.equal(p.state.activeHand.scrolledIntoView, undefined);
+  p.view.waitingAsked += 1; p.draw();
+  assert.equal(p.state.activeHand.scrolledIntoView, true);
+});
+
+test('an already visible hand does not move when the question changes', () => {
+  const p = page(); p.context.innerHeight = 2000;
+  p.nodes.decision.getBoundingClientRect = () => ({ top: 20, bottom: 300, left: 700, right: 1000 }); p.draw();
+  assert.equal(p.state.activeHand.scrolledIntoView, undefined);
+});
+
+test('tapping a selected card declares that card once with the asking identity', async () => {
+  const p = page(); const sent = [];
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  held(p).children[0].events.click(); assert.equal(sent.length, 0);
+  await held(p).children[0].events.click();
+  assert.equal(sent.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[0])), { kind: 'Intent', creature: 1, spell: 'one', asked: 1 });
+});
+
+test('tapping a different card changes the selection instead of declaring', () => {
+  const p = page(); let sent = 0;
+  p.current.transport.decide = async () => { sent += 1; return { ok: true }; }; p.draw();
+  held(p).children[0].events.click(); held(p).children[1].events.click();
+  assert.equal(p.state.chosen, 'two'); assert.equal(sent, 0);
+});
+
+test('holding a keyboard key does not confirm a selected card', () => {
+  const p = page(); p.draw(); held(p).children[0].events.click();
+  held(p).children[0].events.keydown({ key: 'Enter', repeat: true, preventDefault() {} });
+  assert.equal(p.state.sending, false);
+});
+
+test('tapping a selected target confirms it instead of removing it', async () => {
+  const p = page(); const sent = []; p.view.waitingFor = 'Target';
+  p.view.options = { target: { legalTargets: { candidates: [1, 2], minTargets: 1, maxTargets: 1 } } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  p.nodes.enemies.children[0].events.click(); assert.equal(sent.length, 0);
+  await p.nodes.enemies.children[0].events.click();
+  assert.equal(sent.length, 1); assert.deepEqual([...sent[0].targets], [2]);
+  assert.equal(sent[0].asked, 1);
+});
+
+test('multi-target confirmation requires the minimum and an explicit removal remains available', async () => {
+  const p = page(); const sent = []; p.view.waitingFor = 'Target';
+  p.view.options = { target: { legalTargets: { candidates: [1, 2], minTargets: 2, maxTargets: 2 } } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  p.nodes.enemies.children[0].events.click(); await p.nodes.enemies.children[0].events.click();
+  assert.equal(sent.length, 0); assert.deepEqual([...p.state.picked], [2]);
+  p.nodes.allies.children[0].events.click();
+  const remove = p.nodes.choices.querySelectorAll('button').find(button => button.textContent.startsWith('Remove'));
+  assert.ok(remove); remove.events.click(); assert.equal(p.state.picked.length, 1);
+  p.nodes.enemies.children[0].events.click();
+  await p.nodes.allies.children[0].events.click();
+  assert.equal(sent.length, 1); assert.deepEqual([...sent[0].targets].sort(), [1, 2]);
+});
+
+test('a single-target spell allows switching targets before the second tap', () => {
+  const p = page(); p.view.waitingFor = 'Target';
+  p.view.options = { target: { legalTargets: { candidates: [1, 2], minTargets: 1, maxTargets: 1 } } }; p.draw();
+  p.nodes.enemies.children[0].events.click(); p.nodes.allies.children[0].events.click();
+  assert.deepEqual([...p.state.picked], [1]);
+});
+
+test('in-flight confirmation ignores additional card taps', async () => {
+  const p = page(); let release; let entered; let sent = 0;
+  const started = new Promise(resolve => { entered = resolve; });
+  p.current.transport.decide = () => { sent += 1; entered(); return new Promise(resolve => { release = resolve; }); }; p.draw();
+  await p.state.announced; held(p).children[0].events.click();
+  const pending = held(p).children[0].events.click(); await started;
+  held(p).children[1].events.click(); held(p).children[0].events.click();
+  assert.equal(sent, 1); assert.equal(p.state.chosen, 'one');
+  release({ ok: true }); await pending;
+});
+
+test('a detached card from an earlier asking cannot select or declare on the next one', async () => {
+  const p = page(); p.draw(); const stale = held(p).children[0];
+  p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
+  await stale.events.click();
+  assert.equal(p.state.chosen, null); assert.equal(p.state.sending, false);
+});
+
+function talentFixture(p) {
+  p.state.cards.get('one').creatureClass = 'North'; p.state.cards.get('one').tier = 1;
+  p.state.cards.get('two').creatureClass = 'South'; p.state.cards.get('two').tier = 3;
+  p.state.cards.get('two').requires = 'First card';
+  p.state.catalogue.trees = [{ name: 'Branch', spells: ['one', 'two'] }];
+  p.view.board.allies[0].knownSpells = ['one'];
+  p.view.board.allies.push({ id: 3, knownSpells: ['two'] });
+}
+
+test('the talent reference follows the inspected creature and the class filter immediately', () => {
+  const p = page(); talentFixture(p); p.draw();
+  const toolbar = p.nodes.mat.children[0];
+  const south = p.nodes.mat.children[2];
+  assert.match(south.textContent, /SouthTier 3○ Not learned/);
+  assert.match(south.textContent, /Requires: First card/);
+  toolbar.children[2].children[1].events.click();
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
+  const filter = p.nodes.mat.children[0].children[3];
+  filter.value = 'South'; filter.events.change();
+  assert.equal(p.nodes.mat.children.length, 2);
+  assert.match(p.nodes.mat.children[1].textContent, /South/);
+  assert.doesNotMatch(p.nodes.mat.children[1].textContent, /North/);
+});
+
+test('the talent reference uses the selected evolution creature and exposes no extra unlock action', () => {
+  const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { creatures: [{ creature: 1, unlockableSpells: ['two'] }, { creature: 3, unlockableSpells: [] }] } };
+  p.draw(); assert.match(p.nodes.mat.children[2].textContent, /Unlock now/);
+  p.nodes.choices.children[0].children[1].events.click();
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
+  assert.doesNotMatch(p.nodes.mat.textContent, /Unlock now/);
+  assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 0);
+});
+
+test('opponent spellbooks grow only from public known spells and preserve their expansion', () => {
+  const p = page(); p.view.board.enemies[0].knownSpells = ['one']; p.draw();
+  let row = p.nodes['enemy-hand'].children[0];
+  assert.match(row.textContent, /1 revealed spells/);
+  assert.match(row.textContent, /First card/); assert.doesNotMatch(row.textContent, /Second card/);
+  assert.equal(row.children[1].children[0].events.click, undefined);
+  row.open = true; row.events.toggle();
+  p.view.board.enemies[0].knownSpells.push('two'); p.draw();
+  row = p.nodes['enemy-hand'].children[0];
+  assert.equal(row.open, true); assert.match(row.textContent, /2 revealed spells/);
+  assert.match(row.textContent, /Second card/);
+  p.view.board.enemies[0].knownSpells = []; p.draw();
+  assert.match(p.nodes['enemy-hand'].textContent, /No spells revealed yet/);
+  assert.doesNotMatch(p.nodes['enemy-hand'].textContent, /First card/);
+});
+
+test('battlefield turn badges appear only after the timeline exists and follow its current cursor', () => {
+  const p = page(); p.draw(); assert.doesNotMatch(p.nodes.allies.textContent, /Turn/);
+  p.view.board.timeline = [{ creature: 2 }, { creature: 1 }];
+  p.view.board.subPhase = 'RevealAndTarget'; p.view.board.revealCursor = 1; p.draw();
+  assert.match(p.nodes.enemies.textContent, /Turn 1/); assert.match(p.nodes.allies.textContent, /Turn 2/);
+  const number = p.nodes.allies.children[0].children[3].children[0].children[0];
+  assert.match(number.className, /now/); assert.equal(number.attributes['aria-label'], 'Acts 2 of 2');
+  p.view.board.timeline = []; p.draw(); assert.doesNotMatch(p.nodes.allies.textContent, /Turn/);
+});
+
+test('the initial talent preview follows the first offered evolution creature even if an earlier ally is absent from options', () => {
+  const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution'; p.view.waitingCreature = null;
+  p.view.options = { evolution: { creatures: [{ creature: 3, unlockableSpells: ['one'] }] } }; p.draw();
+  assert.match(p.nodes.mat.children[1].textContent, /Unlock now/);
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
 });
