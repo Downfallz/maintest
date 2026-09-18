@@ -35,9 +35,12 @@ Two things follow that shape everything below.
 
 **Search does not have one sign, *against Greedy*.** It gives a weak inner agent 0.1100 and takes 0.1700 from
 the strongest agent this repository has. Both readings are against Greedy and only against Greedy, and the
-negative one starts from 1.0000 — a saturated matchup where there is no upside left to measure, so part of
-that 0.1700 is a ceiling rather than a property of search. What the two rows license is "search can help or
-hurt against this opponent", not "search cannot improve an agent". The generalisation this file carried in an
+negative one starts from 1.0000 — a saturated matchup with no upside left to measure. That ceiling makes the
+row a one-sided test: it can show a loss and could not have shown a gain, so it is unfit to answer whether
+search improves an agent in general. It does **not** account for any part of the 0.1700, which is entirely a
+drop produced by applying search; an earlier version of this paragraph said part of it was the ceiling, which
+is a causal split nothing measured. What the two rows license is "search can help or hurt against this
+opponent", not "search cannot improve an agent". The generalisation this file carried in an
 earlier draft — that search is never an improver — is withdrawn: it would remove search as an operator
 before the pool that Line A builds has ever measured it, and the same file argues two sections later that
 strength here is matchup-dependent.
@@ -71,9 +74,14 @@ this repository measured itself:
 - The `P1` in question was **not the loop's `P2` step**. It was a local clone trained on dataset seed 1 at
   2000 matches, used as a proxy because its bare scores fall inside `ci-149`'s three-seed bands. The actual
   next clone, over the seeds a turn runs, was never trained or played.
-- The regression is **a property of that clone's dataset, not of the loop**. The same session fitted the same
-  teacher on the exploring dataset instead, and the searched version read 0.8488 — indistinguishable from
-  searching over `P0`. `--clone-on-explore` exists because of that measurement.
+- The regression **may be a property of that clone's dataset rather than of the loop**, and that is a
+  hypothesis, not a finding. The same session fitted the same teacher on the exploring dataset instead, and
+  the searched version read 0.8488 — indistinguishable from searching over `P0`. But that fit moved two
+  things at once: the coverage of the dataset *and* the labels, since a fifth of the exploring agent's
+  decisions are deliberately random, so it teaches different actions and not only a wider board. It is also
+  one seed-1 realisation, which is the reading this repository refuses to call a result anywhere else
+  (`AGENTS.md`, ADR 0049). `--clone-on-explore` exists because of it; the cause of the regression does not
+  follow from it.
 
 So the honest statement is that the carrier loop **has not been shown to climb**: the best reading of it is a
 dead heat (0.5325 against searching over `P0`, interval across one half). Closing it needs the real next
@@ -122,11 +130,20 @@ the ten, then eleven, then twelve. This is what replaces the exhausted Greedy ya
   work, is part of A1 rather than a detail after it**. The six-hour figure an earlier draft used was
   `tune.yml`'s; the two workflows do not share a budget.
 
-**Plan B1, when the pool outgrows the job — which is immediately.** Score against a sample rather than the
+**Plan B1, when the pool outgrows the job — which is immediately.** Search against a sample rather than the
 whole pool: the top *k* by current rating plus a random draw from the rest, so a candidate cannot win by
 beating only the weak half and cannot avoid the champions. At *k* = 4 plus two drawn, a rung is back to about
 two hours and fits the current limit without touching it. Given the arithmetic above, this is the likely
 shape of A1 on day one rather than a contingency.
+
+**The sample ranks candidates; it never admits one.** A sample of six from a pool of ten leaves four agents
+unplayed, so a winner could regress badly against one of them and still be let in — which is the failure A2
+exists to prevent, reintroduced by the thing that made A1 affordable. It would also hollow out B2 below,
+which counts on A1 producing every matchup as a by-product; a sampled rung produces a sparse table instead.
+So the split is explicit: **the sample is the search's scoring function, and the admission gate of A2 runs
+the one winning candidate against every pool member.** That gate is one candidate, not 161 — at the same
+7.3 s per opponent, a ten-agent pool costs about 73 seconds, which is nothing next to the rung that produced
+it. Sampling buys the search's cost down and buys nothing off the ratchet.
 
 ### A2 — the ratchet becomes `paired`, and the winner joins the pool
 
@@ -145,16 +162,32 @@ That last sentence is the whole loop. Everything before it exists.
 distinction matters because an earlier draft of this file asserted it. What exists is `ci-69` at 0.5325
 against `search-4` head to head — an interval containing one half, so neither a win nor a proven equivalence —
 beside twenty points between them against Greedy. Two readings, one of them inconclusive, do not make a cycle.
-A settled cycle needs three paired matchups that close, which the pool of A1 produces as a by-product and
-nothing before it does.
+A settled cycle needs three paired matchups that close, which A1's admission gate produces as a by-product —
+every winner against every pool member — and nothing before it does. The *search* sample does not: it plays
+six of ten, so the table it fills is sparse and a cycle can hide in the cells it never visits.
 
 If a cycle *is* found, a scalar rating is the wrong object: "beats the pool on the mean" can promote an agent
-that loses to half of it. The fallback is the **top cycle** — the smallest non-empty set whose every member
-beats every agent outside it — and the gate is "belongs to it". A set of agents "not beaten by any other
-member" is the wrong object and was the wrong object in the earlier draft: under `A > B > C > A` it is
-**empty**, "loses to nobody in it" is then vacuously true, and the ratchet accepts anything precisely when a
-cycle is what it needed to handle. The top cycle is never empty, contains the whole cycle when there is one,
-and reduces to the single champion when there is not.
+that loses to half of it. An earlier draft answered with a set of agents "not beaten by any other member",
+which is worse than imprecise: under `A > B > C > A` that set is **empty**, "loses to nobody in it" is
+vacuously true, and the ratchet accepts anything precisely when a cycle is what it needed to handle.
+
+The **top cycle** — the smallest non-empty set whose every member beats every agent outside it — is the right
+object *on a tournament*, where every pair has a winner. This pool is not one. `paired` returns settled or
+not settled, and not settled is an **absent edge, not a draw**: the relation is incomplete by construction,
+and this plan says so two paragraphs above. On an incomplete relation the top cycle degenerates the same way
+the covering set did. Take a pool of three where `A` beats `B` and a newcomer `X` settles against neither:
+no proper subset dominates, because no subset excluding `X` beats `X`. The top cycle is the whole pool, `X`
+belongs to it, and `X` has beaten nobody. So **membership is not a gate**, and the claim that the top cycle
+reduces to a single champion when there is no cycle is false here — it reduces to "everyone whose matchups
+did not settle, plus the champion".
+
+What the gate needs instead is an explicit rule for absent edges, and the safe direction is that a missing
+edge counts *against* the newcomer, because the ratchet's job is to refuse without evidence rather than to
+admit without it: **at least one settled win against a pool member, and no settled loss to any of them.**
+That is never vacuous and never admits an agent that beat nothing. Its cost is that under a genuine cycle it
+admits nobody — which is not a silent failure, it is A3 firing, and a loop that stops and says "the pool
+contains a cycle" is a result. Which rule is right is an ADR question, and it should be decided on the
+matchup table A1's admission gate produces, not in advance of it.
 
 ### A3 — a stop condition
 
@@ -183,10 +216,27 @@ everything that happened afterwards. A search computes something far better and 
 round was worth after playing it out, for every candidate it considered. That is a dense, local target
 produced by the one component that works.
 
+**And it is, on most rounds, the current evaluation wearing a different hat.** `LookaheadAgent.PlayOut`
+builds a round's value as `value += sign * _scorer.Score(...)` over the slots: a signed sum of the same
+nine-weight `ActionScorer` this line exists to escape. Only the `Outcome` component is independent of it, and
+that is non-zero only on a round that ends the match — a small minority. So a model fitted on this target and
+scoring well has demonstrated that it can **imitate `ActionScorer` cheaply**, which is compression, not a
+route past its functional ceiling. A high held-out r-squared would be the *expected* outcome of a successful
+distillation and would say nothing about strength.
+
+That does not kill B1, but it moves what "success" means: the target is worth fitting because a rollout sum
+is denser and less noisy than an episode return, and because the search's *lookahead* is folded into it —
+the value of a round already played out is not a thing `ActionScorer` can state about the board it starts
+from. The acceptance criterion has to be grounded outside the fit.
+
 - **Produces**: a value fitted on search targets, playable as `lookahead:<value>` once the evaluation can be
   named (see "what is missing" below).
-- **Falsified by**: an r-squared on held-out rounds no better than the episode-return fit. Then the target
-  was not the problem and the encoding is.
+- **Falsified by**: the fitted evaluation failing to beat the built-in weights in the league, by a paired
+  reading over the pool. Not by an r-squared, in either direction: a low one does not condemn it and a high
+  one is what distilling the scorer looks like.
+- **Watch for**: a fit whose ranking of rounds agrees with `ActionScorer`'s almost everywhere. That is the
+  signature of compression, and it is measurable directly — compare the two orders on held-out rounds before
+  spending a league run on it.
 
 **Plan B-alt, if regression stays noisy.** A search does not need a *value*, it needs an *order*: which of
 these rounds is better. Fit a pairwise ranker over rounds instead of a regressor over returns. It is a weaker
@@ -227,6 +277,11 @@ as good as the following holding:
   still one sample of the seed — `ci-150` reproduced `ci-149` exactly while its rows spanned 0.19.
 - Before claiming a measurement cannot be made here, open the artifact. This project writes far more than its
   summaries print.
+- **A correction is not safer than what it corrected.** Four of the five findings in the second review of
+  this file landed on sentences written to answer the first one, and two of those invented a causal split
+  nothing had measured: that part of search's 0.1700 loss "was the ceiling", and that the carrier loop's
+  regression "is a property of the dataset". Withdrawing an overreach tempts a smaller one in its place.
+  Corrections get reviewed like anything else, and this file was merged before its first round of them was.
 
 ## ADRs owed before code
 
