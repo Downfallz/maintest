@@ -83,4 +83,37 @@ public sealed class FileArtifactWriterTests
         Should.Throw<ArgumentException>(() => new FileArtifactWriter(" "));
         Directory.EnumerateFileSystemEntries(directory.Path).ShouldBeEmpty();
     }
+
+    /// <summary>
+    /// Two taps at a table arrive on two request threads, and both land in the same file. Before the writer
+    /// serialized its own writes this lost lines rather than failing: the share mode is advisory on Unix, so
+    /// the second stream opened at a length the first had already moved past. A note nobody can tell was lost
+    /// is worse than a note that refused to be written.
+    /// </summary>
+    [Fact]
+    public async Task Appends_from_several_threads_all_reach_the_file()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"downfall-writer-{Guid.NewGuid():N}");
+        try
+        {
+            var writer = new FileArtifactWriter(root);
+            await writer.StartJsonLinesAsync("notes.jsonl", TestContext.Current.CancellationToken);
+
+            var appends = Enumerable.Range(0, 40).Select(line => Task.Run(
+                () => writer.AppendJsonLinesAsync("notes.jsonl", [new { line }], TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken));
+            await Task.WhenAll(appends);
+
+            var written = await File.ReadAllLinesAsync(Path.Combine(root, "notes.jsonl"), TestContext.Current.CancellationToken);
+            written.Length.ShouldBe(40);
+            written.ShouldAllBe(line => line.StartsWith('{') && line.EndsWith('}'));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
 }

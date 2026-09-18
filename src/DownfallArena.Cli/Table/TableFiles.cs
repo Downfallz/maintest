@@ -38,6 +38,7 @@ internal sealed class TableFiles
             ["/mat.js"] = (Path.Combine(tableDirectory, "mat.js"), JavaScript),
             ["/hand.js"] = (Path.Combine(tableDirectory, "hand.js"), JavaScript),
             ["/feed.js"] = (Path.Combine(tableDirectory, "feed.js"), JavaScript),
+            ["/notes.js"] = (Path.Combine(tableDirectory, "notes.js"), JavaScript),
         };
     }
 

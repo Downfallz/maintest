@@ -74,18 +74,61 @@ public sealed class CliOptionsTests
     }
 
     /// <summary>
-    /// The table's own three. An option the allowlist does not hold is refused as unknown, so a command line the
+    /// The table's own four. An option the allowlist does not hold is refused as unknown, so a command line the
     /// documents print would not run at all — which is how the missing <c>--rules</c> was found.
     /// </summary>
     [Fact]
-    public void The_table_takes_the_rule_set_the_round_to_hand_over_on_and_the_seats()
+    public void The_table_takes_the_rule_set_the_round_to_hand_over_on_the_seats_and_who_is_playing()
     {
-        var options = CliOptions.Parse(["table", "--port", "5100", "--rules", "tabletop.json", "--handover", "10", "--p2", "greedy"]);
+        var options = CliOptions.Parse(["table", "--port", "5100", "--rules", "tabletop.json", "--handover", "10", "--p2", "greedy", "--who", "mk"]);
 
         options.Rules.ShouldBe("tabletop.json");
         options.Handover.ShouldBe(10);
         options.Player2Named.ShouldBeTrue();
         options.Player1Named.ShouldBeFalse();
+        options.Who.ShouldBe("mk");
+    }
+
+    /// <summary>
+    /// A table that leaves the disk as it found it. Recording stays on by default, because a playtest nobody
+    /// recorded teaches nothing and the flag is the one thing anybody would forget; turning it off is said.
+    /// </summary>
+    [Fact]
+    public void A_table_records_unless_it_is_told_not_to()
+    {
+        CliOptions.Parse(["table", "--rules", "tabletop.json"]).Recording.ShouldBeTrue();
+        CliOptions.Parse(["table", "--rules", "tabletop.json", "--no-record"]).Recording.ShouldBeFalse();
+    }
+
+    /// <summary>A valueless flag must not swallow whatever follows it, which is how one becomes a path.</summary>
+    [Fact]
+    public void The_flag_that_records_nothing_carries_no_value()
+    {
+        var options = CliOptions.Parse(["table", "--no-record", "--rules", "tabletop.json", "--who", "mk"]);
+
+        options.Recording.ShouldBeFalse();
+        options.Rules.ShouldBe("tabletop.json");
+        options.Who.ShouldBe("mk");
+    }
+
+    /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>
+    [Fact]
+    public void Recording_nowhere_and_recording_somewhere_cannot_both_be_asked_for()
+    {
+        var both = Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--no-record", "--record", "runs/playtest"]));
+
+        both.Message.ShouldContain("--no-record");
+        both.Message.ShouldContain("--record");
+    }
+
+    /// <summary>The line docs/learning/artifacts.md prints, which has to run.</summary>
+    [Fact]
+    public void The_recorded_session_command_line_the_documents_print_parses()
+    {
+        var options = CliOptions.Parse(["table", "--rules", "tabletop.json", "--who", "mk"]);
+
+        options.Who.ShouldBe("mk");
+        options.Record.ShouldBeNull();
     }
 
     /// <summary>A table told nothing plays the engine's default rule set, and seats a person in both slots.</summary>

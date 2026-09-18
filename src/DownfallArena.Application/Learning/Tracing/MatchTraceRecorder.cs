@@ -57,14 +57,47 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     public IReadOnlyList<TraceEntry> EntriesOf(MatchId matchId, int since = 0) =>
         _entries.GetValueOrDefault(matchId)?.Snapshot(since) ?? [];
 
+    /// <summary>
+    /// How many entries a match has so far, without copying any of them. What a caller watches to know that
+    /// something it set in motion has actually reached the trace: a decision handed to a seat is applied on
+    /// the driver's own thread, so the caller is ahead of it until this grows.
+    /// </summary>
+    public int Length(MatchId matchId) => _entries.GetValueOrDefault(matchId)?.Count ?? 0;
+
     /// <summary>The trace of a match, which the recorder then forgets.</summary>
     public MatchTrace Complete(MatchId matchId, RunStamp stamp, int? seed)
     {
         ArgumentNullException.ThrowIfNull(stamp);
 
         _entries.TryRemove(matchId, out var recorded);
-        var entries = recorded?.Snapshot(0) ?? [];
-        return new MatchTrace
+        return Trace(matchId, stamp, seed, recorded?.Snapshot(0) ?? []);
+    }
+
+    /// <summary>
+    /// The trace of a match as it stands, without forgetting it, or <c>null</c> when this recorder does not
+    /// hold that match. What a session checkpointed mid-match writes, so a table abandoned at Round 9 leaves a
+    /// readable partial trace rather than nothing (<c>docs/tabletop/app-roadmap.md</c>, stage 5). A bot batch
+    /// never needed this because a bot batch is never interrupted by dinner.
+    /// </summary>
+    /// <remarks>
+    /// Null rather than an empty trace, and that distinction is the whole reason for the return type. A match
+    /// this recorder never heard of and a match it has already handed to <see cref="Complete" /> both have no
+    /// entries here, and the second one has a finished trace written somewhere. A caller that checkpoints by
+    /// overwriting a file would replace that trace with an empty one, with nothing left to say it had.
+    /// </remarks>
+    public MatchTrace? Snapshot(MatchId matchId, RunStamp stamp, int? seed)
+    {
+        ArgumentNullException.ThrowIfNull(stamp);
+
+        return _entries.TryGetValue(matchId, out var recorded) ? Trace(matchId, stamp, seed, recorded.Snapshot(0)) : null;
+    }
+
+    /// <summary>
+    /// One definition of what a trace is, so a checkpoint and a finished match cannot disagree about it. The
+    /// outcome is the last entry's, which is null until the match has one.
+    /// </summary>
+    private static MatchTrace Trace(MatchId matchId, RunStamp stamp, int? seed, List<TraceEntry> entries) =>
+        new()
         {
             MatchId = matchId,
             Seed = seed,
@@ -72,13 +105,24 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
             Entries = entries,
             Outcome = entries.Count == 0 ? null : entries[^1].Player1.Outcome,
         };
-    }
 
     /// <summary>One match's entries, and the lock that lets them be read while they are still being written.</summary>
     private sealed class Recorded
     {
         private readonly Lock _gate = new();
         private readonly List<TraceEntry> _entries = [];
+
+        /// <summary>How many entries have been appended, read under the same lock they are appended behind.</summary>
+        public int Count
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _entries.Count;
+                }
+            }
+        }
 
         /// <summary>Appends the event with the boards after it, numbered where it landed.</summary>
         public void Add(IMatchEvent matchEvent, PlayerBoardState player1, PlayerBoardState player2)

@@ -11,7 +11,9 @@ using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Cli.Table;
 
@@ -26,9 +28,22 @@ namespace DownfallArena.Cli.Table;
 /// still the only thing that says what is legal. And it never invents a refusal: a tap that arrives after the
 /// screen moved on is late, not illegal, and says so with a 409 the page can act on.
 /// </remarks>
-internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events)
+internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null)
 {
     public const string TokenHeader = "X-Seat-Token";
+
+    /// <summary>
+    /// Whether the match reached an outcome. Stronger than "stopped being played" on purpose: a driver task
+    /// that faulted or was cancelled is also complete, and the session page is fenced on this because the
+    /// trace it carries holds both seats' boards. Nothing about a match that broke says the hidden half of it
+    /// may now be read.
+    /// </summary>
+    public bool IsDecided => Decided is not null;
+
+    private MatchOutcome? Decided =>
+        session.IsOver && session.Outcome.IsCompletedSuccessfully && session.Outcome.Result.IsSuccess
+            ? session.Outcome.Result.Value
+            : null;
 
     private const string SeatPrefix = "/api/seat/";
 
@@ -71,6 +86,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return Catalogue(ifNoneMatch);
         }
 
+        if (path == "/api/notes")
+        {
+            return method == "POST"
+                ? await NoteAsync(holder, body)
+                : StudioResponse.OfPlainText(404, $"No such route: {method} {path}");
+        }
+
         if (!path.StartsWith(SeatPrefix, StringComparison.Ordinal))
         {
             return StudioResponse.OfPlainText(404, $"No such route: {path}");
@@ -91,7 +113,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         return (method, segments) switch
         {
-            ("GET", [_]) => await SeatAsync(holder, Since(query)),
+            ("GET", [_]) => await SeatAsync(holder, Since(query), Shown(query)),
             ("POST", [_, "decision"]) => await DecideAsync(holder, body),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
@@ -128,16 +150,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         string.IsNullOrWhiteSpace(token) ? null : seats.FirstOrDefault(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
     /// <summary>What both seats may know: whose match this is, and whether it is over.</summary>
-    private StudioResponse Session()
-    {
-        var outcome = session.IsOver && session.Outcome.IsCompletedSuccessfully && session.Outcome.Result.IsSuccess
-            ? session.Outcome.Result.Value
-            : null;
-
-        return StudioResponse.OfJson(
-            new { matchId = session.MatchId, over = session.IsOver, outcome },
+    private StudioResponse Session() =>
+        StudioResponse.OfJson(
+            new { matchId = session.MatchId, over = session.IsOver, outcome = Decided },
             ArtifactJson.LineOptions);
-    }
 
     /// <summary>
     /// The sequence number a page has already seen everything below, off <c>?since=N</c>. Anything that is not
@@ -149,7 +165,21 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         return int.TryParse(since, CultureInfo.InvariantCulture, out var sequence) && sequence > 0 ? sequence : 0;
     }
 
-    private async Task<StudioResponse> SeatAsync(TableSeat seat, int since)
+    /// <summary>
+    /// Which asking this poll says the page has drawn, off <c>?shown=N</c>, or null for an ordinary poll.
+    /// </summary>
+    /// <remarks>
+    /// It names the asking and not merely the seat, because a seat is asked several questions in a row and
+    /// the host must not start a clock on the second one while it is still serving it. A poll that fetched a
+    /// question cannot also be the acknowledgement that it was drawn: that answer still has to reach a phone
+    /// and be rendered, and on a slow link the difference is the network, not the player.
+    /// </remarks>
+    private static long? Shown(string? query) =>
+        long.TryParse(System.Web.HttpUtility.ParseQueryString(query ?? string.Empty)["shown"], CultureInfo.InvariantCulture, out var asked)
+            ? asked
+            : null;
+
+    private async Task<StudioResponse> SeatAsync(TableSeat seat, int since, long? shown)
     {
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
         if (board.IsFailure)
@@ -175,6 +205,16 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // The question the seat is blocked on, rather than what the sub-phase allows: a person acts when their
         // own seat is asked, and the two differ while the other seat is still deciding.
         var waiting = seat.Person?.Waiting;
+
+        // The moment this seat was shown what it is being asked, which is what a decision's duration is
+        // measured from. Only the page's own acknowledgement of *this* asking counts. Anything else leaves the
+        // stamp exactly as it found it: a poll of the other seat from behind the pass screen would time the
+        // handover, and the poll that fetches a question is too early to be the moment it was read.
+        if (shown is { } drawn && waiting is { } asking && drawn == asking.Asked)
+        {
+            run?.Served(seat.Slot, asking);
+        }
+
         return StudioResponse.OfJson(
             new
             {
@@ -183,8 +223,18 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 options = options.Value,
                 waitingFor = waiting?.Kind.ToString(),
                 waitingCreature = waiting?.Creature,
+
+                // Which asking this is. The page sends it back once it has drawn it, and that is what starts
+                // the clock: two questions of the same shape in a row are two askings, and the second must not
+                // inherit the first's moment.
+                waitingAsked = waiting?.Asked,
                 playedByBot = seat.Person is null,
                 over = session.IsOver,
+
+                // Whether anything a player writes will be kept. A table told --no-record keeps nothing, and
+                // the page has to know: buttons that post a note into a 409 are worse than no buttons, because
+                // a player who taps one believes the thing they noticed was written down.
+                recording = run is not null,
                 opponentIntents = opponent.IsSuccess ? StillFaceDown(opponent.Value) : 0,
 
                 // What has happened, as this seat may be told it: the boards the trace keeps beside every
@@ -239,13 +289,172 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var check = PlayerDecisionCheck.Validate(options.Value, decision);
         if (check.IsFailure)
         {
-            return StudioResponse.OfJson(new { error = check.Error.Code, message = check.Error.Message }, ArtifactJson.LineOptions, status: 409);
+            return await RefuseAsync(seat.Slot, check.Error);
         }
+
+        // The question this answers has to be the question the seat is on. `Question.Answers` compares the kind
+        // and the creature, which two consecutive Evolution picks share, so without an asking a decision
+        // validated against the first could be applied to the second. Read here to fail early and to have
+        // something to record, but *checked* inside the seat, under the lock that hands the answer over: here
+        // it would be a check and then a gap, and two callers could both pass it before either submitted.
+        var waiting = person.Waiting;
+        if (posted.Asked is not { } asking)
+        {
+            return await RefuseAsync(seat.Slot, Late);
+        }
+
+        // Where this decision is being made, taken before it is handed over. Submitting releases the driver,
+        // which moves the round on, so anything read afterwards is where the match *went*: the step in
+        // steps.jsonl carries where it was, and the two files this session says are aligned would disagree
+        // about where every decision happened. The sub-phase is the one the options themselves name -- these
+        // are the options the decision was just validated against, so it is the question's own answer to
+        // "where", not a second reading that could have moved. The round comes off the board, before the tap.
+        var subPhase = options.Value.SubPhase;
+        var round = (await WhereAsync(seat.Slot)).Round;
+        var answered = waiting;
+
+        // And when this seat's screen was served, read now rather than after the submit. Submitting releases
+        // the driver, which can ask this seat the next question and have a poll stamp it before the recording
+        // gets here -- and a seat has one stamp, so the new question's replaces the answered one's. Read
+        // afterwards, the decision would be timed at nothing.
+        var servedAt = run?.ServedAt(seat.Slot, answered);
+
+
+        // How far the trace has got before this decision is handed over, so the checkpoint that follows can
+        // tell whether the driver has applied it yet.
+        var traced = run?.TraceLength(session.MatchId) ?? 0;
+
+        // Declared before the decision is handed over, and held until its note is written. The match can end
+        // on this very tap, and the host would otherwise close the session while this thread is still on its
+        // way to writing it down -- showing a finished session whose last decision is missing.
+        using var accepting = run?.Accepting();
 
         // Checked against the options, and still refused: the seat moved on between the two. That is the race
         // the driver would have thrown on, answered as the late tap it is.
-        return person.Submit(decision)
-            ? new StudioResponse(204, StudioResponse.Plain, [])
-            : StudioResponse.OfJson(new { error = "Seat.NotWaiting", message = "This seat is not waiting for that decision any more." }, ArtifactJson.LineOptions, status: 409);
+        if (!person.Submit(decision, asking))
+        {
+            return await RefuseAsync(seat.Slot, Late);
+        }
+
+        // The moment of acceptance, read here and not further down. Submitting releases the driver, which can
+        // run a whole command before this thread is scheduled again, so a clock read inside the recording
+        // would date the note after the thing it records and put engine time inside the player's duration.
+        var accepted = run is null ? null : new AcceptedDecision(answered, servedAt, run.Now());
+
+        await RecordAsync(seat.Slot, round, subPhase, accepted, traced);
+        return new StudioResponse(204, StudioResponse.Plain, []);
+    }
+
+    /// <summary>
+    /// Writes the decision down, and never changes the answer. The decision has landed by the time this runs
+    /// and cannot be taken back, so a session that fails to record it must not become a 500: the page would
+    /// show the seat a failure for a decision the aggregate accepted, and the next tap on a board that has
+    /// moved on would be refused as late. A lost line goes to the console, where it is the operator's problem
+    /// rather than the player's.
+    /// </summary>
+    private async Task RecordAsync(PlayerSlot slot, int? round, RoundSubPhase? subPhase, AcceptedDecision? accepted, int traced)
+    {
+        if (run is not { } recording || accepted is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await recording.DecidedAsync(session.MatchId, slot, round, subPhase, accepted, CancellationToken.None);
+
+            // The trace, as far as the match has got -- and not until the command this decision caused has
+            // finished raising everything it raises.
+            await SettledAsync(recording, slot, traced);
+            await recording.CheckpointAsync(session.MatchId, CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        {
+            await Console.Error.WriteLineAsync($"The session could not record a decision of {TableSeat.NameOf(slot)}: {exception.Message}");
+        }
+    }
+
+    private static readonly DomainError Late = new("Seat.NotWaiting", "This seat is not waiting for that decision any more.");
+
+    /// <summary>
+    /// A refusal, as the page reads it and as the session records it. Both from one place: a refusal a player
+    /// provoked is exactly what a playtest wants to know about, and one that reached the screen without
+    /// reaching <c>notes.jsonl</c> would be a rule that confused somebody and left no trace.
+    /// </summary>
+    private async Task<StudioResponse> RefuseAsync(PlayerSlot slot, DomainError error)
+    {
+        if (run is { } recording)
+        {
+            var (round, subPhase) = await WhereAsync(slot);
+            await recording.RefusedAsync(session.MatchId, slot, round, subPhase, error, CancellationToken.None);
+        }
+
+        return StudioResponse.OfJson(new { error = error.Code, message = error.Message }, ArtifactJson.LineOptions, status: 409);
+    }
+
+    /// <summary>
+    /// A note a player wrote, against the round and sub-phase they wrote it in. It is recorded for the seat
+    /// whose token posted it, so nobody can file a misplay against the other player.
+    /// </summary>
+    private async Task<StudioResponse> NoteAsync(TableSeat seat, string body)
+    {
+        if (run is not { } recording)
+        {
+            return StudioResponse.OfPlainText(409, "This table is not recording a session, so it has nowhere to keep a note.");
+        }
+
+        TableNoteBody? posted;
+        try
+        {
+            posted = JsonSerializer.Deserialize<TableNoteBody>(body, ArtifactJson.LineOptions);
+        }
+        catch (JsonException exception)
+        {
+            return StudioResponse.OfPlainText(400, exception.Message);
+        }
+
+        if (posted is null)
+        {
+            return StudioResponse.OfPlainText(400, $"A note names one of: {TableNoteBody.Kinds}.");
+        }
+
+        if (posted.ToKind(out var problem) is not { } kind)
+        {
+            return StudioResponse.OfPlainText(400, problem);
+        }
+
+        var (round, subPhase) = await WhereAsync(seat.Slot);
+        await recording.TypedAsync(session.MatchId, seat.Slot, round, subPhase, kind, posted.Trimmed(), CancellationToken.None);
+        return new StudioResponse(204, StudioResponse.Plain, []);
+    }
+
+    /// <summary>
+    /// Waits until the engine has finished the command this decision caused, so what is checkpointed next is
+    /// the whole of it and not the first event of it.
+    /// </summary>
+    /// <remarks>
+    /// Two things in sequence, and neither is enough alone. The trace growing says the command has *started*:
+    /// submitting only queues the driver, so until then this thread is ahead of it. Then a read through the
+    /// table's gate says it has *finished* -- the driver holds that gate for a whole command, saving and
+    /// dispatching inside it (<c>MatchWorkflow.CommitAsync</c>), so a read that comes back is that command
+    /// having let go. One command raises several events, and watching the trace alone would stop at the first
+    /// of them and checkpoint while the rest were still being dispatched. The gate is the completion signal
+    /// the host would otherwise have had to invent, and it was already there.
+    /// </remarks>
+    private async Task SettledAsync(PlaytestRun recording, PlayerSlot slot, int traced)
+    {
+        await recording.WaitForTraceAsync(session.MatchId, traced, CancellationToken.None);
+        await WhereAsync(slot);
+    }
+
+    /// <summary>
+    /// Where in the match a note is about to be written, read off the seat's own board. A board that cannot be
+    /// read is not worth refusing a note over: the note is the record, and a missing round number is a smaller
+    /// loss than no note at all.
+    /// </summary>
+    private async Task<(int? Round, RoundSubPhase? SubPhase)> WhereAsync(PlayerSlot slot)
+    {
+        var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, slot));
+        return board.IsSuccess ? (board.Value.RoundNumber, board.Value.SubPhase) : (null, null);
     }
 }

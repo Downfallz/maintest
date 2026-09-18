@@ -7,6 +7,7 @@ import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
+import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -46,7 +47,7 @@ function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
-  const state = { seats, holder: null, shown: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
+  const state = { seats, holder: null, shown: null, acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
   load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -65,8 +66,69 @@ function start(seats) {
     });
   }
 
+  // The two one-tap notes, built once. They read the state at the moment they are tapped, so the note lands
+  // against whichever seat is on screen then rather than whichever was when the page loaded.
+  element('note-buttons').replaceChildren(...TAPPED.map(({ kind, label }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', () => note(state, tappedNote(kind)));
+    return button;
+  }));
+
+  element('comment-save').addEventListener('click', async () => {
+    const box = element('comment-text');
+    if (await note(state, commentNote(box.value))) {
+      box.value = '';
+    }
+  });
+
   refresh(state);
   setInterval(() => refresh(state), 700);
+}
+
+// Tells the host this seat's question is now in front of somebody. It is the ordinary seat poll with the flag
+// set, and its answer is dropped: the board on screen is the one this render already has, and the feed cursor
+// is deliberately not advanced, so nothing this call fetches is lost -- the next poll asks for it again.
+function announce(state, current, drawn) {
+  const since = state.feeds.get(current.seat)?.next ?? 0;
+  const acknowledged = `${current.seat}/${drawn}`;
+
+  // Kept, because a decision must not overtake it. The controls stay live -- disabling them for a round trip
+  // would make every handover feel broken to protect a number -- and `submit` waits on this instead, so a tap
+  // inside the window is delayed by the request it would otherwise have raced rather than being refused. If
+  // it were raced and lost, the host would have no moment for this question and would record the duration as
+  // unknown, which is honest but is one measurement gone.
+  // Remembered only once it has landed. Marking it sent and then losing the request would leave a board on
+  // screen that the host has no moment for, and the render never offers to say so again: the decision made on
+  // it would be recorded with no duration at all, silently.
+  state.announced = current.transport.seat(since, drawn)
+    .then(answer => {
+      if (answer.ok) {
+        state.acknowledged = acknowledged;
+      }
+    })
+    .catch(() => {
+      // A page that cannot reach its host has a louder problem than a clock, and the next poll reports it.
+    });
+}
+
+// A note is the one thing in a session nothing else can reconstruct, so a refused one says so on screen
+// instead of disappearing. It does not go through `submit`: a note is not a decision, it cannot be late, and
+// nothing about the board changes because one was written.
+async function note(state, body) {
+  const line = element('noted');
+  const current = state.seats.find(seat => seat.seat === state.shown);
+  if (!body || !current) {
+    line.textContent = NOTHING_TO_RECORD;
+    line.hidden = false;
+    return false;
+  }
+
+  const answer = await current.transport.note(body);
+  line.textContent = answer.ok ? noted(body.kind) : (answer.body?.message ?? `The host answered ${answer.status}.`);
+  line.hidden = false;
+  return answer.ok;
 }
 
 // The catalogue the match is playing, through any seat this page holds: it is the same for both, and it is
@@ -117,6 +179,9 @@ async function refresh(state) {
     // Only the entries this page has not seen yet. The feed is the whole match's history and it only grows, so
     // a poll every 700 ms that asked for all of it would serialize and download the match again each time --
     // and over a half-hour session that is quadratic in the number of events, for twelve lines on screen.
+    // An ordinary poll acknowledges nothing. What the host times a decision from is the page saying it has
+    // *drawn* an asking, which is sent from the render below -- this request is the one fetching the question,
+    // and its answer still has to arrive and be laid out before anybody has read anything.
     const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0);
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
@@ -184,6 +249,19 @@ function render(state, views) {
   // Until the player being asked says they are the one holding the device, the board stays behind the pass
   // screen (seats.js).
   const fence = needsPass(current, state.holder);
+
+  // What the host is told has been drawn, and it is the asking rather than the seat. One seat is asked several
+  // questions in a row -- two Evolution picks are two askings of the same shape -- so acknowledging per seat
+  // would let the host start the second one's clock while it was still serving it, with the network and the
+  // layout inside the player's duration. Nothing is acknowledged while the pass screen is up: the board is
+  // behind it and the person being asked has not picked the device up yet.
+  // Per seat as well as per asking: the two seats count their own questions, so they are at the same number
+  // whenever they have decided the same number of times -- which in hotseat is most of the time. A bare number
+  // would call the other seat's question already acknowledged and never announce it.
+  const drawn = fence ? null : view.waitingAsked ?? null;
+  if (drawn !== null && `${current.seat}/${drawn}` !== state.acknowledged) {
+    announce(state, current, drawn);
+  }
   element('seat').textContent = nameOf(current.seat);
   element('pass-seat').textContent = nameOf(current.seat);
   element('pass-seat-again').textContent = nameOf(current.seat);
@@ -200,6 +278,15 @@ function render(state, views) {
   renderMat(state, view.board);
   renderFeed(state, view.feed);
   renderDecision(state, current);
+  renderNotes(view);
+}
+
+// The notes, and the comment box only once the match is decided: asking for prose while somebody is deciding
+// is asking them to stop playing. A table that keeps nothing offers neither.
+function renderNotes(view) {
+  const kept = notesAreKept(view);
+  element('notes').hidden = !kept;
+  element('comment').hidden = !kept || !commentIsOpen(view);
 }
 
 // The initiative track: the engine's order, banded by speed, scrolling sideways at 360 px. The strip never
@@ -687,7 +774,14 @@ async function submit(state, current, decision) {
 
   state.sending = true;
   try {
-    const answer = await current.transport.decide(decision);
+    // The host has to have been told this board is up before it is told what was decided on it, or it has
+    // nothing to measure the decision against. On loopback this has already resolved; on a phone over a slow
+    // link it is the difference between a duration and a blank.
+    await state.announced;
+
+    // The asking this answers travels with it: the host refuses a decision that names another, which is what
+    // stops a tap validated against one question from landing on the next of the same shape.
+    const answer = await current.transport.decide({ ...decision, asked: current.view.waitingAsked ?? null });
     if (!answer.ok) {
       const problem = element('problem');
       problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;

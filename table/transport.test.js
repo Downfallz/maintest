@@ -41,6 +41,20 @@ test('a decision is posted as json, which is also what the host requires of a wr
   assert.equal(answer.body, null);
 });
 
+// One route for both seats, because the seat a note belongs to is the token's and not the path's.
+test('a note is posted to one route, carrying the seat token that wrote it', async () => {
+  const { calls, fetchImpl } = stub({ status: 204, body: '' });
+  const transport = httpTransport('player2', 'abc', fetchImpl);
+
+  const answer = await transport.note({ kind: 'Lookup', text: '' });
+
+  assert.equal(calls[0].path, '/api/notes');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers['X-Seat-Token'], 'abc');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { kind: 'Lookup', text: '' });
+  assert.equal(answer.status, 204);
+});
+
 test('a refusal keeps the reason the host gave, whether it is json or a line of text', async () => {
   const late = httpTransport('player1', 'abc', stub({ status: 409, body: '{"error":"Seat.NotWaiting"}' }).fetchImpl);
   const plain = httpTransport('player1', 'abc', stub({ status: 403, body: 'This token is player2\'s.' }).fetchImpl);
@@ -54,7 +68,36 @@ test('a transport without a seat or a token refuses to exist', () => {
   assert.throws(() => httpTransport('player1', ''), /token/);
 });
 
-// The seat route's one query parameter, and the only thing it trims: the board and the options come whole on
+// What the host starts a decision's clock on: the page naming the asking it has drawn. It is the asking and
+// not a flag, because one seat is asked several questions in a row and the second must not inherit the first's
+// moment. An ordinary poll names none.
+test('a poll names the asking the page has drawn, or names none', async () => {
+  const { calls, fetchImpl } = stub();
+  const transport = httpTransport('player1', 'abc', fetchImpl);
+
+  await transport.seat(0, 7);
+  await transport.seat(4, 8);
+  await transport.seat(4);
+  await transport.seat(0);
+
+  assert.deepEqual(calls.map(call => call.path), [
+    '/api/seat/player1?shown=7',
+    '/api/seat/player1?since=4&shown=8',
+    '/api/seat/player1?since=4',
+    '/api/seat/player1',
+  ]);
+});
+
+// Zero is an asking like any other, so it must not be dropped the way a falsy flag would have been.
+test('the first asking is acknowledged even when it is numbered zero', async () => {
+  const { calls, fetchImpl } = stub();
+
+  await httpTransport('player1', 'abc', fetchImpl).seat(0, 0);
+
+  assert.equal(calls[0].path, '/api/seat/player1?shown=0');
+});
+
+// The seat route's other query parameter, and the only thing it trims: the board and the options come whole on
 // every poll because they are a snapshot, and the feed is a log the page already holds part of.
 test('a poll asks only for the feed entries it has not seen', async () => {
   const { calls, fetchImpl } = stub();

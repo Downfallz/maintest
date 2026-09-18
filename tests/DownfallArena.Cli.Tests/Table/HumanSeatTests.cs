@@ -19,13 +19,16 @@ public sealed class HumanSeatTests
 {
     private static readonly CreatureId Creature = CreatureId.From(1);
 
+    /// <summary>Which asking the seat is on, as a caller that has just read its screen would name.</summary>
+    private static long Asking(HumanSeat seat) => seat.Waiting?.Asked ?? 0;
+
     [Fact]
     public void A_seat_nobody_is_asking_is_waiting_for_nothing_and_answers_nothing()
     {
         var seat = new HumanSeat(CancellationToken.None);
 
         seat.Waiting.ShouldBeNull();
-        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick)).ShouldBeFalse();
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), asked: 1).ShouldBeFalse();
     }
 
     [Fact]
@@ -35,7 +38,7 @@ public sealed class HumanSeatTests
         var asked = Task.Run(() => seat.DecideSpeed(null!, Creature), TestContext.Current.CancellationToken);
 
         await WaitingFor(seat, PlayerOptionsKind.Speed);
-        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick)).ShouldBeTrue();
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), Asking(seat)).ShouldBeTrue();
 
         (await asked).ShouldBe(Speed.Quick);
     }
@@ -52,10 +55,11 @@ public sealed class HumanSeatTests
         var asked = Task.Run(() => seat.DecideSpeed(null!, Creature), TestContext.Current.CancellationToken);
 
         await WaitingFor(seat, PlayerOptionsKind.Speed);
-        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Standard));
+        var asking = Asking(seat);
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Standard), asking);
 
         seat.Waiting.ShouldBeNull();
-        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick)).ShouldBeFalse();
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), asking).ShouldBeFalse();
         await asked;
     }
 
@@ -67,10 +71,35 @@ public sealed class HumanSeatTests
 
         await WaitingFor(seat, PlayerOptionsKind.Speed);
 
-        seat.Submit(PlayerDecision.Pass).ShouldBeFalse();
-        seat.Submit(PlayerDecision.DeclareIntent(Creature, SpellId.Parse("spell:pummel:v1"))).ShouldBeFalse();
-        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick)).ShouldBeTrue();
+        seat.Submit(PlayerDecision.Pass, Asking(seat)).ShouldBeFalse();
+        seat.Submit(PlayerDecision.DeclareIntent(Creature, SpellId.Parse("spell:pummel:v1")), Asking(seat)).ShouldBeFalse();
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), Asking(seat)).ShouldBeTrue();
         await asked;
+    }
+
+    /// <summary>
+    /// A decision for the previous asking is refused even when its shape fits the current one. Two Evolution
+    /// picks in a round are the same shape, so without the asking a tap meant for the first would be accepted
+    /// for the second — spending a pick nobody meant to spend. Checked here rather than at the caller, because
+    /// anywhere outside this lock it is a check and then a gap.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_for_an_earlier_asking_of_the_same_shape_is_refused()
+    {
+        var seat = new HumanSeat(TestContext.Current.CancellationToken);
+        var first = Task.Run(() => seat.DecideSpeed(null!, Creature), TestContext.Current.CancellationToken);
+        await WaitingFor(seat, PlayerOptionsKind.Speed);
+        var stale = Asking(seat);
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), stale).ShouldBeTrue();
+        await first;
+
+        // The same shape asked again: the seat is on a new asking, and the old one's answer is not its.
+        var second = Task.Run(() => seat.DecideSpeed(null!, Creature), TestContext.Current.CancellationToken);
+        await WaitingFor(seat, PlayerOptionsKind.Speed);
+
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Standard), stale).ShouldBeFalse();
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Standard), Asking(seat)).ShouldBeTrue();
+        (await second).ShouldBe(Speed.Standard);
     }
 
     /// <summary>A question is asked about one creature, and an answer for another one is not late — it is wrong.</summary>
@@ -82,8 +111,8 @@ public sealed class HumanSeatTests
 
         await WaitingFor(seat, PlayerOptionsKind.Speed);
 
-        seat.Submit(PlayerDecision.ChooseSpeed(CreatureId.From(2), Speed.Quick)).ShouldBeFalse();
-        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick)).ShouldBeTrue();
+        seat.Submit(PlayerDecision.ChooseSpeed(CreatureId.From(2), Speed.Quick), Asking(seat)).ShouldBeFalse();
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), Asking(seat)).ShouldBeTrue();
         await asked;
     }
 
@@ -97,7 +126,7 @@ public sealed class HumanSeatTests
         var waiting = await WaitingFor(seat, PlayerOptionsKind.Speed);
 
         waiting.Creature.ShouldBe(Creature);
-        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick));
+        seat.Submit(PlayerDecision.ChooseSpeed(Creature, Speed.Quick), waiting.Asked);
         await asked;
     }
 

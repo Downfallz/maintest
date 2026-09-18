@@ -65,6 +65,20 @@
         <div id="choices"></div>
         <p id="problem" class="problem" hidden></p>
       </section>
+
+      <!-- The playtest's own record, from the players' side. Two taps while the match runs and a box when it
+           is over: this is the only thing a session carries that nothing else could infer from the trace or
+           the dataset. It sits behind the pass screen with the board, because a note belongs to whoever is
+           holding the device. -->
+      <section id="notes" class="notes" hidden>
+        <div id="note-buttons" class="note-buttons"></div>
+        <div id="comment" hidden>
+          <label for="comment-text">Anything to say about that match?</label>
+          <textarea id="comment-text" rows="3"></textarea>
+          <button id="comment-save" type="button">Save it with the session</button>
+        </div>
+        <p id="noted" class="muted" hidden></p>
+      </section>
     </main>
 
     <script type="module" src="table.js"></script>

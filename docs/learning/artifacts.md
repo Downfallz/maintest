@@ -9,13 +9,20 @@ the run stamp, directly or through its manifest.
 ```bash
 dotnet run --project src/DownfallArena.Cli -- simulate --matches 200 --seed 1 --record runs/random-vs-random
 dotnet run --project src/DownfallArena.Cli -- play --seed 1 --trace match.trace.json
+dotnet run --project src/DownfallArena.Cli -- table --rules <file> --who mk   # a playtest session, into runs/playtest/<id>/
 ```
 
 `simulate --record <dir>` writes the dataset and, by default, one trace per match under `<dir>`;
 `--traces <n>` keeps only the first `n` of them and `--traces 0` keeps none, which is what a dataset large
 enough to train on wants: a trace is about twenty times the disk of the steps from the same match and no
-learner reads one. `play --trace <file>` writes the trace of that one match. `runs/` is git-ignored:
-artifacts are outputs, not sources.
+learner reads one. `play --trace <file>` writes the trace of that one match. `table` records the session two people played into
+`runs/playtest/<session-id>/`, or under whatever `--record` names instead; `--who <initials>` puts them in the
+stamp as `human:<initials>` so two sessions played by different people differ on the agents axis rather than
+looking like the same player. `--no-record` writes nothing at all — no directory, no notes, no trace — for
+trying a rule out at a table that should leave the disk as it found it; the page then offers no note buttons,
+because a button that cannot keep what it was told is worse than no button. Recording is on by default the
+rest of the time: a playtest nobody recorded teaches nothing, and the flag is the one thing anybody would
+forget. `runs/` is git-ignored: artifacts are outputs, not sources.
 
 ## Run directory
 
@@ -26,6 +33,32 @@ artifacts are outputs, not sources.
   episodes.jsonl         one episode per line (two per match)
   traces/<match-id>.json one trace per match, up to what --traces allows
 ```
+
+A playtest session (ADR 0054) is that directory exactly, plus two files a bot run does not need:
+
+```
+runs/playtest/<session-id>/
+  ... the four above, for the one match that was played ...
+  notes.jsonl            one note per line: how long a decision took, a refusal, a lookup, a misplay, a comment
+  catalogue.json         the card faces the match was played with
+```
+
+Both exist because a human session cannot be regenerated. A bot run is a seed and a content hash, so it is
+replayed rather than kept; a session two people played once is not, and a trace read a year later carries
+Spell **ids** against a catalogue that has been tuned twenty times since — `spell:pummel:v1` would be a string
+whose cost and effects are gone, or silently different. `catalogue.json` is written once when the session
+opens, so the hash says *which* content and the file says *what it was*. The viewer ignores both today and
+opens the directory as a Batch and its trace as a Match, with no change to it.
+
+A session's trace is rewritten after every accepted decision, so a table abandoned at Round 9 leaves a
+readable partial trace. Its manifest is only rewritten with the final counts when the match reaches an
+outcome: a session nobody finished keeps the zero-count manifest it was opened with, which is how an
+abandoned session says so rather than reading like a finished one.
+
+**An abandoned session keeps its notes and its trace and loses its dataset.** Steps are held in memory until
+the match is closed, so `steps.jsonl` and `episodes.jsonl` of an interrupted session are empty. Nine rounds of
+trace beside an empty `steps.jsonl` is that, and not a bug — a human session that was not played to the end
+teaches the learning pipeline nothing, and what it still has to say is in `notes.jsonl`.
 
 The manifest is written twice: when the run starts, with zero counts, so an interrupted run still says what
 it was; and when it finishes, with the final counts. Starting a run empties `steps.jsonl` and `episodes.jsonl`,
@@ -146,6 +179,35 @@ The summary of one iteration under `runs/<run-id>/`: the run's stamp and, per ev
 `runs/<run-id>/evaluations/`, the agents, the matches, and the balance metrics (`winRateA` with its interval,
 `scoreA`, `player1WinShare`, `drawRate`, `averageRounds`, `roundCapShare`, spell entropies, fizzle rates).
 `docs/learning/training.md` says how it is built and compared.
+
+## `notes.jsonl` (a playtest session only)
+
+One line per note, written through `IArtifactWriter.AppendJsonLinesAsync` and timed with `TimeProvider`.
+
+| Field | Meaning |
+| --- | --- |
+| `sessionId`, `matchId`, `slot` | Which session, which match, which seat. |
+| `round`, `subPhase` | Where in the match, as in `steps.jsonl`. |
+| `at` | When, in UTC. |
+| `kind` | `Decision`, `Refused`, `Lookup`, `Misplay` or `Comment`. |
+| `elapsedMs` | For a `Decision`: from the moment that seat's options were **served** to the moment the decision was accepted. Served, not asked: the engine may ask a seat while nobody is looking at the screen, and the difference is the walk back to the table. Null when nothing can say the options ever reached a person — a bot seat, or a decision that beat the page's own word that the board was up. Never zero for that case: zero is a measurement and reads exactly like an instant decision. |
+| `code`, `message` | For a `Refused`: the `DomainError` the aggregate or the host's pre-check returned. |
+| `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed. A tap carries none. |
+| `asked` | For a `Decision`: which question of that seat it answered, counted by the seat in the order the engine asked them. **This, and not the line's position in the file, is the order to read decisions in.** |
+
+`Decision` and `Refused` are the host's own account of what happened and it refuses to accept either from a
+client; the other three come from the page, for the seat whose token posted them. No identifier is added to a
+step to tie the two files together: alignment is by order — the *n*-th decision of a seat is its *n*-th step.
+
+**Order decisions by `asked`, not by where they sit in the file.** A decision releases the engine before its
+note is written, so two decisions of one seat can be accepted in one order and appended in the other when a
+thread is descheduled between the two. `asked` is the order the engine asked them in, which is the order
+`steps.jsonl` is in.
+
+That alignment holds **for a seat a person played throughout, and only for such a seat.** A `Decision` note is
+written when a person's tap is accepted, while a step is recorded for whoever was seated — so `table --p2
+greedy` gives player 2 steps and no notes at all, and `table --handover 10` gives player 1 nine rounds of steps
+before its first note. Join the two files only for a seat the run stamp says a person held from the start.
 
 ## `traces/<match-id>.json`
 

@@ -23,6 +23,9 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     private Question? _question;
     private TaskCompletionSource<PlayerDecision>? _answer;
 
+    // Counts the questions this seat has been asked, so each one is told apart from the next of the same shape.
+    private long _asked;
+
     /// <summary>What this seat is waiting for, or <c>null</c> when the match is not asking it anything.</summary>
     public Question? Waiting
     {
@@ -39,13 +42,21 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     /// Answers the question the seat is waiting on. False when it is waiting for nothing, or for something
     /// else — a tap on a screen that has moved on is late, not illegal, and the host answers it as such.
     /// </summary>
-    public bool Submit(PlayerDecision decision)
+    /// <param name="asked">
+    /// Which asking the caller believes it is answering. Checked here, under the same lock that hands the
+    /// answer over, because anywhere else it is a check and then a gap: two callers can both read the seat's
+    /// current question, both agree it is theirs, and the first can advance the driver to the next question of
+    /// the same shape while the second is still on its way. <see cref="Question.Answers" /> would then accept
+    /// that second tap for a question nobody meant it for — a pick spent by accident, or a choice the round no
+    /// longer allows handed to the driver.
+    /// </param>
+    public bool Submit(PlayerDecision decision, long asked)
     {
         ArgumentNullException.ThrowIfNull(decision);
 
         lock (_gate)
         {
-            if (_question is not { } question || _answer is not { } answer || !question.Answers(decision))
+            if (_question is not { } question || _answer is not { } answer || question.Asked != asked || !question.Answers(decision))
             {
                 return false;
             }
@@ -88,8 +99,11 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
         return Ask(new Question(PlayerOptionsKind.Target, options.Actor)).Targets;
     }
 
-    private PlayerDecision Ask(Question question)
+    private PlayerDecision Ask(Question shape)
     {
+        // Stamped here rather than at the four call sites, which name the shape and have no reason to know
+        // that two askings of it are two things.
+        var question = shape with { Asked = Interlocked.Increment(ref _asked) };
         var answer = new TaskCompletionSource<PlayerDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_gate)
         {
@@ -128,7 +142,14 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     /// intent and a target binding, and none for evolution, which is asked of the player rather than of one
     /// creature.
     /// </summary>
-    internal sealed record Question(PlayerOptionsKind Kind, CreatureId? Creature)
+    /// <param name="Asked">
+    /// Which asking this is, counted by the seat. It exists so that two questions of the same shape are two
+    /// questions: a seat with two Evolution picks in a round is asked <c>(Evolution, null)</c> twice, and
+    /// anything comparing askings by their shape alone -- the decision clock does -- would treat the second as
+    /// a continuation of the first, keep the first's stamp for it and then take that stamp away when the first
+    /// was answered. Nothing else reads it; it is identity, not information.
+    /// </param>
+    internal sealed record Question(PlayerOptionsKind Kind, CreatureId? Creature, long Asked = 0)
     {
         /// <summary>Whether a decision answers this question rather than the previous one.</summary>
         public bool Answers(PlayerDecision decision)

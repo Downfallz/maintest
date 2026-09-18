@@ -47,6 +47,20 @@ internal sealed record CliOptions
     public int Port { get; init; } = DefaultPort;
 
     /// <summary>
+    /// Whether a table writes the session down. On by default, because a playtest nobody recorded teaches
+    /// nothing and the flag would be the one thing forgotten; <c>--no-record</c> turns it off, for trying a
+    /// rule out at a table that should leave nothing behind.
+    /// </summary>
+    public bool Recording { get; init; } = true;
+
+    /// <summary>
+    /// Who is playing, as initials. It goes into the run stamp as <c>human:&lt;initials&gt;</c>, so
+    /// <c>compare-stamps</c> reports the agents axis between two sessions played by different people rather
+    /// than calling them the same player (<c>docs/tabletop/app-roadmap.md</c>, stage 5).
+    /// </summary>
+    public string? Who { get; init; }
+
+    /// <summary>
     /// The interface address the table binds. The default is this machine and no other; a playtest on a phone
     /// needs the address that phone can reach (ADR 0054). The studio never reads it (ADR 0023).
     /// </summary>
@@ -87,13 +101,14 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private static readonly string[] Known =
     [
         "--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules", "--bind",
+        "--who",
     ];
 
     public static CliOptions Parse(IReadOnlyList<string> args)
@@ -101,7 +116,11 @@ internal sealed record CliOptions
         ArgumentNullException.ThrowIfNull(args);
 
         var command = args.Count > 0 && !args[0].StartsWith("--", StringComparison.Ordinal) ? args[0] : "play";
-        var (values, write) = Scan(args, skipCommand: command == args.ElementAtOrDefault(0));
+        var (values, flags) = Scan(args, skipCommand: command == args.ElementAtOrDefault(0));
+        if (flags.Contains("--no-record") && values.ContainsKey("--record"))
+        {
+            throw new ArgumentException("'--no-record' and '--record' ask for opposite things; pass one or neither.");
+        }
 
         return new CliOptions
         {
@@ -119,10 +138,12 @@ internal sealed record CliOptions
             Player2Named = values.ContainsKey("--p2"),
             Handover = values.TryGetValue("--handover", out var handover) ? ParseHandover(handover) : null,
             Rules = values.GetValueOrDefault("--rules"),
+            Who = values.GetValueOrDefault("--who"),
+            Recording = !flags.Contains("--no-record"),
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
-            Write = write,
+            Write = flags.Contains("--write"),
             Data = values.GetValueOrDefault("--data") ?? DefaultData,
             Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
             Export = values.GetValueOrDefault("--export"),
@@ -134,16 +155,16 @@ internal sealed record CliOptions
     /// nobody takes is refused here rather than ignored: a mistyped flag that parses is a run that quietly did
     /// something else.
     /// </summary>
-    private static (Dictionary<string, string> Values, bool Write) Scan(IReadOnlyList<string> args, bool skipCommand)
+    private static (Dictionary<string, string> Values, HashSet<string> Flags) Scan(IReadOnlyList<string> args, bool skipCommand)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
-        var write = false;
+        var flags = new HashSet<string>(StringComparer.Ordinal);
         for (var index = skipCommand ? 1 : 0; index < args.Count;)
         {
             var option = args[index];
-            if (option == "--write")
+            if (Valueless.Contains(option))
             {
-                write = true;
+                flags.Add(option);
                 index += 1;
                 continue;
             }
@@ -154,8 +175,11 @@ internal sealed record CliOptions
 
         return values.Keys.Except(Known, StringComparer.Ordinal).FirstOrDefault() is { } unknown
             ? throw new ArgumentException($"Unknown option '{unknown}'.")
-            : (values, write);
+            : (values, flags);
     }
+
+    /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
+    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record" };
 
     /// <summary>A trace count, rejected here so a typo is one line rather than a run that keeps nothing.</summary>
     private static int ParseTraces(string text)

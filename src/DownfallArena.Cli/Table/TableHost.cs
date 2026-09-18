@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Queries;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
@@ -18,6 +19,9 @@ internal static class TableHost
 {
     public const string TableDirectory = "table";
 
+    /// <summary>Where a session is written when <c>--record</c> names nowhere else.</summary>
+    public const string DefaultRunsDirectory = "runs/playtest";
+
     public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules, int seed)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -32,22 +36,55 @@ internal static class TableHost
         using var stopping = new CancellationTokenSource();
         var random = services.GetRequiredService<IRandomSource>();
         var agents = services.GetRequiredService<IAgentFactory>();
+        var resources = services.GetRequiredService<IGameResources>();
+        var events = services.GetRequiredService<MatchTraceRecorder>();
 
         var seat1 = Seat(PlayerSlot.Player1, options, rules, agents, random, stopping.Token);
         var seat2 = Seat(PlayerSlot.Player2, options, rules, agents, random, stopping.Token);
-        using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, stopping.Token);
+
+        // Built once, from the resources this match is playing: a card the page prints is the card the engine
+        // resolves, and a tuning pass is a rebuild and a restart rather than a change to the page (ADR 0054).
+        var catalogue = CatalogueProjection.Build(resources, rules);
+
+        // Opened before the match, so the files exist before anything can be decided into them: a session
+        // abandoned at its first question still says what it was (ADR 0054, stage 5). A table told
+        // --no-record opens nothing and writes nothing: a rule tried out at a table should be able to leave
+        // the disk as it found it.
+        var run = options.Recording
+            ? PlaytestRun.Open(
+                options.Record ?? DefaultRunsDirectory,
+                new PlaytestSetup(
+                    resources,
+                    rules,
+                    seed,
+                    Stamped(PlayerSlot.Player1, seat1.Seat, options),
+                    Stamped(PlayerSlot.Player2, seat2.Seat, options)),
+                events,
+                services.GetRequiredService<TimeProvider>())
+            : null;
+        if (run is not null)
+        {
+            await run.StartAsync(catalogue, stopping.Token);
+        }
+
+        using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, stopping.Token);
+
+        // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
+        // session abandoned at its first question is then a readable directory rather than one missing a file,
+        // and every checkpoint after this one overwrites it.
+        if (run is not null)
+        {
+            await run.CheckpointAsync(session.MatchId, stopping.Token);
+        }
 
         // The session's own read side, not the container's: it is the one behind the lock the driver writes
         // through, and a page polls it while the match is advancing.
         var seats = new[] { seat1.Seat, seat2.Seat };
-        // Built once, from the resources this match is playing: a card the page prints is the card the engine
-        // resolves, and a tuning pass is a rebuild and a restart rather than a change to the page (ADR 0054).
-        var catalogue = CatalogueProjection.Build(services.GetRequiredService<IGameResources>(), rules);
-        var api = new TableApi(session, session.Queries, seats, catalogue, services.GetRequiredService<MatchTraceRecorder>());
+        var api = new TableApi(session, session.Queries, seats, catalogue, events, run);
         var codes = new JoinCodes(seats);
-        using var server = new TableServer(options.Bind, options.Port, api, new TableFiles(TableDirectory), codes);
+        using var server = new TableServer(options.Bind, options.Port, api, new TableFiles(TableDirectory), codes, run);
 
-        Announce(server, codes, seats, options, rules);
+        Announce(server, codes, seats, options, rules, run);
 
         ConsoleCancelEventHandler stop = (_, eventArgs) =>
         {
@@ -59,6 +96,15 @@ internal static class TableHost
         {
             var serving = server.RunAsync(stopping.Token);
             await Task.WhenAny(serving, session.Outcome);
+
+            // Closed the moment the match has an outcome rather than when the host stops. The host keeps
+            // serving so two people can read the end screen and write a comment, and a session page opened
+            // from there has to show a finished run rather than the zero-count manifest it was opened with.
+            if (run is not null)
+            {
+                await CloseAsync(run, session);
+            }
+
 
             // The match is over, but the page has not read the outcome yet. Serving stops on Ctrl+C, which is
             // also how a session that ended badly is left readable rather than vanishing.
@@ -83,9 +129,15 @@ internal static class TableHost
     /// each seat, and the code that seat's player types. Everything a session needs to be joined and to be
     /// reproduced is on these lines, because the alternative is a playtest that nobody can place afterwards.
     /// </summary>
-    private static void Announce(TableServer server, JoinCodes codes, IReadOnlyList<TableSeat> seats, CliOptions options, RuleSet rules)
+    private static void Announce(TableServer server, JoinCodes codes, IReadOnlyList<TableSeat> seats, CliOptions options, RuleSet rules, PlaytestRun? run)
     {
         Console.WriteLine($"Table on {server.Url}");
+
+        // Said out loud either way. A table that is recording names where, and one that is not says so before
+        // anybody plays a session they meant to keep.
+        Console.WriteLine(run is null
+            ? "  Recording nothing: no session directory, no notes, no trace (--no-record)."
+            : $"  Recording session {run.SessionId} into '{run.Directory}'");
 
         // The rule set is named before anything is played. The board game is balanced for 8 to 16 rounds and
         // the engine's default caps at thirty, so a table that took one silently would be testing another
@@ -110,6 +162,52 @@ internal static class TableHost
         Console.WriteLine(server.IsLoopback
             ? $"  Only this machine can reach it.{Elsewhere()}"
             : "  Reachable from this network. A seat is its code: anyone who has one plays that seat.");
+    }
+
+    /// <summary>
+    /// Closes the session's dataset, and only on a match that reached an outcome. A session someone walked away
+    /// from keeps the zero-count manifest it was opened with and the trace checkpointed at the last decision:
+    /// that says "this was abandoned" out loud, where a manifest counting the steps of an unfinished match
+    /// would read exactly like a finished one (<c>docs/tabletop/app-roadmap.md</c>, stage 5).
+    /// </summary>
+    private static async Task CloseAsync(PlaytestRun run, TableSession session)
+    {
+        if (!session.Outcome.IsCompletedSuccessfully || session.Outcome.Result.IsFailure)
+        {
+            Console.WriteLine($"  Session {run.SessionId} was not finished; '{run.Directory}' holds it as far as it got.");
+            return;
+        }
+
+        var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
+        if (board.IsFailure)
+        {
+            Console.WriteLine($"  Session {run.SessionId} ended but its final board could not be read: {board.Error.Message}");
+            return;
+        }
+
+        await run.FinishAsync(session.MatchId, board.Value);
+        Console.WriteLine($"  Session {run.SessionId} written to '{run.Directory}'");
+    }
+
+    /// <summary>
+    /// What the run stamp calls a seat: the agent's own name for a bot, and <c>human</c> — with the initials
+    /// <c>--who</c> gave, when it gave any — for a person, so <c>compare-stamps</c> reports the agents axis
+    /// between two sessions played by different people.
+    /// </summary>
+    private static string Stamped(PlayerSlot slot, TableSeat seat, CliOptions options)
+    {
+        if (seat.Person is null)
+        {
+            return Describe(slot, options);
+        }
+
+        var person = options.Who is { Length: > 0 } who ? $"human:{who}" : "human";
+
+        // A handover seat is a person's seat only from the round it names. A bot plays it until then, and the
+        // recorder wraps the seat rather than whoever is in it, so those decisions are steps under this stamp.
+        // Calling the whole thing `human` would attribute a bot's play to the person and make the agents axis
+        // say the wrong thing about the one seat where it is least obvious.
+        return options.Handover is { } round ? $"{Describe(slot, options)}>{person}@{round}" : person;
     }
 
     /// <summary>The addresses a phone could be told, so choosing one is not a trip to the network settings.</summary>
