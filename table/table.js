@@ -4,7 +4,7 @@ import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
 import { backText, faceDown, handRows } from './hand.js';
-import { accumulate, feedLine } from './feed.js';
+import { accumulate, feedLine, retainRoundEvents, roundRecap } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
@@ -235,8 +235,9 @@ async function poll(state) {
     const held = state.feeds.get(seat.seat);
     const kept = accumulate(held?.entries, answer.body?.feed, FeedKept);
     const next = Number.isInteger(answer.body?.feedNext) ? answer.body.feedNext : held?.next ?? 0;
-    state.feeds.set(seat.seat, { entries: kept, next });
-    views.push({ ...seat, view: { ...answer.body, feed: kept } });
+    const roundEvents = retainRoundEvents(held?.roundEvents, answer.body?.feed, answer.body?.board?.roundNumber);
+    state.feeds.set(seat.seat, { entries: kept, next, roundEvents });
+    views.push({ ...seat, view: { ...answer.body, feed: kept, roundEvents } });
   }
 
   // Dropped after the round of polls rather than inside it, so nothing this loop reads changes while it runs.
@@ -370,6 +371,7 @@ function render(state, views) {
   renderBoard(state, view);
   renderMat(state, view.board);
   renderFeed(state, view.feed);
+  renderRecap(state, view);
   renderDecision(state, current);
   renderNotes(view);
   restorePosition(saved);
@@ -714,6 +716,92 @@ function renderFeed(state, feed) {
   });
 
   element('feed').replaceChildren(...lines);
+}
+
+// A completed round stays readable through the following round, outside the Battlefield/Talents tabs.
+// Open it once per completed round and seat. Ordinary polls preserve the player's collapsed state.
+function renderRecap(state, view) {
+  const panel = element('recap');
+  state.recaps ??= new Map();
+  const previous = state.recaps.get(state.recapSeat);
+  if (previous) previous.open = panel.open;
+  const recap = roundRecap(view.roundEvents, view.board, state.cards);
+  panel.hidden = recap === null;
+  if (recap === null) return;
+
+  const held = state.recaps.get(state.shown);
+  const fresh = held?.round !== recap.round;
+  panel.open = fresh ? true : held.open;
+  state.recaps.set(state.shown, { round: recap.round, open: panel.open });
+  state.recapSeat = state.shown;
+  element('recap-title').textContent = `Round ${recap.round} recap`;
+  element('recap-count').textContent = `${recap.actions.length} ${recap.actions.length === 1 ? 'cast' : 'casts'}`;
+  const rows = recap.actions.map(action => recapRow(action));
+  if (rows.length === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'muted';
+    empty.textContent = 'No casts resolved this round.';
+    rows.push(empty);
+  }
+  element('recap-actions').replaceChildren(...rows);
+  if (fresh) panel.scrollIntoView({ block: 'start', behavior: 'instant' });
+}
+
+function recapPerson(person) {
+  const name = document.createElement('span');
+  name.className = `recap-person ${person.side}`;
+  name.textContent = `${person.label} · ${person.side === 'ally' ? 'yours' : person.side === 'enemy' ? 'opponent' : 'unknown side'}`;
+  return name;
+}
+
+function recapRow(action) {
+  const row = document.createElement('li');
+  row.className = `recap-action ${action.actor.side}`;
+  const head = document.createElement('div');
+  head.className = 'recap-action-head';
+  const spell = document.createElement('strong');
+  spell.className = 'recap-spell';
+  spell.textContent = action.spell;
+  const status = document.createElement('span');
+  status.className = `recap-status ${action.status.toLowerCase()}`;
+  status.textContent = action.status;
+  head.append(spell, status);
+  const path = document.createElement('div');
+  path.className = 'recap-path';
+  path.append(recapPerson(action.actor));
+  const arrow = document.createElement('span');
+  arrow.textContent = '→';
+  arrow.setAttribute('aria-label', 'targets');
+  path.append(arrow);
+  if (action.targets.length === 0) {
+    const none = document.createElement('span');
+    none.textContent = 'No targets';
+    path.append(none);
+  }
+  path.append(...action.targets.map(recapPerson));
+  row.append(head, path);
+  const effects = document.createElement('div');
+  effects.className = 'recap-effects';
+  for (const effect of action.effects) {
+    const chip = document.createElement('span');
+    chip.className = `recap-effect ${effect.tone}`;
+    chip.textContent = `${effect.text} → ${effect.target.label}`;
+    effects.append(chip);
+  }
+  row.append(effects);
+  if (action.reason || action.effects.length === 0) {
+    const reason = document.createElement('p');
+    reason.className = 'muted';
+    reason.textContent = action.reason || 'No effects applied.';
+    row.append(reason);
+  }
+  for (const dropped of action.dropped) {
+    const reason = document.createElement('p');
+    reason.className = 'recap-skipped';
+    reason.textContent = `Skipped target · ${dropped}`;
+    row.append(reason);
+  }
+  return row;
 }
 
 function renderDecision(state, current) {

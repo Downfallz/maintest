@@ -38,6 +38,7 @@ class Element {
   setAttribute(key, value) { this.attributes[key] = value; }
   addEventListener(key, action) { this.events[key] = action; }
   focus() { this.owner.activeElement = this; }
+  scrollIntoView() { this.scrolledIntoView = true; }
   querySelectorAll(selector) {
     return this.children.flatMap(child => [
       ...(selector === 'button' ? child.tagName === 'button' : selector === '[data-focus]' ? child.dataset.focus : child.dataset.scroll) ? [child] : [],
@@ -204,4 +205,37 @@ test('a target spell missing from the catalogue still identifies the cast with n
   p.draw();
   assert.equal(p.nodes.asking.textContent, 'unknown-card');
   assert.match(p.nodes.choices.children.at(-1).textContent, /No legal target/);
+});
+
+
+test('a completed round opens its recap once, preserves collapse and opens the next recap', () => {
+  const p = page();
+  p.view.roundEvents = [{ sequence: 1, round: 2, event: { kind: 'RoundEnded', roundId: 1 } }];
+  p.view.board.roundNumber = 2; p.draw();
+  assert.equal(p.nodes.recap.hidden, false);
+  assert.equal(p.nodes.recap.open, true);
+  assert.equal(p.nodes.recap.scrolledIntoView, true);
+  assert.equal(p.nodes['recap-title'].textContent, 'Round 1 recap');
+  p.nodes.recap.open = false;
+  p.state.chosen = 'one'; p.draw();
+  assert.equal(p.nodes.recap.open, false);
+  p.view.roundEvents.push({ sequence: 2, round: 3, event: { kind: 'RoundEnded', roundId: 2 } });
+  p.view.board.roundNumber = 3; p.draw();
+  assert.equal(p.nodes.recap.open, true);
+  assert.equal(p.nodes['recap-title'].textContent, 'Round 2 recap');
+});
+
+test('a full previous round survives trimming the short activity log on a late first poll', async () => {
+  const p = page(); p.state.holder = null;
+  p.view.board.roundNumber = 3;
+  p.view.feed = Array.from({ length: 70 }, (_, sequence) => ({ sequence, round: 2, event: {
+    kind: 'CombatActionResolved', roundId: 2, resolution: { action: { actor: 1, spell: 'one', targets: [2] } }, appliedOutcomes: [],
+  } }));
+  p.view.feed.push({ sequence: 70, round: 3, event: { kind: 'RoundEnded', roundId: 2 } });
+  await p.context.refresh(p.state);
+  assert.equal(p.state.feeds.get('player1').entries.length, 60);
+  assert.equal(p.state.feeds.get('player1').roundEvents.length, 71);
+  p.state.holder = 'player1'; p.context.redraw(p.state);
+  assert.equal(p.nodes['recap-actions'].children.length, 70);
+  assert.match(p.nodes['recap-actions'].textContent, /First card/);
 });
