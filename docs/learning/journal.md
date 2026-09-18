@@ -4,46 +4,64 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
-## 2026-09-18. Search is not an improver, it is an attractor: it lifts an inner agent that is weaker than its evaluation and drags down one that is stronger, so the operator the loop was built on caps below an agent this repository already has
+## 2026-09-18. The inner agent of a search is worth 44 points with the evaluation held fixed, and search helps or hurts depending which agent it is given: +0.110 on a weak one, −0.170 on the strongest one this repository has
 
-- **The measurement began as a design question and refuted the design.** The next build named in the entry
-  below was targeted coverage: record the boards a search hands its inner agent and label them with
-  `ActionScorer.Best`, which the search already trusts for the enemy slots. Before building it, the obvious
-  check: is `ActionScorer.Best` actually a *better guesser* than the clone it would be teaching? Every number
-  here is the 200 benchmark seeds, both sides, 400 matches, engine `add047a`, content `7e199df4`. Greedy
-  against Greedy reads exactly 0.5000 on this line, which is the sanity check that the column means what it
-  says.
+- **The measurement began as a design question.** The next build named in the entry below was targeted
+  coverage: record the boards a search hands its inner agent and label them with `ActionScorer.Best`, which
+  the search already trusts for the enemy slots. The check before building: is the built-in heuristic a
+  better *guesser* than the clone it would be teaching? Every number here is the 200 benchmark seeds, both
+  sides, 400 matches, engine `add047a`, content `7e199df4`. Greedy against Greedy reads exactly 0.5000 on
+  this line, which is the sanity check that the column means what it says.
 
   | inner agent, **evaluation held at the built-in weights** | searched, against Greedy |
   | --- | --- |
   | the heuristic on the built-in weights — what plain `lookahead` uses | **0.4763** (0.4251 to 0.5274) |
-  | **random** | 0.4888 (0.4392 to 0.5383) |
+  | random | 0.4888 (0.4392 to 0.5383) |
   | `heuristic:stun-first` | 0.8300 (0.7948 to 0.8652) |
   | `policy:ci-69` | 0.8350 (0.7969 to 0.8731) |
   | `heuristic:search-4` | **0.9125** (0.8827 to 0.9423) |
 
-  So no: the default guesser is **indistinguishable from guessing at random**, and the answer to the design
-  question is that `ActionScorer.Best` would have taught the clone to guess worse. The spread from that one
-  component, with everything else fixed, is 44 points.
+  44 points from one component, with everything else fixed. The default guesser is at the bottom of it, below
+  every alternative tried and not above a random one.
 
-- **And then the same table read the other way says the operator does not do what the loop assumed.** Put
-  each inner agent's own score beside its searched one:
+  **What this table cannot be read to say, and a first draft of this entry said anyway.** The default and
+  random rows overlap, and overlapping marginal intervals do not establish equivalence — least of all here,
+  where every row plays the same fixed benchmark seeds and the results are therefore correlated. This
+  repository already says so in `search_weights.py`. Establishing "no better than random" needs a per-seed
+  paired difference or a stated equivalence margin, and `evaluate` reports only aggregates, so the paired
+  test cannot be run without new code. The rows that are *disjoint* are safe to read as differences; the
+  overlapping ones are not.
+
+  **It also cannot be read as a verdict on `ActionScorer.Best` as a labeller**, which is what the draft used
+  it for. Swapping the inner agent changes three things at once — the evolution, the speed, and an ally's
+  undeclared intent (`LookaheadAgent.cs:62`, `:64`, `:373`) — and plain `lookahead` reaches those through a
+  `HeuristicAgent`, whose intent decision also applies `Foresight.AlreadyDoomed` and so is not
+  `ActionScorer.Best`. A whole-agent substitution measured over whole matches cannot isolate one labelling
+  function. The question the targeted-coverage build actually poses is how well each candidate labeller
+  predicts on the recorded query boards, and nothing here measures that.
+
+- **Read against each inner agent's own unsearched score, search does not have one sign.**
 
   | inner agent | alone | searched (built-in evaluation) | what search did |
   | --- | --- | --- | --- |
-  | Greedy | 0.5000 | 0.4763 | nothing |
+  | Greedy | 0.5000 | 0.4763 (0.4251 to 0.5274) | not measurable here |
   | `policy:ci-69` | 0.7250 (0.6775 to 0.7725) | **0.8350** (0.7969 to 0.8731) | **+0.110, disjoint** |
-  | `heuristic:search-4` | 0.9300 (0.9031 to 0.9569) | 0.9125 (0.8827 to 0.9423) | nothing, intervals overlap |
+  | `heuristic:search-4` | 0.9300 (0.9031 to 0.9569) | 0.9125 (0.8827 to 0.9423) | not measurable, overlapping |
   | `heuristic:stun-first` | **1.0000** | **0.8300** (0.7948 to 0.8652) | **−0.170, disjoint** |
 
-  It is monotone in how strong the inner agent already is. **Search is an attractor, not an improver**: it
-  pulls play toward the level of its evaluation, from below *and from above*. `ci-149` climbed because
-  `ci-69` is weak. `stun-first` takes every match from Greedy on its own and loses seventeen points by being
-  searched. ADR 0055 called this a ceiling; a ceiling is something you approach, and this is something that
-  pulls you back down to it.
+  Search lifts `ci-69` and costs `stun-first` seventeen points — a set that takes every match from Greedy on
+  its own. Both of those are disjoint and safe. The middle row is not: `search-4` searched and unsearched
+  overlap, so this line says nothing about it either way.
 
-- **The evaluation is the constraint that binds, held against a fixed guesser.** ADR 0055 decided that naming
-  an inner agent leaves the evaluation as `ActionScorer`'s built-in weights. That decision is measurable:
+  A tempting story is that search pulls play toward the level of its own evaluation, from below and from
+  above. **This table refuses it**: the searched scores do not converge on one level at all — 0.8300, 0.8350
+  and 0.9125, all on the same built-in evaluation — so there is no single point being attracted to. What
+  survives is narrower and still useful: search substitutes the evaluation's judgement for the inner
+  agent's in the positions it plays out, and whether that helps depends on which of the two is better
+  *there*. For the strongest agent measured it is plainly worse.
+
+- **The evaluation is worth points too, held against a fixed guesser.** ADR 0055 decided that naming an inner
+  agent leaves the evaluation as `ActionScorer`'s built-in weights:
 
   | guesser fixed, evaluation varied | against Greedy |
   | --- | --- |
@@ -52,28 +70,25 @@ first.
   | `lookahead:heuristic:search-4` — built-in evaluation | 0.9125 (0.8827 to 0.9423) |
   | `lookahead:learning/weights/search-4.json` — its own | 0.9200 (0.8910 to 0.9490) |
 
-  Thirteen points for `stun-first`, on disjoint intervals, from changing nothing but the yardstick. Nothing
-  for `search-4`, whose intervals overlap. The penalty is largest for the agent whose valuation differs most
-  from the built-in one — `stun-first` is the set that prices a stun above a kill, and reading its play with
-  greedy-ish weights systematically misreads it. Even at 0.9600 it is below the 1.0000 it scores unsearched,
-  so search still costs it four points with the best yardstick available.
+  Thirteen points for `stun-first` on disjoint intervals, from changing nothing but the yardstick; for
+  `search-4` the two overlap and the line says nothing. The largest penalty falls on the agent whose
+  valuation differs most from the built-in one — `stun-first` is the set that prices a stun above a kill, and
+  greedy-ish weights read that play differently. Even at 0.9600 it is below the 1.0000 it scores unsearched.
 
-- **What this does to the plan.** Targeted coverage is refused before it is built, on its own merits: better
-  guessing inside a search whose evaluation caps play near 0.85 cannot exceed 0.85, and `lookahead:policy:ci-69`
-  reads 0.8350 already. There is about two points of headroom there, not a loop. The same argument retires
-  the searched-teacher direction as a *climb*: whatever policy it carries, the operator drags it to the
-  evaluation's level, and `stun-first` sits at 1.0000 far above it.
+- **The draft of this entry claimed a ceiling its own table disproves, and the claim is withdrawn.** It said
+  the built-in evaluation caps searched play near 0.85, and used that to refuse the targeted-coverage build
+  for having two points of headroom and to retire the searched-teacher direction. `heuristic:search-4` runs on
+  that same built-in evaluation and scores **0.9125**. There is no 0.85 cap. Targeted coverage is **not**
+  refused by anything measured here: the best guesser tried reaches 0.9125 with the evaluation untouched, so
+  the headroom above `lookahead:policy:ci-69`'s 0.8350 is at least eight points and possibly more, and
+  whether a clone fitted on the query boards can take it is exactly the open question. Nothing in this entry
+  retires it.
 
-  The lever is the evaluation, and it is the one thing no arm of this project has ever learned. That is what
-  a value of a position is, and the value arm has never produced one — `termsR2` of 0.0004 in `ci-149`, a
-  jackknife interval of 0.0000 to 0.3760. It has been the "eventual" answer in three entries; it is now the
-  only lever that is not capped by construction.
-
-- **One expressiveness gap the table exposes, worth its own record.** There is no spec today for the cell
-  that should be best: a *policy* as the guesser with a *strong weight set* as the evaluation.
-  `lookahead:policy:<file>` gives the built-in evaluation and `lookahead:<weights>` gives the same agent both
-  jobs, so "the clone guesses, `stun-first` judges" cannot be written. The guesser is worth 36 points and the
-  evaluation 13, and nothing here measures whether they compose, because the engine cannot be asked.
+- **What is open, and what the table cannot answer.** There is no spec for the cell that should be best: a
+  *policy* as the guesser with a *strong weight set* as the evaluation. `lookahead:policy:<file>` gives the
+  built-in evaluation and `lookahead:<weights>` gives one agent both jobs, so "the clone guesses, `stun-first`
+  judges" cannot be written. The guesser is worth 44 points across this panel and the evaluation 13 on the
+  row where it is measurable, and **whether they compose is unmeasured**, because the engine cannot be asked.
 
 ## 2026-09-18. Searching over the clone `ci-149` produced is 15 points *worse* than searching over the one it was searched from, and the fix is the dataset: a clone's job inside a search is to guess, not to play, and the two are separate enough that copy accuracy does not predict either
 
