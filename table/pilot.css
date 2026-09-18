@@ -1,0 +1,28 @@
+/* Desktop-first, and the reverse of every other screen in this app on purpose: the pilot page is a table of
+   seats and a table is what a wide screen is for. It still has to open in one column, because a hotseat
+   evening may have one device in the room (docs/tabletop/app-roadmap.md, stage 6). */
+.no-god-view { border-left: 2px solid var(--gold); padding-left: 12px; margin: 0 0 18px; max-width: 70ch; }
+.seats { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 22px; }
+.seat-card { border: 1px solid var(--line); border-radius: 11px; padding: 14px 16px; background: var(--panel); }
+.seat-card h2 { margin-bottom: 8px; }
+.seat-card dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+.seat-card dt { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; align-self: center; }
+.seat-card dd { margin: 0; overflow-wrap: anywhere; }
+.asked { color: var(--gold); }
+.pending { color: var(--ally); }
+.control { border: 1px solid var(--line); border-radius: 11px; padding: 16px; background: var(--panel); max-width: 70ch; }
+.control h2 { margin-bottom: 6px; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 14px; }
+.fields label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; }
+select, input[type="number"] { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--raised); color: var(--ink); }
+input[type="number"] { width: 8ch; }
+.said { margin-top: 12px; font-size: 13px; min-height: 1.4em; }
+.said.refused { color: var(--refused); }
+.problem { margin: 18px 0 0; color: var(--refused); }
+
+/* One column on a phone, which is the fallback this page owes rather than the shape it is designed at. */
+@media (max-width: 720px) {
+  .seats { grid-template-columns: minmax(0, 1fr); }
+  .fields { flex-direction: column; align-items: stretch; }
+  input[type="number"] { width: 100%; }
+}

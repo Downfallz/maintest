@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#111917" />
+    <title>Downfall Arena — pilot</title>
+    <link rel="stylesheet" href="table.css" />
+    <link rel="stylesheet" href="pilot.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The instrument</span><h1>Pilot</h1></div></div>
+      <div class="session-state"><span class="seat-label">This match</span><p id="where" role="status">Connecting…</p></div>
+    </header>
+
+    <main id="pilot" hidden>
+      <!-- Never a board and never a hand: in hotseat the operator is usually one of the two players, and a
+           pilot page showing both sides would hand that person the opponent's face-down Intents. -->
+      <p class="muted no-god-view">
+        This page shows who is playing, not what they hold. In hotseat you are probably one of the two players.
+      </p>
+
+      <section id="seats" class="seats" aria-label="Seats"></section>
+
+      <section class="control" aria-labelledby="swap-title">
+        <h2 id="swap-title">Hand a seat over</h2>
+        <p class="muted">
+          At the top of a round the match has not reached — a seat that changed hands inside a round would split
+          a sub-phase between two players. A seat holds <strong>one</strong> pending swap and a second replaces
+          it, so what is pending is shown above before you type another.
+        </p>
+        <div class="fields">
+          <label for="swap-seat">Seat<select id="swap-seat"></select></label>
+          <label for="swap-agent">Takes it<select id="swap-agent"></select></label>
+          <label for="swap-round">From round<input id="swap-round" type="number" min="1" step="1" value="2" /></label>
+          <button id="swap" type="button">Hand over</button>
+        </div>
+        <p id="said" class="said" role="status"></p>
+      </section>
+    </main>
+
+    <p id="problem" class="problem" hidden></p>
+
+    <script type="module" src="pilot.js"></script>
+  </body>
+</html>

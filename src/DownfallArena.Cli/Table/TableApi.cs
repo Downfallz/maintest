@@ -48,7 +48,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
     private const string SeatPrefix = "/api/seat/";
 
-    private const string PilotPrefix = "/api/pilot/seats/";
+    private const string PilotPrefix = "/api/pilot";
+
+    private const string PilotSeats = "/seats/";
 
     /// <summary>
     /// The catalogue as it is served, and an entity tag over the bytes themselves. The catalogue cannot change
@@ -76,7 +78,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     {
         // The pilot's routes are answered before a seat token is even looked for: the two tokens name
         // different authorities, and a request that carries one must not be measured against the other.
-        if (path.StartsWith(PilotPrefix, StringComparison.Ordinal))
+        if (path == PilotPrefix || path.StartsWith(PilotPrefix + "/", StringComparison.Ordinal))
         {
             return await PilotAsync(method, path[PilotPrefix.Length..], body, token);
         }
@@ -493,7 +495,22 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return StudioResponse.OfPlainText(404, "This table has no pilot.");
         }
 
-        var asked = Asked(method, rest, body, token, flying);
+        if (Mistaken(token, flying) is { } wrongToken)
+        {
+            return wrongToken;
+        }
+
+        if (method == "GET" && rest.TrimEnd('/').Length == 0)
+        {
+            return await ViewAsync();
+        }
+
+        if (!rest.StartsWith(PilotSeats, StringComparison.Ordinal))
+        {
+            return StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{rest}");
+        }
+
+        var asked = Asked(method, rest[PilotSeats.Length..], body);
         if (asked.Refusal is { } refusal)
         {
             return refusal;
@@ -544,23 +561,84 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     }
 
     /// <summary>
+    /// What the pilot may see: the session, the two seats, who is playing each one and the swap each is
+    /// waiting to make.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>This is not a god view, and that is the whole design of it.</strong> In hotseat the operator is
+    /// usually also one of the two players, so a payload carrying both boards would hand that person their
+    /// opponent's six face-down Intents — the leak of <c>playtest-app.md</c> §2.4, arriving through the back
+    /// door on the operator's own screen. So this answer is assembled from named fields and never from a
+    /// board: there is no <c>CreatureSnapshot</c> in it, no hand, and no Intent of any kind, revealed or not.
+    /// A test holds the serialized bytes against exactly that.
+    /// </para>
+    /// <para>
+    /// What is here instead is what piloting needs and a player already knows: which round the match is in,
+    /// which seat is being asked and for what kind of decision, who is sitting in each seat, and the swap a
+    /// seat is waiting to make. The last one is the point: a seat holds one pending swap and a second replaces
+    /// it, so an operator who cannot see the pending one overwrites it without knowing.
+    /// </para>
+    /// </remarks>
+    private async Task<StudioResponse> ViewAsync()
+    {
+        var (round, subPhase) = await WhereAsync(PlayerSlot.Player1);
+        return StudioResponse.OfJson(
+            new
+            {
+                matchId = session.MatchId,
+                over = session.IsOver,
+                outcome = Decided,
+                round,
+                subPhase,
+                seats = seats.Select(seat => Flying(seat)).ToArray(),
+            },
+            ArtifactJson.LineOptions);
+    }
+
+    /// <summary>One seat as the pilot sees it. Named fields only: see <see cref="ViewAsync" />.</summary>
+    private object Flying(TableSeat seat)
+    {
+        var occupied = session.Seat(seat.Slot);
+        var waiting = seat.Person?.Waiting;
+        var pending = occupied.Pending;
+        return new
+        {
+            slot = TableSeat.NameOf(seat.Slot),
+            // Who is deciding for this seat now, by the name a record calls them: the same string every step's
+            // `decidedBy` carries, so the screen and the dataset cannot disagree about who played.
+            seated = occupied.Seated.Name,
+            // Whether this seat has a person at all, which is what says it can be handed back to one.
+            hasPerson = seat.Person is not null,
+            // The kind of decision being asked and of which creature -- never the options, and never what was
+            // chosen. A creature's number is on the table in front of both players; an Intent is not.
+            waitingFor = waiting?.Kind.ToString(),
+            waitingCreature = waiting?.Creature,
+            pending = pending is null ? null : new { to = pending.Next.Name, round = pending.Round },
+        };
+    }
+
+    /// <summary>
+    /// The refusal for a request that is not the pilot's, or null. Compared in fixed time, because a token is
+    /// guessed one character at a time or not at all.
+    /// </summary>
+    private static StudioResponse? Mistaken(string? token, TablePilot flying) =>
+        string.IsNullOrWhiteSpace(token) || !CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(flying.Token))
+            ? StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's.")
+            : null;
+
+    /// <summary>
     /// What the pilot asked for, or the refusal that says why there is nothing to ask. Everything here is
     /// about the request alone: whether it carries the pilot's token, whether it names a seat, and whether it
     /// says what it wants. Nothing about the match or the seat is touched, which is what keeps the swap itself
     /// a short read of one moving thing rather than a long one.
     /// </summary>
-    private static SwapAsked Asked(string method, string rest, string body, string? token, TablePilot flying)
+    private static SwapAsked Asked(string method, string rest, string body)
     {
-        // Compared in fixed time, because a token is guessed one character at a time or not at all.
-        if (string.IsNullOrWhiteSpace(token) || !CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(flying.Token)))
-        {
-            return SwapAsked.No(StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's."));
-        }
-
         if (method != "POST" || TableSeat.SlotOf(rest.TrimEnd('/')) is not { } named)
         {
-            return SwapAsked.No(StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{rest}"));
+            return SwapAsked.No(StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{PilotSeats}{rest}"));
         }
 
         TableSwapBody? posted;

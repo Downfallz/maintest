@@ -152,8 +152,14 @@ Plain HTTP, JSON, request and response. Polling, not push.
 | `POST` | `/api/seat/{slot}/decision` | One decision. `200` with the new seat payload, or `409` with the error code. |
 | `POST` | `/api/notes` | One playtest note. |
 | `GET` | `/session/{id}` | The finished session in the viewer, rendered by `ViewerPage.Render` exactly as the studio serves `/runs/<id>` (`StudioApi.cs:112-126`). |
+| `GET` | `/pilot`, `/pilot.css`, `/pilot.js` | The operator's own page (§ the roadmap's stage 6), from the same fixed route table. It is served to anybody who asks; what it can read is fenced by the token it is opened with, not by the page being secret. |
+| `GET` | `/api/pilot` | The session, the two seats, who is playing each one, which seat is being asked and for what kind of decision, and the swap each seat is waiting to make. **No board, no hand, no Intent** — the operator is usually one of the two players. |
+| `POST` | `/api/pilot/seats/{slot}` | `{"agent": "greedy", "round": 7}`: who plays that seat from the top of a round the match has not reached. `200` with the swap, or `409` with the code (`Table.SwapMidRound`, `Table.NoSuchAgent`, `Table.MatchOver`). |
 
-Every API request carries exactly one seat token and answers for exactly one seat. Long-polling, server-sent
+The three pilot routes carry the pilot's own token instead, which is never a seat's: a pilot can move both
+seats, so a seat token that could also pilot would let either player hand their opponent's seat to a bot — and
+in hotseat both seat tokens live in the same browser as the page a player is looking at. Every other API
+request carries exactly one seat token and answers for exactly one seat. Long-polling, server-sent
 events and WebSockets are all refused for the first version: hotseat has nothing to push to, the idle seat in a
 two-device session needs a one-second poll and no more, and each of the three is a second thing to keep alive
 across a phone's screen lock.

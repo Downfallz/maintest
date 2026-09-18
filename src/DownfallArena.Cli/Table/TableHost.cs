@@ -157,10 +157,13 @@ internal static class TableHost
         }
 
         // The pilot's own token, said once and never mixed into a seat's link: the operator is at this machine
-        // and the players are not, so it goes on this console and nowhere a page could pick it up.
+        // and the players are not, so it goes on this console and nowhere a page could pick it up. The page
+        // link is printed beside it because a token nobody can find the door for is a feature nobody uses;
+        // the header form stays, because the swap is as often one curl from a shell.
         if (pilot is { } flying)
         {
-            Console.WriteLine($"  pilot: {TableApi.TokenHeader}: {flying.Token}");
+            Console.WriteLine($"  Pilot: {server.Url}pilot?token={flying.Token}");
+            Console.WriteLine($"    or from a shell, as '{TableApi.TokenHeader}: {flying.Token}'");
         }
 
         // One link carrying every human seat's token, for the case where the two people share this machine's
