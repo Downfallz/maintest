@@ -10,6 +10,21 @@
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --who mk",
       "workingDirectory": "../.."
     },
+    "table (hard: stun-first — wins every match, and fast)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 heuristic:learning/weights/stun-first.json --who mk",
+      "workingDirectory": "../.."
+    },
+    "table (hard: kill-first — wins every match, most one-sided)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 heuristic:learning/weights/kill-first.json --who mk",
+      "workingDirectory": "../.."
+    },
+    "table (hard: search-4 — the strongest general weights)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 heuristic:learning/weights/search-4.json --who mk",
+      "workingDirectory": "../.."
+    },
     "table (bots until round 3, then you)": {
       "commandName": "Project",
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --p2 greedy --handover 3 --who mk",

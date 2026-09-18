@@ -43,8 +43,14 @@ Microsoft.Testing.Platform (`global.json`).
 
 Both runnable projects carry launch profiles, so a command is chosen from the dropdown rather than typed:
 `build the content (run this first)` on the DataBuilder, and one per thing you can do on the Cli — a hotseat
-table, a table against Greedy, one that plays itself until round 3 and hands over, one bound for a phone, the
-studio, a bot match, the benchmark. They all run from the repository root, because the game schema is found at
+table, a table against Greedy, three against harder opponents, one that plays itself until round 3 and hands
+over, one bound for a phone, the studio, a bot match, the benchmark.
+
+The three hard profiles are the weights a search found, not a difficulty dial: against Greedy, `stun-first`
+and `kill-first` take **every** match and `search-4` takes 0.93 of them (journal, 2026-09-17). The two that
+win every match do it by exploiting the catalogue rather than by playing well — which is worth a playtest of
+its own — and the searching agents are *not* the hard ones: `lookahead` only matches Greedy and `minimax`
+plays below it (journal, 2026-09-16). They all run from the repository root, because the game schema is found at
 `data/dst/game.schema.json` relative to it.
 
 Build the content first. `data/dst/` is generated and git-ignored, and nothing that reads the catalogue —
