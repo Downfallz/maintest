@@ -53,18 +53,28 @@ export function seatRows(view) {
     // A seat with no person can be handed to any agent and back to none: there is no player holding a token
     // for it, so `person` would name somebody who never joined.
     canTakeThePerson: seat.hasPerson === true,
-    asked: seat.waitingFor
-      ? `${seat.waitingFor}${seat.waitingCreature ? ` · creature ${seat.waitingCreature}` : ''}`
-      : null,
+    asked: asking(seat),
     pending: seat.pending ? `${seat.pending.to} from round ${seat.pending.round}` : null,
   }));
+}
+
+// What a seat is being asked, as one line, or nothing when it is not being asked. A decision is named by its
+// kind and, when the engine asks it of one creature at a time, by which creature.
+function asking(seat) {
+  if (!seat.waitingFor) return null;
+
+  const creature = seat.waitingCreature ? ` · creature ${seat.waitingCreature}` : '';
+  return `${seat.waitingFor}${creature}`;
 }
 
 // The one line the page says about the match, and the reason a swap may be refused before it is sent.
 export function whereItIs(view) {
   if (!view) return 'Connecting…';
   if (view.over) return 'The match is over.';
-  return view.round ? `Round ${view.round}${view.subPhase ? ` · ${view.subPhase}` : ''}` : 'Waiting for the first round.';
+  if (!view.round) return 'Waiting for the first round.';
+
+  const sub = view.subPhase ? ` · ${view.subPhase}` : '';
+  return `Round ${view.round}${sub}`;
 }
 
 // The earliest round a swap may name: the one after the round being played, because a seat changes hands at the

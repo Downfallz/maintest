@@ -11,7 +11,7 @@
   <body>
     <header class="masthead">
       <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The instrument</span><h1>Pilot</h1></div></div>
-      <div class="session-state"><span class="seat-label">This match</span><p id="where" role="status">Connecting…</p></div>
+      <div class="session-state"><span class="seat-label">This match</span><output id="where">Connecting…</output></div>
     </header>
 
     <main id="pilot" hidden>
@@ -36,7 +36,7 @@
           <label for="swap-round">From round<input id="swap-round" type="number" min="1" step="1" value="2" /></label>
           <button id="swap" type="button">Hand over</button>
         </div>
-        <p id="said" class="said" role="status"></p>
+        <output id="said" class="said"></output>
       </section>
     </main>
 
