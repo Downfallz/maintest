@@ -70,6 +70,12 @@ on:
       - "src/**"
       - "data/**"
       - "learning/**"
+      # Not the experiment file: the pull request that changes it already runs that exact turn, and merging
+      # it would run the identical one again. Measured rather than assumed -- ci-150 is the merge of ci-149's
+      # pull request, and it reproduced every number of it to sixteen decimal places on a different engine
+      # build, for 56 runner minutes (journal, 2026-09-17). A change to the learning project itself still
+      # triggers, because that genuinely can change what a turn produces.
+      - "!learning/experiments/**"
       - "benchmarks/**"
       - "scripts/iterate.sh"
       - ".github/workflows/iterate.yml"

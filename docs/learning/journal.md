@@ -179,6 +179,22 @@ first.
   dispatch with `commit=true` would have kept nothing either. The policies are in the run artifact
   (`ci-149`), which expires in thirty days.
 
+- **Replicated exactly by `ci-150`, and that is a result about ADR 0049 rather than about this turn.**
+  Merging the experiment file re-ran the same turn on `main`, unasked, and it reproduced `ci-149` **to the
+  last digit**: the three copy accuracies (0.9919, 0.9916, 0.9916) with the same best epochs and losses, every
+  row of the spread, the value arm's jackknife of 0.0000 plus or minus 0.1880 from the same leave-one-out
+  means, and the champion margins to sixteen decimal places — 0.5753804081385983, 0.5543022461631304,
+  0.5530448896371161. It did so on a **different engine build** (`4a08ae4a36f6` against `99b9c35dd74b`), so
+  the determinism is the loop's and not one binary's.
+
+  Which means the 0.1875 spread of `clone-vs-greedy` is **entirely deterministic in the dataset seed**. It is
+  not fitting noise, not sampling, not a flaky runner: run the turn again and seed 1 says 0.6150 and seed
+  10001 says 0.4275, every time, forever. **Reproducible is not the same as reliable** — a pipeline can be
+  exact to sixteen decimals and still hand back an answer that moves nineteen points with a choice nobody
+  thinks of as a parameter. That is the strongest form the ADR 0049 argument has taken here, and it also
+  means re-running an unchanged experiment buys nothing at all: `ci-150` spent 56 runner minutes to learn
+  that `ci-149` was right.
+
 - **What this turn makes possible next.** `models/clone/` held exactly one policy before it, which is why the
   claim that a converged clone arm cannot clear the champion bar could not be measured. It now holds the
   material for that measurement, and the measurement came out against the claim. The open question moved
