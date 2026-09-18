@@ -209,24 +209,21 @@ internal sealed class PlaytestRun
     public int TraceLength(MatchId matchId) => _events.Length(matchId);
 
     /// <summary>
-    /// Checkpoints once the trace has grown past <paramref name="beyond" />, or once the wait runs out.
+    /// Waits until the trace has grown past <paramref name="beyond" />, or until the wait runs out.
     /// </summary>
     /// <remarks>
-    /// A decision is applied on the driver's own thread, and the seat that was holding it is released
-    /// asynchronously -- so the request thread that accepted the tap runs on ahead and would otherwise
-    /// checkpoint a trace from before the decision it just recorded a note for. An abandoned session would
-    /// then hold a note saying something happened and a trace that does not show it, which is the one pairing
-    /// this file exists to keep honest. Waiting is for the driver to apply one command, which is microseconds;
-    /// the bound is there so a driver that stalls costs a stale trace rather than a player's tap hanging.
+    /// A decision is applied on the driver's own thread, and the seat holding it is released asynchronously --
+    /// so the request thread that accepted the tap runs on ahead of the command it caused. This is half of
+    /// catching up with it: the first event of that command appearing is what says the command has *started*.
+    /// The caller pairs it with the table's own gate to learn that the command has finished. The bound is
+    /// there so a driver that stalls costs a stale trace rather than a player's tap hanging.
     /// </remarks>
-    public async Task CheckpointAfterAsync(MatchId matchId, int beyond, CancellationToken cancellationToken = default)
+    public async Task WaitForTraceAsync(MatchId matchId, int beyond, CancellationToken cancellationToken = default)
     {
         for (var waited = TimeSpan.Zero; _events.Length(matchId) <= beyond && waited < GrowthWait; waited += GrowthStep)
         {
             await Task.Delay(GrowthStep, _clock, cancellationToken);
         }
-
-        await CheckpointAsync(matchId, cancellationToken);
     }
 
     public Task CheckpointAsync(MatchId matchId, CancellationToken cancellationToken = default)

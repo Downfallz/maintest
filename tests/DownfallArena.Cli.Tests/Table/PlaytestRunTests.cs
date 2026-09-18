@@ -101,34 +101,35 @@ public sealed class PlaytestRunTests : IDisposable
     }
 
     /// <summary>
-    /// A checkpoint that follows a decision waits for that decision to reach the trace. The driver applies it
-    /// on its own thread and releases the seat asynchronously, so the thread that accepted the tap is ahead of
-    /// the command it caused: checkpointing straight away would write the board from before it.
+    /// The wait that catches up with the driver returns as soon as the trace has passed the mark it was given.
+    /// It is half of the barrier a decision's checkpoint uses: this one says the command has started, and the
+    /// table's gate says it has finished.
     /// </summary>
     [Fact]
-    public async Task A_checkpoint_waits_for_what_it_follows_to_reach_the_trace()
+    public async Task Waiting_for_the_trace_returns_once_it_has_passed_the_mark()
     {
         var (run, session) = await Started();
         await session.Outcome;
         var length = run.TraceLength(session.MatchId);
 
-        await run.CheckpointAfterAsync(session.MatchId, beyond: length - 1, TestContext.Current.CancellationToken);
+        await run.WaitForTraceAsync(session.MatchId, beyond: length - 1, TestContext.Current.CancellationToken);
 
-        Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(length);
+        run.TraceLength(session.MatchId).ShouldBe(length);
     }
 
     /// <summary>
-    /// And it is bounded. Nothing else is coming here, so the wait runs out and the trace is written as it
-    /// stands: a stale trace is the cost of a driver that never came back, and a hanging tap is not.
+    /// And it is bounded. Nothing else is coming here, so the wait runs out and the caller carries on: a stale
+    /// trace is the cost of a driver that never came back, and a hanging tap is not.
     /// </summary>
     [Fact]
-    public async Task A_checkpoint_that_waits_in_vain_still_writes_what_there_is()
+    public async Task Waiting_for_a_trace_that_never_grows_gives_up_rather_than_hanging()
     {
         var (run, session) = await Started();
         await session.Outcome;
         var length = run.TraceLength(session.MatchId);
 
-        await run.CheckpointAfterAsync(session.MatchId, beyond: length + 10, TestContext.Current.CancellationToken);
+        await run.WaitForTraceAsync(session.MatchId, beyond: length + 10, TestContext.Current.CancellationToken);
+        await run.CheckpointAsync(session.MatchId, TestContext.Current.CancellationToken);
 
         Read(run, Path.Combine("traces", $"{session.MatchId}.json")).GetProperty("entries").GetArrayLength().ShouldBe(length);
     }

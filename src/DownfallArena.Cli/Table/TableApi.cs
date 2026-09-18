@@ -330,11 +330,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         {
             await recording.DecidedAsync(session.MatchId, slot, round, subPhase, answered, servedAt, CancellationToken.None);
 
-            // The trace, as far as the match has got -- and not until the decision has actually reached it.
-            // Submitting releases the driver asynchronously, so this thread is ahead of the command it caused,
-            // and a checkpoint taken now would show the board from before the tap it has just written a note
-            // about.
-            await recording.CheckpointAfterAsync(session.MatchId, traced, CancellationToken.None);
+            // The trace, as far as the match has got -- and not until the command this decision caused has
+            // finished raising everything it raises.
+            await SettledAsync(recording, slot, traced);
+            await recording.CheckpointAsync(session.MatchId, CancellationToken.None);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -394,6 +393,25 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         var (round, subPhase) = await WhereAsync(seat.Slot);
         await recording.TypedAsync(session.MatchId, seat.Slot, round, subPhase, kind, posted.Trimmed(), CancellationToken.None);
         return new StudioResponse(204, StudioResponse.Plain, []);
+    }
+
+    /// <summary>
+    /// Waits until the engine has finished the command this decision caused, so what is checkpointed next is
+    /// the whole of it and not the first event of it.
+    /// </summary>
+    /// <remarks>
+    /// Two things in sequence, and neither is enough alone. The trace growing says the command has *started*:
+    /// submitting only queues the driver, so until then this thread is ahead of it. Then a read through the
+    /// table's gate says it has *finished* -- the driver holds that gate for a whole command, saving and
+    /// dispatching inside it (<c>MatchWorkflow.CommitAsync</c>), so a read that comes back is that command
+    /// having let go. One command raises several events, and watching the trace alone would stop at the first
+    /// of them and checkpoint while the rest were still being dispatched. The gate is the completion signal
+    /// the host would otherwise have had to invent, and it was already there.
+    /// </remarks>
+    private async Task SettledAsync(PlaytestRun recording, PlayerSlot slot, int traced)
+    {
+        await recording.WaitForTraceAsync(session.MatchId, traced, CancellationToken.None);
+        await WhereAsync(slot);
     }
 
     /// <summary>
