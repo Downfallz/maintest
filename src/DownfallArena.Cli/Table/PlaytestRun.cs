@@ -45,6 +45,8 @@ internal sealed class PlaytestRun
     private readonly RunRecorder _recorder;
     private readonly MatchTraceRecorder _events;
     private readonly RunStamp _stamp;
+    private readonly Lock _seatedGate = new();
+    private readonly Dictionary<PlayerSlot, string> _playing = [];
     private readonly TimeProvider _clock;
     private readonly DecisionClock _served;
 
@@ -178,8 +180,57 @@ internal sealed class PlaytestRun
     public IPlayerAgent Wrap(MatchId matchId, SeatAgent seat)
     {
         ArgumentNullException.ThrowIfNull(seat);
-        return _recorder.Wrap(matchId, seat, seat.Deciding);
+        return _recorder.Wrap(matchId, seat, board =>
+        {
+            var decider = seat.Deciding(board);
+            Reseated(board.Slot, decider.Name, board.RoundNumber);
+            return decider;
+        });
     }
+
+    /// <summary>
+    /// Notices that a seat has actually changed hands and grows the run stamp to say so.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Here rather than where a swap is asked for, because the two are different events: a swap names a round
+    /// the match has not reached, and the match can end before it. A stamp written from the asking would name
+    /// a player who never played, in the one axis <c>compare-stamps</c> reads to decide whether two runs are
+    /// comparable. This runs at the first decision the new occupant makes, which is the earliest moment the
+    /// claim is true.
+    /// </para>
+    /// <para>
+    /// It only ever appends, so a seat that changed twice says so twice, and the stamp reads in the order it
+    /// happened. Nothing is written here: the manifest is rewritten when the session closes, and an abandoned
+    /// session keeps the opening one, which names exactly the occupants that had played by then.
+    /// </para>
+    /// </remarks>
+    private void Reseated(PlayerSlot slot, string? name, int? round)
+    {
+        if (name is null)
+        {
+            return;
+        }
+
+        lock (_seatedGate)
+        {
+            // Seeded from the stamp the manifest was opened with, never from the first name seen. A swap can
+            // land before this seat's first decision -- `--handover 1` is exactly that -- and taking the first
+            // observation as the baseline would record the new occupant as the original one: the manifest
+            // would say the bot played a session every step of which names the person.
+            var held = _playing.TryGetValue(slot, out var seen) ? seen : Opened(slot);
+            if (held == name)
+            {
+                _playing[slot] = name;
+                return;
+            }
+
+            _playing[slot] = name;
+            _recorder.Reseated(slot, name, round);
+        }
+    }
+
+    private string Opened(PlayerSlot slot) => slot == PlayerSlot.Player1 ? _stamp.Player1Agent : _stamp.Player2Agent;
 
     /// <summary>
     /// Records that a seat has been shown what it is being asked, which is what the next decision's duration
@@ -230,6 +281,21 @@ internal sealed class PlaytestRun
     /// </summary>
     public Task RefusedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, DomainError error, CancellationToken cancellationToken = default) =>
         NoteAsync(PlaytestNote.Refused(Where(matchId, slot, round, subPhase), error, _clock), cancellationToken);
+
+    /// <summary>
+    /// The pilot asked this seat to change hands at the top of a later round.
+    /// </summary>
+    /// <remarks>
+    /// Of the asking, and dated where the match had got to when the seat took it — not where the swap will
+    /// land. The two rounds are both on the note and they answer different questions: this one puts the note
+    /// beside the decisions that prompted it, and <c>atRound</c> says where it takes effect. There is no
+    /// sub-phase, because a swap is not made at one: it is an operator's action against a round.
+    /// </remarks>
+    public Task SeatedAsync(MatchId matchId, PlayerSlot slot, int? round, SeatChange change, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        return NoteAsync(PlaytestNote.Seated(Where(matchId, slot, round, subPhase: null), change.From, change.To, change.AtRound, _clock), cancellationToken);
+    }
 
     /// <summary>A note a player produced with one tap, or typed on the end screen.</summary>
     public Task TypedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, NoteKind kind, string text, CancellationToken cancellationToken = default) =>

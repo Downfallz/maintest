@@ -62,6 +62,24 @@ public sealed record PlaytestNote
     /// <summary>For a <see cref="NoteKind.Lookup" />, a <see cref="NoteKind.Misplay" /> or a <see cref="NoteKind.Comment" />: what the player typed or picked.</summary>
     public string? Text { get; init; }
 
+    /// <summary>For a <see cref="NoteKind.Seat" />: what the seat's occupant was called before the swap.</summary>
+    public string? From { get; init; }
+
+    /// <summary>For a <see cref="NoteKind.Seat" />: what the occupant taking it is called.</summary>
+    public string? To { get; init; }
+
+    /// <summary>
+    /// For a <see cref="NoteKind.Seat" />: the round the swap takes effect at the top of, which is always
+    /// later than <see cref="Round" />.
+    /// </summary>
+    /// <remarks>
+    /// The two rounds answer different questions and both are kept. <see cref="Round" /> is where the match
+    /// was when the pilot asked, which is what makes this note sit in the run beside the decisions that
+    /// prompted it; this is where the swap lands, which is what a reader joins to the steps. A swap cannot
+    /// land inside a round, so the second is never the first.
+    /// </remarks>
+    public int? AtRound { get; init; }
+
     /// <summary>
     /// For a <see cref="NoteKind.Decision" />: which question of this seat it answered, counted by the seat in
     /// the order the engine asked them.
@@ -130,6 +148,35 @@ public sealed record PlaytestNote
             Kind = NoteKind.Refused,
             Code = error.Code,
             Message = error.Message,
+        };
+    }
+
+    /// <summary>
+    /// The pilot asked this seat to change hands at the top of a later round.
+    /// </summary>
+    /// <remarks>
+    /// Written when the swap is asked for, not when it happens: the round named is one the match has not
+    /// reached, so the swap lands later and never lands at all if the match ends first. That is why the note
+    /// is not evidence of who played -- <see cref="StepRecord.DecidedBy" /> is, on every step -- and why this
+    /// one records an operator's action rather than a fact about the board.
+    /// </remarks>
+    public static PlaytestNote Seated(NotePlace where, string from, string to, int atRound, TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(where);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        return new PlaytestNote
+        {
+            SessionId = where.SessionId,
+            MatchId = where.MatchId,
+            Slot = where.Slot,
+            Round = where.Round,
+            SubPhase = where.SubPhase,
+            At = timeProvider.GetUtcNow(),
+            Kind = NoteKind.Seat,
+            From = from,
+            To = to,
+            AtRound = atRound,
         };
     }
 

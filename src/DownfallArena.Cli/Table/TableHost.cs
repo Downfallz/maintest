@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Tracing;
@@ -80,11 +81,16 @@ internal static class TableHost
         // The session's own read side, not the container's: it is the one behind the lock the driver writes
         // through, and a page polls it while the match is advancing.
         var seats = new[] { seat1.Seat, seat2.Seat };
-        var api = new TableApi(session, session.Queries, seats, catalogue, events, run);
+
+        var pilot = new TablePilot(
+            Token(),
+            (slot, wanted) => Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, options, rules, agents, random));
+
+        var api = new TableApi(session, session.Queries, seats, catalogue, events, run, pilot);
         var codes = new JoinCodes(seats);
         using var server = new TableServer(options.Bind, options.Port, api, new TableFiles(TableDirectory), codes, run);
 
-        Announce(server, codes, seats, options, rules, run);
+        Announce(server, codes, seats, options, rules, run, pilot);
 
         ConsoleCancelEventHandler stop = (_, eventArgs) =>
         {
@@ -129,7 +135,7 @@ internal static class TableHost
     /// each seat, and the code that seat's player types. Everything a session needs to be joined and to be
     /// reproduced is on these lines, because the alternative is a playtest that nobody can place afterwards.
     /// </summary>
-    private static void Announce(TableServer server, JoinCodes codes, IReadOnlyList<TableSeat> seats, CliOptions options, RuleSet rules, PlaytestRun? run)
+    private static void Announce(TableServer server, JoinCodes codes, IReadOnlyList<TableSeat> seats, CliOptions options, RuleSet rules, PlaytestRun? run, TablePilot? pilot)
     {
         Console.WriteLine($"Table on {server.Url}");
 
@@ -148,6 +154,13 @@ internal static class TableHost
             var who = seat.Person is null ? Describe(seat.Slot, options) : "a person";
             var join = codes.Of(seat) is { } code ? $" — joins at {server.Url[..^1]}{JoinCodes.Prefix}{code}" : string.Empty;
             Console.WriteLine($"  {seat.Name}: {who}{join}");
+        }
+
+        // The pilot's own token, said once and never mixed into a seat's link: the operator is at this machine
+        // and the players are not, so it goes on this console and nowhere a page could pick it up.
+        if (pilot is { } flying)
+        {
+            Console.WriteLine($"  pilot: {TableApi.TokenHeader}: {flying.Token}");
         }
 
         // One link carrying every human seat's token, for the case where the two people share this machine's
@@ -190,24 +203,54 @@ internal static class TableHost
     }
 
     /// <summary>
-    /// What the run stamp calls a seat: the agent's own name for a bot, and <c>human</c> — with the initials
-    /// <c>--who</c> gave, when it gave any — for a person, so <c>compare-stamps</c> reports the agents axis
-    /// between two sessions played by different people.
+    /// What the run stamp calls a seat when the session opens: whoever is sitting down, and nobody else.
     /// </summary>
-    private static string Stamped(PlayerSlot slot, TableSeat seat, CliOptions options)
+    /// <remarks>
+    /// It names the first occupant only, and the session adds to it as seats actually change hands
+    /// (<see cref="PlaytestRun.Wrap" />). A handover used to be composed here from the round it was configured
+    /// with, which said <c>Greedy&gt;human:mk@3</c> of a session abandoned in round 2 — a person who never
+    /// played, in the axis <c>compare-stamps</c> reads. One stamp built from what happened beats two built
+    /// from what was asked for and what was configured.
+    /// </remarks>
+    private static string Stamped(PlayerSlot slot, TableSeat seat, CliOptions options) =>
+        seat.Person is null || options.Handover is not null ? Describe(slot, options) : PersonName(options);
+
+    /// <summary>
+    /// Who the pilot may seat: any agent spec the CLI understands, and the word <c>person</c> for the seat's
+    /// own player.
+    /// </summary>
+    /// <remarks>
+    /// A seat that no person ever joined has nobody to hand back to, and says so rather than inventing a
+    /// second player nobody holds the token for. A name nothing can be built from -- a typo in a spec, a
+    /// weights file that is not there -- is the operator getting a name wrong, so it is answered as "nobody
+    /// of that name can sit here" rather than as a broken host: the match is fine and the next attempt is one
+    /// line away.
+    /// </remarks>
+    private static Occupant? Seating(TableSeat seat, string wanted, CliOptions options, RuleSet rules, IAgentFactory agents, IRandomSource random)
     {
-        if (seat.Person is null)
+        if (string.Equals(wanted, "person", StringComparison.OrdinalIgnoreCase))
         {
-            return Describe(slot, options);
+            return seat.Person is { } person ? new Occupant(person, PersonName(options)) : null;
         }
 
-        var person = PersonName(options);
-
-        // A handover seat is a person's seat only from the round it names. A bot plays it until then, and the
-        // recorder wraps the seat rather than whoever is in it, so those decisions are steps under this stamp.
-        // Calling the whole thing `human` would attribute a bot's play to the person and make the agents axis
-        // say the wrong thing about the one seat where it is least obvious.
-        return options.Handover is { } round ? $"{Describe(slot, options)}>{person}@{round}" : person;
+        try
+        {
+            // Resolved, not just parsed: for a file-backed agent the resolved spec carries a fingerprint of
+            // the weights or the policy as they are on disk now. Naming it from the text the pilot typed would
+            // stamp two sessions played against different weights at the same path as the same agent, and the
+            // comparison that reads the agents axis would call them comparable. It is also what `GameSession`
+            // does to the agents named at startup, so a seat taken mid-match is named the same way as one
+            // seated at the start.
+            var spec = agents.Resolve(AgentSpec.Parse(wanted));
+            return new Occupant(agents.Create(spec, rules, random), spec.ToString());
+        }
+        catch (Exception failure) when (failure is ArgumentException or IOException or JsonException or InvalidDataException)
+        {
+            // InvalidDataException among them: a policy file that exists but holds something else is the
+            // operator naming the wrong file, which is the same mistake as naming no file at all. Without it
+            // the host answers a 500 for what is an expected bad input.
+            return null;
+        }
     }
 
     /// <summary>
@@ -242,15 +285,13 @@ internal static class TableHost
 
         var human = new HumanSeat(cancellation);
         var person = new Occupant(human, PersonName(options));
-        var seat = new SeatAgent(person);
 
-        // A handover seats the bot first and swaps at the round it names; without one the person plays from
-        // the first decision. The handover is seated under the person's name only so that a seat nobody asked
-        // about reads as theirs; who actually decides a board is the handover's own answer, which is what a
-        // step is stamped with.
+        // A handover is a swap like any other: the bot sits down and the seat is told to hand over at the top
+        // of the round named. Without one the person plays from the first decision.
+        var seat = new SeatAgent(options.Handover is null ? person : bot);
         if (options.Handover is { } round)
         {
-            seat.Seat(person with { Agent = new HandoverAgent(seat, bot, person, round) });
+            seat.SwapAt(person, round);
         }
 
         return (seat, new TableSeat(slot, Token(), human));

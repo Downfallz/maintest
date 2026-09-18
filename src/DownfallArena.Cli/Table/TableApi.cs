@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning;
@@ -28,7 +29,7 @@ namespace DownfallArena.Cli.Table;
 /// still the only thing that says what is legal. And it never invents a refusal: a tap that arrives after the
 /// screen moved on is late, not illegal, and says so with a 409 the page can act on.
 /// </remarks>
-internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null)
+internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null, TablePilot? pilot = null)
 {
     public const string TokenHeader = "X-Seat-Token";
 
@@ -46,6 +47,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             : null;
 
     private const string SeatPrefix = "/api/seat/";
+
+    private const string PilotPrefix = "/api/pilot/seats/";
 
     /// <summary>
     /// The catalogue as it is served, and an entity tag over the bytes themselves. The catalogue cannot change
@@ -71,6 +74,13 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token, string? ifNoneMatch = null, string? query = null)
     {
+        // The pilot's routes are answered before a seat token is even looked for: the two tokens name
+        // different authorities, and a request that carries one must not be measured against the other.
+        if (path.StartsWith(PilotPrefix, StringComparison.Ordinal))
+        {
+            return await PilotAsync(method, path[PilotPrefix.Length..], body, token);
+        }
+
         if (Holder(token) is not { } holder)
         {
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TokenHeader}'.");
@@ -457,6 +467,156 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     /// read is not worth refusing a note over: the note is the record, and a missing round number is a smaller
     /// loss than no note at all.
     /// </summary>
+    /// <summary>
+    /// Changes who plays a seat, from the top of a round the match has not reached.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Everything a pilot does goes through the seats and the engine's own commands: this seats a different
+    /// agent and nothing else. It writes to no Creature and no Round, which the Domain already makes
+    /// unreachable, and the rule is stated here so nobody widens it later "just for the pilot" — a board set
+    /// by hand reads as a legal sequence of moves for ever after (<c>docs/tabletop/app-roadmap.md</c>,
+    /// stage 6).
+    /// </para>
+    /// <para>
+    /// A round is named rather than an instant, and one the match has not reached. The driver asks a seat for
+    /// several decisions inside one sub-phase — a speed for each creature, then an intent for each — so a
+    /// seat changing hands between two of them would split that sub-phase between two players and make the
+    /// round unreadable. Naming a future round makes that impossible rather than unlikely: the seat holds the
+    /// swap and applies it against the board, so it lands where a round begins however long the request took.
+    /// </para>
+    /// </remarks>
+    private async Task<StudioResponse> PilotAsync(string method, string rest, string body, string? token)
+    {
+        if (pilot is not { } flying)
+        {
+            return StudioResponse.OfPlainText(404, "This table has no pilot.");
+        }
+
+        var asked = Asked(method, rest, body, token, flying);
+        if (asked.Refusal is { } refusal)
+        {
+            return refusal;
+        }
+
+        var (_, slot, wanted, round) = asked;
+
+        // Cheap early out only. The real one is below: resolving a file-backed agent takes long enough for a
+        // bot match to finish underneath it, and a swap accepted for a match that has ended is a 200 for
+        // something that can never happen.
+        if (session.IsOver)
+        {
+            return Refused(NoRoundsLeft);
+        }
+
+        if (flying.Seating(slot, wanted) is not { } next)
+        {
+            return Refused(new DomainError(NoSuchAgent, $"Nobody called '{wanted}' can sit in {TableSeat.NameOf(slot)}."));
+        }
+
+        // Nothing about the seat is read here. The round it has reached, who is sitting in it and whether the
+        // swap is taken are one answer from one locked step inside the seat: read separately, a pending swap
+        // landing in between would name the wrong occupant as the one replaced, against a round the match had
+        // already left.
+        var seat = session.Seat(slot);
+        var outcome = seat.SwapAt(next, round);
+        if (!outcome.Taken)
+        {
+            var floor = outcome.Reached is { } reached ? reached + 1 : 1;
+            return Refused(new DomainError(
+                MidRound,
+                outcome.Reached is { } playing
+                    ? $"Round {playing} is being played; a seat changes hands at the top of a round, so name {floor} or later."
+                    : "A seat changes hands at the top of a round, so name round 1 or later."));
+        }
+
+        // Checked again, now that the seat has taken it. A match that ended while the agent was being resolved
+        // leaves this swap installed and inert -- nothing will ask that seat again -- and the operator is told
+        // the truth rather than a 200 for a seat that will never change.
+        if (session.IsOver)
+        {
+            return Refused(NoRoundsLeft);
+        }
+
+        var held = outcome.Held.Name;
+        await NoteSwapAsync(slot, outcome.Reached, new SeatChange(held, next.Name, round));
+        return StudioResponse.OfJson(new { slot = TableSeat.NameOf(slot), from = held, to = next.Name, round }, ArtifactJson.LineOptions);
+    }
+
+    /// <summary>
+    /// What the pilot asked for, or the refusal that says why there is nothing to ask. Everything here is
+    /// about the request alone: whether it carries the pilot's token, whether it names a seat, and whether it
+    /// says what it wants. Nothing about the match or the seat is touched, which is what keeps the swap itself
+    /// a short read of one moving thing rather than a long one.
+    /// </summary>
+    private static SwapAsked Asked(string method, string rest, string body, string? token, TablePilot flying)
+    {
+        // Compared in fixed time, because a token is guessed one character at a time or not at all.
+        if (string.IsNullOrWhiteSpace(token) || !CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(token), Encoding.UTF8.GetBytes(flying.Token)))
+        {
+            return SwapAsked.No(StudioResponse.OfPlainText(403, $"Piloting carries the pilot's own '{TokenHeader}', which is not a seat's."));
+        }
+
+        if (method != "POST" || TableSeat.SlotOf(rest.TrimEnd('/')) is not { } named)
+        {
+            return SwapAsked.No(StudioResponse.OfPlainText(404, $"No such route: {method} {PilotPrefix}{rest}"));
+        }
+
+        TableSwapBody? posted;
+        try
+        {
+            posted = JsonSerializer.Deserialize<TableSwapBody>(body, ArtifactJson.LineOptions);
+        }
+        catch (JsonException exception)
+        {
+            return SwapAsked.No(StudioResponse.OfPlainText(400, exception.Message));
+        }
+
+        if (posted?.Agent is not { Length: > 0 } agent || posted.Round is not { } wantedRound)
+        {
+            return SwapAsked.No(StudioResponse.OfPlainText(400, "A swap names the agent taking the seat and the round it takes it from."));
+        }
+
+        return new SwapAsked(Refusal: null, named, agent, wantedRound);
+    }
+
+    /// <summary>
+    /// Writes the swap down, and never takes it back. The seat has taken it by the time this runs, so a
+    /// session that fails to record it must not become a 500: the operator would be told their request failed
+    /// while the seat still changes hands, and a retry would replace a pending swap they think they never
+    /// made. A lost line goes to the console, where it is the operator's problem rather than the match's.
+    /// </summary>
+    private async Task NoteSwapAsync(PlayerSlot slot, int? round, SeatChange change)
+    {
+        if (run is not { } recording)
+        {
+            return;
+        }
+
+        try
+        {
+            // The round is the seat's own, read as the swap was taken. A board read here would be after the
+            // fact: the driver can enter the round this names before it answers, and the note would then say
+            // it was asked for at or after the round it lands at. There is no sub-phase, because a swap is not
+            // made at one -- it is an operator's action against a round.
+            await recording.SeatedAsync(session.MatchId, slot, round, change, CancellationToken.None);
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException)
+        {
+            Console.WriteLine($"  The seat change {change.From} -> {change.To} at round {change.AtRound} could not be written down: {failure.Message}");
+        }
+    }
+
+    private static StudioResponse Refused(DomainError error) =>
+        StudioResponse.OfJson(new { error = error.Code, message = error.Message }, ArtifactJson.LineOptions, status: 409);
+
+    private const string MidRound = "Table.SwapMidRound";
+
+    private const string NoSuchAgent = "Table.NoSuchAgent";
+
+    private static readonly DomainError NoRoundsLeft = new("Table.MatchOver", "This match has no round left to change a seat for.");
+
     private async Task<(int? Round, RoundSubPhase? SubPhase)> WhereAsync(PlayerSlot slot)
     {
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, slot));
