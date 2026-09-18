@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SEATABLE, earliestRound, pilotTransport, said, seatRows, swapAsked, whereItIs } from './pilot.js';
+import { SEATABLE, earliestRound, newestFirst, pilotTransport, said, seatRows, swapAsked, whereItIs } from './pilot.js';
 
 const view = {
   round: 3,
@@ -102,4 +102,37 @@ test('what a pilot may seat names the person first and the exploits last', () =>
   assert.equal(SEATABLE[0].value, 'person');
   assert.ok(SEATABLE.some(seat => seat.value === 'greedy'));
   assert.ok(SEATABLE.some(seat => seat.value.includes('search-4')));
+});
+
+// The page polls on a timer and asks for its own view the moment a swap lands, so two are in flight at once
+// and the host answers them concurrently. Drawing them in the order they come back puts the seat back as it
+// was: the pending swap blinks out of the page whose whole job is to show it, and the operator replaces a
+// swap they cannot see.
+test('an answer older than the last one drawn is dropped rather than drawn over it', () => {
+  const answers = newestFirst();
+
+  const slow = answers.take();
+  const quick = answers.take();
+
+  assert.equal(answers.keep(quick), true);
+  assert.equal(answers.keep(slow), false);
+});
+
+test('answers that come back in the order they were asked are all drawn', () => {
+  const answers = newestFirst();
+
+  assert.equal(answers.keep(answers.take()), true);
+  assert.equal(answers.keep(answers.take()), true);
+  assert.equal(answers.keep(answers.take()), true);
+});
+
+// A poll whose answer was already drawn cannot draw itself again: an error path that fell through to the same
+// ticket would redraw a view the page has moved past.
+test('the same answer is drawn once', () => {
+  const answers = newestFirst();
+
+  const only = answers.take();
+
+  assert.equal(answers.keep(only), true);
+  assert.equal(answers.keep(only), false);
 });

@@ -106,6 +106,29 @@ export function swapAsked(slot, agent, round, view) {
   return { slot, agent, round: wanted };
 }
 
+// Which answer is still worth drawing. Two polls can be in flight at once -- the swap asks for a fresh view
+// the moment it lands, and a poll that outlives its own interval leaves another behind it -- and the host
+// answers them concurrently, so the order they come back in is not the order they were asked in. An older
+// answer drawn last puts back the seat as it was: on a slow link the pending swap blinks out of the page
+// whose whole job is to show it, and the operator replaces a swap they cannot see. Every ask takes a ticket
+// and an answer older than the newest one drawn is dropped, unread.
+export function newestFirst() {
+  let issued = 0;
+  let drawn = 0;
+
+  return {
+    take: () => ++issued,
+    keep: ticket => {
+      if (ticket <= drawn) {
+        return false;
+      }
+
+      drawn = ticket;
+      return true;
+    },
+  };
+}
+
 // What the page says after the host answered. A refused swap is not an error in the page: it is the host
 // telling the operator something true about the match, so it reads as a sentence and keeps its code.
 export function said(answer) {
@@ -209,8 +232,18 @@ async function start() {
     await poll();
   });
 
+  const answers = newestFirst();
+
   async function poll() {
+    const ticket = answers.take();
     const answer = await transport.view();
+
+    // Read before anything is touched, including the failure line: an error that was already superseded by a
+    // good answer would otherwise leave the page saying the host is unreachable while it is being drawn.
+    if (!answers.keep(ticket)) {
+      return;
+    }
+
     if (!answer.ok) {
       const problem = element('problem');
       problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
@@ -223,8 +256,12 @@ async function start() {
     draw(latest);
   }
 
+  // Rescheduled after each answer rather than on an interval, so a poll slower than POLL_MS leaves nothing
+  // queued behind it. The ticket above is still what makes this correct: the swap asks for its own view, and
+  // that one can overtake the loop's whatever the loop does.
+  const again = () => setTimeout(() => void poll().finally(again), POLL_MS);
   await poll();
-  setInterval(poll, POLL_MS);
+  again();
 }
 
 if (globalThis.document) await start();
