@@ -22,15 +22,16 @@ and is the reason the rest of this plan is phrased the way it is.
 ## The short version
 
 **Two rungs of the loop have been climbed by hand.** `pressure-floor` was searched from `mixture-mean`, and
-`stun-first` from `pressure-floor` *with `pressure-floor` in its panel* — so a candidate had to beat what it
-started from, which is the one idea A2 turns into a rule. It is **not** A1 and A2 already performed: the
-panel was four opponents named by hand out of a pool of eight, so the pool-derived sampling of A1 never
-happened and neither did A2's every-incumbent gate. What the run establishes is the link, not the
-machinery. The link carries its evidence: on 200 seeds
-nothing in this project had played, `stun-first` beats `pressure-floor` **0.8037, interval 0.762 to 0.846**
-(journal, 2026-09-16). That is already a paired reading — a head-to-head's interval is built over per-seed
-means of the two mirrored matches — so it is the instrument this plan insists on, not a marginal score that
-happens to look large.
+`stun-first` from `pressure-floor` *with `pressure-floor` in its panel*. It is **not** A1 and A2 already
+performed, and two drafts of this sentence said otherwise. The panel was four opponents named by hand out of
+a pool of eight, so A1's pool-derived sampling never happened; and putting the predecessor in the panel did
+not make the candidate beat it, because `Score.floor` is the **low end** of the starting matchup's interval —
+a candidate could sit below `pressure-floor`'s mean, stay above that floor, and win on the panel mean anyway.
+So A2's ratchet idea was not exercised either. What establishes the link is the independent replay, not the
+panel: on 200 seeds nothing in this project had played, `stun-first` beats `pressure-floor` **0.8037,
+interval 0.762 to 0.846** (journal, 2026-09-16). That is already a paired reading — a head-to-head's interval
+is built over the per-seed means of the two mirrored matches — so it is the instrument this plan insists on,
+not a marginal score that happens to look large.
 
 An earlier version of this section claimed a seven-rung chain, `greedy → search-2 → … → stun-first`. The
 history does not support it: `search-2`, `search-3` and `search-4` are **independent** searches, each started
@@ -47,11 +48,11 @@ the implementation effort is **not** estimated, because nothing here has been bu
 
 1. **A1 — the panel becomes the pool.** A rung scores its candidates against the top 4 of `learning/weights/`
    by rating plus 2 drawn at random, instead of three opponents named by hand — or, if the round robin below
-   found a cycle, against one strongly connected component taken whole plus a draw, since a cyclic pool has
-   no top 4. Sampled because
-   the whole pool would take ~195 min against `search.yml`'s 180-minute limit; six opponents land near two
-   hours. This replaces Greedy, which `stun-first` beats in every match and which therefore cannot rank
-   anything above itself any more.
+   found a cycle, against the source components of the condensation graph taken whole plus a draw, since a
+   cyclic pool has no top 4 and picking one by rating is the very thing a cycle forbids. Sampled because the
+   whole pool would take ~195 min against `search.yml`'s 180-minute limit; six opponents land near two hours.
+   This replaces Greedy, which `stun-first` beats in every match and which therefore cannot rank anything
+   above itself any more.
 2. **A2 — the ratchet.** The sample only *ranks*; it never admits. The search's top *m* finalists (m ≈ 5) are
    played against every pool member — ~73 s each — and one is admitted only if, against **every** incumbent,
    its paired difference shows no settled loss *and* has a lower bound above −δ, plus at least one settled
@@ -73,8 +74,9 @@ cycle among the ten agents already in `learning/weights/` can never become visib
 ever add edges touching the newcomer.
 
 **Line B — learning the evaluation instead of writing it — waits for the league, not for A3.** It needs A1
-and A2 to exist, because a learned evaluation is only interesting if it beats the best hand-written one and
-"best" needs a pool and a gate. It is explicitly **not** gated on A3 declaring the nine-number form exhausted,
+and A2 to exist, because a learned evaluation is only interesting if it clears A2's gate against the whole
+hand-written pool — not if it beats one champion, which a cyclic pool may not even have. It is explicitly
+**not** gated on A3 declaring the nine-number form exhausted,
 because A3 cannot declare that; an earlier draft made it wait for a signal that never arrives.
 
 ## What is settled
@@ -169,12 +171,16 @@ for, and Line A is also what would disprove it.
 ## Line A: close the weight ladder into a league
 
 **The claim.** The recurrence has been run by hand and it climbed — twice. `pressure-floor` was searched from
-`mixture-mean`; `stun-first` was searched from `pressure-floor` with `pressure-floor` in its panel, so a
-candidate had to beat what it started from, and on 200 unseen seeds it beat `pressure-floor` 0.8037. The
-second of those contains A2's one idea — the incumbent sits in the panel, so the winner has to clear what it
-started from — but it is not A1 and A2 performed by hand. Its four opponents were named by a person out of a
-pool of eight, which is neither A1's sampling nor A2's gate against every incumbent. Line A is not automating
-something already proven; it is building the machinery that these two links suggest is worth building.
+`mixture-mean`; `stun-first` was searched from `pressure-floor`, and on 200 seeds nothing had played it beat
+`pressure-floor` 0.8037, interval 0.762 to 0.846. That replay is the evidence, and it is the whole of it.
+
+**Neither run performed A1 or A2.** The panel was four opponents named by a person out of a pool of eight,
+which is not A1's sampling. And `pressure-floor` sitting in that panel did not force the candidate to beat
+it: the floor a candidate must hold is `Score.floor`, the **low end** of the starting matchup's interval, so
+a set slightly worse than `pressure-floor` clears the floor and can still win on the panel mean. The one idea
+A2 turns into a rule — the winner must clear the incumbent — is therefore *not* what the ladder ran on. Line
+A is not automating something already proven; it is building machinery that two links suggest is worth
+building, and the second of those links held in spite of the search's rule rather than because of it.
 
 **What it is not.** An earlier draft called this a seven-rung chain running back to `greedy`. It is not:
 `search-2`, `search-3` and `search-4` were each searched from the default weights against Greedy, on three
@@ -226,16 +232,32 @@ that one can reject it while an admissible runner-up is never played — and thr
 halt that says only "the *sampled* winner failed", which is one of the readings A3 below refuses to dress up
 as a verdict. So the gate takes the top *m* of the search (m ≈ 5, still under 7 minutes).
 
-**And testing five costs something the first draft of this paragraph took for free.** Five finalists judged
+**And testing five costs something two drafts of this paragraph took for free.** Five finalists judged
 against the same admission data at 95 % each is five chances for sampling error to lift one over the bar; the
 probability that *something* passes is not the 5 % the interval names. A gate that admits "the best of those
-that clear it" is selecting on exactly that error. Two ways out, and the plan does not yet choose between
-them: correct for the family — at m = 5, reading each bound at 1 − 0.05/5 moves the z from 1.96 to 2.576 and
-the half-width from 0.0563 to about 0.0740, which tightens δ and the admission estimate with it — or pick one
-finalist on the sample and put only that one through a gate on data nothing else touched. The first keeps
-round four's benefit and pays in strictness; the second is cleaner statistically and reopens the miss the
-finalists were added to close. **This is a real trade and it belongs in the ADR**, not in a sentence that
-picks the convenient half.
+that clear it" is selecting on exactly that error.
+
+**The family is larger than the finalists, which the first correction missed.** Two of the three conditions
+are universal — no settled loss, lower bound above −δ, *against every incumbent* — and a universal claim over
+more comparisons gets harder, not easier, so multiplicity does not flatter it. The third does the opposite:
+"at least one settled win" is **existential**, and an existential claim is searched for. With five finalists
+and ten incumbents it is chosen from as many as fifty matchups, and even a single finalist searches ten. A
+candidate with no real win anywhere has many chances to be handed a spurious one, and `z = 2.576` — which
+corrects for choosing among five finalists — does nothing about that at all.
+
+So the win condition needs its own correction across finalist–incumbent pairs, or the matchup that must
+supply the win has to be **named before the data is played**. Predeclaring is cheaper and it is not arbitrary:
+the obvious choice is the incumbent the rung started from, which is the agent a new rung is supposed to
+surpass. At fifty comparisons a Bonferroni reading would move the z to about 3.29 and the half-width past
+0.09, which on 200 seeds is wider than most differences this project has ever settled — that is the honest
+size of the problem, and it argues for predeclaring rather than correcting.
+
+Two ways out for the finalists themselves, and the plan does not choose: correct for the family — at m = 5,
+reading each bound at 1 − 0.05/5 moves the z from 1.96 to 2.576 and the half-width from 0.0563 to about
+0.0740 — or pick one finalist on the sample and put only that one through a gate on data nothing else
+touched. The first keeps round four's benefit and pays in strictness; the second is cleaner statistically and
+reopens the miss the finalists were added to close. **This is a real trade and it belongs in the ADR**, not
+in a sentence that picks the convenient half.
 
 The sampled objective also steers the search's own iterations, which *m* finalists soften and do not cure.
 
@@ -300,11 +322,21 @@ robin would detect a cycle and then hand it straight to a rule that cannot repre
 cycles, overlapping, and which one a detector meets first is an accident of traversal order. Two runs would
 then draw different panels of different sizes from the same table. What is canonical is the **strongly
 connected components** of the settled sub-relation — the partition of the agents into groups where everyone
-reaches everyone, computed the same way whatever order the edges arrive in. So: **the panel is the strongly
-connected component that contains the current best-rated agent among the components, taken whole, plus a draw
-from the rest up to the budget.** Whole, because inside a component no rating orders anybody, and dropping a
-member picks a winner by omission. If that component is larger than the panel budget, the rung costs more or
-the budget moves — a real cost, and the price of a pool that cannot be ranked.
+reaches everyone, computed the same way whatever order the edges arrive in.
+
+A draft then said to take "the component containing the best-rated agent", which walks straight back into the
+object this section rejects — and is worse than circular: if the best-rated agent sits *outside* the cycle,
+its component is a singleton, the real cyclic component is left to the random draw, and members get dropped
+one sentence after saying that dropping them picks a winner by omission.
+
+The selection has to be graph-based. Contract each component to a node and the settled relation becomes a
+**condensation**, which is acyclic by construction; its **source** components — those no other component
+beats into — are exactly the agents nothing outside them defeats, and they are canonical without any rating.
+So: **the panel is the union of the condensation's source components, taken whole, plus a draw from the rest
+up to the budget.** Whole, because inside a component nothing orders anybody. The union rather than one of
+them, because an incomplete relation can leave several sources and choosing between them needs precisely the
+rating that does not exist. If that union exceeds the panel budget the rung costs more or the budget moves —
+a real cost, and the price of a pool that cannot be ranked.
 
 **The gate.** "Beats the pool on the mean" can promote an agent that loses to half of it. An earlier draft
 answered with a set of agents "not beaten by any other member", which is worse than imprecise: under
@@ -407,9 +439,10 @@ B2), not a reading of this counter.
 lever that lifts it is an evaluation that is learned rather than written, which is what "a value of a
 position" means. This is also the only remaining purpose of the policy arm.
 
-**Why not first.** It needs the league to judge it — a learned evaluation is only interesting if it beats the
-best hand-written one, and "best" needs a pool and a paired gate. And the value arm has never produced
-anything but noise: `termsR2` 0.0004 on the searched teacher, a jackknife interval of 0.0000 to 0.3760.
+**Why not first.** It needs the league to judge it — a learned evaluation is only interesting if it clears
+A2's gate against every hand-written set in the pool, and that needs a pool and a paired reading. And the
+value arm has never produced anything but noise: `termsR2` 0.0004 on the searched teacher, a jackknife
+interval of 0.0000 to 0.3760.
 
 ### B1 — fit the value on what the search computed, not on who won
 
@@ -433,13 +466,15 @@ from. The acceptance criterion has to be grounded outside the fit.
 
 - **Produces**: a value fitted on search targets, playable as `lookahead:<value>` once the evaluation can be
   named (see "what is missing" below).
-- **Falsified by**: the fitted evaluation failing to beat **the strongest hand-written weight set of the day**
-  — `stun-first` today, whatever the league's champion is by then — by a paired reading, with the guesser and
-  every other role held fixed so only the evaluation differs. Not the built-in weights: `stun-first` already
-  beats those by a settled 0.1300, so a learned evaluation could clear that bar and still be weaker than what
-  a person wrote, which would demonstrate nothing about the ceiling this line exists to break. And not by an
-  r-squared in either direction: a low one does not condemn it and a high one is what distilling the scorer
-  looks like.
+- **Falsified by**: the fitted evaluation failing **A2's own gate against every hand-written set in the
+  pool**, with the guesser and every other role held fixed so only the evaluation differs. Not the built-in
+  weights: `stun-first` already beats those by a settled 0.1300, so a learned evaluation could clear that bar
+  and still be weaker than what a person wrote. And not "the champion" either, which an earlier draft named:
+  if the pool is cyclic there is no unique strongest hand-written set — the section above rejects exactly
+  that object — and beating one member while losing to another establishes nothing about a ceiling. The gate
+  Line A builds is already the right shape for this, so B1 uses it rather than inventing a second one. And
+  not an r-squared in either direction: a low one does not condemn the fit and a high one is what distilling
+  the scorer looks like.
 - **Watch for**: a fit whose ranking of rounds agrees with `ActionScorer`'s almost everywhere. That is the
   signature of compression, and it is measurable directly — compare the two orders on held-out rounds before
   spending a league run on it.
