@@ -45,6 +45,9 @@ on:
       baseline:
         description: "A third opponent every policy is also played against, e.g. heuristic:learning/weights/search-4.json (empty: what learning/experiments/next.json says)"
         default: ""
+      clone_on_explore:
+        description: "Fit the clone on the exploring dataset rather than the pure one; needs a non-off explore (empty: what learning/experiments/next.json says)"
+        default: ""
       clone_control:
         description: "Also train a clone blind to the candidate terms and play it as `clone-blind`, the control that separates what the terms bought from what the conditional logit bought (ADR 0051) (empty: what learning/experiments/next.json says)"
         default: ""
@@ -154,6 +157,7 @@ jobs:
           VALUE_DISCOUNT: ${{ inputs.value_discount }}
           BASELINE: ${{ inputs.baseline }}
           CLONE_CONTROL: ${{ inputs.clone_control }}
+          CLONE_ON_EXPLORE: ${{ inputs.clone_on_explore }}
         run: |
           plan=learning/experiments/next.json
           knob() {
@@ -191,8 +195,9 @@ jobs:
           value_discount="${VALUE_DISCOUNT:-$(knob value_discount 1.0)}"
           baseline="${BASELINE:-$(knob baseline '')}"
           clone_control="${CLONE_CONTROL:-$(knob clone_control false)}"
+          clone_on_explore="${CLONE_ON_EXPLORE:-$(knob clone_on_explore false)}"
           knob why '' > "$RUNNER_TEMP/why.txt"
-          echo "Knobs: matches $matches, seeds ${seeds:-spaced by the match count}, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}, clone control $clone_control"
+          echo "Knobs: matches $matches, seeds ${seeds:-spaced by the match count}, traces $traces, teacher $teacher, explore $explore, value alpha $value_alpha, min samples $value_min_samples, share $value_share, lambda $value_lambda, discount $value_discount, baseline alpha ${value_baseline_alpha:-shared}, baseline ${baseline:-none}, clone control $clone_control, clone on explore $clone_on_explore"
           echo "Why: $(cat "$RUNNER_TEMP/why.txt")"
           arguments=(--run "$RUN_ID" --matches "$matches" --traces "$traces"
             --teacher "$teacher" --value-share "$value_share"
@@ -212,6 +217,9 @@ jobs:
           fi
           if [[ "$clone_control" == true ]]; then
             arguments+=(--clone-control)
+          fi
+          if [[ "$clone_on_explore" == true ]]; then
+            arguments+=(--clone-on-explore)
           fi
           # The log stays out of the checkout: an untracked file there would make the build stamp the engine
           # version as dirty, and that stamp is what tells two runs apart.

@@ -16,6 +16,7 @@ into a form.
 | `seeds` | the dataset seeds of the turn, one dataset each (ADR 0049), spaced by at least `matches`: match `i` plays seed `s + i`, so closer seeds record the same matches shifted | three seeds spaced by `matches` |
 | `seed` | one base seed, the form the files before ADR 0049 carry; read as a one-entry list | — |
 | `explore` | share of decisions taken at random in the value dataset, or `"off"` (ADR 0014) | 0.2 |
+| `clone_on_explore` | fit the clone on the exploring dataset rather than the pure one; needs a non-`off` `explore`. For a clone meant to be a searching agent's inner agent rather than a player: search asks it to *guess* on hypothetical boards that pure self-play never visits (journal, 2026-09-18) | false |
 | `value_alpha` | how strongly the value fit is pulled toward zero | 1.0 |
 | `value_min_samples` | examples an action needs before it gets its own fit | 5 |
 
