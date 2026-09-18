@@ -32,6 +32,7 @@ from downfall_learning.knobs import (
     validate,
 )
 from downfall_learning.mean_policy import mean_policy
+from downfall_learning.paired import format_paired, paired_difference
 from downfall_learning.policy import POLICY_FILE, Policy
 from downfall_learning.progress import Progress
 from downfall_learning.report import TRAINING_FILE, TrainingLog
@@ -296,6 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     _add_mean_policy(commands)
     _add_jackknife(commands)
+    _add_paired(commands)
 
     csv = commands.add_parser("export-csv", help="the wide CSV projection of a dataset")
     csv.add_argument("runs", nargs="+", type=Path, help=RUNS_HELP)
@@ -341,6 +343,17 @@ def _add_jackknife(commands: argparse._SubParsersAction) -> None:
     )
     jackknife.add_argument("run", type=Path, help="a run directory holding mean/ and mean/without-<seed>/")
     jackknife.set_defaults(handler=_jackknife)
+
+
+def _add_paired(commands: argparse._SubParsersAction) -> None:
+    paired = commands.add_parser(
+        "paired",
+        help="the difference between two evaluations, read seed by seed rather than from their intervals",
+    )
+    paired.add_argument("first", type=Path, help="an evaluation.json; its agent A is the first of the pair")
+    paired.add_argument("second", type=Path, help="another evaluation.json on the same seeds and content")
+    paired.add_argument("-o", "--output", type=Path, help="write paired.json here as well as printing it")
+    paired.set_defaults(handler=_paired)
 
 
 def _add_quiet(parser: argparse.ArgumentParser) -> None:
@@ -466,6 +479,14 @@ def _jackknife(arguments: argparse.Namespace) -> int:
     path = write_jackknife(jackknife, arguments.run)
     print(format_jackknife(jackknife))
     print(f"\nWritten to '{path}'.")
+    return 0
+
+
+def _paired(arguments: argparse.Namespace) -> int:
+    result = paired_difference(arguments.first, arguments.second, arguments.output)
+    print(format_paired(result))
+    if arguments.output is not None:
+        print(f"\nWritten to '{arguments.output}'.")
     return 0
 
 
@@ -682,6 +703,10 @@ def mean_policy_command() -> int:
 
 def jackknife_command() -> int:
     return _run("jackknife")
+
+
+def paired_command() -> int:
+    return _run("paired")
 
 
 def compare_stamps_command() -> int:

@@ -322,6 +322,17 @@ and leaves everything under `runs/<id>/`:
    each way. That is how far the mean's number moves with the draw of its fits, which the spread across the
    seeds does not say: two turns' means differ when their intervals are clear of each other, not before.
 
+**Two evaluations are compared seed by seed, not interval by interval.** Every agent plays the same fixed
+benchmark seeds, so two agents' scores rise and fall together: a seed hard for one is hard for the other. A
+marginal interval says where one agent's score sits and neither says anything about the *difference*, in
+either direction — `search_weights.format_search` has said so for as long as it has printed one. `evaluate`
+already writes what the difference needs: `pairs`, one entry per seed carrying `scoreOfA`, with a seed's two
+mirrored matches already averaged into it. `paired a.json b.json` subtracts those per-seed scores and gives
+the mean difference its own interval, which is *tighter* than the marginals suggest because the shared seed
+difficulty cancels instead of adding. It refuses two files that played different seeds or different content,
+and names both agents and both opponents so a reader sees which comparison was made. Nine evaluations were
+once read as marginal intervals with the paired data sitting in the same files (journal, 2026-09-18).
+
 **Read the spread, not a seed.** One seed is a sample: three runs of one configuration differing only in the
 dataset seed scored 0.6625, 0.0975 and 0.30375 against `search-4` (`ci-88`, `ci-90`, `ci-91`), a 56-point
 spread that is wider than every effect this project has measured. The default is three seeds and a turn
