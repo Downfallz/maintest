@@ -141,30 +141,51 @@ unplayed, so a winner could regress badly against one of them and still be let i
 exists to prevent, reintroduced by the thing that made A1 affordable. It would also hollow out B2 below,
 which counts on A1 producing every matchup as a by-product; a sampled rung produces a sparse table instead.
 So the split is explicit: **the sample is the search's scoring function, and the admission gate of A2 runs
-the one winning candidate against every pool member.** That gate is one candidate, not 161 — at the same
-7.3 s per opponent, a ten-agent pool costs about 73 seconds, which is nothing next to the rung that produced
-it. Sampling buys the search's cost down and buys nothing off the ratchet.
+the finalists against every pool member.** At the same 7.3 s per opponent, one candidate against a ten-agent
+pool costs about 73 seconds, which is nothing next to the rung that produced it. Sampling buys the search's
+cost down and buys nothing off the ratchet.
+
+**Finalists, plural, and that is not a detail.** A sample of six ranks candidates by a different objective
+than the full pool does, so the candidate it puts first need not be the one the full pool would. Gating only
+that one can reject it while an admissible runner-up is never played — and three rungs of that would have
+A3 announce the nine-number form exhausted on evidence that only says the *sampled* winner failed. So the
+gate takes the top *m* of the search (m ≈ 5, still under 7 minutes) and admits the best of those that clear
+it. The sampled objective also steers the search's own iterations, which the *m* finalists soften and do not
+cure; A3 has to state that it is one of the ways its counter can be wrong, and it does below.
 
 ### A2 — the ratchet becomes `paired`, and the winner joins the pool
 
 Today a search keeps "the best of what it drew", which is at least the starting score by construction. The
-gate has to be: the winner beats the pool by a paired difference whose interval is clear of zero, on seeds the
-search did not use. Then it is written to `learning/weights/`, and the next rung starts from it.
+gate has to be a paired reading against the pool, on seeds the search did not use; a finalist that clears it
+is written to `learning/weights/`, and the next rung starts from it.
 
-That last sentence is the whole loop. Everything before it exists.
+"Clears it" is the hard part and it is not "an interval clear of zero against the pool mean" — a mean hides
+the incumbent the candidate regressed against, which is the failure this gate exists to catch. The rule is
+per incumbent, and what it has to be is worked out under Plan B2 below, because getting it wrong is the same
+mistake in both places.
+
+"Written to `learning/weights/`, and the next rung starts from it" is the whole loop. Everything it needs
+exists.
 
 - **Produces**: a run that ends by adding to the pool, so the next run has a harder panel and a better start.
-- **Falsified by**: three consecutive rungs where nothing clears the paired gate. That is not a bug, it is
-  the answer to the question — see A3.
-- **Cost**: the hold-out already runs on any improving run (#137). The paired reading is seconds.
+- **Falsified by**: three consecutive rungs where no finalist clears the gate — **and** the failing gates
+  agreeing on why, since that counter has four causes and only one of them is an answer (A3).
+- **Cost**: the hold-out already runs on any improving run (#137). The readings are minutes: *m* finalists
+  against ten incumbents, plus the one-time round robin that starts the table.
 
 **Plan B2, when the pool cannot be ranked.** Non-transitivity is **suspected and not measured**, and the
 distinction matters because an earlier draft of this file asserted it. What exists is `ci-69` at 0.5325
 against `search-4` head to head — an interval containing one half, so neither a win nor a proven equivalence —
 beside twenty points between them against Greedy. Two readings, one of them inconclusive, do not make a cycle.
-A settled cycle needs three paired matchups that close, which A1's admission gate produces as a by-product —
-every winner against every pool member — and nothing before it does. The *search* sample does not: it plays
-six of ten, so the table it fills is sparse and a cycle can hide in the cells it never visits.
+A settled cycle needs three paired matchups that close, and the table that would show one does not exist yet.
+
+**The admission gate alone never builds it.** Each admission adds only the edges touching the newcomer; the
+ten agents already in the starting pool have never been played against each other, only scattered readings
+against Greedy and each other's neighbours. A cycle sitting entirely among the incumbents would stay hidden
+for as long as the loop runs, because nothing ever looks there. So the table starts with an explicit
+**round robin over the initial pool**, once: 45 pairs at roughly 7.3 s each is about 5½ minutes, a one-time
+cost against a rung of two hours. After that the admission gate keeps it complete, one newcomer at a time.
+The *search* sample never contributes: it plays six of ten, and a cycle hides in the cells it skips.
 
 If a cycle *is* found, a scalar rating is the wrong object: "beats the pool on the mean" can promote an agent
 that loses to half of it. An earlier draft answered with a set of agents "not beaten by any other member",
@@ -183,19 +204,54 @@ did not settle, plus the champion".
 
 What the gate needs instead is an explicit rule for absent edges, and the safe direction is that a missing
 edge counts *against* the newcomer, because the ratchet's job is to refuse without evidence rather than to
-admit without it: **at least one settled win against a pool member, and no settled loss to any of them.**
-That is never vacuous and never admits an agent that beat nothing. Its cost is that under a genuine cycle it
-admits nobody — which is not a silent failure, it is A3 firing, and a loop that stops and says "the pool
-contains a cycle" is a result. Which rule is right is an ADR question, and it should be decided on the
-matchup table A1's admission gate produces, not in advance of it.
+admit without it. **This has now been got wrong three times, each time by a rule that looked like it did that
+and did not**, so the failures are worth stating before the rule:
+
+1. "Loses to nobody in the set" — **empty** under a cycle, so it passes vacuously.
+2. "Belongs to the top cycle" — on an incomplete relation the top cycle is everyone whose matchups did not
+   settle, so a newcomer that settled against nothing belongs to it.
+3. "One settled win, and no settled loss" — a candidate that beats the weakest member and is unsettled
+   against all nine others, champions included, has no settled loss, so it passes. **Failing to establish a
+   loss is not evidence of not having regressed**, which is the whole thing the rule claimed to encode.
+
+All three share one mistake: they treat an absent edge as neutral while announcing that it is not. Making it
+count requires a criterion an absent edge can actually **fail**, which the settled/not-settled reading alone
+does not provide. The one that does is a **non-inferiority margin**: against every incumbent, the paired
+difference's lower bound must sit above −δ, plus at least one settled win so a candidate cannot enter having
+beaten nothing.
+
+The arithmetic decides δ, and it is tight. The settled readings on 200 seeds have standard errors near
+0.0287, so a 95 % half-width near 0.0563. A matchup that carries no information is an interval centred on
+zero with a lower bound near −0.0563, so **δ must be below that or an uninformative matchup passes** — at
+δ = 0.07 the counterexample above is admitted again, one margin later. At δ = 0.05, admission needs a point
+estimate above 0.0063 against *every* incumbent: at or above parity, in practice. That is severe, and the
+severity is a property of the seed count rather than of the rule — the half-width falls as 1/√n, so a
+gentler δ is bought with more seeds and in no other way.
+
+This is the fourth attempt at one paragraph, so it is a proposal and not a decision: it goes to an ADR,
+decided on the matchup table A1 produces rather than in advance of it, and the three failures above are the
+test cases that ADR has to survive.
 
 ### A3 — a stop condition
 
 A loop that cannot stop burns runner hours restating a fixed point, which is what three turns of the clone
-arm did. If N consecutive rungs fail the paired gate, the loop stops and says so. That is a result: the
-nine-number form is exhausted, and the ceiling is functional rather than parametric.
+arm did. If N consecutive rungs fail the paired gate, the loop stops and says so.
 
-- **Produces**: the trigger for Line B, with evidence.
+**What it may not say is why.** "N rungs failed the gate" has at least four causes, and the interesting one
+is the rarest: the form is exhausted; or the candidates were ordinary losers; or nothing settled, because the
+seeds do not separate agents this close; or the *sample* ranked the wrong finalist and the full-pool gate
+never saw the one that would have passed. Only the first is the trigger for Line B, so the stop has to name
+which it is — the failing gate reports the margin and the settled/unsettled split per incumbent, and those
+distinguish the four.
+
+A cycle is **not** one of them, and an earlier draft had this backwards in both directions. Repeated
+rejection is not evidence of a cycle, since the causes above produce it without one; and a cycle does not
+force rejection, since a newcomer that beats every member of the cycle is admitted by any of these rules. A
+cycle is a property of the matchup table, so it is found by **testing the table** — the round robin below
+plus the edges each admission adds — and it is a separate outcome with a separate response (B2's fallback),
+not a reading of this counter.
+
+- **Produces**: the trigger for Line B, with evidence, *when* the stop is the exhaustion one.
 
 ---
 
@@ -231,9 +287,13 @@ from. The acceptance criterion has to be grounded outside the fit.
 
 - **Produces**: a value fitted on search targets, playable as `lookahead:<value>` once the evaluation can be
   named (see "what is missing" below).
-- **Falsified by**: the fitted evaluation failing to beat the built-in weights in the league, by a paired
-  reading over the pool. Not by an r-squared, in either direction: a low one does not condemn it and a high
-  one is what distilling the scorer looks like.
+- **Falsified by**: the fitted evaluation failing to beat **the strongest hand-written weight set of the day**
+  — `stun-first` today, whatever the league's champion is by then — by a paired reading, with the guesser and
+  every other role held fixed so only the evaluation differs. Not the built-in weights: `stun-first` already
+  beats those by a settled 0.1300, so a learned evaluation could clear that bar and still be weaker than what
+  a person wrote, which would demonstrate nothing about the ceiling this line exists to break. And not by an
+  r-squared in either direction: a low one does not condemn it and a high one is what distilling the scorer
+  looks like.
 - **Watch for**: a fit whose ranking of rounds agrees with `ActionScorer`'s almost everywhere. That is the
   signature of compression, and it is measurable directly — compare the two orders on held-out rounds before
   spending a league run on it.
