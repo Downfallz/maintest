@@ -7,8 +7,13 @@ right. Each hard-to-reverse choice it raises becomes an ADR before code depends 
 ## The objective, stated so it can fail
 
 A loop that (1) runs without a person deciding each turn, (2) produces an agent measurably stronger than the
-one it started from, and (3) cannot accept a regression. Three parts, and the third is the one that makes the
-first two worth anything: a loop without a ratchet is a random walk that reports its best step.
+one it started from, and (3) cannot accept a regression it can measure. Three parts, and the third is the one
+that makes the first two worth anything: a loop without a ratchet is a random walk that reports its best
+step.
+
+"A regression it can measure" is the honest form and the qualifier is load-bearing. No gate built on finite
+seeds refuses an inferiority smaller than what those seeds resolve; A2's admits at most δ of one it cannot
+see, and that tolerance is a number someone has to choose rather than a gap to be apologised for.
 
 "Measurably" has a specific meaning here, and it is new: the paired difference over the benchmark seeds, from
 `paired` (`docs/learning/training.md`). Not a marginal interval. That distinction cost this project a night
@@ -16,34 +21,49 @@ and is the reason the rest of this plan is phrased the way it is.
 
 ## The short version
 
-**The loop already exists, in manual form.** `greedy → search-2 → search-3 → search-4 → mixture-mean →
-pressure-floor → stun-first`: seven rungs, each searched from the one before it. It is missing two things — a
-person triggers every rung, and the opponent panel is written by hand.
+**Two rungs of the loop have been climbed by hand.** `pressure-floor` was searched from `mixture-mean`, and
+`stun-first` from `pressure-floor` *with `pressure-floor` in its panel* — which is A1 and A2 performed
+manually, once, and it produced the strongest agent here.
+
+An earlier version of this section claimed a seven-rung chain, `greedy → search-2 → … → stun-first`. The
+history does not support it: `search-2`, `search-3` and `search-4` are **independent** searches, each started
+from the default weights against Greedy, on three different content hashes (`d4a21a55`, `938bef5e`,
+`7e199df4`). They are three attempts at the same rung, not three steps of a climb, and `mixture-mean`'s own
+starting point is unverified. So the evidence that the recurrence climbs is **two links long**, and what
+follows builds on that rather than on six.
+
+What those two links needed a person for is what remains: someone triggers each rung, and the opponent panel
+is written by hand.
 
 Three steps close it, in this order. Every runtime below is measured or extrapolated from a measured pace;
 the implementation effort is **not** estimated, because nothing here has been built yet.
 
 1. **A1 — the panel becomes the pool.** A rung scores its candidates against the top 4 of `learning/weights/`
-   by rating plus 2 drawn at random, instead of three opponents named by hand. Sampled because the whole pool
-   would take ~195 min against `search.yml`'s 180-minute limit; six opponents land near two hours. This
-   replaces Greedy, which `stun-first` beats in every match and which therefore cannot rank anything above
-   itself any more.
+   by rating plus 2 drawn at random, instead of three opponents named by hand — or, if the round robin below
+   found a cycle, against the cycle's members plus a draw, since a cyclic pool has no top 4. Sampled because
+   the whole pool would take ~195 min against `search.yml`'s 180-minute limit; six opponents land near two
+   hours. This replaces Greedy, which `stun-first` beats in every match and which therefore cannot rank
+   anything above itself any more.
 2. **A2 — the ratchet.** The sample only *ranks*; it never admits. The search's top *m* finalists (m ≈ 5) are
    played against every pool member — ~73 s each — and one is admitted only if, against **every** incumbent,
-   the paired difference's lower bound clears a non-inferiority margin, plus at least one settled win. An
-   admitted finalist is written to `learning/weights/` and the next rung starts from it. **That sentence is
-   the loop.** Everything it needs already exists, except the gate, which this plan has got wrong three times
-   and hands to an ADR.
-3. **A3 — a stop.** N rungs with nothing admitted ends the loop. It has to report *which* of four causes
-   stopped it, because only one of them ("the nine-number form is exhausted") is a result and the trigger for
-   Line B.
+   its paired difference shows no settled loss *and* has a lower bound above −δ, plus at least one settled
+   win across the pool. Both halves are needed: the first refuses a matchup that says something bad, the
+   second one that says nothing. An admitted finalist is written to `learning/weights/` and the next rung
+   starts from it. **That sentence is the loop.** Everything it needs already exists, except the gate, which
+   this plan has got wrong four times and hands to an ADR.
+3. **A3 — a stop.** N rungs with nothing admitted ends the loop, so it stops burning runner hours restating a
+   fixed point. It records every finalist that failed, against whom and by how much. It does **not** say why
+   the loop stopped: the four possible causes are not distinguishable from what it observes, so it is a halt,
+   not a verdict.
 
 One thing precedes all three: a **round robin over the initial pool** (45 pairs, ~5½ min, once). Without it a
 cycle among the ten agents already in `learning/weights/` can never become visible, because admissions only
 ever add edges touching the newcomer.
 
-**Line B — learning the evaluation instead of writing it — waits for A3 to fire.** It is the only lever on the
-functional ceiling, and it cannot be judged without the league A1 and A2 build.
+**Line B — learning the evaluation instead of writing it — waits for the league, not for A3.** It needs A1
+and A2 to exist, because a learned evaluation is only interesting if it beats the best hand-written one and
+"best" needs a pool and a gate. It is explicitly **not** gated on A3 declaring the nine-number form exhausted,
+because A3 cannot declare that; an earlier draft made it wait for a signal that never arrives.
 
 ## What is settled
 
@@ -126,7 +146,7 @@ it.
 | --- | --- | --- |
 | **Operator** | something that makes the current agent better | search, measured against Greedy only: +0.1100 on a weak inner agent, −0.1700 on a saturated one. Whether it improves an agent against the pool is a Line A deliverable |
 | **Distillation** | capturing that improvement back into the agent | cloning works as copying (99 %) and transfers a one-step policy, not a search |
-| **Ratchet** | a gate that cannot accept a regression | `paired` exists now; the gates still read marginal numbers against a fixed Greedy |
+| **Ratchet** | a gate that cannot accept a measured regression | `paired` exists now; the gates still read marginal numbers against a fixed Greedy |
 
 The evaluation is the constraint this plan bets on: nine hand-written numbers that everything is scored by,
 and worth 0.1300 on the one row where changing only the yardstick was measured. That bet is what Line A is
@@ -136,15 +156,21 @@ for, and Line A is also what would disprove it.
 
 ## Line A: close the weight ladder into a league
 
-**The claim.** The loop that works already exists and nobody called it one. `greedy → search-2 → search-3 →
-search-4 → mixture-mean → pressure-floor → stun-first` is a chain of rungs, each searched from the one before
-it, ending at an agent that takes every match from Greedy. `learning/weights/` holds ten sets in all — the
-rest are branches that did not become rungs, which is what a pool is made of. The chain is missing exactly
-two things: a person triggers each rung, and the opponent panel is written by hand.
+**The claim.** The recurrence has been run by hand and it climbed — twice. `pressure-floor` was searched from
+`mixture-mean`; `stun-first` was searched from `pressure-floor` with `pressure-floor` in its panel, so a
+candidate had to beat what it started from, and on 200 unseen seeds it beat `pressure-floor` 0.8037. The
+second of those is A1 and A2 executed manually: the panel included the incumbent, and the winner had to clear
+it. Automating the two links is what Line A is.
 
-**Why this line first.** It is the only arm that has demonstrably climbed, every component exists
-(`search-weights`, the workflow, the proposal branch, the pool directory, and now `paired`), and it produces
-the thing Line B needs in order to be judged at all.
+**What it is not.** An earlier draft called this a seven-rung chain running back to `greedy`. It is not:
+`search-2`, `search-3` and `search-4` were each searched from the default weights against Greedy, on three
+different content hashes, so they are three tries at one rung rather than three steps; and `mixture-mean`'s
+starting point has not been checked. Two links is the evidence, and two links is thin — this line is first
+because it is the only arm with *any* measured climb, not because the climb is long. `learning/weights/`
+holds ten sets, and the ones that are not rungs are what a pool is made of.
+
+**Why this line first.** Every component exists (`search-weights`, the workflow, the proposal branch, the
+pool directory, and now `paired`), and it produces the thing Line B needs in order to be judged at all.
 
 ### A1 — the panel becomes the pool
 
@@ -166,6 +192,10 @@ whole pool: the top *k* by current rating plus a random draw from the rest, so a
 beating only the weak half and cannot avoid the champions. At *k* = 4 plus two drawn, a rung is back to about
 two hours and fits the current limit without touching it. Given the arithmetic above, this is the likely
 shape of A1 on day one rather than a contingency.
+
+"The top *k* by rating" presumes the pool can be ranked, which the round robin that precedes A1 may refuse:
+under a cycle the panel is drawn by the rule under Plan B2 instead, and the ordering matters — the round
+robin runs first precisely so this is known before a panel is chosen rather than after.
 
 **The sample ranks candidates; it never admits one.** A sample of six from a pool of ten leaves four agents
 unplayed, so a winner could regress badly against one of them and still be let in — which is the failure A2
@@ -199,8 +229,10 @@ mistake in both places.
 exists.
 
 - **Produces**: a run that ends by adding to the pool, so the next run has a harder panel and a better start.
-- **Falsified by**: three consecutive rungs where no finalist clears the gate — **and** the failing gates
-  agreeing on why, since that counter has four causes and only one of them is an answer (A3).
+- **Falsified by**: nothing this counter can establish on its own. Three consecutive rungs admitting no
+  finalist says the loop is not climbing *here*, which is worth stopping for; it does not say the form is
+  spent, the candidates were weak, or the seeds cannot separate them, because those look the same from
+  inside (A3).
 - **Cost**: the hold-out already runs on any improving run (#137). The readings are minutes: *m* finalists
   against ten incumbents, plus the one-time round robin that starts the table.
 
@@ -218,10 +250,20 @@ for as long as the loop runs, because nothing ever looks there. So the table sta
 cost against a rung of two hours. After that the admission gate keeps it complete, one newcomer at a time.
 The *search* sample never contributes: it plays six of ten, and a cycle hides in the cells it skips.
 
-If a cycle *is* found, a scalar rating is the wrong object: "beats the pool on the mean" can promote an agent
-that loses to half of it. An earlier draft answered with a set of agents "not beaten by any other member",
-which is worse than imprecise: under `A > B > C > A` that set is **empty**, "loses to nobody in it" is
-vacuously true, and the ratchet accepts anything precisely when a cycle is what it needed to handle.
+If a cycle *is* found, two things need an answer, and earlier drafts answered only one of them.
+
+**The panel.** A1 picks its six opponents as "the top four by rating plus two drawn", and under a cycle there
+is no top four: a scalar rating over a cyclic table is exactly the object this section rejects, so the round
+robin would detect a cycle and then hand it straight to a rule that cannot represent one. Under a cycle the
+panel is drawn differently — **every member of the cycle, plus a draw from the rest up to the budget** —
+because the members are precisely the agents no rating can order, so leaving any of them out picks a winner
+by omission. If the cycle is larger than the panel budget, the rung costs more or the budget moves; that is a
+real cost and it is the price of a pool that cannot be ranked.
+
+**The gate.** "Beats the pool on the mean" can promote an agent that loses to half of it. An earlier draft
+answered with a set of agents "not beaten by any other member", which is worse than imprecise: under
+`A > B > C > A` that set is **empty**, "loses to nobody in it" is vacuously true, and the ratchet accepts
+anything precisely when a cycle is what it needed to handle.
 
 The **top cycle** — the smallest non-empty set whose every member beats every agent outside it — is the right
 object *on a tournament*, where every pair has a winner. This pool is not one. `paired` returns settled or
@@ -235,7 +277,7 @@ did not settle, plus the champion".
 
 What the gate needs instead is an explicit rule for absent edges, and the safe direction is that a missing
 edge counts *against* the newcomer, because the ratchet's job is to refuse without evidence rather than to
-admit without it. **This has now been got wrong three times, each time by a rule that looked like it did that
+admit without it. **This has now been got wrong four times, each time by a rule that looked like it did that
 and did not**, so the failures are worth stating before the rule:
 
 1. "Loses to nobody in the set" — **empty** under a cycle, so it passes vacuously.
@@ -244,12 +286,31 @@ and did not**, so the failures are worth stating before the rule:
 3. "One settled win, and no settled loss" — a candidate that beats the weakest member and is unsettled
    against all nine others, champions included, has no settled loss, so it passes. **Failing to establish a
    loss is not evidence of not having regressed**, which is the whole thing the rule claimed to encode.
+4. "One settled win, and a lower bound above −δ" — at δ = 0.05 a matchup reading `[−0.04, −0.01]` clears the
+   margin, so a **measured** loss is admitted by a ratchet whose whole point is refusing one.
 
-All three share one mistake: they treat an absent edge as neutral while announcing that it is not. Making it
-count requires a criterion an absent edge can actually **fail**, which the settled/not-settled reading alone
-does not provide. The one that does is a **non-inferiority margin**: against every incumbent, the paired
-difference's lower bound must sit above −δ, plus at least one settled win so a candidate cannot enter having
-beaten nothing.
+The first three share one mistake: they treat an absent edge as neutral while announcing that it is not. The
+fourth makes the opposite one — a rule aimed at absent edges that stopped checking the present ones. Making
+an absent edge count requires a criterion it can actually **fail**, which the settled/not-settled reading
+alone does not provide. The one that does is a **non-inferiority margin**, and it takes three conditions
+rather than the two the fourth draft of this paragraph had. Against every incumbent:
+
+- the paired difference's **upper** bound must not sit below zero — a settled loss is refused outright,
+  however small;
+- the paired difference's **lower** bound must sit above −δ;
+
+and across the pool, at least one settled win, so a candidate cannot enter having beaten nothing.
+
+The first condition is not redundant, and leaving it out was the fourth vacuity. With the margin alone, a
+matchup reading `[−0.04, −0.01]` at δ = 0.05 has a lower bound above −δ and passes — a **measured** regression
+admitted by the ratchet whose stated invariant is that it cannot accept one. The two conditions catch
+different things: the margin refuses a matchup that says nothing, and the upper bound refuses one that says
+something bad.
+
+What the pair still tolerates is an *unmeasured* inferiority of up to δ — an interval like `[−0.045, +0.002]`
+passes. That is what a non-inferiority margin means and the objective at the top of this file has to say so:
+the ratchet cannot accept a regression it can see, and accepts at most δ of one it cannot. Calling it
+"cannot accept a regression" without that clause is a promise the arithmetic does not keep.
 
 The arithmetic decides δ, and it is tight. The settled readings on 200 seeds have standard errors near
 0.0287, so a 95 % half-width near 0.0563. A matchup that carries no information is an interval centred on
@@ -259,30 +320,38 @@ estimate above 0.0063 against *every* incumbent: at or above parity, in practice
 severity is a property of the seed count rather than of the rule — the half-width falls as 1/√n, so a
 gentler δ is bought with more seeds and in no other way.
 
-This is the fourth attempt at one paragraph, so it is a proposal and not a decision: it goes to an ADR,
-decided on the matchup table A1 produces rather than in advance of it, and the three failures above are the
-test cases that ADR has to survive.
+This is the fifth attempt at one paragraph, so it is a proposal and not a decision: it goes to an ADR,
+decided on the matchup table A1 produces rather than in advance of it, and the four failures above are the
+test cases that ADR has to survive. Four wrong rules in a row, each of which read as correct when written,
+is the strongest argument in this file for not letting the loop run on a gate nobody has tried to break.
 
 ### A3 — a stop condition
 
 A loop that cannot stop burns runner hours restating a fixed point, which is what three turns of the clone
 arm did. If N consecutive rungs fail the paired gate, the loop stops and says so.
 
-**What it may not say is why.** "N rungs failed the gate" has at least four causes, and the interesting one
-is the rarest: the form is exhausted; or the candidates were ordinary losers; or nothing settled, because the
-seeds do not separate agents this close; or the *sample* ranked the wrong finalist and the full-pool gate
-never saw the one that would have passed. Only the first is the trigger for Line B, so the stop has to name
-which it is — the failing gate reports the margin and the settled/unsettled split per incumbent, and those
-distinguish the four.
+**What it cannot say is why, and a previous draft claimed it could.** "N rungs failed the gate" has at least
+four causes: the nine-weight form is exhausted; the candidates were ordinary losers; nothing settled, because
+the seeds do not separate agents this close; or the sample ranked the wrong finalists and the gate never saw
+the one that would have passed. That draft said the per-incumbent margins and the settled/unsettled split
+distinguish them. **They do not.** Every one of those reports describes only the finalists that were played,
+so the reports are identical whether an untested candidate would have passed or no candidate in the space
+can; and a search that simply drew weak candidates looks exactly like a space with nothing left in it.
+
+So A3 stops the loop and reports what it observed, and it **does not name a cause**. In particular it cannot
+certify exhaustion, and nothing downstream may be gated on it certifying exhaustion. Establishing that the
+nine-number form is spent needs evidence A3 does not produce — a coverage argument about what the search
+actually explored, or a different search shape entirely — and that is an open question, not a step.
 
 A cycle is **not** one of them, and an earlier draft had this backwards in both directions. Repeated
 rejection is not evidence of a cycle, since the causes above produce it without one; and a cycle does not
 force rejection, since a newcomer that beats every member of the cycle is admitted by any of these rules. A
-cycle is a property of the matchup table, so it is found by **testing the table** — the round robin below
-plus the edges each admission adds — and it is a separate outcome with a separate response (B2's fallback),
-not a reading of this counter.
+cycle is a property of the matchup table, so it is found by **testing the table** — the round robin plus the
+edges each admission adds — and it is a separate outcome with a separate response (the panel rule under Plan
+B2), not a reading of this counter.
 
-- **Produces**: the trigger for Line B, with evidence, *when* the stop is the exhaustion one.
+- **Produces**: a loop that halts instead of restating a fixed point, and a record of every finalist that
+  failed and by how much against whom. Not a verdict on the functional form.
 
 ---
 
