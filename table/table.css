@@ -118,3 +118,6 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
   .choice-cards { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 }
 @media (prefers-reduced-motion: no-preference) { button, .creature, .held { transition: border-color 120ms, background-color 120ms; } }
+
+/* Keep the revealed spell prominent while the player chooses its targets. */
+#decision[data-kind="Target"] #asking { font-size: 32px; color: var(--gold); overflow-wrap: anywhere; }

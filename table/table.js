@@ -743,16 +743,19 @@ function renderDecision(state, current) {
     return;
   }
 
-  asking.textContent = titleOf(view);
+  asking.textContent = titleOf(state, view);
   choices.replaceChildren(...buttonsFor(state, current));
 }
 
-function titleOf(view) {
+function titleOf(state, view) {
   switch (view.waitingFor) {
     case 'Evolution': return `Unlock a spell · ${view.options.evolution?.remainingPicks ?? 0} pick(s) left`;
     case 'Speed': return `Speed of creature ${view.waitingCreature}`;
     case 'Intent': return `What does creature ${view.waitingCreature} do?`;
-    case 'Target': return `Targets for creature ${view.waitingCreature}`;
+    case 'Target': {
+      const spell = view.options.target?.spell;
+      return cardTitle(state.cards.get(spell)) || spell || 'Choose targets';
+    }
     default: return 'Your move';
   }
 }
@@ -845,13 +848,16 @@ function pick(state, view, candidate) {
 }
 
 function targetButtons(state, current) {
+  const context = document.createElement('p');
+  context.className = 'muted';
+  context.textContent = `Choose targets · Creature ${current.view.options.target?.actor ?? current.view.waitingCreature}`;
   const legal = current.view.options.target?.legalTargets ?? { candidates: [], minTargets: 0, maxTargets: 0 };
   const picked = state.picked;
 
   // A spell with nothing left to hit is revealed with no targets and fizzles, so binding none is the action
   // rather than a dead end (docs/tabletop/rulebook.md, 6.2).
   if (legal.candidates.length < legal.minTargets) {
-    return [button('No legal target — cast anyway', () => submit(state, current, { kind: 'Target', targets: [] }))];
+    return [context, button('No legal target — cast anyway', () => submit(state, current, { kind: 'Target', targets: [] }))];
   }
 
   // No button a candidate: the tap is on the creature's own row, where its health, its defense and what is
@@ -866,7 +872,7 @@ function targetButtons(state, current) {
     submit(state, current, { kind: 'Target', targets: picked });
   });
   confirm.disabled = picked.length < legal.minTargets;
-  return [asking, confirm];
+  return [context, asking, confirm];
 }
 
 // A spell as the card the host serves, and as the id it was offered by when the catalogue has no card for it.

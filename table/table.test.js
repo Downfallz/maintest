@@ -189,3 +189,19 @@ test('a new question starts the decision sheet at the top', () => {
   p.view.waitingAsked += 1; p.draw();
   assert.equal(p.nodes.decision.scrollTop, 0);
 });
+
+test('target selection prominently names the host spell and retains the acting creature', () => {
+  const p = page(); p.view.waitingFor = 'Target';
+  p.view.options = { target: { actor: 1, spell: 'two', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
+  p.draw();
+  assert.equal(p.nodes.asking.textContent, 'Second card');
+  assert.match(p.nodes.choices.children[0].textContent, /Choose targets · Creature 1/);
+});
+
+test('a target spell missing from the catalogue still identifies the cast with no legal target', () => {
+  const p = page(); p.view.waitingFor = 'Target';
+  p.view.options = { target: { actor: 1, spell: 'unknown-card', legalTargets: { candidates: [], minTargets: 1, maxTargets: 1 } } };
+  p.draw();
+  assert.equal(p.nodes.asking.textContent, 'unknown-card');
+  assert.match(p.nodes.choices.children.at(-1).textContent, /No legal target/);
+});
