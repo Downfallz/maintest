@@ -63,6 +63,34 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     /// <summary>
+    /// The acceptance moment is read before the seat is answered, and so carries none of what answering it
+    /// sets off. Handing a decision over releases the driver, which runs a whole command and asks the next
+    /// question; a thread that reads its clock afterwards can be scheduled again at any point in that, and
+    /// would date the note after the thing it records and put engine time inside a duration that measures a
+    /// person reading a screen.
+    /// </summary>
+    /// <remarks>
+    /// Read after the submit, this reports a minute: the clock here moves exactly when the seat comes off the
+    /// question being answered, which is what the submit does, under its own lock, before it returns. The
+    /// other timing tests in this file cannot catch it -- their clock only moves when the test moves it, so it
+    /// reads the same on both sides of the handoff and both orderings pass.
+    /// </remarks>
+    [Fact]
+    public async Task A_decision_is_timed_before_it_is_handed_to_the_engine()
+    {
+        var clock = new ClockThatJumpsOnceTheSeatIsAnswered(Start, Start.AddMinutes(1));
+        var table = await Recording(clock);
+
+        clock.Answering(table.Person);
+        await Shown(table);
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+
+        var note = Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision");
+        note.GetProperty("at").GetDateTimeOffset().ShouldBe(Start);
+        note.GetProperty("elapsedMs").GetInt64().ShouldBe(0);
+    }
+
+    /// <summary>
     /// In hotseat the page polls both seats on a timer while one of them is behind the pass screen, so a poll
     /// that is not drawing the seat must not start its clock: the duration would include the walk round the
     /// table, picking the phone up and tapping ready. Here the background polls happen and then the screen is
@@ -302,7 +330,7 @@ public sealed class PlaytestNotesTests : IDisposable
         answer.Status.ShouldBe(204, Text(answer));
     }
 
-    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run)> Recording()
+    private async Task<(TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run)> Recording(TimeProvider? clock = null)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
@@ -317,7 +345,7 @@ public sealed class PlaytestNotesTests : IDisposable
             _runs,
             new PlaytestSetup(resources, Rules, Seed: 7, "human:mk", "greedy"),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
-            _clock);
+            clock ?? _clock);
         await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);
 
         var session = await TableSession.StartAsync(_host.Services, Rules, seed: 7, new SeatAgent(person), new SeatAgent(bot), run.Wrap, _stopping.Token);
@@ -351,6 +379,34 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
+
+    /// <summary>
+    /// A clock that stands still while the seat is on one named question and jumps the moment it is off it.
+    /// The jump stands for everything that happens once a decision is handed over -- the driver released, a
+    /// command run, the next question asked -- so a note holding any of it reads a minute late.
+    /// </summary>
+    /// <remarks>
+    /// The two orderings are told apart with no race because <see cref="HumanSeat.Submit" /> clears the
+    /// question under its own lock before it returns, and an asking is never reused: while the seat is on
+    /// asking <c>n</c> the read is before the handoff, and once it is on null or on anything past <c>n</c> the
+    /// read is after it. Neither branch waits on a thread being scheduled, which is why the bug this catches
+    /// can be caught at all -- it is a race in production and an ordering here.
+    /// </remarks>
+    private sealed class ClockThatJumpsOnceTheSeatIsAnswered(DateTimeOffset pending, DateTimeOffset answered) : TimeProvider
+    {
+        private HumanSeat? _seat;
+        private long? _asking;
+
+        public override DateTimeOffset GetUtcNow() =>
+            _seat is { } seat && _asking is { } asking && seat.Waiting?.Asked != asking ? answered : pending;
+
+        /// <summary>Freeze the clock until this seat is off the question it is waiting on right now.</summary>
+        public void Answering(HumanSeat seat)
+        {
+            _seat = seat;
+            _asking = seat.Waiting?.Asked;
+        }
+    }
 
     /// <summary>A clock a test moves by hand, so a measured duration is the one the test asked for.</summary>
     private sealed class SteppingClock(DateTimeOffset start) : TimeProvider
