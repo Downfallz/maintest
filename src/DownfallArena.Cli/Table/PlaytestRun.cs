@@ -99,15 +99,22 @@ internal sealed class PlaytestRun
     /// says they are all there: a page asked too early is told to come back, which is true, rather than served
     /// a session missing the decision that ended it.
     /// </remarks>
-    public bool IsClosed => _closed && Volatile.Read(ref _recording) == 0;
+    public bool IsClosed => FilesWritten && Volatile.Read(ref _recording) == 0;
 
-    private bool _closed;
+    /// <summary>
+    /// Whether the last write has been made: the episodes, the final trace and the manifest with its counts.
+    /// Half of <see cref="IsClosed" />; the other half is that nothing is still on its way into them.
+    /// </summary>
+    private bool FilesWritten { get; set; }
 
-    // Set the moment closing begins, and it is a different question from IsClosed: this one stops a checkpoint
-    // from queueing a write that would land after the final trace, and it has to be true while the final
-    // writes are still running. Reading it as "the session is readable" is what would serve a half-written
-    // directory, so the two are not one flag.
-    private bool _closing;
+    /// <summary>
+    /// Whether checkpoints have stopped, which begins the moment closing does and is a different question from
+    /// both of the above. It is what keeps a checkpoint from queueing a write that would land after the final
+    /// trace, so it has to be true <em>while</em> the final writes run — reading it as "the session is
+    /// readable" is what served a half-written directory once already. Three names because three questions;
+    /// folding any two of them together is the bug.
+    /// </summary>
+    private bool CheckpointsStopped { get; set; }
 
     /// <summary>
     /// Opens a session under <paramref name="root" />. The rule set is the table's own, so the feature schema
@@ -285,7 +292,7 @@ internal sealed class PlaytestRun
         // copy and an enqueue.
         lock (_ordering)
         {
-            if (_closing)
+            if (CheckpointsStopped)
             {
                 return Task.CompletedTask;
             }
@@ -308,7 +315,7 @@ internal sealed class PlaytestRun
         // the final one.
         lock (_ordering)
         {
-            _closing = true;
+            CheckpointsStopped = true;
         }
 
         // Decisions already accepted finish being written down first. The match can end on a tap, and the
@@ -327,7 +334,7 @@ internal sealed class PlaytestRun
         // And only now are the files written. Saying so at the top of this method would let the session page
         // answer while the manifest still says the match played nothing, or while a file it is about to embed
         // is half written. Whether anything is still on its way into them is the other half of IsClosed.
-        _closed = true;
+        FilesWritten = true;
     }
 
     /// <summary>
