@@ -288,8 +288,11 @@ internal sealed class PlaytestRun
     /// both on the note and they answer different questions: this one puts the note beside the decisions that
     /// prompted it, and <c>atRound</c> says where it takes effect.
     /// </remarks>
-    public Task SeatedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, string from, string to, int atRound, CancellationToken cancellationToken = default) =>
-        NoteAsync(PlaytestNote.Seated(Where(matchId, slot, round, subPhase), from, to, atRound, _clock), cancellationToken);
+    public Task SeatedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, SeatChange change, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        return NoteAsync(PlaytestNote.Seated(Where(matchId, slot, round, subPhase), change.From, change.To, change.AtRound, _clock), cancellationToken);
+    }
 
     /// <summary>A note a player produced with one tap, or typed on the end screen.</summary>
     public Task TypedAsync(MatchId matchId, PlayerSlot slot, int? round, RoundSubPhase? subPhase, NoteKind kind, string text, CancellationToken cancellationToken = default) =>

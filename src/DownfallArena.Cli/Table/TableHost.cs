@@ -82,31 +82,9 @@ internal static class TableHost
         // through, and a page polls it while the match is advancing.
         var seats = new[] { seat1.Seat, seat2.Seat };
 
-        // Who the pilot may seat: any agent spec the CLI understands, and the word `person` for the seat's own
-        // player. A seat that no person ever joined has nobody to hand back to, and says so rather than
-        // inventing a second player nobody has the token for.
-        var pilot = new TablePilot(Token(), (slot, wanted) =>
-        {
-            var seat = slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat;
-            if (string.Equals(wanted, "person", StringComparison.OrdinalIgnoreCase))
-            {
-                var person = (slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat).Person;
-                return person is null ? null : new Occupant(person, PersonName(options));
-            }
-
-            try
-            {
-                var spec = AgentSpec.Parse(wanted);
-                return new Occupant(agents.Create(spec, rules, random), spec.ToString());
-            }
-            catch (Exception failure) when (failure is ArgumentException or IOException or JsonException)
-            {
-                // A typo in a spec, or a weights file that is not there, is the operator getting a name
-                // wrong. It is answered as "nobody of that name can sit here" rather than as a broken host:
-                // the match is fine and the next attempt is one line away.
-                return null;
-            }
-        });
+        var pilot = new TablePilot(
+            Token(),
+            (slot, wanted) => Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, options, rules, agents, random));
 
         var api = new TableApi(session, session.Queries, seats, catalogue, events, run, pilot);
         var codes = new JoinCodes(seats);
@@ -236,6 +214,35 @@ internal static class TableHost
     /// </remarks>
     private static string Stamped(PlayerSlot slot, TableSeat seat, CliOptions options) =>
         seat.Person is null || options.Handover is not null ? Describe(slot, options) : PersonName(options);
+
+    /// <summary>
+    /// Who the pilot may seat: any agent spec the CLI understands, and the word <c>person</c> for the seat's
+    /// own player.
+    /// </summary>
+    /// <remarks>
+    /// A seat that no person ever joined has nobody to hand back to, and says so rather than inventing a
+    /// second player nobody holds the token for. A name nothing can be built from -- a typo in a spec, a
+    /// weights file that is not there -- is the operator getting a name wrong, so it is answered as "nobody
+    /// of that name can sit here" rather than as a broken host: the match is fine and the next attempt is one
+    /// line away.
+    /// </remarks>
+    private static Occupant? Seating(TableSeat seat, string wanted, CliOptions options, RuleSet rules, IAgentFactory agents, IRandomSource random)
+    {
+        if (string.Equals(wanted, "person", StringComparison.OrdinalIgnoreCase))
+        {
+            return seat.Person is { } person ? new Occupant(person, PersonName(options)) : null;
+        }
+
+        try
+        {
+            var spec = AgentSpec.Parse(wanted);
+            return new Occupant(agents.Create(spec, rules, random), spec.ToString());
+        }
+        catch (Exception failure) when (failure is ArgumentException or IOException or JsonException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// What a record calls the person at this table. One helper rather than one expression per caller: the run

@@ -553,7 +553,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         if (run is { } recording)
         {
             var (at, subPhase) = await WhereAsync(slot);
-            await recording.SeatedAsync(session.MatchId, slot, at, subPhase, held, next.Name, round, CancellationToken.None);
+            await recording.SeatedAsync(session.MatchId, slot, at, subPhase, new SeatChange(held, next.Name, round), CancellationToken.None);
         }
 
         return StudioResponse.OfJson(new { slot = TableSeat.NameOf(slot), from = held, to = next.Name, round }, ArtifactJson.LineOptions);
