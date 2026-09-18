@@ -14,6 +14,13 @@ namespace DownfallArena.Cli.Table;
 /// round the table, picking the phone up, tapping ready -- and not the decision. So only a poll that says it
 /// is rendering that seat stamps it, later polls of the same question leave the stamp alone, and answering it
 /// takes it away.
+/// <para>
+/// "The same question" is one asking and not one shape. A seat with two Evolution picks in a round is asked
+/// <c>(Evolution, null)</c> twice, and comparing shapes would call the second a continuation of the first:
+/// a poll that caught the second would leave the first's stamp on it, and answering the first would then take
+/// that stamp away, leaving the second timed from nothing. <c>Question.Asked</c> counts the askings, so record
+/// equality tells them apart.
+/// </para>
 /// </remarks>
 internal sealed class DecisionClock(TimeProvider clock)
 {

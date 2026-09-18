@@ -13,8 +13,11 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class DecisionClockTests
 {
     private static readonly DateTimeOffset Start = new(2026, 9, 17, 20, 30, 0, TimeSpan.Zero);
-    private static readonly HumanSeat.Question Evolution = new(PlayerOptionsKind.Evolution, Creature: null);
-    private static readonly HumanSeat.Question SpeedOfOne = new(PlayerOptionsKind.Speed, CreatureId.From(1));
+    private static readonly HumanSeat.Question Evolution = new(PlayerOptionsKind.Evolution, Creature: null, Asked: 1);
+    private static readonly HumanSeat.Question SpeedOfOne = new(PlayerOptionsKind.Speed, CreatureId.From(1), Asked: 2);
+
+    /// <summary>The same shape asked again, which is a different question.</summary>
+    private static readonly HumanSeat.Question EvolutionAgain = new(PlayerOptionsKind.Evolution, Creature: null, Asked: 3);
 
     [Fact]
     public void A_decision_is_timed_from_when_its_question_was_first_served()
@@ -101,6 +104,28 @@ public sealed class DecisionClockTests
         clock.Advance(TimeSpan.FromSeconds(1));
 
         stopwatch.ServedAt(PlayerSlot.Player1, Evolution).ShouldBe(Start.AddMinutes(3));
+    }
+
+    /// <summary>
+    /// Two askings of the same shape are two questions. A seat with two Evolution picks in a round is asked
+    /// <c>(Evolution, null)</c> twice: a poll that catches the second while the first is still being written
+    /// down must not have the second inherit the first's moment, and answering the first must not take the
+    /// second's away.
+    /// </summary>
+    [Fact]
+    public void The_same_shape_asked_again_is_a_new_question_with_its_own_moment()
+    {
+        var clock = new SteppingClock(Start);
+        var stopwatch = new DecisionClock(clock);
+        stopwatch.Served(PlayerSlot.Player1, Evolution);
+
+        // The player answers the first while a poll catches the second.
+        clock.Advance(TimeSpan.FromSeconds(9));
+        stopwatch.Served(PlayerSlot.Player1, EvolutionAgain);
+
+        stopwatch.ServedAt(PlayerSlot.Player1, EvolutionAgain).ShouldBe(Start.AddSeconds(9), "the second asking is timed from when it was served, not from the first");
+        stopwatch.Answered(PlayerSlot.Player1, Evolution);
+        stopwatch.ServedAt(PlayerSlot.Player1, EvolutionAgain).ShouldBe(Start.AddSeconds(9), "answering the first does not take the second's moment");
     }
 
     /// <summary>One seat's poll cannot start or take the other seat's clock; hotseat depends on it.</summary>
