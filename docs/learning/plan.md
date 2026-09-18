@@ -14,6 +14,37 @@ first two worth anything: a loop without a ratchet is a random walk that reports
 `paired` (`docs/learning/training.md`). Not a marginal interval. That distinction cost this project a night
 and is the reason the rest of this plan is phrased the way it is.
 
+## The short version
+
+**The loop already exists, in manual form.** `greedy → search-2 → search-3 → search-4 → mixture-mean →
+pressure-floor → stun-first`: seven rungs, each searched from the one before it. It is missing two things — a
+person triggers every rung, and the opponent panel is written by hand.
+
+Three steps close it, in this order. Every runtime below is measured or extrapolated from a measured pace;
+the implementation effort is **not** estimated, because nothing here has been built yet.
+
+1. **A1 — the panel becomes the pool.** A rung scores its candidates against the top 4 of `learning/weights/`
+   by rating plus 2 drawn at random, instead of three opponents named by hand. Sampled because the whole pool
+   would take ~195 min against `search.yml`'s 180-minute limit; six opponents land near two hours. This
+   replaces Greedy, which `stun-first` beats in every match and which therefore cannot rank anything above
+   itself any more.
+2. **A2 — the ratchet.** The sample only *ranks*; it never admits. The search's top *m* finalists (m ≈ 5) are
+   played against every pool member — ~73 s each — and one is admitted only if, against **every** incumbent,
+   the paired difference's lower bound clears a non-inferiority margin, plus at least one settled win. An
+   admitted finalist is written to `learning/weights/` and the next rung starts from it. **That sentence is
+   the loop.** Everything it needs already exists, except the gate, which this plan has got wrong three times
+   and hands to an ADR.
+3. **A3 — a stop.** N rungs with nothing admitted ends the loop. It has to report *which* of four causes
+   stopped it, because only one of them ("the nine-number form is exhausted") is a result and the trigger for
+   Line B.
+
+One thing precedes all three: a **round robin over the initial pool** (45 pairs, ~5½ min, once). Without it a
+cycle among the ten agents already in `learning/weights/` can never become visible, because admissions only
+ever add edges touching the newcomer.
+
+**Line B — learning the evaluation instead of writing it — waits for A3 to fire.** It is the only lever on the
+functional ceiling, and it cannot be judged without the league A1 and A2 build.
+
 ## What is settled
 
 Every number below is the paired per-seed difference over the 200 benchmark seeds, both sides, with the 95 %
