@@ -11,6 +11,14 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 internal sealed record TableDecisionBody
 {
+    /// <summary>
+    /// Which asking this answers, as the seat payload's <c>waitingAsked</c> gave it. A decision belongs to one
+    /// question and to no other: two clients on one token can both validate against the options of the first
+    /// of two same-shaped questions, and the slower of them would otherwise answer the second -- spending a
+    /// pick nobody meant to spend, or handing the driver a choice that is no longer legal.
+    /// </summary>
+    public long? Asked { get; init; }
+
     public string? Kind { get; init; }
 
     public int? Creature { get; init; }

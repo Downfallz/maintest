@@ -87,11 +87,21 @@ internal sealed class PlaytestRun
     public string Directory { get; }
 
     /// <summary>
-    /// Whether the session's files are finished: the episodes written, the final trace written, and the
-    /// manifest rewritten with its counts. Only then is the directory worth showing anybody — before it, a
-    /// page would carry the zero-count manifest the session was opened with, or a file caught mid-write.
+    /// Whether the session's files are finished and nothing is still on its way into them: the episodes
+    /// written, the final trace written, the manifest rewritten with its counts, and no accepted decision left
+    /// to write down. Only then is the directory worth showing anybody.
     /// </summary>
-    public bool IsClosed { get; private set; }
+    /// <remarks>
+    /// The second half is not the same as the first, and a bounded wait cannot bridge them. Closing waits for
+    /// decisions in flight, but that wait has to give up eventually or a thread that is not coming back would
+    /// hold a table open — and giving up would otherwise let the page serve a run that says it is finished
+    /// while its last note is still arriving. So the wait is what gets the files written, and this is what
+    /// says they are all there: a page asked too early is told to come back, which is true, rather than served
+    /// a session missing the decision that ended it.
+    /// </remarks>
+    public bool IsClosed => _closed && Volatile.Read(ref _recording) == 0;
+
+    private bool _closed;
 
     // Set the moment closing begins, and it is a different question from IsClosed: this one stops a checkpoint
     // from queueing a write that would land after the final trace, and it has to be true while the final
@@ -314,10 +324,10 @@ internal sealed class PlaytestRun
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);
 
-        // And only now is the directory worth reading. Saying so at the top of this method would let the
-        // session page answer while the manifest still says the match played nothing, or while a file it is
-        // about to embed is half written.
-        IsClosed = true;
+        // And only now are the files written. Saying so at the top of this method would let the session page
+        // answer while the manifest still says the match played nothing, or while a file it is about to embed
+        // is half written. Whether anything is still on its way into them is the other half of IsClosed.
+        _closed = true;
     }
 
     /// <summary>

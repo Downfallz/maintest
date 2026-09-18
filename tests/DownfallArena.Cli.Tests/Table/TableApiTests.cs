@@ -337,10 +337,44 @@ public sealed partial class TableApiTests : IDisposable
     {
         var table = await Seated();
 
+        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", Answering("""{"kind":"Evolution","pass":true}""", table.Person), table.Token);
+
+        answer.Status.ShouldBe(204, Text(answer));
+        await Waiting(table.Person, "Speed");
+    }
+
+    /// <summary>
+    /// A decision belongs to one asking. Two consecutive questions of the same shape -- two Evolution picks --
+    /// pass `Question.Answers`, so without naming the asking a tap validated against the first could land on
+    /// the second: a second client on the same token, or a slow request the driver overtook. Refused as late,
+    /// which is what it is.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_that_names_another_asking_is_refused_as_late()
+    {
+        var table = await Seated();
+        var asking = table.Person.Waiting?.Asked ?? 0;
+
+        var answer = await table.Api.HandleAsync(
+            "POST",
+            "/api/seat/player1/decision",
+            $$"""{"asked":{{asking + 1}},"kind":"Evolution","pass":true}""",
+            table.Token);
+
+        answer.Status.ShouldBe(409, Text(answer));
+        Text(answer).ShouldContain("Seat.NotWaiting");
+        table.Person.Waiting?.Asked.ShouldBe(asking, "the seat is still on the question it was on");
+    }
+
+    /// <summary>A decision naming no asking cannot be tied to one either, so it is refused the same way.</summary>
+    [Fact]
+    public async Task A_decision_that_names_no_asking_is_refused()
+    {
+        var table = await Seated();
+
         var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", """{"kind":"Evolution","pass":true}""", table.Token);
 
-        answer.Status.ShouldBe(204);
-        await Waiting(table.Person, "Speed");
+        answer.Status.ShouldBe(409, Text(answer));
     }
 
     /// <summary>
@@ -437,9 +471,16 @@ public sealed partial class TableApiTests : IDisposable
         throw new InvalidOperationException($"The seat never reached {until}; it is waiting for {table.Person.Waiting?.Kind.ToString() ?? "nothing"}.");
     }
 
+    /// <summary>
+    /// A decision carries the asking it answers, as the page's does off <c>waitingAsked</c>. The host refuses
+    /// one that names another question, so a test that left it out would be testing that refusal.
+    /// </summary>
+    private static string Answering(string body, HumanSeat person) =>
+        body.Insert(1, $"\"asked\":{person.Waiting?.Asked ?? 0},");
+
     private static async Task Post((TableApi Api, TableSession Session, HumanSeat Person, string Token) table, string body)
     {
-        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", body, table.Token);
+        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", Answering(body, table.Person), table.Token);
         answer.Status.ShouldBe(204, Text(answer));
     }
 

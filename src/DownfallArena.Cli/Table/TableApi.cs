@@ -292,6 +292,16 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return await RefuseAsync(seat.Slot, check.Error);
         }
 
+        // The question this answers has to be the question the seat is on. `Question.Answers` compares the kind
+        // and the creature, which two consecutive Evolution picks share, so without this a decision validated
+        // against the first could be applied to the second -- by a second client on the same token, or by a
+        // tap that took the slow path while the driver moved on. Refused as late, which is what it is.
+        var waiting = person.Waiting;
+        if (posted.Asked != waiting?.Asked)
+        {
+            return await RefuseAsync(seat.Slot, Late);
+        }
+
         // Where this decision is being made, taken before it is handed over. Submitting releases the driver,
         // which moves the round on, so anything read afterwards is where the match *went*: the step in
         // steps.jsonl carries where it was, and the two files this session says are aligned would disagree
@@ -300,13 +310,14 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // "where", not a second reading that could have moved. The round comes off the board, before the tap.
         var subPhase = options.Value.SubPhase;
         var round = (await WhereAsync(seat.Slot)).Round;
-        var answered = person.Waiting;
+        var answered = waiting;
 
         // And when this seat's screen was served, read now rather than after the submit. Submitting releases
         // the driver, which can ask this seat the next question and have a poll stamp it before the recording
         // gets here -- and a seat has one stamp, so the new question's replaces the answered one's. Read
         // afterwards, the decision would be timed at nothing.
         var servedAt = run?.ServedAt(seat.Slot, answered);
+
 
         // How far the trace has got before this decision is handed over, so the checkpoint that follows can
         // tell whether the driver has applied it yet.

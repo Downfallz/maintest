@@ -92,15 +92,25 @@ function start(seats) {
 // is deliberately not advanced, so nothing this call fetches is lost -- the next poll asks for it again.
 function announce(state, current, drawn) {
   const since = state.feeds.get(current.seat)?.next ?? 0;
+  const acknowledged = `${current.seat}/${drawn}`;
 
   // Kept, because a decision must not overtake it. The controls stay live -- disabling them for a round trip
   // would make every handover feel broken to protect a number -- and `submit` waits on this instead, so a tap
   // inside the window is delayed by the request it would otherwise have raced rather than being refused. If
   // it were raced and lost, the host would have no moment for this question and would record the duration as
   // unknown, which is honest but is one measurement gone.
-  state.announced = current.transport.seat(since, drawn).catch(() => {
-    // A page that cannot reach its host has a louder problem than a clock, and the next poll reports it.
-  });
+  // Remembered only once it has landed. Marking it sent and then losing the request would leave a board on
+  // screen that the host has no moment for, and the render never offers to say so again: the decision made on
+  // it would be recorded with no duration at all, silently.
+  state.announced = current.transport.seat(since, drawn)
+    .then(answer => {
+      if (answer.ok) {
+        state.acknowledged = acknowledged;
+      }
+    })
+    .catch(() => {
+      // A page that cannot reach its host has a louder problem than a clock, and the next poll reports it.
+    });
 }
 
 // A note is the one thing in a session nothing else can reconstruct, so a refused one says so on screen
@@ -245,9 +255,11 @@ function render(state, views) {
   // would let the host start the second one's clock while it was still serving it, with the network and the
   // layout inside the player's duration. Nothing is acknowledged while the pass screen is up: the board is
   // behind it and the person being asked has not picked the device up yet.
+  // Per seat as well as per asking: the two seats count their own questions, so they are at the same number
+  // whenever they have decided the same number of times -- which in hotseat is most of the time. A bare number
+  // would call the other seat's question already acknowledged and never announce it.
   const drawn = fence ? null : view.waitingAsked ?? null;
-  if (drawn !== null && drawn !== state.acknowledged) {
-    state.acknowledged = drawn;
+  if (drawn !== null && `${current.seat}/${drawn}` !== state.acknowledged) {
     announce(state, current, drawn);
   }
   element('seat').textContent = nameOf(current.seat);
@@ -767,7 +779,9 @@ async function submit(state, current, decision) {
     // link it is the difference between a duration and a blank.
     await state.announced;
 
-    const answer = await current.transport.decide(decision);
+    // The asking this answers travels with it: the host refuses a decision that names another, which is what
+    // stops a tap validated against one question from landing on the next of the same shape.
+    const answer = await current.transport.decide({ ...decision, asked: current.view.waitingAsked ?? null });
     if (!answer.ok) {
       const problem = element('problem');
       problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;

@@ -289,9 +289,16 @@ public sealed class PlaytestNotesTests : IDisposable
         answer.Status.ShouldBe(200, Text(answer));
     }
 
+    /// <summary>
+    /// A decision carries the asking it answers, as the page's does off <c>waitingAsked</c>. The host refuses
+    /// one that names another question, so a test that left it out would be testing that refusal.
+    /// </summary>
+    private static string Answering(string body, HumanSeat person) =>
+        body.Insert(1, $"\"asked\":{person.Waiting?.Asked ?? 0},");
+
     private static async Task Post((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table, string body)
     {
-        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", body, table.Token);
+        var answer = await table.Api.HandleAsync("POST", "/api/seat/player1/decision", Answering(body, table.Person), table.Token);
         answer.Status.ShouldBe(204, Text(answer));
     }
 
