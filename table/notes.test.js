@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, tappedNote } from './notes.js';
+import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 
 test('the one-tap notes are a lookup and a misplay, in that order', () => {
   assert.deepEqual(TAPPED.map(button => button.kind), ['Lookup', 'Misplay']);
@@ -41,6 +41,15 @@ test('a note that landed says which kind landed', () => {
 test('a blank box has its own line, rather than keeping the last one that landed', () => {
   assert.notEqual(NOTHING_TO_RECORD, noted('Comment'));
   assert.match(NOTHING_TO_RECORD, /nothing/i);
+});
+
+// A table run with --no-record refuses every note. Offering the buttons anyway would let a player tap one and
+// believe what they noticed was written down.
+test('a table that keeps nothing offers no notes', () => {
+  assert.equal(notesAreKept({ recording: true }), true);
+  assert.equal(notesAreKept({ recording: false }), false);
+  assert.equal(notesAreKept({}), false);
+  assert.equal(notesAreKept(undefined), false);
 });
 
 test('the comment box belongs to the end screen and nowhere else', () => {

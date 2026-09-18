@@ -7,7 +7,7 @@ import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { drawn, matBands } from './mat.js';
-import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, tappedNote } from './notes.js';
+import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -266,10 +266,11 @@ function render(state, views) {
 }
 
 // The notes, and the comment box only once the match is decided: asking for prose while somebody is deciding
-// is asking them to stop playing.
+// is asking them to stop playing. A table that keeps nothing offers neither.
 function renderNotes(view) {
-  element('notes').hidden = false;
-  element('comment').hidden = !commentIsOpen(view);
+  const kept = notesAreKept(view);
+  element('notes').hidden = !kept;
+  element('comment').hidden = !kept || !commentIsOpen(view);
 }
 
 // The initiative track: the engine's order, banded by speed, scrolling sideways at 360 px. The strip never

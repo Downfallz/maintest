@@ -219,6 +219,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 waitingCreature = waiting?.Creature,
                 playedByBot = seat.Person is null,
                 over = session.IsOver,
+
+                // Whether anything a player writes will be kept. A table told --no-record keeps nothing, and
+                // the page has to know: buttons that post a note into a 409 are worse than no buttons, because
+                // a player who taps one believes the thing they noticed was written down.
+                recording = run is not null,
                 opponentIntents = opponent.IsSuccess ? StillFaceDown(opponent.Value) : 0,
 
                 // What has happened, as this seat may be told it: the boards the trace keeps beside every

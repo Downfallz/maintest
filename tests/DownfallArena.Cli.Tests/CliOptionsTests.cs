@@ -89,6 +89,38 @@ public sealed class CliOptionsTests
         options.Who.ShouldBe("mk");
     }
 
+    /// <summary>
+    /// A table that leaves the disk as it found it. Recording stays on by default, because a playtest nobody
+    /// recorded teaches nothing and the flag is the one thing anybody would forget; turning it off is said.
+    /// </summary>
+    [Fact]
+    public void A_table_records_unless_it_is_told_not_to()
+    {
+        CliOptions.Parse(["table", "--rules", "tabletop.json"]).Recording.ShouldBeTrue();
+        CliOptions.Parse(["table", "--rules", "tabletop.json", "--no-record"]).Recording.ShouldBeFalse();
+    }
+
+    /// <summary>A valueless flag must not swallow whatever follows it, which is how one becomes a path.</summary>
+    [Fact]
+    public void The_flag_that_records_nothing_carries_no_value()
+    {
+        var options = CliOptions.Parse(["table", "--no-record", "--rules", "tabletop.json", "--who", "mk"]);
+
+        options.Recording.ShouldBeFalse();
+        options.Rules.ShouldBe("tabletop.json");
+        options.Who.ShouldBe("mk");
+    }
+
+    /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>
+    [Fact]
+    public void Recording_nowhere_and_recording_somewhere_cannot_both_be_asked_for()
+    {
+        var both = Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--no-record", "--record", "runs/playtest"]));
+
+        both.Message.ShouldContain("--no-record");
+        both.Message.ShouldContain("--record");
+    }
+
     /// <summary>The line docs/learning/artifacts.md prints, which has to run.</summary>
     [Fact]
     public void The_recorded_session_command_line_the_documents_print_parses()

@@ -47,25 +47,35 @@ internal static class TableHost
         var catalogue = CatalogueProjection.Build(resources, rules);
 
         // Opened before the match, so the files exist before anything can be decided into them: a session
-        // abandoned at its first question still says what it was (ADR 0054, stage 5).
-        var run = PlaytestRun.Open(
-            options.Record ?? DefaultRunsDirectory,
-            new PlaytestSetup(
-                resources,
-                rules,
-                seed,
-                Stamped(PlayerSlot.Player1, seat1.Seat, options),
-                Stamped(PlayerSlot.Player2, seat2.Seat, options)),
-            events,
-            services.GetRequiredService<TimeProvider>());
-        await run.StartAsync(catalogue, stopping.Token);
+        // abandoned at its first question still says what it was (ADR 0054, stage 5). A table told
+        // --no-record opens nothing and writes nothing: a rule tried out at a table should be able to leave
+        // the disk as it found it.
+        var run = options.Recording
+            ? PlaytestRun.Open(
+                options.Record ?? DefaultRunsDirectory,
+                new PlaytestSetup(
+                    resources,
+                    rules,
+                    seed,
+                    Stamped(PlayerSlot.Player1, seat1.Seat, options),
+                    Stamped(PlayerSlot.Player2, seat2.Seat, options)),
+                events,
+                services.GetRequiredService<TimeProvider>())
+            : null;
+        if (run is not null)
+        {
+            await run.StartAsync(catalogue, stopping.Token);
+        }
 
-        using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, run.Wrap, stopping.Token);
+        using var session = await TableSession.StartAsync(services, rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, stopping.Token);
 
         // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
         // session abandoned at its first question is then a readable directory rather than one missing a file,
         // and every checkpoint after this one overwrites it.
-        await run.CheckpointAsync(session.MatchId, stopping.Token);
+        if (run is not null)
+        {
+            await run.CheckpointAsync(session.MatchId, stopping.Token);
+        }
 
         // The session's own read side, not the container's: it is the one behind the lock the driver writes
         // through, and a page polls it while the match is advancing.
@@ -90,7 +100,11 @@ internal static class TableHost
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
             // serving so two people can read the end screen and write a comment, and a session page opened
             // from there has to show a finished run rather than the zero-count manifest it was opened with.
-            await CloseAsync(run, session);
+            if (run is not null)
+            {
+                await CloseAsync(run, session);
+            }
+
 
             // The match is over, but the page has not read the outcome yet. Serving stops on Ctrl+C, which is
             // also how a session that ended badly is left readable rather than vanishing.
@@ -115,10 +129,15 @@ internal static class TableHost
     /// each seat, and the code that seat's player types. Everything a session needs to be joined and to be
     /// reproduced is on these lines, because the alternative is a playtest that nobody can place afterwards.
     /// </summary>
-    private static void Announce(TableServer server, JoinCodes codes, IReadOnlyList<TableSeat> seats, CliOptions options, RuleSet rules, PlaytestRun run)
+    private static void Announce(TableServer server, JoinCodes codes, IReadOnlyList<TableSeat> seats, CliOptions options, RuleSet rules, PlaytestRun? run)
     {
         Console.WriteLine($"Table on {server.Url}");
-        Console.WriteLine($"  Recording session {run.SessionId} into '{run.Directory}'");
+
+        // Said out loud either way. A table that is recording names where, and one that is not says so before
+        // anybody plays a session they meant to keep.
+        Console.WriteLine(run is null
+            ? "  Recording nothing: no session directory, no notes, no trace (--no-record)."
+            : $"  Recording session {run.SessionId} into '{run.Directory}'");
 
         // The rule set is named before anything is played. The board game is balanced for 8 to 16 rounds and
         // the engine's default caps at thirty, so a table that took one silently would be testing another

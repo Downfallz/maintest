@@ -40,6 +40,13 @@ export function noted(kind) {
   }
 }
 
+// Whether this table keeps what a player writes. A host told --no-record answers every note with a refusal,
+// so the buttons are not offered at all: a player who taps one and is refused has still lost the thing they
+// noticed, and one who taps one and is not refused believes it was kept.
+export function notesAreKept(view) {
+  return view?.recording === true;
+}
+
 // Whether the comment box belongs on screen. It is the end screen's, not the round's: asking for prose while
 // somebody is deciding is asking them to stop playing, and the thing they want to say is usually about the
 // match as a whole.

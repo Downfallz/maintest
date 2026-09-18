@@ -18,7 +18,11 @@ enough to train on wants: a trace is about twenty times the disk of the steps fr
 learner reads one. `play --trace <file>` writes the trace of that one match. `table` records the session two people played into
 `runs/playtest/<session-id>/`, or under whatever `--record` names instead; `--who <initials>` puts them in the
 stamp as `human:<initials>` so two sessions played by different people differ on the agents axis rather than
-looking like the same player. `runs/` is git-ignored: artifacts are outputs, not sources.
+looking like the same player. `--no-record` writes nothing at all — no directory, no notes, no trace — for
+trying a rule out at a table that should leave the disk as it found it; the page then offers no note buttons,
+because a button that cannot keep what it was told is worse than no button. Recording is on by default the
+rest of the time: a playtest nobody recorded teaches nothing, and the flag is the one thing anybody would
+forget. `runs/` is git-ignored: artifacts are outputs, not sources.
 
 ## Run directory
 
