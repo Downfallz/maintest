@@ -3,84 +3,81 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#111917" />
     <title>Downfall Arena — table</title>
     <link rel="stylesheet" href="table.css" />
   </head>
   <body>
-    <header>
-      <h1 id="seat">—</h1>
-      <p id="phase" class="muted">Connecting…</p>
-      <p id="rules" class="muted"></p>
-
-      <!-- The round's shape, collapsed: the steps in the order they are played and the two orderings a player
-           gets wrong. Every word of it is the host's (playtest-app.md §3.1). -->
+    <header class="masthead">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">D</span><div><span class="eyebrow">The tabletop</span><h1>Downfall Arena</h1></div></div>
+      <div class="session-state"><span id="seat" class="seat-label">Your table</span><p id="phase" role="status">Connecting…</p></div>
       <details id="shape">
-        <summary>The shape of a round</summary>
-        <ol id="sub-phases"></ol>
-        <ul id="orderings"></ul>
+        <summary>Round guide</summary>
+        <div class="guide-body"><p id="rules" class="muted"></p><ol id="sub-phases"></ol><ul id="orderings"></ul></div>
       </details>
     </header>
 
-    <!-- The pass-the-device screen. It is a screen and not a banner: on one phone it is the whole fence
-         between the two seats, and it has to be impossible to read the board through. -->
-    <section id="pass" hidden>
+    <!-- Opaque and above every control: neither seat can read the board during handover. -->
+    <section id="pass" hidden aria-labelledby="pass-seat">
+      <div class="pass-emblem" aria-hidden="true">D</div>
+      <p class="eyebrow">A new perspective</p>
       <p class="pass-line">Pass the device to</p>
-      <p class="pass-seat" id="pass-seat">—</p>
-      <button id="pass-ready" type="button">I am <span id="pass-seat-again">—</span></button>
+      <h2 class="pass-seat" id="pass-seat">—</h2>
+      <p class="muted">Your choices stay hidden until you’re ready.</p>
+      <button id="pass-ready" type="button">I am <span id="pass-seat-again">—</span> <span aria-hidden="true">→</span></button>
     </section>
 
     <main id="table" hidden>
-      <!-- Two tabs and not two panels: the mat is touched once a round, during Evolution, and a phone has
-           one screen. -->
-      <nav class="tabs">
-        <button id="tab-board" type="button" class="tab on">Board</button>
-        <button id="tab-mat" type="button" class="tab">Talents</button>
-      </nav>
+      <div class="play-area">
+        <nav class="tabs" aria-label="Table views">
+          <button id="tab-board" type="button" class="tab on" aria-controls="board" aria-pressed="true">Battlefield</button>
+          <button id="tab-mat" type="button" class="tab" aria-controls="mat" aria-pressed="false">Talents</button>
+          <span class="table-caption">Plan. Reveal. Resolve.</span>
+        </nav>
+        <section id="board" aria-label="Battlefield">
+          <div id="revealed" class="revealed" hidden></div>
+          <section class="team-section" aria-labelledby="enemy-heading">
+            <div class="section-heading"><h2 id="enemy-heading"><span class="side-dot enemy-dot"></span>Opponent</h2><span class="eyebrow">Across the table</span></div>
+            <div id="enemies" class="team-grid"></div>
+          </section>
+          <section class="initiative-section" aria-label="Initiative order">
+            <div class="section-heading"><h2>Initiative</h2><span class="muted">First → last</span></div>
+            <div id="timeline" class="strip" aria-label="Initiative"></div>
+          </section>
+          <section class="team-section" aria-labelledby="ally-heading">
+            <div class="section-heading"><h2 id="ally-heading"><span class="side-dot ally-dot"></span>Your team</h2><span class="eyebrow">Your side of the table</span></div>
+            <div id="allies" class="team-grid"></div>
+          </section>
+          <div id="backs"></div>
+          <section class="hand-section" aria-labelledby="hand-heading">
+            <div class="section-heading"><h2 id="hand-heading">Your spellbook</h2><span class="muted">Select a highlighted card when asked</span></div>
+            <div id="own-hand"></div>
+          </section>
+        </section>
+        <section id="mat" aria-label="Talent catalogue" hidden></section>
+        <section id="notes" class="notes" hidden>
+          <h2>Playtest notes</h2>
+          <div id="note-buttons" class="note-buttons"></div>
+          <div id="comment" hidden>
+            <label for="comment-text">Anything to say about that match?</label>
+            <textarea id="comment-text" rows="3"></textarea>
+            <button id="comment-save" type="button">Save it with the session</button>
+          </div>
+          <p id="noted" class="muted" role="status" hidden></p>
+        </section>
+        <details id="log"><summary>Match activity <span class="muted">Latest events</span></summary><ol id="feed"></ol></details>
+      </div>
 
-      <!-- One column, in the order playtest-app.md §3.3 gives: the enemy team, the initiative strip, your
-           team, your hand. The enemies are at the top because they are what a decision is about, and the hand
-           is at the bottom because it is the tallest thing on the page -- a hand above the boards means
-           scrolling past five card faces to read the health a target choice depends on. -->
-      <section id="board">
-        <!-- The reveal strip is first because it is what the choice below it is about: during
-             RevealAndTarget the player reads the cast, then the rows whose health and conditions decide the
-             targets. Under the boards it would mean scrolling down to read the cast and back up to act on it.
-             The four blocks §3.3 names keep their order among themselves. -->
-        <div id="revealed" class="revealed" hidden></div>
-        <div id="enemies"></div>
-        <section id="timeline" class="strip" aria-label="Initiative"></section>
-        <div id="allies"></div>
-        <div id="backs"></div>
-        <div id="own-hand"></div>
-      </section>
-      <section id="mat" hidden></section>
+      <aside class="action-area" aria-label="Your turn">
+        <section id="decision" class="sheet" aria-labelledby="asking">
+          <div class="decision-heading"><span class="eyebrow">Your next move</span><span id="decision-state" class="status-tag">Waiting</span></div>
+          <h2 id="asking" aria-live="polite">Waiting for the other seat…</h2>
+          <div id="choices"></div>
+          <p id="problem" class="problem" role="alert" hidden></p>
+        </section>
 
-      <details id="log">
-        <summary>What has happened</summary>
-        <ol id="feed"></ol>
-      </details>
-
-      <section id="decision" class="sheet">
-        <h2 id="asking">Waiting for the other seat…</h2>
-        <div id="choices"></div>
-        <p id="problem" class="problem" hidden></p>
-      </section>
-
-      <!-- The playtest's own record, from the players' side. Two taps while the match runs and a box when it
-           is over: this is the only thing a session carries that nothing else could infer from the trace or
-           the dataset. It sits behind the pass screen with the board, because a note belongs to whoever is
-           holding the device. -->
-      <section id="notes" class="notes" hidden>
-        <div id="note-buttons" class="note-buttons"></div>
-        <div id="comment" hidden>
-          <label for="comment-text">Anything to say about that match?</label>
-          <textarea id="comment-text" rows="3"></textarea>
-          <button id="comment-save" type="button">Save it with the session</button>
-        </div>
-        <p id="noted" class="muted" hidden></p>
-      </section>
+      </aside>
     </main>
-
     <script type="module" src="table.js"></script>
   </body>
 </html>

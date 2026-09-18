@@ -1,377 +1,120 @@
-/* Designed at 360 px and widened from there: the phone is the target, the desktop is the same page with room
-   to breathe. Nothing here is a second layout. */
+/* A felt-dark table, warm paper cards and one gold action. Layout never determines game rules. */
 :root {
-  color-scheme: light dark;
-  --ink: #1a1a1a;
-  --paper: #fbfbf9;
-  --line: #d6d3cc;
-  --muted: #6b6b6b;
-  --refused: #a33;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+  --ink: #f1f2e9;
+  --paper: #111917;
+  --panel: #1b2521;
+  --raised: #233029;
+  --line: #3a4940;
+  --muted: #b0bbb2;
+  --gold: #e7c37b;
+  --ally: #96ccb0;
+  --enemy: #e3a29a;
+  --refused: #ffb3a7;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #eceae6;
-    --paper: #16181a;
-    --line: #35393d;
-    --muted: #9aa0a6;
-    --refused: #e88;
-  }
-}
-
 * { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  padding: 12px;
-  background: var(--paper);
-  color: var(--ink);
-  max-width: 720px;
-  margin-inline: auto;
-}
-
-h1 { font-size: 1.1rem; margin: 0; }
-h2 { font-size: 1rem; margin: 0 0 8px; }
-.muted { color: var(--muted); margin: 4px 0 12px; font-size: 0.9rem; }
-.problem { color: var(--refused); font-size: 0.9rem; }
-
-.creature {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
-  font-variant-numeric: tabular-nums;
-}
-.creature.enemy { border-style: dashed; }
-.creature.dead { opacity: 0.45; }
-.creature .stats { color: var(--muted); font-size: 0.85rem; }
-
-/* The one decision, at the bottom where a thumb is. `dvh` rather than `vh` so a phone's shrinking toolbar
-   does not push the buttons under it. */
-.sheet {
-  position: sticky;
-  bottom: 0;
-  background: var(--paper);
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
-  max-height: 60dvh;
-  overflow-y: auto;
-}
-
-button {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  font: inherit;
-  text-align: left;
-  color: var(--ink);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
-}
+[hidden] { display: none !important; }
+body { margin: 0; padding: 0 32px 32px; color: var(--ink); background: radial-gradient(ellipse at 40% 0, #25362c 0, transparent 65%), var(--paper); min-height: 100dvh; }
+h1, h2, p { margin: 0; }
+h1 { font-family: Georgia, serif; font-size: 25px; font-weight: 400; letter-spacing: -0.7px; }
+h2 { font-size: 14px; font-weight: 650; }
+button, textarea { font: inherit; }
+button { min-height: 44px; border: 1px solid var(--line); border-radius: 9px; padding: 11px 14px; background: var(--raised); color: var(--ink); cursor: pointer; text-align: left; }
+button:hover:not(:disabled), [role="button"]:hover { border-color: var(--gold); }
 button:disabled { opacity: 0.5; cursor: default; }
-button.chosen { border-width: 2px; }
-
-#pass {
-  position: fixed;
-  inset: 0;
-  background: var(--paper);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 24px;
-  text-align: center;
+button:focus-visible, [tabindex]:focus-visible, summary:focus-visible, textarea:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+button, [role="button"] { touch-action: manipulation; }
+.muted { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.eyebrow { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1.8px; font-weight: 650; }
+.masthead { max-width: 1500px; margin: auto; min-height: 108px; display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 15px; }
+.brand-mark, .pass-emblem { color: var(--gold); border: 1px solid #a9915e; width: 43px; height: 49px; display: grid; place-items: center; font: 31px Georgia, serif; border-radius: 12px 3px; }
+.brand .eyebrow { display: block; margin-bottom: 4px; }
+.session-state { margin-left: auto; text-align: right; }
+.seat-label { color: var(--gold); font-size: 12px; }
+#phase { margin-top: 5px; font-size: 13px; }
+#shape { position: relative; font-size: 12px; }
+summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
+.guide-body { position: absolute; right: 0; top: 45px; width: 310px; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 15px 40px #0008; z-index: 5; line-height: 1.8; }
+.guide-body ol, .guide-body ul { padding-left: 20px; }
+#table { max-width: 1500px; margin: 24px auto 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+.play-area, .action-area, #board, .team-section, .hand-section { min-width: 0; }
+.tabs { display: flex; gap: 5px; align-items: center; margin-bottom: 26px; border-bottom: 1px solid var(--line); }
+.tab { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 13px 18px; border-bottom: 2px solid transparent; }
+.tab.on { color: var(--gold); border-bottom-color: var(--gold); }
+.table-caption { color: var(--muted); font: italic 13px Georgia, serif; margin-left: auto; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+.section-heading h2 { display: flex; align-items: center; gap: 8px; }
+.side-dot { width: 7px; height: 7px; border-radius: 50%; }
+.enemy-dot { background: var(--enemy); }.ally-dot { background: var(--ally); }
+.team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px; }
+.creature { position: relative; padding: 16px; background: linear-gradient(140deg, #26362b, var(--panel)); border: 1px solid #4b6251; border-top: 2px solid var(--ally); border-radius: 11px; font-variant-numeric: tabular-nums; }
+.creature.enemy { border-color: #614a44; border-top-color: var(--enemy); background: linear-gradient(140deg, #322c27, #221f1d); }
+.creature.dead { opacity: 0.55; }
+.creature.active { box-shadow: 0 0 0 2px var(--gold); }
+.who { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+.creature-id { display: grid; place-items: center; min-width: 33px; height: 33px; padding: 4px; background: #ffffff0a; border: 1px solid #ffffff25; border-radius: 8px; color: var(--ally); font-weight: 750; }
+.enemy .creature-id { color: var(--enemy); }
+.creature-name { font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
+.creature-label { font-size: 10px; color: var(--muted); display: block; margin-top: 3px; letter-spacing: 0.4px; }
+.health { position: relative; height: 24px; margin: 0 0 12px; border-radius: 5px; overflow: hidden; background: #050a0777; }
+.health .bar { display: block; height: 100%; background: #42644f; }
+.enemy .health .bar { background: #694b42; }
+.health .number { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 650; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { display: flex; flex-direction: column; gap: 3px; }
+.stat strong { font-size: 20px; font-weight: 550; }.stat span { font-size: 10px; text-transform: capitalize; color: var(--muted); }
+.badges { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.badge, .marker { padding: 3px 7px; border: 1px solid var(--line); border-radius: 4px; font-size: 10px; }
+.dock, .markers { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.dock:empty, .badges:empty { display: none; }
+.dock-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; border: 1px dashed var(--line); padding: 4px; border-radius: 5px; }
+.dock-rounds { color: var(--muted); font-size: 10px; }.chip { background: #ffffff0a; font-size: 11px; padding: 3px 5px; border-radius: 3px; }.chip-source { display: block; font-size: 10px; color: var(--muted); }
+.creature.legal { cursor: pointer; border: 2px dashed var(--gold); padding: 15px; }
+.creature.picked { border: 2px solid var(--gold); padding: 15px; background: #39392a; }
+.marker.picked { background: var(--gold); color: #251f13; border-color: var(--gold); }
+.initiative-section { margin: 22px 0; padding: 15px 18px; border: 1px solid var(--line); border-radius: 10px; background: #0a120e55; }
+.initiative-section .section-heading { margin-bottom: 10px; }.initiative-section h2 { font-size: 12px; color: var(--muted); }
+.strip { display: flex; gap: 20px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
+.strip:empty::before { content: 'The order appears after speed selection.'; font-size: 12px; color: var(--muted); }
+.band { flex: none; display: flex; gap: 9px; align-items: center; }.band-name { color: var(--muted); font-size: 11px; }.slots { display: flex; gap: 6px; }
+.slot { flex: none; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line); font-size: 12px; }.slot.ally { color: var(--ally); }.slot.enemy { color: var(--enemy); }.slot.now { color: #251f13; border-color: var(--gold); background: var(--gold); }
+.hand { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 13px 0 25px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.hand-section { border-top: 1px solid var(--line); padding-top: 20px; }.hand-section > .section-heading { align-items: baseline; }
+.hand-cards { display: grid; gap: 12px; }.hand-row { min-width: 0; }.hand-row summary { padding: 13px 0; border-top: 1px solid var(--line); margin-bottom: 0; }.hand-row[open] summary { margin-bottom: 8px; }.hand-who { color: var(--muted); font-size: 11px; margin-bottom: 9px; }.hand-row.active .hand-who { color: var(--gold); font-weight: 650; }
+.held-cards { display: flex; overflow-x: auto; gap: 10px; padding: 4px 3px 12px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.card { display: block; padding: 15px; border-radius: 9px; border: 1px solid #c9c4ac; background: #e8e5d7; color: #27332b; text-align: left; font: inherit; }
+.card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }.card-title { font: 600 18px Georgia, serif; line-height: 1.25; }.card-meta { display: block; font: 10px ui-sans-serif, system-ui, sans-serif; margin-top: 5px; color: #546151; }
+.card-cost { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #b3b7a4; background: #d3d8c3; border-radius: 50%; font-size: 14px; font-weight: 750; }
+.card-body { margin-top: 13px; padding-top: 11px; border-top: 1px solid #c8c9b6; font-size: 11px; color: #414f41; line-height: 1.65; }.card-body div + div { margin-top: 3px; }
+.held { flex: 0 0 205px; scroll-snap-align: start; background: #252d26; border-color: #4a5547; color: #c4cebc; }.held .card-meta, .held .card-body { color: #b0baa8; }.held .card-body { border-color: #485143; }.held .card-cost { background: #323f2e; border-color: #53604c; }
+.held.castable { background: #e8e5d7; border-color: #c9c4ac; color: #27332b; }.held.castable .card-meta, .held.castable .card-body { color: #414f41; }.held.castable .card-body { border-color: #c8c9b6; }.held.castable .card-cost { background: #d3d8c3; border-color: #b3b7a4; }
+.held.offered { cursor: pointer; }.held.chosen { outline: 3px solid var(--gold); outline-offset: 0; }
+.card-availability { display: block; margin-top: 12px; font-size: 10px; font-weight: 650; }
+.action-area { position: sticky; top: 22px; }.sheet { padding: 22px; background: #222d25; border: 1px solid #667051; border-radius: 13px; box-shadow: 0 15px 35px #0002; max-height: calc(100dvh - 44px); overflow-y: auto; scrollbar-width: thin; }
+.decision-heading { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 18px; }.status-tag { color: var(--gold); border: 1px solid #756443; border-radius: 99px; font-size: 10px; padding: 4px 8px; }
+#asking { font: 26px/1.2 Georgia, serif; margin-bottom: 20px; text-wrap: balance; }
+#choices { display: grid; gap: 10px; }#choices > button:not(.card) { width: 100%; background: var(--gold); border-color: var(--gold); color: #2b251a; font-weight: 650; text-align: center; }
+#choices .secondary { background: transparent !important; color: var(--muted) !important; border-color: var(--line) !important; }
+.creature-picker { display: flex; gap: 6px; flex-wrap: wrap; }.creature-picker button { flex: 1; text-align: center; font-size: 12px; padding: 8px; }.creature-picker .chosen { color: var(--gold); border-color: var(--gold); }
+.choice-cards { display: grid; gap: 10px; }.choice-help { color: var(--muted); line-height: 1.6; font-size: 12px; }
+.problem { margin-top: 12px; padding: 10px; background: #562e2a; color: var(--refused); border-radius: 6px; font-size: 12px; }
+.revealed { border-left: 3px solid var(--gold); padding: 13px 16px; margin-bottom: 22px; background: #e7c37b0c; font-size: 12px; line-height: 1.8; }
+.band-row { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 18px; margin-bottom: 14px; }.band-row > .band-name { color: var(--gold); font-size: 14px; margin-bottom: 10px; }.mat-spell { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 13px; }.mat-spell > span:first-child { flex: 1; }.gate { color: var(--muted); font-size: 11px; }.pip { min-width: 25px; padding: 4px; text-align: center; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 11px; }.pip.known { background: var(--ally); color: #18271d; border-color: var(--ally); }
+#log { border-top: 1px solid var(--line); margin-top: 25px; font-size: 12px; }#log summary .muted { float: right; }#feed { padding-left: 20px; color: var(--muted); line-height: 1.7; }#feed li { padding: 6px 0; }
+.notes { padding: 20px 4px 0; }.notes h2 { font-size: 12px; color: var(--muted); margin-bottom: 10px; }.note-buttons { display: flex; gap: 8px; }.notes button { flex: 1; font-size: 11px; background: transparent; color: var(--muted); }.notes label { display: block; margin: 14px 0 8px; font-size: 12px; }.notes textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--panel); color: var(--ink); margin-bottom: 8px; }.notes #noted { margin-top: 10px; }
+#pass { position: fixed; inset: 0; z-index: 100; background: #111917; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; padding: 25px; text-align: center; }.pass-emblem { width: 65px; height: 76px; font-size: 45px; margin-bottom: 20px; }.pass-line { color: var(--muted); margin-top: 10px; }.pass-seat { font: 50px Georgia, serif; }#pass-ready { background: var(--gold); color: #2b251a; border: 0; min-width: 250px; text-align: center; font-weight: 650; margin-top: 20px; }#pass-ready > span:last-child { margin-left: 12px; }
+@media (min-width: 1600px) { :root { font-size: 15px; } #table { grid-template-columns: minmax(0, 1fr) 380px; gap: 36px; } }
+@media (max-width: 1000px) {
+  body { padding: 0 18px 24px; }.masthead { gap: 18px; }#table { grid-template-columns: minmax(0, 1fr) 290px; gap: 18px; }.sheet { padding: 17px; }.team-grid { grid-template-columns: 1fr; }.creature { padding: 13px; }.who { margin-bottom: 10px; }.stats { grid-template-columns: repeat(3, 1fr); }.table-caption { display: none; }
 }
-#pass[hidden] { display: none; }
-.pass-line { color: var(--muted); margin: 0; }
-.pass-seat { font-size: 1.6rem; margin: 0 0 16px; }
-#pass button { width: auto; min-width: 200px; text-align: center; }
-
-/* A card is a button: the whole face is the tap target, because a thumb on a phone is not a pointer.
-   Its words are the host's -- the page only lays them out (card.js). */
-.card {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 0.6rem 0.7rem;
-  margin: 0 0 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 0.5rem;
-  background: var(--paper);
-  color: var(--ink);
-  font: inherit;
+@media (max-width: 760px) {
+  body { padding: 0 14px max(16px, env(safe-area-inset-bottom)); }.masthead { flex-wrap: wrap; gap: 10px; padding: 18px 0; min-height: 0; }.brand { flex: 1; }.brand h1 { font-size: 22px; }.brand-mark { width: 33px; height: 39px; font-size: 24px; }.session-state { width: 100%; order: 3; text-align: left; display: flex; align-items: baseline; gap: 12px; }#phase { font-size: 12px; }.guide-body { width: min(310px, calc(100vw - 28px)); }
+  #table { display: flex; flex-direction: column; gap: 18px; margin-top: 12px; }.play-area { width: 100%; }.tabs { margin-bottom: 18px; }.section-heading .eyebrow { font-size: 8px; letter-spacing: 1px; }.team-grid { grid-template-columns: 1fr; gap: 8px; }
+  .creature { display: grid; grid-template-columns: minmax(0, 1fr) 126px; gap: 6px 12px; padding: 12px; }.creature.legal, .creature.picked { padding: 11px; }.who { margin: 0; }.creature-name { font-size: 13px; }.creature-id { min-width: 28px; height: 30px; }.health { grid-column: 1; margin: 0; height: 19px; }.stats { grid-column: 2; grid-row: 1 / 3; align-self: center; gap: 5px; }.stat strong { font-size: 18px; }.stat span { font-size: 9px; }.badges, .dock, .markers { grid-column: 1 / -1; margin-top: 2px; }
+  .initiative-section { margin: 16px 0; padding: 12px; }.hand-section > .section-heading { display: block; }.hand-section > .section-heading .muted { display: block; margin-top: 5px; }.held { flex-basis: 185px; }.action-area { position: sticky; bottom: 0; top: auto; width: 100%; z-index: 10; }.sheet { max-height: 44dvh; border-radius: 12px 12px 0 0; padding: 15px; padding-bottom: max(15px, env(safe-area-inset-bottom)); box-shadow: 0 -10px 35px #0006; }.decision-heading { margin-bottom: 8px; }#asking { font-size: 22px; margin-bottom: 13px; }.notes { background: var(--paper); padding: 12px 2px; }.action-area:has(#decision[data-kind="Evolution"]) .notes { display: none; }
+  .choice-cards { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 }
-
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-weight: 600;
-}
-
-.card-cost {
-  flex: none;
-  min-width: 1.6rem;
-  text-align: center;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--paper);
-}
-
-.card-body {
-  margin-top: 0.3rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-/* The initiative track: one strip that scrolls sideways, because at 360 px a round of six creatures does not
-   fit and wrapping it would break the one thing it is for -- the order. */
-.strip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  margin-bottom: 8px;
-  scrollbar-width: thin;
-}
-
-.band {
-  flex: none;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 4px 6px;
-}
-
-.band-name {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.slots { display: flex; gap: 4px; }
-
-.slot {
-  flex: none;
-  padding: 2px 6px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.85rem;
-}
-
-.slot.ally { border-color: var(--ink); }
-.slot.now { background: var(--ink); color: var(--paper); }
-
-/* Two tabs, not two panels: one screen, and the mat is touched once a round. */
-.tabs { display: flex; gap: 8px; margin-bottom: 8px; }
-
-.tab {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
-  color: var(--muted);
-  font: inherit;
-}
-
-.tab.on { color: var(--ink); border-color: var(--ink); }
-
-/* What is face down: this seat's own backs read, the other side's counted. */
-/* The hand: one row a creature, its cards as chips. Dimmed is "known but not castable now", which is a state
-   the board has to show rather than hide -- a player asking why has to be able to read the card. */
-.hand-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-  font-size: 0.75rem;
-}
-
-.hand-row { display: flex; flex-direction: column; gap: 2px; }
-
-.hand-who { color: var(--muted); }
-
-/* The cards scroll sideways rather than wrapping: at 360 px a wrapped hand of five faces is the whole screen,
-   and a row that scrolls keeps the boards below it reachable with one thumb. */
-.held-cards {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scroll-snap-type: x proximity;
-}
-
-.held {
-  flex: 0 0 11rem;
-  scroll-snap-align: start;
-  opacity: 0.45;
-}
-
-.held.castable { opacity: 1; border-color: currentcolor; }
-
-/* Offered is narrower than castable: every row says what its creature could cast, but only the creature being
-   asked can be tapped right now. */
-.held.offered { cursor: pointer; box-shadow: 0 0 0 1px currentcolor inset; }
-
-.hand {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
-}
-
-.backs.enemy { color: var(--muted); }
-
-/* What is already face up this round. It sits above the creatures because it is what the player about to pick
-   targets is reading, and it is the only part of the board that is not a creature. */
-.revealed {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  border-left: 3px solid var(--line);
-  font-size: 0.8rem;
-}
-
-/* A creature board: a number and a bar, never a rail of twenty-one cells. */
-.health {
-  position: relative;
-  height: 1.25rem;
-  margin: 4px 0;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.health .bar {
-  display: block;
-  height: 100%;
-  background: var(--line);
-}
-
-.health .number {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.8rem;
-}
-
-.dock { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-
-.dock-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border: 1px dashed var(--line);
-  border-radius: 999px;
-}
-
-.dock-rounds { font-size: 0.7rem; color: var(--muted); }
-
-.chip {
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--line);
-  font-size: 0.75rem;
-}
-
-.chip-source { margin-left: 4px; color: var(--muted); font-size: 0.65rem; }
-
-/* The round strip and the gates on the mat: both are reference, read once and then ignored, so both are small
-   and neither competes with the boards. */
-#shape { font-size: 0.75rem; margin-top: 4px; }
-
-#shape ol, #shape ul { margin: 4px 0 0; padding-left: 1.25rem; color: var(--muted); }
-
-.gate { margin-left: 6px; color: var(--muted); font-size: 0.65rem; }
-
-/* The markers, on the row: what this seat has tapped and not yet sent, and every caster already pointing at
-   this creature -- the printed board's `Targeted by` row of one box a caster. */
-.markers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-
-.marker {
-  min-width: 1.25rem;
-  padding: 0 4px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  text-align: center;
-  font-size: 0.7rem;
-}
-
-.marker.picked { border-color: currentcolor; font-weight: 600; }
-
-.creature.picked { outline: 2px solid currentcolor; outline-offset: -2px; }
-
-/* A legal target is a tap surface, and has to look like one: the whole row, because the row is what the choice
-   is made against. */
-.creature.legal { cursor: pointer; border-style: solid; }
-
-.badge {
-  margin-left: 6px;
-  padding: 0 5px;
-  border: 1px solid currentcolor;
-  border-radius: 3px;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-}
-
-/* The talent mat. A pip per creature, filled when it knows the spell. */
-.band-row { margin-bottom: 10px; }
-
-.mat-spell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 0;
-  font-size: 0.85rem;
-}
-
-.mat-spell span:first-child { flex: 1; }
-
-.pip {
-  width: 1.25rem;
-  text-align: center;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.7rem;
-}
-
-.pip.known { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-
-#log { margin: 10px 0; font-size: 0.8rem; color: var(--muted); }
-#feed { margin: 4px 0 0; padding-left: 1.2rem; }
-
-/* The notes. Quieter than the decision sheet on purpose: it is beside the game and never in front of it, so
-   the two taps read as available rather than as something being asked of a player mid-round. */
-.notes {
-  border-top: 1px solid var(--line);
-  margin-top: 10px;
-  padding-top: 10px;
-}
-.notes button { font-size: 0.9rem; color: var(--muted); }
-.notes label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; }
-.notes textarea {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  font: inherit;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
+@media (prefers-reduced-motion: no-preference) { button, .creature, .held { transition: border-color 120ms, background-color 120ms; } }
