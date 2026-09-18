@@ -246,3 +246,17 @@ test('a previous-round enemy choice is labelled separately and event round ident
   assert.equal(liveChoice({ id: 4 }, { roundNumber: 5 }, entries).previous, null);
   assert.equal(liveChoice({ id: 4 }, { roundNumber: 3 }, entries).status, 'Critical');
 });
+
+test('a public spell is visible before its targets and never creates target markers prematurely', async () => {
+  const { liveChoice } = await import('./board.js');
+  const creature = { id: 4 };
+  const board = { roundNumber: 1, revealedIntents: [{ actor: 4, spell: 'shown' }], revealedActions: [] };
+  const waiting = liveChoice(creature, board, []);
+  assert.equal(waiting.intent.spell, 'shown');
+  assert.equal(waiting.action, undefined);
+  assert.equal(waiting.status, 'Choosing targets');
+  assert.deepEqual(targetedBy(1, board), []);
+  board.revealedActions = [{ actor: 4, spell: 'shown', targets: [] }];
+  assert.equal(liveChoice(creature, board, []).status, 'Revealed');
+  assert.deepEqual(liveChoice(creature, board, []).action.targets, []);
+});

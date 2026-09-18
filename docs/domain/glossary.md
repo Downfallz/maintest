@@ -63,7 +63,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Evolution | A Planning decision where a Player unlocks a Spell for a Creature from its Talent tree, within the picks allowed by the Rule set. The unlock also raises the Creature's Initiative by the Spell initiative (ADR 0017). | decided |
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
-| Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
+| Turn cursor | The position in the Combat timeline of the next Intent to bind to targets (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
 | Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by Player slot then Creature id. | decided |
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |
@@ -72,7 +72,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Regeneration tick | The health a Creature regains from its regeneration Conditions at the start of a Round, applied before the Bleed ticks. | decided |
 | Energy regeneration tick | The Energy a Creature gains from its energy regeneration Conditions at the start of a Round, on top of the Round's own Energy gain. It is given before the Bleed ticks, so a Creature its Bleed kills that Round still gained it. | decided |
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
-| Reveal and target | The step where the next Intent on the timeline is revealed and its targets chosen, producing a Combat action. | decided |
+| Reveal and target | All declared Spells become public together, then targets are chosen in timeline order, producing Combat actions (ADR 0056). | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
 | Combat step | The result of resolving one Combat action through the Match: the Resolution, and whether it completed the Round or the Match. | decided |
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |

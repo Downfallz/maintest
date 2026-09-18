@@ -61,3 +61,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0053](0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md) | Score the exploit term on how fast the best exploiter wins, not on whether it wins | Accepted |
 | [0054](0054-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
 | [0055](0055-a-searching-agent-may-be-built-on-a-policy.md) | A searching agent may be built on a policy, so the loop has an operator that improves one | Proposed |
+| [0056](0056-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Accepted |

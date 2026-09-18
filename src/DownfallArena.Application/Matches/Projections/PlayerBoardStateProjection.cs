@@ -37,6 +37,9 @@ public static class PlayerBoardStateProjection
             SpeedChoices = [.. round.SpeedChoices.Where(choice => ownCreatures.Contains(choice.Creature))],
             Intents = [.. round.IntentsOf(slot)],
             Timeline = round.Timeline.Slots,
+            RevealedIntents = round.SubPhase is RoundSubPhase.RevealAndTarget or RoundSubPhase.ActionResolution or RoundSubPhase.Cleanup or RoundSubPhase.Finalization
+                ? [.. round.Timeline.Slots.Select(activation => round.IntentOf(activation.Creature)).OfType<CombatIntent>()]
+                : [],
             RevealedActions = [.. round.Timeline.Slots.Take(round.RevealCursor.Index).Select(activation => round.ActionOf(activation.Creature)).OfType<CombatAction>()],
             RevealCursor = round.RevealCursor.Index,
             ResolveCursor = round.ResolveCursor.Index,

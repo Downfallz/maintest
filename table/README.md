@@ -25,16 +25,16 @@ not recorded matches. Card text and creature names in the actual app come from t
   applied outcomes, in resolution order. Reopen it throughout the next round; it stays available after the
   match ends. Critical casts, failed casts and skipped targets are labelled as well as coloured.
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
-- Desktop is the primary workspace: a full-width planning panel groups the main decision with the acting
-  spellbook. The page scrolls normally; the battlefield and desktop cards have no clipped inner scrolling
-  panes. Cards wrap into rows, and the active creature appears first. Battlefield / Your move links jump
-  between planning and the board. Phones use the same flow with a horizontal card hand.
+- Desktop keeps the battlefield beside a compact planning desk with the acting spellbook. The board stays
+  visible while the page scrolls through longer spell lists; neither board nor hand has a clipped inner
+  scrolling pane. Cards wrap into two columns and the active creature appears first. Phones retain the
+  stacked flow and horizontal hand; jump links remain available below desktop width.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's unlocks at a time. Choose its numbered button, then the spell to unlock.
 - Speed opens the acting creature's spellbook as a readable reference. Each new Speed or Intent question
-  brings the decision and hand into view together when needed; a Target question brings its heading into
-  view, with the target controls staying above the battlefield on desktop. Later polls and local selection
+  keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
+  active decision. Later polls and local selection
   preserve deliberate scrolling. Other hands remain expandable.
 - Tap a spell once to select it, then again to declare it. Tap a selected target again to cast on the entire
   selected group once the host's minimum is met. Remove buttons let you correct a target set; single-target
@@ -42,6 +42,8 @@ not recorded matches. Card text and creature names in the actual app come from t
   Enter or Space works too; holding a key or tapping while a request is pending never submits again.
 - The Talent atlas opens over the battlefield as a non-modal window: drag its title, resize its corner,
   maximize, reset or close it. Arrow keys on the title move it as well. Phones use a full-screen panel.
+  Its sticky toolbar keeps the creature, round, Evolution pick number and remaining picks visible.
+  Down from the last row of spell choices reaches the explorer; Enter opens it and Up returns to spells.
 - The atlas draws the actual class hierarchy in three rows for the current catalogue: base, families and
   specializations. Parent links come explicitly from the catalogue projection. Select a class for its full
   spell cards, tiers and exact prerequisites. Branch lines show class ancestry, not individual spell gates.
@@ -54,8 +56,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   number follows the full server order, including ties; the active reveal/resolution slot is highlighted.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
-- Enemy battlefield cards show public speed plus the current round's revealed spell, targets and resolution
-  status. Before reveal, the spell stays hidden. At the next round, the previous public action is explicitly
+- All spells become public together after the last declaration, before any targeting (ADR 0056).
+  Both teams show their declared spell with “Targets pending” until its owner confirms targets in order.
+  Confirmed targets and resolution status update on the battlefield. During declaration, enemy choices stay
+  hidden. At the next round, the previous public action is explicitly
   labelled “Last round” until a new one is revealed; it is recovered from the seat's public feed on reload.
 - Round guide contains the host's round order and rule stamp. Match activity and playtest notes stay below
   the spellbook. The opaque handover screen remains the hotseat privacy boundary.

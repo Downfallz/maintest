@@ -383,7 +383,7 @@ function render(state, views) {
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
-  const targetOffset = view.waitingFor === 'Target' && globalThis.innerWidth > 760
+  const targetOffset = view.waitingFor === 'Target' && globalThis.innerWidth > 760 && globalThis.innerWidth < 1100
     ? element('decision').getBoundingClientRect().height + 30 : 18;
   element('board').style.setProperty('--target-offset', `${targetOffset}px`);
   renderNotes(view);
@@ -401,7 +401,9 @@ function guideDecision(state, current) {
   if (state.guidedAsking === state.asked || current.view.over || current.view.playedByBot) return;
   state.guidedAsking = state.asked;
   const kind = current.view.waitingFor;
-  const anchor = ['Speed', 'Intent'].includes(kind) ? element('planning') : kind === 'Target' ? element('decision') : null;
+  const desktop = globalThis.innerWidth >= 1100;
+  const anchor = desktop && ['Speed', 'Intent', 'Target'].includes(kind) ? element('board')
+    : ['Speed', 'Intent'].includes(kind) ? element('planning') : kind === 'Target' ? element('decision') : null;
   if (!anchor) return;
   const rect = anchor.getBoundingClientRect();
   if (rect.top < 16 || rect.bottom > globalThis.innerHeight) {
@@ -473,7 +475,7 @@ function renderBoard(state, current) {
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
   enemyBooks(state, current);
-  revealed(state, board.revealedActions);
+  revealed(state, board);
   element('backs').replaceChildren(backs(state, board, view.opponentIntents));
   element('own-hand').replaceChildren(hand(state, current));
 }
@@ -562,17 +564,25 @@ function heldCard(state, spell, offered, creature, current, reference) {
   return face;
 }
 
-// The actions that are already face up, in the order they were revealed (board.js). Nothing is drawn while
-// none is, so the board of a planning phase is the board it was.
-function revealed(state, actions) {
+// All public spells, with confirmed targets only. Pending targets are distinct from an empty confirmed cast.
+function revealed(state, board) {
   const box = element('revealed');
-  box.hidden = (actions ?? []).length === 0;
-  box.replaceChildren(...(actions ?? []).map(action => {
+  const actions = board.revealedActions ?? [];
+  const intents = board.revealedIntents?.length ? board.revealedIntents : actions;
+  box.hidden = intents.length === 0;
+  const open = box.children[0]?.open ?? false;
+  const list = document.createElement('details');
+  list.open = open;
+  const heading = document.createElement('summary');
+  heading.textContent = `Round spells · ${intents.length} revealed`;
+  list.append(heading, ...intents.map(intent => {
+    const action = actions.find(one => one.actor === intent.actor);
     const one = document.createElement('div');
     one.className = 'revealed-action';
-    one.textContent = revealedText(action, state.cards);
+    one.textContent = revealedText(action ?? intent, state.cards) + (action ? '' : ' · Targets pending');
     return one;
   }));
+  box.replaceChildren(list);
 }
 
 // What is face down. This seat's own backs are its own to read; the other side's is a count and carries no
@@ -580,10 +590,12 @@ function revealed(state, actions) {
 function backs(state, board, opponentIntents) {
   const box = document.createElement('div');
   box.className = 'hand';
+  const hidden = faceDown(board);
+  box.hidden = hidden.length === 0 && !Number(opponentIntents);
 
   const mine = document.createElement('div');
   mine.className = 'backs ally';
-  mine.textContent = faceDown(board)
+  mine.textContent = hidden
     .map(intent => backText(intent, state.cards))
     .join(' · ') || 'nothing declared';
 
@@ -673,7 +685,10 @@ function line(state, creature, which, marks) {
   }
 
   box.append(who, health, stats, tags, dock(state, creature.conditions));
-  if (which === 'enemy') box.append(enemyChoice(state, creature, marks?.board, marks?.roundEvents));
+  const publicChoice = liveChoice(creature, marks?.board, marks?.roundEvents);
+  if (which === 'enemy' || publicChoice.intent || publicChoice.action) {
+    box.append(enemyChoice(state, creature, marks?.board, marks?.roundEvents));
+  }
 
   // The markers, on the row rather than only in the sheet: a target is chosen against this creature's health,
   // its defense and what is already on it, so the choice has to be visible where those numbers are
@@ -789,7 +804,13 @@ function renderMat(state, current) {
   const toolbar = document.createElement('div');
   toolbar.className = 'talent-toolbar';
   const heading = document.createElement('h2');
-  heading.textContent = 'Choose your path';
+  heading.textContent = creature ? `${creature.name || 'Creature'} #${creature.id}` : 'Choose your path';
+  const context = document.createElement('span');
+  context.className = 'atlas-context';
+  context.textContent = evolution
+    ? `Round ${view.board.roundNumber} · Evolution pick ${(view.board.evolutionChoices ?? []).length + 1} · ${evolution.remainingPicks ?? 0} remaining`
+    : `Round ${view.board.roundNumber} · Spellbook reference`;
+  heading.append(context);
   const help = document.createElement('p');
   help.className = 'muted';
   help.textContent = 'Base → families → specializations. Select a class to inspect its spells. Branch lines show class ancestry; Requires on each card gives the exact unlock conditions.';
@@ -1093,7 +1114,9 @@ function evolutionButtons(state, current) {
   pass.className = 'secondary';
   const explore = button('Explore classes & tiers →', () => openTalents(state));
   explore.className = 'secondary';
-  return [picker, hint, explore, cards, pass];
+  explore.dataset.focus = 'evolution-explorer';
+  pass.dataset.focus = 'evolution-pass';
+  return [picker, hint, cards, explore, pass];
 }
 
 // An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
@@ -1475,7 +1498,7 @@ function keyboardDecision(state, event) {
 function enemyChoice(state, creature, board, entries) {
   const choice = liveChoice(creature, board, entries);
   const box = document.createElement('div');
-  box.className = `round-choice ${choice.action ? 'public' : 'hidden-choice'}`;
+  box.className = `round-choice ${choice.action || choice.intent ? 'public' : 'hidden-choice'}`;
   const heading = document.createElement('span');
   heading.className = 'choice-round';
   heading.textContent = `Round ${choice.round ?? '—'} · ${choice.status}`;
@@ -1488,14 +1511,14 @@ function enemyChoice(state, creature, board, entries) {
     });
     return { name, targets: targets.length ? `→ ${targets.join(', ')}` : 'No targets' };
   };
-  if (choice.action) {
-    const text = describe(choice.action);
+  if (choice.action || choice.intent) {
+    const text = describe(choice.action ?? choice.intent);
     const name = document.createElement('strong');
     name.className = 'choice-spell';
     name.textContent = text.name;
     const targets = document.createElement('span');
     targets.className = 'choice-targets';
-    targets.textContent = text.targets;
+    targets.textContent = choice.action ? text.targets : 'Targets pending';
     box.append(name, targets);
   } else if (choice.previous) {
     const text = describe(choice.previous.action);
@@ -1524,9 +1547,17 @@ function navigateChoices(state, current, event) {
   if (atlas || evolving) {
     const picker = nodes(atlas ? 'talent-creature-' : 'evolve-').filter(node => !node.dataset.focus.startsWith('evolve-spell-'));
     const cards = nodes(atlas ? 'tree-' : 'evolve-spell-');
+    const explore = atlas ? null : nodes('evolution-explorer')[0];
+    const pass = atlas ? null : nodes('evolution-pass')[0];
+    if (active === explore || active === pass) {
+      if (event.key === 'ArrowUp') focus(active === pass ? explore : cards.at(-1) ?? picker[0]);
+      else if (event.key === 'ArrowDown') focus(pass ?? active);
+      else focus(active === explore ? pass : explore);
+      return;
+    }
     const inCards = cards.includes(active);
     if (!inCards) {
-      if (event.key === 'ArrowDown') { focus(cards[0]); return; }
+      if (event.key === 'ArrowDown') { focus(cards[0] ?? explore); return; }
       if (!['ArrowLeft', 'ArrowRight'].includes(event.key) || !picker.length) return;
       const selected = picker.findIndex(node => node.getAttribute('aria-pressed') === 'true');
       const index = picker.includes(active) ? picker.indexOf(active) : Math.max(0, selected);
@@ -1539,6 +1570,7 @@ function navigateChoices(state, current, event) {
     }
     const next = arrowNeighbour(cards, active, event.key);
     if (event.key === 'ArrowUp' && !next) focus(picker.find(node => node.getAttribute('aria-pressed') === 'true') ?? picker[0]);
+    else if (event.key === 'ArrowDown' && !next && explore) focus(explore);
     else focus(next ?? active);
     return;
   }
@@ -1546,6 +1578,15 @@ function navigateChoices(state, current, event) {
   if (!prefix) return;
   const controls = nodes(prefix);
   if (!controls.length) return;
+  const explore = view.waitingFor === 'Intent' ? element('hand-talents') : null;
+  if (active === explore) {
+    focus(event.key === 'ArrowUp' ? controls.at(-1) : controls[0]);
+    return;
+  }
+  if (controls.includes(active) && event.key === 'ArrowDown' && !arrowNeighbour(controls, active, event.key) && explore) {
+    focus(explore);
+    return;
+  }
   focus(controls.includes(active) ? arrowNeighbour(controls, active, event.key) ?? active : controls[0]);
 }
 

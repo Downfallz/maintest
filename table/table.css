@@ -203,7 +203,9 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 .window-hint { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; }
 .talent-window #mat { overflow: auto; padding: 18px; flex: 1; min-height: 0; scrollbar-width: thin; }
 .talent-window.maximized { left: 8px !important; top: 8px !important; width: calc(100vw - 16px) !important; height: calc(100dvh - 16px) !important; resize: none; }
-.talent-window .talent-toolbar { grid-template-columns: 1fr 230px; gap: 10px 20px; padding: 0 0 16px; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: 8px; }
+.talent-window .talent-toolbar { position: sticky; top: -18px; z-index: 4; grid-template-columns: 1fr 300px; gap: 10px 20px; padding: 16px 0; background: #15201d; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; margin-bottom: 8px; box-shadow: 0 8px 12px #15201ddd; }
+.atlas-context { display: block; font: 600 12px ui-sans-serif, system-ui, sans-serif; color: var(--ink); margin-top: 7px; line-height: 1.5; }
+.talent-window #mat { scroll-padding-top: 170px; }
 .talent-toolbar h2 { font-size: 22px; }
 .talent-toolbar .muted { grid-column: 1; grid-row: 2; max-width: 80ch; }
 .talent-toolbar .creature-picker { grid-column: 2; grid-row: 1; }
@@ -237,6 +239,9 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
   #talent-grip { cursor: default; }
   .talent-window #mat { padding: 12px; }
   .talent-window .talent-toolbar { grid-template-columns: 1fr; }
+  .talent-window .talent-toolbar { top: -12px; padding: 10px 0; gap: 8px; }
+  .talent-window .talent-toolbar .muted { display: none; }
+  .talent-window #mat { scroll-padding-top: 200px; }
   .talent-toolbar .muted, .talent-toolbar .creature-picker, .talent-toolbar select { grid-column: auto; grid-row: auto; }
   .tree-map { max-height: 55dvh; }
 }
@@ -272,7 +277,7 @@ kbd { font: 10px ui-monospace, monospace; border: 1px solid #70816e; border-radi
 .held { display: flex; flex-direction: column; }
 .held > .card-availability { order: -1; margin: 0 0 9px; }
 
-/* The page is the scrolling surface. Planning gets the full width and keeps controls with the cards. */
+/* One page scroll. On laptops the board and the planning desk share the viewport. */
 body:has(#table) { overflow: auto; }
 #table { display: block; height: auto; max-width: 1440px; margin: 22px auto 0; }
 .play-area { display: flex; flex-direction: column; height: auto; overflow: visible; gap: 24px; }
@@ -315,8 +320,77 @@ body:has(#table) { overflow: auto; }
 .enemy-books { display: flex; gap: 14px; }
 .enemy-book { flex: 1; }
 .enemy-book .held-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); overflow: visible; }
-@media (min-width: 761px) {
+@media (min-width: 761px) and (max-width: 1099px) {
   .play-area:has(#decision[data-kind="Target"]) .action-area { position: sticky; top: 10px; z-index: 10; }
+}
+@media (min-width: 1100px) {
+  body:has(#table) { padding: 0 20px 24px; }
+  .masthead { min-height: 72px; }
+  .brand h1 { font-size: 23px; }
+  #table { max-width: 1600px; margin-top: 10px; }
+  .play-area { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(410px, 1fr); gap: 14px 20px; align-items: start; }
+  .tabs, .round-recap, #notes, #log { grid-column: 1 / -1; }
+  .tabs { grid-row: 1; }
+  #notes { grid-row: 4; }
+  #log { grid-row: 5; }
+  #planning, #planning:is([data-kind="Speed"], [data-kind="Intent"]) {
+    display: block; grid-column: 2; grid-row: 3; min-width: 0; padding: 16px;
+    border: 1px solid #697051; border-radius: 14px; background: linear-gradient(145deg, #2a362a, #1b2922 65%);
+  }
+  .round-recap { grid-row: 2; }
+  #board { grid-column: 1; grid-row: 3; position: sticky; top: 14px; align-self: start; }
+  #decision, #planning:is([data-kind="Speed"], [data-kind="Intent"]) #decision {
+    display: block; padding: 0 0 8px; background: transparent; border: 0; box-shadow: none;
+  }
+  #decision #asking { font-size: 27px; margin: 8px 0; }
+  #decision[data-kind="Target"] #asking { font-size: 30px; }
+  .decision-context { font-size: 12px; margin: 6px 0 12px; }
+  #decision[data-kind="Speed"] #choices { gap: 10px; }
+  #decision[data-kind="Speed"] #choices > button { min-height: 52px; font-size: 18px; text-align: center; padding: 10px; }
+  #decision[data-kind="Speed"] #choices > button::before { display: inline; margin-right: 10px; }
+  #decision[data-kind="Intent"] #choices > button { min-height: 44px; font-size: 15px; }
+  #decision[data-kind="Evolution"] .choice-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shortcuts summary { min-height: 28px; padding: 6px 0; }
+  #planning .hand-section { padding-top: 12px; }
+  .hand-section > .section-heading { align-items: center; gap: 6px; margin-bottom: 8px; }
+  .hand-actions .reference-link { min-height: 30px; padding: 5px 8px; font-size: 10px; }
+  #hand-board, #board-move { display: none; }
+  .hand-row.active .hand-who { font-size: 11px; margin-bottom: 6px; }
+  #own-hand .held-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #own-hand .held { padding: 12px; }
+  #own-hand .card-title { font-size: 17px; }
+  #own-hand .card-body { font-size: 11px; line-height: 1.5; padding-top: 8px; margin-top: 8px; }
+  #own-hand .card-cost { width: 25px; height: 25px; font-size: 12px; }
+  #own-hand .card-availability { font-size: 10px; margin-bottom: 6px; }
+  .hand-cards { gap: 4px; }
+  .hand-row.active { margin-bottom: 4px; }
+  .hand-row summary { min-height: 32px; padding: 8px 0; }
+  .team-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .creature { padding: 11px; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .creature.legal, .creature.picked { padding: 10px; }
+  .health { grid-column: 1; }
+  .stats { grid-column: 1; grid-row: auto; display: flex; gap: 14px; }
+  .stat { flex-direction: row; align-items: baseline; gap: 4px; }
+  .stat strong { font-size: 15px; }
+  .stat span { font-size: 9px; }
+  .creature-label { display: none; }
+  .section-heading { margin-bottom: 8px; }
+  .initiative-section { margin: 12px 0; padding: 9px 11px; }
+  .initiative-section .section-heading { margin-bottom: 5px; }
+  .strip { flex-wrap: wrap; gap: 8px 16px; overflow: visible; }
+  .slot { padding: 4px 7px; }
+  .enemy-book > summary { min-height: 30px; padding: 7px 0; font-size: 10px; }
+  .enemy-books:has(.enemy-book[open]) { flex-wrap: wrap; }
+  .enemy-book[open] { flex-basis: 100%; }
+  .hand { margin: 8px 0; }
+  .revealed { padding: 0 10px; margin: 8px 0 0; }
+  .revealed summary { min-height: 30px; padding: 6px 0; }
+  .round-choice { padding-top: 5px; }
+  .choice-spell { margin-top: 3px; }
+  .choice-targets { margin-top: 3px; }
+  .ally .choice-spell { color: #b9dcc1; }
+  .round-recap summary { padding: 10px 16px; }
+  #recap-title { font-size: 20px; }
 }
 @media (max-width: 760px) {
   .play-area { gap: 18px; }

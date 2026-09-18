@@ -255,27 +255,31 @@ in the desktop workspace section that follows.
 
 ### Desktop workspace and responsive fallback (2026-09-18)
 
-The table uses a full-width planning panel on desktop and an ordinary page flow on phones. Evolution
+The table keeps a compact planning desk beside the battlefield on desktop and an ordinary page flow on phones. Evolution
 groups unlocks by creature. Speed opens the acting creature’s spellbook as a reference, and a new Speed or
 Intent question brings the controls and that hand into view together when needed. Cards and legal targets support keyboard activation and a second tap on
 an existing selection confirms it; the explicit confirmation buttons remain. Selected targets have separate
 removal buttons so a multi-target set can still be corrected.
 
-Desktop now uses normal page scrolling with a full-width planning panel: the main decision and acting
-spellbook stay together, cards wrap without height clipping, and the active hand appears first. The
-battlefield has no nested scrolling pane. Direct links jump between the board and the current decision.
+Desktop uses normal page scrolling: the battlefield stays visible beside the main decision and acting
+spellbook, cards wrap without height clipping, and the active hand appears first. Neither board nor hand has
+a nested scrolling pane. Smaller screens retain links between board and decision.
 Talents opens a movable, resizable, maximizable non-modal atlas; a phone gets a full-screen
 panel. The atlas draws base, families and specializations as connected rows using explicit `ParentCode`
 values added to `TalentBand`. Node ancestry is separate from the exact spell prerequisites on each card.
 The first-level authored families receive cool, leaf and ember palettes, inherited by their specializations
 and shared across all card surfaces. Selecting a class shows its spells and current host-offered unlocks;
-a legal Evolution pick can be submitted directly from this inspector.
+a legal Evolution pick can be submitted directly from this inspector. The sticky toolbar keeps the inspected
+creature, Evolution pick number and remaining picks visible while reading spells. Down from the last spell
+row reaches the explorer button; Enter opens it.
 
 Keyboard shortcuts select numbered options, confirm with Enter, toggle the atlas with T, and close or clear
 with Escape. Arrows switch Evolution creatures, enter their offered spells, and navigate the visible spell
 or target rows without committing; focused controls retain their normal Enter behavior. They ignore text entry, repeat events and modifier chords and use the same asking and submission
 guards as pointer input. Battlefield cards keep the creature's timeline position; enemy cards also retain
-public speed, revealed spell, targets and resolution state. Hidden choices stay hidden. The previous round's
+public speed, revealed spell, targets and resolution state. All declared spells become public together at
+entry into targeting (ADR 0056); targets still become public one confirmation at a time. Unconfirmed targets
+read “Targets pending”, never “No targets”. Spells stay hidden during declaration. The previous round's
 public action is labelled separately at the next round, using the retained public resolution feed.
 
 Every offered option, card face, stat and ordering still comes from the host. The opaque hotseat handover

@@ -7,7 +7,7 @@ namespace DownfallArena.Application.Matches.Projections;
 
 /// <summary>
 /// What one player sees of a match: both teams as snapshots, the round position, their own hidden choices, and
-/// everything already public (timeline, revealed actions, outcome).
+/// everything already public (timeline, revealed intents and actions, outcome).
 /// </summary>
 public sealed record PlayerBoardState
 {
@@ -41,6 +41,9 @@ public sealed record PlayerBoardState
     public IReadOnlyList<CombatIntent> Intents { get; init; } = [];
 
     public IReadOnlyList<ActivationSlot> Timeline { get; init; } = [];
+
+    /// <summary>All declared spells, public together after intent selection, before any targets are bound.</summary>
+    public IReadOnlyList<CombatIntent> RevealedIntents { get; init; } = [];
 
     /// <summary>The actions revealed so far this round, in timeline order; public to both players.</summary>
     public IReadOnlyList<CombatAction> RevealedActions { get; init; } = [];

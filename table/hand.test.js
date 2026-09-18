@@ -84,3 +84,8 @@ test('a seat whose whole team has been revealed has no backs left', () => {
 
   assert.deepEqual(faceDown(board), []);
 });
+
+test('all public declarations are face up even before any targets have been bound', () => {
+  const intents = [{ actor: 1, spell: 'a' }, { actor: 2, spell: 'b' }];
+  assert.deepEqual(faceDown({ intents, revealedIntents: intents, revealedActions: [] }), []);
+});

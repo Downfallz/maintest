@@ -493,6 +493,61 @@ test('an atlas unlock uses the guarded current asking and rejects a stale inspec
   await unlock.events.click(); assert.equal(sent.length, 1);
 });
 
+test('every public spell is readable before targeting and confirmed targets update without hiding later spells', () => {
+  const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'RevealAndTarget';
+  p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
+  p.view.board.timeline = [{ creature: 1 }, { creature: 2 }];
+  p.view.board.revealedIntents = [{ actor: 1, spell: 'one' }, { actor: 2, spell: 'two' }];
+  p.view.board.revealedActions = []; p.draw();
+  assert.match(p.nodes.enemies.textContent, /Second cardTargets pending/);
+  assert.match(p.nodes.allies.textContent, /First cardTargets pending/);
+  assert.match(p.nodes.revealed.textContent, /First card/);
+  assert.match(p.nodes.revealed.textContent, /Second card/);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /No targets/);
+  p.view.board.revealedActions = [{ actor: 1, spell: 'one', targets: [2] }]; p.draw();
+  assert.match(p.nodes.allies.textContent, /First card→ #2/);
+  assert.match(p.nodes.enemies.textContent, /Second cardTargets pending/);
+  p.view.board.roundNumber = 2; p.view.board.revealedIntents = []; p.view.board.revealedActions = []; p.draw();
+  assert.equal(p.nodes.revealed.hidden, true);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
+});
+
+test('down reaches the evolution explorer after spell choices and up returns to a spell', () => {
+  const p = page(); p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, unlockableSpells: ['one'] }] } }; p.draw();
+  const spell = p.nodes.choices.querySelectorAll('[data-focus]').find(node => node.dataset.focus.startsWith('evolve-spell-'));
+  spell.focus(); p.context.keyboardDecision(p.state, keyEvent('ArrowDown'));
+  assert.equal(p.document.activeElement.dataset.focus, 'evolution-explorer');
+  const explorer = p.document.activeElement;
+  p.context.keyboardDecision(p.state, keyEvent('ArrowUp'));
+  assert.equal(p.document.activeElement, spell);
+  explorer.click(); assert.equal(p.state.tab, 'mat');
+});
+
+test('down from the last intent row reaches its explorer without declaring a card', () => {
+  const p = page(); p.draw(); held(p).children.at(-1).focus();
+  p.context.keyboardDecision(p.state, keyEvent('ArrowDown'));
+  assert.equal(p.document.activeElement, p.nodes['hand-talents']);
+  assert.equal(p.state.chosen, null);
+  p.context.keyboardDecision(p.state, keyEvent('ArrowUp'));
+  assert.equal(p.document.activeElement, held(p).children.at(-1));
+});
+
+test('the atlas identifies the inspected creature and the second evolution pick from the new board', () => {
+  const p = page(); p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, unlockableSpells: ['two'] }] } }; p.draw();
+  assert.match(p.nodes.mat.children[0].textContent, /First #1Round 1 · Evolution pick 1 · 2 remaining/);
+  p.view.board.evolutionChoices = [{ creature: 1, spell: 'one' }];
+  p.view.options.evolution.remainingPicks = 1; p.view.waitingAsked++; p.draw();
+  assert.match(p.nodes.mat.children[0].textContent, /First #1Round 1 · Evolution pick 2 · 1 remaining/);
+});
+
+test('desktop turn guidance keeps the battlefield in view alongside planning', () => {
+  const p = page(); p.context.innerWidth = 1280; p.context.innerHeight = 720; p.draw();
+  assert.equal(p.nodes.board.scrolledIntoView, true);
+  assert.equal(p.nodes.planning.scrolledIntoView, undefined);
+});
+
 test('the acting creature appears first in the planning spellbook with its context', () => {
   const p = page(); p.view.board.allies.push({ id: 3, name: 'Third', health: 12, maxHealth: 20, energy: 5, knownSpells: ['two'] });
   p.view.waitingFor = 'Speed'; p.view.waitingCreature = 3; p.view.options = { speed: {} }; p.draw();

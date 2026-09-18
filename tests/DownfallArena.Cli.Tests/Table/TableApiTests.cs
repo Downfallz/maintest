@@ -407,15 +407,10 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
-    /// The count of the other side's backs against the cards already turned over. A round keeps every intent
-    /// it was given and tracks the reveal separately, so from the first reveal onwards the two differ — and
-    /// with the reveal strip on the same screen, a count that did not subtract would be reading "one face
-    /// down" beside a card that is plainly face up. Both seats go Standard here so the faster enemy reveals
-    /// first, which is the only ordering that puts an opponent's card face up while this seat is still being
-    /// asked.
+    /// All opposing spells are public after declaration, including creatures still waiting to bind targets.
     /// </summary>
     [Fact]
-    public async Task The_other_side_backs_are_counted_without_the_cards_already_turned_over()
+    public async Task No_opposing_card_remains_face_down_during_targeting()
     {
         var table = await Seated();
         await Post(table, """{"kind":"Evolution","pass":true}""");
@@ -425,10 +420,10 @@ public sealed partial class TableApiTests : IDisposable
         var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
 
         body.ShouldContain("\"subPhase\":\"RevealAndTarget\"");
-        // Enemy 3 is the first slot, so its card is face up; the other seat has two creatures, so one back
-        // is left. Before the count subtracted the reveal this line read two.
+        // Enemy 3 has bound targets; the other enemy has not, but its spell is already public as well.
         body.ShouldContain("\"revealedActions\":[{\"actor\":3,");
-        body.ShouldContain("\"opponentIntents\":1");
+        body.ShouldContain("\"revealedIntents\":[");
+        body.ShouldContain("\"opponentIntents\":0");
     }
 
     /// <summary>
