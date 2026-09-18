@@ -22,8 +22,11 @@ and is the reason the rest of this plan is phrased the way it is.
 ## The short version
 
 **Two rungs of the loop have been climbed by hand.** `pressure-floor` was searched from `mixture-mean`, and
-`stun-first` from `pressure-floor` *with `pressure-floor` in its panel* — which is A1 and A2 performed
-manually, once, and it produced the strongest agent here. The second link carries its evidence: on 200 seeds
+`stun-first` from `pressure-floor` *with `pressure-floor` in its panel* — so a candidate had to beat what it
+started from, which is the one idea A2 turns into a rule. It is **not** A1 and A2 already performed: the
+panel was four opponents named by hand out of a pool of eight, so the pool-derived sampling of A1 never
+happened and neither did A2's every-incumbent gate. What the run establishes is the link, not the
+machinery. The link carries its evidence: on 200 seeds
 nothing in this project had played, `stun-first` beats `pressure-floor` **0.8037, interval 0.762 to 0.846**
 (journal, 2026-09-16). That is already a paired reading — a head-to-head's interval is built over per-seed
 means of the two mirrored matches — so it is the instrument this plan insists on, not a marginal score that
@@ -44,7 +47,8 @@ the implementation effort is **not** estimated, because nothing here has been bu
 
 1. **A1 — the panel becomes the pool.** A rung scores its candidates against the top 4 of `learning/weights/`
    by rating plus 2 drawn at random, instead of three opponents named by hand — or, if the round robin below
-   found a cycle, against the cycle's members plus a draw, since a cyclic pool has no top 4. Sampled because
+   found a cycle, against one strongly connected component taken whole plus a draw, since a cyclic pool has
+   no top 4. Sampled because
    the whole pool would take ~195 min against `search.yml`'s 180-minute limit; six opponents land near two
    hours. This replaces Greedy, which `stun-first` beats in every match and which therefore cannot rank
    anything above itself any more.
@@ -52,9 +56,13 @@ the implementation effort is **not** estimated, because nothing here has been bu
    played against every pool member — ~73 s each — and one is admitted only if, against **every** incumbent,
    its paired difference shows no settled loss *and* has a lower bound above −δ, plus at least one settled
    win across the pool. Both halves are needed: the first refuses a matchup that says something bad, the
-   second one that says nothing. An admitted finalist is written to `learning/weights/` and the next rung
-   starts from it. **That sentence is the loop.** Everything it needs already exists, except the gate, which
-   this plan has got wrong four times and hands to an ADR.
+   second one that says nothing. Testing five finalists at once inflates that 95 %, so the bounds are either
+   corrected for the family or one finalist is chosen first and gated alone — an open trade, not a detail.
+   The gate's seeds must also be fresh **per rung**, not merely unused by the current search: the loop's own
+   output feeds the next rung, so a fixed hold-out window is fitted a little more with every turn. An
+   admitted finalist is written to `learning/weights/` and the next rung starts from it. **That sentence is
+   the loop.** Everything it needs already exists, except the gate, which this plan has got wrong four times
+   and hands to an ADR.
 3. **A3 — a stop.** N rungs with nothing admitted ends the loop, so it stops burning runner hours restating a
    fixed point. It records every finalist that failed, against whom and by how much. It does **not** say why
    the loop stopped: the four possible causes are not distinguishable from what it observes, so it is a halt,
@@ -163,8 +171,10 @@ for, and Line A is also what would disprove it.
 **The claim.** The recurrence has been run by hand and it climbed — twice. `pressure-floor` was searched from
 `mixture-mean`; `stun-first` was searched from `pressure-floor` with `pressure-floor` in its panel, so a
 candidate had to beat what it started from, and on 200 unseen seeds it beat `pressure-floor` 0.8037. The
-second of those is A1 and A2 executed manually: the panel included the incumbent, and the winner had to clear
-it. Automating the two links is what Line A is.
+second of those contains A2's one idea — the incumbent sits in the panel, so the winner has to clear what it
+started from — but it is not A1 and A2 performed by hand. Its four opponents were named by a person out of a
+pool of eight, which is neither A1's sampling nor A2's gate against every incumbent. Line A is not automating
+something already proven; it is building the machinery that these two links suggest is worth building.
 
 **What it is not.** An earlier draft called this a seven-rung chain running back to `greedy`. It is not:
 `search-2`, `search-3` and `search-4` were each searched from the default weights against Greedy, on three
@@ -212,11 +222,22 @@ cost down and buys nothing off the ratchet.
 
 **Finalists, plural, and that is not a detail.** A sample of six ranks candidates by a different objective
 than the full pool does, so the candidate it puts first need not be the one the full pool would. Gating only
-that one can reject it while an admissible runner-up is never played — and three rungs of that would have
-A3 announce the nine-number form exhausted on evidence that only says the *sampled* winner failed. So the
-gate takes the top *m* of the search (m ≈ 5, still under 7 minutes) and admits the best of those that clear
-it. The sampled objective also steers the search's own iterations, which the *m* finalists soften and do not
-cure; A3 has to state that it is one of the ways its counter can be wrong, and it does below.
+that one can reject it while an admissible runner-up is never played — and three rungs of that would end in a
+halt that says only "the *sampled* winner failed", which is one of the readings A3 below refuses to dress up
+as a verdict. So the gate takes the top *m* of the search (m ≈ 5, still under 7 minutes).
+
+**And testing five costs something the first draft of this paragraph took for free.** Five finalists judged
+against the same admission data at 95 % each is five chances for sampling error to lift one over the bar; the
+probability that *something* passes is not the 5 % the interval names. A gate that admits "the best of those
+that clear it" is selecting on exactly that error. Two ways out, and the plan does not yet choose between
+them: correct for the family — at m = 5, reading each bound at 1 − 0.05/5 moves the z from 1.96 to 2.576 and
+the half-width from 0.0563 to about 0.0740, which tightens δ and the admission estimate with it — or pick one
+finalist on the sample and put only that one through a gate on data nothing else touched. The first keeps
+round four's benefit and pays in strictness; the second is cleaner statistically and reopens the miss the
+finalists were added to close. **This is a real trade and it belongs in the ADR**, not in a sentence that
+picks the convenient half.
+
+The sampled objective also steers the search's own iterations, which *m* finalists soften and do not cure.
 
 ### A2 — the ratchet becomes `paired`, and the winner joins the pool
 
@@ -228,6 +249,21 @@ is written to `learning/weights/`, and the next rung starts from it.
 the incumbent the candidate regressed against, which is the failure this gate exists to catch. The rule is
 per incumbent, and what it has to be is worked out under Plan B2 below, because getting it wrong is the same
 mistake in both places.
+
+**"Seeds the search did not use" is not the same as unseen, once the loop turns.** `search.yml` takes its
+hold-out as the window starting at `max(seeds) + 1`, which is deterministic: every rung replays on the *same*
+seeds. That is fine once and corrosive in a loop, because rung *n + 1* starts from the weights rung *n*'s
+window admitted, so by rung three those seeds have shaped the lineage as surely as the search seeds did.
+Nothing catches it, because each rung is individually honest — this is ADR 0049's rule ("never pick the seed
+that scored best") applied across time rather than within a run, and the repository has no guard for that
+version of it. The loop would report a rising score on a test set it had been quietly fitting.
+
+So the gate needs seeds that are fresh **per rung**, not merely fresh per search: a window advanced by the
+rung index, recorded with the admission so a window is never reused. The seed space is large enough that this
+does not run out. And because a fresh window each time still lets errors accumulate across rungs, a second
+block is **sealed**: never used for admission, played only every N rungs to audit how far the loop has
+drifted from what it claims. That audit is the only reading that stays honest indefinitely, and it is worth
+more than any single rung's gate.
 
 "Written to `learning/weights/`, and the next rung starts from it" is the whole loop. Everything it needs
 exists.
@@ -258,11 +294,17 @@ If a cycle *is* found, two things need an answer, and earlier drafts answered on
 
 **The panel.** A1 picks its six opponents as "the top four by rating plus two drawn", and under a cycle there
 is no top four: a scalar rating over a cyclic table is exactly the object this section rejects, so the round
-robin would detect a cycle and then hand it straight to a rule that cannot represent one. Under a cycle the
-panel is drawn differently — **every member of the cycle, plus a draw from the rest up to the budget** —
-because the members are precisely the agents no rating can order, so leaving any of them out picks a winner
-by omission. If the cycle is larger than the panel budget, the rung costs more or the budget moves; that is a
-real cost and it is the price of a pool that cannot be ranked.
+robin would detect a cycle and then hand it straight to a rule that cannot represent one.
+
+"The cycle's members" is not a set, which a draft of this paragraph assumed it was: a table can hold several
+cycles, overlapping, and which one a detector meets first is an accident of traversal order. Two runs would
+then draw different panels of different sizes from the same table. What is canonical is the **strongly
+connected components** of the settled sub-relation — the partition of the agents into groups where everyone
+reaches everyone, computed the same way whatever order the edges arrive in. So: **the panel is the strongly
+connected component that contains the current best-rated agent among the components, taken whole, plus a draw
+from the rest up to the budget.** Whole, because inside a component no rating orders anybody, and dropping a
+member picks a winner by omission. If that component is larger than the panel budget, the rung costs more or
+the budget moves — a real cost, and the price of a pool that cannot be ranked.
 
 **The gate.** "Beats the pool on the mean" can promote an agent that loses to half of it. An earlier draft
 answered with a set of agents "not beaten by any other member", which is worse than imprecise: under
