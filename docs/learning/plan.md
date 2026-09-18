@@ -33,10 +33,19 @@ built-in one (+0.0075).
 
 Two things follow that shape everything below.
 
-**Search is not an improver on its own.** It gives a weak inner agent 0.1100 and takes 0.1700 from the
-strongest agent this repository has, which scores 1.0000 against Greedy unsearched. Whatever it is doing, it
-is not "make the agent better"; it substitutes its evaluation's judgement for the agent's in the positions it
-plays out, and that is an improvement only while the evaluation is the better of the two.
+**Search does not have one sign, *against Greedy*.** It gives a weak inner agent 0.1100 and takes 0.1700 from
+the strongest agent this repository has. Both readings are against Greedy and only against Greedy, and the
+negative one starts from 1.0000 — a saturated matchup where there is no upside left to measure, so part of
+that 0.1700 is a ceiling rather than a property of search. What the two rows license is "search can help or
+hurt against this opponent", not "search cannot improve an agent". The generalisation this file carried in an
+earlier draft — that search is never an improver — is withdrawn: it would remove search as an operator
+before the pool that Line A builds has ever measured it, and the same file argues two sections later that
+strength here is matchup-dependent.
+
+The mechanism remains a reasonable *hypothesis*, untested against anything but Greedy: search substitutes its
+evaluation's judgement for the inner agent's in the positions it plays out, which helps only while the
+evaluation is the better of the two. **Measuring it against the pool is a Line A deliverable**, not a
+premise.
 
 **Greedy is exhausted as a yardstick.** `stun-first` takes every match. A fixed opponent cannot drive a loop
 past the point where you beat it always, and every gate in this project currently reads a score against
@@ -44,9 +53,6 @@ Greedy.
 
 ## What is refuted, so it is not tried again
 
-- **The carrier loop, `P(n+1) = clone(lookahead:policy:P(n))`.** The order inverts under search: `P1` beats
-  `P0` bare, and searching over `P1` reads 0.6875 against Greedy where searching over `P0` reads 0.8350.
-  The second iteration is below the first. Do not build this expecting it to climb.
 - **Imitation as the climb.** Three turns: the better the clone copies, the closer to one half it lands
   against its own teacher (0.5513 to 0.6175 at 96 % copy, 0.4875 to 0.4925 at 98.5 %). A clone reaches its
   teacher; it does not pass it. Levers on the clone arm change how *fast* it arrives.
@@ -55,16 +61,37 @@ Greedy.
 - **Copy accuracy as the arm's headline number.** It does not predict how well a policy guesses inside a
   search, which is the job that turned out to matter.
 
+## What is open, and was called refuted in an earlier draft
+
+**The carrier loop, `P(n+1) = clone(lookahead:policy:P(n))`.** An earlier version of this file put it under
+"refuted" on one reading: searching over `P1` scored 0.6875 against Greedy where searching over `P0` scored
+0.8350, so the second iteration looked lower than the first. That does not close the path, for two reasons
+this repository measured itself:
+
+- The `P1` in question was **not the loop's `P2` step**. It was a local clone trained on dataset seed 1 at
+  2000 matches, used as a proxy because its bare scores fall inside `ci-149`'s three-seed bands. The actual
+  next clone, over the seeds a turn runs, was never trained or played.
+- The regression is **a property of that clone's dataset, not of the loop**. The same session fitted the same
+  teacher on the exploring dataset instead, and the searched version read 0.8488 — indistinguishable from
+  searching over `P0`. `--clone-on-explore` exists because of that measurement.
+
+So the honest statement is that the carrier loop **has not been shown to climb**: the best reading of it is a
+dead heat (0.5325 against searching over `P0`, interval across one half). Closing it needs the real next
+clone, trained with `--clone-on-explore` over a turn's seeds, and its searched form compared to its
+predecessor's by a paired reading. That is a loop turn plus one evaluation, and nothing above substitutes for
+it.
+
 ## The three parts, and where each one stands
 
 | | what it is | status |
 | --- | --- | --- |
-| **Operator** | something that makes the current agent better | search, but only while the agent is weaker than the evaluation — and `stun-first` is already above it |
+| **Operator** | something that makes the current agent better | search, measured against Greedy only: +0.1100 on a weak inner agent, −0.1700 on a saturated one. Whether it improves an agent against the pool is a Line A deliverable |
 | **Distillation** | capturing that improvement back into the agent | cloning works as copying (99 %) and transfers a one-step policy, not a search |
 | **Ratchet** | a gate that cannot accept a regression | `paired` exists now; the gates still read marginal numbers against a fixed Greedy |
 
-The binding constraint, measured three ways tonight, is the **evaluation**: nine hand-written numbers that
-everything is scored by. That is where the plan goes.
+The evaluation is the constraint this plan bets on: nine hand-written numbers that everything is scored by,
+and worth 0.1300 on the one row where changing only the yardstick was measured. That bet is what Line A is
+for, and Line A is also what would disprove it.
 
 ---
 
@@ -88,13 +115,18 @@ the ten, then eleven, then twelve. This is what replaces the exhausted Greedy ya
 - **Produces**: a rung's score is a mean over the pool rather than over three hand-picked agents.
 - **Falsified by**: a pool score that ranks candidates the same way the three-opponent panel did, over two
   rungs. Then the panel was not the constraint and A1 bought nothing but runtime.
-- **Cost**: linear in pool size. At the measured **21.9 s per candidate** for a three-opponent panel, a
-  ten-agent pool is roughly 73 s, and a 161-candidate search goes from 59 minutes to about 3¼ hours —
-  inside a 6-hour job, but not by much.
+- **Cost, and it does not fit today.** Linear in pool size. At the measured **21.9 s per candidate** for a
+  three-opponent panel, a ten-agent pool is roughly 73 s, and a 161-candidate search goes from 59 minutes to
+  about **195 minutes** — before the build, the hold-out and the gate. `search.yml` sets
+  `timeout-minutes: 180`. So A1 as written would be killed partway, and **raising that limit, or cutting the
+  work, is part of A1 rather than a detail after it**. The six-hour figure an earlier draft used was
+  `tune.yml`'s; the two workflows do not share a budget.
 
-**Plan B1, when the pool outgrows the job.** Score against a sample rather than the whole pool: the top *k*
-by current rating plus a random draw from the rest, so a candidate cannot win by beating only the weak half
-and cannot avoid the champions. Trigger: the first rung that exceeds four hours.
+**Plan B1, when the pool outgrows the job — which is immediately.** Score against a sample rather than the
+whole pool: the top *k* by current rating plus a random draw from the rest, so a candidate cannot win by
+beating only the weak half and cannot avoid the champions. At *k* = 4 plus two drawn, a rung is back to about
+two hours and fits the current limit without touching it. Given the arithmetic above, this is the likely
+shape of A1 on day one rather than a contingency.
 
 ### A2 — the ratchet becomes `paired`, and the winner joins the pool
 
@@ -109,11 +141,20 @@ That last sentence is the whole loop. Everything before it exists.
   the answer to the question — see A3.
 - **Cost**: the hold-out already runs on any improving run (#137). The paired reading is seconds.
 
-**Plan B2, when the pool cannot be ranked.** Non-transitivity is measured here, not hypothetical: `ci-69`
-beats `search-4` head to head and loses twenty points to it against Greedy. If cycles appear, a single scalar
-rating is the wrong object and "beats the pool on the mean" can promote an agent that loses to half of it.
-Fall back to keeping a **covering set** — every agent that is not beaten by some other member — and gate on
-"loses to nobody in the set". Stricter, smaller, and it never claims an order that does not exist.
+**Plan B2, when the pool cannot be ranked.** Non-transitivity is **suspected and not measured**, and the
+distinction matters because an earlier draft of this file asserted it. What exists is `ci-69` at 0.5325
+against `search-4` head to head — an interval containing one half, so neither a win nor a proven equivalence —
+beside twenty points between them against Greedy. Two readings, one of them inconclusive, do not make a cycle.
+A settled cycle needs three paired matchups that close, which the pool of A1 produces as a by-product and
+nothing before it does.
+
+If a cycle *is* found, a scalar rating is the wrong object: "beats the pool on the mean" can promote an agent
+that loses to half of it. The fallback is the **top cycle** — the smallest non-empty set whose every member
+beats every agent outside it — and the gate is "belongs to it". A set of agents "not beaten by any other
+member" is the wrong object and was the wrong object in the earlier draft: under `A > B > C > A` it is
+**empty**, "loses to nobody in it" is then vacuously true, and the ratchet accepts anything precisely when a
+cycle is what it needed to handle. The top cycle is never empty, contains the whole cycle when there is one,
+and reduces to the single champion when there is not.
 
 ### A3 — a stop condition
 
