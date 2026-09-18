@@ -52,6 +52,10 @@ internal sealed class PlaytestRun
     // of them lands last decides whether the session keeps the match it played or a snapshot of half of it.
     private readonly Lock _ordering = new();
 
+    // What the recorder held when the session was closed. It forgets the match at that point, and the page is
+    // still watching; null while the match is live, because then the recorder is the truth.
+    private IReadOnlyList<TraceEntry>? _kept;
+
     // Decisions accepted whose notes have not been written yet. The match can end on a tap, and the thread
     // that accepted that tap is still on its way to writing it down while the host is already closing the
     // session -- so closing waits for these, or the finished session it shows is missing its last decision.
@@ -265,6 +269,21 @@ internal sealed class PlaytestRun
     public int TraceLength(MatchId matchId) => _events.Length(matchId);
 
     /// <summary>
+    /// The match's entries from <paramref name="since" /> onwards, whether or not the session has been closed.
+    /// </summary>
+    /// <remarks>
+    /// Closing a session hands the finished trace to the recorder, and the recorder then forgets the match --
+    /// but the host keeps serving, because two people want to read the end of the match they just played. The
+    /// feed would go empty at exactly that moment and never recover, so whatever happened in the last poll's
+    /// worth of match, the deciding blow and the outcome among it, would be on nobody's screen. The entries are
+    /// kept here as closing takes them, and served from here afterwards.
+    /// </remarks>
+    public IReadOnlyList<TraceEntry> Entries(MatchId matchId, int since) =>
+        _kept is { } final
+            ? final.Skip(Math.Clamp(since, 0, final.Count)).ToList()
+            : _events.EntriesOf(matchId, since);
+
+    /// <summary>
     /// Waits until the trace has grown past <paramref name="beyond" />, or until the wait runs out.
     /// </summary>
     /// <remarks>
@@ -327,6 +346,9 @@ internal sealed class PlaytestRun
         {
             await Task.Delay(GrowthStep, _clock, cancellationToken);
         }
+
+        // Taken before the recorder is handed the match, because being handed it is what makes it forget.
+        _kept = _events.EntriesOf(matchId);
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);

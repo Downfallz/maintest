@@ -200,7 +200,9 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         // Everything the host looked at this poll: the slice from the cursor onwards. What the seat may be told
         // of it is a subset, and where to resume is the end of the slice rather than the end of that subset.
-        var examined = events.EntriesOf(session.MatchId, since);
+        // Through the session when there is one: closing hands the trace over and the recorder forgets the
+        // match, while these two are still reading the end of it on their screens.
+        var examined = run is { } recording ? recording.Entries(session.MatchId, since) : events.EntriesOf(session.MatchId, since);
 
         // The question the seat is blocked on, rather than what the sub-phase allows: a person acts when their
         // own seat is asked, and the two differ while the other seat is still deciding.
@@ -331,15 +333,18 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
         // Checked against the options, and still refused: the seat moved on between the two. That is the race
         // the driver would have thrown on, answered as the late tap it is.
+        // The moment of acceptance, read *before* the seat is answered and kept only if it was. After the
+        // submit is too late: it releases the driver, and this thread can lose the processor between the two,
+        // so the clock would then read once a whole command had run -- dating the note after the thing it
+        // records and putting engine time inside a duration that measures a person. Read first, it is at worst
+        // a few instructions early, and it cannot contain any of the engine, which is the error worth having.
+        var acceptedAt = run?.Now();
         if (!person.Submit(decision, asking))
         {
             return await RefuseAsync(seat.Slot, Late);
         }
 
-        // The moment of acceptance, read here and not further down. Submitting releases the driver, which can
-        // run a whole command before this thread is scheduled again, so a clock read inside the recording
-        // would date the note after the thing it records and put engine time inside the player's duration.
-        var accepted = run is null ? null : new AcceptedDecision(answered, servedAt, run.Now());
+        var accepted = acceptedAt is { } moment ? new AcceptedDecision(answered, servedAt, moment) : null;
 
         await RecordAsync(seat.Slot, round, subPhase, accepted, traced);
         return new StudioResponse(204, StudioResponse.Plain, []);
