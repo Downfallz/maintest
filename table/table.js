@@ -47,22 +47,24 @@ function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
-  const state = { seats, holder: null, shown: null, acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
+  const state = {
+    seats, views: [], holder: null, shown: null, asked: null,
+    acknowledged: null, announced: null, announcing: null,
+    rendered: null, revision: 0, polling: false, sending: false, error: '',
+    picked: [], chosen: null, evolving: null, expandedHands: new Set(),
+    cards: new Map(), catalogue: null, tab: 'board', feeds: new Map(),
+  };
   load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
-    refresh(state);
+    redraw(state);
   });
 
   // Two tabs, one screen. The mat is a tab because it is touched once a round and the board is touched all
   // the time; switching draws from what the last poll already fetched, so it never waits.
   for (const [tab, name] of [['tab-board', 'board'], ['tab-mat', 'mat']]) {
     element(tab).addEventListener('click', () => {
-      state.tab = name;
-      element('tab-board').classList.toggle('on', name === 'board');
-      element('tab-mat').classList.toggle('on', name === 'mat');
-      element('board').hidden = name !== 'board';
-      element('mat').hidden = name !== 'mat';
+      showTab(state, name);
     });
   }
 
@@ -102,6 +104,7 @@ function announce(state, current, drawn) {
   // Remembered only once it has landed. Marking it sent and then losing the request would leave a board on
   // screen that the host has no moment for, and the render never offers to say so again: the decision made on
   // it would be recorded with no duration at all, silently.
+  state.announcing = acknowledged;
   state.announced = current.transport.seat(since, drawn)
     .then(answer => {
       if (answer.ok) {
@@ -110,7 +113,8 @@ function announce(state, current, drawn) {
     })
     .catch(() => {
       // A page that cannot reach its host has a louder problem than a clock, and the next poll reports it.
-    });
+    })
+    .finally(() => { state.announcing = null; });
 }
 
 // A note is the one thing in a session nothing else can reconstruct, so a refused one says so on screen
@@ -125,7 +129,14 @@ async function note(state, body) {
     return false;
   }
 
-  const answer = await current.transport.note(body);
+  let answer;
+  try {
+    answer = await current.transport.note(body);
+  } catch {
+    line.textContent = 'Could not save the note. Check your connection and try again.';
+    line.hidden = false;
+    return false;
+  }
   line.textContent = answer.ok ? noted(body.kind) : (answer.body?.message ?? `The host answered ${answer.status}.`);
   line.hidden = false;
   return answer.ok;
@@ -134,10 +145,15 @@ async function note(state, body) {
 // The catalogue the match is playing, through any seat this page holds: it is the same for both, and it is
 // what every card on this screen is drawn from. A page that does not get it prints spell ids and still plays.
 async function load(state) {
-  state.catalogue = await loadCatalogue(state.seats);
+  try {
+    state.catalogue = await loadCatalogue(state.seats);
+  } catch {
+    return; // The seat poll reports connection failures; a later poll retries the catalogue.
+  }
   state.cards = new Map((state.catalogue?.cards ?? []).map(card => [card.id, card]));
   element('rules').textContent = ruleLine(state.catalogue);
   renderShape(state.catalogue?.round);
+  redraw(state);
 }
 
 // The round's shape, as the printed board's collapsible strip: every step in the order it is played, and the
@@ -168,8 +184,22 @@ function ruleLine(catalogue) {
   return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerRound} picks · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
 }
 
+// Only one poll can be in flight. An old response must never replace a newer decision.
 async function refresh(state) {
-  if (state.sending) return;
+  if (state.sending || state.polling) return;
+  state.polling = true;
+  try {
+    await poll(state);
+  } catch {
+    state.rendered = null;
+    element('phase').textContent = 'Connection lost · retrying…';
+  } finally {
+    state.polling = false;
+  }
+}
+
+async function poll(state) {
+  const revision = state.revision;
 
   // Every seat this page holds, every poll: the host answers one seat per payload, and which one is being
   // asked is exactly what the page cannot know without asking.
@@ -183,6 +213,7 @@ async function refresh(state) {
     // *drawn* an asking, which is sent from the render below -- this request is the one fetching the question,
     // and its answer still has to arrive and be laid out before anybody has read anything.
     const answer = await seat.transport.seat(state.feeds.get(seat.seat)?.next ?? 0);
+    if (revision !== state.revision) return;
 
     // A token this host does not know is a seat from another table -- an earlier session, or the browser of
     // somebody who played here yesterday. Only that seat goes: a code typed for *this* table may be on the
@@ -194,6 +225,7 @@ async function refresh(state) {
     }
 
     if (!answer.ok) {
+      state.rendered = null;
       element('phase').textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
       return;
     }
@@ -221,11 +253,60 @@ async function refresh(state) {
   }
 
   if (views.length === 0) {
+    state.views = [];
+    element('table').hidden = true;
+    element('pass').hidden = true;
     element('phase').textContent = 'This browser holds no seat at this table. Type the code the host printed.';
     return;
   }
 
+  if (state.sending) return;
+  state.views = views;
   render(state, views);
+  if (!state.catalogue) await load(state);
+}
+
+function redraw(state) {
+  if (state.views.length > 0) render(state, state.views);
+}
+
+function showTab(state, name) {
+  state.tab = name;
+  for (const [id, panel] of [['tab-board', 'board'], ['tab-mat', 'mat']]) {
+    element(id).classList.toggle('on', name === panel);
+    element(id).setAttribute('aria-pressed', String(name === panel));
+    element(panel).hidden = name !== panel;
+  }
+}
+
+function selectable(face, selected, onClick) {
+  face.tabIndex = 0;
+  face.setAttribute('role', 'button');
+  face.setAttribute('aria-pressed', String(selected));
+  face.addEventListener('click', onClick);
+  face.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  });
+}
+
+// Stable keys preserve keyboard focus and each hand's scroll offset when a selection changes.
+function rememberPosition() {
+  return {
+    focus: document.activeElement?.dataset?.focus,
+    scrolls: [...document.querySelectorAll('[data-scroll]')].map(node => [node.dataset.scroll, node.scrollLeft]),
+  };
+}
+
+function restorePosition(saved) {
+  for (const node of document.querySelectorAll('[data-scroll]')) {
+    node.scrollLeft = saved.scrolls.find(([key]) => key === node.dataset.scroll)?.[1] ?? 0;
+  }
+  if (saved.focus) {
+    [...document.querySelectorAll('[data-focus]')].find(node => node.dataset.focus === saved.focus)?.focus({ preventScroll: true });
+  }
 }
 
 const nameOf = seat => (seat === 'player1' ? 'Player 1' : 'Player 2');
@@ -238,12 +319,16 @@ function render(state, views) {
   // refused as stale (409) leaves the choice standing, and the next question of the same seat is very often a
   // different creature that knows the same spell -- which would arrive with a card already selected and one tap
   // from being committed, through the confirmation that exists to stop exactly that.
-  const asked = `${current.seat}/${view.waitingFor ?? ''}/${view.waitingCreature ?? ''}`;
+  const asked = `${current.seat}/${view.waitingAsked ?? ''}/${view.waitingFor ?? ''}/${view.waitingCreature ?? ''}`;
   if (asked !== state.asked) {
     state.shown = current.seat;
     state.asked = asked;
     state.picked = [];
     state.chosen = null;
+    state.error = '';
+    state.evolving = null;
+    element('decision').scrollTop = 0;
+    if (view.waitingFor === 'Intent' || view.waitingFor === 'Target') showTab(state, 'board');
   }
 
   // Until the player being asked says they are the one holding the device, the board stays behind the pass
@@ -259,26 +344,35 @@ function render(state, views) {
   // whenever they have decided the same number of times -- which in hotseat is most of the time. A bare number
   // would call the other seat's question already acknowledged and never announce it.
   const drawn = fence ? null : view.waitingAsked ?? null;
-  if (drawn !== null && `${current.seat}/${drawn}` !== state.acknowledged) {
+  const acknowledgement = `${current.seat}/${drawn}`;
+  if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.catalogue, state.error]);
+  if (state.rendered === identity) return;
+  state.rendered = identity;
+  const saved = rememberPosition();
   element('seat').textContent = nameOf(current.seat);
   element('pass-seat').textContent = nameOf(current.seat);
   element('pass-seat-again').textContent = nameOf(current.seat);
   element('pass-ready').dataset.seat = current.seat;
   element('pass').hidden = !fence;
   element('table').hidden = fence;
-  if (fence) return;
+  if (fence) {
+    element('pass-ready').focus({ preventScroll: true });
+    return;
+  }
 
   element('phase').textContent = view.over
     ? 'The match is over.'
-    : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${view.board.subPhase ?? '—'}`;
+    : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`;
   renderTimeline(view.board);
   renderBoard(state, view);
   renderMat(state, view.board);
   renderFeed(state, view.feed);
   renderDecision(state, current);
   renderNotes(view);
+  restorePosition(saved);
 }
 
 // The notes, and the comment box only once the match is decided: asking for prose while somebody is deciding
@@ -325,6 +419,7 @@ function renderBoard(state, view) {
   const marks = {
     picked: state.picked,
     board,
+    active: isAsked(view) ? view.waitingCreature : null,
     candidates: isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
     onPick: candidate => pick(state, view, candidate),
   };
@@ -357,18 +452,28 @@ function hand(state, view) {
 
 // One creature's row: who it is, whether it has declared, and its cards.
 function handRow(state, row, asked) {
-  const one = document.createElement('div');
-  one.className = 'hand-row';
+  const active = row.creature === asked;
+  const one = document.createElement(active ? 'div' : 'details');
+  state.expandedHands ??= new Set();
+  if (!active) {
+    one.open = state.expandedHands.has(row.creature);
+    one.addEventListener('toggle', () => {
+      if (one.open) state.expandedHands.add(row.creature);
+      else state.expandedHands.delete(row.creature);
+    });
+  }
+  one.className = `hand-row${row.creature === asked ? ' active' : ''}`;
 
-  const who = document.createElement('div');
+  const who = document.createElement(active ? 'div' : 'summary');
   who.className = 'hand-who';
-  who.textContent = `${row.creature}${row.declared ? ' · declared' : ''}`;
+  who.textContent = `Creature ${row.creature}${row.creature === asked ? ' · choose a card' : row.declared ? ' · declared' : ''}`;
 
   const held = document.createElement('div');
   held.className = 'held-cards';
+  held.dataset.scroll = `hand-${row.creature}`;
   // Tappable only on the creature being asked: every row says what its creature could cast, which is what
   // makes the hand readable, but only one creature is being asked at a time.
-  held.append(...row.spells.map(spell => heldCard(state, spell, row.creature === asked && spell.castable)));
+  held.append(...row.spells.map(spell => heldCard(state, spell, row.creature === asked && spell.castable, row.creature)));
 
   one.append(who, held);
   return one;
@@ -376,7 +481,7 @@ function handRow(state, row, asked) {
 
 // One card in the hand: its whole face, dimmed when the creature cannot cast it, and a tap surface when it is
 // the one being asked for.
-function heldCard(state, spell, offered) {
+function heldCard(state, spell, offered, creature) {
   const face = document.createElement('div');
   face.className = ['card held', spell.castable ? 'castable' : '', offered ? 'offered' : '', offered && spell.spell === state.chosen ? 'chosen' : '']
     .filter(Boolean)
@@ -389,12 +494,15 @@ function heldCard(state, spell, offered) {
     face.append(...parts);
   }
 
+  const availability = document.createElement('span');
+  availability.className = 'card-availability';
+  availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Selected' : 'Select card →') : spell.castable ? 'Available' : 'Not available now';
+  face.append(availability);
   if (offered) {
-    face.tabIndex = 0;
-    face.setAttribute('role', 'button');
-    face.addEventListener('click', () => {
+    face.dataset.focus = `card-${creature}-${spell.spell}`;
+    selectable(face, spell.spell === state.chosen, () => {
       state.chosen = spell.spell;
-      refresh(state);
+      redraw(state);
     });
   }
 
@@ -440,16 +548,25 @@ function line(state, creature, which, marks) {
   const legal = (marks?.candidates ?? []).includes(creature.id);
   const casters = targetedBy(creature.id, marks?.board);
   const box = document.createElement('div');
-  box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}${legal ? ' legal' : ''}`;
+  box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}${legal ? ' legal' : ''}${creature.id === marks?.active ? ' active' : ''}`;
   if (legal) {
-    box.tabIndex = 0;
-    box.setAttribute('role', 'button');
-    box.addEventListener('click', () => marks.onPick(creature.id));
+    box.dataset.focus = `target-${creature.id}`;
+    selectable(box, picked, () => marks.onPick(creature.id));
   }
 
   const who = document.createElement('div');
   who.className = 'who';
-  who.textContent = `${which === 'ally' ? 'Yours' : 'Theirs'} · ${creature.name ?? ''} ${creature.id}`;
+  const id = document.createElement('span');
+  id.className = 'creature-id';
+  id.textContent = creature.id;
+  const name = document.createElement('div');
+  name.className = 'creature-name';
+  name.textContent = creature.name || `Creature ${creature.id}`;
+  const label = document.createElement('span');
+  label.className = 'creature-label';
+  label.textContent = creature.isAlive === false ? 'Defeated' : legal ? (picked ? 'Selected target' : 'Select target') : creature.id === marks?.active ? 'Acting now' : which === 'ally' ? 'Your creature' : 'Opponent creature';
+  name.append(label);
+  who.append(id, name);
 
   const health = document.createElement('div');
   health.className = 'health';
@@ -458,21 +575,32 @@ function line(state, creature, which, marks) {
   bar.style.width = `${Math.round(healthShare(creature) * 100)}%`;
   const number = document.createElement('span');
   number.className = 'number';
-  number.textContent = healthText(creature);
+  number.textContent = `${healthText(creature)} HP`;
   health.append(bar, number);
 
   const stats = document.createElement('div');
   stats.className = 'stats';
-  stats.textContent = statPairs(creature).map(([name, value]) => `${name} ${value}`).join(' · ');
+  for (const [name, value] of statPairs(creature)) {
+    const stat = document.createElement('div');
+    stat.className = 'stat';
+    const amount = document.createElement('strong');
+    amount.textContent = value;
+    const label = document.createElement('span');
+    label.textContent = name;
+    stat.append(amount, label);
+    stats.append(stat);
+  }
+  const tags = document.createElement('div');
+  tags.className = 'badges';
 
   for (const badge of badges(creature, marks?.board?.timeline)) {
     const one = document.createElement('span');
     one.className = 'badge';
     one.textContent = badge;
-    stats.append(one);
+    tags.append(one);
   }
 
-  box.append(who, health, stats, dock(state, creature.conditions));
+  box.append(who, health, stats, tags, dock(state, creature.conditions));
 
   // The markers, on the row rather than only in the sheet: a target is chosen against this creature's health,
   // its defense and what is already on it, so the choice has to be visible where those numbers are
@@ -592,7 +720,10 @@ function renderDecision(state, current) {
   const view = current.view;
   const asking = element('asking');
   const choices = element('choices');
-  element('problem').hidden = true;
+  element('problem').hidden = !state.error;
+  element('problem').textContent = state.error;
+  element('decision').dataset.kind = view.waitingFor ?? 'Waiting';
+  element('decision-state').textContent = view.over ? 'Finished' : view.playedByBot ? 'Bot playing' : isAsked(view) ? 'Your turn' : 'Waiting';
 
   if (view.over) {
     asking.textContent = 'The match is over.';
@@ -633,10 +764,7 @@ function buttonsFor(state, current) {
   const send = decision => () => submit(state, current, decision);
   switch (view.waitingFor) {
     case 'Evolution': {
-      const unlocks = (view.options.evolution?.creatures ?? []).flatMap(creature =>
-        creature.unlockableSpells.map(spell =>
-          card(state, spell, `Creature ${creature.creature}`, send({ kind: 'Evolution', creature: creature.creature, spell }))));
-      return [...unlocks, button('Pass', send({ kind: 'Evolution', pass: true }))];
+      return evolutionButtons(state, current);
     }
     case 'Speed':
       return ['Quick', 'Standard'].map(speed =>
@@ -648,6 +776,37 @@ function buttonsFor(state, current) {
     default:
       return [];
   }
+}
+
+
+// Only one creature's unlocks occupy the sheet at a time; every server-offered creature stays reachable.
+function evolutionButtons(state, current) {
+  const creatures = current.view.options.evolution?.creatures ?? [];
+  const selected = creatures.find(one => one.creature === state.evolving) ?? creatures[0];
+  const picker = document.createElement('div');
+  picker.className = 'creature-picker';
+  picker.setAttribute('aria-label', 'Choose a creature to evolve');
+  for (const creature of creatures) {
+    const choice = button(`Creature ${creature.creature}`, () => {
+      state.evolving = creature.creature;
+      redraw(state);
+    });
+    choice.classList.toggle('chosen', creature === selected);
+    choice.setAttribute('aria-pressed', String(creature === selected));
+    choice.dataset.focus = `evolve-${creature.creature}`;
+    picker.append(choice);
+  }
+  const cards = document.createElement('div');
+  cards.className = 'choice-cards';
+  for (const spell of selected?.unlockableSpells ?? []) {
+    cards.append(card(state, spell, '', () => submit(state, current, { kind: 'Evolution', creature: selected.creature, spell })));
+  }
+  const hint = document.createElement('p');
+  hint.className = 'choice-help';
+  hint.textContent = cards.children.length ? 'Choose a creature, then tap a spell to unlock it.' : 'No spells to unlock for this creature. Choose another creature or pass.';
+  const pass = button('Pass this pick', () => submit(state, current, { kind: 'Evolution', pass: true }));
+  pass.className = 'secondary';
+  return [picker, hint, cards, pass];
 }
 
 // An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
@@ -682,7 +841,7 @@ function pick(state, view, candidate) {
   state.picked = state.picked.includes(candidate)
     ? state.picked.filter(one => one !== candidate)
     : [...state.picked, candidate].slice(0, legal.maxTargets);
-  refresh(state);
+  redraw(state);
 }
 
 function targetButtons(state, current) {
@@ -700,7 +859,7 @@ function targetButtons(state, current) {
   const asking = document.createElement('p');
   asking.className = 'muted';
   const howMany = legal.minTargets === legal.maxTargets ? `${legal.maxTargets}` : `${legal.minTargets} to ${legal.maxTargets}`;
-  asking.textContent = `Tap ${howMany} on the board.`;
+  asking.textContent = `Select ${howMany} target(s) on the battlefield. ${picked.length} selected.`;
 
   const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => {
     confirm.disabled = true;
@@ -738,11 +897,19 @@ function cardParts(state, spell, prefix) {
 
   const head = document.createElement('div');
   head.className = 'card-head';
-  head.textContent = [prefix, cardTitle(face), cardHead(face)].filter(Boolean).join(' · ');
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  title.textContent = cardTitle(face);
+  const meta = document.createElement('span');
+  meta.className = 'card-meta';
+  meta.textContent = [prefix, cardHead(face)].filter(Boolean).join(' · ');
+  title.append(meta);
+  head.append(title);
 
   const cost = document.createElement('span');
   cost.className = 'card-cost';
   cost.textContent = cardCost(face);
+  cost.setAttribute('aria-label', `${cardCost(face)} energy`);
   head.append(cost);
 
   const body = document.createElement('div');
@@ -773,6 +940,9 @@ async function submit(state, current, decision) {
   }
 
   state.sending = true;
+  state.revision += 1;
+  element('decision').setAttribute('aria-busy', 'true');
+  for (const control of element('choices').querySelectorAll('button')) control.disabled = true;
   try {
     // The host has to have been told this board is up before it is told what was decided on it, or it has
     // nothing to measure the decision against. On loopback this has already resolved; on a phone over a slow
@@ -783,16 +953,20 @@ async function submit(state, current, decision) {
     // stops a tap validated against one question from landing on the next of the same shape.
     const answer = await current.transport.decide({ ...decision, asked: current.view.waitingAsked ?? null });
     if (!answer.ok) {
-      const problem = element('problem');
-      problem.textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
-      problem.hidden = false;
+      state.error = answer.body?.message ?? `The host answered ${answer.status}.`;
       return;
     }
 
     state.picked = [];
     state.chosen = null;
+    state.error = '';
+  } catch {
+    state.error = 'Could not reach the host. Check your connection before trying again.';
   } finally {
     state.sending = false;
+    element('decision').setAttribute('aria-busy', 'false');
+    state.rendered = null;
+    redraw(state);
   }
 
   await refresh(state);

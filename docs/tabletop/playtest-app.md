@@ -245,6 +245,18 @@ The target is a 360 to 400 pixel wide screen held in one hand.
 
 ---
 
+### Responsive presentation (2026-09-18)
+
+The table now uses a wider desktop layout with the decision sheet beside the board, while keeping a
+bounded sticky bottom sheet and the same board reading order on phones. Evolution groups unlocks by
+creature. The acting creature’s hand stays open; the other hands can be expanded. Cards and legal targets
+also support keyboard activation. These are presentation and input changes only: every offered option,
+card face, stat and ordering still comes from the host. The opaque hotseat handover and the confirmation
+of intents and targets are unchanged. See [table/README.md](../../table/README.md) for the interaction and
+test details.
+
+---
+
 ## Part 4. Hotseat, one screen
 
 **Settled by the maintainer (2026-09-14): hotseat, one screen, to start.** The bill for each option is kept
