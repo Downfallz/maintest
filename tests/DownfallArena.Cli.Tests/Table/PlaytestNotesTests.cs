@@ -124,6 +124,22 @@ public sealed class PlaytestNotesTests : IDisposable
             .GetProperty("subPhase").GetString().ShouldBe(asked);
     }
 
+    /// <summary>
+    /// A decision posted without the page ever saying the board was up -- a scripted seat here, a tap that beat
+    /// its own visibility request at a table. The duration is unknown, and unknown is written rather than zero:
+    /// zero reads like an instant decision and would quietly pollute the one measurement this file exists for.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_whose_screen_was_never_announced_is_noted_with_no_duration()
+    {
+        var table = await Recording();
+
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+
+        Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
+            .GetProperty("elapsedMs").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
     /// <summary>A rule that confused somebody and left no trace is the failure this prevents.</summary>
     [Fact]
     public async Task A_refused_decision_is_noted_with_the_error_that_refused_it()

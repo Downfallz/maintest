@@ -37,6 +37,21 @@ public sealed class PlaytestNoteTests
         note.ElapsedMs.ShouldBe(0);
     }
 
+    /// <summary>
+    /// Nothing knew when the options reached a person: a scripted seat, or a tap that beat the page's own word
+    /// that the board was up. Zero would be a measurement and would read exactly like an instant decision, so
+    /// a hole in the stamping would hide in the data instead of showing.
+    /// </summary>
+    [Fact]
+    public void A_decision_nobody_can_time_is_recorded_as_unknown_and_not_as_no_time()
+    {
+        var note = PlaytestNote.Decision(Where(PlayerSlot.Player1, 5, RoundSubPhase.Speed), servedAt: null, new FixedClock(Now));
+
+        note.ElapsedMs.ShouldBeNull();
+        note.Kind.ShouldBe(NoteKind.Decision);
+        note.At.ShouldBe(Now);
+    }
+
     [Fact]
     public void A_decision_note_carries_no_error_and_no_text()
     {

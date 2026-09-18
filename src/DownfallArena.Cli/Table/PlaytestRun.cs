@@ -76,11 +76,17 @@ internal sealed class PlaytestRun
     public string Directory { get; }
 
     /// <summary>
-    /// Whether the session has been closed: no further checkpoint will be written, and the episodes and the
-    /// manifest with its counts are being or have been written. A page that showed the session before this
-    /// would be showing a run that says it played nothing.
+    /// Whether the session's files are finished: the episodes written, the final trace written, and the
+    /// manifest rewritten with its counts. Only then is the directory worth showing anybody — before it, a
+    /// page would carry the zero-count manifest the session was opened with, or a file caught mid-write.
     /// </summary>
     public bool IsClosed { get; private set; }
+
+    // Set the moment closing begins, and it is a different question from IsClosed: this one stops a checkpoint
+    // from queueing a write that would land after the final trace, and it has to be true while the final
+    // writes are still running. Reading it as "the session is readable" is what would serve a half-written
+    // directory, so the two are not one flag.
+    private bool _closing;
 
     /// <summary>
     /// Opens a session under <paramref name="root" />. The rule set is the table's own, so the feature schema
@@ -146,9 +152,9 @@ internal sealed class PlaytestRun
 
     /// <summary>
     /// A decision was accepted, timed from <paramref name="servedAt" /> -- the moment the caller read off
-    /// <see cref="ServedAt" /> before submitting it. Null means the options were never served to anybody, which
-    /// is a scripted seat rather than a person who took no time, and is recorded as no time rather than as a
-    /// number off the wall clock.
+    /// <see cref="ServedAt" /> before submitting it. Null means nothing knows when the options reached a
+    /// person -- a scripted seat, or a tap that beat the page's own word that the board was up -- and is
+    /// recorded as an unknown duration, never as zero.
     /// </summary>
     public Task DecidedAsync(
         MatchId matchId,
@@ -160,7 +166,7 @@ internal sealed class PlaytestRun
         CancellationToken cancellationToken = default)
     {
         _served.Answered(slot, answered);
-        return NoteAsync(PlaytestNote.Decision(Where(matchId, slot, round, subPhase), servedAt ?? _clock.GetUtcNow(), _clock), cancellationToken);
+        return NoteAsync(PlaytestNote.Decision(Where(matchId, slot, round, subPhase), servedAt, _clock), cancellationToken);
     }
 
     /// <summary>
@@ -203,7 +209,7 @@ internal sealed class PlaytestRun
         // copy and an enqueue.
         lock (_ordering)
         {
-            if (IsClosed)
+            if (_closing)
             {
                 return Task.CompletedTask;
             }
@@ -220,16 +226,22 @@ internal sealed class PlaytestRun
     /// </summary>
     public async Task FinishAsync(MatchId matchId, PlayerBoardState player1Board, CancellationToken cancellationToken = default)
     {
-        // Closed before anything final is written, not after. A checkpoint already inside the lock queues its
-        // write first and the finished trace lands on top of it; one arriving afterwards finds the session
-        // closed and does nothing. The order is the point: the last write to the trace has to be the final one.
+        // Checkpoints are stopped before anything final is written, not after. A checkpoint already inside the
+        // lock queues its write first and the finished trace lands on top of it; one arriving afterwards finds
+        // the session closing and does nothing. The order is the point: the last write to the trace has to be
+        // the final one.
         lock (_ordering)
         {
-            IsClosed = true;
+            _closing = true;
         }
 
         await _recorder.MatchPlayedAsync(matchId, _seed, player1Board, cancellationToken);
         await _recorder.FinishAsync(cancellationToken);
+
+        // And only now is the directory worth reading. Saying so at the top of this method would let the
+        // session page answer while the manifest still says the match played nothing, or while a file it is
+        // about to embed is half written.
+        IsClosed = true;
     }
 
     /// <summary>

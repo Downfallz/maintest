@@ -47,7 +47,7 @@ function start(seats) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
-  const state = { seats, holder: null, shown: null, displayed: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
+  const state = { seats, holder: null, shown: null, displayed: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards: new Map(), catalogue: null, tab: 'board', feeds: new Map() };
   load(state);
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -92,7 +92,13 @@ function start(seats) {
 // is deliberately not advanced, so nothing this call fetches is lost -- the next poll asks for it again.
 function announce(state, current) {
   const since = state.feeds.get(current.seat)?.next ?? 0;
-  current.transport.seat(since, true).catch(() => {
+
+  // Kept, because a decision must not overtake it. The controls stay live -- disabling them for a round trip
+  // would make every handover feel broken to protect a number -- and `submit` waits on this instead, so a tap
+  // inside the window is delayed by the request it would otherwise have raced rather than being refused. If
+  // it were raced and lost, the host would have no moment for this question and would record the duration as
+  // unknown, which is honest but is one measurement gone.
+  state.announced = current.transport.seat(since, true).catch(() => {
     // A page that cannot reach its host has a louder problem than a clock, and the next poll reports it.
   });
 }
@@ -758,6 +764,11 @@ async function submit(state, current, decision) {
 
   state.sending = true;
   try {
+    // The host has to have been told this board is up before it is told what was decided on it, or it has
+    // nothing to measure the decision against. On loopback this has already resolved; on a phone over a slow
+    // link it is the difference between a duration and a blank.
+    await state.announced;
+
     const answer = await current.transport.decide(decision);
     if (!answer.ok) {
       const problem = element('problem');

@@ -47,6 +47,8 @@ public sealed record PlaytestNote
     /// For a <see cref="NoteKind.Decision" />: from the moment this seat's options were served to the moment
     /// the decision was accepted. It measures a person reading a screen, so it is the served moment that
     /// starts it and not the moment the engine asked — the two differ by however long nobody was looking.
+    /// Null when nothing can say the options were ever put in front of anybody, which is not the same claim as
+    /// zero and must not be written as one.
     /// </summary>
     public long? ElapsedMs { get; init; }
 
@@ -64,7 +66,12 @@ public sealed record PlaytestNote
     /// same <paramref name="timeProvider" /> as <see cref="At" />, so a test that moves the clock moves both
     /// and a session recorded under a frozen clock reports zero rather than a wall-clock accident.
     /// </summary>
-    public static PlaytestNote Decision(NotePlace where, DateTimeOffset servedAt, TimeProvider timeProvider)
+    /// <param name="servedAt">
+    /// When this seat's options were put in front of somebody, or null when nothing knows. Null is recorded as
+    /// an unknown duration rather than as no time at all: zero is a measurement, indistinguishable from a
+    /// decision taken instantly, so a hole in the stamping would hide in the data rather than show.
+    /// </param>
+    public static PlaytestNote Decision(NotePlace where, DateTimeOffset? servedAt, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(where);
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -81,7 +88,7 @@ public sealed record PlaytestNote
             Kind = NoteKind.Decision,
             // Never negative: a served moment in the future is a clock that moved, not a decision taken before
             // it was asked, and a negative duration in a dataset is worse than a zero.
-            ElapsedMs = (long)Math.Max(0, (at - servedAt).TotalMilliseconds),
+            ElapsedMs = servedAt is { } served ? (long)Math.Max(0, (at - served).TotalMilliseconds) : null,
         };
     }
 
