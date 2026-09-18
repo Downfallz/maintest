@@ -251,6 +251,33 @@ public sealed class PlaytestRunTests : IDisposable
             .ShouldAllBe(step => step.GetProperty("decidedBy").GetString() == "greedy");
     }
 
+    /// <summary>
+    /// A seat handed over before its very first decision still says so in the stamp.
+    /// </summary>
+    /// <remarks>
+    /// <c>--handover 1</c> is exactly this: the swap lands before the seat has decided anything, so the first
+    /// name the session ever observes is already the new occupant's. Taking that first observation as the
+    /// baseline — which is what it did — records it as the original, and the manifest then says a bot played a
+    /// session every step of which names the person. The baseline is the stamp the manifest was opened with.
+    /// </remarks>
+    [Fact]
+    public async Task A_seat_handed_over_before_its_first_decision_still_grows_the_stamp()
+    {
+        var (run, session) = await Started(player1Agent: "Greedy", seat1: resources =>
+        {
+            var seat = new SeatAgent(new Occupant(Bot(resources), "Greedy"));
+            seat.SwapAt(new Occupant(Bot(resources), "human:mk"), round: 1);
+            return seat;
+        });
+        await session.Outcome;
+        await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
+
+        Read(run, "manifest.json").GetProperty("stamp").GetProperty("player1Agent").GetString().ShouldBe("Greedy>human:mk@1");
+        Lines(run, "steps.jsonl")
+            .Where(step => step.GetProperty("slot").GetString() == "Player1")
+            .ShouldAllBe(step => step.GetProperty("decidedBy").GetString() == "human:mk");
+    }
+
     private static IReadOnlyList<JsonElement> Lines(PlaytestRun run, string relativePath) =>
         [.. File.ReadAllLines(Path.Combine(run.Directory, relativePath))
             .Where(line => line.Length > 0)
@@ -309,7 +336,7 @@ public sealed class PlaytestRunTests : IDisposable
             _host.Services,
             Rules,
             seed: 7,
-            seat1?.Invoke(resources) ?? new SeatAgent(new Occupant(Bot(resources), "greedy")),
+            seat1?.Invoke(resources) ?? new SeatAgent(new Occupant(Bot(resources), player1Agent)),
             new SeatAgent(new Occupant(Bot(resources), "greedy")),
             run.Wrap,
             _stopping.Token);

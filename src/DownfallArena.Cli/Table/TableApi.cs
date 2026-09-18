@@ -523,30 +523,23 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             return Refused(NoRoundsLeft);
         }
 
-        var (current, _) = await WhereAsync(slot);
-        if (current is not { } reached)
-        {
-            return Refused(NoRoundsLeft);
-        }
-
-        // Read before the swap is recorded and checked against the round the board is in. A request naming the
-        // round being played is the mid-round swap this refuses; one naming a round already gone is the same
-        // request, later.
-        if (round <= reached)
-        {
-            return Refused(new DomainError(
-                MidRound,
-                $"Round {reached} is being played; a seat changes hands at the top of a round, so name {reached + 1} or later."));
-        }
-
         if (flying.Seating(slot, wanted) is not { } next)
         {
             return Refused(new DomainError(NoSuchAgent, $"Nobody called '{wanted}' can sit in {TableSeat.NameOf(slot)}."));
         }
 
+        // The round is not checked here. Reading the board and then installing the swap are two steps against
+        // a match that is moving, and resolving the agent above is long enough to be overtaken: the driver can
+        // enter the very round this names before the swap arrives, which is the split the check exists to
+        // prevent. The seat checks and installs under one lock, because the seat is what sees rounds go by.
         var seat = session.Seat(slot);
         var held = seat.Seated.Name;
-        seat.SwapAt(next, round);
+        if (seat.SwapAt(next, round) is { } refusal)
+        {
+            return Refused(new DomainError(
+                MidRound,
+                $"Round {refusal.Reached} is being played; a seat changes hands at the top of a round, so name {refusal.Reached + 1} or later."));
+        }
 
         // The note is of the asking, and the asking is all that has happened: the swap lands later, and never
         // at all if the match ends first. What actually gets played is on the steps, one `decidedBy` each.

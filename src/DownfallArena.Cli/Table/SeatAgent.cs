@@ -22,6 +22,7 @@ internal sealed class SeatAgent : IPlayerAgent
     private readonly Lock _gate = new();
     private Occupant _seated;
     private Swap? _swap;
+    private int? _reached;
 
     public SeatAgent(Occupant seated)
     {
@@ -71,28 +72,43 @@ internal sealed class SeatAgent : IPlayerAgent
     }
 
     /// <summary>
-    /// Hands the seat over at the top of a round rather than now, and returns the swap this replaces.
+    /// Hands the seat over at the top of a round rather than now, or refuses because that round is already
+    /// being played.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Why a round and not an instant: the driver asks one seat for several decisions inside one sub-phase --
     /// a speed for each creature, then an intent for each -- so a seat that changed hands between two
     /// creatures of the same team would split that sub-phase between two players and make the round
-    /// unreadable (<c>docs/tabletop/app-roadmap.md</c>, stage 6; <c>MatchDriver.ActAsync</c>). Naming a round
-    /// instead of an instant is what makes that impossible rather than unlikely: the board carries the round,
-    /// so the swap lands where a round begins however long the request waited.
+    /// unreadable (<c>docs/tabletop/app-roadmap.md</c>, stage 6; <c>MatchDriver.ActAsync</c>).
+    /// </para>
+    /// <para>
+    /// Why the round is checked <em>here</em> and not by whoever asks: the check and the install have to be
+    /// one step against a match that is moving. A caller that read the board, found round 5 and then asked for
+    /// 6 can be overtaken between the two -- resolving a file-backed agent alone is long enough -- and the
+    /// driver is then already inside round 6 when the swap arrives, which is the split this refuses. The seat
+    /// sees every round as it is asked about it, so under this lock the newest round it has been asked for is
+    /// the newest round there is.
+    /// </para>
     /// <para>
     /// A seat holds one pending swap. A second replaces the first, which is what an operator changing their
     /// mind means, and is the only reading that keeps "who is seated" answerable without walking a chain.
     /// </para>
     /// </remarks>
-    public Swap? SwapAt(Occupant next, int round)
+    public SwapRefusal? SwapAt(Occupant next, int round)
     {
         ArgumentNullException.ThrowIfNull(next);
         lock (_gate)
         {
-            var replaced = _swap;
+            // Nothing has been asked of this seat yet, so no round has begun for it and any round will do.
+            // That is what makes `--handover 1` a swap like any other rather than a special case.
+            if (_reached is { } reached && round <= reached)
+            {
+                return new SwapRefusal(reached);
+            }
+
             _swap = new Swap(next, round);
-            return replaced;
+            return null;
         }
     }
 
@@ -117,10 +133,15 @@ internal sealed class SeatAgent : IPlayerAgent
         ArgumentNullException.ThrowIfNull(board);
         lock (_gate)
         {
-            if (_swap is { } swap && board.RoundNumber is { } round && round >= swap.Round)
+            if (board.RoundNumber is { } round)
             {
-                _seated = swap.Next;
-                _swap = null;
+                // The newest round this seat has been asked about, which is what a swap is refused against.
+                _reached = _reached is { } seen && seen > round ? seen : round;
+                if (_swap is { } swap && round >= swap.Round)
+                {
+                    _seated = swap.Next;
+                    _swap = null;
+                }
             }
 
             return new Decider(_seated.Agent, _seated.Name);

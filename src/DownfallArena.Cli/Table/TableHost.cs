@@ -235,11 +235,20 @@ internal static class TableHost
 
         try
         {
-            var spec = AgentSpec.Parse(wanted);
+            // Resolved, not just parsed: for a file-backed agent the resolved spec carries a fingerprint of
+            // the weights or the policy as they are on disk now. Naming it from the text the pilot typed would
+            // stamp two sessions played against different weights at the same path as the same agent, and the
+            // comparison that reads the agents axis would call them comparable. It is also what `GameSession`
+            // does to the agents named at startup, so a seat taken mid-match is named the same way as one
+            // seated at the start.
+            var spec = agents.Resolve(AgentSpec.Parse(wanted));
             return new Occupant(agents.Create(spec, rules, random), spec.ToString());
         }
-        catch (Exception failure) when (failure is ArgumentException or IOException or JsonException)
+        catch (Exception failure) when (failure is ArgumentException or IOException or JsonException or InvalidDataException)
         {
+            // InvalidDataException among them: a policy file that exists but holds something else is the
+            // operator naming the wrong file, which is the same mistake as naming no file at all. Without it
+            // the host answers a 500 for what is an expected bad input.
             return null;
         }
     }

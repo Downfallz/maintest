@@ -214,14 +214,14 @@ internal sealed class PlaytestRun
 
         lock (_seatedGate)
         {
-            if (!_playing.TryGetValue(slot, out var held))
-            {
-                _playing[slot] = name;
-                return;
-            }
-
+            // Seeded from the stamp the manifest was opened with, never from the first name seen. A swap can
+            // land before this seat's first decision -- `--handover 1` is exactly that -- and taking the first
+            // observation as the baseline would record the new occupant as the original one: the manifest
+            // would say the bot played a session every step of which names the person.
+            var held = _playing.TryGetValue(slot, out var seen) ? seen : Opened(slot);
             if (held == name)
             {
+                _playing[slot] = name;
                 return;
             }
 
@@ -229,6 +229,8 @@ internal sealed class PlaytestRun
             _recorder.Reseated(slot, name, round);
         }
     }
+
+    private string Opened(PlayerSlot slot) => slot == PlayerSlot.Player1 ? _stamp.Player1Agent : _stamp.Player2Agent;
 
     /// <summary>
     /// Records that a seat has been shown what it is being asked, which is what the next decision's duration

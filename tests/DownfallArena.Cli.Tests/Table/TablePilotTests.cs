@@ -9,9 +9,11 @@ using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Randomness;
 using DownfallArena.Infrastructure.Resources.Authoring;
+using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -253,12 +255,16 @@ public sealed class TablePilotTests : IDisposable
         await run.StartAsync(CatalogueProjection.Build(resources, Rules), _stopping.Token);
 
         // Two bots, so the match plays itself to an outcome while the pilot moves a seat under it. What is
-        // being tested is the piloting, and a person in a seat would only add a thread to block on.
+        // being tested is the piloting, and a person in a seat would only add a thread to block on. Player 1's
+        // agent says when it has first been asked something, because "a round is being played" is only true of
+        // a seat that has been asked about it, and a test that posted before that would be testing the other
+        // case: a seat nothing has begun for, which may be seated for any round at all.
+        var asked = new Watching(new GreedyAgent(resources, Rules));
         var session = await TableSession.StartAsync(
             _host.Services,
             Rules,
             seed: 7,
-            new SeatAgent(new Occupant(new GreedyAgent(resources, Rules), "Greedy")),
+            new SeatAgent(new Occupant(asked, "Greedy")),
             new SeatAgent(new Occupant(new GreedyAgent(resources, Rules), "Greedy")),
             run.Wrap,
             _stopping.Token);
@@ -279,8 +285,39 @@ public sealed class TablePilotTests : IDisposable
             run,
             pilot);
 
+        asked.Asked.WaitOne(TimeSpan.FromSeconds(30)).ShouldBeTrue("player 1 should have been asked something");
         return new Table(api, session, run);
     }
 
     private sealed record Table(TableApi Api, TableSession Session, PlaytestRun Run);
+
+    /// <summary>A bot that says when it has first been asked for a decision, and plays as itself otherwise.</summary>
+    private sealed class Watching(IPlayerAgent inner) : IPlayerAgent
+    {
+        public ManualResetEvent Asked { get; } = new(false);
+
+        public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
+        {
+            Asked.Set();
+            return inner.DecideEvolution(board, options);
+        }
+
+        public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
+        {
+            Asked.Set();
+            return inner.DecideSpeed(board, creature);
+        }
+
+        public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
+        {
+            Asked.Set();
+            return inner.DecideIntent(board, intentOption);
+        }
+
+        public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
+        {
+            Asked.Set();
+            return inner.DecideTargets(board, options);
+        }
+    }
 }

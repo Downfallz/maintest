@@ -52,6 +52,55 @@ public sealed class TableSessionTests : IDisposable
         seat.Seated.ShouldBeSameAs(second);
     }
 
+    /// <summary>The least board a seat needs to answer: the round it is in.</summary>
+    private static PlayerBoardState BoardIn(int round) => new()
+    {
+        MatchId = MatchId.New(),
+        Slot = PlayerSlot.Player1,
+        State = MatchState.InProgress,
+        ContentHash = "hash",
+        RoundNumber = round,
+        Allies = [],
+        Enemies = [],
+    };
+
+    /// <summary>
+    /// A seat refuses to be handed over for a round it is already playing, and the refusal says which.
+    /// </summary>
+    /// <remarks>
+    /// The check belongs here rather than in whoever asks, because a caller that read the board and then
+    /// installed a swap does those in two steps against a match that is moving: the driver can enter the very
+    /// round the request names in between, and the swap then lands inside it. The seat sees every round as it
+    /// is asked about it, so under its own lock the newest round it has seen is the newest round there is.
+    /// </remarks>
+    [Fact]
+    public void A_seat_refuses_to_change_hands_for_a_round_it_is_already_playing()
+    {
+        var seat = new SeatAgent(new Occupant(new Counting(new Refusing()), "first"));
+        var next = new Occupant(new Counting(new Refusing()), "second");
+
+        // Nothing has been asked yet, so no round has begun for this seat and any round will do.
+        seat.SwapAt(next, round: 1).ShouldBeNull();
+
+        seat.Deciding(BoardIn(round: 4));
+
+        seat.SwapAt(next, round: 4)!.Reached.ShouldBe(4);
+        seat.SwapAt(next, round: 2)!.Reached.ShouldBe(4);
+        seat.SwapAt(next, round: 5).ShouldBeNull();
+    }
+
+    /// <summary>A seat that has seen a round does not forget it because a later board reads lower.</summary>
+    [Fact]
+    public void A_seat_refuses_against_the_newest_round_it_has_seen()
+    {
+        var seat = new SeatAgent(new Occupant(new Counting(new Refusing()), "first"));
+
+        seat.Deciding(BoardIn(round: 6));
+        seat.Deciding(BoardIn(round: 3));
+
+        seat.SwapAt(new Occupant(new Counting(new Refusing()), "second"), round: 5)!.Reached.ShouldBe(6);
+    }
+
     /// <summary>
     /// The swap is the mechanism behind every piloting capability, so what matters is that the match does not
     /// notice: it keeps asking the seat, and the seat keeps answering, with someone else behind it.
