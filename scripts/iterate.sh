@@ -368,9 +368,11 @@ for seed in "${seed_list[@]}"; do
   if [[ "$clone_control" == true ]]; then
     # The same dataset and the same learner with the terms dropped, so the two clone rows differ by the
     # terms and nothing else. Without it a turn cannot tell what the terms bought from what the conditional
-    # logit bought, since ADR 0051 brought both at once.
-    step "5b. [seed $seed] Train the control clone, blind to the candidate terms"
-    "${learning[@]}" train-clone "$seed_run/dataset" -o "$seed_run/clone-blind" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation" --ignore-terms
+    # logit bought, since ADR 0051 brought both at once. `$clone_dataset` and not the pure one: whichever
+    # dataset the treatment was fitted on, the control has to be fitted on it too, or the two rows differ by
+    # the terms *and* the distribution and the control measures neither.
+    step "5b. [seed $seed] Train the control clone on '$clone_dataset', blind to the candidate terms"
+    "${learning[@]}" train-clone "$clone_dataset" -o "$seed_run/clone-blind" --epochs "$clone_epochs" --alpha "$clone_alpha" --validation "$validation" --ignore-terms
     models+=(clone-blind)
   fi
 
