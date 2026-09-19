@@ -65,7 +65,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   and initiative separately. Creature numbers replace repeated definition names in the play surface.
 - Spell faces use restrained paper tints with labelled effect and critical badges derived by the catalogue
   projection. The client does not infer effect categories from spell names or parse effect text. The critical
-  reminder matches the current engine: either speed can roll a critical, multiplying direct damage/healing.
+  badge and reminder state the maintainer-confirmed rule: Quick cannot crit; Standard can, multiplying only
+  direct damage/healing on targets. Enforcement in the engine is being delivered in a separate PR; this UI
+  anticipates that change and does not alter combat resolution.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
 - Each spell becomes public together with its confirmed targets, in timeline order (ADR 0057).

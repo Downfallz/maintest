@@ -101,7 +101,7 @@ public static class CatalogueProjection
             requires,
             Cues(spell),
             spell.Stats.CriticalChance.Value > 0
-                ? "Crits work at either speed; only direct damage and healing on targets are multiplied."
+                ? "Quick cannot crit. In Standard, crits multiply only direct damage and healing on targets."
                 : null);
 
     private static IReadOnlyList<CardCue> Cues(Spell spell)
@@ -112,7 +112,7 @@ public static class CatalogueProjection
             .ToList();
         if (spell.Stats.CriticalChance.Value > 0)
         {
-            cues.Add(new CardCue("critical", "Critical"));
+            cues.Add(new CardCue("critical", "Crit · Standard only"));
         }
 
         return cues;

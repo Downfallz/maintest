@@ -290,8 +290,9 @@ persistent bottom phase guide keeps the round limit and current task visible. Cr
 labelled initiative slots, coloured stats/speeds and an ordered colour gradient make the board readable
 without decoding pairs of numbers. The atlas displays spells side by side and keeps the shared team-pick
 budget visible; picks are per player per round in the engine, not per creature. `CardCue` metadata supplies
-short semantic badges for spell faces, with a critical reminder from the host. These are presentation changes;
-they do not restrict critical rolls to Standard or change the team's evolution allowance.
+short semantic badges for spell faces, with a critical reminder from the host. The maintainer confirmed that
+Quick cannot crit and Standard can; the badge and reminder anticipate engine enforcement in a separate PR.
+These presentation changes do not alter combat resolution or the team's evolution allowance.
 
 ---
 
