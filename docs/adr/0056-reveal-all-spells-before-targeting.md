@@ -1,7 +1,7 @@
 # 0056. Reveal all spells before choosing targets
 
 Date: 2026-09-18
-Status: Accepted
+Status: Superseded by [0057](0057-reveal-spells-with-confirmed-targets.md)
 
 ## Context
 

@@ -79,7 +79,7 @@ public sealed class PlayerBoardStateProjectionTests
     }
 
     [Fact]
-    public void All_six_spells_become_public_together_before_targets_are_chosen()
+    public void The_first_target_decision_sees_no_public_actions_and_the_fifth_sees_only_the_first_four()
     {
         var match = new MatchStore().Started(RuleSet.Create(3, 2, 2, 30, 2.0));
         MatchStore.PassEvolution(match);
@@ -96,20 +96,17 @@ public sealed class PlayerBoardStateProjectionTests
         {
             var hidden = PlayerBoardStateProjection.Build(match, player);
             hidden.SubPhase.ShouldBe(RoundSubPhase.IntentSelection);
-            hidden.RevealedIntents.ShouldBeEmpty();
             hidden.RevealedActions.ShouldBeEmpty();
             hidden.Intents.ShouldAllBe(intent => hidden.Allies.Any(creature => creature.Id == intent.Actor));
         }
 
         var last = timeline.Last();
         match.SubmitIntent(last.Owner, new CombatIntent(last.Creature, TestContent.Strike)).IsSuccess.ShouldBeTrue();
-        var intents = timeline.Select(activation => new CombatIntent(activation.Creature, TestContent.Strike)).ToArray();
 
         foreach (var player in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
         {
             var revealed = PlayerBoardStateProjection.Build(match, player);
             revealed.SubPhase.ShouldBe(RoundSubPhase.RevealAndTarget);
-            revealed.RevealedIntents.ShouldBe(intents);
             revealed.RevealedActions.ShouldBeEmpty();
             revealed.RevealCursor.ShouldBe(0);
         }
@@ -122,8 +119,7 @@ public sealed class PlayerBoardStateProjectionTests
         }
 
         var fifth = PlayerBoardStateProjection.Build(match, timeline[4].Owner);
-        fifth.RevealedIntents.ShouldBe(intents);
-        fifth.RevealedActions.Count.ShouldBe(4);
+        fifth.RevealedActions.Select(action => action.Actor).ShouldBe(timeline.Take(4).Select(activation => activation.Creature));
         fifth.RevealedActions.ShouldAllBe(action => action.Targets.Count == 1);
         fifth.RevealCursor.ShouldBe(4);
         fifth.ResolveCursor.ShouldBe(0);

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
@@ -407,10 +408,15 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
-    /// All opposing spells are public after declaration, including creatures still waiting to bind targets.
+    /// The count of the other side's backs against the cards already turned over. A round keeps every intent
+    /// it was given and tracks the reveal separately, so from the first reveal onwards the two differ — and
+    /// with the reveal strip on the same screen, a count that did not subtract would be reading "one face
+    /// down" beside a card that is plainly face up. Both seats go Standard here so the faster enemy reveals
+    /// first, which is the only ordering that puts an opponent's card face up while this seat is still being
+    /// asked.
     /// </summary>
     [Fact]
-    public async Task No_opposing_card_remains_face_down_during_targeting()
+    public async Task The_other_side_backs_are_counted_without_the_cards_already_turned_over()
     {
         var table = await Seated();
         await Post(table, """{"kind":"Evolution","pass":true}""");
@@ -420,10 +426,10 @@ public sealed partial class TableApiTests : IDisposable
         var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
 
         body.ShouldContain("\"subPhase\":\"RevealAndTarget\"");
-        // Enemy 3 has bound targets; the other enemy has not, but its spell is already public as well.
+        // Enemy 3 is the first slot, so its card is face up; the other seat has two creatures, so one back
+        // is left. Before the count subtracted the reveal this line read two.
         body.ShouldContain("\"revealedActions\":[{\"actor\":3,");
-        body.ShouldContain("\"revealedIntents\":[");
-        body.ShouldContain("\"opponentIntents\":0");
+        body.ShouldContain("\"opponentIntents\":1");
     }
 
     /// <summary>
@@ -435,6 +441,31 @@ public sealed partial class TableApiTests : IDisposable
         await Post(table, """{"kind":"Evolution","pass":true}""");
         await AnswerEach(table, PlayerOptionsKind.Speed, creature => $$"""{"kind":"Speed","creature":{{creature}},"speed":"Quick"}""", until: PlayerOptionsKind.Intent);
         await AnswerEach(table, PlayerOptionsKind.Intent, creature => $$"""{"kind":"Intent","creature":{{creature}},"spell":"spell:strike:v1"}""", until: PlayerOptionsKind.Target);
+    }
+
+    [Fact]
+    public async Task The_targeting_payload_never_exposes_an_unconfirmed_opposing_spell_choice()
+    {
+        var table = await Seated();
+        await PlayUpToTargeting(table);
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+        using var document = JsonDocument.Parse(body);
+        var board = document.RootElement.GetProperty("board");
+        var own = board.GetProperty("allies").EnumerateArray().Select(creature => creature.GetProperty("id").GetInt32()).ToHashSet();
+        var confirmed = board.GetProperty("revealedActions").EnumerateArray().Select(action => action.GetProperty("actor").GetInt32()).ToHashSet();
+        board.GetProperty("enemies").EnumerateArray().Select(creature => creature.GetProperty("id").GetInt32()).Except(confirmed).ShouldNotBeEmpty();
+
+        // Audit every board collection, not just Intents: a second field must not bypass the seat boundary.
+        foreach (var collection in board.EnumerateObject().Where(property => property.Value.ValueKind == JsonValueKind.Array))
+        {
+            foreach (var entry in collection.Value.EnumerateArray())
+            {
+                if (entry.ValueKind == JsonValueKind.Object && entry.TryGetProperty("actor", out var actor) && entry.TryGetProperty("spell", out _))
+                {
+                    (own.Contains(actor.GetInt32()) || confirmed.Contains(actor.GetInt32())).ShouldBeTrue("an opposing spell choice needs confirmed targets before it can be public");
+                }
+            }
+        }
     }
 
     /// <summary>

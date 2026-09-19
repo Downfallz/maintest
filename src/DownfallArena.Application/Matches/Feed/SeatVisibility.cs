@@ -47,8 +47,8 @@ public static class SeatVisibility
         ArgumentNullException.ThrowIfNull(matchEvent);
         return matchEvent switch
         {
-            // Submission events record decisions while hidden. Spells become public together in the board's
-            // RevealedIntents after declaration (ADR 0056); never replay private submission events to peers.
+            // The two hidden decisions of the game. An intent is face down until the timeline reveals it, and
+            // a speed choice is what the timeline is built from; either one read early is the whole match.
             IntentSubmitted intent => intent.Slot == slot,
             SpeedChoiceSubmitted speed => speed.Slot == slot,
 

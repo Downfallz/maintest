@@ -564,22 +564,20 @@ function heldCard(state, spell, offered, creature, current, reference) {
   return face;
 }
 
-// All public spells, with confirmed targets only. Pending targets are distinct from an empty confirmed cast.
+// A spell becomes public together with its confirmed targets, in timeline order.
 function revealed(state, board) {
   const box = element('revealed');
   const actions = board.revealedActions ?? [];
-  const intents = board.revealedIntents?.length ? board.revealedIntents : actions;
-  box.hidden = intents.length === 0;
+  box.hidden = actions.length === 0;
   const open = box.children[0]?.open ?? false;
   const list = document.createElement('details');
   list.open = open;
   const heading = document.createElement('summary');
-  heading.textContent = `Round spells · ${intents.length} revealed`;
-  list.append(heading, ...intents.map(intent => {
-    const action = actions.find(one => one.actor === intent.actor);
+  heading.textContent = `Round spells · ${actions.length} revealed`;
+  list.append(heading, ...actions.map(action => {
     const one = document.createElement('div');
     one.className = 'revealed-action';
-    one.textContent = revealedText(action ?? intent, state.cards) + (action ? '' : ' · Targets pending');
+    one.textContent = revealedText(action, state.cards);
     return one;
   }));
   box.replaceChildren(list);
@@ -686,7 +684,7 @@ function line(state, creature, which, marks) {
 
   box.append(who, health, stats, tags, dock(state, creature.conditions));
   const publicChoice = liveChoice(creature, marks?.board, marks?.roundEvents);
-  if (which === 'enemy' || publicChoice.intent || publicChoice.action) {
+  if (which === 'enemy' || publicChoice.action) {
     box.append(enemyChoice(state, creature, marks?.board, marks?.roundEvents));
   }
 
@@ -1498,7 +1496,7 @@ function keyboardDecision(state, event) {
 function enemyChoice(state, creature, board, entries) {
   const choice = liveChoice(creature, board, entries);
   const box = document.createElement('div');
-  box.className = `round-choice ${choice.action || choice.intent ? 'public' : 'hidden-choice'}`;
+  box.className = `round-choice ${choice.action ? 'public' : 'hidden-choice'}`;
   const heading = document.createElement('span');
   heading.className = 'choice-round';
   heading.textContent = `Round ${choice.round ?? '—'} · ${choice.status}`;
@@ -1511,14 +1509,14 @@ function enemyChoice(state, creature, board, entries) {
     });
     return { name, targets: targets.length ? `→ ${targets.join(', ')}` : 'No targets' };
   };
-  if (choice.action || choice.intent) {
-    const text = describe(choice.action ?? choice.intent);
+  if (choice.action) {
+    const text = describe(choice.action);
     const name = document.createElement('strong');
     name.className = 'choice-spell';
     name.textContent = text.name;
     const targets = document.createElement('span');
     targets.className = 'choice-targets';
-    targets.textContent = choice.action ? text.targets : 'Targets pending';
+    targets.textContent = text.targets;
     box.append(name, targets);
   } else if (choice.previous) {
     const text = describe(choice.previous.action);

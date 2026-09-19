@@ -146,12 +146,15 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
     private static PlayerSlot Other(PlayerSlot slot) => slot == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
 
     /// <summary>
-    /// How many declarations remain hidden. All spells turn over together before targeting (ADR 0056),
-    /// so an intent awaiting targets is already face up even though it has no confirmed action yet.
+    /// How many of a board's intents are still face down. A round keeps every intent it was given
+    /// (<c>Round.IntentsOf</c>) and tracks what has been turned over separately, in the actions the reveal
+    /// cursor has reached, so the count of the one is not the count of the other from the first reveal
+    /// onwards. Subtracting here is what keeps the number and the reveal strip from contradicting each other
+    /// on the same screen: three face down beside two of them face up is a table nobody would believe.
     /// </summary>
     private static int StillFaceDown(PlayerBoardState board)
     {
-        var revealed = board.RevealedIntents.Select(intent => intent.Actor).ToHashSet();
+        var revealed = board.RevealedActions.Select(action => action.Actor).ToHashSet();
         return board.Intents.Count(intent => !revealed.Contains(intent.Actor));
     }
 

@@ -493,20 +493,23 @@ test('an atlas unlock uses the guarded current asking and rejects a stale inspec
   await unlock.events.click(); assert.equal(sent.length, 1);
 });
 
-test('every public spell is readable before targeting and confirmed targets update without hiding later spells', () => {
+test('targeting exposes only confirmed spells and targets while later choices stay hidden', () => {
   const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'RevealAndTarget';
   p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
   p.view.board.timeline = [{ creature: 1 }, { creature: 2 }];
   p.view.board.revealedIntents = [{ actor: 1, spell: 'one' }, { actor: 2, spell: 'two' }];
   p.view.board.revealedActions = []; p.draw();
-  assert.match(p.nodes.enemies.textContent, /Second cardTargets pending/);
-  assert.match(p.nodes.allies.textContent, /First cardTargets pending/);
-  assert.match(p.nodes.revealed.textContent, /First card/);
-  assert.match(p.nodes.revealed.textContent, /Second card/);
-  assert.doesNotMatch(p.nodes.enemies.textContent, /No targets/);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
+  assert.equal(p.nodes.revealed.hidden, true);
+  p.state.picked = [2]; p.draw();
+  assert.equal(p.nodes.revealed.hidden, true);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
   p.view.board.revealedActions = [{ actor: 1, spell: 'one', targets: [2] }]; p.draw();
   assert.match(p.nodes.allies.textContent, /First card→ #2/);
-  assert.match(p.nodes.enemies.textContent, /Second cardTargets pending/);
+  assert.match(p.nodes.revealed.textContent, /First card → 2/);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
+  p.view.board.revealedActions.push({ actor: 2, spell: 'two', targets: [1] }); p.draw();
+  assert.match(p.nodes.enemies.textContent, /Second card→ First #1/);
   p.view.board.roundNumber = 2; p.view.board.revealedIntents = []; p.view.board.revealedActions = []; p.draw();
   assert.equal(p.nodes.revealed.hidden, true);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);

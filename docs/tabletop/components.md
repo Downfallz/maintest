@@ -685,9 +685,9 @@ An A4 landscape mat a Player, three columns, one a Creature:
 
 1. **Intent**: put a Spell card from the hand face down in the Creature's intent slot. Legal if the Creature
    knows it - the pip is on the mat - and the Energy rail is at or above the printed cost.
-2. **Reveal and target**: turn all declared cards face up together (ADR 0056). Then, at each Creature's slot
-   on the initiative track, place its target markers, one per target, in the `Targeted by` boxes of the
-   targets' boards. Up to `maxTargets`, and fewer is allowed. Do this for all six slots before resolving any.
+2. **Reveal**: at the Creature's slot on the initiative track, turn the card face up and place its target
+   markers, one per target, in the `Targeted by` boxes of the targets' boards. Up to `maxTargets`, and fewer
+   is allowed. Do this for all six slots before resolving any.
 3. **Resolve**, in the same order: check the Fizzle conditions, roll the die if the card prints a chance, move
    the Energy marker down by the cost, apply each effect line to each target, then the caster line, then take
    the markers back.
@@ -947,7 +947,7 @@ Every **needs a component** verdict in [translation.md](translation.md), and wha
 | 1.5 The Combat timeline | The initiative track and 6 numbered markers, [3.5](#35-the-initiative-track) |
 | 1.5 Current initiative | The Base initiative rails read with the dock's Initiative tokens, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) |
 | 1.5 Ties by Player slot then Creature id | The number 1 to 6 printed on each board, [3.1](#31-the-creature-board) |
-| 1.7 Reveal all Spells, then bind targets in timeline order (ADR 0056) | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
+| 1.7 Reveal in timeline order, bind targets at reveal | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
 | 1.8 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.8 Total Defense | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
 | 1.8 A lasting Effect attaches as a Condition | The 144 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |

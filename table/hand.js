@@ -38,6 +38,6 @@ export function backText(intent, cards) {
 // two differ -- and a back drawn for a cast the reveal strip is showing face up on the same screen is the
 // board contradicting itself about this player's own cards.
 export function faceDown(board) {
-  const revealed = new Set([...(board?.revealedIntents ?? []), ...(board?.revealedActions ?? [])].map(action => action?.actor));
+  const revealed = new Set((board?.revealedActions ?? []).map(action => action?.actor));
   return (board?.intents ?? []).filter(intent => !revealed.has(intent?.actor));
 }

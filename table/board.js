@@ -168,7 +168,7 @@ export function standing(board) {
   return (board?.revealedActions ?? []).filter(action => !resolved.has(action?.actor));
 }
 
-// Keep only public declarations and actions: never consult private intents or infer a spellbook choice.
+// Keep only confirmed public actions: never consult private intents or infer a spellbook choice.
 // Resolution events also recover the previous round after reload, without retaining another seat's state.
 export function liveChoice(creature, board, entries) {
   const round = board?.roundNumber;
@@ -177,10 +177,9 @@ export function liveChoice(creature, board, entries) {
   const roundOf = entry => entry.event.roundId ?? entry.round;
   const resolved = events.filter(entry => roundOf(entry) === round).at(-1)?.event.resolution;
   const action = (board?.revealedActions ?? []).find(one => one.actor === creature?.id) ?? resolved?.action;
-  const intent = (board?.revealedIntents ?? []).find(one => one.actor === creature?.id);
   const index = (board?.timeline ?? []).findIndex(slot => slot.creature === creature?.id);
-  const status = !action ? (intent ? 'Choosing targets' : 'Hidden until reveal') : resolved?.fizzled ? 'Fizzled' : resolved?.isCritical ? 'Critical'
+  const status = !action ? 'Hidden until reveal' : resolved?.fizzled ? 'Fizzled' : resolved?.isCritical ? 'Critical'
     : resolved || (index >= 0 && index < (board?.resolveCursor ?? 0)) ? 'Resolved' : 'Revealed';
   const previous = events.filter(entry => roundOf(entry) === round - 1).at(-1);
-  return { round, action, intent, status, previous: previous ? { round: roundOf(previous), action: previous.event.resolution.action } : null };
+  return { round, action, status, previous: previous ? { round: roundOf(previous), action: previous.event.resolution.action } : null };
 }

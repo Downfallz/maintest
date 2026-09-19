@@ -32,13 +32,13 @@ Two Players. Each commands a Team of Creatures. You win when the other Team is d
 Creatures at zero Health.
 
 A Match is a sequence of Rounds. In each Round you unlock Spells from a Talent tree, choose how fast each of
-your Creatures moves, then declare one hidden Intent per Creature. All Intents are revealed together. Targets
-are then chosen in order along the Combat timeline, and only then does anything resolve (ADR 0056).
+your Creatures moves, then declare one hidden Intent per Creature. The Intents are revealed in order along
+the Combat timeline, targets are chosen as each one is revealed, and only then does anything resolve.
 
 Three things make the game:
 
 - **You commit before you see.** Your Speed choices and your Intents are made face down, at the same time as
-  your opponent's. You choose targets later, knowing every declared Spell and the targets already confirmed.
+  your opponent's. You choose targets later, when the card flips, knowing what has already been revealed.
 - **You spend a Round to get stronger.** Evolution unlocks Spells you did not have, and every unlock raises
   that Creature's Base initiative for the rest of the Match. The Creature that acts first is the one that has
   been climbing its Talent tree.
@@ -332,8 +332,8 @@ Energy rails stay face up.
 
 **Trigger.** Every Creature on the timeline has an Intent.
 **Actor.** The Player who owns the next Activation slot on the timeline.
-**Result.** Turn every Intent card face up together before anyone chooses targets. Then choose targets for
-each Creature in timeline order, moving to the next slot after each confirmation.
+**Result.** Choose that Creature's targets, then reveal its Intent card and confirmed targets together
+(ADR 0057). Later slots' cards stay face down. Walk the whole timeline this way.
 **Nothing resolves yet, and nothing on any board changes.**
 
 Choose targets to satisfy the card's targeting line:
@@ -351,10 +351,10 @@ markers stay there until that cast resolves.
 **A Spell with no legal target at all is revealed with no target markers.** It fizzles later. The timeline
 always moves on.
 
-> **Example.** Creature 3 chooses targets for its revealed **Meteor**: `Up to 3 enemies`, `Damage 2`. All three enemies are alive.
+> **Example.** Creature 3 reveals **Meteor**: `Up to 3 enemies`, `Damage 2`. All three enemies are alive.
 > Creature 3 may place one, two or three markers. Placing one is legal and sometimes right: Meteor's damage is
 > small, and a target already carrying a Defense buff will take nothing from it.
-> Creature 6 then chooses targets for its revealed **Guard**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2 rounds`. Ally
+> Creature 6 then reveals **Guard**: `One ally`, `Defense +1 permanent` and `Defense +1 for 2 rounds`. Ally
 > includes the caster, so Creature 6 puts its own target marker in its own `Targeted by` row.
 > Both markers stay on the table. Neither cast has done anything yet.
 

@@ -56,10 +56,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   number follows the full server order, including ties; the active reveal/resolution slot is highlighted.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
-- All spells become public together after the last declaration, before any targeting (ADR 0056).
-  Both teams show their declared spell with “Targets pending” until its owner confirms targets in order.
-  Confirmed targets and resolution status update on the battlefield. During declaration, enemy choices stay
-  hidden. At the next round, the previous public action is explicitly
+- Each spell becomes public together with its confirmed targets, in timeline order (ADR 0057).
+  The first creature sees no unrevealed enemy choices; the fifth can read the first four confirmed actions.
+  Local target selections remain private until confirmation. Confirmed spells, targets and resolution status
+  update on the battlefield. At the next round, the previous public action is explicitly
   labelled “Last round” until a new one is revealed; it is recovered from the seat's public feed on reload.
 - Round guide contains the host's round order and rule stamp. Match activity and playtest notes stay below
   the spellbook. The opaque handover screen remains the hotseat privacy boundary.

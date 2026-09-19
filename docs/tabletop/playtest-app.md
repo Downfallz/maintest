@@ -277,9 +277,9 @@ Keyboard shortcuts select numbered options, confirm with Enter, toggle the atlas
 with Escape. Arrows switch Evolution creatures, enter their offered spells, and navigate the visible spell
 or target rows without committing; focused controls retain their normal Enter behavior. They ignore text entry, repeat events and modifier chords and use the same asking and submission
 guards as pointer input. Battlefield cards keep the creature's timeline position; enemy cards also retain
-public speed, revealed spell, targets and resolution state. All declared spells become public together at
-entry into targeting (ADR 0056); targets still become public one confirmation at a time. Unconfirmed targets
-read “Targets pending”, never “No targets”. Spells stay hidden during declaration. The previous round's
+public speed, revealed spell, targets and resolution state. Each spell becomes public together with its
+confirmed targets in timeline order (ADR 0057). Unconfirmed enemy choices stay hidden throughout targeting;
+local selection reveals nothing. The previous round's
 public action is labelled separately at the next round, using the retained public resolution feed.
 
 Every offered option, card face, stat and ordering still comes from the host. The opaque hotseat handover
