@@ -53,7 +53,7 @@ public sealed class ResolutionRulesTests
         var creatures = Arena.Snapshots(living);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
-        var resolution = ResolutionRules.Resolve(action, creatures, resources, RuleSet.Default, Crit);
+        var resolution = ResolutionRules.Resolve(action, creatures, resources, RuleSet.Default, Crit, Speed.Standard);
 
         resolution.IsCritical.ShouldBeTrue();
         resolution.EnergySpent.ShouldBe(Energy.Of(1));
@@ -80,8 +80,32 @@ public sealed class ResolutionRulesTests
         var rules = RuleSet.Create(3, 2, 2, 30, 1.5);
 
         // The creature has 5% and the spell 25%: a roll of 0.28 crits only because they add up; 0.32 does not.
-        ResolutionRules.Resolve(action, creatures, resources, rules, new FixedRandom(0.28)).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, true)]);
-        ResolutionRules.Resolve(action, creatures, resources, rules, new FixedRandom(0.32)).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 2, false)]);
+        ResolutionRules.Resolve(action, creatures, resources, rules, new FixedRandom(0.28), Speed.Standard).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 3, true)]);
+        ResolutionRules.Resolve(action, creatures, resources, rules, new FixedRandom(0.32), Speed.Standard).Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 2, false)]);
+    }
+
+    /// <summary>
+    /// Speed is a trade, and this is the half that was missing: a Quick creature acts before every Standard
+    /// one and gives up its critical roll to do it. Without this the choice costs nothing, so Quick dominates
+    /// for anything that attacks and the hidden speed token decides nothing.
+    /// </summary>
+    [Fact]
+    public void A_quick_creature_cannot_crit_however_certain_its_chance()
+    {
+        var spell = Content.Spell("spell:certain:v1", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 1.0, Damage.Of(2));
+        var resources = Resources(spell);
+        var living = Arena.FourCreatures();
+        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
+        var creatures = Arena.Snapshots(living);
+        var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
+
+        var standard = ResolutionRules.Resolve(action, creatures, resources, RuleSet.Default, Crit, Speed.Standard);
+        var quick = ResolutionRules.Resolve(action, creatures, resources, RuleSet.Default, Crit, Speed.Quick);
+
+        standard.IsCritical.ShouldBeTrue();
+        standard.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 4, true)]);
+        quick.IsCritical.ShouldBeFalse();
+        quick.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 2, false)]);
     }
 
     [Fact]
@@ -91,7 +115,7 @@ public sealed class ResolutionRulesTests
         Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(3, Duration.OfRounds(1)));
         var rules = RuleSet.Create(3, 2, 2, 30, double.MaxValue);
 
-        var resolution = ResolutionRules.Resolve(Strike(Arena.Ghoul), Arena.Snapshots(living), Arena.Resources, rules, Crit);
+        var resolution = ResolutionRules.Resolve(Strike(Arena.Ghoul), Arena.Snapshots(living), Arena.Resources, rules, Crit, Speed.Standard);
 
         resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, int.MaxValue - 3, true)]);
     }
@@ -113,7 +137,7 @@ public sealed class ResolutionRulesTests
         stunned.IsCritical.ShouldBeFalse();
 
         var dead = CombatAction.Bind(new CombatIntent(Arena.Archer, Arena.Strike), [Arena.Ghoul]);
-        ResolutionRules.Resolve(dead, creatures, Arena.Resources, RuleSet.Default, NoCrit).FizzleReason.ShouldBe(CombatErrors.ActorDead);
+        ResolutionRules.Resolve(dead, creatures, Arena.Resources, RuleSet.Default, NoCrit, Speed.Standard).FizzleReason.ShouldBe(CombatErrors.ActorDead);
     }
 
     [Fact]
@@ -201,7 +225,7 @@ public sealed class ResolutionRulesTests
         knight.UnlockSpell(spell);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
-        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit);
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit, Speed.Standard);
 
         resolution.Outcomes.ShouldBe(
         [
@@ -235,8 +259,8 @@ public sealed class ResolutionRulesTests
         knight.Apply(DefenseBuff.Of(2, Duration.Permanent));
         var creatures = Arena.Snapshots(living);
 
-        var tolled = ResolutionRules.Resolve(CombatAction.Bind(new CombatIntent(Arena.Knight, bleeding.Id), [Arena.Ghoul]), creatures, resources, RuleSet.Default, NoCrit);
-        var wounded = ResolutionRules.Resolve(CombatAction.Bind(new CombatIntent(Arena.Knight, wounding.Id), [Arena.Ghoul]), creatures, resources, RuleSet.Default, NoCrit);
+        var tolled = ResolutionRules.Resolve(CombatAction.Bind(new CombatIntent(Arena.Knight, bleeding.Id), [Arena.Ghoul]), creatures, resources, RuleSet.Default, NoCrit, Speed.Standard);
+        var wounded = ResolutionRules.Resolve(CombatAction.Bind(new CombatIntent(Arena.Knight, wounding.Id), [Arena.Ghoul]), creatures, resources, RuleSet.Default, NoCrit, Speed.Standard);
 
         tolled.Outcomes.OfType<ConditionOutcome>().ShouldHaveSingleItem()
             .Effect.ShouldBe(Bleed.Of(3, rounds: 1), "a bleed carries its full amount past the armour");
@@ -267,7 +291,7 @@ public sealed class ResolutionRulesTests
         Arena.Find(living, Arena.Knight).UnlockSpell(sweeping);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, sweeping.Id), [Arena.Ghoul, Arena.Wraith]);
 
-        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit);
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit, Speed.Standard);
 
         resolution.Outcomes.OfType<HealOutcome>().ShouldHaveSingleItem().ShouldBe(new HealOutcome(Arena.Knight, 2) with { OnCaster = true });
     }
@@ -285,7 +309,7 @@ public sealed class ResolutionRulesTests
         Arena.Find(living, Arena.Knight).UnlockSpell(spell);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
-        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit);
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit, Speed.Standard);
 
         resolution.IsCritical.ShouldBeTrue();
         resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 6, true), new DamageOutcome(Arena.Knight, 2, true) with { OnCaster = true }]);
@@ -304,7 +328,7 @@ public sealed class ResolutionRulesTests
         Arena.Find(living, Arena.Knight).UnlockSpell(spell);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
-        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit);
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit, Speed.Standard);
 
         resolution.Outcomes.ShouldBe([new HealOutcome(Arena.Ghoul, 6), new HealOutcome(Arena.Knight, 2) with { OnCaster = true }]);
     }
@@ -320,7 +344,7 @@ public sealed class ResolutionRulesTests
         knight.Apply(Stun.For(1));
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
-        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit);
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit, Speed.Standard);
 
         resolution.Fizzled.ShouldBeTrue();
         resolution.Outcomes.ShouldBeEmpty();
@@ -332,11 +356,11 @@ public sealed class ResolutionRulesTests
         var creatures = Arena.Snapshots(Arena.FourCreatures());
         var action = Strike(Arena.Ghoul);
 
-        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(null!, creatures, Arena.Resources, RuleSet.Default, NoCrit));
-        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, null!, Arena.Resources, RuleSet.Default, NoCrit));
-        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, creatures, null!, RuleSet.Default, NoCrit));
-        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, creatures, Arena.Resources, null!, NoCrit));
-        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, creatures, Arena.Resources, RuleSet.Default, null!));
+        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(null!, creatures, Arena.Resources, RuleSet.Default, NoCrit, Speed.Standard));
+        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, null!, Arena.Resources, RuleSet.Default, NoCrit, Speed.Standard));
+        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, creatures, null!, RuleSet.Default, NoCrit, Speed.Standard));
+        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, creatures, Arena.Resources, null!, NoCrit, Speed.Standard));
+        Should.Throw<ArgumentNullException>(() => ResolutionRules.Resolve(action, creatures, Arena.Resources, RuleSet.Default, null!, Speed.Standard));
         Should.Throw<ArgumentNullException>(() => CombatResolution.Fizzle(action, null!));
         Should.Throw<ArgumentNullException>(() => CombatResolution.Resolved(action, null!, [], false, Energy.Of(0), []));
     }
@@ -344,7 +368,7 @@ public sealed class ResolutionRulesTests
     private static CombatAction Strike(CreatureId target) => CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [target]);
 
     private static CombatResolution Resolve(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, FixedRandom random) =>
-        ResolutionRules.Resolve(action, creatures, Arena.Resources, RuleSet.Default, random);
+        ResolutionRules.Resolve(action, creatures, Arena.Resources, RuleSet.Default, random, Speed.Standard);
 
     private static GameResources Resources(params Spell[] extra) =>
         GameResources.Create("test", [.. Arena.Resources.Creatures], [.. Arena.Resources.Spells, .. extra], [.. Arena.Resources.TalentTrees]);

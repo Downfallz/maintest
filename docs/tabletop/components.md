@@ -171,7 +171,7 @@ supply that runs out is replaced by a blank token with the value written on it; 
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Speed token, Quick on one face, Standard on the other | **6** | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`). Two-sided because the choice is one of two and is made face down. | **VALUE** (team size) |
+| Speed token, Quick on one face, Standard on the other | **6** | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`). Two-sided because the choice is one of two and is made face down. The Quick face needs a reminder that it forfeits the Critical roll (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. | **VALUE** (team size) |
 | Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number is the tiebreak (`TimelineBuilder.cs:27-28`): ids are handed out in join order (`Match.cs:286-296`), so 1 to 3 are Player 1's. | **VALUE** (team size) |
 | Evolution pick token | **4** | 2 per Player a Round (`RuleSet.EvolutionPicksPerRound`), spent and returned each Round. | **VALUE** |
 | Round marker | **1** | One position on the Round track. | **RULE** |
