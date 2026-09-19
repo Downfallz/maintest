@@ -497,3 +497,51 @@ body:has(#table) { padding-bottom: 110px; }
   .talent-toolbar .pick-tokens { margin-bottom: 0; }
   .talent-tier { flex-basis: 100%; grid-template-columns: 1fr; }
 }
+
+/* Phase cues never capture input or displace the battlefield. Details remain available after the cue. */
+#phase-notice { position: absolute; left: 20px; bottom: calc(100% + 12px); width: min(570px, calc(100vw - 40px)); padding: 14px 18px; border: 1px solid #a58c56; border-left: 3px solid var(--gold); border-radius: 10px; background: #182923f5; box-shadow: 0 8px 24px #0005; pointer-events: none; }
+#phase-notice-title { display: block; font-size: 17px; color: #f3d697; }
+#phase-notice[data-kind="round"] { border-color: #e6c57d; background: linear-gradient(110deg, #343424fa, #182923fa); }
+#phase-notice[data-kind="round"] #phase-notice-title { font: 650 26px Georgia, serif; letter-spacing: .2px; }
+#phase-notice-detail { margin: 6px 0 0; font-size: 12px; line-height: 1.55; color: #d4dfd5; }
+#phase-dock { grid-template-columns: auto 1fr auto; }
+#phase-reminder { grid-column: 1 / 3; }
+#upkeep { grid-column: 3; grid-row: 1 / 3; align-self: center; }
+#upkeep summary { cursor: pointer; color: #e9d49b; border: 1px solid #667a62; border-radius: 6px; padding: 8px 10px; font-size: 11px; white-space: nowrap; }
+#upkeep summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+#upkeep-panel { position: absolute; left: 20px; bottom: calc(100% + 12px); width: min(520px, calc(100vw - 40px)); max-height: 48dvh; overflow-y: auto; padding: 18px; border: 1px solid #738769; border-radius: 10px; background: #192921; box-shadow: 0 8px 30px #0008; }
+#phase-dock:has(#upkeep[open]) #phase-notice { visibility: hidden; }
+body:has(#upkeep[open]) .round-recap { visibility: hidden; }
+#upkeep-title { font-size: 18px; margin: 0 0 10px; }
+#upkeep-energy { color: #e6be70; font-size: 13px; }
+.upkeep-order, #upkeep-panel > .muted { font-size: 11px; line-height: 1.5; margin-top: 9px; }
+#upkeep-effects { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 6px; }
+#upkeep-effects li { display: grid; grid-template-columns: 1fr auto; padding: 8px 10px; background: #ffffff07; border-left: 2px solid #7b8b79; border-radius: 4px; font-size: 12px; }
+#upkeep-effects li span { grid-column: 1 / -1; font-size: 10px; color: #becabe; margin-top: 3px; }
+#upkeep-effects [data-tone="energy"] { border-color: #e6be70; color: #e6be70; }
+#upkeep-effects [data-tone="recovery"] { border-color: #96d3a1; color: #96d3a1; }
+#upkeep-effects [data-tone="harm"] { border-color: #efa199; color: #efa199; }
+.card .card-cost { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 10px; font-size: 17px; color: #684b1d; background: #e6d5ab; }
+.card-cost small { font: 650 8px ui-sans-serif, system-ui, sans-serif; text-transform: uppercase; letter-spacing: .4px; }
+.card-stats { display: grid; gap: 4px; margin-top: 9px; }
+.card-stats:empty { display: none; }
+.card-stat { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 5px; border: 1px solid #89847140; border-radius: 6px; padding: 6px; background: #ffffff36; }
+.card-stat > span { align-self: center; font-size: 10px; font-weight: 650; }
+.card-stat > strong { font: 750 15px ui-sans-serif, system-ui, sans-serif; }
+.card-stat > small { font-size: 9px; opacity: .85; text-align: right; }
+.card-stat[data-stat="initiative"] { color: #614977; }
+.card-stat[data-stat="critical"] { color: #715019; }
+.card-line-target { font-weight: 650; padding-bottom: 5px; }
+.card-line-requires { margin-top: 6px; font-size: 11px; opacity: .85; }
+.card.future .card-stat { color: #e3d9bf; background: #ffffff08; border-color: #7d897344; }
+@media (max-width: 760px) {
+  #phase-dock { grid-template-columns: 1fr auto; }
+  #phase-round { grid-column: 1; }
+  #phase-steps { grid-column: 1 / -1; grid-row: 2; }
+  #phase-reminder { grid-column: 1 / -1; grid-row: 3; }
+  #upkeep { grid-column: 2; grid-row: 1; }
+  #upkeep summary { padding: 5px 8px; }
+  #phase-notice, #upkeep-panel { left: 12px; width: calc(100vw - 24px); }
+  #phase-notice-title { font-size: 15px; }
+  #phase-notice-detail { font-size: 11px; }
+}

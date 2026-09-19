@@ -206,3 +206,16 @@ test('a fizzled cast names its reason instead of reporting a critical', () => {
   assert.equal(recap.actions[0].reason, 'Cannot act.');
   assert.equal(recap.actions[0].spell, 'spell:throwing_star:v1');
 });
+
+test('upkeep uses the event round and actual capped ticks in host order, retained beyond the short log', async () => {
+  const { roundUpkeep } = await import('./feed.js');
+  const entries = [{ sequence: 50, round: 8, event: { kind: 'OngoingEffectsApplied', roundId: 7,
+    energyRegenerationTicks: [{ creature: 1, gained: 3 }], regenerationTicks: [{ creature: 1, healed: 0 }], bleedTicks: [{ creature: 2, damage: 1 }] } }];
+  const kept = retainRoundEvents([], entries, 7);
+  const recap = roundUpkeep(kept, 7);
+  assert.deepEqual(recap.rows.map(row => [row.creature, row.amount, row.tone]), [[1, 3, 'energy'], [1, 0, 'recovery'], [2, 1, 'harm']]);
+  assert.equal(roundUpkeep(kept, 8), null);
+  assert.equal(retainRoundEvents(kept, entries, 7).length, 1);
+  assert.equal(retainRoundEvents(kept, [], 9).length, 0);
+  assert.equal(roundUpkeep([{ sequence: 51, event: { kind: 'OngoingEffectsApplied', roundId: 8 } }], 8).rows.length, 0);
+});

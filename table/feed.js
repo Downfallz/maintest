@@ -73,9 +73,9 @@ export function accumulate(kept, arriving, limit) {
 }
 
 // Kept separately from the short activity log, per seat, before that log is trimmed. Only public combat
-// events enter a recap. A first poll can contain a whole match; retain just the current and previous round.
+// and upkeep events enter the references. A first poll can contain a whole match; keep two rounds.
 export function retainRoundEvents(kept, arriving, currentRound) {
-  const relevant = entry => entry?.event?.kind === 'CombatActionResolved' || entry?.event?.kind === 'RoundEnded';
+  const relevant = entry => ['CombatActionResolved', 'RoundEnded', 'OngoingEffectsApplied'].includes(entry?.event?.kind);
   const events = accumulate(kept, (arriving ?? []).filter(relevant));
   const latest = Math.max(Number.isInteger(currentRound) ? currentRound : 0, ...events.map(eventRound));
   return events.filter(entry => eventRound(entry) >= latest - 1 && eventRound(entry) <= latest)
@@ -86,6 +86,21 @@ export function retainRoundEvents(kept, arriving, currentRound) {
 // entry can carry the next snapshot's round number. The event's own roundId is the authoritative number.
 function eventRound(entry) {
   return entry?.event?.roundId ?? entry?.round ?? 0;
+}
+
+// Actual applied ticks, in the host's upkeep order. Never subtract board snapshots: one poll may also
+// contain combat, and a capped recovery or lethal tick must show what happened, not the nominal effect.
+export function roundUpkeep(entries, round) {
+  const entry = (entries ?? []).filter(item => eventRound(item) === round && item?.event?.kind === 'OngoingEffectsApplied')
+    .sort((left, right) => right.sequence - left.sequence)[0];
+  if (!entry) return null;
+  const event = entry.event;
+  const rows = [
+    ...(event.energyRegenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.gained, tone: 'energy', label: 'Energy from effects', unit: 'energy', sign: '+' })),
+    ...(event.regenerationTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.healed, tone: 'recovery', label: 'Healing over time', unit: 'HP', sign: '+' })),
+    ...(event.bleedTicks ?? []).map(tick => ({ creature: tick.creature, amount: tick.damage, tone: 'harm', label: 'Ongoing damage', unit: 'HP', sign: '−' })),
+  ];
+  return { round, rows };
 }
 
 export function roundRecap(entries, board, cards) {

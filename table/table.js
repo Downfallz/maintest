@@ -1,10 +1,10 @@
 import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
-import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.js';
+import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy, turnOrder, liveChoice } from './board.js';
 import { backText, faceDown, handRows } from './hand.js';
-import { accumulate, feedLine, retainRoundEvents, roundRecap } from './feed.js';
+import { accumulate, feedLine, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { classColour, talentClasses, talentForest, talentPalette } from './mat.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
@@ -369,6 +369,8 @@ function render(state, views) {
   element('pass').hidden = !fence;
   element('table').hidden = fence;
   if (fence) {
+    hidePhaseNotice(state);
+    element('upkeep').open = false;
     element('pass-ready').focus({ preventScroll: true });
     return;
   }
@@ -383,7 +385,7 @@ function render(state, views) {
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
-  renderPhaseGuide(state, view);
+  renderPhaseGuide(state, view, current.seat);
   const targetOffset = view.waitingFor === 'Target' && globalThis.innerWidth > 760 && globalThis.innerWidth < 1100
     ? element('decision').getBoundingClientRect().height + 30 : 18;
   element('board').style.setProperty('--target-offset', `${targetOffset}px`);
@@ -1112,7 +1114,7 @@ function evolutionBudget(state, view) {
   return box;
 }
 
-function renderPhaseGuide(state, view) {
+function renderPhaseGuide(state, view, seat) {
   const phases = [
     ['Upkeep', [], 'Round upkeep is automatic.'],
     ['Evolve', ['Evolution'], 'Spend your shared team picks to unlock spells, or pass.'],
@@ -1132,6 +1134,80 @@ function renderPhaseGuide(state, view) {
   }));
   element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
     : phases[current]?.[2] ?? 'Waiting for the next phase.';
+  const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
+  renderUpkeep(state, view, upkeep, seat);
+  const key = `${view.board.roundNumber}/${view.over ? 'over' : current}`;
+  state.phaseSeen ??= new Map();
+  const previous = state.phaseSeen.get(seat);
+  if (previous?.key === key) return;
+  state.phaseSeen.set(seat, { key, round: view.board.roundNumber });
+  const newRound = previous?.round !== view.board.roundNumber;
+  const begins = Boolean(previous) && newRound && !view.over;
+  const label = view.over ? 'Match complete' : phases[current]?.[0] ?? 'Waiting';
+  const title = begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} · Upkeep complete → ${label}`
+    : `Round ${view.board.roundNumber} · ${label}`;
+  const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
+  showPhaseNotice(state, title, detail, newRound && upkeep ? upkeepPreview(state, upkeep) : '', begins);
+}
+
+function upkeepEnergy(state) {
+  const amount = state.catalogue?.rules?.energyPerRound;
+  return Number.isInteger(amount) ? `+${amount} energy per creature alive at round start.` : 'Round energy applied by the host.';
+}
+
+function upkeepPreview(state, upkeep) {
+  const changes = upkeep.rows.filter(row => row.amount > 0).slice(0, 2)
+    .map(row => `Creature ${row.creature}: ${row.sign}${row.amount} ${row.unit}`);
+  return [upkeepEnergy(state), ...changes, 'Open Upkeep for details.'].join(' · ');
+}
+
+function renderUpkeep(state, view, upkeep, seat) {
+  const panel = element('upkeep');
+  panel.hidden = !upkeep;
+  const key = `${seat}/${view.board.roundNumber}`;
+  if (state.upkeepShown !== key) panel.open = false;
+  state.upkeepShown = key;
+  if (!upkeep) return;
+  element('upkeep-label').textContent = `Upkeep${upkeep.rows.length ? ` · ${upkeep.rows.length} ${upkeep.rows.length === 1 ? 'effect' : 'effects'}` : ''} ↗`;
+  element('upkeep-title').textContent = `Round ${upkeep.round} · Upkeep applied`;
+  element('upkeep-energy').textContent = upkeepEnergy(state);
+  const rows = upkeep.rows.map(row => {
+    const item = document.createElement('li');
+    item.dataset.tone = row.tone;
+    const who = document.createElement('strong');
+    who.textContent = `Creature ${row.creature}`;
+    const amount = document.createElement('b');
+    amount.textContent = `${row.sign}${row.amount} ${row.unit}`;
+    const why = document.createElement('span');
+    why.textContent = `${row.label}${row.amount === 0 ? ' · no change' : ''}`;
+    item.append(who, amount, why);
+    return item;
+  });
+  if (!rows.length) {
+    const empty = document.createElement('li');
+    empty.textContent = 'No ongoing effects this round.';
+    rows.push(empty);
+  }
+  element('upkeep-effects').replaceChildren(...rows);
+}
+
+function hidePhaseNotice(state) {
+  clearTimeout(state.phaseTimer);
+  state.phaseMotion?.cancel();
+  element('phase-notice').hidden = true;
+}
+
+function showPhaseNotice(state, title, detail, upkeep, newRound) {
+  hidePhaseNotice(state);
+  const notice = element('phase-notice');
+  notice.dataset.kind = newRound ? 'round' : 'phase';
+  element('phase-notice-title').textContent = title;
+  element('phase-notice-detail').textContent = upkeep ? `${upkeep} ${detail}` : detail;
+  notice.hidden = false;
+  if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    state.phaseMotion = notice.animate?.([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 280, easing: 'ease-out' });
+  }
+  state.phaseTimer = setTimeout(() => { notice.hidden = true; }, newRound ? 7500 : 5500);
 }
 
 // One button per thing the options offer, and nothing else. A screen that offered more than the options do
@@ -1346,15 +1422,36 @@ function cardParts(state, spell, prefix) {
 
   const cost = document.createElement('span');
   cost.className = 'card-cost';
-  cost.textContent = cardCost(face);
-  cost.setAttribute('aria-label', `${cardCost(face)} energy`);
-  head.append(cost);
+  cost.textContent = `ϟ ${cardCost(face)}`;
+  const costLabel = document.createElement('small');
+  costLabel.textContent = 'Energy';
+  cost.append(costLabel);
+  cost.setAttribute('aria-label', `Costs ${cardCost(face)} energy per cast`);
+  cost.title = 'Energy spent when casting';
+  if (cardCost(face) !== '') head.append(cost);
+
+  const stats = document.createElement('div');
+  stats.className = 'card-stats';
+  for (const stat of cardStats(face)) {
+    const box = document.createElement('div');
+    box.className = 'card-stat';
+    box.dataset.stat = stat.kind;
+    const label = document.createElement('span');
+    label.textContent = `${stat.symbol} ${stat.label}`;
+    const value = document.createElement('strong');
+    value.textContent = stat.value;
+    const hint = document.createElement('small');
+    hint.textContent = stat.hint;
+    box.append(label, value, hint);
+    stats.append(box);
+  }
 
   const body = document.createElement('div');
   body.className = 'card-body';
-  for (const line of cardLines(face)) {
+  for (const line of cardDetails(face)) {
     const row = document.createElement('div');
-    row.textContent = line;
+    row.className = `card-line card-line-${line.role}`;
+    row.textContent = `${line.role === 'target' ? '◎ ' : line.role === 'requires' ? '↳ ' : ''}${line.text}`;
     body.append(row);
   }
 
@@ -1374,7 +1471,7 @@ function cardParts(state, spell, prefix) {
     note.textContent = face.criticalNote;
     body.append(note);
   }
-  return [head, cues, body];
+  return [head, cues, stats, body];
 }
 
 function button(label, onClick) {
@@ -1550,6 +1647,7 @@ function keyboardDecision(state, event) {
   if (key === 'escape') {
     event.preventDefault();
     if (state.tab === 'mat') closeTalents(state);
+    else if (element('upkeep').open) element('upkeep').open = false;
     else if (element('recap').open) element('recap').open = false;
     else { state.chosen = null; state.picked = []; redraw(state); }
     return;

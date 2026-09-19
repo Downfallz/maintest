@@ -51,6 +51,7 @@ class Element {
 }
 
 function page() {
+  const timers = new Map(); let timerId = 0;
   const ids = [...readFileSync(new URL('./index.html', import.meta.url), 'utf8').matchAll(/id="([^"]+)"/g)].map(match => match[1]);
   const nodes = Object.fromEntries(ids.map(id => [id, new Element()]));
   const document = {
@@ -62,6 +63,7 @@ function page() {
   for (const node of Object.values(nodes)) node.owner = document;
   const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes,
     document, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
+    setTimeout: action => { timers.set(++timerId, action); return timerId; }, clearTimeout: id => timers.delete(id),
   });
   const script = readFileSync(new URL('./table.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
   vm.runInContext(script, context);
@@ -75,7 +77,7 @@ function page() {
   };
   const current = { seat: 'player1', view, transport: { seat: async () => ({ ok: true, body: view }), decide: async () => ({ ok: true }) } };
   state.views = [current]; state.seats = [current];
-  return { context, document, nodes, state, view, current, draw: () => context.render(state, state.views) };
+  return { context, document, nodes, state, view, current, timers, draw: () => context.render(state, state.views) };
 }
 
 function held(p) { return p.nodes['own-hand'].children[0].children[0].children[1]; }
@@ -637,4 +639,75 @@ test('left and right traverse choices when a narrow layout has only one item per
   nodes.forEach((node, index) => { node.getBoundingClientRect = () => ({ left: 0, top: index * 150, width: 300 }); });
   assert.equal(p.context.arrowNeighbour(nodes, nodes[0], 'ArrowRight'), nodes[1]);
   assert.equal(p.context.arrowNeighbour(nodes, nodes[1], 'ArrowLeft'), nodes[0]);
+});
+
+test('phase notices survive selection redraws, expire once, and announce only real phase changes', () => {
+  const p = page(); p.draw();
+  const timer = p.state.phaseTimer;
+  assert.match(p.nodes['phase-notice-title'].textContent, /Spells/);
+  p.state.chosen = 'one'; p.draw(); p.view.waitingAsked++; p.draw();
+  assert.equal(p.state.phaseTimer, timer);
+  p.timers.get(timer)();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  p.view.waitingAsked++; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  p.view.board.subPhase = 'RevealAndTarget'; p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Targets/);
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+  assert.equal(p.timers.has(timer), false);
+});
+
+test('upkeep remains readable after a skipped automatic phase and after the notice fades', () => {
+  const p = page(); p.draw();
+  p.state.catalogue.rules.energyPerRound = 3;
+  p.view.board.roundNumber = 2; p.view.board.subPhase = 'Evolution';
+  p.view.roundEvents = [{ sequence: 40, round: 2, event: { kind: 'OngoingEffectsApplied', roundId: 2,
+    regenerationTicks: [{ creature: 1, healed: 2 }], bleedTicks: [{ creature: 2, damage: 1 }] } }];
+  p.draw();
+  assert.match(p.nodes['phase-notice-title'].textContent, /Round 2 begins/);
+  assert.equal(p.nodes['phase-notice'].dataset.kind, 'round');
+  assert.match(p.nodes['phase-notice-detail'].textContent, /Now: Evolve/);
+  assert.match(p.nodes['upkeep-energy'].textContent, /\+3 energy/);
+  assert.match(p.nodes['upkeep-effects'].textContent, /Creature 1\+2 HP/);
+  assert.match(p.nodes['upkeep-effects'].textContent, /Creature 2−1 HP/);
+  p.nodes.upkeep.open = true;
+  p.timers.get(p.state.phaseTimer)(); p.view.waitingAsked++; p.draw();
+  assert.equal(p.nodes.upkeep.open, true);
+  assert.equal(p.nodes.upkeep.hidden, false);
+  p.context.keyboardDecision(p.state, { key: 'Escape', preventDefault() {} });
+  assert.equal(p.nodes.upkeep.open, false);
+  p.nodes.upkeep.open = true;
+  p.view.board.roundNumber = 3; p.draw();
+  assert.equal(p.nodes.upkeep.open, false);
+  assert.equal(p.nodes.upkeep.hidden, true);
+});
+
+test('handover hides and cancels the old notice before the other seat sees the table', () => {
+  const p = page(); p.draw(); const timer = p.state.phaseTimer;
+  p.current.seat = 'player2'; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  assert.equal(p.timers.has(timer), false);
+  p.state.holder = 'player2'; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+});
+
+test('reduced motion keeps the phase announcement without animating it', () => {
+  const p = page(); let animated = false;
+  p.context.matchMedia = () => ({ matches: true });
+  p.nodes['phase-notice'].animate = () => { animated = true; };
+  p.draw();
+  assert.equal(animated, false);
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+});
+
+test('spell stats label the cast cost and distinguish unlock initiative from critical chance', () => {
+  const p = page(); p.state.cards.set('one', { name: 'Probe', cost: 0, initiative: 2, critical: '35%', criticalThreshold: 14 });
+  const parts = p.context.cardParts(p.state, 'one');
+  assert.match(parts[0].textContent, /ϟ 0Energy/);
+  assert.match(parts[2].textContent, /Initiative\+2On unlock/);
+  assert.match(parts[2].textContent, /Crit chance35%Standard only · d20 14\+/);
+  p.state.cards.set('one', { name: 'Unknown stats' });
+  const missing = p.context.cardParts(p.state, 'one');
+  assert.equal(missing[0].children.length, 1);
+  assert.equal(missing[2].children.length, 0);
 });

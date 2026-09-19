@@ -68,6 +68,19 @@ not recorded matches. Card text and creature names in the actual app come from t
   badge and reminder state the maintainer-confirmed rule: Quick cannot crit; Standard can, multiplying only
   direct damage/healing on targets. Enforcement in the engine is being delivered in a separate PR; this UI
   anticipates that change and does not alter combat resolution.
+- The energy cost has an icon and a visible label. Compact stat rows distinguish initiative gained on unlock
+  from critical chance, with its Standard-only reminder and host-provided d20 threshold. Targeting has its own
+  visual marker; authored effects and prerequisites retain their exact text.
+- Phase changes show a short, non-blocking announcement above the reference dock for 5.5 seconds. It does
+  not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
+  the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
+  New rounds get a larger, gold-accented “Round N begins” announcement for 7.5 seconds, alongside upkeep
+  results and the next task. Loading an existing round does not pretend that a new round just started.
+- Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
+  configured energy allowance and actual applied ongoing energy, healing and damage ticks per creature,
+  including zero/capped results, in engine order. These public events are retained separately from the short
+  activity log. Escape closes the panel. A new round announces upkeep even when polling skipped that phase;
+  missing events are never reconstructed from board deltas or guessed from conditions.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
 - Each spell becomes public together with its confirmed targets, in timeline order (ADR 0057).

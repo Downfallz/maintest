@@ -99,9 +99,23 @@
         </section>
         <details id="log"><summary>Match activity <span class="muted">Latest events</span></summary><ol id="feed"></ol></details>
         <aside id="phase-dock" aria-label="Round progress">
+          <div id="phase-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
+            <strong id="phase-notice-title"></strong>
+            <p id="phase-notice-detail"></p>
+          </div>
           <strong id="phase-round"></strong>
           <ol id="phase-steps" aria-label="Round phases"></ol>
           <p id="phase-reminder"></p>
+          <details id="upkeep" hidden>
+            <summary id="upkeep-label">Upkeep</summary>
+            <section id="upkeep-panel" aria-label="This round's upkeep">
+              <h2 id="upkeep-title"></h2>
+              <p id="upkeep-energy"></p>
+              <p class="upkeep-order">Energy → healing → damage over time. Healing happens first; ongoing damage ignores defense.</p>
+              <ol id="upkeep-effects"></ol>
+              <p class="muted">Already applied to the battlefield. Conditions count down at the end of the round.</p>
+            </section>
+          </details>
         </aside>
       </div>
     </main>
