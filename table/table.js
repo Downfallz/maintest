@@ -2,8 +2,8 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
-import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy, turnOrder, liveChoice } from './board.js';
-import { backText, faceDown, handRows } from './hand.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, statPairs, targetedBy, turnOrder, liveChoice } from './board.js';
+import { handRows } from './hand.js';
 import { accumulate, feedLine, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
 import { classColour, talentClasses, talentForest, talentPalette } from './mat.js';
@@ -56,6 +56,7 @@ function start(seats) {
   };
   load(state);
   setupTalentWindow(state);
+  setupPhaseControls(state);
   document.addEventListener('keydown', event => keyboardDecision(state, event));
   element('pass-ready').addEventListener('click', () => {
     state.holder = element('pass-ready').dataset.seat ?? state.holder;
@@ -344,6 +345,7 @@ function render(state, views) {
   // Until the player being asked says they are the one holding the device, the board stays behind the pass
   // screen (seats.js).
   const fence = needsPass(current, state.holder);
+  if (!fence) syncPlayback(state, current);
 
   // What the host is told has been drawn, and it is the asking rather than the seat. One seat is asked several
   // questions in a row -- two Evolution picks are two askings of the same shape -- so acknowledging per seat
@@ -353,12 +355,12 @@ function render(state, views) {
   // Per seat as well as per asking: the two seats count their own questions, so they are at the same number
   // whenever they have decided the same number of times -- which in hotseat is most of the time. A bare number
   // would call the other seat's question already acknowledged and never announce it.
-  const drawn = fence ? null : view.waitingAsked ?? null;
+  const drawn = fence || state.playback ? null : view.waitingAsked ?? null;
   const acknowledgement = `${current.seat}/${drawn}`;
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.inspectCreature, state.inspectClass, state.catalogue, state.error]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -371,6 +373,8 @@ function render(state, views) {
   if (fence) {
     hidePhaseNotice(state);
     element('upkeep').open = false;
+    element('announcements').open = false;
+    element('phase-progress').open = false;
     element('pass-ready').focus({ preventScroll: true });
     return;
   }
@@ -385,17 +389,28 @@ function render(state, views) {
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
-  renderPhaseGuide(state, view, current.seat);
+  if (state.playback) renderPlayback(state, current);
+  else renderPhaseGuide(state, view, current.seat);
+  element('planning').hidden = Boolean(state.playback);
+  element('playback').hidden = !state.playback;
+  element('playback-board-note').hidden = !state.playback;
+  element('phase-progress').hidden = Boolean(state.playback);
+  const phaseHeight = element('phase-dock').getBoundingClientRect().height ?? 0;
+  element('table').style.setProperty('--phase-height', `${phaseHeight}px`);
   const targetOffset = view.waitingFor === 'Target' && globalThis.innerWidth > 760 && globalThis.innerWidth < 1100
     ? element('decision').getBoundingClientRect().height + 30 : 18;
-  element('board').style.setProperty('--target-offset', `${targetOffset}px`);
+  element('board').style.setProperty('--target-offset', `${targetOffset + phaseHeight}px`);
   renderNotes(view);
   element('shortcut-context').textContent = view.waitingFor === 'Speed'
     ? '1 Quick · 2 Standard' : view.waitingFor === 'Evolution'
       ? '← → Choose creature · ↓ Browse spells · Enter to choose'
       : '1–9 Select card / target · Enter to confirm';
   restorePosition(saved);
-  guideDecision(state, current);
+  if (!state.playback) guideDecision(state, current);
+  else if (state.guidedPlayback !== `${state.playback.seat}/${state.playback.round}`) {
+    state.guidedPlayback = `${state.playback.seat}/${state.playback.round}`;
+    element('playback').scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  }
 }
 
 // Guide each new question once, after the handover fence is down. Polls and local selections never
@@ -410,7 +425,7 @@ function guideDecision(state, current) {
   if (!anchor) return;
   const rect = anchor.getBoundingClientRect();
   const dockHeight = element('phase-dock').getBoundingClientRect().height ?? 0;
-  if (rect.top < 16 || rect.bottom > globalThis.innerHeight - dockHeight - 12) {
+  if (rect.top < dockHeight + 12 || rect.bottom > globalThis.innerHeight - 12) {
     anchor.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
 }
@@ -418,7 +433,7 @@ function guideDecision(state, current) {
 // A handler can outlive its DOM node or its question. Only the visible seat's current asking may act.
 function canInteract(state, current, kind) {
   const active = activeSeat(state.views, state.holder);
-  return !state.sending && !current.view.over && !current.view.playedByBot &&
+  return !state.playback && !state.sending && !current.view.over && !current.view.playedByBot &&
     current.view.waitingFor === kind && current.seat === state.shown &&
     active?.seat === current.seat && active.view.waitingAsked === current.view.waitingAsked &&
     !needsPass(current, state.holder);
@@ -481,16 +496,17 @@ function renderBoard(state, current) {
     picked: state.picked,
     board,
     roundEvents: view.roundEvents,
-    active: isAsked(view) ? view.waitingCreature : null,
-    candidates: isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
+    active: state.playback ? state.playback.actions[state.playback.index]?.actor.id : isAsked(view) ? view.waitingCreature : null,
+    playback: state.playback?.actions[state.playback.index],
+    draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen : null,
+    targeting: isAsked(view) && view.waitingFor === 'Target',
+    candidates: !state.playback && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
     onPick: candidate => pick(state, current, candidate),
     canConfirm: canCastTargets(state, view),
   };
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
   enemyBooks(state, current);
-  revealed(state, board);
-  element('backs').replaceChildren(backs(state, board, view.opponentIntents));
   element('own-hand').replaceChildren(hand(state, current));
 }
 
@@ -578,47 +594,6 @@ function heldCard(state, spell, offered, creature, current, reference) {
   return face;
 }
 
-// A spell becomes public together with its confirmed targets, in timeline order.
-function revealed(state, board) {
-  const box = element('revealed');
-  const actions = board.revealedActions ?? [];
-  box.hidden = actions.length === 0;
-  const open = box.children[0]?.open ?? false;
-  const list = document.createElement('details');
-  list.open = open;
-  const heading = document.createElement('summary');
-  heading.textContent = `Round spells · ${actions.length} revealed`;
-  list.append(heading, ...actions.map(action => {
-    const one = document.createElement('div');
-    one.className = 'revealed-action';
-    one.textContent = revealedText(action, state.cards);
-    return one;
-  }));
-  box.replaceChildren(list);
-}
-
-// What is face down. This seat's own backs are its own to read; the other side's is a count and carries no
-// data at all -- that is the whole of the hidden information, and it is the server that keeps it so.
-function backs(state, board, opponentIntents) {
-  const box = document.createElement('div');
-  box.className = 'hand';
-  const hidden = faceDown(board);
-  box.hidden = hidden.length === 0 && !Number(opponentIntents);
-
-  const mine = document.createElement('div');
-  mine.className = 'backs ally';
-  mine.textContent = hidden
-    .map(intent => backText(intent, state.cards))
-    .join(' · ') || 'nothing declared';
-
-  const theirs = document.createElement('div');
-  theirs.className = 'backs enemy';
-  theirs.textContent = `${Number(opponentIntents) || 0} face down`;
-
-  box.append(mine, theirs);
-  return box;
-}
-
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
 function line(state, creature, which, marks) {
   const picked = (marks?.picked ?? []).includes(creature.id);
@@ -626,6 +601,8 @@ function line(state, creature, which, marks) {
   const casters = targetedBy(creature.id, marks?.board);
   const box = document.createElement('div');
   box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}${legal ? ' legal' : ''}${creature.id === marks?.active ? ' active' : ''}`;
+  if (marks?.playback?.actor.id === creature.id) box.classList.toggle('replay-caster', true);
+  if (marks?.playback?.targets.some(target => target.id === creature.id)) box.classList.toggle('replay-target', true);
   if (legal) {
     state.targetAnchor ??= box;
     box.dataset.focus = `target-${creature.id}`;
@@ -699,9 +676,11 @@ function line(state, creature, which, marks) {
   }
 
   box.append(who, health, stats, tags, dock(state, creature.conditions));
-  const publicChoice = liveChoice(creature, marks?.board, marks?.roundEvents);
-  if (which === 'enemy' || publicChoice.action) {
+  if (which === 'enemy') {
     box.append(enemyChoice(state, creature, marks?.board, marks?.roundEvents));
+  } else {
+    const choice = ownChoice(state, creature, marks);
+    if (choice) box.append(choice);
   }
 
   // The markers, on the row rather than only in the sheet: a target is chosen against this creature's health,
@@ -956,6 +935,16 @@ function renderRecap(state, view) {
   element('recap-title').textContent = `Round ${recap.round} recap`;
   element('recap-count').textContent = `${recap.actions.length} ${recap.actions.length === 1 ? 'cast' : 'casts'}`;
   const rows = recap.actions.map(action => recapRow(action));
+  if (rows.length) {
+    const replay = document.createElement('li');
+    replay.append(button('Replay action by action', () => {
+      startPlayback(state, state.shown, recap);
+      panel.open = false;
+      redraw(state);
+      element('playback').scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    }));
+    rows.unshift(replay);
+  }
   if (rows.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'muted';
@@ -963,6 +952,74 @@ function renderRecap(state, view) {
     rows.push(empty);
   }
   element('recap-actions').replaceChildren(...rows);
+}
+
+// Review public results at the reader's pace. This never re-runs the engine or estimates intermediate HP;
+// the separate note identifies the board totals as current. The next question is acknowledged only on exit.
+function syncPlayback(state, current) {
+  if (state.playback && state.playback.seat !== current.seat) state.playback = null;
+  state.playbackSeen ??= new Map();
+  const recap = roundRecap(current.view.roundEvents, current.view.board, state.cards);
+  const previous = state.playbackSeen.get(current.seat);
+  const round = recap?.round ?? 0;
+  state.playbackSeen.set(current.seat, Math.max(previous ?? 0, round));
+  if (previous !== undefined && round > previous && recap.actions.length && !state.playback) startPlayback(state, current.seat, recap);
+}
+
+function startPlayback(state, seat, recap) {
+  state.playback = { seat, round: recap.round, actions: recap.actions, index: 0 };
+  state.picked = [];
+  state.chosen = null;
+  hidePhaseNotice(state);
+  element('upkeep').open = false;
+  element('announcements').open = false;
+  element('phase-progress').open = false;
+  if (state.tab === 'mat') closeTalents(state);
+}
+
+function finishPlayback(state) {
+  state.playback = null;
+  state.guidedAsking = null;
+  redraw(state);
+  element('asking').setAttribute('tabindex', '-1');
+  element('asking').focus({ preventScroll: true });
+}
+
+function movePlayback(state, step) {
+  const replay = state.playback;
+  if (!replay) return;
+  if (replay.index + step >= replay.actions.length) { finishPlayback(state); return; }
+  replay.index = Math.max(0, replay.index + step);
+  redraw(state);
+}
+
+function renderPlayback(state, current) {
+  const replay = state.playback;
+  const action = replay.actions[replay.index];
+  element('phase-round').textContent = `Round ${replay.round}`;
+  element('upkeep').hidden = true;
+  element('phase-current').textContent = 'Resolution replay';
+  element('phase-turn').textContent = `Action ${replay.index + 1} of ${replay.actions.length} · ${action.actor.label}`;
+  element('phase-reminder').textContent = 'Next: following action · Previous: review again · Skip: return to the match';
+  element('phase').textContent = `Round ${replay.round} · Resolution replay`;
+  element('playback-title').textContent = `${action.actor.label} acts`;
+  element('playback-count').textContent = `Action ${replay.index + 1} of ${replay.actions.length}`;
+  const held = element('playback-action');
+  held.replaceChildren(recapRow(action));
+  if (state.playbackFrame !== `${replay.seat}/${replay.round}/${replay.index}`) {
+    state.playbackFrame = `${replay.seat}/${replay.round}/${replay.index}`;
+    if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) held.animate?.([{ opacity: .25 }, { opacity: 1 }], { duration: 240 });
+  }
+  const previous = button('← Previous', () => movePlayback(state, -1));
+  previous.dataset.focus = 'playback-previous';
+  previous.disabled = replay.index === 0;
+  const last = replay.index === replay.actions.length - 1;
+  const onward = current.view.over ? 'Match results' : `Continue to round ${current.view.board.roundNumber}`;
+  const next = button(last ? onward : 'Next action →', () => movePlayback(state, 1));
+  next.dataset.focus = 'playback-next';
+  const skip = button(current.view.over ? 'Skip to results' : `Skip to round ${current.view.board.roundNumber}`, () => finishPlayback(state));
+  skip.dataset.focus = 'playback-skip';
+  element('playback-controls').replaceChildren(previous, next, skip);
 }
 
 function recapPerson(person) {
@@ -1034,6 +1091,10 @@ function renderDecision(state, current) {
   element('problem').textContent = state.error;
   element('decision').dataset.kind = view.waitingFor ?? 'Waiting';
   element('decision-state').textContent = view.over ? 'Finished' : view.playedByBot ? 'Bot playing' : isAsked(view) ? 'Your turn' : 'Waiting';
+  element('decision-phase').textContent = decisionPhase(view);
+  const turn = activeTurn(view.board);
+  element('decision-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
+  element('decision-turn').hidden = !turn;
 
   if (view.over) {
     asking.textContent = 'The match is over.';
@@ -1072,6 +1133,18 @@ function titleOf(state, view) {
     }
     default: return 'Your move';
   }
+}
+
+function decisionPhase(view) {
+  if (view.over) return 'Match complete';
+  const phases = { Evolution: 'Evolution', Speed: 'Choose speed', Intent: 'Choose spell', Target: 'Targeting' };
+  return phases[view.waitingFor] ?? (view.board.subPhase === 'ActionResolution' ? 'Resolution' : 'Waiting');
+}
+
+function activeTurn(board) {
+  const cursor = cursorOf(board);
+  const slot = board.timeline?.[cursor];
+  return slot ? { slot, position: cursor + 1, total: board.timeline.length } : null;
 }
 
 function evolutionBudgetText(state, view) {
@@ -1120,11 +1193,14 @@ function renderPhaseGuide(state, view, seat) {
     ['Evolve', ['Evolution'], 'Spend your shared team picks to unlock spells, or pass.'],
     ['Speed', ['Speed', 'TurnOrderResolution'], 'Pick a speed for each eligible creature. All speeds reveal together when everyone is done.'],
     ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.'],
-    ['Targets', ['RevealAndTarget'], 'Choose targets in turn order. Each confirmed spell and its targets reveal together.'],
+    ['Targeting', ['RevealAndTarget'], 'Choose targets in turn order. Each confirmed spell and its targets reveal together.'],
     ['Resolve', ['ActionResolution', 'Cleanup', 'Finalization'], 'All targets are locked. Actions resolve in turn order, then the next round begins.'],
   ];
   const current = view.board.phase === 'StartOfRound' ? 0 : phases.findIndex(([, names]) => names.includes(view.board.subPhase));
   element('phase-round').textContent = `Round ${view.board.roundNumber ?? '—'} / ${state.catalogue?.rules?.roundCap ?? '—'}`;
+  element('phase-current').textContent = view.over ? 'Match complete' : phases[current]?.[0] ?? 'Waiting';
+  const turn = activeTurn(view.board);
+  element('phase-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total} · Creature ${turn.slot.creature}` : '';
   element('phase-steps').replaceChildren(...phases.map(([label], index) => {
     const step = document.createElement('li');
     step.textContent = label;
@@ -1139,6 +1215,7 @@ function renderPhaseGuide(state, view, seat) {
   const key = `${view.board.roundNumber}/${view.over ? 'over' : current}`;
   state.phaseSeen ??= new Map();
   const previous = state.phaseSeen.get(seat);
+  renderAnnouncements(state, seat);
   if (previous?.key === key) return;
   state.phaseSeen.set(seat, { key, round: view.board.roundNumber });
   const newRound = previous?.round !== view.board.roundNumber;
@@ -1147,7 +1224,11 @@ function renderPhaseGuide(state, view, seat) {
   const title = begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} · Upkeep complete → ${label}`
     : `Round ${view.board.roundNumber} · ${label}`;
   const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
-  showPhaseNotice(state, title, detail, newRound && upkeep ? upkeepPreview(state, upkeep) : '', begins);
+  const entry = { title, detail, upkeep: newRound && upkeep ? upkeepPreview(state, upkeep) : '', newRound: begins };
+  state.announcements ??= new Map();
+  state.announcements.set(seat, [...(state.announcements.get(seat) ?? []), entry].slice(-12));
+  renderAnnouncements(state, seat);
+  showPhaseNotice(state, entry);
 }
 
 function upkeepEnergy(state) {
@@ -1194,20 +1275,83 @@ function renderUpkeep(state, view, upkeep, seat) {
 function hidePhaseNotice(state) {
   clearTimeout(state.phaseTimer);
   state.phaseMotion?.cancel();
+  if (element('phase-notice').contains?.(document.activeElement)) element('announcements-label').focus({ preventScroll: true });
   element('phase-notice').hidden = true;
 }
 
-function showPhaseNotice(state, title, detail, upkeep, newRound) {
+function showPhaseNotice(state, { title, detail, upkeep, newRound }, replay = false) {
   hidePhaseNotice(state);
+  state.noticePinned = replay;
+  state.noticeDuration = newRound ? 20000 : 15000;
   const notice = element('phase-notice');
   notice.dataset.kind = newRound ? 'round' : 'phase';
+  element('phase-notice-context').textContent = replay ? 'Earlier announcement · review' : 'Phase update';
+  element('phase-notice-pin').textContent = replay ? 'Kept open' : 'Keep open';
+  element('phase-notice-pin').disabled = replay;
   element('phase-notice-title').textContent = title;
   element('phase-notice-detail').textContent = upkeep ? `${upkeep} ${detail}` : detail;
   notice.hidden = false;
   if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
     state.phaseMotion = notice.animate?.([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 280, easing: 'ease-out' });
   }
-  state.phaseTimer = setTimeout(() => { notice.hidden = true; }, newRound ? 7500 : 5500);
+  schedulePhaseNotice(state);
+}
+
+function schedulePhaseNotice(state) {
+  clearTimeout(state.phaseTimer);
+  if (state.noticePinned || element('phase-notice').hidden) return;
+  state.phaseTimer = setTimeout(() => { element('phase-notice').hidden = true; }, state.noticeDuration);
+}
+
+function renderAnnouncements(state, seat) {
+  const history = state.announcements?.get(seat) ?? [];
+  const key = JSON.stringify([seat, history]);
+  if (state.announcementView === key) return;
+  if (state.announcementSeat !== seat) element('announcements').open = false;
+  state.announcementSeat = seat;
+  state.announcementView = key;
+  element('announcements-label').textContent = `Announcements · ${history.length}`;
+  element('announcement-list').replaceChildren(...[...history].reverse().map(entry => {
+    const item = document.createElement('li');
+    item.append(button(entry.title, () => {
+      element('announcements').open = false;
+      showPhaseNotice(state, entry, true);
+      element('phase-notice-close').focus({ preventScroll: true });
+    }));
+    return item;
+  }));
+}
+
+function setupPhaseControls(state) {
+  const notice = element('phase-notice');
+  element('phase-notice-close').addEventListener('click', () => {
+    hidePhaseNotice(state);
+    element('announcements-label').focus({ preventScroll: true });
+  });
+  element('phase-notice-pin').addEventListener('click', () => {
+    state.noticePinned = true;
+    clearTimeout(state.phaseTimer);
+    element('phase-notice-pin').textContent = 'Kept open';
+    element('phase-notice-pin').disabled = true;
+    element('phase-notice-close').focus({ preventScroll: true });
+  });
+  for (const event of ['mouseenter', 'focusin']) notice.addEventListener(event, () => clearTimeout(state.phaseTimer));
+  notice.addEventListener('mouseleave', () => {
+    if (!notice.contains(document.activeElement)) schedulePhaseNotice(state);
+  });
+  notice.addEventListener('focusout', event => {
+    if (!notice.contains(event.relatedTarget)) schedulePhaseNotice(state);
+  });
+  for (const id of ['upkeep', 'recap', 'announcements', 'phase-progress']) {
+    element(id).addEventListener('toggle', () => {
+      if (!element(id).open) return;
+      hidePhaseNotice(state);
+      for (const other of ['upkeep', 'recap', 'announcements', 'phase-progress']) if (other !== id) element(other).open = false;
+    });
+  }
+  if (globalThis.ResizeObserver) new ResizeObserver(() => {
+    element('table').style.setProperty('--phase-height', `${element('phase-dock').getBoundingClientRect().height}px`);
+  }).observe(element('phase-dock'));
 }
 
 // One button per thing the options offer, and nothing else. A screen that offered more than the options do
@@ -1352,10 +1496,11 @@ function targetRemovals(state, current) {
 
 function targetButtons(state, current) {
   const context = document.createElement('p');
-  context.className = 'muted';
-  context.textContent = `Choose targets · Creature ${current.view.options.target?.actor ?? current.view.waitingCreature}`;
+  context.className = 'target-instruction';
   const legal = current.view.options.target?.legalTargets ?? { candidates: [], minTargets: 0, maxTargets: 0 };
   const picked = state.picked;
+  const howMany = legal.minTargets === legal.maxTargets ? `${legal.maxTargets}` : `${legal.minTargets}–${legal.maxTargets}`;
+  context.textContent = `Choose ${howMany} ${legal.maxTargets === 1 ? 'target' : 'targets'} on the battlefield.`;
 
   // A spell with nothing left to hit is revealed with no targets and fizzles, so binding none is the action
   // rather than a dead end (docs/tabletop/rulebook.md, 6.2).
@@ -1365,17 +1510,20 @@ function targetButtons(state, current) {
 
   // No button a candidate: the tap is on the creature's own row, where its health, its defense and what is
   // already on it are (playtest-app.md §3.2). The sheet holds `done` and the count it is enabled at.
-  const asking = document.createElement('p');
-  asking.className = 'muted';
-  const howMany = legal.minTargets === legal.maxTargets ? `${legal.maxTargets}` : `${legal.minTargets} to ${legal.maxTargets}`;
-  asking.textContent = `Select ${howMany} target(s). ${picked.length} selected. Tap a selected target again to cast on the selected group, or use Cast below. Use Remove to change your selection.`;
+  const help = document.createElement('details');
+  help.className = 'selection-help';
+  const summary = document.createElement('summary');
+  summary.textContent = 'Selection help';
+  const instructions = document.createElement('p');
+  instructions.textContent = 'Click a selected target again or press Enter to confirm the selected group. Use Remove to change your selection.';
+  help.append(summary, instructions);
 
   const confirm = button(`Cast on ${picked.length} of ${legal.maxTargets}`, () => {
     confirm.disabled = true;
     castTargets(state, current);
   });
   confirm.disabled = !canCastTargets(state, current.view);
-  return [context, asking, targetRemovals(state, current), confirm];
+  return [context, targetRemovals(state, current), help, confirm];
 }
 
 // A spell as the card the host serves, and as the id it was offered by when the catalogue has no card for it.
@@ -1486,7 +1634,7 @@ async function submit(state, current, decision) {
   // The guard is here and not only on the buttons, because there is no undo: on a slow connection a rapid
   // double tap posted twice, one call committing the decision and the other coming back 409, which showed the
   // player an error for a declaration that had in fact been accepted.
-  if (state.sending) {
+  if (state.sending || state.playback) {
     return;
   }
 
@@ -1633,6 +1781,14 @@ function keyboardDecision(state, event) {
   const current = activeSeat(state.views, state.holder);
   if (!current || needsPass(current, state.holder) || state.sending) return;
   const key = event.key.toLowerCase();
+  if (key !== 'escape' && target?.closest?.('#phase-dock')) return;
+  if (state.playback && !target?.closest?.('#phase-dock')) {
+    if (key === 'arrowright' || key === 'arrowleft' || key === 'escape') {
+      event.preventDefault();
+      if (key === 'escape') finishPlayback(state); else movePlayback(state, key === 'arrowright' ? 1 : -1);
+    }
+    return;
+  }
   if (key.startsWith('arrow')) { navigateChoices(state, current, event); return; }
   if (key === '?') {
     event.preventDefault();
@@ -1647,8 +1803,11 @@ function keyboardDecision(state, event) {
   if (key === 'escape') {
     event.preventDefault();
     if (state.tab === 'mat') closeTalents(state);
+    else if (element('announcements').open) element('announcements').open = false;
+    else if (element('phase-progress').open) element('phase-progress').open = false;
     else if (element('upkeep').open) element('upkeep').open = false;
     else if (element('recap').open) element('recap').open = false;
+    else if (!element('phase-notice').hidden) hidePhaseNotice(state);
     else { state.chosen = null; state.picked = []; redraw(state); }
     return;
   }
@@ -1719,6 +1878,33 @@ function enemyChoice(state, creature, board, entries) {
     last.textContent = `Last round (${choice.previous.round}): ${text.name} ${text.targets}`;
     box.append(last);
   }
+  return box;
+}
+
+// Own declarations are private but visible to their owner as soon as the host accepts them. Draft selections
+// are labelled separately; neither kind is ever consulted while drawing an opponent creature.
+function ownChoice(state, creature, marks) {
+  const board = marks?.board;
+  if (liveChoice(creature, board, marks?.roundEvents).action) return enemyChoice(state, creature, board, marks?.roundEvents);
+  const intent = board?.intents?.find(one => one.actor === creature.id);
+  const active = creature.id === marks?.active;
+  const spell = intent?.spell ?? (active ? marks?.draftSpell : null);
+  if (!spell) return null;
+  const box = document.createElement('div');
+  box.className = 'round-choice private-choice';
+  const heading = document.createElement('span');
+  heading.className = 'choice-round';
+  heading.textContent = `Round ${board.roundNumber} · ${intent ? 'Not revealed' : 'Not declared'}`;
+  const name = document.createElement('strong');
+  name.className = 'choice-spell';
+  name.textContent = state.cards.get(spell)?.name ?? spell;
+  const targets = document.createElement('span');
+  targets.className = 'choice-targets';
+  targets.textContent = active && marks.targeting && marks.picked.length
+    ? `Selecting → ${marks.picked.map(id => `Creature ${id}`).join(', ')} · not confirmed`
+    : 'No targets chosen yet';
+  box.title = intent ? 'Only you can see this choice' : 'Preview · confirm to declare';
+  box.append(heading, name, targets);
   return box;
 }
 

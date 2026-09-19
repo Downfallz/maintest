@@ -286,7 +286,7 @@ Every offered option, card face, stat and ordering still comes from the host. Th
 remains the privacy boundary. See [table/README.md](../../table/README.md) for controls and verification.
 
 The round recap now opens on demand from a compact floating button, without moving the battlefield. A
-persistent bottom phase guide keeps the round limit and current task visible. Creature-number headings,
+persistent top phase guide keeps the round limit, current task and acting turn position visible. Creature-number headings,
 labelled initiative slots, coloured stats/speeds and an ordered colour gradient make the board readable
 without decoding pairs of numbers. The atlas displays spells side by side and keeps the shared team-pick
 budget visible; picks are per player per round in the engine, not per creature. `CardCue` metadata supplies

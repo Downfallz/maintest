@@ -21,10 +21,20 @@ not recorded matches. Card text and creature names in the actual app come from t
 
 ## Playing
 
-- A completed round adds a compact recap button beside the bottom phase guide. Open it to read the
+- A completed round adds a compact recap button in the sticky top status bar. Open it to read the
   colour-coded casts, targets and outcomes in a floating panel; it never scrolls or pushes the battlefield.
   It remains available throughout the next round and after the match ends. Escape closes it.
-- A persistent bottom guide shows the current phase, round cap and a short reminder. Speeds reveal together;
+- Newly completed rounds open an action-by-action resolution review in the decision column. Previous and
+  Next traverse actual public results (including criticals, fizzles and dropped targets); Skip returns to the
+  latest round or match results. The actor and targets are highlighted on the battlefield. This is recorded
+  playback, not a second combat simulation: the board is explicitly labelled as showing current totals.
+  New-round controls and their asking acknowledgement wait until the review closes; replay controls send
+  no decisions. Arrow keys step backward/forward and Escape skips. Reloading does not auto-play old history;
+  the recap's Replay action by action button makes it available on demand.
+- The sticky top bar leads with round, current phase and the acting position/creature from the host timeline.
+  The decision repeats the phase and turn position above the creature/spell title; targeting starts with one
+  short instruction and keeps confirmation help collapsed. Round flow, upkeep, announcements and recap are
+  on-demand references in this same bar. Speeds reveal together;
   opposing spell choices reveal only with confirmed targets. The guide displays this distinction explicitly.
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
 - Desktop keeps the battlefield beside a compact planning desk with the acting spellbook. The board stays
@@ -71,11 +81,14 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The energy cost has an icon and a visible label. Compact stat rows distinguish initiative gained on unlock
   from critical chance, with its Standard-only reminder and host-provided d20 threshold. Targeting has its own
   visual marker; authored effects and prerequisites retain their exact text.
-- Phase changes show a short, non-blocking announcement above the reference dock for 5.5 seconds. It does
+- Phase changes show a non-blocking announcement below the top bar for 15 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
-  New rounds get a larger, gold-accented “Round N begins” announcement for 7.5 seconds, alongside upkeep
+  New rounds get a larger, gold-accented “Round N begins” announcement for 20 seconds, alongside upkeep
   results and the next task. Loading an existing round does not pretend that a new round just started.
+  Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
+  the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier
+  announcement; it does not change the current phase, question or selection. The top bar remains current.
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
   configured energy allowance and actual applied ongoing energy, healing and damage ticks per creature,
   including zero/capped results, in engine order. These public events are retained separately from the short
@@ -88,6 +101,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   Local target selections remain private until confirmation. Confirmed spells, targets and resolution status
   update on the battlefield. At the next round, the previous public action is explicitly
   labelled “Last round” until a new one is revealed; it is recovered from the seat's public feed on reload.
+- Your creatures display their current spell directly below their stats: draft choices say Not declared,
+  accepted private intents say Not revealed / No targets chosen yet, and local target selections say not
+  confirmed. Public confirmation replaces that private summary with the real target names and reveal status.
+  Opponent cards still consult confirmed public actions only. The duplicate face-down text strip and
+  expandable revealed-action list below the board have been removed.
 - Round guide contains the host's round order and rule stamp. Match activity and playtest notes stay below
   the spellbook. The opaque handover screen remains the hotseat privacy boundary.
 

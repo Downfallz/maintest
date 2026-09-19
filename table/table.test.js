@@ -41,6 +41,7 @@ class Element {
   addEventListener(key, action) { this.events[key] = action; }
   focus() { this.owner.activeElement = this; }
   scrollIntoView() { this.scrolledIntoView = true; }
+  contains(node) { return node === this || this.children.some(child => child.contains(node)); }
   getBoundingClientRect() { return { top: 1200, bottom: 1460, left: 0, right: 600, height: 260 }; }
   querySelectorAll(selector) {
     return this.children.flatMap(child => [
@@ -51,7 +52,7 @@ class Element {
 }
 
 function page() {
-  const timers = new Map(); let timerId = 0;
+  const timers = new Map(); const delays = new Map(); let timerId = 0;
   const ids = [...readFileSync(new URL('./index.html', import.meta.url), 'utf8').matchAll(/id="([^"]+)"/g)].map(match => match[1]);
   const nodes = Object.fromEntries(ids.map(id => [id, new Element()]));
   const document = {
@@ -63,7 +64,7 @@ function page() {
   for (const node of Object.values(nodes)) node.owner = document;
   const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes,
     document, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
-    setTimeout: action => { timers.set(++timerId, action); return timerId; }, clearTimeout: id => timers.delete(id),
+    setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
   const script = readFileSync(new URL('./table.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
   vm.runInContext(script, context);
@@ -77,7 +78,7 @@ function page() {
   };
   const current = { seat: 'player1', view, transport: { seat: async () => ({ ok: true, body: view }), decide: async () => ({ ok: true }) } };
   state.views = [current]; state.seats = [current];
-  return { context, document, nodes, state, view, current, timers, draw: () => context.render(state, state.views) };
+  return { context, document, nodes, state, view, current, timers, delays, draw: () => context.render(state, state.views) };
 }
 
 function held(p) { return p.nodes['own-hand'].children[0].children[0].children[1]; }
@@ -201,7 +202,8 @@ test('target selection prominently names the host spell and retains the acting c
   p.view.options = { target: { actor: 1, spell: 'two', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
   p.draw();
   assert.equal(p.nodes.asking.textContent, 'Creature 1 · Second card');
-  assert.match(p.nodes.choices.children[0].textContent, /Choose targets · Creature 1/);
+  assert.equal(p.nodes['decision-phase'].textContent, 'Targeting');
+  assert.match(p.nodes.choices.children[0].textContent, /Choose 1 target on the battlefield/);
 });
 
 test('a target spell missing from the catalogue still identifies the cast with no legal target', () => {
@@ -241,7 +243,7 @@ test('a full previous round survives trimming the short activity log on a late f
   assert.equal(p.state.feeds.get('player1').entries.length, 60);
   assert.equal(p.state.feeds.get('player1').roundEvents.length, 71);
   p.state.holder = 'player1'; p.context.redraw(p.state);
-  assert.equal(p.nodes['recap-actions'].children.length, 70);
+  assert.equal(p.nodes['recap-actions'].children.length, 71);
   assert.match(p.nodes['recap-actions'].textContent, /First card/);
 });
 
@@ -502,18 +504,14 @@ test('targeting exposes only confirmed spells and targets while later choices st
   p.view.board.revealedIntents = [{ actor: 1, spell: 'one' }, { actor: 2, spell: 'two' }];
   p.view.board.revealedActions = []; p.draw();
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
-  assert.equal(p.nodes.revealed.hidden, true);
   p.state.picked = [2]; p.draw();
-  assert.equal(p.nodes.revealed.hidden, true);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
   p.view.board.revealedActions = [{ actor: 1, spell: 'one', targets: [2] }]; p.draw();
   assert.match(p.nodes.allies.textContent, /First card→ Creature 2/);
-  assert.match(p.nodes.revealed.textContent, /First card → 2/);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
   p.view.board.revealedActions.push({ actor: 2, spell: 'two', targets: [1] }); p.draw();
   assert.match(p.nodes.enemies.textContent, /Second card→ Creature 1/);
   p.view.board.roundNumber = 2; p.view.board.revealedIntents = []; p.view.board.revealedActions = []; p.draw();
-  assert.equal(p.nodes.revealed.hidden, true);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
 });
 
@@ -652,7 +650,7 @@ test('phase notices survive selection redraws, expire once, and announce only re
   p.view.waitingAsked++; p.draw();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.subPhase = 'RevealAndTarget'; p.draw();
-  assert.match(p.nodes['phase-notice-title'].textContent, /Targets/);
+  assert.match(p.nodes['phase-notice-title'].textContent, /Targeting/);
   assert.equal(p.nodes['phase-notice'].hidden, false);
   assert.equal(p.timers.has(timer), false);
 });
@@ -710,4 +708,138 @@ test('spell stats label the cast cost and distinguish unlock initiative from cri
   const missing = p.context.cardParts(p.state, 'one');
   assert.equal(missing[0].children.length, 1);
   assert.equal(missing[2].children.length, 0);
+});
+
+test('targeting names the actual host cursor separately from creature identity in both headers', () => {
+  const p = page(); p.view.waitingFor = 'Target'; p.view.board.subPhase = 'RevealAndTarget';
+  p.view.board.timeline = [4, 5, 1, 3, 6, 2].map(creature => ({ creature, speed: 'Standard' }));
+  p.view.board.revealCursor = 2;
+  p.view.options = { target: { actor: 1, spell: 'two', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
+  p.draw();
+  assert.equal(p.nodes['decision-phase'].textContent, 'Targeting');
+  assert.equal(p.nodes['decision-turn'].textContent, 'Turn 3 of 6 · Standard');
+  assert.equal(p.nodes['phase-current'].textContent, 'Targeting');
+  assert.equal(p.nodes['phase-turn'].textContent, 'Turn 3 of 6 · Creature 1');
+  p.view.board.revealCursor = 6; p.draw();
+  assert.equal(p.nodes['decision-turn'].hidden, true);
+  assert.equal(p.nodes['phase-turn'].textContent, '');
+});
+
+test('announcements last longer, pause while reading and can be kept open', () => {
+  const p = page(); p.context.setupPhaseControls(p.state); p.draw();
+  assert.equal(p.delays.get(p.state.phaseTimer), 15000);
+  p.nodes['phase-notice'].events.mouseenter();
+  assert.equal(p.timers.has(p.state.phaseTimer), false);
+  p.nodes['phase-notice'].events.mouseleave();
+  assert.equal(p.timers.has(p.state.phaseTimer), true);
+  p.nodes['phase-notice-pin'].click();
+  assert.equal(p.state.noticePinned, true);
+  assert.equal(p.timers.has(p.state.phaseTimer), false);
+  p.nodes['phase-notice'].events.mouseleave();
+  assert.equal(p.timers.has(p.state.phaseTimer), false);
+  p.nodes['phase-notice-close'].click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  p.view.board.roundNumber++; p.draw();
+  assert.equal(p.delays.get(p.state.phaseTimer), 20000);
+});
+
+test('announcement history is bounded, separate per seat, and replays without changing current decisions', () => {
+  const p = page(); p.draw(); p.state.chosen = 'one'; p.draw();
+  assert.equal(p.state.announcements.get('player1').length, 1);
+  p.view.board.subPhase = 'RevealAndTarget'; p.draw();
+  p.nodes['announcement-list'].children[1].children[0].click();
+  assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement/);
+  assert.match(p.nodes['phase-notice-title'].textContent, /Spells/);
+  assert.equal(p.nodes['phase-current'].textContent, 'Targeting');
+  assert.equal(p.state.chosen, 'one');
+  assert.equal(p.state.noticePinned, true);
+  assert.equal(p.timers.has(p.state.phaseTimer), false);
+  for (let round = 2; round <= 16; round++) { p.view.board.roundNumber = round; p.draw(); }
+  assert.equal(p.state.announcements.get('player1').length, 12);
+  p.current.seat = 'player2'; p.draw();
+  assert.equal(p.nodes.table.hidden, true);
+  p.state.holder = 'player2'; p.draw();
+  assert.equal(p.nodes['announcement-list'].children.length, 1);
+  assert.equal(p.state.announcements.get('player1').length, 12);
+});
+
+test('own battlefield cards track draft, private declaration, pending targets and public confirmation', () => {
+  const p = page(); p.draw(); p.state.chosen = 'one'; p.draw();
+  assert.match(p.nodes.allies.textContent, /Not declaredFirst cardNo targets chosen yet/);
+  p.view.board.intents = [{ actor: 1, spell: 'one' }, { actor: 2, spell: 'two' }];
+  p.view.waitingAsked++; p.view.waitingFor = 'Target'; p.view.board.subPhase = 'RevealAndTarget';
+  p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } }; p.draw();
+  assert.match(p.nodes.allies.textContent, /Not revealedFirst cardNo targets chosen yet/);
+  assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
+  p.state.picked = [2]; p.draw();
+  assert.match(p.nodes.allies.textContent, /Selecting → Creature 2 · not confirmed/);
+  p.view.board.revealedActions = [{ actor: 1, spell: 'one', targets: [2] }]; p.draw();
+  assert.match(p.nodes.allies.textContent, /RevealedFirst card→ Creature 2/);
+  assert.doesNotMatch(p.nodes.allies.textContent, /Not revealed|not confirmed|No targets chosen/);
+  p.view.board.roundNumber++; p.view.board.intents = []; p.view.board.revealedActions = []; p.state.chosen = null; p.draw();
+  assert.doesNotMatch(p.nodes.allies.textContent, /First card/);
+});
+
+function completedRound(round) {
+  return [
+    { sequence: 10, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor: 1, spell: 'one', targets: [2] }, isCritical: true }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 3 }] } },
+    { sequence: 11, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor: 2, spell: 'two', targets: [1] }, fizzled: true, fizzleReason: { message: 'Cannot act.' } }, appliedOutcomes: [] } },
+    { sequence: 12, round: round + 1, event: { kind: 'RoundEnded', roundId: round } },
+  ];
+}
+
+test('new completed rounds review one actual action at a time and delay the next asking acknowledgement', async () => {
+  const p = page(); const acknowledgements = []; const sent = [];
+  p.current.transport.seat = async (_, drawn) => { acknowledgements.push(drawn); return { ok: true }; };
+  p.current.transport.decide = async body => { sent.push(body); return { ok: true }; };
+  p.draw();
+  p.view.board.roundNumber = 2; p.view.waitingAsked = 2; p.view.roundEvents = completedRound(1); p.draw();
+  assert.equal(p.state.playback.index, 0);
+  assert.equal(p.nodes.planning.hidden, true);
+  assert.equal(p.nodes.playback.hidden, false);
+  assert.equal(p.nodes['phase-current'].textContent, 'Resolution replay');
+  assert.match(p.nodes['playback-action'].textContent, /First cardCritical/);
+  assert.match(p.nodes['playback-action'].textContent, /Damage 3 → Creature 2/);
+  assert.match(p.nodes.allies.children[0].className, /replay-caster/);
+  assert.match(p.nodes.enemies.children[0].className, /replay-target/);
+  assert.deepEqual(acknowledgements, [1]);
+  await p.context.submit(p.state, p.current, { kind: 'Intent', spell: 'one' });
+  assert.deepEqual(sent, []);
+  p.nodes['playback-controls'].children[1].click();
+  assert.match(p.nodes['playback-action'].textContent, /Second cardFizzled/);
+  assert.match(p.nodes['playback-action'].textContent, /Cannot act/);
+  p.view.feedNext = 100; p.draw();
+  assert.equal(p.state.playback.index, 1);
+  p.nodes['playback-controls'].children[0].click();
+  assert.equal(p.state.playback.index, 0);
+  p.nodes['playback-controls'].children[2].click();
+  assert.equal(p.state.playback, null);
+  assert.equal(p.nodes.planning.hidden, false);
+  assert.deepEqual(acknowledgements, [1, 2]);
+  assert.deepEqual(sent, []);
+  p.draw(); assert.equal(p.state.playback, null);
+});
+
+test('loading an old recap does not auto replay it, but its replay button is available after a skip', () => {
+  const p = page(); p.view.roundEvents = completedRound(1); p.view.board.roundNumber = 2; p.draw();
+  assert.equal(p.state.playback, undefined);
+  p.nodes['recap-actions'].children[0].children[0].click();
+  assert.equal(p.state.playback.round, 1);
+  assert.match(p.nodes['playback-controls'].textContent, /Skip to round 2/);
+  p.context.movePlayback(p.state, 1); p.context.movePlayback(p.state, 1);
+  assert.equal(p.state.playback, null);
+  assert.equal(p.nodes.playback.hidden, true);
+});
+
+test('end-of-match replay uses results controls and hotseat fences keep the review hidden', () => {
+  const p = page(); p.draw(); p.view.over = true; p.view.waitingFor = null;
+  p.view.roundEvents = completedRound(1); p.draw();
+  assert.match(p.nodes['playback-controls'].textContent, /Skip to results/);
+  p.context.movePlayback(p.state, 1);
+  assert.match(p.nodes['playback-controls'].textContent, /Match results/);
+  p.view.over = false; p.view.waitingFor = 'Intent'; p.current.seat = 'player2'; p.draw();
+  assert.equal(p.nodes.table.hidden, true);
+  p.state.holder = 'player2'; p.draw();
+  assert.equal(p.state.playback, null);
+  assert.equal(p.nodes.playback.hidden, true);
 });

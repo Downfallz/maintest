@@ -28,11 +28,35 @@
     </section>
 
     <main id="table" hidden>
-      <div class="play-area">
+        <aside id="phase-dock" aria-label="Round progress">
+          <div id="phase-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
+            <span id="phase-notice-context" class="eyebrow">Phase update</span>
+            <strong id="phase-notice-title"></strong>
+            <p id="phase-notice-detail"></p>
+            <div class="notice-controls"><button id="phase-notice-pin" type="button">Keep open</button><button id="phase-notice-close" type="button" aria-label="Close announcement">Close ×</button></div>
+          </div>
+          <div class="phase-primary"><strong id="phase-round"></strong><strong id="phase-current"></strong><span id="phase-turn"></span></div>
+          <p id="phase-reminder"></p>
+          <div class="phase-tools">
+          <details id="phase-progress"><summary>Round flow</summary><ol id="phase-steps" aria-label="Round phases"></ol></details>
+          <details id="announcements"><summary id="announcements-label">Announcements</summary><ol id="announcement-list" aria-label="Recent announcements"></ol></details>
+          <details id="upkeep" hidden>
+            <summary id="upkeep-label">Upkeep</summary>
+            <section id="upkeep-panel" aria-label="This round's upkeep">
+              <h2 id="upkeep-title"></h2>
+              <p id="upkeep-energy"></p>
+              <p class="upkeep-order">Energy → healing → damage over time. Healing happens first; ongoing damage ignores defense.</p>
+              <ol id="upkeep-effects"></ol>
+              <p class="muted">Already applied to the battlefield. Conditions count down at the end of the round.</p>
+            </section>
+          </details>
         <details id="recap" class="round-recap" hidden>
           <summary><strong id="recap-title">Round recap</strong><span id="recap-count" class="status-tag"></span></summary>
           <ol id="recap-actions"></ol>
         </details>
+          </div>
+        </aside>
+      <div class="play-area">
         <nav class="tabs" aria-label="Table views">
           <button id="tab-board" type="button" class="tab on" aria-controls="board" aria-pressed="true">Battlefield</button>
           <button id="tab-mat" type="button" class="tab" aria-controls="mat" aria-pressed="false">Talent atlas ↗</button>
@@ -41,7 +65,7 @@
         <section id="planning" aria-label="Plan your move">
           <aside class="action-area" aria-label="Your turn">
             <section id="decision" class="sheet" aria-labelledby="asking">
-              <div class="decision-heading"><span class="eyebrow">Your next move</span><span id="decision-state" class="status-tag">Waiting</span></div>
+              <div class="decision-heading"><strong id="decision-phase">Waiting</strong><span id="decision-turn" class="decision-turn" hidden></span><span id="decision-state" class="status-tag">Waiting</span></div>
               <h2 id="asking" aria-live="polite">Waiting for the other seat…</h2>
               <p id="decision-context" class="decision-context"></p>
               <div id="evolution-budget" hidden></div>
@@ -61,7 +85,16 @@
             <div id="own-hand"></div>
           </section>
         </section>
+        <section id="playback" class="sheet" aria-labelledby="playback-title" hidden>
+          <p class="eyebrow">Resolution · action by action</p>
+          <h2 id="playback-title"></h2>
+          <p id="playback-count" class="muted"></p>
+          <ol id="playback-action" aria-live="polite"></ol>
+          <div id="playback-controls"></div>
+          <p class="muted">Recorded results. Take your time; Next shows the following action.</p>
+        </section>
         <section id="board" aria-label="Battlefield">
+          <p id="playback-board-note" class="muted" hidden>Reviewing recorded actions · battlefield totals show the current state.</p>
           <section class="team-section" aria-labelledby="enemy-heading">
             <div class="section-heading"><h2 id="enemy-heading"><span class="side-dot enemy-dot"></span>Opponent</h2><button id="board-move" type="button" class="reference-link">Your move ↑</button></div>
             <div id="enemies" class="team-grid"></div>
@@ -75,8 +108,6 @@
             <div class="section-heading"><h2 id="ally-heading"><span class="side-dot ally-dot"></span>Your team</h2><span class="eyebrow">Your side of the table</span></div>
             <div id="allies" class="team-grid"></div>
           </section>
-          <div id="backs"></div>
-          <div id="revealed" class="revealed" hidden></div>
         </section>
         <section id="talent-window" class="talent-window" role="dialog" aria-modal="false" aria-labelledby="talent-title" hidden>
           <header class="window-bar">
@@ -98,25 +129,7 @@
           <p id="noted" class="muted" role="status" hidden></p>
         </section>
         <details id="log"><summary>Match activity <span class="muted">Latest events</span></summary><ol id="feed"></ol></details>
-        <aside id="phase-dock" aria-label="Round progress">
-          <div id="phase-notice" role="status" aria-live="polite" aria-atomic="true" hidden>
-            <strong id="phase-notice-title"></strong>
-            <p id="phase-notice-detail"></p>
-          </div>
-          <strong id="phase-round"></strong>
-          <ol id="phase-steps" aria-label="Round phases"></ol>
-          <p id="phase-reminder"></p>
-          <details id="upkeep" hidden>
-            <summary id="upkeep-label">Upkeep</summary>
-            <section id="upkeep-panel" aria-label="This round's upkeep">
-              <h2 id="upkeep-title"></h2>
-              <p id="upkeep-energy"></p>
-              <p class="upkeep-order">Energy → healing → damage over time. Healing happens first; ongoing damage ignores defense.</p>
-              <ol id="upkeep-effects"></ol>
-              <p class="muted">Already applied to the battlefield. Conditions count down at the end of the round.</p>
-            </section>
-          </details>
-        </aside>
+
       </div>
     </main>
     <script type="module" src="table.js"></script>
