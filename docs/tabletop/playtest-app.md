@@ -222,7 +222,7 @@ is subtracted (components.md:645-647) — are on the round strip, because they a
 ### 3.2 The decision
 
 One screen at a time, driven by `PlayerOptionsKind`, and never more than the one section that is filled. The
-decision lives in a bottom sheet, in thumb reach, above the board it is about. Evolution lists the unlockable
+decision lives in the planning panel with the active hand, above the board it is about. Evolution lists the unlockable
 Spells with a `pass` at the end, exactly as `ConsoleAgent` does (`ConsoleAgent.cs:15-24`). Speed is two
 buttons. Intent is the hand, filtered by the server. Target is a tap on a legal Creature, with `done` enabled
 once `MinTargets` is met and disabled past `MaxTargets` — the same walk `ConsoleAgent.cs:41-67` does at the
@@ -233,7 +233,9 @@ A Spell with no legal target is offered anyway, and says it will fizzle, because
 
 ### 3.3 A phone
 
-The target is a 360 to 400 pixel wide screen held in one hand.
+Desktop is now the primary interaction target (maintainer direction, 2026-09-18). Phones remain playable.
+The original mobile constraints below document the first design; the current shared page flow is described
+in the desktop workspace section that follows.
 
 - **One column.** Nothing side by side. The enemy team, the initiative strip, your team, your hand, in that
   order, scrolling.
@@ -251,15 +253,46 @@ The target is a 360 to 400 pixel wide screen held in one hand.
 
 ---
 
-### Responsive presentation (2026-09-18)
+### Desktop workspace and responsive fallback (2026-09-18)
 
-The table now uses a wider desktop layout with the decision sheet beside the board, while keeping a
-bounded sticky bottom sheet and the same board reading order on phones. Evolution groups unlocks by
-creature. The acting creature’s hand stays open; the other hands can be expanded. Cards and legal targets
-also support keyboard activation. These are presentation and input changes only: every offered option,
-card face, stat and ordering still comes from the host. The opaque hotseat handover and the confirmation
-of intents and targets are unchanged. See [table/README.md](../../table/README.md) for the interaction and
-test details.
+The table keeps a compact planning desk beside the battlefield on desktop and an ordinary page flow on phones. Evolution
+groups unlocks by creature. Speed opens the acting creature’s spellbook as a reference, and a new Speed or
+Intent question brings the controls and that hand into view together when needed. Cards and legal targets support keyboard activation and a second tap on
+an existing selection confirms it; the explicit confirmation buttons remain. Selected targets have separate
+removal buttons so a multi-target set can still be corrected.
+
+Desktop uses normal page scrolling: the battlefield stays visible beside the main decision and acting
+spellbook, cards wrap without height clipping, and the active hand appears first. Neither board nor hand has
+a nested scrolling pane. Smaller screens retain links between board and decision.
+Talents opens a movable, resizable, maximizable non-modal atlas; a phone gets a full-screen
+panel. The atlas draws base, families and specializations as connected rows using explicit `ParentCode`
+values added to `TalentBand`. Node ancestry is separate from the exact spell prerequisites on each card.
+The first-level authored families receive cool, leaf and ember palettes, inherited by their specializations
+and shared across all card surfaces. Selecting a class shows its spells and current host-offered unlocks;
+a legal Evolution pick can be submitted directly from this inspector. The sticky toolbar keeps the inspected
+creature, Evolution pick number and remaining picks visible while reading spells. Down from the last spell
+row reaches the explorer button; Enter opens it.
+
+Keyboard shortcuts select numbered options, confirm with Enter, toggle the atlas with T, and close or clear
+with Escape. Arrows switch Evolution creatures, enter their offered spells, and navigate the visible spell
+or target rows without committing; focused controls retain their normal Enter behavior. They ignore text entry, repeat events and modifier chords and use the same asking and submission
+guards as pointer input. Battlefield cards keep the creature's timeline position; enemy cards also retain
+public speed, revealed spell, targets and resolution state. Each spell becomes public together with its
+confirmed targets in timeline order (ADR 0057). Unconfirmed enemy choices stay hidden throughout targeting;
+local selection reveals nothing. The previous round's
+public action is labelled separately at the next round, using the retained public resolution feed.
+
+Every offered option, card face, stat and ordering still comes from the host. The opaque hotseat handover
+remains the privacy boundary. See [table/README.md](../../table/README.md) for controls and verification.
+
+The round recap now opens on demand from a compact floating button, without moving the battlefield. A
+persistent top phase guide keeps the round limit, current task and acting turn position visible. Creature-number headings,
+labelled initiative slots, coloured stats/speeds and an ordered colour gradient make the board readable
+without decoding pairs of numbers. The atlas displays spells side by side and keeps the shared team-pick
+budget visible; picks are per player per round in the engine, not per creature. `CardCue` metadata supplies
+short semantic badges for spell faces, with a critical reminder from the host. The maintainer confirmed that
+Quick cannot crit and Standard can; the badge and reminder anticipate engine enforcement in a separate PR.
+These presentation changes do not alter combat resolution or the team's evolution allowance.
 
 ---
 

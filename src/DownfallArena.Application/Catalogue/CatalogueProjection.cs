@@ -3,6 +3,7 @@ using DownfallArena.Application.Learning;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Resources.Talents;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -97,7 +98,41 @@ public static class CatalogueProjection
             Threshold(spell.Stats.CriticalChance.Value),
             band?.TreeName,
             tier,
-            requires);
+            requires,
+            Cues(spell),
+            spell.Stats.CriticalChance.Value > 0
+                ? "Quick cannot crit. In Standard, crits multiply only direct damage and healing on targets."
+                : null);
+
+    private static List<CardCue> Cues(Spell spell)
+    {
+        var cues = spell.Effects.Select(effect => Cue(effect, onCaster: false))
+            .Concat(spell.CasterEffects.Select(effect => Cue(effect, onCaster: true)))
+            .Distinct()
+            .ToList();
+        if (spell.Stats.CriticalChance.Value > 0)
+        {
+            cues.Add(new CardCue("critical", "Crit · Standard only"));
+        }
+
+        return cues;
+    }
+
+    private static CardCue Cue(Effect effect, bool onCaster)
+    {
+        var cue = effect switch
+        {
+            Damage => new CardCue("harm", "Damage"),
+            Bleed => new CardCue("harm", "Damage over time"),
+            Heal => new CardCue("recovery", "Healing"),
+            Regeneration => new CardCue("recovery", "Healing over time"),
+            DefenseBuff => new CardCue("protection", "Protection"),
+            EnergyGain or EnergyDrain or EnergyRegeneration => new CardCue("energy", "Energy"),
+            Stun or DefenseDebuff or InitiativeBuff or InitiativeDebuff => new CardCue("control", "Control"),
+            _ => new CardCue("neutral", "Effect"),
+        };
+        return onCaster ? cue with { Label = $"Caster: {cue.Label}" } : cue;
+    }
 
     /// <summary>
     /// Origin, scope and count in one sentence: <c>Self</c>, <c>One enemy</c>, <c>Up to 2 allies</c>,
@@ -182,10 +217,10 @@ public static class CatalogueProjection
         .. resources.TalentTrees.SelectMany(tree => Bands(tree, tree.Root, depth: 1)),
     ];
 
-    private static IEnumerable<TalentBand> Bands(TalentTree tree, TalentNode node, int depth)
+    private static IEnumerable<TalentBand> Bands(TalentTree tree, TalentNode node, int depth, string? parentCode = null)
     {
-        yield return new TalentBand(tree.Id, tree.Name, node.Code, node.Name, depth, [.. node.Spells.Select(spell => spell.Id)]);
-        foreach (var band in node.Children.SelectMany(child => Bands(tree, child, depth + 1)))
+        yield return new TalentBand(tree.Id, tree.Name, node.Code, node.Name, depth, [.. node.Spells.Select(spell => spell.Id)], parentCode);
+        foreach (var band in node.Children.SelectMany(child => Bands(tree, child, depth + 1, node.Code)))
         {
             yield return band;
         }

@@ -72,7 +72,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Regeneration tick | The health a Creature regains from its regeneration Conditions at the start of a Round, applied before the Bleed ticks. | decided |
 | Energy regeneration tick | The Energy a Creature gains from its energy regeneration Conditions at the start of a Round, on top of the Round's own Energy gain. It is given before the Bleed ticks, so a Creature its Bleed kills that Round still gained it. | decided |
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
-| Reveal and target | The step where the next Intent on the timeline is revealed and its targets chosen, producing a Combat action. | decided |
+| Reveal and target | The owner binds targets for the next Intent on the timeline; its Spell and targets become public together on confirmation, producing a Combat action (ADR 0057). | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
 | Combat step | The result of resolving one Combat action through the Match: the Resolution, and whether it completed the Round or the Match. | decided |
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |

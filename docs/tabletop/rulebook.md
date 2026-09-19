@@ -332,8 +332,9 @@ Energy rails stay face up.
 
 **Trigger.** Every Creature on the timeline has an Intent.
 **Actor.** The Player who owns the next Activation slot on the timeline.
-**Result.** Turn that Creature's Intent card face up and choose its targets at once, then move to the next
-slot. Walk the whole timeline this way. **Nothing resolves yet, and nothing on any board changes.**
+**Result.** Choose that Creature's targets, then reveal its Intent card and confirmed targets together
+(ADR 0057). Later slots' cards stay face down. Walk the whole timeline this way.
+**Nothing resolves yet, and nothing on any board changes.**
 
 Choose targets to satisfy the card's targeting line:
 

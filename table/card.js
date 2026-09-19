@@ -36,6 +36,23 @@ export function cardLines(card) {
   ].filter(Boolean);
 }
 
+// Separate visual roles without parsing any authored effect sentence.
+export function cardDetails(card) {
+  return [
+    { role: 'target', text: card?.targeting },
+    ...(card?.effects ?? []).map(text => ({ role: 'effect', text })),
+    ...(card?.casterEffects ?? []).map(text => ({ role: 'caster', text })),
+    { role: 'requires', text: requiresLine(card) },
+  ].filter(row => row.text);
+}
+
+export function cardStats(card) {
+  const stats = [];
+  if (Number.isInteger(card?.initiative)) stats.push({ kind: 'initiative', symbol: '↟', label: 'Initiative', value: `${card.initiative >= 0 ? '+' : ''}${card.initiative}`, hint: 'On unlock' });
+  if (card?.critical) stats.push({ kind: 'critical', symbol: '✦', label: 'Crit chance', value: card.critical, hint: ['Standard only', card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : ''].filter(Boolean).join(' · ') });
+  return stats;
+}
+
 // The chance, and the face of the die when the chance is a twentieth. The threshold is the host's: whether a
 // chance can be rolled on a d20 is a property of the content, not of the screen.
 export function criticalLine(card) {
