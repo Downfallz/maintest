@@ -22,7 +22,8 @@ public static class ResolutionRules
         IReadOnlyList<CreatureSnapshot> creatures,
         IGameResources resources,
         RuleSet rules,
-        IRandomSource random)
+        IRandomSource random,
+        Speed speed)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(creatures);
@@ -53,7 +54,9 @@ public static class ResolutionRules
             return CombatResolution.Fizzle(action, CombatErrors.AllTargetsInvalid);
         }
 
-        var isCritical = random.NextDouble() < actor.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
+        // The roll is drawn whatever the speed, so that a Quick cast consumes the same randomness a Standard
+        // one does: the choice changes the outcome, not the stream every later cast in the match reads from.
+        var isCritical = random.NextDouble() < CriticalChanceOf(actor, spell, speed);
         var multiplier = isCritical ? rules.CriticalMultiplier : 1.0;
         var outcomes = effectiveTargets
             .SelectMany(target => spell.Effects.Select(effect => Outcome(effect, creatures.First(candidate => candidate.Id == target), multiplier, isCritical)))
@@ -65,6 +68,21 @@ public static class ResolutionRules
         outcomes.AddRange(spell.CasterEffects.Select(effect => Outcome(effect, actor, multiplier: 1.0, isCritical) with { OnCaster = true }));
 
         return CombatResolution.Resolved(action, effectiveTargets, [.. report.PerTargetFailures], isCritical, spell.Stats.Cost, outcomes);
+    }
+
+    /// <summary>
+    /// What a cast's chance of a critical is: the creature's and the spell's added, and <b>zero when the
+    /// creature chose Quick</b>. Speed is a trade rather than a free ordering — a Quick slot acts before every
+    /// Standard one and pays the critical roll for it — so the chance belongs here, where the rule is, and not
+    /// at each of the three places that price a cast. An agent asking what a candidate is worth must read it
+    /// from here too, or it will price a crit it cannot roll.
+    /// </summary>
+    public static double CriticalChanceOf(CreatureSnapshot actor, Spell spell, Speed speed)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(spell);
+
+        return speed == Speed.Quick ? 0 : actor.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
     }
 
     private static EffectOutcome Outcome(Effect effect, CreatureSnapshot target, double multiplier, bool isCritical) =>

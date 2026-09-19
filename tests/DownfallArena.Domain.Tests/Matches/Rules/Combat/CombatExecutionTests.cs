@@ -168,7 +168,7 @@ public sealed class CombatExecutionTests
         knight.GainEnergy(2);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Slam), [Arena.Ghoul, Arena.Wraith]);
 
-        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(creatures), Arena.Resources, RuleSet.Default, new FixedRandom(0.99));
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(creatures), Arena.Resources, RuleSet.Default, new FixedRandom(0.99), Speed.Standard);
         CombatExecution.Apply(resolution, creatures);
 
         knight.Energy.ShouldBe(Energy.Of(0));

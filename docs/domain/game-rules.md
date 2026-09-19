@@ -87,7 +87,9 @@ listed in [spells.md](spells.md).
       nothing.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
-      such Creature has a choice.
+      such Creature has a choice. **The choice is a trade: a `Quick` Creature acts before every `Standard`
+      one and cannot roll a critical that Round, whatever its own and its Spell's chances add up to.** Without
+      that cost the choice decides nothing, since acting earlier is never worse.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
       then Standard slots by Initiative descending; ties by Player slot, then Creature id.
 3. **Combat**
@@ -104,7 +106,8 @@ listed in [spells.md](spells.md).
         failure drops that target, and the action fizzles when no target remains;
       - a fizzled action costs nothing;
       - the energy cost is spent;
-      - a critical roll (creature chance plus Spell chance) multiplies a target's damage and direct heal by
+      - a critical roll (creature chance plus Spell chance, and zero for a `Quick` Creature) multiplies a
+        target's damage and direct heal by
         the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
       - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy given,
         or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs

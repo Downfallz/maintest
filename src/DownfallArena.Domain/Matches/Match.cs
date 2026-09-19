@@ -272,7 +272,11 @@ public sealed class Match : AggregateRoot<MatchId>
 
         var round = ActiveRound;
         var action = round.NextActionToResolve();
-        var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, RuleSet, _random);
+        // Every creature on the timeline chose a speed in planning, so the lookup cannot miss: an action is
+        // only ever resolved for a slot the timeline holds, and a slot is only built from a speed choice.
+        var speed = round.SpeedChoiceOf(action.Actor)?.Speed
+            ?? throw new InvalidOperationException($"Actor {action.Actor} is resolving an action without a speed choice.");
+        var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, RuleSet, _random, speed);
         var applied = CombatExecution.Apply(resolution, Creatures);
         round.MarkActionResolved();
         RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied));

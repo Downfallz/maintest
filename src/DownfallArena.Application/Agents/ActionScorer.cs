@@ -39,20 +39,29 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// against a board that will have changed before the action lands.
     /// </para>
     /// </summary>
-    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null) =>
-        weights.Apply(ExpectedTerms(action, creatures, gone));
+    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard) =>
+        weights.Apply(ExpectedTerms(action, creatures, gone, speed));
 
-    /// <summary>The terms behind <see cref="Expected"/>: the crit and non-crit terms weighted by the crit chance.</summary>
-    public ScoreTerms ExpectedTerms(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null)
+    /// <summary>
+    /// The terms behind <see cref="Expected"/>: the crit and non-crit terms weighted by the crit chance.
+    /// <para>
+    /// <paramref name="speed"/> decides whether there is a crit chance at all, since a Quick cast never crits.
+    /// It defaults to <see cref="Speed.Standard"/>, which is an <em>assumption</em> and not a reading: a caller
+    /// that knows the actor's speed should say so, and one that does not is pricing a critical the actor may
+    /// not be able to roll. The rule itself takes no default — <see cref="ResolutionRules.Resolve"/> demands
+    /// the speed — because mispricing costs an agent a good move while misresolving would change the game.
+    /// </para>
+    /// </summary>
+    public ScoreTerms ExpectedTerms(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(creatures);
 
         gone ??= NoneGone;
         var actor = creatures.First(creature => creature.Id == action.Actor);
-        var chance = actor.CriticalChance.Plus(resources.GetSpell(action.Spell).Stats.CriticalChance.Value).Value;
-        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical), creatures, gone);
-        var plain = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical), creatures, gone);
+        var chance = ResolutionRules.CriticalChanceOf(actor, resources.GetSpell(action.Spell), speed);
+        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical, speed), creatures, gone);
+        var plain = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, speed), creatures, gone);
         return (chance * critical) + ((1 - chance) * plain);
     }
 
@@ -62,7 +71,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(creatures);
 
-        var resolution = ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical);
+        // The roll is forced plain, so the speed cannot change this reading: a Quick cast and a Standard one
+        // both land their base damage here. Standard is passed because something must be, not as a claim.
+        var resolution = ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, Speed.Standard);
         return resolution.Fizzled
             ? []
             : Damage(resolution, creatures, gone ?? NoneGone).Where(hit => hit.Kills && hit.Enemy).Select(hit => hit.Id);
@@ -74,19 +85,19 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(creatures);
 
-        var resolution = ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical);
+        var resolution = ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, Speed.Standard);
         return !resolution.Fizzled && Damage(resolution, creatures, NoneGone).Any(hit => hit.Kills && hit.Enemy);
     }
 
     /// <summary>The best target set of a spell for an actor, or null when the spell has no legal target.</summary>
-    public (IReadOnlyList<CreatureId> Targets, double Score)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null) =>
-        BestTerms(actor, spellId, creatures, gone) is { } best ? (best.Targets, weights.Apply(best.Terms)) : null;
+    public (IReadOnlyList<CreatureId> Targets, double Score)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard) =>
+        BestTerms(actor, spellId, creatures, gone, speed) is { } best ? (best.Targets, weights.Apply(best.Terms)) : null;
 
     /// <summary>
     /// The best target set of a spell for an actor with the terms behind its score, or null when the spell has
     /// no legal target. Best under this scorer's weights: the terms say what that set does, the weights chose it.
     /// </summary>
-    public (IReadOnlyList<CreatureId> Targets, ScoreTerms Terms)? BestTerms(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null)
+    public (IReadOnlyList<CreatureId> Targets, ScoreTerms Terms)? BestTerms(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(spellId);
@@ -97,7 +108,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var bestScore = double.NegativeInfinity;
         foreach (var targets in TargetSets.Of(legal))
         {
-            var terms = ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets), creatures, gone);
+            var terms = ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets), creatures, gone, speed);
             var score = weights.Apply(terms);
             if (best is null || score > bestScore)
             {
