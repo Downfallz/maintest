@@ -100,7 +100,7 @@ public sealed class PlayerBoardStateProjectionTests
             hidden.Intents.ShouldAllBe(intent => hidden.Allies.Any(creature => creature.Id == intent.Actor));
         }
 
-        var last = timeline.Last();
+        var last = timeline[^1];
         match.SubmitIntent(last.Owner, new CombatIntent(last.Creature, TestContent.Strike)).IsSuccess.ShouldBeTrue();
 
         foreach (var player in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })

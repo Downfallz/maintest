@@ -104,7 +104,7 @@ public static class CatalogueProjection
                 ? "Quick cannot crit. In Standard, crits multiply only direct damage and healing on targets."
                 : null);
 
-    private static IReadOnlyList<CardCue> Cues(Spell spell)
+    private static List<CardCue> Cues(Spell spell)
     {
         var cues = spell.Effects.Select(effect => Cue(effect, onCaster: false))
             .Concat(spell.CasterEffects.Select(effect => Cue(effect, onCaster: true)))
