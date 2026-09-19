@@ -143,7 +143,7 @@ test('the recap uses the event round id when the snapshot has advanced to the ne
   ];
   const recap = roundRecap(entries, { allies: [{ id: 4, name: 'Caster' }], enemies: [{ id: 1, name: 'Target' }] }, cards);
   assert.equal(recap.round, 2);
-  assert.equal(recap.actions[0].actor.label, 'Caster · #4');
+  assert.equal(recap.actions[0].actor.label, 'Creature 4');
   assert.equal(recap.actions[0].actor.side, 'ally');
   assert.equal(recap.actions[0].targets[0].side, 'enemy');
   assert.equal(recap.actions[0].spell, 'Throwing Star');

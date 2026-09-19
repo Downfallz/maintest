@@ -30,7 +30,7 @@
     <main id="table" hidden>
       <div class="play-area">
         <details id="recap" class="round-recap" hidden>
-          <summary><span><span class="eyebrow">Last round · in resolution order</span><strong id="recap-title">Round recap</strong></span><span id="recap-count" class="status-tag"></span></summary>
+          <summary><strong id="recap-title">Round recap</strong><span id="recap-count" class="status-tag"></span></summary>
           <ol id="recap-actions"></ol>
         </details>
         <nav class="tabs" aria-label="Table views">
@@ -44,6 +44,7 @@
               <div class="decision-heading"><span class="eyebrow">Your next move</span><span id="decision-state" class="status-tag">Waiting</span></div>
               <h2 id="asking" aria-live="polite">Waiting for the other seat…</h2>
               <p id="decision-context" class="decision-context"></p>
+              <div id="evolution-budget" hidden></div>
               <div id="choices"></div>
               <details id="shortcuts" class="shortcuts">
                 <summary>Keyboard shortcuts <kbd>?</kbd></summary>
@@ -67,7 +68,7 @@
             <div id="enemy-hand" class="enemy-books" aria-label="Opponent spellbooks"></div>
           </section>
           <section class="initiative-section" aria-label="Initiative order">
-            <div class="section-heading"><h2>Initiative</h2><span class="muted">First → last</span></div>
+            <div class="section-heading"><h2>Turn order</h2><span class="muted">First → last</span></div>
             <div id="timeline" class="strip" aria-label="Initiative"></div>
           </section>
           <section class="team-section" aria-labelledby="ally-heading">
@@ -97,6 +98,11 @@
           <p id="noted" class="muted" role="status" hidden></p>
         </section>
         <details id="log"><summary>Match activity <span class="muted">Latest events</span></summary><ol id="feed"></ol></details>
+        <aside id="phase-dock" aria-label="Round progress">
+          <strong id="phase-round"></strong>
+          <ol id="phase-steps" aria-label="Round phases"></ol>
+          <p id="phase-reminder"></p>
+        </aside>
       </div>
     </main>
     <script type="module" src="table.js"></script>

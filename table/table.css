@@ -407,3 +407,93 @@ body:has(#table) { overflow: auto; }
 }
 
 .creature.legal { scroll-margin-top: var(--target-offset, 18px); }
+
+/* A compact reference dock leaves the battlefield in place as rounds change. */
+body:has(#table) { padding-bottom: 110px; }
+#phase-dock { position: fixed; z-index: 20; inset: auto 0 0; display: grid; grid-template-columns: auto 1fr; gap: 7px 18px; padding: 12px 285px 12px 20px; border-top: 1px solid #60715c; background: #14211ffa; box-shadow: 0 -8px 25px #0004; }
+#phase-round { align-self: center; color: var(--gold); font-size: 12px; white-space: nowrap; }
+#phase-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0; margin: 0; list-style: none; }
+#phase-steps li { padding: 5px 9px; color: #a2b0a7; border-radius: 5px; font-size: 11px; }
+#phase-steps li + li::before { content: '›'; margin-right: 10px; opacity: .6; }
+#phase-steps .current { background: var(--gold); color: #211e16; font-weight: 750; }
+#phase-steps .complete { color: #b7dbbd; }
+#phase-reminder { grid-column: 1 / -1; font-size: 12px; color: #c1cec4; line-height: 1.5; }
+.round-recap { position: fixed; z-index: 24; right: 20px; bottom: 15px; width: 245px; margin: 0; box-shadow: 0 8px 30px #0006; }
+.round-recap summary { padding: 10px 12px; gap: 8px; min-height: 45px; }
+#recap-title { margin: 0; font: 600 13px ui-sans-serif, system-ui, sans-serif; flex: 1; }
+#recap-count { font-size: 10px; white-space: nowrap; }
+.round-recap[open] { bottom: 92px; width: min(640px, calc(100vw - 40px)); }
+#recap-actions { max-height: 56dvh; }
+.stat-energy strong, .stat-energy span { color: #e6be70; }
+.stat-defense strong, .stat-defense span { color: #8bc6ed; }
+.stat-initiative strong, .stat-initiative span { color: #c4a2ef; }
+.badge[data-speed="Quick"] { color: #ffe0a0; background: #5c4525; border-color: #b48b48; }
+.badge[data-speed="Standard"] { color: #b8dcff; background: #253f58; border-color: #537fa5; }
+.turn-order, .turn-order.now, .slot-order { background: var(--turn-color, #b4dacf); color: #152222; border-color: transparent; font-weight: 750; }
+.turn-order.now, .slot.now .slot-order { outline: 2px solid #fff3c9; outline-offset: 2px; box-shadow: 0 0 12px #e7c37b65; }
+.slot { display: grid; grid-template-columns: 20px 1fr; gap: 2px 6px; padding: 6px 8px; }
+.slot-order { grid-row: 1 / 3; align-self: center; border: 1px solid currentColor; border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; font-size: 11px; }
+.slot strong { font-size: 11px; font-weight: 650; }
+.slot-initiative { font-size: 9px; opacity: .85; }
+.strip { gap: 8px; }
+.band { flex-wrap: wrap; gap: 6px; }
+.band-name { min-width: 55px; }
+.slots { flex-wrap: wrap; gap: 5px; }
+.pick-budget { padding: 10px 12px; border: 1px solid #74845e; border-radius: 8px; background: #2c3827; margin-bottom: 10px; }
+.pick-budget > strong { display: block; font-size: 14px; color: #f5dda0; }
+.pick-tokens { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0 5px; }
+.pick-token { border: 1px solid #9eaa7b; border-radius: 5px; padding: 4px 7px; font-size: 10px; }
+.pick-token.available { color: #f6e0a8; background: #435036; }
+.pick-token.spent { color: #adbcaa; border-color: #586a53; }
+.pick-note { display: block; font-size: 10px; color: #bac7b3; }
+#evolution-budget { grid-column: 1 / -1; }
+.talent-window .talent-toolbar .muted { display: none; }
+.talent-toolbar .pick-budget { grid-column: 1; grid-row: 2; margin: 0; padding: 8px 10px; }
+.talent-toolbar select { align-self: start; }
+.talent-toolbar h2 { font-size: 21px; }
+.talent-window #mat { scroll-padding-top: 190px; }
+.talent-lane { padding: 12px; max-width: 920px; margin-inline: auto; }
+.talent-inspector .talent-lane { margin-inline: auto; }
+.talent-tiers { display: flex; flex-wrap: wrap; gap: 12px; overflow: visible; }
+.talent-tier { flex: 1 1 350px; display: grid; grid-template-columns: repeat(var(--tier-columns, 1), minmax(0, 1fr)); align-content: start; gap: 10px; }
+.talent-tier h3 { grid-column: 1 / -1; margin: 4px 0 0; padding-bottom: 6px; }
+.talent-card { padding: 12px; margin: 0; display: flex; flex-direction: column; }
+.talent-card .card-title { font-size: 17px; }
+.talent-card .card-body { margin-top: 8px; padding-top: 8px; line-height: 1.5; }
+.talent-status { margin-bottom: 7px; }
+.atlas-unlock { margin-top: auto; min-height: 36px; padding: 8px; }
+.talent-card .card-body + .atlas-unlock { margin-top: 10px; }
+.card { border-radius: 12px; background: linear-gradient(145deg, #f4f0e5, #dedbc9); box-shadow: 0 3px 9px #0002; }
+.card:not(.future):has(.card-head[data-tone="harm"]) { background: linear-gradient(145deg, #f4ece3, #e1d7c5); }
+.card:not(.future):has(.card-head[data-tone="recovery"]) { background: linear-gradient(145deg, #edf2e5, #d9e0ce); }
+.card-head { padding-top: 3px; }
+.card-title { letter-spacing: -.25px; }
+.card-cost { box-shadow: inset 0 0 0 2px #ffffff40; }
+.card-cues { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 0; }
+.card-cues:empty { display: none; }
+.card-cue { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 5px; font: 650 10px ui-sans-serif, system-ui, sans-serif; color: #46533f; background: #d6ddca; }
+.card-cue[data-tone="harm"] { color: #893e2b; background: #efd4c4; }
+.card-cue[data-tone="recovery"] { color: #285739; background: #cce4cb; }
+.card-cue[data-tone="protection"] { color: #31566d; background: #cadde5; }
+.card-cue[data-tone="control"] { color: #644975; background: #ddd0e6; }
+.card-cue[data-tone="critical"] { color: #614212; background: #edcc81; border: 1px solid #b99848; padding: 3px 6px; }
+.card-critical-note { margin-top: 8px; font-size: 10px; line-height: 1.45; font-style: italic; }
+@media (max-width: 1099px) {
+  .talent-toolbar .pick-budget { grid-column: 1; grid-row: auto; }
+}
+@media (max-width: 760px) {
+  body:has(#table) { padding-bottom: 200px; }
+  #phase-dock { padding: 10px 12px; gap: 6px; grid-template-columns: 1fr; }
+  #phase-steps { gap: 2px; }
+  #phase-steps li { padding: 4px; font-size: 10px; }
+  #phase-steps li + li::before { margin-right: 4px; }
+  #phase-reminder { font-size: 11px; }
+  .round-recap { right: 12px; bottom: 136px; width: 220px; }
+  .round-recap[open] { bottom: 136px; width: calc(100vw - 24px); }
+  #recap-actions { max-height: 48dvh; }
+  .talent-window #mat { scroll-padding-top: 280px; }
+  .talent-toolbar .pick-note { display: none; }
+  .talent-toolbar .pick-budget { padding: 6px 8px; }
+  .talent-toolbar .pick-tokens { margin-bottom: 0; }
+  .talent-tier { flex-basis: 100%; grid-template-columns: 1fr; }
+}

@@ -383,6 +383,7 @@ function render(state, views) {
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
+  renderPhaseGuide(state, view);
   const targetOffset = view.waitingFor === 'Target' && globalThis.innerWidth > 760 && globalThis.innerWidth < 1100
     ? element('decision').getBoundingClientRect().height + 30 : 18;
   element('board').style.setProperty('--target-offset', `${targetOffset}px`);
@@ -406,7 +407,8 @@ function guideDecision(state, current) {
     : ['Speed', 'Intent'].includes(kind) ? element('planning') : kind === 'Target' ? element('decision') : null;
   if (!anchor) return;
   const rect = anchor.getBoundingClientRect();
-  if (rect.top < 16 || rect.bottom > globalThis.innerHeight) {
+  const dockHeight = element('phase-dock').getBoundingClientRect().height ?? 0;
+  if (rect.top < 16 || rect.bottom > globalThis.innerHeight - dockHeight - 12) {
     anchor.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
 }
@@ -446,7 +448,17 @@ function renderTimeline(board) {
     for (const slot of band.slots) {
       const one = document.createElement('div');
       one.className = `slot ${side(slot, board.slot)}${slot.isNow ? ' now' : ''}`;
-      one.textContent = `${slot.creature} · ${slot.initiative}`;
+      const order = document.createElement('span');
+      order.className = 'slot-order';
+      order.textContent = `${turnOrder({ id: slot.creature }, board)}`;
+      order.style.setProperty('--turn-color', turnColour(Number(order.textContent), board.timeline.length));
+      const creature = document.createElement('strong');
+      creature.textContent = `Creature ${slot.creature}`;
+      const initiative = document.createElement('span');
+      initiative.className = 'slot-initiative';
+      initiative.textContent = `Initiative ${slot.initiative}`;
+      one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${band.speed}, initiative ${slot.initiative}${slot.isNow ? ', acting now' : ''}`);
+      one.append(order, creature, initiative);
       slots.append(one);
     }
 
@@ -625,7 +637,7 @@ function line(state, creature, which, marks) {
   id.textContent = creature.id;
   const name = document.createElement('div');
   name.className = 'creature-name';
-  name.textContent = creature.name || `Creature ${creature.id}`;
+  name.textContent = `Creature ${creature.id}`;
   const label = document.createElement('span');
   label.className = 'creature-label';
   label.textContent = creature.isAlive === false ? 'Defeated' : legal ? (picked ? (marks.canConfirm ? 'Tap again to cast' : 'Selected · choose more targets') : 'Select target') : creature.id === marks?.active ? 'Acting now' : which === 'ally' ? 'Your creature' : 'Opponent creature';
@@ -650,7 +662,7 @@ function line(state, creature, which, marks) {
   stats.className = 'stats';
   for (const [name, value] of statPairs(creature)) {
     const stat = document.createElement('div');
-    stat.className = 'stat';
+    stat.className = `stat stat-${name}`;
     const amount = document.createElement('strong');
     amount.textContent = value;
     const label = document.createElement('span');
@@ -669,6 +681,7 @@ function line(state, creature, which, marks) {
     const number = document.createElement('span');
     number.className = `turn-order${order - 1 === cursorOf(marks?.board) ? ' now' : ''}`;
     number.textContent = order;
+    number.style.setProperty('--turn-color', turnColour(order, marks.board.timeline.length));
     number.setAttribute('aria-label', `Acts ${order} of ${marks.board.timeline.length}`);
     turn.append(number);
     tags.append(turn);
@@ -679,6 +692,7 @@ function line(state, creature, which, marks) {
     one.className = 'badge';
     const speed = marks?.board?.timeline?.find(slot => slot.creature === creature.id)?.speed;
     one.textContent = badge === speed ? `Speed · ${badge}` : badge;
+    if (badge === speed) one.dataset.speed = speed;
     tags.append(one);
   }
 
@@ -765,7 +779,7 @@ function enemyBooks(state, current) {
     const spells = creature.knownSpells ?? [];
     const title = document.createElement('summary');
     title.className = 'hand-who';
-    title.textContent = `${creature.name || 'Creature'} #${creature.id} · ${spells.length} revealed spells`;
+    title.textContent = `Creature ${creature.id} · ${spells.length} revealed spells`;
     const cards = document.createElement('div');
     cards.className = 'held-cards';
     cards.dataset.scroll = `enemy-hand-${key}`;
@@ -802,11 +816,11 @@ function renderMat(state, current) {
   const toolbar = document.createElement('div');
   toolbar.className = 'talent-toolbar';
   const heading = document.createElement('h2');
-  heading.textContent = creature ? `${creature.name || 'Creature'} #${creature.id}` : 'Choose your path';
+  heading.textContent = creature ? `Creature ${creature.id} · talents` : 'Choose your path';
   const context = document.createElement('span');
   context.className = 'atlas-context';
   context.textContent = evolution
-    ? `Round ${view.board.roundNumber} · Evolution pick ${(view.board.evolutionChoices ?? []).length + 1} · ${evolution.remainingPicks ?? 0} remaining`
+    ? `Round ${view.board.roundNumber} · Evolution`
     : `Round ${view.board.roundNumber} · Spellbook reference`;
   heading.append(context);
   const help = document.createElement('p');
@@ -838,6 +852,7 @@ function renderMat(state, current) {
   filter.value = classes.some(group => group.name === state.inspectClass) ? state.inspectClass : '';
   filter.addEventListener('change', () => { state.inspectClass = filter.value; redraw(state); });
   toolbar.append(heading, help, picker, filter);
+  if (evolution) toolbar.append(evolutionBudget(state, view));
   const forest = talentForest(state.catalogue);
   const graph = document.createElement('div');
   graph.className = 'tree-map';
@@ -875,6 +890,7 @@ function talentLane(state, group, current, creature) {
   for (const tier of group.tiers) {
     const column = document.createElement('div');
     column.className = 'talent-tier';
+    column.style.setProperty('--tier-columns', Math.min(2, tier.spells.length));
     const heading = document.createElement('h3');
     heading.textContent = tier.tier ? `Tier ${tier.tier}` : 'Unranked';
     column.append(heading);
@@ -920,7 +936,7 @@ function renderFeed(state, feed) {
 }
 
 // A completed round stays readable through the following round, outside the Battlefield/Talents tabs.
-// Open it once per completed round and seat. Ordinary polls preserve the player's collapsed state.
+// New recaps stay closed and never move the table. Opening the floating panel is the player's choice.
 function renderRecap(state, view) {
   const panel = element('recap');
   state.recaps ??= new Map();
@@ -932,7 +948,7 @@ function renderRecap(state, view) {
 
   const held = state.recaps.get(state.shown);
   const fresh = held?.round !== recap.round;
-  panel.open = fresh ? true : held.open;
+  panel.open = fresh ? false : held.open;
   state.recaps.set(state.shown, { round: recap.round, open: panel.open });
   state.recapSeat = state.shown;
   element('recap-title').textContent = `Round ${recap.round} recap`;
@@ -945,7 +961,6 @@ function renderRecap(state, view) {
     rows.push(empty);
   }
   element('recap-actions').replaceChildren(...rows);
-  if (fresh) panel.scrollIntoView({ block: 'start', behavior: 'instant' });
 }
 
 function recapPerson(person) {
@@ -1009,6 +1024,8 @@ function renderDecision(state, current) {
   const view = current.view;
   element('planning').dataset.kind = view.waitingFor ?? 'Waiting';
   element('decision-context').textContent = '';
+  element('evolution-budget').hidden = view.waitingFor !== 'Evolution' || !isAsked(view);
+  element('evolution-budget').replaceChildren(...(view.waitingFor === 'Evolution' && isAsked(view) ? [evolutionBudget(state, view)] : []));
   const asking = element('asking');
   const choices = element('choices');
   element('problem').hidden = !state.error;
@@ -1036,7 +1053,7 @@ function renderDecision(state, current) {
 
   const actor = (view.board.allies ?? []).find(creature => creature.id === view.waitingCreature);
   element('decision-context').textContent = actor
-    ? `${actor.name || 'Creature'} #${actor.id} · ${healthText(actor)} HP · ${actor.energy ?? 0} energy`
+    ? `${healthText(actor)} HP · ${actor.energy ?? 0} energy`
     : '';
   asking.textContent = titleOf(state, view);
   choices.replaceChildren(...buttonsFor(state, current));
@@ -1044,15 +1061,77 @@ function renderDecision(state, current) {
 
 function titleOf(state, view) {
   switch (view.waitingFor) {
-    case 'Evolution': return `Unlock a spell · ${view.options.evolution?.remainingPicks ?? 0} pick(s) left`;
-    case 'Speed': return 'Choose your speed';
-    case 'Intent': return 'Choose your spell';
+    case 'Evolution': return `Creature ${state.evolving ?? view.options.evolution?.creatures?.[0]?.creature ?? '—'} · unlock a spell`;
+    case 'Speed': return `Creature ${view.waitingCreature} · choose speed`;
+    case 'Intent': return `Creature ${view.waitingCreature} · choose spell`;
     case 'Target': {
       const spell = view.options.target?.spell;
-      return cardTitle(state.cards.get(spell)) || spell || 'Choose targets';
+      return `Creature ${view.waitingCreature} · ${cardTitle(state.cards.get(spell)) || spell || 'Choose targets'}`;
     }
     default: return 'Your move';
   }
+}
+
+function evolutionBudgetText(state, view) {
+  const remaining = view.options.evolution?.remainingPicks ?? 0;
+  const used = (view.board.evolutionChoices ?? []).length;
+  const total = state.catalogue?.rules?.evolutionPicksPerRound ?? used + remaining;
+  return `${remaining} / ${total} team picks remaining`;
+}
+
+function turnColour(position, count) {
+  const fraction = (position - 1) / Math.max(1, count - 1);
+  return `hsl(${Math.round(170 + fraction * 90)} 58% 76%)`;
+}
+
+function evolutionBudget(state, view) {
+  const box = document.createElement('div');
+  box.className = 'pick-budget';
+  const title = document.createElement('strong');
+  title.textContent = evolutionBudgetText(state, view);
+  const used = view.board.evolutionChoices ?? [];
+  const remaining = view.options.evolution?.remainingPicks ?? 0;
+  const picks = document.createElement('div');
+  picks.className = 'pick-tokens';
+  for (const [index, choice] of used.entries()) {
+    const token = document.createElement('span');
+    token.className = 'pick-token spent';
+    token.textContent = `✓ Pick ${index + 1} · Creature ${choice.creature}`;
+    picks.append(token);
+  }
+  for (let index = 0; index < remaining; index++) {
+    const token = document.createElement('span');
+    token.className = 'pick-token available';
+    token.textContent = `Pick ${used.length + index + 1} · available`;
+    picks.append(token);
+  }
+  const note = document.createElement('span');
+  note.className = 'pick-note';
+  note.textContent = 'Shared across your creatures · resets next round';
+  box.append(title, picks, note);
+  return box;
+}
+
+function renderPhaseGuide(state, view) {
+  const phases = [
+    ['Upkeep', [], 'Round upkeep is automatic.'],
+    ['Evolve', ['Evolution'], 'Spend your shared team picks to unlock spells, or pass.'],
+    ['Speed', ['Speed', 'TurnOrderResolution'], 'Pick a speed for each eligible creature. All speeds reveal together when everyone is done.'],
+    ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.'],
+    ['Targets', ['RevealAndTarget'], 'Choose targets in turn order. Each confirmed spell and its targets reveal together.'],
+    ['Resolve', ['ActionResolution', 'Cleanup', 'Finalization'], 'All targets are locked. Actions resolve in turn order, then the next round begins.'],
+  ];
+  const current = view.board.phase === 'StartOfRound' ? 0 : phases.findIndex(([, names]) => names.includes(view.board.subPhase));
+  element('phase-round').textContent = `Round ${view.board.roundNumber ?? '—'} / ${state.catalogue?.rules?.roundCap ?? '—'}`;
+  element('phase-steps').replaceChildren(...phases.map(([label], index) => {
+    const step = document.createElement('li');
+    step.textContent = label;
+    step.className = index === current ? 'current' : index < current ? 'complete' : '';
+    if (index === current) step.setAttribute('aria-current', 'step');
+    return step;
+  }));
+  element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
+    : phases[current]?.[2] ?? 'Waiting for the next phase.';
 }
 
 // One button per thing the options offer, and nothing else. A screen that offered more than the options do
@@ -1251,6 +1330,7 @@ function cardParts(state, spell, prefix) {
 
   const head = document.createElement('div');
   head.className = 'card-head';
+  head.dataset.tone = (face.cues ?? []).find(cue => cue.tone !== 'critical')?.tone ?? 'neutral';
   if (face.creatureClass) {
     head.classList.toggle('class-accent', true);
     head.style.setProperty('--class-color', classColour(face.creatureClass, state.palette));
@@ -1278,7 +1358,23 @@ function cardParts(state, spell, prefix) {
     body.append(row);
   }
 
-  return [head, body];
+  const cues = document.createElement('div');
+  cues.className = 'card-cues';
+  const symbols = { harm: '↘', recovery: '+', protection: '◇', control: '◎', energy: 'ϟ', critical: '✦' };
+  for (const cue of face.cues ?? []) {
+    const badge = document.createElement('span');
+    badge.className = 'card-cue';
+    badge.dataset.tone = cue.tone;
+    badge.textContent = `${symbols[cue.tone] ?? '•'} ${cue.label}`;
+    cues.append(badge);
+  }
+  if (face.criticalNote) {
+    const note = document.createElement('p');
+    note.className = 'card-critical-note';
+    note.textContent = face.criticalNote;
+    body.append(note);
+  }
+  return [head, cues, body];
 }
 
 function button(label, onClick) {
@@ -1454,6 +1550,7 @@ function keyboardDecision(state, event) {
   if (key === 'escape') {
     event.preventDefault();
     if (state.tab === 'mat') closeTalents(state);
+    else if (element('recap').open) element('recap').open = false;
     else { state.chosen = null; state.picked = []; redraw(state); }
     return;
   }
@@ -1504,8 +1601,7 @@ function enemyChoice(state, creature, board, entries) {
   const describe = action => {
     const name = state.cards.get(action.spell)?.name ?? action.spell;
     const targets = (action.targets ?? []).map(id => {
-      const target = [...(board?.allies ?? []), ...(board?.enemies ?? [])].find(one => one.id === id);
-      return target?.name ? `${target.name} #${id}` : `#${id}`;
+      return `Creature ${id}`;
     });
     return { name, targets: targets.length ? `→ ${targets.join(', ')}` : 'No targets' };
   };

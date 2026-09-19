@@ -103,7 +103,7 @@ function recapCreature(id, board) {
   const enemy = (board?.enemies ?? []).find(creature => creature.id === id);
   const creature = ally ?? enemy;
   return {
-    label: creature?.name ? `${creature.name} · #${id}` : `Creature ${id ?? '?'}`,
+    label: `Creature ${id ?? '?'}`,
     side: ally ? 'ally' : enemy ? 'enemy' : 'neutral',
   };
 }

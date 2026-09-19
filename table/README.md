@@ -21,9 +21,11 @@ not recorded matches. Card text and creature names in the actual app come from t
 
 ## Playing
 
-- A completed round opens a colour-coded recap above the board: caster, spell, chosen targets and actual
-  applied outcomes, in resolution order. Reopen it throughout the next round; it stays available after the
-  match ends. Critical casts, failed casts and skipped targets are labelled as well as coloured.
+- A completed round adds a compact recap button beside the bottom phase guide. Open it to read the
+  colour-coded casts, targets and outcomes in a floating panel; it never scrolls or pushes the battlefield.
+  It remains available throughout the next round and after the match ends. Escape closes it.
+- A persistent bottom guide shows the current phase, round cap and a short reminder. Speeds reveal together;
+  opposing spell choices reveal only with confirmed targets. The guide displays this distinction explicitly.
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
 - Desktop keeps the battlefield beside a compact planning desk with the acting spellbook. The board stays
   visible while the page scrolls through longer spell lists; neither board nor hand has a clipped inner
@@ -32,6 +34,9 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's unlocks at a time. Choose its numbered button, then the spell to unlock.
+  The visible budget is shared by the team, not per creature. Both the atlas and decision panel show the
+  host-configured allowance, remaining picks and spent picks with their creatures; switching creature never
+  resets it. The current default is two team picks per round.
 - Speed opens the acting creature's spellbook as a readable reference. Each new Speed or Intent question
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
@@ -47,6 +52,7 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The atlas draws the actual class hierarchy in three rows for the current catalogue: base, families and
   specializations. Parent links come explicitly from the catalogue projection. Select a class for its full
   spell cards, tiers and exact prerequisites. Branch lines show class ancestry, not individual spell gates.
+  Same-tier spells share a compact row on desktop, with no giant full-width cards stacked one by one.
 - The authored first-level families use coherent cool, leaf and ember palettes, with shades inherited by
   specializations. These accents follow every card into the spellbook and unlock picker.
 - Inspect each creature's known and currently offered spells. Legal Evolution unlocks can be taken directly
@@ -54,6 +60,12 @@ not recorded matches. Card text and creature names in the actual app come from t
   Target questions close the atlas to expose the battlefield.
 - Every battlefield creature receives a circular turn number once the host has built the timeline. The
   number follows the full server order, including ties; the active reveal/resolution slot is highlighted.
+  Order numbers run from turquoise to violet; Quick tags are gold and Standard tags blue. Energy, defense
+  and initiative have separate colours and retain text labels. The order strip spells out creature identity
+  and initiative separately. Creature numbers replace repeated definition names in the play surface.
+- Spell faces use restrained paper tints with labelled effect and critical badges derived by the catalogue
+  projection. The client does not infer effect categories from spell names or parse effect text. The critical
+  reminder matches the current engine: either speed can roll a critical, multiplying direct damage/healing.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
 - Each spell becomes public together with its confirmed targets, in timeline order (ADR 0057).

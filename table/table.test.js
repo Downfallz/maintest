@@ -198,7 +198,7 @@ test('target selection prominently names the host spell and retains the acting c
   const p = page(); p.view.waitingFor = 'Target';
   p.view.options = { target: { actor: 1, spell: 'two', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
   p.draw();
-  assert.equal(p.nodes.asking.textContent, 'Second card');
+  assert.equal(p.nodes.asking.textContent, 'Creature 1 · Second card');
   assert.match(p.nodes.choices.children[0].textContent, /Choose targets · Creature 1/);
 });
 
@@ -206,25 +206,25 @@ test('a target spell missing from the catalogue still identifies the cast with n
   const p = page(); p.view.waitingFor = 'Target';
   p.view.options = { target: { actor: 1, spell: 'unknown-card', legalTargets: { candidates: [], minTargets: 1, maxTargets: 1 } } };
   p.draw();
-  assert.equal(p.nodes.asking.textContent, 'unknown-card');
+  assert.equal(p.nodes.asking.textContent, 'Creature 1 · unknown-card');
   assert.match(p.nodes.choices.children.at(-1).textContent, /No legal target/);
 });
 
 
-test('a completed round opens its recap once, preserves collapse and opens the next recap', () => {
+test('a completed round keeps its recap compact without scrolling and preserves a manual opening', () => {
   const p = page();
   p.view.roundEvents = [{ sequence: 1, round: 2, event: { kind: 'RoundEnded', roundId: 1 } }];
   p.view.board.roundNumber = 2; p.draw();
   assert.equal(p.nodes.recap.hidden, false);
-  assert.equal(p.nodes.recap.open, true);
-  assert.equal(p.nodes.recap.scrolledIntoView, true);
-  assert.equal(p.nodes['recap-title'].textContent, 'Round 1 recap');
-  p.nodes.recap.open = false;
-  p.state.chosen = 'one'; p.draw();
   assert.equal(p.nodes.recap.open, false);
+  assert.equal(p.nodes.recap.scrolledIntoView, undefined);
+  assert.equal(p.nodes['recap-title'].textContent, 'Round 1 recap');
+  p.nodes.recap.open = true;
+  p.state.chosen = 'one'; p.draw();
+  assert.equal(p.nodes.recap.open, true);
   p.view.roundEvents.push({ sequence: 2, round: 3, event: { kind: 'RoundEnded', roundId: 2 } });
   p.view.board.roundNumber = 3; p.draw();
-  assert.equal(p.nodes.recap.open, true);
+  assert.equal(p.nodes.recap.open, false);
   assert.equal(p.nodes['recap-title'].textContent, 'Round 2 recap');
 });
 
@@ -475,7 +475,7 @@ test('enemy cards show public speed and the revealed spell while keeping the new
   assert.match(p.nodes.enemies.textContent, /Hidden until reveal/);
   assert.doesNotMatch(p.nodes.enemies.textContent, /First card/);
   p.view.board.revealedActions = [{ actor: 2, spell: 'one', targets: [1] }]; p.draw();
-  assert.match(p.nodes.enemies.textContent, /Round 1 · RevealedFirst card→ First #1/);
+  assert.match(p.nodes.enemies.textContent, /Round 1 · RevealedFirst card→ Creature 1/);
   p.view.board.roundNumber = 2; p.view.board.revealedActions = []; p.view.board.timeline = [];
   p.view.roundEvents = [{ round: 2, event: { kind: 'CombatActionResolved', roundId: 1, resolution: { action: { actor: 2, spell: 'one', targets: [1] } } } }]; p.draw();
   assert.match(p.nodes.enemies.textContent, /Round 2 · Hidden until revealLast round \(1\): First card/);
@@ -505,11 +505,11 @@ test('targeting exposes only confirmed spells and targets while later choices st
   assert.equal(p.nodes.revealed.hidden, true);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
   p.view.board.revealedActions = [{ actor: 1, spell: 'one', targets: [2] }]; p.draw();
-  assert.match(p.nodes.allies.textContent, /First card→ #2/);
+  assert.match(p.nodes.allies.textContent, /First card→ Creature 2/);
   assert.match(p.nodes.revealed.textContent, /First card → 2/);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
   p.view.board.revealedActions.push({ actor: 2, spell: 'two', targets: [1] }); p.draw();
-  assert.match(p.nodes.enemies.textContent, /Second card→ First #1/);
+  assert.match(p.nodes.enemies.textContent, /Second card→ Creature 1/);
   p.view.board.roundNumber = 2; p.view.board.revealedIntents = []; p.view.board.revealedActions = []; p.draw();
   assert.equal(p.nodes.revealed.hidden, true);
   assert.doesNotMatch(p.nodes.enemies.textContent, /Second card/);
@@ -539,10 +539,52 @@ test('down from the last intent row reaches its explorer without declaring a car
 test('the atlas identifies the inspected creature and the second evolution pick from the new board', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
   p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, unlockableSpells: ['two'] }] } }; p.draw();
-  assert.match(p.nodes.mat.children[0].textContent, /First #1Round 1 · Evolution pick 1 · 2 remaining/);
+  assert.match(p.nodes.mat.children[0].textContent, /Creature 1 · talentsRound 1 · Evolution/);
   p.view.board.evolutionChoices = [{ creature: 1, spell: 'one' }];
   p.view.options.evolution.remainingPicks = 1; p.view.waitingAsked++; p.draw();
-  assert.match(p.nodes.mat.children[0].textContent, /First #1Round 1 · Evolution pick 2 · 1 remaining/);
+  assert.match(p.nodes.mat.children[0].textContent, /1 \/ 2 team picks remaining/);
+  assert.match(p.nodes['evolution-budget'].textContent, /1 \/ 2 team picks remaining/);
+  assert.match(p.nodes['evolution-budget'].textContent, /✓ Pick 1 · Creature 1/);
+  assert.match(p.nodes.mat.children[0].textContent, /Shared across your creatures/);
+});
+
+test('the evolution budget follows the configured team allowance and does not reset when switching creatures', () => {
+  const p = page(); p.view.waitingFor = 'Evolution'; p.state.catalogue.rules.evolutionPicksPerRound = 4;
+  p.view.board.evolutionChoices = [{ creature: 1, spell: 'one' }];
+  p.view.options = { evolution: { remainingPicks: 3, creatures: [{ creature: 1, unlockableSpells: ['two'] }, { creature: 2, unlockableSpells: ['one'] }] } }; p.draw();
+  assert.match(p.nodes['evolution-budget'].textContent, /3 \/ 4 team picks remaining/);
+  p.nodes.choices.children[0].children[1].click();
+  assert.match(p.nodes.asking.textContent, /Creature 2/);
+  assert.match(p.nodes['evolution-budget'].textContent, /3 \/ 4 team picks remaining/);
+});
+
+test('the persistent phase guide distinguishes simultaneous speeds from sequential spell revelation', () => {
+  const p = page(); p.view.board.subPhase = 'Speed'; p.draw();
+  assert.match(p.nodes['phase-round'].textContent, /Round 1 \/ 16/);
+  assert.match(p.nodes['phase-reminder'].textContent, /All speeds reveal together/);
+  assert.equal(p.nodes['phase-steps'].children[2].attributes['aria-current'], 'step');
+  p.view.board.subPhase = 'RevealAndTarget'; p.draw();
+  assert.match(p.nodes['phase-reminder'].textContent, /confirmed spell and its targets reveal together/);
+  assert.equal(p.nodes['phase-steps'].children[4].attributes['aria-current'], 'step');
+  p.view.board.phase = 'StartOfRound'; p.draw();
+  assert.equal(p.nodes['phase-steps'].children[0].attributes['aria-current'], 'step');
+});
+
+test('turn order labels distinguish creature identity, play position and initiative', () => {
+  const p = page(); p.view.board.timeline = [{ creature: 2, initiative: 8, speed: 'Quick' }, { creature: 1, initiative: 11, speed: 'Standard' }]; p.draw();
+  assert.equal(p.nodes.timeline.children[0].children[1].children[0].attributes['aria-label'], 'Turn 1, Creature 2, Quick, initiative 8');
+  assert.equal(p.nodes.timeline.children[1].children[1].children[0].attributes['aria-label'], 'Turn 2, Creature 1, Standard, initiative 11');
+  assert.match(p.nodes.allies.textContent, /Creature 1/);
+  assert.doesNotMatch(p.nodes.allies.textContent, /First/);
+});
+
+test('spell faces display host-provided effect cues and the exact critical reminder without guessing from names', () => {
+  const p = page();
+  p.state.cards.set('one', { id: 'one', name: 'A neutral title', cues: [{ tone: 'harm', label: 'Impact' }, { tone: 'critical', label: 'Critical' }], criticalNote: 'The host critical rule.' }); p.draw();
+  assert.match(held(p).children[0].textContent, /↘ Impact/);
+  assert.match(held(p).children[0].textContent, /✦ Critical/);
+  assert.match(held(p).children[0].textContent, /The host critical rule/);
+  assert.doesNotMatch(held(p).children[1].textContent, /✦/);
 });
 
 test('desktop turn guidance keeps the battlefield in view alongside planning', () => {
@@ -555,8 +597,8 @@ test('the acting creature appears first in the planning spellbook with its conte
   const p = page(); p.view.board.allies.push({ id: 3, name: 'Third', health: 12, maxHealth: 20, energy: 5, knownSpells: ['two'] });
   p.view.waitingFor = 'Speed'; p.view.waitingCreature = 3; p.view.options = { speed: {} }; p.draw();
   assert.match(p.nodes['own-hand'].children[0].children[0].textContent, /Creature 3/);
-  assert.match(p.nodes['decision-context'].textContent, /Third #3 · 12\/20 HP · 5 energy/);
-  assert.equal(p.nodes.asking.textContent, 'Choose your speed');
+  assert.match(p.nodes['decision-context'].textContent, /12\/20 HP · 5 energy/);
+  assert.equal(p.nodes.asking.textContent, 'Creature 3 · choose speed');
 });
 
 test('arrows switch the evolution creature and move into its offered spells without submitting', () => {
