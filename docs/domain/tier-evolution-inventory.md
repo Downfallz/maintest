@@ -115,6 +115,17 @@ The plan's section 1 reads as one pick at rounds 1, 3, 5. The owner's intent is 
 every two rounds** (2026-09-21). That is a different proposal and a much closer one, so the arithmetic below
 replaces an earlier draft of this section that measured the one-pick reading and called it a problem.
 
+**These numbers are a counterfactual, not a forecast.** The 400 benchmark entries were played under the
+*current* progression — two spell picks every round — and the proposal changes both how often a pick comes
+and what it grants. That changes combat strength, which changes how long matches run, so the round
+distribution below belongs to a different game than the one being costed. What follows is therefore "how many
+opportunities today's match lengths would contain", not "how many a migrated match buys".
+
+The bias has a direction, and it is worth naming as reasoning rather than measurement: the proposal puts
+fewer spells into play and puts them there later, so creatures are weaker for longer and matches would
+plausibly run *longer*, which would add opportunities. If so every figure below is a floor. Only running the
+proposed rules settles it, and they do not exist yet.
+
 Against the 400 benchmark entries, counting opportunities at rounds 1, 3, 5, …:
 
 | | |
@@ -132,9 +143,10 @@ Spells reaching play, which is the comparison that matters because a package tea
 | Proposed: 2 packages every other round | **11.0** (11.7 if bought as whole lines) |
 
 A full specialization line is tier 1 (2 spells) + tier 2 (1) + tier 3 (2) = **five spells for three
-purchases**, so a median match affords two complete lines and most of a third. The owner's reading — that
-unlocking several spells at once brings it back to roughly the same place — holds: 11 against 13.6, not the
-3-to-4-purchase famine the one-pick reading produces.
+purchases**, so a median match of today's length affords two complete lines and most of a third. The owner's
+reading — that unlocking several spells at once brings it back to roughly the same place — holds on this
+counterfactual: 11 against 13.6, not the 3-to-4-purchase famine the one-pick reading produces. The 13.6 is
+the only figure here measured under the rules that produced it.
 
 **What this opens instead.** With two picks in one opportunity, the plan no longer says whether they resolve
 **sequentially or simultaneously**, because it was written for one. If the second pick sees the first one's
