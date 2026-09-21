@@ -106,29 +106,45 @@ The plan already says this baseline is not a balance guarantee. The numbers say 
 spreads were never authored as package values, they are the accident of how many spells happened to sit in a
 node. Any validation rule of the "nonnegative" kind passes all of them, `Shaman`'s zero included.
 
-### 3.3 The cadence does not fit the matches
+### 3.3 The cadence, with the owner's correction
 
 `RuleSet.Default` is `(3, 2, 2, 30, 2.0)`: team size 3, energy 2, **2 evolution picks per round, every
-round**, round cap 30. The plan proposes one pick at rounds 1, 3, 5.
+round**, round cap 30.
 
-Against the current benchmark digest, 400 entries:
+The plan's section 1 reads as one pick at rounds 1, 3, 5. The owner's intent is **two picks at once, once
+every two rounds** (2026-09-21). That is a different proposal and a much closer one, so the arithmetic below
+replaces an earlier draft of this section that measured the one-pick reading and called it a problem.
+
+Against the 400 benchmark entries, counting opportunities at rounds 1, 3, 5, …:
 
 | | |
 | --- | --- |
-| Rounds, mean | **6.79** |
-| Median | 6 |
-| 90th percentile | 8 |
-| Entries reaching round 17 or later | **12 of 400** (3 %) |
+| Match rounds, mean / median | 6.79 / 6 |
+| Opportunities per match, mean / median | 3.50 / 3 |
+| **Purchases per match**, mean / median | **7.0 / 6** |
+| Of the 9 a full team of three needs | **6 of 9** in a median match |
 
-So a match contains roughly **four** evolution opportunities under the proposal, against roughly fourteen
-today. The plan notes that three creatures cannot all reach tier 3 before round 17; what it does not say is
-that 97 % of matches are over before then. A team ends a typical match with about four of its nine packages
-bought, and most of the 21-package tree is never seen in play.
+Spells reaching play, which is the comparison that matters because a package teaches more than one:
 
-That may be the intent — choices that cost something, a climb you do not finish. It is not written down as
-the intent, and "measure it in playtests before changing it" arrives too late if the cadence is already in
-`RuleSet` and its serialized form. **How many purchases a match should contain is a question for before
-stage 1, not after stage 6.**
+| | spells per match |
+| --- | --- |
+| Today: 2 picks every round, one spell each | **13.6** |
+| Proposed: 2 packages every other round | **11.0** (11.7 if bought as whole lines) |
+
+A full specialization line is tier 1 (2 spells) + tier 2 (1) + tier 3 (2) = **five spells for three
+purchases**, so a median match affords two complete lines and most of a third. The owner's reading — that
+unlocking several spells at once brings it back to roughly the same place — holds: 11 against 13.6, not the
+3-to-4-purchase famine the one-pick reading produces.
+
+**What this opens instead.** With two picks in one opportunity, the plan no longer says whether they resolve
+**sequentially or simultaneously**, because it was written for one. If the second pick sees the first one's
+result, a creature can buy tier 1 and then tier 2 in the same opportunity, and **tier 3 arrives at round 3**.
+If both are judged against the state at the start of the opportunity, tier 2 has to wait, and tier 3 arrives
+at round 5. That is a two-round difference in when the top of the tree opens, on a median match of six
+rounds — so it is a rule, not a detail, and it belongs in the ADR with the cadence parameters.
+
+Tuning the rest (initiative values, health, match length) is explicitly deferred by the owner. Raising health
+lengthens matches, which adds opportunities, so the two knobs are not independent.
 
 ## 4. Surfaces, counted
 
@@ -184,7 +200,10 @@ ADRs to supersede exist as the plan says: `0017-spell-initiative-on-unlock.md` a
 
 ## 6. What stage 0 leaves open
 
-- **The purchases-per-match question** (3.3). It decides the cadence parameters, and the cadence is stage 1.
+- **Whether two picks in one opportunity resolve in sequence or at once** (3.3). It decides whether tier 3
+  opens at round 3 or round 5, on a median match of six. The purchases-per-match question that stood here is
+  answered: two picks every other round gives 7 per match on average, 6 in a median one, and about 11 spells
+  against today's 13.6.
 - **Authored tier initiative** (3.2), which the sum cannot supply. Somebody chooses 21 numbers.
 - **The benchmark baseline.** The mirror currently reads 70.5 % for Player 1 after the speed rule landed
   (#160), and why is not understood. A tier migration moves initiative, which is what the timeline orders by,
