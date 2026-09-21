@@ -1,0 +1,13 @@
+{
+  "id": "tier:blightweaver:v1",
+  "name": "Blightweaver",
+  "level": 3,
+  "prerequisites": [
+    "tier:plague_doctor:v1"
+  ],
+  "spells": [
+    "spell:tranquilizer_dart:v1",
+    "spell:infectious_blast:v1"
+  ],
+  "initiativeBonus": 4
+}

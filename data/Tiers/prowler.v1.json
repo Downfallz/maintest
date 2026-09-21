@@ -1,0 +1,11 @@
+{
+  "id": "tier:prowler:v1",
+  "name": "Prowler",
+  "level": 1,
+  "prerequisites": [],
+  "spells": [
+    "spell:poison_slash:v1",
+    "spell:throwing_star:v1"
+  ],
+  "initiativeBonus": 3
+}

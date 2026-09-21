@@ -1,0 +1,11 @@
+{
+  "id": "tier:occultist:v1",
+  "name": "Occultist",
+  "level": 1,
+  "prerequisites": [],
+  "spells": [
+    "spell:lightning_bolt:v1",
+    "spell:rejuvenate:v1"
+  ],
+  "initiativeBonus": 2
+}

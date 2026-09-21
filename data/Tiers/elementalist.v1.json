@@ -1,0 +1,12 @@
+{
+  "id": "tier:elementalist:v1",
+  "name": "Elementalist",
+  "level": 2,
+  "prerequisites": [
+    "tier:occultist:v1"
+  ],
+  "spells": [
+    "spell:meteor:v1"
+  ],
+  "initiativeBonus": 1
+}

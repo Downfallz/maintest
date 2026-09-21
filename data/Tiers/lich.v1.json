@@ -1,0 +1,13 @@
+{
+  "id": "tier:lich:v1",
+  "name": "Lich",
+  "level": 3,
+  "prerequisites": [
+    "tier:necromancer:v1"
+  ],
+  "spells": [
+    "spell:revenant_guards:v1",
+    "spell:crazed_specter:v1"
+  ],
+  "initiativeBonus": 2
+}

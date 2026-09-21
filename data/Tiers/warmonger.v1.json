@@ -1,0 +1,13 @@
+{
+  "id": "tier:warmonger:v1",
+  "name": "Warmonger",
+  "level": 3,
+  "prerequisites": [
+    "tier:marauder:v1"
+  ],
+  "spells": [
+    "spell:chain_slash:v1",
+    "spell:thundering_seal:v1"
+  ],
+  "initiativeBonus": 4
+}

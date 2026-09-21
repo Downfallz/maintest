@@ -1,0 +1,12 @@
+{
+  "id": "tier:shaman:v1",
+  "name": "Shaman",
+  "level": 2,
+  "prerequisites": [
+    "tier:occultist:v1"
+  ],
+  "spells": [
+    "spell:healing_screech:v1"
+  ],
+  "initiativeBonus": 0
+}
