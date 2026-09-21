@@ -127,19 +127,30 @@ stage 1, not after stage 6.**
 
 ## 4. Surfaces, counted
 
-Files outside `legacy/` containing each term. These are the call sites stage 0 is asked to enumerate; they
-are a floor, not a ceiling, because a rename reaches things none of these strings name.
+Tracked files containing each term, excluding `legacy/` and excluding these two audit documents themselves.
+Counted at `99d1239` with one command, so the numbers can be reproduced and will move as the repository does:
+
+```bash
+git ls-files -z | grep -zv '^legacy/' | grep -zv '^docs/domain/tier-evolution-' \
+  | xargs -0 grep -lE '<term>' | wc -l
+```
 
 | term | files |
 | --- | --- |
-| `creatureClass` / `CreatureClass` | **70** |
-| `talentTree` / `TalentTree` | **67** |
+| `creatureClass` / `CreatureClass` | **69** |
+| `talentTree` / `TalentTree` | **64** |
 | `EvolutionChoice` | **47** |
 | `EvolutionOption` | 33 |
 | `DecideEvolution` | 23 |
 | `SpellInitiative` | 10 |
 | `TalentUnlocks` / `EvolutionRules` | 10 |
 | `UnlockValue` / `UnlockTerms` | 7 |
+
+An earlier draft of this table read 70 and 67 for the first two rows. It was produced by grepping a list of
+directories rather than the tracked set, which swept in three git-ignored files of generated output under
+`data/dst`, and it did not say whether this document counted itself. Both were the same mistake: an audit
+whose method is not written down is not an audit. These are the call sites stage 0 is asked to enumerate, and
+they remain a floor rather than a ceiling, because a rename reaches things none of these strings name.
 
 `EvolutionChoice` by area: Application/Agents (5), Cli and Cli/Table (4), Application/Matches
 Commands + Driving + Projections (6), Domain/Matches/Rounds (2), tests across Domain and Application (8),
