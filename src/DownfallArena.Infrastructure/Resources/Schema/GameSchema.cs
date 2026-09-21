@@ -18,5 +18,11 @@ public sealed record GameSchema
 
     public IReadOnlyList<TalentTreeDto> TalentTrees { get; init; } = [];
 
+    /// <summary>
+    /// The packages one evolution pick buys. Empty while the migration is in flight, which is why the schema
+    /// version does not move for it yet: a catalogue with no tiers is the catalogue that exists today.
+    /// </summary>
+    public IReadOnlyList<TierDto> Tiers { get; init; } = [];
+
     public IReadOnlyDictionary<string, string> Aliases { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
 }

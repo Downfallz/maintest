@@ -16,6 +16,8 @@ public static class GameSchemaBuilder
     public const string CreaturesFolder = "Creatures";
     public const string SpellsFolder = "Spells";
     public const string TalentTreesFolder = "TalentTrees";
+
+    public const string TiersFolder = "Tiers";
     public const string AliasesFile = "aliases.json";
 
     public static GameSchema Build(string dataDirectory) => Build(dataDirectory, notes: null);
@@ -37,6 +39,7 @@ public static class GameSchemaBuilder
         var creatures = LoadAll<CreatureDefinitionDto>(Path.Combine(dataDirectory, CreaturesFolder), problems);
         var spells = LoadAll<SpellDto>(Path.Combine(dataDirectory, SpellsFolder), problems);
         var trees = LoadAll<TalentTreeDto>(Path.Combine(dataDirectory, TalentTreesFolder), problems);
+        var tiers = LoadAll<TierDto>(Path.Combine(dataDirectory, TiersFolder), problems, optional: true);
         ThrowIfAny(problems);
 
         var resolver = new AliasResolver(aliases);
@@ -45,6 +48,7 @@ public static class GameSchemaBuilder
             Creatures = [.. creatures.Select(creature => Canonical(creature, resolver, problems)).OrderBy(creature => creature.Id, StringComparer.Ordinal)],
             Spells = [.. spells.Select(spell => Canonical(spell, resolver, problems)).OrderBy(spell => spell.Id, StringComparer.Ordinal)],
             TalentTrees = [.. trees.Select(tree => Canonical(tree, resolver, problems)).OrderBy(tree => tree.Id, StringComparer.Ordinal)],
+            Tiers = [.. tiers.Select(tier => Canonical(tier, resolver, problems)).OrderBy(tier => tier.Id, StringComparer.Ordinal)],
             Aliases = new SortedDictionary<string, string>(aliases, StringComparer.Ordinal),
         };
         ThrowIfAny(problems);
@@ -120,6 +124,17 @@ public static class GameSchemaBuilder
             CasterEffects = spell.CasterEffects is { Count: > 0 } ? spell.CasterEffects : null,
         };
 
+    private static TierDto Canonical(TierDto tier, AliasResolver resolver, List<string> problems)
+    {
+        var context = $"tier '{tier.Id}'";
+        return tier with
+        {
+            Id = resolver.Resolve<TierId>(tier.Id, context, problems) ?? tier.Id,
+            Prerequisites = [.. tier.Prerequisites.Select(id => resolver.Resolve<TierId>(id, context, problems) ?? id)],
+            Spells = [.. tier.Spells.Select(id => resolver.Resolve<SpellId>(id, context, problems) ?? id)],
+        };
+    }
+
     private static TalentTreeDto Canonical(TalentTreeDto tree, AliasResolver resolver, List<string> problems)
     {
         var context = $"talent tree '{tree.Id}'";
@@ -173,13 +188,22 @@ public static class GameSchemaBuilder
         }
     }
 
-    private static List<T> LoadAll<T>(string directory, List<string> problems)
+    /// <summary>
+    /// Every JSON file under a content folder. A missing folder is a problem unless <paramref name="optional"/>
+    /// says otherwise, which only <c>Tiers</c> is while the migration runs: a catalogue authored before tiers
+    /// existed has no such folder and is still a catalogue.
+    /// </summary>
+    private static List<T> LoadAll<T>(string directory, List<string> problems, bool optional = false)
         where T : class
     {
         var items = new List<T>();
         if (!Directory.Exists(directory))
         {
-            problems.Add($"Content folder '{Path.GetFileName(directory)}' is missing.");
+            if (!optional)
+            {
+                problems.Add($"Content folder '{Path.GetFileName(directory)}' is missing.");
+            }
+
             return items;
         }
 

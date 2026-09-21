@@ -15,7 +15,7 @@ try
         await Console.Out.WriteLineAsync("note: " + note);
     }
 
-    await Console.Out.WriteLineAsync($"Built {schema.Spells.Count} spells, {schema.Creatures.Count} creatures, {schema.TalentTrees.Count} talent trees from '{dataDirectory}'.");
+    await Console.Out.WriteLineAsync($"Built {schema.Spells.Count} spells, {schema.Creatures.Count} creatures, {schema.TalentTrees.Count} talent trees, {schema.Tiers.Count} tiers from '{dataDirectory}'.");
     await Console.Out.WriteLineAsync($"Content hash {schema.ContentHash} written to '{outputDirectory}'.");
     return 0;
 }

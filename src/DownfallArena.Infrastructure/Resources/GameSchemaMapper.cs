@@ -23,6 +23,7 @@ public static class GameSchemaMapper
         var spells = new List<Spell>();
         var creatures = new List<CreatureDefinition>();
         var trees = new List<TalentTree>();
+        var tiers = new List<Tier>();
 
         foreach (var dto in schema.Spells)
         {
@@ -48,13 +49,54 @@ public static class GameSchemaMapper
             }
         }
 
+        foreach (var dto in schema.Tiers)
+        {
+            if (MapTier(dto, problems) is { } tier)
+            {
+                tiers.Add(tier);
+            }
+        }
+
         if (problems.Count > 0)
         {
             throw new InvalidGameContentException(problems);
         }
 
         var version = string.IsNullOrWhiteSpace(schema.ContentHash) ? "unhashed" : schema.ContentHash;
-        return GameResources.Create(version, creatures, spells, trees);
+        return GameResources.Create(version, creatures, spells, trees, tiers);
+    }
+
+    /// <summary>
+    /// A package, or null with the reasons collected. <see cref="Tier.Create"/> throws on what it refuses, so
+    /// the throw is caught and turned into a problem: one bad tier must not hide the rest of the catalogue's.
+    /// </summary>
+    private static Tier? MapTier(TierDto dto, List<string> problems)
+    {
+        var context = $"tier '{dto.Id}'";
+        var id = ParseId<TierId>(dto.Id, context, problems);
+        var prerequisites = dto.Prerequisites.Select(value => ParseId<TierId>(value, context, problems)).OfType<TierId>().ToList();
+        var spells = dto.Spells.Select(value => ParseId<SpellId>(value, context, problems)).OfType<SpellId>().ToList();
+
+        if (id is null || prerequisites.Count != dto.Prerequisites.Count || spells.Count != dto.Spells.Count)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Name))
+        {
+            problems.Add($"{context}: 'name' is required.");
+            return null;
+        }
+
+        try
+        {
+            return Tier.Create(id, dto.Name, dto.Level, prerequisites, spells, Initiative.Of(dto.InitiativeBonus));
+        }
+        catch (ArgumentException error)
+        {
+            problems.Add($"{context}: {error.Message}");
+            return null;
+        }
     }
 
     private static Spell? MapSpell(SpellDto dto, List<string> problems)
