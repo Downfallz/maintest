@@ -139,7 +139,8 @@ public sealed class Foresight(ActionScorer scorer, IGameResources resources, Rul
                 break;
             }
 
-            var resolution = ResolutionRules.Resolve(action, ahead, resources, rules, ForcedRandom.NotCritical);
+            // Forced plain, so the speed cannot move this reading; Standard is passed because the call needs one.
+            var resolution = ResolutionRules.Resolve(action, ahead, resources, rules, ForcedRandom.NotCritical, Speed.Standard);
             if (resolution.Fizzled)
             {
                 continue;

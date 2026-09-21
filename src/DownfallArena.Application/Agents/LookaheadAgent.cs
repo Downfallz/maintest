@@ -114,7 +114,8 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         IReadOnlyList<CreatureSnapshot> ahead = beforeCombat;
         foreach (var revealed in board.RevealedActions)
         {
-            ahead = Advance.Action(revealed, ahead, resources, rules, ForcedRandom.NotCritical).Board;
+            // Already revealed and replayed plain: the roll is forced, so the speed changes nothing here.
+            ahead = Advance.Action(revealed, ahead, resources, rules, ForcedRandom.NotCritical, Speed.Standard).Board;
         }
 
         var intent = new CombatIntent(options.Actor, options.Spell);
@@ -260,7 +261,9 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
                 continue;
             }
 
-            var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical);
+            // The timeline knows what each creature chose, and the actor's roll is the one that can crit, so the
+            // rollout has to read the real speed here or it prices a critical a Quick actor cannot roll.
+            var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical, board.Timeline[index].Speed);
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
             value += sign * _scorer.Score(advanced.Resolution, ahead);
             ahead = advanced.Board;

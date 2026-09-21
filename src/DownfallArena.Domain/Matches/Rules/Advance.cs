@@ -26,14 +26,16 @@ public static class Advance
     /// <summary>
     /// The board after one combat action: resolved on the snapshots as the match resolves it, applied to the
     /// restored creatures as the match applies it. The random source decides the critical roll, which is how
-    /// a caller asks for the plain outcome or the critical one.
+    /// a caller asks for the plain outcome or the critical one — and the speed decides whether there is a roll
+    /// to ask for at all, since a Quick cast never crits.
     /// </summary>
     public static AdvancedAction Action(
         CombatAction action,
         IReadOnlyList<CreatureSnapshot> board,
         IGameResources resources,
         RuleSet rules,
-        IRandomSource random)
+        IRandomSource random,
+        Speed speed)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(board);
@@ -41,7 +43,7 @@ public static class Advance
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(random);
 
-        var resolution = ResolutionRules.Resolve(action, board, resources, rules, random);
+        var resolution = ResolutionRules.Resolve(action, board, resources, rules, random, speed);
         var creatures = Restore(board, resources);
         var applied = CombatExecution.Apply(resolution, creatures);
         return new AdvancedAction(resolution, applied, Snapshots(creatures));

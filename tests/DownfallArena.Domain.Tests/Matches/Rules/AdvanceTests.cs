@@ -90,7 +90,7 @@ public sealed class AdvanceTests
         var before = match.Snapshots();
         var action = match.CurrentRound.ShouldNotBeNull().NextActionToResolve();
 
-        var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
+        var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
         var step = match.ResolveNextAction().Value;
 
         step.MatchCompleted.ShouldBeTrue();
@@ -128,7 +128,7 @@ public sealed class AdvanceTests
         Table.HitFirstLivingEnemy(match);
         var before = match.Snapshots();
 
-        var advanced = Advance.Action(match.CurrentRound.ShouldNotBeNull().NextActionToResolve(), before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
+        var advanced = Advance.Action(match.CurrentRound.ShouldNotBeNull().NextActionToResolve(), before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
 
         advanced.AppliedOutcomes.ShouldNotBeEmpty();
         ShouldMatch(match.Snapshots(), before);
@@ -141,7 +141,7 @@ public sealed class AdvanceTests
         var board = Arena.Snapshots(Arena.FourCreatures());
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Slam), [Arena.Ghoul]);
 
-        var advanced = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99));
+        var advanced = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99), Speed.Standard);
 
         advanced.Resolution.Fizzled.ShouldBeTrue();
         advanced.Resolution.FizzleReason.ShouldBe(CombatErrors.SpellNotKnown);
@@ -155,8 +155,8 @@ public sealed class AdvanceTests
         var board = Arena.Snapshots(Arena.FourCreatures());
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Ghoul]);
 
-        var plain = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99));
-        var critical = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.0));
+        var plain = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99), Speed.Standard);
+        var critical = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.0), Speed.Standard);
 
         plain.Board.Single(creature => creature.Id == Arena.Ghoul).Health.ShouldBe(Health.Of(17));
         critical.Resolution.IsCritical.ShouldBeTrue();
@@ -236,7 +236,7 @@ public sealed class AdvanceTests
             var before = match.Snapshots();
             var round = match.CurrentRound.Number;
             var action = match.CurrentRound.NextActionToResolve();
-            var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
+            var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
 
             var step = match.ResolveNextAction().Value;
 

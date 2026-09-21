@@ -270,6 +270,11 @@ Player.
 **Result.** Put that Creature's two-sided Speed token **face down** in its Speed slot, Quick side or Standard
 side up. Every such Creature gets exactly one. When both Players are done, turn all the tokens over together.
 
+**What you are trading.** Quick acts before every Standard Creature — and **a Quick Creature cannot crit this
+Round**, however much Critical chance it and its Spell have. Standard keeps the crit and waits its turn. Go
+Quick to land a blow that does not need the dice, or to act before something that would kill you; stay
+Standard when the crit is what you are hoping for, or when you want the board to change before you play.
+
 **A stunned Creature skips the Round entirely.** It takes no Speed choice, so it gets no Activation slot on
 the Combat timeline, so it declares no Intent and never acts. It is not "losing its attack": it is not in the
 Round. The Stun token sits in its Speed slot, so there is nowhere to put a Speed token.
@@ -294,7 +299,7 @@ A dead Creature is not in the Round either, for the same reason and one step ear
 4. Break every tie with: **Player 1 before Player 2**, then **the lower Creature number first**.
 
 Quick always beats Standard. A Quick Creature with Current initiative 0 still acts before a Standard Creature
-with 20.
+with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
 
 > **Example.** Creature 2 was hit by **Ice Spear** in the last Round and carries Initiative -2 for one Round.
 > Base initiatives: Creature 1 is 6, Creatures 2, 3, 5 and 6 are 5, Creature 4 is 6. Current initiatives are
