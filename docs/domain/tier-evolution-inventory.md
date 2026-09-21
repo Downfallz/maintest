@@ -71,10 +71,15 @@ migration — but they name the tier 2 opener, not the whole specialization. Spe
 | `Assassin` | momentum, death_squad, mortal_wound | only momentum; the rest are `Deathstalker` |
 | `Shaman` | healing_screech, toxic_waves, restorative_burst | only healing_screech; the rest are `Spiritcaller` |
 
-**A migration that leaves `creatureClass` alone produces data that validates and is wrong**, for these four
-families and twelve spells. Every other family fails loudly, because `Mercenary` and the rest stop existing.
-So the four that look safest are the four to check: the migration must rewrite `creatureClass` for all 33
-acquired spells, and any validation that only checks "the class exists" will pass this corruption.
+**A migration that leaves `creatureClass` alone produces data that validates and is wrong** — for **eight**
+spells, not for all twelve in these four families. In each of the four, the opener keeps a label that is
+still correct and the other two go stale while staying a real class name. An earlier draft of this paragraph
+said twelve, contradicting the table directly above it.
+
+Eight is the number that matters precisely because it is not twelve: the four correct labels are what make
+the corruption look like working data. Every other family fails loudly, because `Mercenary` and the rest stop
+existing. So the four that look safest are the four to check: the migration must rewrite `creatureClass` for
+all 33 acquired spells, and any validation that only asks "does this class exist" will pass all eight.
 
 ### 3.2 The initiative baseline is uneven, with numbers
 
@@ -131,9 +136,15 @@ Tracked files containing each term, excluding `legacy/` and excluding these two 
 Counted at `99d1239` with one command, so the numbers can be reproduced and will move as the repository does:
 
 ```bash
-git ls-files -z | grep -zv '^legacy/' | grep -zv '^docs/domain/tier-evolution-' \
+git ls-files -z | grep -zv '^legacy/' \
+  | grep -zvx 'docs/domain/tier-evolution-inventory.md' \
+  | grep -zvx 'docs/domain/tier-evolution-plan.md' \
   | xargs -0 grep -lE '<term>' | wc -l
 ```
+
+The two documents are excluded by their exact paths. A `tier-evolution-` prefix would have been shorter and
+wrong in both directions: it would drop any future migration document from the count, and it would stop
+excluding either of these the moment one is renamed.
 
 | term | files |
 | --- | --- |
