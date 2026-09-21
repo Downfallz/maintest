@@ -4,7 +4,8 @@ Status: **inventory only** (2026-09-21). Nothing is decided and no code has move
 the migration plan's stage 0 asks for: what the tree is today, what the 21 packages map onto, which surfaces
 the change touches, and the hazards a mechanical migration would walk into.
 
-Read with the plan. Where the two disagree, this file is the one that was measured.
+Read with `tier-evolution-plan.md`, which sits beside it. Where the two disagree, this file is the one that
+was measured.
 
 ## 1. The tree as it exists
 
