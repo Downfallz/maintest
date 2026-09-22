@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
 from typing import Any
@@ -283,11 +283,14 @@ class Content:
         """Whether an alias names a spell that is on disk, built or not."""
         return alias in self.spells or alias in self.disabled
 
-    def with_spells(self, spells: Mapping[str, dict]) -> Content:
+    def with_spells(
+        self, spells: Mapping[str, dict], package_documents: Mapping[str, dict] | None = None
+    ) -> Content:
         """The same catalogue with other numbers in it: same files, same disabled set, same packages.
 
         Everything a candidate is judged by other than the numbers comes from here, so rebuilding a Content
         by hand is how a rule quietly stops seeing what it needs — the tiers went missing that way once.
+        ``package_documents`` replaces the packages' own numbers when given, and keeps them when not.
         """
         return Content(
             spells=dict(spells),
@@ -295,7 +298,9 @@ class Content:
             disabled=self.disabled,
             tiers=self.tiers,
             packages=self.packages,
-            package_documents=self.package_documents,
+            package_documents=self.package_documents
+            if package_documents is None
+            else dict(package_documents),
             package_files=self.package_files,
             ambiguous_packages=self.ambiguous_packages,
             disabled_packages=self.disabled_packages,
@@ -304,8 +309,8 @@ class Content:
     def with_documents(self, documents: Mapping[str, dict]) -> Content:
         """The same catalogue with other numbers in it, spells and packages alike, each in its own place."""
         packaged = {alias: doc for alias, doc in documents.items() if alias.startswith(PACKAGE_PREFIX)}
-        changed = self.with_spells({alias: doc for alias, doc in documents.items() if alias not in packaged})
-        return replace(changed, package_documents={**self.package_documents, **packaged})
+        spells = {alias: doc for alias, doc in documents.items() if alias not in packaged}
+        return self.with_spells(spells, package_documents={**self.package_documents, **packaged})
 
     def progression(self, better: str, worse: str) -> bool:
         """Whether ``better`` outclassing ``worse`` is what climbing a family is for.

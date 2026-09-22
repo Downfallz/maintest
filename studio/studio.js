@@ -9,7 +9,7 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
+import { STALE_POINTER, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
 import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
@@ -2215,12 +2215,9 @@ async function remove(item) {
   // Every alias pointing at this spell, not the one it is reached by: the map below drops them all, so
   // pruning a single entry would leave the others naming a spell nothing resolves to -- which is the second
   // door ADR 0025 exists to close, and `survey` already reasons about two aliases on one spell.
-  const pointing = Object.keys(state.catalogue.aliases || {}).filter(name => state.catalogue.aliases[name] === item.id);
-  // A package is usually reached by no alias at all, so its entry is keyed by its id without the version --
-  // unless that name is an alias for another version, which makes this file the superseded one and leaves
-  // the entry where it is (`aliasOfPackage` is the rule `load_content` reads by).
-  const packageKey = state.tab === 'tiers' && !pointing.length ? aliasOfPackage(item.id, state.catalogue.aliases) : null;
-  const aliases = KNOBBED_TABS.has(state.tab) ? [...pointing, ...(packageKey ? [packageKey] : [])] : [];
+  // A package is usually reached by no alias at all, so its entry is keyed by its id without the version,
+  // which `entryAliasesOf` works out the way `load_content` does.
+  const aliases = entryAliasesOf(item.id, state.catalogue.aliases);
   const entries = balance ? aliases.filter(name => entryFor(balance, name)) : [];
   // A constraint names its spells by hand. Deleting one of them does not fail the knobs file the way an
   // orphaned entry does -- it leaves the constraint checking nothing, quietly, which is worse (ADR 0025), so

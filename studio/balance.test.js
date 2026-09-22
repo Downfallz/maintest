@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 
 import {
-  STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading,
+  STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading,
   newKnob, objectiveOf, pointersOf,
   readBalance, readPointer, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry,
 } from './balance.js';
@@ -549,6 +549,25 @@ test('an alias decides which version of a package the entry belongs to', () => {
 
   assert.equal(aliasOfPackage('tier:prowler:v2', aliases), 'tier:prowler');
   assert.equal(aliasOfPackage('tier:prowler:v1', aliases), null, 'the superseded version owns no entry');
+});
+
+test('a spell owns an entry for every alias pointing at it, and deleting it takes them all', () => {
+  const aliases = { 'spell:pummel': 'spell:pummel:v1', 'spell:bonk': 'spell:pummel:v1', 'spell:guard': 'spell:guard:v1' };
+
+  assert.deepEqual(entryAliasesOf('spell:pummel:v1', aliases), ['spell:pummel', 'spell:bonk']);
+});
+
+test('a package no alias reaches owns the entry named by its id without the version', () => {
+  assert.deepEqual(entryAliasesOf('tier:prowler:v1', {}), ['tier:prowler']);
+});
+
+test('a superseded package owns no entry: it follows the alias to the version that replaced it', () => {
+  assert.deepEqual(entryAliasesOf('tier:prowler:v1', { 'tier:prowler': 'tier:prowler:v2' }), []);
+  assert.deepEqual(entryAliasesOf('tier:prowler:v2', { 'tier:prowler': 'tier:prowler:v2' }), ['tier:prowler']);
+});
+
+test('a creature or a tree owns no knobs entry', () => {
+  assert.deepEqual(entryAliasesOf('creature:main:v1', { 'creature:main': 'creature:main:v1' }), []);
 });
 
 test('a seeded entry carries what the content says and invents no intent', () => {

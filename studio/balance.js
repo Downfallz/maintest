@@ -110,6 +110,23 @@ export function aliasOfPackage(packageId, aliases) {
 }
 
 /**
+ * Every knobs entry an item owns, by the id it is saved under: the entries its deletion has to take with it
+ * (ADR 0025). A spell owns one per alias pointing at it -- two aliases on one spell are two entries, and
+ * pruning one would leave the other naming nothing. A package is usually reached by no alias at all, so
+ * without one it owns the entry `aliasOfPackage` names it by. Anything else owns none.
+ */
+export function entryAliasesOf(itemId, aliases) {
+  const map = isRecord(aliases) ? aliases : {};
+  const id = text(itemId);
+  const isPackage = id.startsWith(PACKAGE_PREFIX);
+  if (!isPackage && !id.startsWith('spell:')) return [];
+  const pointing = Object.keys(map).filter(alias => map[alias] === id);
+  if (pointing.length || !isPackage) return pointing;
+  const owned = aliasOfPackage(id, map);
+  return owned ? [owned] : [];
+}
+
+/**
  * The unversioned alias a spell id answers to, which is how the knobs file names it. The alias map is the
  * authority -- `spell:pummel` is only this spell's alias while it points here -- so the id with its `:vN` cut
  * off is a candidate to confirm, never an answer on its own.

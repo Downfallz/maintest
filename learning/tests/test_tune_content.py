@@ -1459,8 +1459,10 @@ PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"], "ini
 
 def with_package(tmp_path: Path) -> Content:
     """The two-spell catalogue plus one package, each document read from its own file."""
-    return replace(
-        catalogue(tmp_path),
+    base = catalogue(tmp_path)
+    return Content(
+        spells=base.spells,
+        files=base.files,
         package_documents={"tier:open": json.loads(json.dumps(PACKAGE))},
         package_files={"tier:open": tmp_path / "Tiers" / "open.v1.json"},
     )

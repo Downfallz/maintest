@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -889,8 +888,9 @@ def packaged(**document: object) -> Content:
     """The one-spell test catalogue with one package selling that spell."""
     base = content(**{"spell:attack": ATTACK})
     package = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"]} | document
-    return replace(
-        base,
+    return Content(
+        spells=base.spells,
+        files=base.files,
         package_documents={"tier:open": package},
         package_files={"tier:open": Path("Tiers/open.v1.json")},
     )
