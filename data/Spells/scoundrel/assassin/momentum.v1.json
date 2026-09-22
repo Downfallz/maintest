@@ -3,7 +3,6 @@
   "name": "Momentum",
   "spellType": "Defensive",
   "creatureClass": "Assassin",
-  "initiative": 3,
   "energyCost": 0,
   "criticalChance": 0,
   "targeting": {

@@ -10,9 +10,11 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   **Authored, like everything above** (ADR 0057). The studio edits them: id, name, level, prerequisites, the
   spells taught and the initiative bonus. `scripts/build-tiers.py` is how the 21 were first written from the
   talent tree; it has run, and re-running it would overwrite what has been authored since. The data builder
-  validates them and carries them into the consolidated schema, which is then version 2; a catalogue with no
-  packages is the version-1 document it always was, hash included. The game plays them: a pick buys one, and
-  its `initiativeBonus` is the initiative a purchase is worth.
+  validates them and carries them into the consolidated schema, which is then version 4; a catalogue with no
+  packages is version 3. Both numbers moved from 2 and 1 when a spell stopped carrying its own initiative
+  (ADR 0059): the content hash is taken over that document, so dropping a member from it is a break an older
+  engine has to be told about rather than left to read as a bad hash. The game plays them: a pick buys one,
+  and its `initiativeBonus` is the initiative a purchase is worth.
 - `aliases.json`: unversioned ids (`spell:pummel`) to their current versioned id (`spell:pummel:v1`).
 
 References between items (starting spells, talent prerequisites) may use either form; the data builder resolves

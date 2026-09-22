@@ -3,7 +3,6 @@
   "name": "Noxious Cure",
   "spellType": "Defensive",
   "creatureClass": "Trickster",
-  "initiative": 1,
   "energyCost": 2,
   "criticalChance": 0.28,
   "targeting": {

@@ -3,7 +3,6 @@
   "name": "Tornado",
   "spellType": "Offensive",
   "creatureClass": "Berserker",
-  "initiative": 1,
   "energyCost": 3,
   "criticalChance": 0.38,
   "targeting": {

@@ -186,7 +186,7 @@ public sealed class ContentAuditTests
                     "Seep",
                     SpellType.Offensive,
                     CreatureClass.Creature,
-                    new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+                    new SpellStats(Energy.Of(0), CriticalChance.None),
                     TargetingSpec.SingleTarget(TargetOrigin.Enemy),
                     [Bleed.Of(2, rounds)]),
             ],
@@ -248,7 +248,7 @@ public sealed class ContentAuditTests
                     "Battery",
                     SpellType.Defensive,
                     CreatureClass.Creature,
-                    new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+                    new SpellStats(Energy.Of(0), CriticalChance.None),
                     TargetingSpec.SingleTarget(TargetOrigin.Self),
                     [EnergyGain.Of(5)]),
                 Spell(costly, cost: 10_000, damage: 2),
@@ -352,7 +352,7 @@ public sealed class ContentAuditTests
             id.Name,
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            new SpellStats(Energy.Of(0), CriticalChance.None),
             TargetingSpec.SingleTarget(TargetOrigin.Enemy),
             effects,
             casterEffects);
@@ -360,13 +360,12 @@ public sealed class ContentAuditTests
     [Fact]
     public void A_spell_stat_every_spell_gives_the_same_value_is_reported_as_one_this_content_does_not_vary()
     {
-        // Every test spell here shares an initiative and a critical chance, and differs only by its damage.
+        // Every test spell here shares a critical chance, and differs by its cost and its damage.
         var report = ContentAudit.Of(TestContent.Resources, RuleSet.Default);
 
         var flat = report.Findings.Where(finding => finding.Code == "Content.FlatSpellStat").ToList();
-        flat.Select(finding => finding.Subject).ShouldBe(["criticalChance", "initiative"], ignoreOrder: true);
+        flat.Select(finding => finding.Subject).ShouldBe(["criticalChance"]);
         flat.Single(finding => finding.Subject == "criticalChance").Message.ShouldContain("bonus on the creature's own");
-        flat.Single(finding => finding.Subject == "initiative").Message.ShouldContain("Unlocking any spell");
     }
 
     [Fact]
@@ -417,7 +416,7 @@ public sealed class ContentAuditTests
             id.Name,
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(cost), CriticalChance.None),
+            new SpellStats(Energy.Of(cost), CriticalChance.None),
             TargetingSpec.SingleTarget(TargetOrigin.Enemy),
             [Damage.Of(damage)]);
 

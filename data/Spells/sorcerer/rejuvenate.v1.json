@@ -3,7 +3,6 @@
   "name": "Rejuvenate",
   "spellType": "Defensive",
   "creatureClass": "Sorcerer",
-  "initiative": 1,
   "energyCost": 2,
   "criticalChance": 0.22,
   "targeting": {

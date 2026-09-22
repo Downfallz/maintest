@@ -36,6 +36,9 @@ from downfall_learning.knobs import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DAMAGE_POINTER = "/effects/0/amount"
 
+# The `initiative` is deliberately still here. Until ADR 0059 it was a spell's acquisition bonus and every
+# reading below compared it; now nothing does, and a file left over from before must not be read as content.
+# `test_an_initiative_a_stale_file_carries_decides_nothing` is what holds that.
 ATTACK = {
     "id": "spell:attack:v1",
     "initiative": 1,
@@ -210,11 +213,19 @@ def test_reaching_more_enemies_for_the_same_price_is_strictly_better() -> None:
     assert dominates(sweep, ATTACK)
 
 
-def test_a_slower_unlock_is_not_strictly_better_however_hard_it_hits() -> None:
-    """Spell initiative is a real reward, so giving it up is a price like any other."""
-    later = spell(initiative=0, effects=[{"kind": "Damage", "amount": 9}])
+def test_an_initiative_a_stale_file_carries_decides_nothing() -> None:
+    """It was a reward a spell gave up, so the comparison priced it. A package pays it now (ADR 0059).
 
-    assert not dominates(later, ATTACK)
+    Both halves of the rule, on one pair: a spell that gives the field up is judged on what is left, and two
+    spells that differ only by it are the same spell. A file written before the change still parses, so the
+    field can still arrive -- it just decides nothing when it does.
+    """
+    harder = spell(initiative=0, effects=[{"kind": "Damage", "amount": 9}])
+
+    assert dominates(harder, ATTACK)
+    assert twins(content(**{"spell:attack": ATTACK, "spell:twin": spell(initiative=3)})) == [
+        frozenset({"spell:attack", "spell:twin"})
+    ]
 
 
 def test_only_the_pairs_a_candidate_adds_count_against_it() -> None:
@@ -242,7 +253,7 @@ def test_two_spells_a_match_cannot_tell_apart_are_reported(tmp_path: Path) -> No
 
     assert reports == [
         "spell:attack and spell:twin are one spell under two names: the same cost, "
-        "Spell initiative, critical chance, targeting and effects."
+        "critical chance, targeting and effects."
     ]
 
 

@@ -67,7 +67,7 @@ public sealed class StudioApiTests : IDisposable
               "path": "Spells/brawler/guard.v2.json",
               "document": {
                 "id": "spell:guard:v2", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-                "initiative": 2, "energyCost": 2, "criticalChance": 0,
+                "energyCost": 2, "criticalChance": 0,
                 "targeting": { "origin": "Self", "scope": "SingleTarget" },
                 "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
               }
@@ -105,7 +105,7 @@ public sealed class StudioApiTests : IDisposable
               "create": true,
               "document": {
                 "id": "spell:guard:v1", "name": "Replaced", "spellType": "Defensive", "creatureClass": "Brawler",
-                "initiative": 2, "energyCost": 1, "criticalChance": 0,
+                "energyCost": 1, "criticalChance": 0,
                 "targeting": { "origin": "Self", "scope": "SingleTarget" },
                 "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
               }

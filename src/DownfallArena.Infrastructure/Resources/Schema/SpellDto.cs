@@ -12,8 +12,6 @@ public sealed record SpellDto
 
     public string CreatureClass { get; init; } = string.Empty;
 
-    public int Initiative { get; init; }
-
     public int EnergyCost { get; init; }
 
     public double CriticalChance { get; init; }

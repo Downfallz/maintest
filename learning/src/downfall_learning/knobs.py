@@ -683,8 +683,7 @@ def indistinguishable(content: Content) -> list[str]:
 
 
 def twins(content: Content) -> list[frozenset[str]]:
-    """Pairs of spells nothing in a match distinguishes: same cost, Spell initiative, critical chance,
-    targeting and effects.
+    """Pairs of spells nothing in a match distinguishes: same cost, critical chance, targeting and effects.
 
     The effects are compared whole and as a multiset, the way the engine's ``ContentAudit`` compares them:
     two damage effects of three are not one of six, and a stacking policy is part of the effect. The engine
@@ -706,7 +705,6 @@ def _signature(document: Mapping[str, object]) -> str:
     return json.dumps(
         [
             document.get("energyCost", 0),
-            document.get("initiative", 0),
             document.get("criticalChance", 0) or 0,
             document.get("targeting", {}),
             _multiset(document.get("effects", [])),
@@ -731,16 +729,16 @@ def _multiset(effects: object) -> list[str]:
 def _twin_report(pair: frozenset[str]) -> str:
     first, second = sorted(pair)
     return (
-        f"{first} and {second} are one spell under two names: the same cost, Spell initiative, "
-        "critical chance, targeting and effects."
+        f"{first} and {second} are one spell under two names: the same cost, critical chance, "
+        "targeting and effects."
     )
 
 
 def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool:
     """Whether ``better`` is at least as good as ``worse`` everywhere and better somewhere.
 
-    Same targeting origin and at least as many targets, cost no higher, Spell initiative no lower, every
-    effect of ``worse`` matched by one at least as large, and an extra effect that carries something.
+    Same targeting origin and at least as many targets, cost no higher, every effect of ``worse`` matched
+    by one at least as large, and an extra effect that carries something.
 
     Critical chance is compared only between two spells that both carry something the multiplier reaches --
     a `Damage` or a direct `Heal` (ADR 0033). On a spell that carries neither it is a number no match reads,
@@ -776,7 +774,6 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
     comparisons += [
         (int(left.get("maxTargets", 1)), int(right.get("maxTargets", 1))),
         (-int(better.get("energyCost", 0)), -int(worse.get("energyCost", 0))),
-        (int(better.get("initiative", 0)), int(worse.get("initiative", 0))),
     ]
     if CRITTABLE & ours.keys() and CRITTABLE & theirs.keys():
         comparisons.append(
@@ -919,10 +916,8 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
       the shred lets through (ADR 0035);
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
       bigger average one in a way nothing here can see;
-    - no energy cost and no Spell initiative, both of which `ActionScorer` prices when it picks an unlock,
-      so a spell whose intent rests on being cheap or on coming up early reads low here. `throwing_star` is
-      the one in this catalogue: its entry says its Spell initiative is worth more to the class than its
-      damage, and none of that is in this number;
+    - no energy cost, which `ActionScorer` prices when it picks a package, so a spell whose intent rests on
+      being cheap reads low here;
     - the caster's own critical chance, which belongs to a creature and not to a spell.
 
     What it is good for is one question: roughly how much is this spell worth next to the one offered beside
@@ -976,9 +971,8 @@ def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: M
 
     Every term of :func:`cast_value` is a weight that the weights file keeps at or above zero times a
     magnitude the content keeps at or above zero, so the top of the box is every knob that reaches a term set
-    to its maximum. A Spell initiative knob moves no term here and is left where it is. A cost knob moves no
-    term either, but it moves how often the cast comes up, so the ceiling is read at the *cheapest* price the
-    bounds reach -- the corner that is best for the spell, on both counts.
+    to its maximum. A cost knob moves no term here, but it moves how often the cast comes up, so the ceiling
+    is read at the *cheapest* price the bounds reach -- the corner that is best for the spell.
 
     One kind of knob is turned the other way: a harmful effect on the caster (ADR 0031) is subtracted, so the
     best corner for the spell is its **minimum**. Sending it to the maximum would understate the ceiling, and

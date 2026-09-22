@@ -3,7 +3,6 @@
   "name": "Restorative Gush",
   "spellType": "Defensive",
   "creatureClass": "Warlord",
-  "initiative": 2,
   "energyCost": 2,
   "criticalChance": 0.5,
   "targeting": {

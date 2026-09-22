@@ -40,7 +40,7 @@ internal sealed class ContentDirectory : IDisposable
         .WithFile("Spells/strike.v1.json", """
             {
               "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
-              "initiative": 1, "energyCost": 0, "criticalChance": 0,
+              "energyCost": 0, "criticalChance": 0,
               "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
               "effects": [ { "kind": "Damage", "amount": 1 }, { "kind": "Bleed", "amountPerRound": 1, "durationRounds": 2 } ]
             }
@@ -48,7 +48,7 @@ internal sealed class ContentDirectory : IDisposable
         .WithFile("Spells/brawler/guard.v1.json", """
             {
               "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-              "initiative": 2, "energyCost": 1, "criticalChance": 0,
+              "energyCost": 1, "criticalChance": 0,
               "targeting": { "origin": "Self", "scope": "SingleTarget" },
               "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
             }

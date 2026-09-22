@@ -187,7 +187,7 @@ public sealed class TierContentTests
             .WithFile("Spells/brawler/guard.v1.json", """
                 {
                   "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-                  "initiative": 2, "energyCost": 1, "criticalChance": 0, "enabled": false,
+                  "energyCost": 1, "criticalChance": 0, "enabled": false,
                   "targeting": { "origin": "Self", "scope": "SingleTarget" },
                   "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
                 }

@@ -3,6 +3,16 @@
 Status: **Specification** (2026-09-14). Phase 3 of [plan.md](plan.md). It answers the 41 **needs a component**
 rows of [translation.md](translation.md) and specifies a generator that is not written here.
 
+> **The evolution rules below describe the game before
+> [ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md).** A pick bought one Spell and every
+> unlock raised Base initiative by that Spell's own number; a pick buys a whole package now, twice at round 1
+> and every second round after, and the package pays one initiative bonus. The per-Spell number is gone
+> entirely ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), so any row here
+> that cites `Spell initiative` or `Creature.UnlockSpell` names something the engine no longer has. Re-auditing
+> the tabletop translation against the package model is phase 7 of
+> [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md) and has not been done. Everything
+> outside evolution — combat, the timeline, conditions, the win condition — is unaffected.
+
 ## What this is
 
 A manifest, a card face, a board and track layout, and the specification of the generator that prints them.

@@ -3,7 +3,6 @@
   "name": "Basic Attack",
   "spellType": "Offensive",
   "creatureClass": "Creature",
-  "initiative": 1,
   "energyCost": 1,
   "criticalChance": 0,
   "targeting": {

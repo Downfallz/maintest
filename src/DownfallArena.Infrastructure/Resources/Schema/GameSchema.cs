@@ -7,17 +7,30 @@ namespace DownfallArena.Infrastructure.Resources.Schema;
 /// </summary>
 public sealed record GameSchema
 {
-    /// <summary>The document as it was before evolution packages existed: no <see cref="Tiers"/> member.</summary>
-    public const int VersionWithoutTiers = 1;
+    /// <summary>
+    /// The last version whose spells carried a per-spell <c>initiative</c>. 1 had no <see cref="Tiers"/> member
+    /// and 2 carried one; both are unreadable here, because ADR 0059 removed that member from a spell and the
+    /// content hash is taken over this document.
+    /// </summary>
+    public const int LastVersionWithASpellInitiative = 2;
+
+    /// <summary>The document without a <see cref="Tiers"/> member, spells as ADR 0059 left them.</summary>
+    public const int VersionWithoutTiers = 3;
 
     /// <summary>The document that carries <see cref="Tiers"/>, which a reader written before them cannot read.</summary>
-    public const int VersionWithTiers = 2;
+    public const int VersionWithTiers = 4;
 
     /// <summary>
     /// The lowest version that can read this document, not the newest the builder knows. A catalogue with no
-    /// packages stays at <see cref="VersionWithoutTiers"/> because it is still exactly the document that version
-    /// always was, down to its content hash; one that has them says so, because a reader that predates the
-    /// member refuses it as an unknown field.
+    /// packages stays at <see cref="VersionWithoutTiers"/>; one that has them says so, because a reader that
+    /// predates the member refuses it as an unknown field.
+    /// <para>
+    /// Both numbers moved at ADR 0059, which took the per-spell <c>initiative</c> out of a spell. Dropping a
+    /// member is the same compatibility break as adding one and in the same place: the hash is taken over this
+    /// document, so a reader that still knows the member deserializes it back as 0, writes it into the
+    /// canonical form, and reports a hash that does not match — corruption, for a catalogue that is sound. A
+    /// version it does not know is the sentence worth reading instead.
+    /// </para>
     /// </summary>
     public int SchemaVersion { get; init; } = VersionWithoutTiers;
 

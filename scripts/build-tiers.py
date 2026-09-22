@@ -5,16 +5,14 @@ The tree is the source. Each family node becomes a tier 1 package, and each spec
 its opener (the first spell, tier 2) and the rest (tier 3) -- the rule the stage 0 audit found holds for all
 nine of them (docs/domain/tier-evolution-inventory.md).
 
-Initiative is seeded by summing the spells' former per-spell bonuses. That is a migration baseline and not a
-balance decision: it hands tier 1 a spread of 1 to 3 and gives Shaman a package worth nothing. Somebody
-authors the twenty-one real numbers later; this only refuses to invent them.
+Initiative was seeded by summing the spells' former per-spell bonuses. That was a migration baseline and not
+a balance decision: it handed tier 1 a spread of 1 to 3 and gave Shaman a package worth nothing. Somebody
+authors the twenty-one real numbers later; this only refused to invent them.
 
-**It has run, and data/Tiers is authored now** (ADR 0057). The studio edits a package where the engine reads
-it, so this script is the record of how the 21 were first produced rather than the way they are maintained.
-Re-running it rewrites every file from the tree and destroys what has been authored since -- including the
-initiative numbers it exists to say it did not invent. Read the diff before keeping it:
-
-    python3 scripts/build-tiers.py && git diff --stat data/Tiers
+**It has run, and it cannot run again.** data/Tiers is authored now (ADR 0057) and the studio edits a package
+where the engine reads it, so this is the record of how the 21 were first produced rather than the way they
+are maintained. The input is gone too: ADR 0059 removed the per-spell bonus this summed, so the script stops
+with an error rather than writing 0 into all 21 and destroying what has been authored since.
 """
 
 from __future__ import annotations
@@ -54,7 +52,15 @@ def main() -> None:
     initiative = {}
     for path in (ROOT / "data/Spells").rglob("*.json"):
         spell = json.loads(path.read_text())
-        initiative[spell["id"]] = spell.get("initiative", 0)
+        if "initiative" not in spell:
+            raise SystemExit(
+                f"{path.relative_to(ROOT)} carries no 'initiative': the per-spell acquisition bonus this "
+                "script summed was removed with ADR 0059, so there is nothing left to derive a package's "
+                "bonus from. Re-running would write 0 into all 21 and destroy what has been authored since. "
+                "The script stays as the record of how the packages were first produced (ADR 0057); to read "
+                "what it did, check out a commit before that removal."
+            )
+        initiative[spell["id"]] = spell["initiative"]
 
     def resolve(reference: str) -> str:
         """The tree may name a spell unversioned; aliases.json is what the data builder resolves it with."""

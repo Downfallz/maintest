@@ -10,7 +10,7 @@ public sealed class ContentStoreTests
     private const string Guard = """
         {
           "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-          "initiative": 2, "energyCost": 1, "criticalChance": 0,
+          "energyCost": 1, "criticalChance": 0,
           "targeting": { "origin": "Self", "scope": "SingleTarget" },
           "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
         }
@@ -329,6 +329,31 @@ public sealed class ContentStoreTests
             .Message.ShouldContain("initiative");
 
         File.Exists(Path.Combine(content.Path, "Tiers", "typo.v1.json")).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// The mirror of the case above, and the one this catalogue was actually written with: every spell carried
+    /// an <c>initiative</c> until the package took that bonus over (ADR 0059). A file that still carries it is
+    /// content written for rules that no longer exist, so it is refused rather than quietly ignored — a
+    /// silently dropped field is a number an author believes they are tuning.
+    /// </summary>
+    [Fact]
+    public void A_spell_still_carrying_the_acquisition_initiative_is_refused_at_the_save()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+
+        Should.Throw<InvalidGameContentException>(() => new ContentStore(content.Path).Save(
+            ContentKind.Spell,
+            "Spells/old.v1.json",
+            """
+            { "id": "spell:old:v1", "name": "Old", "spellType": "Offensive", "creatureClass": "Creature",
+              "initiative": 1, "energyCost": 0, "criticalChance": 0,
+              "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+              "effects": [{ "kind": "Damage", "amount": 1 }] }
+            """))
+            .Message.ShouldContain("initiative");
+
+        File.Exists(Path.Combine(content.Path, "Spells", "old.v1.json")).ShouldBeFalse();
     }
 
     [Fact]

@@ -11,7 +11,7 @@ public sealed class GameSchemaBuilderTests
         {
           "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
           "enabled": false,
-          "initiative": 2, "energyCost": 1, "criticalChance": 0,
+          "energyCost": 1, "criticalChance": 0,
           "targeting": { "origin": "Self", "scope": "SingleTarget" },
           "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
         }
@@ -43,7 +43,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Spells/strike.v1.json", """
                 {
                   "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
-                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "energyCost": 0, "criticalChance": 0,
                   "targeting": { "origin": "Enemy", "scope": "SingleTarget" },
                   "effects": [ { "kind": "Damage", "amount": 2 } ]
                 }
@@ -85,7 +85,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Spells/strike.v1.json", """
                 {
                   "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
-                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "energyCost": 0, "criticalChance": 0,
                   "targeting": { "origin": "Enemy", "scope": "SingleTarget" },
                   "effects": [
                     { "kind": "EnergyDrain", "amount": 2 },
@@ -152,7 +152,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Spells/typo.v1.json", """
                 {
                   "id": "spell:typo:v1", "name": "Typo", "spellType": "Offensive", "characterClass": "Creature",
-                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "energyCost": 0, "criticalChance": 0,
                   "targeting": { "origin": "Enemy", "scope": "SingleTarget" },
                   "effects": [ { "kind": "Damage", "amount": 1 } ]
                 }
@@ -171,7 +171,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Spells/broken.v1.json", """
                 {
                   "id": "spell:broken:v1", "name": "Broken", "spellType": "Sideways", "creatureClass": "Creature",
-                  "initiative": 1, "energyCost": -1, "criticalChance": 0,
+                  "energyCost": -1, "criticalChance": 0,
                   "targeting": { "origin": "Enemy", "scope": "Multi", "maxTargets": 1 },
                   "effects": [
                     { "kind": "Damage" },
@@ -286,7 +286,7 @@ public sealed class GameSchemaBuilderTests
                 {
                   "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
                   "enabled": false,
-                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "energyCost": 0, "criticalChance": 0,
                   "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
                   "effects": [ { "kind": "Damage", "amount": 1 } ]
                 }
@@ -416,7 +416,7 @@ public sealed class GameSchemaBuilderTests
                 {
                   "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
                   "enabled": true,
-                  "initiative": 1, "energyCost": 0, "criticalChance": 0,
+                  "energyCost": 0, "criticalChance": 0,
                   "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
                   "effects": [ { "kind": "Damage", "amount": 1 }, { "kind": "Bleed", "amountPerRound": 1, "durationRounds": 2 } ]
                 }
@@ -466,7 +466,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Spells/brawler/guard.v1.json", """
                 {
                   "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-                  "initiative": 2, "energyCost": 1, "criticalChance": 0,
+                  "energyCost": 1, "criticalChance": 0,
                   "targeting": { "origin": "Ally", "scope": "SingleTarget" },
                   "effects": [ { "kind": "Heal", "amount": 2 }, { "kind": "Regeneration", "amountPerRound": 2, "durationRounds": 1 } ]
                 }
@@ -489,7 +489,7 @@ public sealed class GameSchemaBuilderTests
             .WithFile("Spells/brawler/guard.v1.json", """
                 {
                   "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-                  "initiative": 2, "energyCost": 1, "criticalChance": 0,
+                  "energyCost": 1, "criticalChance": 0,
                   "targeting": { "origin": "Self", "scope": "SingleTarget" },
                   "effects": [ { "kind": "EnergyRegeneration", "amountPerRound": 2, "durationRounds": 3 } ]
                 }

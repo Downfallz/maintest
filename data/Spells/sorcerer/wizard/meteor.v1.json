@@ -3,7 +3,6 @@
   "name": "Meteor",
   "spellType": "Offensive",
   "creatureClass": "Wizard",
-  "initiative": 1,
   "energyCost": 3,
   "criticalChance": 0.35,
   "targeting": {

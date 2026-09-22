@@ -3,7 +3,6 @@
   "name": "Death Squad",
   "spellType": "Defensive",
   "creatureClass": "Assassin",
-  "initiative": 3,
   "energyCost": 2,
   "criticalChance": 0,
   "targeting": {

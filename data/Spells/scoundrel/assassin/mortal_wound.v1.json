@@ -3,7 +3,6 @@
   "name": "Mortal Wound",
   "spellType": "Offensive",
   "creatureClass": "Assassin",
-  "initiative": 2,
   "energyCost": 3,
   "criticalChance": 0.45,
   "targeting": {

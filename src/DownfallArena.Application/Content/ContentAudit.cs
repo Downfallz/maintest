@@ -13,7 +13,7 @@ namespace DownfallArena.Application.Content;
 /// creature can ever use, spells no match can tell apart, and a spell stat every spell gives the same value.
 /// A spell nothing teaches, a talent node whose gate never opens, a spell that costs more energy than a whole
 /// match hands out, a talent tree no creature is on, spells whose numbers are all the same, and a number the
-/// engine reads — at a cast, or at an unlock — that this content never varies. None of these stop a build —
+/// engine reads at a cast that this content never varies. None of these stop a build —
 /// the content is valid and the engine plays it — so they are findings rather than problems.
 /// <para>
 /// Reachability is the climb a pick makes: the starting kit, plus every spell of every package whose
@@ -203,14 +203,13 @@ public static class ContentAudit
     private static IReadOnlyList<(string Name, Func<Spell, double> Of, string Meaning)> SpellStats =>
     [
         ("energyCost", spell => spell.Stats.Cost.Value, "Energy never decides which spell a creature can cast."),
-        ("initiative", spell => spell.Stats.SpellInitiative.Value, "Unlocking any spell raises a creature's Base initiative by the same amount, so which spell it unlocks never changes how soon it acts."),
         ("criticalChance", spell => spell.Stats.CriticalChance.Value, "A spell's critical chance is a bonus on the creature's own, so every cast crits at the creature's rate and no spell moves it."),
     ];
 
     /// <summary>
-    /// Spells a match cannot tell apart: the same cost, the same initiative, the same targeting and the same
-    /// effects. They are legal content and the engine plays them, but tuning one of them moves nothing that the
-    /// others do not also move, so a result cannot attribute anything to it. Reported once per group.
+    /// Spells a match cannot tell apart: the same cost, the same critical chance, the same targeting and the
+    /// same effects. They are legal content and the engine plays them, but tuning one of them moves nothing that
+    /// the others do not also move, so a result cannot attribute anything to it. Reported once per group.
     /// <para>
     /// The signature is what the value types print, which is exactly their values: two spells share it when
     /// every number a match reads is the same, and the names are all that differ.
@@ -224,7 +223,7 @@ public static class ContentAudit
             .Select(group => new ContentFinding(
                 "Spell.Indistinguishable",
                 group[0].Id.Value,
-                $"'{group[0].Name}' and {group.Count - 1} other spell(s) have the same cost, targeting and effects ({Names(group.Skip(1))}), so nothing in a match tells them apart."))
+                $"'{group[0].Name}' and {group.Count - 1} other spell(s) have the same cost, critical chance, targeting and effects ({Names(group.Skip(1))}), so nothing in a match tells them apart."))
             .OrderBy(finding => finding.Subject, StringComparer.Ordinal);
 
     /// <summary>
@@ -233,7 +232,7 @@ public static class ContentAudit
     /// (ADR 0031): two spells alike on their targets and different on their caster are told apart in a match.
     /// </summary>
     private static string Signature(Spell spell) =>
-        $"{spell.Stats.Cost.Value}|{spell.Stats.SpellInitiative.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{Set(spell.Effects)}|{Set(spell.CasterEffects)}";
+        $"{spell.Stats.Cost.Value}|{spell.Stats.CriticalChance.Value}|{spell.Targeting}|{Set(spell.Effects)}|{Set(spell.CasterEffects)}";
 
     private static string Set(IEnumerable<Effect> effects) =>
         string.Join(";", effects.Select(effect => effect.ToString()).Order(StringComparer.Ordinal));
@@ -270,7 +269,6 @@ public static class ContentAudit
         Name = spell.Name,
         CreatureClass = spell.CreatureClass.ToString(),
         Cost = spell.Stats.Cost.Value,
-        SpellInitiative = spell.Stats.SpellInitiative.Value,
         Damage = spell.Effects.OfType<Damage>().Sum(effect => effect.Amount),
         BleedDamage = spell.Effects.OfType<Bleed>().Sum(effect => effect.AmountPerRound * Math.Min(effect.Duration.Rounds ?? rules.RoundCap, rules.RoundCap)),
         Healing = spell.Effects.OfType<Heal>().Sum(effect => effect.Amount),

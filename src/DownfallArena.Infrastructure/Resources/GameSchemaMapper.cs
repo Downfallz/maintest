@@ -124,7 +124,7 @@ public static class GameSchemaMapper
                 dto.Name,
                 type.Value,
                 creatureClass.Value,
-                new SpellStats(Initiative.Of(dto.Initiative), Energy.Of(dto.EnergyCost), CriticalChance.Of(dto.CriticalChance)),
+                new SpellStats(Energy.Of(dto.EnergyCost), CriticalChance.Of(dto.CriticalChance)),
                 targeting,
                 effects,
                 casterEffects),

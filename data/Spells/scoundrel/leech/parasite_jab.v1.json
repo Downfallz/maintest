@@ -3,7 +3,6 @@
   "name": "Parasite Jab",
   "spellType": "Offensive",
   "creatureClass": "Leech",
-  "initiative": 1,
   "energyCost": 2,
   "criticalChance": 0.45,
   "targeting": {

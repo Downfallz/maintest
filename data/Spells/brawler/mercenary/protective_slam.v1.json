@@ -3,7 +3,6 @@
   "name": "Protective Slam",
   "spellType": "Offensive",
   "creatureClass": "Mercenary",
-  "initiative": 1,
   "energyCost": 3,
   "criticalChance": 0.283,
   "targeting": {

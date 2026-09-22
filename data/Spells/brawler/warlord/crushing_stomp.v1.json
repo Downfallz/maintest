@@ -3,7 +3,6 @@
   "name": "Crushing Stomp",
   "spellType": "Offensive",
   "creatureClass": "Warlord",
-  "initiative": 1,
   "energyCost": 4,
   "criticalChance": 0.75,
   "targeting": {
