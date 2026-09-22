@@ -28,6 +28,7 @@ internal sealed class StudioFiles
             ["/backend.js"] = (Path.Combine(studioDirectory, "backend.js"), JavaScript),
             ["/github.js"] = (Path.Combine(studioDirectory, "github.js"), JavaScript),
             ["/balance.js"] = (Path.Combine(studioDirectory, "balance.js"), JavaScript),
+            ["/tiers.js"] = (Path.Combine(studioDirectory, "tiers.js"), JavaScript),
             ["/viewer.css"] = (Path.Combine(viewerDirectory, "viewer.css"), Css),
         };
     }
