@@ -103,18 +103,20 @@ public static class ContentAudit
     {
         var known = new HashSet<SpellId>(creature.StartingSpells);
         var owned = new HashSet<TierId>();
-        bool grew;
+        List<Tier> opened;
         do
         {
-            grew = false;
-            foreach (var tier in resources.Tiers.Where(tier => !owned.Contains(tier.Id) && tier.Prerequisites.All(owned.Contains)))
+            // Taken as a list before anything is bought, not iterated lazily: the filter reads `owned`, which
+            // the body then adds to, so a deferred query would be answering a question about a set that is
+            // changing underneath it. One round at a time is what the loop already says it does.
+            opened = [.. resources.Tiers.Where(tier => !owned.Contains(tier.Id) && tier.Prerequisites.All(owned.Contains))];
+            foreach (var tier in opened)
             {
                 owned.Add(tier.Id);
                 known.UnionWith(tier.Spells);
-                grew = true;
             }
         }
-        while (grew);
+        while (opened.Count > 0);
 
         return known;
     }
