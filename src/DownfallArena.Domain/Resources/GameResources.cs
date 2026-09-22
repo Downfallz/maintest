@@ -87,7 +87,7 @@ public sealed class GameResources : IGameResources
         }
 
         var tierIndex = Index(tiers ?? [], tier => tier.Id, "tier", problems);
-        ValidateTiers(tierIndex, spellIndex, problems);
+        ValidateTiers(tierIndex, spellIndex, StartingKit(creatureIndex), problems);
 
         if (problems.Count > 0)
         {
@@ -134,16 +134,39 @@ public sealed class GameResources : IGameResources
     }
 
     /// <summary>
+    /// The spells every creature already starts with. A package that teaches one of those sells a pick for
+    /// something nobody can gain, and the starting kit is deliberately outside what a pick buys. It is the
+    /// intersection rather than the union: a spell one creature starts with is a real acquisition for another,
+    /// and forbidding it everywhere would refuse a package the design allows.
+    /// </summary>
+    private static HashSet<SpellId> StartingKit(Dictionary<CreatureDefinitionId, CreatureDefinition> creatures)
+    {
+        if (creatures.Count == 0)
+        {
+            return [];
+        }
+
+        var kit = new HashSet<SpellId>(creatures.Values.First().StartingSpells);
+        foreach (var creature in creatures.Values.Skip(1))
+        {
+            kit.IntersectWith(creature.StartingSpells);
+        }
+
+        return kit;
+    }
+
+    /// <summary>
     /// What a package must satisfy beyond its own construction: the spells and prerequisites it names have to
-    /// exist, and the prerequisite graph has to be one a creature can actually climb -- acyclic, with each step
-    /// deeper than the one it requires, and reached one level at a time rather than jumped to. A negative bonus
-    /// is not checked here because
+    /// exist and be worth buying, and the prerequisite graph has to be one a creature can actually climb --
+    /// acyclic, with each step deeper than the one it requires, and reached one level at a time rather than
+    /// jumped to. A negative bonus is not checked here because
     /// <see cref="Initiative" /> already refuses one, and a second rule saying the same thing is a second rule
     /// to keep in agreement.
     /// </summary>
     private static void ValidateTiers(
         Dictionary<TierId, Tier> tiers,
         Dictionary<SpellId, Spell> spells,
+        HashSet<SpellId> startingKit,
         List<string> problems)
     {
         foreach (var tier in tiers.Values)
@@ -151,6 +174,13 @@ public sealed class GameResources : IGameResources
             foreach (var spell in tier.Spells.Where(spell => !spells.ContainsKey(spell)))
             {
                 problems.Add($"Tier '{tier.Id.Value}' teaches unknown spell '{spell.Value}'.");
+            }
+
+            foreach (var spell in tier.Spells.Where(startingKit.Contains))
+            {
+                problems.Add(
+                    $"Tier '{tier.Id.Value}' teaches '{spell.Value}', which every creature already starts with. "
+                    + "A pick would buy nothing: the starting kit is not part of what a package sells.");
             }
 
             var known = new List<Tier>();

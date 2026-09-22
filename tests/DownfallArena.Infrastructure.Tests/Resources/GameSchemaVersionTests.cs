@@ -16,7 +16,7 @@ namespace DownfallArena.Infrastructure.Tests.Resources;
 public sealed class GameSchemaVersionTests
 {
     private const string Opener = """
-        { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:strike"], "initiativeBonus": 1 }
+        { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 1 }
         """;
 
     /// <summary>
@@ -66,7 +66,7 @@ public sealed class GameSchemaVersionTests
     public void Disabling_every_package_leaves_the_document_at_the_first_version()
     {
         using var content = Content().WithFile("Tiers/spare.v1.json", """
-            { "id": "tier:spare:v1", "name": "Spare", "level": 1, "prerequisites": [], "spells": ["spell:strike"], "initiativeBonus": 1, "enabled": false }
+            { "id": "tier:spare:v1", "name": "Spare", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 1, "enabled": false }
             """);
         using var bare = Content();
 
@@ -134,6 +134,52 @@ public sealed class GameSchemaVersionTests
 
         Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
             .Message.ShouldContain("written by a newer builder");
+    }
+
+    /// <summary>
+    /// And read before the document is deserialized, which is the case the version check exists for: a newer
+    /// builder writes members this reader does not know, and the strict reader refuses an unknown member with a
+    /// <c>JsonException</c> naming the member. The version is the useful half of that sentence, so it is read
+    /// first. The test above only moves the number and keeps today's shape, so it never reaches this.
+    /// </summary>
+    [Fact]
+    public void A_document_from_a_newer_builder_is_refused_before_its_unknown_members_are_read()
+    {
+        using var content = Content();
+        var path = Path.Combine(content.Path, "newer.json");
+        File.WriteAllText(path, """
+            {
+              "schemaVersion": 3, "contentHash": "", "creatures": [], "spells": [], "talentTrees": [],
+              "aliases": {}, "somethingANewerBuilderWrites": [1, 2]
+            }
+            """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
+            .Message.ShouldContain("written by a newer builder");
+    }
+
+    /// <summary>A version that is not a whole number is not a version, and says so rather than reading oddly.</summary>
+    [Fact]
+    public void A_version_that_is_not_a_number_is_refused()
+    {
+        using var content = Content();
+        var path = Path.Combine(content.Path, "odd.json");
+        File.WriteAllText(path, """{ "schemaVersion": "two", "contentHash": "", "creatures": [], "spells": [], "talentTrees": [], "aliases": {} }""");
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
+            .Message.ShouldContain("not a whole number");
+    }
+
+    /// <summary>A document that is not an object at all is refused before anything reads a property off it.</summary>
+    [Fact]
+    public void A_document_that_is_not_a_schema_is_refused()
+    {
+        using var content = Content();
+        var path = Path.Combine(content.Path, "list.json");
+        File.WriteAllText(path, "[1, 2, 3]");
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Load(path))
+            .Message.ShouldContain("does not contain a game schema");
     }
 
     private static ContentDirectory Content() => new ContentDirectory().WithValidContent();

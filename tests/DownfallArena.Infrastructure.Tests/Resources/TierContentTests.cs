@@ -13,7 +13,7 @@ public sealed class TierContentTests
     private const string Opener = """
         {
           "id": "tier:brute:v1", "name": "Brute", "level": 1,
-          "prerequisites": [], "spells": ["spell:strike"], "initiativeBonus": 1
+          "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 1
         }
         """;
 
@@ -48,7 +48,7 @@ public sealed class TierContentTests
 
         var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path));
 
-        resources.GetTier(TierId.Parse("tier:brute:v1")).Spells.ShouldBe([SpellId.Parse("spell:strike:v1")]);
+        resources.GetTier(TierId.Parse("tier:brute:v1")).Spells.ShouldBe([SpellId.Parse("spell:guard:v1")]);
     }
 
     [Fact]
@@ -141,11 +141,27 @@ public sealed class TierContentTests
     public void A_package_worth_negative_initiative_is_refused()
     {
         using var content = Content().WithFile("Tiers/brute.v1.json", """
-            { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:strike"], "initiativeBonus": -1 }
+            { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": -1 }
             """);
 
         Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)))
             .Message.ShouldContain("non-negative");
+    }
+
+    /// <summary>
+    /// The starting kit sits outside what a pick buys: a package teaching a spell every creature already has
+    /// spends a pick on nothing. Read as the intersection over the creature definitions, so a spell one
+    /// creature starts with stays a real acquisition for another.
+    /// </summary>
+    [Fact]
+    public void A_package_that_teaches_a_spell_every_creature_starts_with_is_refused()
+    {
+        using var content = Content().WithFile("Tiers/brute.v1.json", """
+            { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:strike"], "initiativeBonus": 1 }
+            """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)))
+            .Message.ShouldContain("every creature already starts with");
     }
 
     [Fact]
@@ -168,12 +184,12 @@ public sealed class TierContentTests
     {
         using var content = Content()
             .WithFile("Tiers/brute.v1.json", Opener)
-            .WithFile("Spells/strike.v1.json", """
+            .WithFile("Spells/brawler/guard.v1.json", """
                 {
-                  "id": "spell:strike:v1", "name": "Strike", "spellType": "Offensive", "creatureClass": "Creature",
-                  "initiative": 1, "energyCost": 0, "criticalChance": 0, "enabled": false,
-                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
-                  "effects": [ { "kind": "Damage", "amount": 1 } ]
+                  "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
+                  "initiative": 2, "energyCost": 1, "criticalChance": 0, "enabled": false,
+                  "targeting": { "origin": "Self", "scope": "SingleTarget" },
+                  "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
                 }
                 """);
 
@@ -227,7 +243,7 @@ public sealed class TierContentTests
             .WithFile("Tiers/brute.v1.json", Opener)
             .WithFile("Tiers/marauder.v1.json", Advanced)
             .WithFile("Tiers/ironbound.v1.json", """
-                { "id": "tier:ironbound:v1", "name": "Ironbound", "level": 2, "prerequisites": ["tier:brute:v1"], "spells": ["spell:strike"], "initiativeBonus": 1 }
+                { "id": "tier:ironbound:v1", "name": "Ironbound", "level": 2, "prerequisites": ["tier:brute:v1"], "spells": ["spell:guard"], "initiativeBonus": 1 }
                 """)
             .WithFile("Tiers/warmonger.v1.json", """
                 { "id": "tier:warmonger:v1", "name": "Warmonger", "level": 3, "prerequisites": ["tier:marauder:v1", "tier:ironbound:v1"], "spells": ["spell:guard"], "initiativeBonus": 2 }
