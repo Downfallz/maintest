@@ -171,57 +171,71 @@ public sealed class GameResources : IGameResources
     {
         foreach (var tier in tiers.Values)
         {
-            foreach (var spell in tier.Spells.Where(spell => !spells.ContainsKey(spell)))
-            {
-                problems.Add($"Tier '{tier.Id.Value}' teaches unknown spell '{spell.Value}'.");
-            }
-
-            foreach (var spell in tier.Spells.Where(startingKit.Contains))
-            {
-                problems.Add(
-                    $"Tier '{tier.Id.Value}' teaches '{spell.Value}', which every creature already starts with. "
-                    + "A pick would buy nothing: the starting kit is not part of what a package sells.");
-            }
-
-            var known = new List<Tier>();
-            foreach (var required in tier.Prerequisites)
-            {
-                if (!tiers.TryGetValue(required, out var prerequisite))
-                {
-                    problems.Add($"Tier '{tier.Id.Value}' requires unknown tier '{required.Value}'.");
-                    continue;
-                }
-
-                known.Add(prerequisite);
-
-                // A prerequisite deeper than or level with what it opens cannot be reached first, which is a
-                // cycle that a cycle check phrased in terms of reachability would take longer to find.
-                if (prerequisite.Level >= tier.Level)
-                {
-                    problems.Add(
-                        $"Tier '{tier.Id.Value}' at level {tier.Level} requires '{required.Value}' at level {prerequisite.Level}; "
-                        + "a prerequisite has to sit above what it opens.");
-                }
-            }
-
-            // Sitting above is not enough: a level-3 package whose only prerequisite opens the family is bought
-            // with two picks rather than three, so the level it is priced and paced at is not the one a player
-            // pays. Checked only once every prerequisite is known, so one mistake reads as one problem.
-            if (tier.Level > 1 && known.Count == tier.Prerequisites.Count && !known.Exists(prerequisite => prerequisite.Level == tier.Level - 1))
-            {
-                problems.Add(
-                    $"Tier '{tier.Id.Value}' at level {tier.Level} has no prerequisite at level {tier.Level - 1}; "
-                    + "a package is reached one level at a time, so an advanced package has to follow the level below it.");
-            }
+            ValidatePackage(tier, spells, startingKit, problems);
+            ValidateClimb(tier, tiers, problems);
         }
 
-        // Kept although the level rule above already makes a cycle impossible: a prerequisite chain that must
+        // Kept although the level rule already makes a cycle impossible: a prerequisite chain that must
         // strictly decrease in level cannot close, so this can only ever fire beside that rule and never
         // alone. It stays because the level rule is the part likeliest to be relaxed -- a sibling prerequisite
         // at the same level is a reasonable thing to want -- and this is what would be left guarding the graph.
         foreach (var tier in tiers.Values.Where(tier => Reaches(tier.Id, tier.Id, tiers, [])))
         {
             problems.Add($"Tier '{tier.Id.Value}' requires itself through its prerequisites.");
+        }
+    }
+
+    /// <summary>What a package sells: spells that exist, and none the buyer would already have.</summary>
+    private static void ValidatePackage(Tier tier, Dictionary<SpellId, Spell> spells, HashSet<SpellId> startingKit, List<string> problems)
+    {
+        foreach (var spell in tier.Spells.Where(spell => !spells.ContainsKey(spell)))
+        {
+            problems.Add($"Tier '{tier.Id.Value}' teaches unknown spell '{spell.Value}'.");
+        }
+
+        foreach (var spell in tier.Spells.Where(startingKit.Contains))
+        {
+            problems.Add(
+                $"Tier '{tier.Id.Value}' teaches '{spell.Value}', which every creature already starts with. "
+                + "A pick would buy nothing: the starting kit is not part of what a package sells.");
+        }
+    }
+
+    /// <summary>
+    /// The way up to a package: every prerequisite exists and sits above what it opens, and an advanced
+    /// package follows the level below it rather than being jumped to.
+    /// </summary>
+    private static void ValidateClimb(Tier tier, Dictionary<TierId, Tier> tiers, List<string> problems)
+    {
+        var known = new List<Tier>();
+        foreach (var required in tier.Prerequisites)
+        {
+            if (!tiers.TryGetValue(required, out var prerequisite))
+            {
+                problems.Add($"Tier '{tier.Id.Value}' requires unknown tier '{required.Value}'.");
+                continue;
+            }
+
+            known.Add(prerequisite);
+
+            // A prerequisite deeper than or level with what it opens cannot be reached first, which is a
+            // cycle that a cycle check phrased in terms of reachability would take longer to find.
+            if (prerequisite.Level >= tier.Level)
+            {
+                problems.Add(
+                    $"Tier '{tier.Id.Value}' at level {tier.Level} requires '{required.Value}' at level {prerequisite.Level}; "
+                    + "a prerequisite has to sit above what it opens.");
+            }
+        }
+
+        // Sitting above is not enough: a level-3 package whose only prerequisite opens the family is bought
+        // with two picks rather than three, so the level it is priced and paced at is not the one a player
+        // pays. Checked only once every prerequisite is known, so one mistake reads as one problem.
+        if (tier.Level > 1 && known.Count == tier.Prerequisites.Count && !known.Exists(prerequisite => prerequisite.Level == tier.Level - 1))
+        {
+            problems.Add(
+                $"Tier '{tier.Id.Value}' at level {tier.Level} has no prerequisite at level {tier.Level - 1}; "
+                + "a package is reached one level at a time, so an advanced package has to follow the level below it.");
         }
     }
 
