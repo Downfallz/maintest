@@ -181,6 +181,31 @@ because this changes contract meaning"):
 The migration's own content moved from `4f453e87…` to `d367db1c…` when the version did, with all 400
 benchmark entries byte-identical — a document change, not a game change.
 
+### 3.5 A surface the grep could not find: `Creature.Restore`
+
+Found while writing the domain slice, not by the counts below. `Creature.Restore` validates that every spell
+a restored creature knows came from its definition's starting kit **or its talent tree**:
+
+```csharp
+if (!definition.StartingSpells.All(snapshot.KnownSpells.Contains)
+    || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell)
+        || tree.Spells.Any(offered => offered.Id == spell)))
+```
+
+A tier is a third source of spells, and this check does not know about it. The moment a package teaches a
+spell the tree does not offer, every restore of a creature that bought it throws — which includes every
+hypothetical board a search reconstructs, so the failure would arrive inside the agents rather than at the
+content boundary.
+
+It cannot fire today, because `scripts/build-tiers.py` derives the packages *from* the tree and every tier
+spell is therefore a tree spell. It fires the first time the two are allowed to diverge, which the migration
+intends: the plan retires per-spell acquisition gates and makes tier prerequisites authoritative.
+
+**Why the surface count missed it.** `Creature.Restore` contains none of `creatureClass`, `talentTree`,
+`EvolutionChoice`, `EvolutionOption`, `DecideEvolution`, `SpellInitiative`, `TalentUnlocks`, `EvolutionRules`
+or `UnlockValue`. It reads the tree without naming it in any of the terms an audit would think to grep, which
+is the concrete form of the caveat under the table below — a floor, not a ceiling.
+
 ## 4. Surfaces, counted
 
 Tracked files containing each term, excluding `legacy/` and excluding these two audit documents themselves.
