@@ -49,7 +49,7 @@ public static class GameSchemaMapper
             }
         }
 
-        foreach (var dto in schema.Tiers)
+        foreach (var dto in schema.Tiers ?? [])
         {
             if (MapTier(dto, problems) is { } tier)
             {

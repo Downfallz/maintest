@@ -56,6 +56,7 @@ public static class GameSchemaBuilder
         schema = DisabledContent.Remove(schema, notes, problems);
         ThrowIfAny(problems);
 
+        schema = Versioned(schema);
         schema = schema with { ContentHash = ComputeHash(schema) };
         GameSchemaMapper.ToGameResources(schema);
         return schema;
@@ -85,6 +86,8 @@ public static class GameSchemaBuilder
         var schema = JsonSerializer.Deserialize<GameSchema>(File.ReadAllText(schemaPath), GameSchemaJson.ReadOptions)
             ?? throw new InvalidGameContentException($"'{schemaPath}' does not contain a game schema.");
 
+        VerifyVersion(schema, schemaPath);
+
         var expected = ComputeHash(schema);
         if (!string.Equals(expected, schema.ContentHash, StringComparison.Ordinal))
         {
@@ -99,6 +102,48 @@ public static class GameSchemaBuilder
         ArgumentNullException.ThrowIfNull(schema);
         var canonical = JsonSerializer.Serialize(schema with { ContentHash = string.Empty }, GameSchemaJson.HashOptions);
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+
+    /// <summary>
+    /// The document's version and its <c>tiers</c> member decided together, because they are one fact: the
+    /// version is the lowest one that can read the document. A catalogue with no packages is emitted exactly as
+    /// it was before packages existed -- member absent, version 1, same content hash -- and one that has them
+    /// says version 2, because a reader written before the member refuses it as an unknown field.
+    /// </summary>
+    private static GameSchema Versioned(GameSchema schema) =>
+        schema.Tiers is { Count: > 0 }
+            ? schema with { SchemaVersion = GameSchema.VersionWithTiers }
+            : schema with { SchemaVersion = GameSchema.VersionWithoutTiers, Tiers = null };
+
+    /// <summary>
+    /// Checked before the hash, because a version this engine does not know explains a hash mismatch that would
+    /// otherwise read as corrupted content. The pairing is verified both ways so that one content hash has one
+    /// document: a version that does not match what the document carries would hash differently for the same
+    /// catalogue.
+    /// </summary>
+    private static void VerifyVersion(GameSchema schema, string schemaPath)
+    {
+        if (schema.SchemaVersion is not (GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers))
+        {
+            throw new InvalidGameContentException(
+                $"'{schemaPath}' declares schema version {schema.SchemaVersion}; this engine reads "
+                + $"{GameSchema.VersionWithoutTiers} and {GameSchema.VersionWithTiers}. It was written by a newer builder.");
+        }
+
+        var carriesTiers = schema.Tiers is { Count: > 0 };
+        if (carriesTiers && schema.SchemaVersion == GameSchema.VersionWithoutTiers)
+        {
+            throw new InvalidGameContentException(
+                $"'{schemaPath}' declares schema version {GameSchema.VersionWithoutTiers} but carries evolution packages; "
+                + $"a catalogue that uses them is version {GameSchema.VersionWithTiers}. Rebuild it with the data builder.");
+        }
+
+        if (!carriesTiers && schema.SchemaVersion == GameSchema.VersionWithTiers)
+        {
+            throw new InvalidGameContentException(
+                $"'{schemaPath}' declares schema version {GameSchema.VersionWithTiers} but carries no evolution packages; "
+                + $"a catalogue without them is version {GameSchema.VersionWithoutTiers}. Rebuild it with the data builder.");
+        }
     }
 
     private static CreatureDefinitionDto Canonical(CreatureDefinitionDto creature, AliasResolver resolver, List<string> problems)
