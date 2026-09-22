@@ -83,10 +83,18 @@ public static class GameSchemaBuilder
             throw new FileNotFoundException($"Game schema '{schemaPath}' does not exist. Run the data builder first.", schemaPath);
         }
 
-        var schema = JsonSerializer.Deserialize<GameSchema>(File.ReadAllText(schemaPath), GameSchemaJson.ReadOptions)
+        var text = File.ReadAllText(schemaPath);
+
+        // The declared version is read before the document is deserialized, and deliberately: a document from a
+        // newer builder is one carrying members this reader does not know, and the strict reader
+        // (UnmappedMemberHandling.Disallow) would throw about the member rather than about the version -- the
+        // one case the version check exists for. A loose read of one number cannot fail that way.
+        VerifyKnownVersion(DeclaredVersion(text, schemaPath), schemaPath);
+
+        var schema = JsonSerializer.Deserialize<GameSchema>(text, GameSchemaJson.ReadOptions)
             ?? throw new InvalidGameContentException($"'{schemaPath}' does not contain a game schema.");
 
-        VerifyVersion(schema, schemaPath);
+        VerifyVersionCarriesWhatItSays(schema, schemaPath);
 
         var expected = ComputeHash(schema);
         if (!string.Equals(expected, schema.ContentHash, StringComparison.Ordinal))
@@ -116,20 +124,47 @@ public static class GameSchemaBuilder
             : schema with { SchemaVersion = GameSchema.VersionWithoutTiers, Tiers = null };
 
     /// <summary>
-    /// Checked before the hash, because a version this engine does not know explains a hash mismatch that would
-    /// otherwise read as corrupted content. The pairing is verified both ways so that one content hash has one
-    /// document: a version that does not match what the document carries would hash differently for the same
-    /// catalogue.
+    /// The version the document declares, read on its own. A document with no <c>schemaVersion</c> is the
+    /// first version, which is what the record's own default says.
     /// </summary>
-    private static void VerifyVersion(GameSchema schema, string schemaPath)
+    private static int DeclaredVersion(string text, string schemaPath)
     {
-        if (schema.SchemaVersion is not (GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers))
+        using var document = JsonDocument.Parse(text, GameSchemaJson.DocumentOptions);
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
-            throw new InvalidGameContentException(
-                $"'{schemaPath}' declares schema version {schema.SchemaVersion}; this engine reads "
-                + $"{GameSchema.VersionWithoutTiers} and {GameSchema.VersionWithTiers}. It was written by a newer builder.");
+            throw new InvalidGameContentException($"'{schemaPath}' does not contain a game schema.");
         }
 
+        if (!document.RootElement.TryGetProperty("schemaVersion", out var version))
+        {
+            return GameSchema.VersionWithoutTiers;
+        }
+
+        return version.ValueKind == JsonValueKind.Number && version.TryGetInt32(out var number)
+            ? number
+            : throw new InvalidGameContentException($"'{schemaPath}' declares a schema version that is not a whole number.");
+    }
+
+    /// <summary>
+    /// Read before anything else, because a version this engine does not know explains both an unknown member
+    /// and a hash mismatch that would otherwise read as corrupted content.
+    /// </summary>
+    private static void VerifyKnownVersion(int declared, string schemaPath)
+    {
+        if (declared is not (GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers))
+        {
+            throw new InvalidGameContentException(
+                $"'{schemaPath}' declares schema version {declared}; this engine reads "
+                + $"{GameSchema.VersionWithoutTiers} and {GameSchema.VersionWithTiers}. It was written by a newer builder.");
+        }
+    }
+
+    /// <summary>
+    /// The pairing, verified both ways so that one content hash has one document: a version that does not
+    /// match what the document carries would hash differently for the same catalogue.
+    /// </summary>
+    private static void VerifyVersionCarriesWhatItSays(GameSchema schema, string schemaPath)
+    {
         var carriesTiers = schema.Tiers is { Count: > 0 };
         if (carriesTiers && schema.SchemaVersion == GameSchema.VersionWithoutTiers)
         {
