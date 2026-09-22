@@ -19,7 +19,6 @@ import shutil
 import subprocess
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
-from functools import partial
 from itertools import combinations
 from pathlib import Path
 from typing import Any, Protocol
@@ -433,6 +432,10 @@ def _tier_metrics(
     A package nobody cast is not read here: that is what ``spellsNeverCast`` is for. Each reading drops a
     package it cannot speak about rather than guessing a number, and a reading no package could produce is
     left out entirely, which the objective reports as missing rather than counting as zero.
+
+    How many spells a package *teaches* is counted from the catalogue and never from the outcome rows: a
+    package of two whose second spell was never declared has one row, and reading that as a package of one
+    would drop the very reading this metric exists for -- a package whose casts all go to one of its spells.
     """
     grouped: dict[str, list[Mapping[str, object]]] = {}
     for outcome in outcomes:
@@ -440,28 +443,36 @@ def _tier_metrics(
         for package in packages.get(alias, ()) if alias else ():
             grouped.setdefault(package, []).append(outcome)
 
-    readings = {
-        "tierUsageShare": _usage_share,
-        "tierDamageSpread": partial(_damage_spread, damaging=damaging),
-        "tierWinSpread": _win_spread,
-    }
-    measured = {}
-    for name, read in readings.items():
-        worst = [value for value in (read(members) for members in grouped.values()) if value is not None]
-        if worst:
-            measured[name] = max(worst)
+    taught: dict[str, int] = {}
+    for named in packages.values():
+        for package in named:
+            taught[package] = taught.get(package, 0) + 1
+
+    measured: dict[str, float] = {}
+    for package, members in grouped.items():
+        readings = (
+            ("tierUsageShare", _usage_share(members, taught.get(package, len(members)))),
+            ("tierDamageSpread", _damage_spread(members, damaging)),
+            ("tierWinSpread", _win_spread(members)),
+        )
+        for name, value in readings:
+            if value is not None:
+                measured[name] = max(measured.get(name, value), value)
     return measured
 
 
-def _usage_share(members: Sequence[Mapping[str, object]]) -> float | None:
+def _usage_share(members: Sequence[Mapping[str, object]], teaches: int) -> float | None:
     """The share of a package's landed casts its most-cast spell takes.
 
-    None when the package was never cast, and none when it teaches one spell: a lone spell takes all of its
+    None when the package was never cast, and none when it *teaches* one spell: a lone spell takes all of its
     own package's casts by construction, so reading it would pin the metric at 1.0 whatever the content did.
     Nine of the twenty-one shipped packages teach one spell. The two readings beside this one already drop a
     group they cannot speak about; this one has to as well, for the same reason (ADR 0058).
+
+    ``teaches`` is the authored count and not ``len(members)``. A package of two whose second spell nobody
+    declared has one row here, and skipping it as a singleton would hide the monopoly this reading is for.
     """
-    if len(members) < 2:
+    if teaches < 2:
         return None
     landed = [int(member.get("resolved", 0)) for member in members]
     return max(landed) / sum(landed) if sum(landed) > 0 else None

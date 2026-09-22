@@ -1438,3 +1438,17 @@ def test_one_agent_on_agent_a_still_plays_once(tmp_path: Path) -> None:
 
     assert metrics["exploit"]["winRateA"] == pytest.approx(0.30)
     assert evaluator.calls == 1
+
+
+# How many spells a package teaches is counted from the catalogue, never from the outcome rows. A package of
+# two whose second spell nobody ever declared has one row, and reading that as a package of one would skip it
+# as a singleton -- dropping the exact reading this metric exists for.
+def test_a_package_of_two_whose_second_spell_was_never_cast_still_reports_its_monopoly() -> None:
+    content = one_tier(**{"spell:big": 500})[0]
+    content.packages["spell:silent"] = ("tier:one:v1",)
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [outcome("spell:big:v1", 500, 500, 500)]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierUsageShare"] == pytest.approx(1.0)
