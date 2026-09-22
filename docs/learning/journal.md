@@ -12,10 +12,20 @@ first.
   superseding ADR 0017). The bonus moved to the package at ADR 0056 and nothing removed the per-spell stat,
   so the catalogue carried 36 authored numbers no rule read.
 
-- **Content hash `d367db1c` to `338e52d4`.** A new digest, and it is worth saying exactly what changed in it:
-  **nothing**. The 200 entries are byte-identical to the previous digest's; only `contentHash` and
-  `engineVersion` differ. The same holds for a `greedy` against `random` evaluation on the benchmark seeds —
-  every winner, round count and remaining health the same, in both directions.
+- **Content hash `d367db1c` to `6df8dc30`, and the consolidated schema 2 to 4.** A new digest, and it is
+  worth saying exactly what changed in it: **nothing**. The 200 entries are byte-identical to the previous
+  digest's; only `contentHash` and `engineVersion` differ. The same holds for a `greedy` against `random`
+  evaluation on the benchmark seeds — every winner, round count and remaining health the same, in both
+  directions.
+
+- **The schema version had to move, and nearly did not.** Dropping a member from the consolidated document is
+  the same compatibility break as adding one, in the same place: the hash is taken over the document, so an
+  engine that still knows `initiative` deserializes it back as 0, writes it into the canonical form, and
+  reports a hash that does not match — *corruption*, for a catalogue that is sound. The mirror is as bad: this
+  engine reading an old version-2 document accepted the version, then threw a `JsonException` naming the
+  member, which is the exact sentence the version check sits ahead of to replace. Versions are 3 (no packages)
+  and 4 (with them); 1 and 2 are refused with "written by an older builder ... rebuild it from `data/`".
+  Caught by Codex on #171, with two tests that failed before the fix.
 
 - **Measured before the removal, not after.** Moving every spell's initiative to a different value (0 becomes
   3, everything else becomes 0) and replaying the same 400 matches changed no outcome either. That is the

@@ -28,6 +28,13 @@ are tuning. The 33 knobs that addressed it go with it. `InitiativeBuff` and `Ini
 those are combat effects, and the agents' `initiative` scoring weight (ADR 0018, ADR 0032) is a different
 thing again and keeps its name and its measured value.
 
+The consolidated schema is **versioned for the new shape**: 3 for a catalogue with no packages, 4 for one that
+has them, replacing 1 and 2. Dropping a member from that document is the same compatibility break as adding
+one and in the same place — the content hash is taken over the document, so an engine that still knows
+`initiative` deserializes it back as 0, writes it into the canonical form, and reports a hash that does not
+match. That reads as corruption for a catalogue that is sound, and the mirror reads as an unknown member
+rather than as an old file. A version neither engine shares is the sentence worth reading instead.
+
 ## Consequences
 
 - Good: the catalogue stops carrying a stat that decides nothing. Measured before the removal by moving every
@@ -39,8 +46,11 @@ thing again and keeps its name and its measured value.
   rejected for `noNewStrictDominance` on an initiative it gave up, which is a rejection over nothing.
 - Good: two knob entries that described a spell by what it no longer does are now honest. `momentum` is the
   energy trade alone; `throwing_star` is a cheap jab whose written purpose was the tempo its package now pays.
-- Bad: the content hash moves, so the benchmark digest is regenerated and the journal records why. Every
-  digest keyed to an older hash stays valid for the content it names, as always.
+- Bad: the content hash moves (`d367db1c` to `6df8dc30`), so the benchmark digest is regenerated and the
+  journal records why. Every digest keyed to an older hash stays valid for the content it names, as always.
+- Bad: a catalogue with no packages no longer hashes to the document it hashed before packages existed. That
+  property held from ADR 0009 to here and is what kept version 1 meaningful; the spell shape is what ends it,
+  and `GameSchemaVersionTests` pins the new canonical bytes as strictly as it pinned the old ones.
 - Bad: `throwing_star` is left without an identity. Its whole entry rested on buying two points of Base
   initiative, and under ADR 0056 `tier:prowler:v1` pays that bonus once for both of its spells — which is why
   that package splits its casts 1813 to 140 toward `poison_slash` (#169). This ADR records the hole rather
@@ -68,6 +78,8 @@ thing again and keeps its name and its measured value.
 - `src/DownfallArena.Domain/Resources/SpellStats.cs`: the record is `(Cost, CriticalChance)`.
 - `src/DownfallArena.Infrastructure/Resources/Schema/SpellDto.cs` and `GameSchemaMapper.cs`: the field is
   gone, so the strict reader refuses a file that still carries it. `ContentStoreTests` pins that refusal.
+- `src/DownfallArena.Infrastructure/Resources/Schema/GameSchema.cs` and `GameSchemaBuilder.cs`: versions 3 and
+  4, and a refusal that says which side of the change a document it cannot read comes from.
 - `src/DownfallArena.Application/Content/ContentAudit.cs` and `SpellReach.cs`: the flat-stat entry, the
   signature term and the exported column.
 - `learning/src/downfall_learning/knobs.py`: `_signature`, `dominates` and the docs that named the stat.

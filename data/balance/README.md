@@ -52,8 +52,9 @@ replaced.
 { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
 ```
 
-- `path` is a JSON pointer into the spell's own document: `/energyCost`, `/initiative`,
-  `/effects/0/amount`, `/effects/1/durationRounds`.
+- `path` is a JSON pointer into the spell's own document: `/energyCost`, `/criticalChance`,
+  `/effects/0/amount`, `/effects/1/durationRounds`. Not `/initiative`: a spell carries none since ADR 0059,
+  and `check-knobs` refuses a knob that addresses a field the spell does not have.
 - A move is `step` added to **the value the content carries today**, not to a grid, so a critical chance
   authored at 0.667 can reach 0.717 and 0.617 and stays reachable from itself. Results are rounded to three
   decimals and clamped to `[min, max]`.

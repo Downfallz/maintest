@@ -151,12 +151,20 @@ public static class GameSchemaBuilder
     /// </summary>
     private static void VerifyKnownVersion(int declared, string schemaPath)
     {
-        if (declared is not (GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers))
+        if (declared is GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers)
         {
-            throw new InvalidGameContentException(
-                $"'{schemaPath}' declares schema version {declared}; this engine reads "
-                + $"{GameSchema.VersionWithoutTiers} and {GameSchema.VersionWithTiers}. It was written by a newer builder.");
+            return;
         }
+
+        // Which side it is on is the whole use of the sentence: an older document is rebuilt from `data/`, a
+        // newer one needs a newer engine. Neither is a corrupt file, which is what both would otherwise read as.
+        var age = declared <= GameSchema.LastVersionWithASpellInitiative
+            ? "It was written by an older builder, before a spell stopped carrying its own initiative (ADR 0059); rebuild it from 'data/'."
+            : "It was written by a newer builder.";
+
+        throw new InvalidGameContentException(
+            $"'{schemaPath}' declares schema version {declared}; this engine reads "
+            + $"{GameSchema.VersionWithoutTiers} and {GameSchema.VersionWithTiers}. {age}");
     }
 
     /// <summary>
