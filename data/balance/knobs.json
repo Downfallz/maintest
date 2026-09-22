@@ -7,7 +7,7 @@
       "mirror": {
         "p1": "greedy",
         "p2": "greedy",
-        "reads": "Both sides play the content equally well, so everything left is the content."
+        "reads": "Both sides play the content equally well, so everything left is the content: how long a match lasts, how often it is drawn or capped, how often a declaration fizzles. Not who wins it -- two identical deterministic agents on a symmetric board buy the same packages in the same rounds, tie on every initiative and hand the tie to the seat, so the seat question is read on variety instead (ADR 0062)."
       },
       "skill": {
         "p1": "greedy",
@@ -31,16 +31,16 @@
         "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A is a panel and the reading is its best exploiter (ADR 0052): one agent only ever reads what that agent happens to punish, and the same one-spell move was worth 0.013 to one of these sets and 0.235 to another (journal, 2026-09-17), so the term named a pair rather than a catalogue. Every set is played and the highest win rate decides the evaluation. A set goes stale when the content moves — a tuning pass changes what there is to exploit — so the newest search joins the panel rather than replacing it, and an older set stays because a moved catalogue sometimes blinds the newer ones and not it. kill-first is the one set searched on a catalogue other than this one, the weakened Crushing Stomp of that same entry, and it takes every match on both: a set fitted to a moved catalogue finds another route rather than losing the old one, which is why this term is a constant this file cannot spend content on (journal, 2026-09-17). So what is scored here is no longer whether the best exploiter wins but how fast it does (ADR 0053), and a tie at the top of the panel goes to the fastest win rather than to the first name in the list."
       }
     },
-    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one. ADR 0029 did it again, and harder: seven targets moved off the mirrored run onto the exploring one without their bands changing, which took the core content from 69.39 to 52.00 without a single number in the content moving. Compare scores only across runs judged by the same set read from the same runs.",
+    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one. ADR 0029 did it again, and harder: seven targets moved off the mirrored run onto the exploring one without their bands changing, which took the core content from 69.39 to 52.00 without a single number in the content moving. ADR 0062 did it a third time: player1WinShare moved from the mirror to the exploring run, which took the shipped content from 285.77 to 42.77 with the content unchanged. Compare scores only across runs judged by the same set read from the same runs.",
     "targets": [
       {
         "metric": "player1WinShare",
-        "on": "mirror",
+        "on": "variety",
         "min": 0.45,
         "max": 0.55,
         "scale": 0.05,
         "weight": 3,
-        "why": "Identical agents, so anything away from one half is the content favouring a slot. 64.0% at the last measured run, down from 81.5% when spell initiative got priced."
+        "why": "Equal skill on both sides, so anything away from one half is the content favouring a slot. Read on the exploring run since ADR 0062, for the reason ADR 0029 moved seven targets there: on the greedy mirror under packages both sides buy the same package in the same round, every initiative ties, and the seat breaks the tie -- Player 1 took 400 of 400 on four catalogues in five, so the reading measured the tie-break rule and not the content, and was 243 of an objective of 285.77. On the exploring run the two sides diverge and the question has an answer: 0.44 to 0.495 on the same five catalogues."
       },
       {
         "metric": "drawRate",
