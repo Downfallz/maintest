@@ -697,76 +697,104 @@ def test_a_spell_sits_below_what_it_requires_even_in_the_same_node() -> None:
     assert spells.tiers["spell:crazed_specter"] == 3
 
 
-def test_a_prerequisite_raises_a_spell_the_node_depth_would_leave_shallow(tmp_path: Path) -> None:
-    """The reading, without the repository: two spells in one node, one behind the other."""
-    _write_tree(
+def test_a_spell_sits_at_the_level_of_the_package_that_teaches_it(tmp_path: Path) -> None:
+    """The reading, without the repository: a pick buys a package, and its level is what the climb cost."""
+    _write_packages(
         tmp_path,
+        ["spell:opener", "spell:behind"],
         [
-            {"id": "spell:opener:v1"},
-            {"id": "spell:behind:v1", "prerequisites": {"allOf": ["spell:opener"]}},
+            {"id": "tier:open:v1", "level": 1, "spells": ["spell:opener"]},
+            {"id": "tier:deep:v1", "level": 2, "prerequisites": ["tier:open:v1"], "spells": ["spell:behind"]},
         ],
     )
 
-    tiers = load_content(tmp_path).tiers
+    content = load_content(tmp_path)
 
-    assert tiers["spell:opener"] == 0
-    assert tiers["spell:behind"] == 1
+    assert content.tiers["spell:opener"] == 1
+    assert content.tiers["spell:behind"] == 2
+    assert content.packages["spell:opener"] == ("tier:open:v1",)
+    assert content.packages["spell:behind"] == ("tier:deep:v1",)
 
 
-def test_an_anyof_spell_sits_one_past_its_shallowest_alternative(tmp_path: Path) -> None:
-    """`TalentPrerequisites.AreSatisfiedBy` unlocks on *one* of `anyOf`, so the cheap path is what gates it.
-
-    Read together with `allOf` the deepest alternative won, and every spell behind a cheap alternative read
-    several tiers too deep -- which `tierUsageShare`, `tierDamageSpread` and `tierWinSpread` are all computed
-    over. Every `anyOf` pair in the repository sits at one depth today, so only a tree like this one shows it.
-    """
-    _write_tree(
+def test_a_starting_spell_sits_at_level_zero_and_belongs_to_no_package(tmp_path: Path) -> None:
+    """It is had before anything is chosen, so no pick paid for it and no package sells it."""
+    _write_packages(
         tmp_path,
+        ["spell:kit", "spell:bought"],
+        [{"id": "tier:open:v1", "level": 1, "spells": ["spell:bought"]}],
+        starting=["spell:kit"],
+    )
+
+    content = load_content(tmp_path)
+
+    assert content.tiers["spell:kit"] == 0
+    assert content.packages.get("spell:kit") is None
+    assert content.tiers["spell:bought"] == 1
+
+
+def test_a_spell_two_packages_teach_takes_the_cheaper_level_and_is_grouped_under_both(tmp_path: Path) -> None:
+    """Its level is how soon a creature can have it; both packages sell it, so both are read on it."""
+    _write_packages(
+        tmp_path,
+        ["spell:shared"],
         [
-            {"id": "spell:opener:v1"},
-            {"id": "spell:mid:v1", "prerequisites": {"allOf": ["spell:opener"]}},
-            {"id": "spell:deep:v1", "prerequisites": {"allOf": ["spell:mid"]}},
-            {"id": "spell:gated:v1", "prerequisites": {"anyOf": ["spell:opener", "spell:deep"]}},
+            {"id": "tier:cheap:v1", "level": 1, "spells": ["spell:shared"]},
+            {"id": "tier:dear:v1", "level": 3, "spells": ["spell:shared"]},
         ],
     )
 
-    tiers = load_content(tmp_path).tiers
+    content = load_content(tmp_path)
 
-    assert tiers["spell:deep"] == 2
-    assert tiers["spell:gated"] == 1, "one past the opener it can take, not one past the deep alternative"
+    assert content.tiers["spell:shared"] == 1
+    assert content.packages["spell:shared"] == ("tier:cheap:v1", "tier:dear:v1")
 
 
-def test_an_allof_spell_still_sits_one_past_its_deepest_requirement(tmp_path: Path) -> None:
-    """The other half of the rule: `allOf` must all be known, so the dearest of them is the floor."""
-    _write_tree(
+def test_a_disabled_package_teaches_nothing(tmp_path: Path) -> None:
+    """It left the build (ADR 0015), so nothing it named is acquired and nothing is grouped under it."""
+    _write_packages(
         tmp_path,
-        [
-            {"id": "spell:opener:v1"},
-            {"id": "spell:mid:v1", "prerequisites": {"allOf": ["spell:opener"]}},
-            {"id": "spell:deep:v1", "prerequisites": {"allOf": ["spell:mid"]}},
-            {"id": "spell:gated:v1", "prerequisites": {"allOf": ["spell:opener", "spell:deep"]}},
-        ],
+        ["spell:orphan"],
+        [{"id": "tier:off:v1", "level": 1, "spells": ["spell:orphan"], "enabled": False}],
     )
 
-    tiers = load_content(tmp_path).tiers
+    content = load_content(tmp_path)
 
-    assert tiers["spell:gated"] == 3, "it needs both, so the deep one sets the floor"
+    assert content.packages.get("spell:orphan") is None
+    assert content.tiers.get("spell:orphan") is None
 
 
-def test_a_chain_of_prerequisites_settles_at_its_own_length(tmp_path: Path) -> None:
-    """Three deep in one node, declared in the order that makes a single pass insufficient."""
-    _write_tree(
-        tmp_path,
-        [
-            {"id": "spell:third:v1", "prerequisites": {"allOf": ["spell:second"]}},
-            {"id": "spell:second:v1", "prerequisites": {"allOf": ["spell:first"]}},
-            {"id": "spell:first:v1"},
-        ],
+def test_the_repository_levels_come_from_the_packages(tmp_path: Path) -> None:
+    """The shipped catalogue, read through the files a pick actually buys."""
+    content = load_content(REPO_ROOT / "data")
+
+    assert content.packages["spell:lightning_bolt"] == ("tier:occultist:v1",)
+    assert content.packages["spell:pummel"] == ("tier:brute:v1",)
+    assert content.tiers["spell:lightning_bolt"] == content.tiers["spell:pummel"] == 1
+    assert content.packages.get("spell:heavy_strike") is None, "a starting spell no package sells"
+
+
+def _write_packages(
+    root: Path, spells: list[str], packages: list[dict], starting: list[str] | None = None
+) -> None:
+    """A data directory of spells, the packages that teach them, and one creature to hold a starting kit."""
+    (root / "Spells").mkdir(parents=True)
+    (root / "Tiers").mkdir(parents=True)
+    (root / "Creatures").mkdir(parents=True)
+    aliases = {}
+    for alias in spells:
+        identifier = f"{alias}:v1"
+        aliases[alias] = identifier
+        (root / "Spells" / f"{alias.split(':')[1]}.json").write_text(
+            json.dumps({**spell(id=identifier), "enabled": True}), encoding="utf-8"
+        )
+    (root / "aliases.json").write_text(json.dumps(aliases), encoding="utf-8")
+    for package in packages:
+        (root / "Tiers" / f"{str(package['id']).split(':')[1]}.json").write_text(
+            json.dumps(package), encoding="utf-8"
+        )
+    (root / "Creatures" / "one.json").write_text(
+        json.dumps({"id": "creature:one:v1", "startingSpellIds": starting or []}), encoding="utf-8"
     )
-
-    tiers = load_content(tmp_path).tiers
-
-    assert [tiers["spell:first"], tiers["spell:second"], tiers["spell:third"]] == [0, 1, 2]
 
 
 def _write_tree(root: Path, entries: list[dict]) -> None:

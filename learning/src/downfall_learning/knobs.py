@@ -8,7 +8,7 @@ an evaluation already reports. Everything here reads the authored content in ``d
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
@@ -18,7 +18,7 @@ KNOBS_FILE = Path("data/balance/knobs.json")
 ALIASES_FILE = "aliases.json"
 SPELLS_FOLDER = "Spells"
 CREATURES_FOLDER = "Creatures"
-TALENT_TREES_FOLDER = "TalentTrees"
+TIERS_FOLDER = "Tiers"
 JSON_FILES = "*.json"
 SUPPORTED_VERSIONS = frozenset({"knobs:v1"})
 
@@ -212,7 +212,15 @@ class Content:
     spells: Mapping[str, dict]
     files: Mapping[str, Path]
     disabled: frozenset[str] = frozenset()
+
+    #: The level of the cheapest package teaching each spell, and 0 for one in a starting kit (ADR 0058).
+    #: What climbing to the spell cost, which is what makes outclassing a reward rather than a mistake.
     tiers: Mapping[str, int] = field(default_factory=dict)
+
+    #: The packages teaching each spell, by id. The set the balance metrics group by: the spells of a package
+    #: arrive together for one pick, so "is one of them taking every cast" is a question about one authored
+    #: file. A spell no package teaches has no entry, and a starting-kit spell is one of those.
+    packages: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
     def __len__(self) -> int:
         return len(self.spells)
@@ -222,20 +230,27 @@ class Content:
         return alias in self.spells or alias in self.disabled
 
     def with_spells(self, spells: Mapping[str, dict]) -> Content:
-        """The same catalogue with other numbers in it: same files, same disabled set, same tiers.
+        """The same catalogue with other numbers in it: same files, same disabled set, same packages.
 
         Everything a candidate is judged by other than the numbers comes from here, so rebuilding a Content
         by hand is how a rule quietly stops seeing what it needs — the tiers went missing that way once.
         """
-        return Content(spells=dict(spells), files=self.files, disabled=self.disabled, tiers=self.tiers)
+        return Content(
+            spells=dict(spells),
+            files=self.files,
+            disabled=self.disabled,
+            tiers=self.tiers,
+            packages=self.packages,
+        )
 
     def progression(self, better: str, worse: str) -> bool:
-        """Whether ``better`` outclassing ``worse`` is what a talent tree is for.
+        """Whether ``better`` outclassing ``worse`` is what climbing a family is for.
 
-        True when ``better`` sits deeper than ``worse``: reaching it cost picks and prerequisites, so being
-        better is the reward. Two spells at the same depth are offered at once and one outclassing the other
-        is a decision that is not one; a shallower spell outclassing a deeper one is worse still, since the
-        pick buys a downgrade. An unknown depth is not read as progression.
+        True when ``better`` sits at a higher package level than ``worse``: reaching it cost picks and the
+        packages below it, so being better is the reward (ADR 0058). Two spells at one level are bought for
+        the same price and one outclassing the other is a decision that is not one; a spell at a lower level
+        outclassing a higher one is worse still, since the pick buys a downgrade. An unknown level is not
+        read as progression.
         """
         here, there = self.tiers.get(better), self.tiers.get(worse)
         return here is not None and there is not None and here > there
@@ -281,141 +296,92 @@ def load_content(data_directory: Path) -> Content:
         elif identifier in turned_off:
             off.add(alias)
     by_id = {str(document["id"]): alias for alias, document in spells.items()}
+    teachers, levels = _packages(data_directory, by_id)
     return Content(
         spells=spells,
         files=paths,
         disabled=frozenset(off),
-        tiers=_tiers(data_directory, by_id),
+        tiers=levels,
+        packages=teachers,
     )
 
 
-def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
-    """How deep each spell sits: what it requires as well as where it is written (ADR 0034).
-
-    A node's depth is where a spell is *offered*; a prerequisite is how deep it is *reachable*. A class node
-    holds its opener and both spells that require it, so reading the node alone puts all three at one depth
-    and calls a set a player never chooses between a tier.
-
-    A spell taught in two places takes the shallowest, which is how soon a creature can actually have it. The
-    prerequisite raise applies after that: a prerequisite is a floor, not a choice.
-    """
-    offers: dict[str, list[_Offer]] = {}
-
-    def alias_of(reference: str) -> str | None:
-        return reference if reference in by_id.values() else by_id.get(reference)
-
-    def resolve(references: Sequence[str]) -> list[str]:
-        return [found for found in map(alias_of, references) if found is not None]
-
-    def note(reference: str, depth: int, prerequisites: _Prerequisites | None = None) -> None:
-        alias = alias_of(reference)
-        if alias is None:
-            return
-        asked = prerequisites or _Prerequisites([], [])
-        offers.setdefault(alias, []).append(_Offer(depth, resolve(asked.all_of), resolve(asked.any_of)))
-
-    _note_starting_spells(data_directory, note)
-    _note_tree_nodes(data_directory, note)
-    return _settle(offers)
-
-
-def _note_starting_spells(data_directory: Path, note: _Note) -> None:
-    """Everything a creature spawns with sits at depth zero: it is had before anything is chosen."""
-    for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
-        creature = _read_json(file)
-        if creature.get("enabled", True):
-            for reference in creature.get("startingSpellIds", []):
-                note(str(reference), 0)
-
-
-def _note_tree_nodes(data_directory: Path, note: _Note) -> None:
-    """Every enabled tree, walked from its root. A tree with no root teaches nothing and is skipped."""
-    for file in sorted((data_directory / TALENT_TREES_FOLDER).rglob(JSON_FILES)):
-        tree = _read_json(file)
-        if tree.get("enabled", True) and isinstance(tree.get("root"), Mapping):
-            _walk(tree["root"], 0, note)
-
-
-@dataclass(frozen=True)
-class _Prerequisites:
-    """What a talent-tree entry asks for, with the two lists kept apart because they are read differently."""
-
-    all_of: list[str]
-    any_of: list[str]
-
-
-@dataclass(frozen=True)
-class _Offer:
-    """One place a spell is taught: how deep that node sits, and what it asks for *there*."""
-
-    depth: int
-    all_of: list[str]
-    any_of: list[str]
-
-
-def _settle(offers: Mapping[str, Sequence[_Offer]]) -> dict[str, int]:
-    """How deep each spell is first reachable, raising it until nothing moves.
-
-    A spell is as shallow as its shallowest offer, and one offer is no shallower than the node holding it or
-    than one past everything that offer gates it behind. The two prerequisite lists are read differently,
-    which is `TalentPrerequisites.AreSatisfiedBy`: `allOf` must all be known, so the **deepest** of them sets
-    the floor; `anyOf` needs one, so the **shallowest** does. Flattening them together over-deepens every
-    spell behind a cheap alternative -- today every `anyOf` pair in the content sits at one depth, so nothing
-    moves, and the rule is written for the content that does not.
-
-    A pass at a time rather than a recursion, so a prerequisite chain of any length settles and a cycle --
-    which a talent tree should never carry and this must not hang on -- stops at the number of spells.
-    """
-    depths = {alias: min(offer.depth for offer in taught) for alias, taught in offers.items()}
-    for _ in range(len(depths)):
-        moved = False
-        for alias, taught in offers.items():
-            reachable = min(_offer_depth(offer, depths) for offer in taught)
-            if depths[alias] < reachable:
-                depths[alias] = reachable
-                moved = True
-        if not moved:
-            break
-    return depths
-
-
-def _offer_depth(offer: _Offer, depths: Mapping[str, int]) -> int:
-    """How deep one offer makes its spell reachable: its node, or one past what it gates the spell behind."""
-    floors = [offer.depth]
-    known_all = [depths[found] for found in offer.all_of if found in depths]
-    known_any = [depths[found] for found in offer.any_of if found in depths]
-    if known_all:
-        floors.append(max(known_all) + 1)
-    if known_any:
-        floors.append(min(known_any) + 1)
-    return max(floors)
-
-
-#: What `_walk` hands back for each spell: its id, the depth of the node offering it, and what it requires.
-_Note = Callable[[str, int, "_Prerequisites | None"], None]
-
-
-def _required_by(spell: Mapping[str, object]) -> _Prerequisites:
-    """The spells a talent-tree entry names as prerequisites, with `allOf` and `anyOf` kept apart."""
-    prerequisites = spell.get("prerequisites")
-    if not isinstance(prerequisites, Mapping):
-        return _Prerequisites([], [])
-    return _Prerequisites(_names(prerequisites.get("allOf")), _names(prerequisites.get("anyOf")))
-
-
 def _names(listed: object) -> list[str]:
+    """A list-of-strings field as one, whatever the file actually holds."""
     return [str(entry) for entry in listed if isinstance(entry, str)] if isinstance(listed, list) else []
 
 
-def _walk(node: Mapping[str, object], depth: int, note: _Note) -> None:
-    spells = node.get("spells", [])
-    for spell in spells if isinstance(spells, list) else []:
-        if isinstance(spell, Mapping) and "id" in spell:
-            note(str(spell["id"]), depth, _required_by(spell))
-    children = node.get("children", [])
-    for child in children if isinstance(children, list) else []:
-        if isinstance(child, Mapping):
-            _walk(child, depth + 1, note)
+def _packages(
+    data_directory: Path, by_id: Mapping[str, str]
+) -> tuple[dict[str, tuple[str, ...]], dict[str, int]]:
+    """Which packages teach each spell, and the level of the cheapest one (ADR 0058).
+
+    A pick buys a package, so the package is the set the objective reads and its level is what climbing to it
+    cost. This replaces the depth computed over the talent tree (ADR 0034): the tree gates nothing a pick
+    buys, so a depth in it described a choice nobody makes.
+
+    A spell in a creature's starting kit is had before anything is chosen, so it sits at level 0 and belongs
+    to no package -- the same thing the old depth 0 meant. A spell taught by several packages is grouped
+    under each of them, because each package sells it and each package's own balance is a question; its level
+    is the shallowest, which is how soon a creature can actually have it.
+    """
+    resolve = _resolver(by_id)
+    levels = _starting_levels(data_directory, resolve)
+    teachers: dict[str, list[str]] = {}
+    for identifier, level, taught in _authored_packages(data_directory, resolve):
+        for alias in taught:
+            teachers.setdefault(alias, []).append(identifier)
+            # A package whose level is not a number still sells its spells, so it still groups them; it just
+            # says nothing about how soon they are had. The data builder is what refuses the file.
+            if isinstance(level, int):
+                levels[alias] = min(levels.get(alias, level), level)
+
+    return {alias: tuple(sorted(named)) for alias, named in teachers.items()}, levels
+
+
+def _resolver(by_id: Mapping[str, str]) -> Callable[[str], str | None]:
+    """A reference to the alias it names, or ``None``. A reference that is already an alias passes through."""
+    aliases = set(by_id.values())
+
+    def resolve(reference: str) -> str | None:
+        return reference if reference in aliases else by_id.get(reference)
+
+    return resolve
+
+
+def _starting_levels(data_directory: Path, resolve: Callable[[str], str | None]) -> dict[str, int]:
+    """Every spell a creature spawns with, at level 0.
+
+    It is had before anything is chosen, so no pick paid for it and no package sells it.
+    """
+    levels: dict[str, int] = {}
+    for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
+        creature = _read_json(file)
+        if creature.get("enabled", True):
+            levels.update(dict.fromkeys(_aliases(creature.get("startingSpellIds"), resolve), 0))
+    return levels
+
+
+def _authored_packages(
+    data_directory: Path, resolve: Callable[[str], str | None]
+) -> Iterator[tuple[str, object, list[str]]]:
+    """Each enabled package: its id, its level as authored, and the aliases it teaches.
+
+    A disabled package is not in the build (ADR 0015), so it teaches nothing and nothing is grouped under it.
+    """
+    for file in sorted((data_directory / TIERS_FOLDER).rglob(JSON_FILES)):
+        package = _read_json(file)
+        if package.get("enabled", True):
+            yield (
+                str(package.get("id", file.stem)),
+                package.get("level"),
+                _aliases(package.get("spells"), resolve),
+            )
+
+
+def _aliases(listed: object, resolve: Callable[[str], str | None]) -> list[str]:
+    """The aliases a list of references names, dropping every reference nothing resolves."""
+    return [alias for alias in map(resolve, _names(listed)) if alias is not None]
 
 
 def read_value(document: Mapping[str, object], pointer: str) -> float:

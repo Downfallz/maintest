@@ -48,11 +48,15 @@ public sealed class ContentAuditTests
         finding.Subject.ShouldBe(Lost.Value);
     }
 
+    /// <summary>
+    /// A node gate decides nothing now that a package's prerequisites are the only eligibility rule
+    /// (ADR 0056, ADR 0058), so the audit says nothing about one. What it reports is the spell: this tree
+    /// offers Follow behind a gate and no package sells either, so both are out of reach and the gate is
+    /// beside the point.
+    /// </summary>
     [Fact]
-    public void A_node_whose_gate_no_creature_can_open_is_reported_rather_than_its_spells_one_by_one()
+    public void A_node_gate_is_not_audited_and_the_spells_behind_it_are_reported_on_their_own()
     {
-        // The gate asks for a spell nothing teaches, so the node never opens and the spell behind it never comes
-        // up. The node is the cause; reporting Follow as well would name the symptom twice.
         var resources = Content(
             Node("root", TalentPrerequisites.None, [Spell(Strike)], Node("locked", TalentPrerequisites.Of([Lost], []), [Spell(Follow)])),
             [Strike, Follow, Lost]);
@@ -60,8 +64,25 @@ public sealed class ContentAuditTests
         var report = ContentAudit.Of(resources, RuleSet.Default);
 
         ItemFindings(report).Select(finding => (finding.Code, finding.Subject)).ShouldBe(
-            [("Spell.Unreachable", Follow.Value), ("Spell.Unreachable", Lost.Value), ("TalentNode.Unreachable", $"{Tree.Value}/locked")],
+            [("Spell.Unreachable", Follow.Value), ("Spell.Unreachable", Lost.Value)],
             ignoreOrder: true);
+    }
+
+    /// <summary>The climb is what reaches a spell: one package behind another still puts its spells in hand.</summary>
+    [Fact]
+    public void A_spell_sold_by_a_package_behind_another_is_reachable_through_the_climb()
+    {
+        var resources = GameResources.Create(
+            "climb",
+            [Creature(Fighter, Tree, [Strike], energy: 0)],
+            [Spell(Strike, cost: 0), Spell(Follow, cost: 0, damage: 2), Spell(Lost, cost: 0, damage: 3)],
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike)]))],
+            [
+                Tier.Create(TierId.Parse("tier:open:v1"), "Open", 1, [], [Follow], Initiative.Of(1)),
+                Tier.Create(TierId.Parse("tier:deep:v1"), "Deep", 2, [TierId.Parse("tier:open:v1")], [Lost], Initiative.Of(1)),
+            ]);
+
+        ItemFindings(ContentAudit.Of(resources, RuleSet.Default)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -91,7 +112,8 @@ public sealed class ContentAuditTests
             "expensive",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
             [Spell(Strike, cost: 0), Spell(Follow, cost: rules.EnergyPerRound * rules.RoundCap), Spell(Lost, cost: (rules.EnergyPerRound * rules.RoundCap) + 1)],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(Follow), Spell(Lost)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(Follow), Spell(Lost)]))],
+            [Pack(Follow, Lost)]);
 
         var report = ContentAudit.Of(resources, rules);
 
@@ -114,7 +136,8 @@ public sealed class ContentAuditTests
             "enemy-only-energy",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
             [Spell(Strike, cost: 0), Bundle(Follow, EnergyGain.Of(5)), Spell(Lost, cost: (rules.EnergyPerRound * rules.RoundCap) + 1)],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(Follow), Spell(Lost)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(Follow), Spell(Lost)]))],
+            [Pack(Follow, Lost)]);
 
         var report = ContentAudit.Of(resources, rules);
 
@@ -184,7 +207,8 @@ public sealed class ContentAuditTests
             "twins",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
             [Spell(Strike, cost: 0), Spell(twin, cost: 0)],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))],
+            [Pack(twin)]);
 
         var report = ContentAudit.Of(resources, RuleSet.Default);
 
@@ -202,7 +226,8 @@ public sealed class ContentAuditTests
             "distinct",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
             [Spell(Strike, cost: 0), Spell(twin, cost: 1)],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))],
+            [Pack(twin)]);
 
         ItemFindings(ContentAudit.Of(resources, RuleSet.Default)).ShouldBeEmpty();
     }
@@ -228,7 +253,8 @@ public sealed class ContentAuditTests
                     [EnergyGain.Of(5)]),
                 Spell(costly, cost: 10_000, damage: 2),
             ],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(battery), Spell(costly)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(battery), Spell(costly)]))],
+            [Pack(battery, costly)]);
 
         ContentAudit.Of(resources, RuleSet.Default).Findings
             .Select(finding => finding.Code)
@@ -244,7 +270,8 @@ public sealed class ContentAuditTests
             "starting-energy",
             [Creature(Fighter, Tree, [Strike], energy: 5)],
             [Spell(Strike, cost: 0), Spell(affordable, cost: (rules.EnergyPerRound * rules.RoundCap) + 5, damage: 2)],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(affordable)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(affordable)]))],
+            [Pack(affordable)]);
 
         ItemFindings(ContentAudit.Of(resources, rules)).ShouldBeEmpty("the five it spawns with is what takes it over the line");
     }
@@ -266,7 +293,8 @@ public sealed class ContentAuditTests
             "reordered",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
             [Bundle(Strike, Damage.Of(2), Stun.For(1)), Bundle(twin, Stun.For(1), Damage.Of(2))],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(twin)]))],
+            [Pack(twin)]);
 
         ItemFindings(ContentAudit.Of(resources, RuleSet.Default)).ShouldHaveSingleItem().Code.ShouldBe("Spell.Indistinguishable");
     }
@@ -283,7 +311,8 @@ public sealed class ContentAuditTests
             "caster",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
             [Bundle(Strike, [Damage.Of(2)], Heal.Of(1)), Bundle(other, [Damage.Of(2)], Damage.Of(1))],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(other)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(other)]))],
+            [Pack(other)]);
 
         ItemFindings(ContentAudit.Of(resources, RuleSet.Default))
             .ShouldNotContain(finding => finding.Code == "Spell.Indistinguishable");
@@ -308,7 +337,8 @@ public sealed class ContentAuditTests
                 Bundle(battery, [Damage.Of(1)], EnergyGain.Of(5)),
                 Spell(costly, cost: (rules.EnergyPerRound * rules.RoundCap) + 5, damage: 2),
             ],
-            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(battery), Spell(costly)]))]);
+            [TalentTree.Create(Tree, "Base", Node("root", TalentPrerequisites.None, [Spell(Strike), Spell(battery), Spell(costly)]))],
+            [Pack(battery, costly)]);
 
         ItemFindings(ContentAudit.Of(resources, rules))
             .ShouldBeEmpty("an offensive spell that pays its own caster lifts the ceiling like a friendly one");
@@ -376,6 +406,10 @@ public sealed class ContentAuditTests
         new(code, code, prerequisites, spells, children);
 
     private static TalentSpell Spell(SpellId id) => new(id, TalentPrerequisites.None);
+
+    /// <summary>One opener teaching these spells, which is how a creature comes to know them now (ADR 0056).</summary>
+    private static Tier Pack(params SpellId[] spells) =>
+        Tier.Create(TierId.Parse("tier:pack:v1"), "Pack", 1, [], spells, Initiative.Of(1));
 
     private static Spell Spell(SpellId id, int cost, int damage = 1) =>
         Domain.Resources.Spell.Create(

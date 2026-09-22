@@ -848,6 +848,11 @@ def two_tiers() -> Content:
         spells=spells,
         files=dict.fromkeys(spells, Path("x.json")),
         tiers={"spell:starter": 0, "spell:filler": 0, "spell:unlocked": 1},
+        packages={
+            "spell:starter": ("tier:opener:v1",),
+            "spell:filler": ("tier:opener:v1",),
+            "spell:unlocked": ("tier:deep:v1",),
+        },
     )
 
 
@@ -887,6 +892,7 @@ def tier_with(extra: dict) -> Content:
         spells=spells,
         files=dict.fromkeys(spells, Path("x.json")),
         tiers=dict(base.tiers) | {"spell:extra": 1},
+        packages=dict(base.packages) | {"spell:extra": ("tier:deep:v1",)},
     )
 
 
@@ -972,13 +978,19 @@ def test_a_spell_too_few_sides_declared_is_left_out_of_the_win_spread() -> None:
     assert "tierWinSpread" not in metrics
 
 
-def test_a_tier_nobody_cast_is_left_to_the_never_cast_count() -> None:
+def test_a_package_nobody_cast_is_left_to_the_never_cast_count() -> None:
+    """And a package with one spell to read is dropped rather than reported as a share of 1.0.
+
+    `tier:deep:v1` teaches one spell, so its share is 1.0 whatever the content does -- a reading about the
+    shape of the package and not about the numbers in it (ADR 0058). `spellsNeverCast` is what names the two
+    spells nobody cast, and it does.
+    """
     raw = evaluation_json(0.5, 0.5)
     raw["spellOutcomes"] = [outcome("spell:unlocked:v1", 100, 100, 100)]
 
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
 
-    assert metrics["tierUsageShare"] == pytest.approx(1.0)
+    assert "tierUsageShare" not in metrics
     assert metrics["spellsNeverCast"] == 2
 
 
@@ -1115,12 +1127,13 @@ def test_two_targets_on_one_measurement_are_told_apart_by_the_run_they_came_from
 
 
 def one_tier(**resolved: int) -> tuple[Content, dict]:
-    """Spells at one depth, with the casts each landed, as `metrics_of` reads the pair."""
+    """Spells one package teaches, with the casts each landed, as `metrics_of` reads the pair."""
     spells = {alias: json.loads(json.dumps(ATTACK)) | {"id": f"{alias}:v1"} for alias in resolved}
     content = Content(
         spells=spells,
         files=dict.fromkeys(spells, Path("x.json")),
         tiers=dict.fromkeys(spells, 1),
+        packages=dict.fromkeys(spells, ("tier:one:v1",)),
     )
     raw = evaluation_json(0.5, 0.5)
     raw["spellOutcomes"] = [
@@ -1145,18 +1158,18 @@ def test_a_spell_holding_its_own_in_its_tier_is_not_counted() -> None:
     assert metrics_of(Evaluation.from_json(raw), "mirror", content)["spellsBarelyCast"] == 0
 
 
-def test_the_share_is_read_against_the_tier_and_not_the_catalogue() -> None:
-    """A tier is the set a player chooses between: rare overall can still be the right pick where offered."""
+def test_the_share_is_read_against_the_package_and_not_the_catalogue() -> None:
+    """A package is what one pick buys: rare overall can still be worth the pick that brought it."""
     content, raw = one_tier(**{"spell:big": 1000, "spell:small": 5})
-    content.tiers["spell:big"] = 0
+    content.packages["spell:big"] = ("tier:elsewhere:v1",)
 
     assert metrics_of(Evaluation.from_json(raw), "mirror", content)["spellsBarelyCast"] == 0
 
 
-def test_a_spell_in_a_tier_nobody_cast_is_not_counted_as_barely_cast() -> None:
-    """Skipped rather than counted, the same way the tier readings skip a tier they cannot speak about."""
+def test_a_spell_in_a_package_nobody_cast_is_not_counted_as_barely_cast() -> None:
+    """Skipped rather than counted, the same way the readings skip a package they cannot speak about."""
     content, raw = one_tier(**{"spell:cast": 10, "spell:quiet": 0})
-    content.tiers["spell:quiet"] = 2
+    content.packages["spell:quiet"] = ("tier:silent:v1",)
 
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
 
@@ -1425,3 +1438,17 @@ def test_one_agent_on_agent_a_still_plays_once(tmp_path: Path) -> None:
 
     assert metrics["exploit"]["winRateA"] == pytest.approx(0.30)
     assert evaluator.calls == 1
+
+
+# How many spells a package teaches is counted from the catalogue, never from the outcome rows. A package of
+# two whose second spell nobody ever declared has one row, and reading that as a package of one would skip it
+# as a singleton -- dropping the exact reading this metric exists for.
+def test_a_package_of_two_whose_second_spell_was_never_cast_still_reports_its_monopoly() -> None:
+    content = one_tier(**{"spell:big": 500})[0]
+    content.packages["spell:silent"] = ("tier:one:v1",)
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [outcome("spell:big:v1", 500, 500, 500)]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierUsageShare"] == pytest.approx(1.0)

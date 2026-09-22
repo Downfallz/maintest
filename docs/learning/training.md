@@ -93,15 +93,13 @@ The score is `sum(weight * (excess / scale) ** 2)` over the objective's targets,
 of them are `report.json` metrics under their own names, so a tuning run and a normal run are read the same
 way. Six the tuner derives from `spellOutcomes`, because they need the catalogue as well as the evaluation:
 `spellUsageShare`, `spellsNeverCast` and `spellsBarelyCast` over the whole catalogue, and three over a
-**tier** — the spells
-offered at one depth of the talent tree, which is the set a player chooses between. Depth is what a spell
-requires as well as where it is written (ADR 0034): a class node holds its opener and both spells behind it,
-so reading the node alone would call all three one tier. Reading the prerequisites gives the shape a player
-climbs, 3 / 6 / 9 / 18 on today's content. `tierUsageShare` asks
-whether one of them owns the tier, `tierDamageSpread` whether they hit comparably hard per landed cast, and
-`tierWinSpread` whether they win comparably often. Each reports its worst tier, and each skips what it
-cannot read: a tier nobody cast, a spell with no `Damage` effect, a spell too few sides declared for its
-own number to mean anything. Damaging is read from the content, so an attack whose hits are absorbed widens
+**package** — the spells one evolution pick buys together (ADR 0058). The tree depth these used to read
+described a choice nobody makes: prerequisites on the package are the only eligibility rule, so the tree
+gates nothing (ADR 0056). `tierUsageShare` asks whether the package's casts all go to one of its spells,
+`tierDamageSpread` whether they hit comparably hard per landed cast, and `tierWinSpread` whether they win
+comparably often. Each reports its worst package, and each skips what it cannot read: a package nobody cast,
+a package teaching one spell, a spell with no `Damage` effect, a spell too few sides declared for its own
+number to mean anything. Damaging is read from the content, so an attack whose hits are absorbed widens
 the spread rather than leaving it.
 
 `docs/learning/explained.md` says what a band, a scale and a weight are in plain words, and how to point the

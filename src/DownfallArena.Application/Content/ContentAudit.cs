@@ -16,9 +16,12 @@ namespace DownfallArena.Application.Content;
 /// engine reads — at a cast, or at an unlock — that this content never varies. None of these stop a build —
 /// the content is valid and the engine plays it — so they are findings rather than problems.
 /// <para>
-/// Reachability is <see cref="TalentUnlocks.ReachableSpells"/>, the evolution rules' own gate applied until
-/// nothing new is learned. Since what a creature knows only grows, a gate shut at that fixed point is shut for
-/// good.
+/// Reachability is the climb a pick makes: the starting kit, plus every spell of every package whose
+/// prerequisites that set of packages can satisfy, applied until nothing new is owned (ADR 0058). The talent
+/// tree gates nothing a pick buys (ADR 0056), so reading it here understated the catalogue — under free
+/// multiclassing every family is within reach of every creature, and the question "can this creature ever
+/// know that spell" has one answer for all of them unless a package is unreachable or a spell is taught by
+/// none.
 /// </para>
 /// </summary>
 public static class ContentAudit
@@ -70,9 +73,7 @@ public static class ContentAudit
                 reached.Starting[spell] = reached.Starting.GetValueOrDefault(spell) + 1;
             }
 
-            // GameResources refuses a creature on a tree it does not have, so this always resolves.
-            var tree = resources.GetTalentTree(creature.TalentTree);
-            var known = TalentUnlocks.ReachableSpells(creature.StartingSpells, tree);
+            var known = Climbed(creature, resources);
             var ceiling = Ceiling(creature, known, resources, rules);
             foreach (var spell in known)
             {
@@ -80,16 +81,44 @@ public static class ContentAudit
                 reached.MostEnergy[spell] = Math.Max(reached.MostEnergy.GetValueOrDefault(spell), ceiling);
             }
 
-            if (!reached.Opened.TryGetValue(tree.Id, out var opened))
-            {
-                opened = new HashSet<string>(StringComparer.Ordinal);
-                reached.Opened[tree.Id] = opened;
-            }
-
-            opened.UnionWith(tree.Nodes.Where(node => node.Prerequisites.AreSatisfiedBy(known)).Select(node => node.Code));
+            // GameResources refuses a creature on a tree it does not have, so this always resolves.
+            reached.Used.Add(creature.TalentTree);
         }
 
         return reached;
+    }
+
+    /// <summary>
+    /// Every spell this creature could ever come to know: what it starts with, plus what every package it can
+    /// buy teaches. Prerequisites are the only eligibility rule (ADR 0056), and a creature owns no package at
+    /// the start, so the climb opens the packages with no prerequisite first and grows from there.
+    /// <para>
+    /// Written as a climb rather than as "every package", although a catalogue <see cref="GameResources"/>
+    /// accepts has no unreachable package — it refuses a cycle, and a prerequisite that does not sit above
+    /// what it opens. That is a rule of the validator and not of this reading, so this does not assume it: a
+    /// package no creature can open still reports its spells as unreachable rather than silently counting them.
+    /// </para>
+    /// </summary>
+    private static HashSet<SpellId> Climbed(CreatureDefinition creature, IGameResources resources)
+    {
+        var known = new HashSet<SpellId>(creature.StartingSpells);
+        var owned = new HashSet<TierId>();
+        List<Tier> opened;
+        do
+        {
+            // Taken as a list before anything is bought, not iterated lazily: the filter reads `owned`, which
+            // the body then adds to, so a deferred query would be answering a question about a set that is
+            // changing underneath it. One round at a time is what the loop already says it does.
+            opened = [.. resources.Tiers.Where(tier => !owned.Contains(tier.Id) && tier.Prerequisites.All(owned.Contains))];
+            foreach (var tier in opened)
+            {
+                owned.Add(tier.Id);
+                known.UnionWith(tier.Spells);
+            }
+        }
+        while (opened.Count > 0);
+
+        return known;
     }
 
     /// <summary>
@@ -100,22 +129,15 @@ public static class ContentAudit
     private static int Ceiling(CreatureDefinition creature, IReadOnlySet<SpellId> known, IGameResources resources, RuleSet rules) =>
         Grants(known, resources) ? int.MaxValue : creature.BaseStats.Energy.Value + (rules.EnergyPerRound * rules.RoundCap);
 
-    private static IEnumerable<ContentFinding> TreeFindings(IGameResources resources, Reach reached)
-    {
-        foreach (var tree in resources.TalentTrees)
-        {
-            if (!reached.Opened.TryGetValue(tree.Id, out var opened))
-            {
-                yield return new ContentFinding("TalentTree.Unused", tree.Id.Value, $"No creature definition is on '{tree.Name}', so none of its {tree.Nodes.Count()} node(s) is ever offered.");
-                continue;
-            }
-
-            foreach (var node in tree.Nodes.Where(node => !opened.Contains(node.Code)))
-            {
-                yield return new ContentFinding("TalentNode.Unreachable", $"{tree.Id.Value}/{node.Code}", $"No creature on '{tree.Name}' can satisfy the prerequisites of '{node.Name}', so its {node.Spells.Count} spell(s) are never offered.");
-            }
-        }
-    }
+    /// <summary>
+    /// A tree no creature is on is authored content nothing names. Its nodes are not audited any more: a node
+    /// gate decides nothing now that prerequisites are the only eligibility rule (ADR 0056), so a finding
+    /// saying its spells "are never offered" would name a consequence that does not follow.
+    /// </summary>
+    private static IEnumerable<ContentFinding> TreeFindings(IGameResources resources, Reach reached) =>
+        resources.TalentTrees
+            .Where(tree => !reached.Used.Contains(tree.Id))
+            .Select(tree => new ContentFinding("TalentTree.Unused", tree.Id.Value, $"No creature definition is on '{tree.Name}', so nothing names its {tree.Nodes.Count()} node(s)."));
 
     private static IEnumerable<ContentFinding> SpellFindings(IGameResources resources, Reach reached)
     {
@@ -123,7 +145,7 @@ public static class ContentAudit
         {
             if (!reached.By.ContainsKey(spell.Id))
             {
-                yield return new ContentFinding("Spell.Unreachable", spell.Id.Value, $"'{spell.Name}' is no creature's starting spell and no reachable talent node teaches it.");
+                yield return new ContentFinding("Spell.Unreachable", spell.Id.Value, $"'{spell.Name}' is no creature's starting spell and no package a pick can buy teaches it.");
                 continue;
             }
 
@@ -147,8 +169,8 @@ public static class ContentAudit
         /// <summary>The most energy any creature that can reach each spell could hold.</summary>
         public Dictionary<SpellId, int> MostEnergy { get; } = [];
 
-        /// <summary>The node codes of each tree that some creature on it can open.</summary>
-        public Dictionary<TalentTreeId, HashSet<string>> Opened { get; } = [];
+        /// <summary>The trees some creature definition is on.</summary>
+        public HashSet<TalentTreeId> Used { get; } = [];
     }
 
     /// <summary>
