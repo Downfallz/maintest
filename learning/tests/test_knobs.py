@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -119,14 +120,14 @@ def test_a_whole_number_is_written_as_a_whole_number() -> None:
 
 
 def test_a_knob_moves_from_the_value_the_content_carries_not_from_a_grid() -> None:
-    critical = Knob(spell="spell:attack", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
+    critical = Knob(target="spell:attack", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
 
     assert critical.moved(0.667, 1) == 0.717
     assert critical.moved(0.667, -1) == 0.617
 
 
 def test_a_knob_never_leaves_its_bounds() -> None:
-    damage = Knob(spell="spell:attack", path="/effects/0/amount", minimum=1, maximum=5, step=1)
+    damage = Knob(target="spell:attack", path="/effects/0/amount", minimum=1, maximum=5, step=1)
 
     assert damage.moved(5, 3) == 5
     assert damage.moved(1, -3) == 1
@@ -784,6 +785,117 @@ def test_the_repository_levels_come_from_the_packages(tmp_path: Path) -> None:
     assert content.packages.get("spell:heavy_strike") is None, "a starting spell no package sells"
 
 
+def test_an_enabled_package_is_read_under_its_unversioned_alias(tmp_path: Path) -> None:
+    """A knobs entry names a package the way it names a spell, so a version cut does not orphan the entry."""
+    _write_packages(
+        tmp_path,
+        ["spell:opener"],
+        [
+            {"id": "tier:open:v1", "level": 1, "spells": ["spell:opener"], "initiativeBonus": 2},
+            {"id": "tier:off:v1", "level": 1, "spells": ["spell:opener"], "enabled": False},
+        ],
+    )
+
+    content = load_content(tmp_path)
+
+    assert set(content.package_documents) == {"tier:open"}
+    assert content.package_documents["tier:open"]["initiativeBonus"] == 2
+    assert content.file_of("tier:open") == tmp_path / "Tiers" / "open.json"
+
+
+def test_an_alias_decides_which_version_of_a_package_a_knob_moves(tmp_path: Path) -> None:
+    """What the studio writes when it cuts a package's next version: the older file is superseded."""
+    _write_packages(tmp_path, ["spell:opener"], [OPEN_PACKAGE])
+    (tmp_path / "Tiers" / "open.v2.json").write_text(
+        json.dumps({"id": "tier:open:v2", "level": 1, "spells": ["spell:opener"], "initiativeBonus": 4}),
+        encoding="utf-8",
+    )
+    aliases = json.loads((tmp_path / "aliases.json").read_text()) | {"tier:open": "tier:open:v2"}
+    (tmp_path / "aliases.json").write_text(json.dumps(aliases), encoding="utf-8")
+
+    content = load_content(tmp_path)
+
+    assert content.package_documents["tier:open"]["id"] == "tier:open:v2"
+    assert content.ambiguous_packages == ()
+
+
+def test_two_enabled_versions_and_no_alias_are_reported_rather_than_picked(tmp_path: Path) -> None:
+    _write_packages(tmp_path, ["spell:opener"], [OPEN_PACKAGE])
+    (tmp_path / "Tiers" / "open.v2.json").write_text(
+        json.dumps({"id": "tier:open:v2", "level": 1, "spells": ["spell:opener"]}), encoding="utf-8"
+    )
+
+    content = load_content(tmp_path)
+
+    problems = validate(load_knobs(write_knobs(tmp_path, knobs_json())), content)
+
+    assert "tier:open" not in content.package_documents
+    assert any("tier:open: 2 enabled versions" in problem and "no alias" in problem for problem in problems)
+
+
+def test_an_enabled_package_with_no_entry_is_a_number_nobody_decided_the_intent_of(tmp_path: Path) -> None:
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json()))
+
+    problems = validate(knobs, packaged(initiativeBonus=2))
+
+    assert "tier:open: an enabled package with no entry in the knobs file." in problems
+
+
+def test_a_package_knob_on_anything_but_its_initiative_bonus_is_refused(tmp_path: Path) -> None:
+    """Its level, prerequisites and spells are the progression: moving them would be redesigning it."""
+    entry = package_entry(knobs=[{"path": "/level", "min": 1, "max": 3, "step": 1}])
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
+
+    problems = validate(knobs, packaged(initiativeBonus=2))
+
+    assert any("tier:open/level" in problem and "identity" in problem for problem in problems)
+
+
+def test_a_package_bonus_outside_its_own_bounds_is_reported(tmp_path: Path) -> None:
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
+
+    problems = validate(knobs, packaged(initiativeBonus=9))
+
+    assert "tier:open/initiativeBonus: the content carries 9.0, outside [0.0, 4.0]." in problems
+
+
+def test_a_package_knob_is_one_of_the_knobs_a_search_can_move(tmp_path: Path) -> None:
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
+
+    assert "tier:open/initiativeBonus" in {knob.key for knob in knobs}
+    assert validate(knobs, packaged(initiativeBonus=2)) == []
+
+
+def test_the_repository_knobs_cover_every_package_the_repository_sells() -> None:
+    content = load_content(REPO_ROOT / "data")
+    knobs = load_knobs(REPO_ROOT / "data" / "balance" / "knobs.json")
+
+    assert set(knobs.packages) == set(content.package_documents)
+    assert len(content.package_documents) == 21
+
+
+OPEN_PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:opener"]}
+
+
+def package_entry(**overrides: object) -> dict:
+    return {
+        "name": "Open",
+        "intent": "The opener.",
+        "knobs": [{"path": "/initiativeBonus", "min": 0, "max": 4, "step": 1}],
+    } | overrides
+
+
+def packaged(**document: object) -> Content:
+    """The one-spell test catalogue with one package selling that spell."""
+    base = content(**{"spell:attack": ATTACK})
+    package = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"]} | document
+    return replace(
+        base,
+        package_documents={"tier:open": package},
+        package_files={"tier:open": Path("Tiers/open.v1.json")},
+    )
+
+
 def _write_packages(
     root: Path, spells: list[str], packages: list[dict], starting: list[str] | None = None
 ) -> None:
@@ -1096,7 +1208,7 @@ def boxed(alias: str, tier: int, document: dict, *knobs: dict) -> tuple[Content,
         intent="Something.",
         keep=(),
         note=None,
-        knobs=tuple(Knob(spell=alias, **knob) for knob in knobs),
+        knobs=tuple(Knob(target=alias, **knob) for knob in knobs),
     )
     knobs_file = Knobs(
         version="knobs:v1",

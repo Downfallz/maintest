@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 
 import {
-  STALE_POINTER, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading,
+  STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, kitAliases, knobReading,
   newKnob, objectiveOf, pointersOf,
   readBalance, readPointer, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry,
 } from './balance.js';
@@ -503,6 +503,52 @@ test('everything outside the spells map survives a write', () => {
 
   assert.equal(changed.version, 'knobs:v1');
   assert.equal(changed.about, 'Read the README.');
+});
+
+test('a package entry is written to the packages section and never among the spells', () => {
+  const entry = { name: 'Prowler', intent: 'The fast opener.', keep: [], knobs: [] };
+
+  const changed = withEntry(twoEntries(), 'tier:prowler', entry);
+
+  assert.deepEqual(Object.keys(changed.spells), ['spell:wait', 'spell:pummel']);
+  assert.deepEqual(changed.packages, { 'tier:prowler': entry });
+});
+
+test('a package entry is read back from where it was written, with no class', () => {
+  const balance = withEntry(twoEntries(), 'tier:prowler', { name: 'Prowler', intent: 'The fast opener.', keep: [], knobs: [] });
+
+  const entry = entryFor(balance, 'tier:prowler');
+
+  assert.equal(entry.intent, 'The fast opener.');
+  assert.equal(entry.creatureClass, '');
+  assert.equal(entryFor(balance, 'spell:prowler'), null, 'a spell alias never reads the packages section');
+});
+
+test('pruning a package entry leaves the spells untouched', () => {
+  const balance = withEntry(twoEntries(), 'tier:prowler', { name: 'Prowler', intent: 'Fast.', keep: [], knobs: [] });
+
+  const changed = withEntry(balance, 'tier:prowler', null);
+
+  assert.deepEqual(changed.packages, {});
+  assert.deepEqual(Object.keys(changed.spells), ['spell:wait', 'spell:pummel']);
+});
+
+test('a seeded package entry carries no class, because a package has none', () => {
+  assert.deepEqual(
+    seedEntry({ id: 'tier:prowler:v1', name: 'Prowler' }, 'The fast opener.'),
+    { name: 'Prowler', intent: 'The fast opener.', keep: [], knobs: [] },
+  );
+});
+
+test('a package with no alias is named by its id without the version', () => {
+  assert.equal(aliasOfPackage('tier:prowler:v1', {}), 'tier:prowler');
+});
+
+test('an alias decides which version of a package the entry belongs to', () => {
+  const aliases = { 'tier:prowler': 'tier:prowler:v2' };
+
+  assert.equal(aliasOfPackage('tier:prowler:v2', aliases), 'tier:prowler');
+  assert.equal(aliasOfPackage('tier:prowler:v1', aliases), null, 'the superseded version owns no entry');
 });
 
 test('a seeded entry carries what the content says and invents no intent', () => {

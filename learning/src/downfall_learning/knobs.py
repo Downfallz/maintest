@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from operator import itemgetter
 from pathlib import Path
 from typing import Any
@@ -55,6 +55,13 @@ CRITICAL_CHANCE = "/criticalChance"
 #: The pointer that names a spell's energy cost.
 ENERGY_COST = "/energyCost"
 
+#: The one number a package carries that a tuning pass may move: what a purchase adds to Base initiative
+#: (ADR 0056). A package's level, prerequisites and spells are its identity and are never knobs.
+INITIATIVE_BONUS = "/initiativeBonus"
+
+#: How a package alias reads, and so how a document is told apart from a spell without a second field.
+PACKAGE_PREFIX = "tier:"
+
 #: The agents' own prices. `ScoringWeights.Default` is the source and this file mirrors it (AGENTS.md), so
 #: the reading below is read from there rather than restated here and cannot drift from what the bots score
 #: with.
@@ -83,9 +90,12 @@ class KnobsError(ValueError):
 
 @dataclass(frozen=True)
 class Knob:
-    """One number of one spell, and how far it may travel."""
+    """One number of one spell or one package, and how far it may travel.
 
-    spell: str
+    ``target`` is the unversioned alias of the document it moves: ``spell:pummel`` or ``tier:prowler``.
+    """
+
+    target: str
     path: str
     minimum: float
     maximum: float
@@ -93,8 +103,9 @@ class Knob:
 
     @property
     def key(self) -> str:
-        """``spell:pummel/criticalChance``: unique across the catalogue, stable across versions."""
-        return f"{self.spell}{self.path}"
+        """``spell:pummel/criticalChance`` or ``tier:prowler/initiativeBonus``: unique, and stable across
+        versions."""
+        return f"{self.target}{self.path}"
 
     def clamp(self, value: float) -> float:
         return round(min(self.maximum, max(self.minimum, value)), PRECISION)
@@ -115,6 +126,23 @@ class SpellKnobs:
     alias: str
     name: str
     creature_class: str
+    intent: str
+    keep: tuple[str, ...]
+    note: str | None
+    knobs: tuple[Knob, ...]
+
+
+@dataclass(frozen=True)
+class PackageKnobs:
+    """The knobs of one package, with the intent its number serves.
+
+    A package has one number worth tuning, its initiative bonus (ADR 0059 moved it here from the spells), so
+    this is a spell entry without a class: which spells it teaches, at what level and behind what is the
+    package's identity, and a tuning pass that moved any of it would be redesigning the progression.
+    """
+
+    alias: str
+    name: str
     intent: str
     keep: tuple[str, ...]
     note: str | None
@@ -188,13 +216,14 @@ class Knobs:
     objective: Objective
     constraints: Mapping[str, Mapping[str, object]]
     spells: Mapping[str, SpellKnobs]
+    packages: Mapping[str, PackageKnobs] = field(default_factory=dict)
 
     def __iter__(self) -> Iterator[Knob]:
-        for spell in self.spells.values():
-            yield from spell.knobs
+        for entry in (*self.spells.values(), *self.packages.values()):
+            yield from entry.knobs
 
     def __len__(self) -> int:
-        return sum(len(spell.knobs) for spell in self.spells.values())
+        return sum(len(entry.knobs) for entry in (*self.spells.values(), *self.packages.values()))
 
     def enabled(self, constraint: str) -> bool:
         return bool(self.constraints.get(constraint, {}).get("enabled", False))
@@ -222,8 +251,33 @@ class Content:
     #: file. A spell no package teaches has no entry, and a starting-kit spell is one of those.
     packages: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
+    #: The enabled packages themselves, by unversioned alias (``tier:prowler``), and the files they came from.
+    #: Kept apart from ``spells`` on purpose: dominance, twins and a cast's value are questions about spells,
+    #: and a package document read as one would answer them with nonsense. The tuner moves both kinds through
+    #: :attr:`documents`, which is the one place they meet.
+    package_documents: Mapping[str, dict] = field(default_factory=dict)
+    package_files: Mapping[str, Path] = field(default_factory=dict)
+
+    #: Packages the content cannot key unambiguously: two enabled versions of one package and no alias saying
+    #: which is meant. Reported by :func:`validate` rather than guessed at.
+    ambiguous_packages: tuple[str, ...] = ()
+
+    #: Packages on disk with ``"enabled": false``: out of the build, so nothing tunes them, and their entry is
+    #: still the right place for what they were for -- the same reading ``disabled`` gives a spell.
+    disabled_packages: frozenset[str] = frozenset()
+
     def __len__(self) -> int:
         return len(self.spells)
+
+    @property
+    def documents(self) -> dict[str, dict]:
+        """Every document a knob may move, spells and packages, by alias. Aliases never collide: the kind
+        is the prefix."""
+        return {**self.spells, **self.package_documents}
+
+    def file_of(self, alias: str) -> Path:
+        """The file a spell or a package was read from."""
+        return Path(self.files[alias] if alias in self.files else self.package_files[alias])
 
     def knows(self, alias: str) -> bool:
         """Whether an alias names a spell that is on disk, built or not."""
@@ -241,7 +295,17 @@ class Content:
             disabled=self.disabled,
             tiers=self.tiers,
             packages=self.packages,
+            package_documents=self.package_documents,
+            package_files=self.package_files,
+            ambiguous_packages=self.ambiguous_packages,
+            disabled_packages=self.disabled_packages,
         )
+
+    def with_documents(self, documents: Mapping[str, dict]) -> Content:
+        """The same catalogue with other numbers in it, spells and packages alike, each in its own place."""
+        packaged = {alias: doc for alias, doc in documents.items() if alias.startswith(PACKAGE_PREFIX)}
+        changed = self.with_spells({alias: doc for alias, doc in documents.items() if alias not in packaged})
+        return replace(changed, package_documents={**self.package_documents, **packaged})
 
     def progression(self, better: str, worse: str) -> bool:
         """Whether ``better`` outclassing ``worse`` is what climbing a family is for.
@@ -268,6 +332,7 @@ def load_knobs(path: Path = KNOBS_FILE) -> Knobs:
         objective=_objective(document.get("objective", {})),
         constraints=document.get("constraints", {}),
         spells={alias: _spell_knobs(alias, body) for alias, body in document.get("spells", {}).items()},
+        packages={alias: _package_knobs(alias, body) for alias, body in document.get("packages", {}).items()},
     )
 
 
@@ -297,13 +362,61 @@ def load_content(data_directory: Path) -> Content:
             off.add(alias)
     by_id = {str(document["id"]): alias for alias, document in spells.items()}
     teachers, levels = _packages(data_directory, by_id)
+    package_documents, package_files, ambiguous, turned_off_packages = _package_documents(
+        data_directory, aliases
+    )
     return Content(
         spells=spells,
         files=paths,
         disabled=frozenset(off),
         tiers=levels,
         packages=teachers,
+        package_documents=package_documents,
+        package_files=package_files,
+        ambiguous_packages=ambiguous,
+        disabled_packages=turned_off_packages,
     )
+
+
+def _package_documents(
+    data_directory: Path, aliases: Mapping[str, str]
+) -> tuple[dict[str, dict], dict[str, Path], tuple[str, ...], frozenset[str]]:
+    """Every enabled package, keyed by the unversioned alias a knobs entry names it by.
+
+    An alias in ``aliases.json`` decides it, the way it does for a spell, and it is what the studio writes
+    when it cuts a package's next version. Without one a package is named by its id with the version taken
+    off, which is only an answer when one enabled version carries that name: two of them and no alias is a
+    catalogue that has not said which one it means, and that is reported rather than picked.
+    """
+    by_id = {identifier: alias for alias, identifier in aliases.items() if alias.startswith(PACKAGE_PREFIX)}
+    claimed: dict[str, list[tuple[str, dict, Path]]] = {}
+    off: set[str] = set()
+    for file in sorted((data_directory / TIERS_FOLDER).rglob(JSON_FILES)):
+        package = _read_json(file)
+        identifier = str(package.get("id", file.stem))
+        alias = by_id.get(identifier, _unversioned(identifier))
+        if identifier not in by_id and alias in aliases:
+            continue  # superseded: the alias names another version, and the entry follows the alias
+        if package.get("enabled", True):
+            claimed.setdefault(alias, []).append((identifier, package, file))
+        else:
+            off.add(alias)
+
+    documents = {alias: found[0][1] for alias, found in claimed.items() if len(found) == 1}
+    files = {alias: found[0][2] for alias, found in claimed.items() if len(found) == 1}
+    ambiguous = tuple(
+        f"{alias}: {len(found)} enabled versions ({', '.join(sorted(item[0] for item in found))}) and no "
+        "alias saying which one a knob moves."
+        for alias, found in sorted(claimed.items())
+        if len(found) > 1
+    )
+    return documents, files, ambiguous, frozenset(off - set(documents))
+
+
+def _unversioned(identifier: str) -> str:
+    """``tier:prowler:v1`` to ``tier:prowler``: an id with its version taken off, and nothing else."""
+    head, _, tail = identifier.rpartition(":")
+    return head if head and tail.startswith("v") and tail[1:].isdigit() else identifier
 
 
 def _names(listed: object) -> list[str]:
@@ -437,8 +550,37 @@ def validate(knobs: Knobs, content: Content, root: Path | None = None) -> list[s
             problems.append(f"{alias}: no intent, so nothing says what its numbers are for.")
         problems.extend(_knob_problems(spell, document))
 
+    problems.extend(_package_problems(knobs, content))
     problems.extend(_objective_problems(knobs, root))
     problems.extend(_constraint_problems(knobs, content))
+    return problems
+
+
+def _package_problems(knobs: Knobs, content: Content) -> list[str]:
+    """What makes the packages section and the packages on disk disagree.
+
+    The same three questions a spell entry answers -- is every enabled package covered, does every entry name
+    one, does every pointer address a number inside its bounds -- plus one only a package can raise: a knob on
+    anything but the initiative bonus is refused, because the rest of a package is the progression itself.
+    """
+    problems = list(content.ambiguous_packages)
+    for alias in sorted(set(content.package_documents) - set(knobs.packages)):
+        problems.append(f"{alias}: an enabled package with no entry in the knobs file.")
+    for alias in sorted(set(knobs.packages) - set(content.package_documents) - content.disabled_packages):
+        problems.append(f"{alias}: a knobs entry for a package no file resolves to.")
+    for alias, package in sorted(knobs.packages.items()):
+        document = content.package_documents.get(alias)
+        if document is None:
+            continue
+        if not package.intent.strip():
+            problems.append(f"{alias}: no intent, so nothing says what its number is for.")
+        problems.extend(
+            f"{knob.key}: a package's {knob.path.lstrip('/')} is its identity, not a knob; only "
+            f"'{INITIATIVE_BONUS}' may move."
+            for knob in package.knobs
+            if knob.path != INITIATIVE_BONUS
+        )
+        problems.extend(_knob_problems(package, document))
     return problems
 
 
@@ -451,8 +593,8 @@ def _inert_critical(knob: Knob, document: Mapping[str, object]) -> bool:
     return knob.path == CRITICAL_CHANCE and not (CRITTABLE & set(_effects(document)))
 
 
-def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[str]:
-    """Everything wrong with one spell's knobs, read against the spell the content carries."""
+def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, object]) -> list[str]:
+    """Everything wrong with one entry's knobs, read against the document the content carries."""
     problems: list[str] = []
     seen: set[str] = set()
     for knob in spell.knobs:
@@ -1195,7 +1337,27 @@ def _spell_knobs(alias: str, body: Mapping[str, object]) -> SpellKnobs:
         note=None if body.get("note") is None else str(body.get("note")),
         knobs=tuple(
             Knob(
-                spell=alias,
+                target=alias,
+                path=str(knob["path"]),
+                minimum=float(knob["min"]),
+                maximum=float(knob["max"]),
+                step=float(knob["step"]),
+            )
+            for knob in body.get("knobs", [])
+        ),
+    )
+
+
+def _package_knobs(alias: str, body: Mapping[str, object]) -> PackageKnobs:
+    return PackageKnobs(
+        alias=alias,
+        name=str(body.get("name", alias)),
+        intent=str(body.get("intent", "")),
+        keep=tuple(str(item) for item in body.get("keep", [])),
+        note=None if body.get("note") is None else str(body.get("note")),
+        knobs=tuple(
+            Knob(
+                target=alias,
                 path=str(knob["path"]),
                 minimum=float(knob["min"]),
                 maximum=float(knob["max"]),
@@ -1216,7 +1378,7 @@ def _child(node: object, token: str, pointer: str) -> object:
         return node[token]
     if isinstance(node, list) and token.isdigit() and int(token) < len(node):
         return node[int(token)]
-    raise KnobsError(f"'{pointer}' addresses nothing in this spell.")
+    raise KnobsError(f"'{pointer}' addresses nothing in this document.")
 
 
 def _tokens(pointer: str) -> list[str]:

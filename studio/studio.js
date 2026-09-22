@@ -9,7 +9,7 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { STALE_POINTER, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
+import { STALE_POINTER, aliasOfPackage, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
 import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
@@ -54,6 +54,11 @@ const EFFECTS = {
   InitiativeBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
 };
+
+// The tabs whose items each carry an entry in data/balance/knobs.json: a spell, and since ADR 0061 a package.
+// check-knobs fails on an enabled one with no entry and on an entry naming nothing, so creating or deleting one
+// of these changes the knobs file in the same commit (ADR 0025).
+const KNOBBED_TABS = new Set(['spells', 'tiers']);
 
 const TEMPLATES = {
   spells: () => ({
@@ -2210,9 +2215,12 @@ async function remove(item) {
   // Every alias pointing at this spell, not the one it is reached by: the map below drops them all, so
   // pruning a single entry would leave the others naming a spell nothing resolves to -- which is the second
   // door ADR 0025 exists to close, and `survey` already reasons about two aliases on one spell.
-  const aliases = state.tab === 'spells'
-    ? Object.keys(state.catalogue.aliases || {}).filter(name => state.catalogue.aliases[name] === item.id)
-    : [];
+  const pointing = Object.keys(state.catalogue.aliases || {}).filter(name => state.catalogue.aliases[name] === item.id);
+  // A package is usually reached by no alias at all, so its entry is keyed by its id without the version --
+  // unless that name is an alias for another version, which makes this file the superseded one and leaves
+  // the entry where it is (`aliasOfPackage` is the rule `load_content` reads by).
+  const packageKey = state.tab === 'tiers' && !pointing.length ? aliasOfPackage(item.id, state.catalogue.aliases) : null;
+  const aliases = KNOBBED_TABS.has(state.tab) ? [...pointing, ...(packageKey ? [packageKey] : [])] : [];
   const entries = balance ? aliases.filter(name => entryFor(balance, name)) : [];
   // A constraint names its spells by hand. Deleting one of them does not fail the knobs file the way an
   // orphaned entry does -- it leaves the constraint checking nothing, quietly, which is worse (ADR 0025), so
@@ -2226,9 +2234,9 @@ async function remove(item) {
   const pruned = entries.length ? `\n\n${going}` : '';
   // The same door as creating a spell here: the page cannot prune an entry out of a file it never read, so it
   // says which one will be left naming nothing rather than letting a pipeline find it.
-  const orphaned = state.tab === 'spells' && !balance
-    ? '\n\nThis page has not read data/balance/knobs.json, so any entry for this spell stays behind and will'
-      + ' name a spell nothing resolves to. check-knobs fails on that.'
+  const orphaned = KNOBBED_TABS.has(state.tab) && !balance
+    ? `\n\nThis page has not read data/balance/knobs.json, so any entry for this ${TABS[state.tab].label} stays`
+      + ' behind and will name something nothing resolves to. check-knobs fails on that.'
     : '';
   if (!window.confirm(`Delete ${item.path}?${guarded}${pruned}${orphaned}\n\nThe file goes away; git still has it.`)) return;
 
@@ -2277,7 +2285,8 @@ async function create() {
   };
   const owed = [];
 
-  // A new enabled spell with no entry fails check-knobs, so the entry is seeded in the same change (ADR 0025).
+  // A new enabled spell or package with no entry fails check-knobs, so the entry is seeded in the same change
+  // (ADR 0025, ADR 0061).
   // Only the intent is asked for: the name and the class are in the document, and an intent cannot be taken
   // from either -- that is the argument of ADR 0021, and a search that chases the metrics alone will happily
   // make every spell the same spell.
@@ -2285,13 +2294,13 @@ async function create() {
   // A host that publishes no knobs cannot be handed a file it never read, so this spell goes out without an
   // entry -- and the author hears it now rather than from a red pipeline, because it is theirs to write by
   // hand and nothing on this page will ask again.
-  if (state.tab === 'spells' && !answer.ok) {
+  if (KNOBBED_TABS.has(state.tab) && !answer.ok) {
     owed.push(`${id} goes out with no entry in data/balance/knobs.json, which check-knobs fails on for enabled`
       + ' content. This page could not seed one: it never read the file. Write it by hand, or open the studio'
       + ' where the knobs are published.');
   }
 
-  if (state.tab === 'spells' && answer.ok) {
+  if (KNOBBED_TABS.has(state.tab) && answer.ok) {
     const intent = window.prompt(`What is ${content.name} for? A sentence or two: the decision it exists to pose.`
       + ' A tuning pass may move its numbers; it may not move this.', '');
     if (intent === null) return;

@@ -744,5 +744,328 @@
         { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     }
+  },
+  "packages": {
+    "tier:brute": {
+      "name": "Brute",
+      "intent": "The Brawler's opener: a cheap swing and a point of armour, bought together. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:occultist": {
+      "name": "Occultist",
+      "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        }
+      ]
+    },
+    "tier:prowler": {
+      "name": "Prowler",
+      "intent": "The Scoundrel's opener, and the fastest of the three: the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:assassin": {
+      "name": "Assassin",
+      "intent": "The Assassin's opener: Momentum, the energy that arrives later rather than now. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:berserker": {
+      "name": "Berserker",
+      "intent": "The Berserker's opener: Enraged Charge, two hits in one activation. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:elementalist": {
+      "name": "Elementalist",
+      "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:ironbound": {
+      "name": "Ironbound",
+      "intent": "The Warlord's opener: Full Plate, armour as a line's identity. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:marauder": {
+      "name": "Marauder",
+      "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:necromancer": {
+      "name": "Necromancer",
+      "intent": "The Necromancer's opener: Summon Minions, paid for in the summoner's own health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:parasite": {
+      "name": "Parasite",
+      "intent": "The Leech's opener: Parasite Jab, the start of the line that feeds on its targets. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:plague_doctor": {
+      "name": "Plague Doctor",
+      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:shaman": {
+      "name": "Shaman",
+      "intent": "The Shaman's opener: Healing Screech, the team heal of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 0 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 2,
+          "step": 1
+        }
+      ],
+      "note": "Worth nothing on purchase: its one spell carried no per-spell bonus, so the seeded sum is 0. A package that buys no tempo at all may be right for a healer and may be an accident of the migration; the bounds let a tuning pass find out rather than assume either."
+    },
+    "tier:blightweaver": {
+      "name": "Blightweaver",
+      "intent": "The Trickster's close: the cheap stun and the armour shred. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 2,
+          "max": 6,
+          "step": 1
+        }
+      ]
+    },
+    "tier:deathstalker": {
+      "name": "Deathstalker",
+      "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 3,
+          "max": 7,
+          "step": 1
+        }
+      ]
+    },
+    "tier:dreadnought": {
+      "name": "Dreadnought",
+      "intent": "The Warlord's close: a large self-repair and the full-price stun. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:harbinger": {
+      "name": "Harbinger",
+      "intent": "The Wizard's close: the burning nuke and the slowing spear. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:lich": {
+      "name": "Lich",
+      "intent": "The Necromancer's close: the armoured dead and the specter that costs health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        }
+      ]
+    },
+    "tier:ravager": {
+      "name": "Ravager",
+      "intent": "The Berserker's close: the sweep and the single enormous hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        }
+      ]
+    },
+    "tier:soulreaver": {
+      "name": "Soulreaver",
+      "intent": "The Leech's close: the sacrifice and the devourer that drains. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 3,
+          "max": 7,
+          "step": 1
+        }
+      ]
+    },
+    "tier:spiritcaller": {
+      "name": "Spiritcaller",
+      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:warmonger": {
+      "name": "Warmonger",
+      "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 2,
+          "max": 6,
+          "step": 1
+        }
+      ]
+    }
   }
 }
