@@ -16,6 +16,7 @@ namespace DownfallArena.Domain.Matches.Creatures;
 public sealed class Creature : Entity<CreatureId>
 {
     private readonly HashSet<SpellId> _knownSpells;
+    private readonly HashSet<TierId> _acquiredTiers;
     private readonly ConditionSet _conditions;
 
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
@@ -27,6 +28,7 @@ public sealed class Creature : Entity<CreatureId>
         Energy = definition.BaseStats.Energy;
         BaseInitiative = definition.BaseStats.Initiative;
         _knownSpells = [.. definition.StartingSpells];
+        _acquiredTiers = [];
         _conditions = new ConditionSet();
     }
 
@@ -39,6 +41,10 @@ public sealed class Creature : Entity<CreatureId>
         Energy = snapshot.Energy;
         BaseInitiative = snapshot.BaseInitiative;
         _knownSpells = [.. snapshot.KnownSpells];
+
+        // The snapshot's base initiative already includes every bonus the creature bought, so restoring the
+        // tiers must not add them again. The list is what it owns, not a script to replay.
+        _acquiredTiers = [.. snapshot.AcquiredTiers];
         _conditions = new ConditionSet(snapshot.Conditions);
     }
 
@@ -61,6 +67,9 @@ public sealed class Creature : Entity<CreatureId>
     public Energy Energy { get; private set; }
 
     public IReadOnlySet<SpellId> KnownSpells => _knownSpells;
+
+    /// <summary>The packages this creature has bought, in no particular order.</summary>
+    public IReadOnlySet<TierId> AcquiredTiers => _acquiredTiers;
 
     public IReadOnlyList<Condition> Conditions => _conditions.Active;
 
@@ -153,6 +162,51 @@ public sealed class Creature : Entity<CreatureId>
     }
 
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
+
+    /// <summary>
+    /// Whether this creature bought a package. Asked of the tier and never of its spells: a creature can know
+    /// every spell of a package without having bought it, and the prerequisite rule is about the purchase.
+    /// </summary>
+    public bool OwnsTier(TierId tierId) => _acquiredTiers.Contains(tierId);
+
+    /// <summary>
+    /// Buys a package: every spell it teaches at once, and its initiative bonus exactly once, for the rest of
+    /// the match.
+    /// <para>
+    /// Everything is checked before anything changes, so a refused purchase leaves the creature as it was --
+    /// no half-taught package, and no bonus without the tier that paid for it. A spell the creature already
+    /// knows is granted idempotently rather than refused, because the package is what is being bought and
+    /// two packages may legitimately teach the same spell; owning the <em>tier</em> is what blocks a repeat.
+    /// </para>
+    /// </summary>
+    internal Result BuyTier(Tier tier)
+    {
+        ArgumentNullException.ThrowIfNull(tier);
+
+        if (IsDead)
+        {
+            return Result.Failure(CreatureErrors.Dead);
+        }
+
+        if (_acquiredTiers.Contains(tier.Id))
+        {
+            return Result.Failure(CreatureErrors.TierAlreadyOwned);
+        }
+
+        if (!tier.Prerequisites.All(_acquiredTiers.Contains))
+        {
+            return Result.Failure(CreatureErrors.TierPrerequisiteMissing);
+        }
+
+        _acquiredTiers.Add(tier.Id);
+        foreach (var spell in tier.Spells)
+        {
+            _knownSpells.Add(spell);
+        }
+
+        BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value);
+        return Result.Success();
+    }
 
     /// <summary>
     /// Learns a spell and raises the base initiative by its Spell initiative, for the rest of the match. A
@@ -293,6 +347,7 @@ public sealed class Creature : Entity<CreatureId>
         CriticalChance = CriticalChance,
         IsStunned = IsStunned,
         KnownSpells = _knownSpells.ToHashSet(),
+        AcquiredTiers = _acquiredTiers.ToHashSet(),
         Conditions = [.. _conditions.Active.Select(condition => condition.Snapshot())],
     };
 }

@@ -1,5 +1,6 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Resources.Talents;
 using DownfallArena.Domain.Tests.Matches.Support;
@@ -341,5 +342,111 @@ public sealed class CreatureTests
         var snapshot = Spawn().Snapshot() with { Health = Health.Of(21) };
 
         Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+    }
+
+    private static Tier Package(string id, int level = 1, int bonus = 2, string[]? requires = null, string[]? spells = null) =>
+        Tier.Create(
+            TierId.Parse(id),
+            id,
+            level,
+            [.. (requires ?? []).Select(TierId.Parse)],
+            [.. (spells ?? ["spell:guard:v1"]).Select(SpellId.Parse)],
+            Initiative.Of(bonus));
+
+    [Fact]
+    public void Buying_a_package_teaches_every_spell_in_it_and_raises_initiative_once()
+    {
+        var creature = Spawn();
+        var before = creature.BaseInitiative;
+
+        creature.BuyTier(Package("tier:brute:v1", bonus: 2, spells: ["spell:guard:v1", "spell:slam:v1"])).IsSuccess.ShouldBeTrue();
+
+        creature.OwnsTier(TierId.Parse("tier:brute:v1")).ShouldBeTrue();
+        creature.KnowsSpell(SpellId.Parse("spell:guard:v1")).ShouldBeTrue();
+        creature.KnowsSpell(SpellId.Parse("spell:slam:v1")).ShouldBeTrue();
+        creature.BaseInitiative.ShouldBe(before.Plus(2));
+    }
+
+    [Fact]
+    public void A_package_cannot_be_bought_twice()
+    {
+        var creature = Spawn();
+        creature.BuyTier(Package("tier:brute:v1")).IsSuccess.ShouldBeTrue();
+        var after = creature.BaseInitiative;
+
+        creature.BuyTier(Package("tier:brute:v1")).Error.ShouldBe(CreatureErrors.TierAlreadyOwned);
+
+        creature.BaseInitiative.ShouldBe(after);
+    }
+
+    /// <summary>
+    /// Ownership is asked of the tier, never of its spells: knowing what a package teaches is not having
+    /// bought it, and a starting kit can hand over a spell a package also teaches.
+    /// </summary>
+    [Fact]
+    public void Knowing_a_packages_spells_is_not_owning_the_package()
+    {
+        var creature = Spawn();
+        creature.BuyTier(Package("tier:brute:v1", spells: ["spell:guard:v1"])).IsSuccess.ShouldBeTrue();
+
+        creature.KnowsSpell(SpellId.Parse("spell:guard:v1")).ShouldBeTrue();
+        creature.OwnsTier(TierId.Parse("tier:marauder:v1")).ShouldBeFalse();
+    }
+
+    /// <summary>A spell two packages teach is granted again without refusing the second purchase.</summary>
+    [Fact]
+    public void A_package_grants_a_spell_the_creature_already_knows_without_refusing()
+    {
+        var creature = Spawn();
+        creature.BuyTier(Package("tier:brute:v1", spells: ["spell:guard:v1"])).IsSuccess.ShouldBeTrue();
+
+        creature.BuyTier(Package("tier:prowler:v1", spells: ["spell:guard:v1", "spell:slam:v1"])).IsSuccess.ShouldBeTrue();
+
+        creature.KnowsSpell(SpellId.Parse("spell:guard:v1")).ShouldBeTrue();
+        creature.AcquiredTiers.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void A_package_whose_prerequisite_is_not_owned_is_refused_and_changes_nothing()
+    {
+        var creature = Spawn();
+        var before = creature.BaseInitiative;
+
+        creature.BuyTier(Package("tier:marauder:v1", level: 2, requires: ["tier:brute:v1"], spells: ["spell:slam:v1"]))
+            .Error.ShouldBe(CreatureErrors.TierPrerequisiteMissing);
+
+        creature.AcquiredTiers.ShouldBeEmpty();
+        creature.KnowsSpell(SpellId.Parse("spell:slam:v1")).ShouldBeFalse();
+        creature.BaseInitiative.ShouldBe(before);
+    }
+
+    [Fact]
+    public void A_dead_creature_buys_nothing()
+    {
+        var creature = Spawn();
+        creature.TakeDamage(999);
+
+        creature.BuyTier(Package("tier:brute:v1")).Error.ShouldBe(CreatureErrors.Dead);
+
+        creature.AcquiredTiers.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// The snapshot's base initiative already carries every bonus the creature bought, so restoring the list
+    /// of packages must not add them a second time. Getting this wrong makes a creature faster every time a
+    /// rollout reconstructs it, which is the kind of drift a search would silently learn to exploit.
+    /// </summary>
+    [Fact]
+    public void Restoring_a_creature_does_not_pay_its_package_bonuses_again()
+    {
+        var creature = Spawn();
+        creature.BuyTier(Package("tier:brute:v1", bonus: 3)).IsSuccess.ShouldBeTrue();
+        var snapshot = creature.Snapshot();
+
+        var restored = Creature.Restore(snapshot, Content.Creature(), Arena.Tree);
+
+        restored.BaseInitiative.ShouldBe(snapshot.BaseInitiative);
+        restored.AcquiredTiers.ShouldBe(creature.AcquiredTiers);
+        restored.Snapshot().BaseInitiative.ShouldBe(snapshot.BaseInitiative);
     }
 }
