@@ -40,8 +40,18 @@ internal static class Table
 
     public static IEnumerable<Creature> Living(Match match, PlayerSlot slot) => TeamOf(match, slot).LivingCreatures;
 
+    /// <summary>
+    /// Gives up both players' picks, when there are any to give up. A round the schedule offers no opportunity
+    /// leaves the sub-phase already complete (ADR 0056), and a pass there is refused rather than needed: not
+    /// asking is the point, so a helper that insisted would be testing the stall the schedule removes.
+    /// </summary>
     public static void PassEvolution(Match match)
     {
+        if (match.CurrentRound?.SubPhase != RoundSubPhase.Evolution)
+        {
+            return;
+        }
+
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
     }

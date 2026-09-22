@@ -122,7 +122,7 @@ the best spec of the round contract).
 - `TalentUnlockService` (unlockable spells from the tree and known spells; validation with error catalogue).
 - `SpeedChoicePolicy`, `CombatTimelineBuilder` (Quick before Standard, initiative descending, deterministic
   tie-break by slot then creature id: legacy had arbitrary order because all initiatives were 0).
-- Progression gates: `EvolutionGate` (picks per round from the rule set, not a constant), `SpeedGate`.
+- Progression gates: `EvolutionGate` (the picks the rule set's schedule gives that round, not a constant), `SpeedGate`.
   Gates return what is missing (creature ids, remaining picks) so the UI and bots share one source of truth.
 
 Fix: legacy unlocked the spell on the creature before the round accepted the choice; a rejected duplicate left

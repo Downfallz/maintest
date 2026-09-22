@@ -41,12 +41,12 @@ public sealed class PlayerDecisionCheckTests
         var options = new PlayerOptions
         {
             Kind = PlayerOptionsKind.Evolution,
-            Evolution = new EvolutionOptions(2, [new EvolutionOption(Mine, [TestContent.Guard])]),
+            Evolution = new EvolutionOptions(2, [new EvolutionOption(Mine, [TestContent.GuardPack])]),
         };
 
-        PlayerDecisionCheck.Validate(options, PlayerDecision.Unlock(Mine, TestContent.Guard)).IsSuccess.ShouldBeTrue();
-        PlayerDecisionCheck.Validate(options, PlayerDecision.Unlock(Theirs, TestContent.Guard)).Error.ShouldBe(DecisionErrors.CreatureNotOffered);
-        PlayerDecisionCheck.Validate(options, PlayerDecision.Unlock(Mine, TestContent.Slam)).Error.ShouldBe(DecisionErrors.SpellNotOffered);
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Buy(Mine, TestContent.GuardPack)).IsSuccess.ShouldBeTrue();
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Buy(Theirs, TestContent.GuardPack)).Error.ShouldBe(DecisionErrors.CreatureNotOffered);
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Buy(Mine, TestContent.SlamPack)).Error.ShouldBe(DecisionErrors.TierNotOffered);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class PlayerDecisionCheckTests
 
         var evolution = PlayerOptionsProjection.Build(match, PlayerSlot.Player1, TestContent.Resources);
         var offered = evolution.Evolution.ShouldNotBeNull().Creatures[0];
-        PlayerDecisionCheck.Validate(evolution, PlayerDecision.Unlock(offered.Creature, offered.UnlockableSpells[0])).IsSuccess.ShouldBeTrue();
+        PlayerDecisionCheck.Validate(evolution, PlayerDecision.Buy(offered.Creature, offered.AvailableTiers[0])).IsSuccess.ShouldBeTrue();
         PlayerDecisionCheck.Validate(evolution, PlayerDecision.Pass).IsSuccess.ShouldBeTrue();
         MatchStore.PassEvolution(match);
 

@@ -58,7 +58,7 @@ public sealed class CreatureTests
         creature.GainEnergy(3).ShouldBe(0);
         creature.LoseEnergy(3).ShouldBe(0);
         creature.SpendEnergy(Energy.Of(0)).Error.ShouldBe(CreatureErrors.Dead);
-        creature.UnlockSpell(Content.Spell("spell:new:v1")).Error.ShouldBe(CreatureErrors.Dead);
+        creature.BuyTier(Package("tier:new:v1")).Error.ShouldBe(CreatureErrors.Dead);
         creature.Health.ShouldBe(Health.Of(0));
         creature.Energy.ShouldBe(Energy.Of(0));
     }
@@ -108,14 +108,18 @@ public sealed class CreatureTests
         Should.Throw<ArgumentOutOfRangeException>(() => creature.LoseEnergy(-1));
     }
 
+    /// <summary>
+    /// Learning is idempotent rather than refusable, because two packages may teach the same spell and the
+    /// second purchase is not a mistake (ADR 0056).
+    /// </summary>
     [Fact]
-    public void Unlocking_a_spell_adds_it_once()
+    public void Learning_a_spell_twice_leaves_one_of_it()
     {
         var creature = Spawn();
         var guard = Content.Spell("spell:guard:v1");
 
-        creature.UnlockSpell(guard).IsSuccess.ShouldBeTrue();
-        creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
+        creature.Learn(guard.Id);
+        creature.Learn(guard.Id);
 
         creature.KnowsSpell(guard.Id).ShouldBeTrue();
         creature.KnownSpells.Count.ShouldBe(2);
@@ -131,63 +135,39 @@ public sealed class CreatureTests
     }
 
     [Fact]
-    public void Unlocking_a_spell_raises_the_base_initiative_by_the_spell_initiative()
+    public void Buying_two_packages_raises_the_base_initiative_by_both()
     {
         var creature = Spawn();
 
-        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2)).IsSuccess.ShouldBeTrue();
+        creature.BuyTier(Package("tier:first:v1", bonus: 2)).IsSuccess.ShouldBeTrue();
         creature.BaseInitiative.ShouldBe(Initiative.Of(7));
 
-        creature.UnlockSpell(Content.SpellAtInitiative("spell:slam:v1", 3)).IsSuccess.ShouldBeTrue();
+        creature.BuyTier(Package("tier:second:v1", bonus: 3, spells: ["spell:slam:v1"])).IsSuccess.ShouldBeTrue();
         creature.BaseInitiative.ShouldBe(Initiative.Of(10));
         creature.CurrentInitiative.ShouldBe(Initiative.Of(10));
     }
 
     /// <summary>
-    /// ADR 0017: a definition's baseInitiative is authored knowing its starting kit, so the kit does not pay
-    /// again. Only an unlock taken during the match raises the base.
+    /// A spell is worth no initiative on its own any more: the bonus belongs to the package that teaches it
+    /// and is paid when the package is bought (ADR 0056). This is what stops a creature taught a spell by two
+    /// packages from being paid twice for it.
     /// </summary>
     [Fact]
-    public void A_spell_the_creature_starts_with_raises_no_initiative()
-    {
-        var guard = Content.SpellAtInitiative("spell:guard:v1", 2);
-        var creature = Creature.Spawn(CreatureId.From(1), PlayerSlot.Player1, Content.Creature("creature:main:v1", "spell:guard:v1"));
-
-        creature.KnowsSpell(guard.Id).ShouldBeTrue();
-        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
-
-        creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
-        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
-    }
-
-    [Fact]
-    public void A_refused_unlock_raises_no_initiative()
+    public void Learning_a_spell_raises_no_initiative()
     {
         var creature = Spawn();
-        var guard = Content.SpellAtInitiative("spell:guard:v1", 2);
 
-        creature.UnlockSpell(guard);
-        creature.UnlockSpell(guard).Error.ShouldBe(CreatureErrors.SpellAlreadyKnown);
+        creature.Learn(SpellId.Parse("spell:guard:v1"));
 
-        creature.BaseInitiative.ShouldBe(Initiative.Of(7));
-    }
-
-    [Fact]
-    public void A_dead_creature_unlocks_nothing_and_keeps_the_base_initiative_it_had()
-    {
-        var creature = Spawn();
-        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2));
-        creature.TakeDamage(20);
-
-        creature.UnlockSpell(Content.SpellAtInitiative("spell:slam:v1", 3)).Error.ShouldBe(CreatureErrors.Dead);
-        creature.BaseInitiative.ShouldBe(Initiative.Of(7));
+        creature.KnowsSpell(SpellId.Parse("spell:guard:v1")).ShouldBeTrue();
+        creature.BaseInitiative.ShouldBe(Initiative.Of(5));
     }
 
     [Fact]
     public void An_initiative_debuff_lowers_the_current_initiative_and_leaves_the_base_alone()
     {
         var creature = Spawn();
-        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 3));
+        creature.BuyTier(Package("tier:guard:v1", bonus: 3));
 
         creature.Apply(InitiativeDebuff.Of(2, Duration.OfRounds(1)));
 
@@ -208,7 +188,7 @@ public sealed class CreatureTests
     public void Debuffs_past_the_base_floor_the_current_initiative_at_zero()
     {
         var creature = Spawn();
-        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 3));
+        creature.BuyTier(Package("tier:guard:v1", bonus: 3));
 
         creature.Apply(InitiativeDebuff.Of(5, Duration.OfRounds(1)));
         creature.Apply(InitiativeDebuff.Of(5, Duration.OfRounds(1)));
@@ -246,12 +226,12 @@ public sealed class CreatureTests
         var creature = Spawn();
         creature.TakeDamage(4);
         creature.GainEnergy(3);
-        creature.UnlockSpell(Content.SpellAtInitiative("spell:guard:v1", 2)).IsSuccess.ShouldBeTrue();
+        creature.BuyTier(Package("tier:guard:v1", bonus: 2)).IsSuccess.ShouldBeTrue();
         creature.Apply(Stun.For(2));
         creature.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)), new ConditionSource(CreatureId.From(3), SpellId.Parse("spell:guard:v1")));
         var snapshot = creature.Snapshot();
 
-        var restored = Creature.Restore(snapshot, Content.Creature(), Arena.Tree);
+        var restored = Creature.Restore(snapshot, Content.Creature(), Arena.TiersOf(snapshot));
 
         restored.Id.ShouldBe(creature.Id);
         restored.Owner.ShouldBe(creature.Owner);
@@ -269,7 +249,7 @@ public sealed class CreatureTests
     public void A_restored_creature_changes_on_its_own_and_not_the_original()
     {
         var creature = Spawn();
-        var restored = Creature.Restore(creature.Snapshot(), Content.Creature(), Arena.Tree);
+        var restored = Creature.Restore(creature.Snapshot(), Content.Creature(), Arena.TiersOf(creature.Snapshot()));
 
         restored.TakeDamage(5);
         restored.Apply(Stun.For(1));
@@ -283,7 +263,7 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot();
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature("creature:other:v1"), Arena.Tree));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature("creature:other:v1"), Arena.TiersOf(snapshot)));
     }
 
     [Fact]
@@ -293,7 +273,7 @@ public sealed class CreatureTests
         creature.Apply(DefenseBuff.Of(2, Duration.OfRounds(1)));
         var snapshot = creature.Snapshot() with { TotalDefense = Defense.Of(0) };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.TiersOf(snapshot)));
     }
 
     [Fact]
@@ -301,7 +281,7 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot() with { IsStunned = true };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.TiersOf(snapshot)));
     }
 
     [Fact]
@@ -309,15 +289,15 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot() with { CurrentInitiative = Initiative.Of(9) };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.TiersOf(snapshot)));
     }
 
     [Fact]
-    public void A_creature_cannot_be_restored_knowing_a_spell_its_tree_does_not_offer()
+    public void A_creature_cannot_be_restored_knowing_a_spell_no_package_of_its_taught_it()
     {
         var snapshot = Spawn().Snapshot() with { KnownSpells = new HashSet<SpellId> { SpellId.Parse("spell:strike:v1"), SpellId.Parse("spell:forbidden:v1") } };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.TiersOf(snapshot)));
     }
 
     [Fact]
@@ -325,15 +305,19 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot() with { KnownSpells = new HashSet<SpellId> { SpellId.Parse("spell:guard:v1") } };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.TiersOf(snapshot)));
     }
 
+    /// <summary>
+    /// The packages handed in have to be the ones the snapshot says it owns. A caller that resolved the wrong
+    /// set would restore a creature whose spells are explained by packages it never bought.
+    /// </summary>
     [Fact]
-    public void A_creature_cannot_be_restored_against_another_talent_tree()
+    public void A_creature_cannot_be_restored_with_packages_it_does_not_own()
     {
-        var other = TalentTree.Create(TalentTreeId.Parse("talent-tree:other:v1"), "Other", Content.Node("root", Content.TalentSpell("spell:strike:v1")));
+        var snapshot = Spawn().Snapshot();
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(Spawn().Snapshot(), Content.Creature(), other));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), [Package("tier:unbought:v1")]));
     }
 
     [Fact]
@@ -341,7 +325,7 @@ public sealed class CreatureTests
     {
         var snapshot = Spawn().Snapshot() with { Health = Health.Of(21) };
 
-        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.Tree));
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot, Content.Creature(), Arena.TiersOf(snapshot)));
     }
 
     private static Tier Package(string id, int level = 1, int bonus = 2, string[]? requires = null, string[]? spells = null) =>
@@ -440,10 +424,11 @@ public sealed class CreatureTests
     public void Restoring_a_creature_does_not_pay_its_package_bonuses_again()
     {
         var creature = Spawn();
-        creature.BuyTier(Package("tier:brute:v1", bonus: 3)).IsSuccess.ShouldBeTrue();
+        var brute = Package("tier:brute:v1", bonus: 3);
+        creature.BuyTier(brute).IsSuccess.ShouldBeTrue();
         var snapshot = creature.Snapshot();
 
-        var restored = Creature.Restore(snapshot, Content.Creature(), Arena.Tree);
+        var restored = Creature.Restore(snapshot, Content.Creature(), [brute]);
 
         restored.BaseInitiative.ShouldBe(snapshot.BaseInitiative);
         restored.AcquiredTiers.ShouldBe(creature.AcquiredTiers);

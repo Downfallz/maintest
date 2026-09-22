@@ -11,7 +11,7 @@ public sealed class SubmitEvolutionChoiceHandler(MatchWorkflow workflow) : IComm
         ArgumentNullException.ThrowIfNull(command);
         return workflow.ExecuteAsync(
             command.MatchId,
-            match => match.SubmitEvolutionChoice(command.Slot, new EvolutionChoice(command.Creature, command.Spell)),
+            match => match.SubmitEvolutionChoice(command.Slot, new EvolutionChoice(command.Creature, command.Tier)),
             cancellationToken);
     }
 }

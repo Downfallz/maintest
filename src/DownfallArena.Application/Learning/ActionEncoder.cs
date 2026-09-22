@@ -25,7 +25,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
         ArgumentNullException.ThrowIfNull(choice);
 
         var slot = slots.SlotOf(choice.Creature);
-        return new EncodedAction(string.Create(CultureInfo.InvariantCulture, $"evolve:{slot}:{choice.Spell.Value}"), new ActionCode(ActionKind.Evolve, slot, schema.SpellIndex(choice.Spell), -1, 0));
+        return new EncodedAction(string.Create(CultureInfo.InvariantCulture, $"evolve:{slot}:{choice.Tier.Value}"), new ActionCode(ActionKind.Evolve, slot, schema.TierIndex(choice.Tier), -1, 0));
     }
 
     public static EncodedAction Speed(BoardSlots slots, SpeedChoice choice)
@@ -82,7 +82,7 @@ public sealed class ActionEncoder(FeatureSchema schema)
     }
 
     private IEnumerable<EncodedAction> EvolutionCandidates(BoardSlots slots, EvolutionOptions options) =>
-        options.Creatures.SelectMany(creature => creature.UnlockableSpells.Select(spell => Evolve(slots, new EvolutionChoice(creature.Creature, spell))));
+        options.Creatures.SelectMany(creature => creature.AvailableTiers.Select(tier => Evolve(slots, new EvolutionChoice(creature.Creature, tier))));
 
     private static IEnumerable<EncodedAction> SpeedCandidates(BoardSlots slots, SpeedOptions options) =>
         options.Missing.SelectMany(creature => new[]

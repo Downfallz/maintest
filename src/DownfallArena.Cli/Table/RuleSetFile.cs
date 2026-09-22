@@ -23,24 +23,36 @@ internal sealed record RuleSetFile
 
     public int EnergyPerRound { get; init; } = 2;
 
-    public int EvolutionPicksPerRound { get; init; } = 2;
+    public int EvolutionPicksPerOpportunity { get; init; } = 2;
 
     public int RoundCap { get; init; } = 12;
 
     public double CriticalMultiplier { get; init; } = 2.0;
+
+    /// <summary>The first round an opportunity comes, and how many rounds apart they are (ADR 0056).</summary>
+    public int FirstEvolutionRound { get; init; } = 1;
+
+    public int EvolutionInterval { get; init; } = 2;
 
     public static RuleSet Read(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         if (!File.Exists(path))
         {
-            throw new ArgumentException($"Rule set '{path}' not found. It is a JSON object of teamSize, energyPerRound, evolutionPicksPerRound, roundCap and criticalMultiplier.", nameof(path));
+            throw new ArgumentException($"Rule set '{path}' not found. It is a JSON object of teamSize, energyPerRound, evolutionPicksPerOpportunity, roundCap, criticalMultiplier, firstEvolutionRound and evolutionInterval.", nameof(path));
         }
 
         var file = Parse(path);
         try
         {
-            return RuleSet.Create(file.TeamSize, file.EnergyPerRound, file.EvolutionPicksPerRound, file.RoundCap, file.CriticalMultiplier);
+            return RuleSet.Create(
+                file.TeamSize,
+                file.EnergyPerRound,
+                file.EvolutionPicksPerOpportunity,
+                file.RoundCap,
+                file.CriticalMultiplier,
+                file.FirstEvolutionRound,
+                file.EvolutionInterval);
         }
         catch (ArgumentOutOfRangeException exception)
         {
@@ -53,7 +65,8 @@ internal sealed record RuleSetFile
     {
         ArgumentNullException.ThrowIfNull(rules);
         var where = path is { Length: > 0 } ? path : "the engine default, no --rules given";
-        return $"Rules {rules.TeamSize} creatures, {rules.EnergyPerRound} energy, {rules.EvolutionPicksPerRound} picks, {rules.RoundCap} rounds, x{rules.CriticalMultiplier} crit ({where})";
+        var cadence = rules.EvolutionInterval == 1 ? "every round" : $"every {rules.EvolutionInterval} rounds from {rules.FirstEvolutionRound}";
+        return $"Rules {rules.TeamSize} creatures, {rules.EnergyPerRound} energy, {rules.EvolutionPicksPerOpportunity} picks {cadence}, {rules.RoundCap} rounds, x{rules.CriticalMultiplier} crit ({where})";
     }
 
     private static RuleSetFile Parse(string path)

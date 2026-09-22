@@ -5,24 +5,19 @@ using DownfallArena.SharedKernel.Identifiers;
 namespace DownfallArena.Domain.Matches.Rules.Planning;
 
 /// <summary>
-/// Which spells of a talent tree a creature may unlock next: a spell is unlockable when its node's prerequisites
-/// and its own prerequisites are met by the spells the creature knows, and it is not known yet.
+/// What a talent tree's gates offer a creature: structural reachability through the tree, which is no longer
+/// what may be bought.
 /// </summary>
+/// <remarks>
+/// A pick buys a package and the package's prerequisites decide eligibility (ADR 0056,
+/// <see cref="TierEligibility"/>). The per-spell gate this file used to apply is gone with it. What is left is
+/// the question the content audit asks — which spells a creature could ever come to know on its own tree —
+/// and that reading now understates the catalogue, because multiclassing puts every family within reach. The
+/// audit moves to packages in the stage that rewrites the content scorer; until then it reads the tree, and
+/// says so.
+/// </remarks>
 public static class TalentUnlocks
 {
-    public static IReadOnlyList<SpellId> UnlockableSpells(CreatureSnapshot creature, TalentTree tree)
-    {
-        ArgumentNullException.ThrowIfNull(creature);
-        ArgumentNullException.ThrowIfNull(tree);
-
-        if (creature.IsDead)
-        {
-            return [];
-        }
-
-        return [.. Offered(creature.KnownSpells, tree).Where(spell => !creature.KnowsSpell(spell))];
-    }
-
     /// <summary>
     /// Every spell a creature starting with <paramref name="known"/> could ever come to know on this tree: what
     /// the gates offer that set, then what they offer the larger set, until it stops growing. What a creature

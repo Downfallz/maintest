@@ -79,7 +79,7 @@ public sealed class ContentAuditTests
     [Fact]
     public void A_spell_costing_more_energy_than_a_whole_match_hands_out_is_uncastable()
     {
-        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerRound: 2, roundCap: 30, criticalMultiplier: 2.0);
+        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, roundCap: 30, criticalMultiplier: 2.0);
         var resources = GameResources.Create(
             "expensive",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
@@ -102,7 +102,7 @@ public sealed class ContentAuditTests
     [Fact]
     public void A_spell_that_gives_energy_only_to_enemies_does_not_lift_its_casters_ceiling()
     {
-        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerRound: 2, roundCap: 30, criticalMultiplier: 2.0);
+        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, roundCap: 30, criticalMultiplier: 2.0);
         var resources = GameResources.Create(
             "enemy-only-energy",
             [Creature(Fighter, Tree, [Strike], energy: 0)],

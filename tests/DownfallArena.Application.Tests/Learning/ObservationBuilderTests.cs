@@ -13,7 +13,7 @@ namespace DownfallArena.Application.Tests.Learning;
 public sealed class ObservationBuilderTests
 {
     private static readonly FeatureSchema Schema = FeatureSchema.Build(TestContent.Resources, MatchStore.TwoOnTwo());
-    private static readonly ObservationBuilder Builder = new(Schema, TestContent.Resources);
+    private static readonly ObservationBuilder Builder = new(Schema);
 
     [Fact]
     public void The_same_board_gives_the_same_observation()
@@ -24,7 +24,7 @@ public sealed class ObservationBuilderTests
 
         observation.ShouldBe(Builder.Build(board));
         observation.SchemaId.ShouldBe(Schema.Id);
-        observation.SchemaId.ShouldStartWith("features:v5+");
+        observation.SchemaId.ShouldStartWith("features:v6+");
         observation.Features.Count.ShouldBe(Schema.Length);
         Builder.Schema.ShouldBeSameAs(Schema);
     }
@@ -92,9 +92,9 @@ public sealed class ObservationBuilderTests
     }
 
     [Fact]
-    public void A_creature_block_holds_its_stats_spells_and_nodes()
+    public void A_creature_block_holds_its_stats_spells_and_packages()
     {
-        var creature = Boards.Creature(1, PlayerSlot.Player1) with
+        var creature = (Boards.Creature(1, PlayerSlot.Player1) with
         {
             Health = Health.Of(10),
             Energy = Energy.Of(2),
@@ -102,8 +102,7 @@ public sealed class ObservationBuilderTests
             BaseInitiative = Initiative.Of(6),
             CurrentInitiative = Initiative.Of(4),
             IsStunned = true,
-            KnownSpells = new HashSet<SpellId> { TestContent.Strike, TestContent.Guard },
-        };
+        }).Bought(TestContent.GuardPack);
 
         var features = Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])).Features;
 
@@ -117,8 +116,8 @@ public sealed class ObservationBuilderTests
         features[Schema.IndexOf("own0_knows_spell:guard:v1")].ShouldBe(1f);
         features[Schema.IndexOf("own0_knows_spell:slam:v1")].ShouldBe(0f);
         features[Schema.IndexOf("own0_knows_spell:rend:v1")].ShouldBe(0f);
-        features[Schema.IndexOf("own0_node_talent-tree:base:v1/root")].ShouldBe(1f);
-        features[Schema.IndexOf("own0_node_talent-tree:base:v1/brawler")].ShouldBe(0f);
+        features[Schema.IndexOf("own0_owns_tier:guard:v1")].ShouldBe(1f);
+        features[Schema.IndexOf("own0_owns_tier:slam:v1")].ShouldBe(0f);
     }
 
     [Fact]
@@ -231,7 +230,7 @@ public sealed class ObservationBuilderTests
         var exception = Should.Throw<InvalidOperationException>(() => Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])));
 
         exception.Message.ShouldContain("Unpublished");
-        exception.Message.ShouldContain("features:v5");
+        exception.Message.ShouldContain("features:v6");
     }
 
     [Fact]

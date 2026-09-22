@@ -31,12 +31,16 @@ public sealed class TablePilotTests : IDisposable
     private const string SeatToken = "token-of-player-1";
 
     private readonly StudioContent _content = new();
+    private Watching? _held;
     private readonly CancellationTokenSource _stopping = new();
     private readonly string _runs = Path.Combine(Path.GetTempPath(), $"downfall-pilot-{Guid.NewGuid():N}");
     private IHost? _host;
 
     public void Dispose()
     {
+        // Let go of a match a test left held, so the driver thread is not parked for thirty seconds.
+        _held?.Release();
+        _held?.Dispose();
         _stopping.Cancel();
         _stopping.Dispose();
         _host?.Dispose();
@@ -63,6 +67,7 @@ public sealed class TablePilotTests : IDisposable
         said.GetProperty("to").GetString().ShouldBe("Random");
         said.GetProperty("round").GetInt32().ShouldBe(3);
 
+        table.Release();
         var outcome = await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         outcome.IsSuccess.ShouldBeTrue(outcome.IsFailure ? outcome.Error.Message : null);
     }
@@ -159,6 +164,7 @@ public sealed class TablePilotTests : IDisposable
         var table = await Started();
 
         (await Swap(table, "player1", agent: "random", round: 4)).Status.ShouldBe(200);
+        table.Release();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         await table.Run.FinishAsync(table.Session.MatchId, await Board(table.Session), TestContext.Current.CancellationToken);
 
@@ -184,6 +190,7 @@ public sealed class TablePilotTests : IDisposable
         var table = await Started();
 
         (await Swap(table, "player1", agent: "random", round: 3)).Status.ShouldBe(200);
+        table.Release();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         await table.Run.FinishAsync(table.Session.MatchId, await Board(table.Session), TestContext.Current.CancellationToken);
 
@@ -209,6 +216,7 @@ public sealed class TablePilotTests : IDisposable
 
         // Past the round cap these rules set, so the match ends before the seat would change hands.
         (await Swap(table, "player1", agent: "random", round: 99)).Status.ShouldBe(200);
+        table.Release();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         await table.Run.FinishAsync(table.Session.MatchId, await Board(table.Session), TestContext.Current.CancellationToken);
 
@@ -229,6 +237,7 @@ public sealed class TablePilotTests : IDisposable
     public async Task A_swap_on_a_match_that_has_ended_is_refused()
     {
         var table = await Started();
+        table.Release();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         var answer = await Swap(table, "player1", agent: "random", round: 99);
@@ -433,38 +442,77 @@ public sealed class TablePilotTests : IDisposable
             pilot);
 
         asked.Asked.WaitOne(TimeSpan.FromSeconds(30)).ShouldBeTrue("player 1 should have been asked something");
-        return new Table(api, session, run);
+        _held = asked;
+        return new Table(api, session, run, asked);
     }
 
-    private sealed record Table(TableApi Api, TableSession Session, PlaytestRun Run);
-
-    /// <summary>A bot that says when it has first been asked for a decision, and plays as itself otherwise.</summary>
-    private sealed class Watching(IPlayerAgent inner) : IPlayerAgent
+    /// <summary>
+    /// The table under test. <see cref="Release"/> lets the held match run on: every test that waits for an
+    /// outcome calls it, and the ones that only read a view do not need to.
+    /// </summary>
+    private sealed record Table(TableApi Api, TableSession Session, PlaytestRun Run, Watching Player1)
     {
+        public void Release() => Player1.Release();
+    }
+
+    /// <summary>
+    /// A bot that says when it has first been asked for a decision, holds the match there until it is let go,
+    /// and plays as itself after that.
+    /// </summary>
+    /// <remarks>
+    /// The holding is what makes a swap for a later round a fact rather than a race. Two bots play a match of
+    /// this rule set in milliseconds, so a test that posts "seat this at round 3" after the match has started
+    /// is racing the match to round 3, and losing that race is a 409 -- the pilot answering correctly. Held in
+    /// its first decision, the match cannot be past round 1 when the swap is posted.
+    /// <para>
+    /// Holding a decision is safe because <see cref="SeatAgent.Deciding"/> takes the seat's lock, hands back a
+    /// decider, and calls the agent outside it -- which is the same reason a seat held by a person does not
+    /// stop the host answering. A wrapper that blocked with that lock held would deadlock the pilot instead.
+    /// </para>
+    /// </remarks>
+    private sealed class Watching(IPlayerAgent inner) : IPlayerAgent, IDisposable
+    {
+        private readonly ManualResetEventSlim _held = new(false);
+
         public ManualResetEvent Asked { get; } = new(false);
+
+        /// <summary>Lets the match run on, once the swap it must not have reached has been posted.</summary>
+        public void Release() => _held.Set();
+
+        public void Dispose()
+        {
+            _held.Dispose();
+            Asked.Dispose();
+        }
 
         public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
         {
-            Asked.Set();
+            Hold();
             return inner.DecideEvolution(board, options);
         }
 
         public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
         {
-            Asked.Set();
+            Hold();
             return inner.DecideSpeed(board, creature);
         }
 
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
         {
-            Asked.Set();
+            Hold();
             return inner.DecideIntent(board, intentOption);
         }
 
         public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
         {
-            Asked.Set();
+            Hold();
             return inner.DecideTargets(board, options);
+        }
+
+        private void Hold()
+        {
+            Asked.Set();
+            _held.Wait(TimeSpan.FromSeconds(30));
         }
     }
 }

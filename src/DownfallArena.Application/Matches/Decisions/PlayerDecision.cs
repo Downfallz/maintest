@@ -22,8 +22,11 @@ public sealed record PlayerDecision
     /// <summary>The creature the decision is about; none for a pass, and none for a target binding.</summary>
     public CreatureId? Creature { get; private init; }
 
-    /// <summary>The spell unlocked or declared; none for a speed choice, a pass, or a target binding.</summary>
+    /// <summary>The spell declared; none for an evolution decision, a speed choice or a target binding.</summary>
     public SpellId? Spell { get; private init; }
+
+    /// <summary>The package bought; none for anything but a purchase.</summary>
+    public TierId? Tier { get; private init; }
 
     public Speed? Speed { get; private init; }
 
@@ -36,8 +39,9 @@ public sealed record PlayerDecision
     /// <summary>Gives up the remaining evolution picks. Always legal while evolution is pending.</summary>
     public static PlayerDecision Pass { get; } = new(PlayerOptionsKind.Evolution) { IsPass = true };
 
-    public static PlayerDecision Unlock(CreatureId creature, SpellId spell) =>
-        new(PlayerOptionsKind.Evolution) { Creature = creature, Spell = spell };
+    /// <summary>Buys a package for a creature. The whole package, for one pick (ADR 0056).</summary>
+    public static PlayerDecision Buy(CreatureId creature, TierId tier) =>
+        new(PlayerOptionsKind.Evolution) { Creature = creature, Tier = tier };
 
     public static PlayerDecision ChooseSpeed(CreatureId creature, Speed speed) =>
         new(PlayerOptionsKind.Speed) { Creature = creature, Speed = speed };
@@ -56,9 +60,10 @@ public sealed record PlayerDecision
         && Kind == other.Kind
         && Creature == other.Creature
         && Spell == other.Spell
+        && Tier == other.Tier
         && Speed == other.Speed
         && IsPass == other.IsPass
         && Targets.SequenceEqual(other.Targets);
 
-    public override int GetHashCode() => HashCode.Combine(Kind, Creature, Spell, Speed, IsPass, Targets.Count);
+    public override int GetHashCode() => HashCode.Combine(Kind, Creature, Spell, Tier, Speed, IsPass, Targets.Count);
 }

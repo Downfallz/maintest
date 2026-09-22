@@ -74,9 +74,18 @@ public sealed class ViewerSamplesTests
         }
     }
 
-    private static async Task RecordAsync(string runDirectory, CancellationToken cancellationToken)
+    /// <summary>
+    /// Records a run the way the committed sample was recorded. The counts are the sample's, because the
+    /// Python side reads them as a contract (<c>learning/tests/test_artifacts.py</c>): six matches, and an
+    /// evaluation of three seeds played mirrored, which is six matches again.
+    /// </summary>
+    private static async Task RecordAsync(string runDirectory, CancellationToken cancellationToken, int matches = 6, int[]? seeds = null)
     {
-        using var content = new ContentDirectory().WithValidContent();
+        // With a package, because a recorded run that never evolves records no purchase, and the purchase is
+        // the step the viewer's evolution rows are (ADR 0056).
+        using var content = new ContentDirectory().WithValidContent().WithFile("Tiers/guard.v1.json", """
+            { "id": "tier:guard:v1", "name": "Guard", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 2 }
+            """);
         GameSchemaBuilder.Write(GameSchemaBuilder.Build(content.Path), content.Output);
         var resources = GameSchemaBuilder.Load(Path.Combine(content.Output, GameSchemaJson.SchemaFileName));
         var rules = RuleSet.Create(2, 2, 2, 5, 2.0);
@@ -92,23 +101,51 @@ public sealed class ViewerSamplesTests
         var recorder = new RunRecorder(
             new FileArtifactWriter(runDirectory),
             RunStamp.Create(new EngineVersion("abc123def456", false), resources, rules, schema, "Random", "Random", 1),
-            new ObservationBuilder(schema, resources),
+            new ObservationBuilder(schema),
             new ActionEncoder(schema),
             new CandidateTerms(resources, rules),
             TimeProvider.System,
             provider.GetRequiredService<MatchTraceRecorder>());
         var roster = Enumerable.Repeat(resources.Creatures.First().Id, rules.TeamSize).ToList();
-        var scenario = new SimulationScenario { RuleSet = rules, Player1Roster = roster, Player2Roster = roster, Matches = 3, BaseSeed = 1 };
+        var scenario = new SimulationScenario { RuleSet = rules, Player1Roster = roster, Player2Roster = roster, Matches = matches, BaseSeed = 1 };
 
         await recorder.StartAsync(cancellationToken);
         await provider.GetRequiredService<BatchRunner>().RunAsync(scenario, recorder, cancellationToken);
         await recorder.FinishAsync(cancellationToken);
 
         var evaluation = await provider.GetRequiredService<EvaluationRunner>().RunAsync(
-            new EvaluationScenario { RuleSet = rules, Roster = roster, AgentA = AgentSpec.Random, AgentB = AgentSpec.Random, Seeds = [1, 2] },
+            new EvaluationScenario { RuleSet = rules, Roster = roster, AgentA = AgentSpec.Random, AgentB = AgentSpec.Random, Seeds = seeds ?? [1, 2, 3] },
             recorder.Stamp,
             cancellationToken);
         await new FileArtifactWriter(runDirectory).WriteJsonAsync("evaluation.json", evaluation, cancellationToken);
+    }
+
+    /// <summary>
+    /// Re-records the committed samples in place. Skipped unless DOWNFALL_WRITE_SAMPLES names the repository's
+    /// viewer/samples directory, so the regeneration is a deliberate act and not something a test run does.
+    /// </summary>
+    [Fact]
+    public async Task Rewrite_the_samples_when_asked()
+    {
+        var target = Environment.GetEnvironmentVariable("DOWNFALL_WRITE_SAMPLES");
+        Assert.SkipWhen(string.IsNullOrWhiteSpace(target), "set DOWNFALL_WRITE_SAMPLES to re-record the samples");
+
+        var run = Path.Combine(target!, "random-vs-random");
+        var traces = Path.Combine(run, RunRecorder.TracesDirectory);
+        if (Directory.Exists(traces))
+        {
+            Directory.Delete(traces, recursive: true);
+        }
+
+        await RecordAsync(run, TestContext.Current.CancellationToken);
+        File.Move(Path.Combine(run, "evaluation.json"), Path.Combine(target!, "evaluation.json"), overwrite: true);
+
+        // One trace, as the committed sample has always carried: they are all the same shape, and three of them
+        // is three copies of it in the repository.
+        foreach (var extra in Directory.GetFiles(Path.Combine(run, RunRecorder.TracesDirectory)).Order(StringComparer.Ordinal).Skip(1))
+        {
+            File.Delete(extra);
+        }
     }
 
     private static HashSet<string> ShapesOf(string path)

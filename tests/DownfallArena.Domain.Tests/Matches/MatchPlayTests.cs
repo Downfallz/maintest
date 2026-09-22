@@ -68,11 +68,11 @@ public sealed class MatchPlayTests
     {
         var match = Table.Started(Table.TwoOnTwo(roundCap: 1));
 
-        // Bob's first creature learns Guard and guards instead of striking. The unlock also raises its base
-        // initiative to 6 (ADR 0017), so it acts before both of Alice's: it guards, and the two strikes that
+        // Bob's first creature buys the Guard package and guards instead of striking. The package also raises
+        // its base initiative to 6 (ADR 0056), so it acts before both of Alice's: it guards, and the two strikes that
         // follow land on 2 defense instead of none. Bob deals less and takes much less, and wins the tiebreak.
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         Table.ChooseStandard(match);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Strike)).IsSuccess.ShouldBeTrue();
@@ -101,7 +101,7 @@ public sealed class MatchPlayTests
     {
         var match = Table.Started(Table.TwoOnTwo(roundCap: 2));
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         Table.ChooseStandard(match);
         foreach (var slot in match.CurrentRound.ShouldNotBeNull().Timeline.Slots)
@@ -140,8 +140,8 @@ public sealed class MatchPlayTests
     public void Stunned_creatures_skip_the_next_round()
     {
         var match = Table.Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), Arena.Guard)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), Arena.Slam)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), Arena.SlamPack)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         Table.ChooseStandard(match);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Slam)).IsSuccess.ShouldBeTrue();

@@ -46,7 +46,7 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         foreach (var option in options.Creatures)
         {
             var actor = creatures.First(creature => creature.Id == option.Creature);
-            terms.AddRange(option.UnlockableSpells.Select(spell => Vector(_scorer.UnlockTerms(actor, spell, creatures))));
+            terms.AddRange(option.AvailableTiers.Select(tier => Vector(_scorer.PurchaseTerms(actor, tier, creatures))));
         }
 
         terms.Add(Vector(ScoreTerms.Zero));

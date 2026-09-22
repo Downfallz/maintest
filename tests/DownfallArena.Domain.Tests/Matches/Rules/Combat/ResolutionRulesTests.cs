@@ -47,7 +47,7 @@ public sealed class ResolutionRulesTests
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(spell);
+        knight.Learn(spell.Id);
         knight.GainEnergy(1);
         Arena.Find(living, Arena.Ghoul).Apply(DefenseBuff.Of(1, Duration.OfRounds(1)));
         var creatures = Arena.Snapshots(living);
@@ -74,7 +74,7 @@ public sealed class ResolutionRulesTests
         var spell = Content.Spell("spell:precise:v1", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 0.25, Damage.Of(2));
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
-        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
+        Arena.Find(living, Arena.Knight).Learn(spell.Id);
         var creatures = Arena.Snapshots(living);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
         var rules = RuleSet.Create(3, 2, 2, 30, 1.5);
@@ -95,7 +95,7 @@ public sealed class ResolutionRulesTests
         var spell = Content.Spell("spell:certain:v1", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, criticalChance: 1.0, Damage.Of(2));
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
-        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
+        Arena.Find(living, Arena.Knight).Learn(spell.Id);
         var creatures = Arena.Snapshots(living);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
@@ -145,7 +145,7 @@ public sealed class ResolutionRulesTests
     {
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
+        knight.Learn(Arena.Guard);
         knight.GainEnergy(1);
         var creatures = Arena.Snapshots(living);
 
@@ -164,7 +164,7 @@ public sealed class ResolutionRulesTests
     {
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
+        knight.Learn(Arena.Guard);
         knight.GainEnergy(1);
         var guard = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Guard), [Arena.Knight]);
 
@@ -180,8 +180,8 @@ public sealed class ResolutionRulesTests
     {
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
-        knight.UnlockSpell(Arena.SpellOf(Arena.Slam));
+        knight.Learn(Arena.Guard);
+        knight.Learn(Arena.Slam);
         knight.GainEnergy(2);
         Arena.Find(living, Arena.Wraith).TakeDamage(99);
         var creatures = Arena.Snapshots(living);
@@ -222,7 +222,7 @@ public sealed class ResolutionRulesTests
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(spell);
+        knight.Learn(spell.Id);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
         var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit, Speed.Standard);
@@ -254,8 +254,8 @@ public sealed class ResolutionRulesTests
         var resources = Resources(bleeding, wounding);
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(bleeding);
-        knight.UnlockSpell(wounding);
+        knight.Learn(bleeding.Id);
+        knight.Learn(wounding.Id);
         knight.Apply(DefenseBuff.Of(2, Duration.Permanent));
         var creatures = Arena.Snapshots(living);
 
@@ -288,7 +288,7 @@ public sealed class ResolutionRulesTests
             spell.CasterEffects);
         var resources = Resources(sweeping);
         var living = Arena.FourCreatures();
-        Arena.Find(living, Arena.Knight).UnlockSpell(sweeping);
+        Arena.Find(living, Arena.Knight).Learn(sweeping.Id);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, sweeping.Id), [Arena.Ghoul, Arena.Wraith]);
 
         var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, NoCrit, Speed.Standard);
@@ -306,7 +306,7 @@ public sealed class ResolutionRulesTests
         var spell = Content.SpellWithCasterEffects("spell:recoil:v1", [Damage.Of(3)], Damage.Of(2));
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
-        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
+        Arena.Find(living, Arena.Knight).Learn(spell.Id);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
         var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit, Speed.Standard);
@@ -325,7 +325,7 @@ public sealed class ResolutionRulesTests
         var spell = Content.SpellWithCasterEffects("spell:siphon:v1", [Heal.Of(3)], Heal.Of(2));
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
-        Arena.Find(living, Arena.Knight).UnlockSpell(spell);
+        Arena.Find(living, Arena.Knight).Learn(spell.Id);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 
         var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(living), resources, RuleSet.Default, Crit, Speed.Standard);
@@ -340,7 +340,7 @@ public sealed class ResolutionRulesTests
         var resources = Resources(spell);
         var living = Arena.FourCreatures();
         var knight = Arena.Find(living, Arena.Knight);
-        knight.UnlockSpell(spell);
+        knight.Learn(spell.Id);
         knight.Apply(Stun.For(1));
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, spell.Id), [Arena.Ghoul]);
 

@@ -15,17 +15,19 @@ public sealed class RuleSetFileTests : IDisposable
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 
     [Fact]
-    public void A_rule_set_file_is_read_as_the_five_numbers_it_names()
+    public void A_rule_set_file_is_read_as_the_numbers_it_names()
     {
-        var path = Written("""{"teamSize":4,"energyPerRound":3,"evolutionPicksPerRound":1,"roundCap":12,"criticalMultiplier":1.5}""");
+        var path = Written("""{"teamSize":4,"energyPerRound":3,"evolutionPicksPerOpportunity":1,"roundCap":12,"criticalMultiplier":1.5,"firstEvolutionRound":2,"evolutionInterval":3}""");
 
         var rules = RuleSetFile.Read(path);
 
         rules.TeamSize.ShouldBe(4);
         rules.EnergyPerRound.ShouldBe(3);
-        rules.EvolutionPicksPerRound.ShouldBe(1);
+        rules.EvolutionPicksPerOpportunity.ShouldBe(1);
         rules.RoundCap.ShouldBe(12);
         rules.CriticalMultiplier.ShouldBe(1.5);
+        rules.FirstEvolutionRound.ShouldBe(2);
+        rules.EvolutionInterval.ShouldBe(3);
     }
 
     /// <summary>The tabletop numbers, so a file only has to say what it changes.</summary>
@@ -70,11 +72,19 @@ public sealed class RuleSetFileTests : IDisposable
     /// are the same game is one glance by a human until components.md's question 6 is answered.
     /// </summary>
     [Fact]
-    public void The_line_a_table_prints_names_the_five_numbers_and_where_they_came_from()
+    public void The_line_a_table_prints_names_the_numbers_and_where_they_came_from()
     {
-        var described = RuleSetFile.Describe(RuleSet.Create(4, 3, 1, 12, 1.5), "tabletop.json");
+        var described = RuleSetFile.Describe(RuleSet.Create(4, 3, 1, 12, 1.5, 1, 2), "tabletop.json");
 
-        described.ShouldBe("Rules 4 creatures, 3 energy, 1 picks, 12 rounds, x1.5 crit (tabletop.json)");
+        described.ShouldBe("Rules 4 creatures, 3 energy, 1 picks every 2 rounds from 1, 12 rounds, x1.5 crit (tabletop.json)");
+    }
+
+    /// <summary>A rule set that offers a pick every round says so in words rather than in an interval of 1.</summary>
+    [Fact]
+    public void A_rule_set_that_offers_every_round_says_every_round()
+    {
+        RuleSetFile.Describe(RuleSet.Create(4, 3, 1, 12, 1.5, 1, 1), "every.json")
+            .ShouldBe("Rules 4 creatures, 3 energy, 1 picks every round, 12 rounds, x1.5 crit (every.json)");
     }
 
     /// <summary>Playing the default is allowed; not saying so is not.</summary>

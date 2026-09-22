@@ -51,9 +51,17 @@ public static class CatalogueProjection
             resources.Version,
             RuleSetStamp.Of(rules),
             [.. resources.Spells.Select(spell => Card(spell, placed.GetValueOrDefault(spell.Id), tiers.GetValueOrDefault(spell.Id), Gate(spell.Id, resources)))],
+            [.. resources.Tiers.Select(Package).OrderBy(package => package.Level).ThenBy(package => package.Id.Value, StringComparer.Ordinal)],
             bands,
             Round());
     }
+
+    /// <summary>
+    /// One package as its card. Ordered by level and then by id, which is the order a player reads a family
+    /// in: the opener before what it opens.
+    /// </summary>
+    private static PackageCard Package(Tier tier) =>
+        new(tier.Id, tier.Name, tier.Level, tier.Prerequisites, tier.Spells, tier.InitiativeBonus.Value);
 
     /// <summary>
     /// The round, as the strip a table prints. The sub-phases are <see cref="RoundSubPhase" /> in declaration

@@ -39,7 +39,7 @@ public sealed class PlayerOptionsProjectionTests
     }
 
     [Fact]
-    public void Evolution_lists_the_creatures_that_can_unlock_something_and_the_picks_left()
+    public void Evolution_lists_the_creatures_that_can_buy_something_and_the_picks_left()
     {
         var match = new MatchStore().Started();
 
@@ -48,12 +48,22 @@ public sealed class PlayerOptionsProjectionTests
         fresh.SubPhase.ShouldBe(RoundSubPhase.Evolution);
         var evolution = fresh.Evolution.ShouldNotBeNull();
         evolution.RemainingPicks.ShouldBe(2);
-        evolution.Creatures.ShouldBe([new EvolutionOption(CreatureId.From(1), [TestContent.Guard]), new EvolutionOption(CreatureId.From(2), [TestContent.Guard])]);
+        evolution.Creatures.ShouldBe(
+        [
+            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.GuardPack, TestContent.StrikePack]),
+            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.StrikePack]),
+        ],
+        "every level-1 package is open to every creature: prerequisites are the only gate, so multiclassing is free (ADR 0056)");
 
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Guard)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)).IsSuccess.ShouldBeTrue();
         var afterOne = Options(match, PlayerSlot.Player1).Evolution.ShouldNotBeNull();
         afterOne.RemainingPicks.ShouldBe(1);
-        afterOne.Creatures.ShouldBe([new EvolutionOption(CreatureId.From(1), [TestContent.Slam]), new EvolutionOption(CreatureId.From(2), [TestContent.Guard])]);
+        afterOne.Creatures.ShouldBe(
+        [
+            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.SlamPack, TestContent.StrikePack]),
+            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.StrikePack]),
+        ],
+        "the creature that bought Guard has Slam open and Guard gone; the other is where it was");
 
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
@@ -82,8 +92,8 @@ public sealed class PlayerOptionsProjectionTests
     public void Intent_lists_the_timeline_creatures_without_an_intent_and_their_affordable_spells()
     {
         var match = new MatchStore().Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Guard)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Slam)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.SlamPack)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         MatchStore.ChooseStandard(match);
 

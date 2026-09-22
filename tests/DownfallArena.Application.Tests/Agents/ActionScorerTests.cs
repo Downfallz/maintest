@@ -405,16 +405,16 @@ public sealed class ActionScorerTests
     /// weight (ADR 0018, measured by ADR 0032). Here Guard is a Spell initiative of 6 and the others 1.
     /// </summary>
     [Fact]
-    public void Unlocking_a_spell_is_worth_its_combat_value_plus_the_initiative_it_buys_less_what_it_costs()
+    public void Buying_a_package_is_worth_its_combat_value_plus_the_initiative_it_buys_less_what_it_costs()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
 
         // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. The three costs
         // -- Strike 0, Guard 1, Slam 2 -- price at nothing, one point of energy and two.
-        scorer.UnlockValue(board[0], TestContent.Guard, board).ShouldBe((0.65 * 2 * 2) + (Tempo * 6) - PerEnergy, 1e-9);
-        scorer.UnlockValue(board[0], TestContent.Strike, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
-        scorer.UnlockValue(board[0], TestContent.Slam, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - (PerEnergy * 2), 1e-9);
+        scorer.PurchaseValue(board[0], TestContent.GuardPack, board).ShouldBe((0.65 * 2 * 2) + (Tempo * 6) - PerEnergy, 1e-9);
+        scorer.PurchaseValue(board[0], TestContent.StrikePack, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
+        scorer.PurchaseValue(board[0], TestContent.SlamPack, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - (PerEnergy * 2), 1e-9);
     }
 
     /// <summary>
@@ -422,25 +422,25 @@ public sealed class ActionScorerTests
     /// priced. This is what it means for a pick to buy tempo, and it is the whole point of the weight.
     /// </summary>
     [Fact]
-    public void A_spell_worth_less_in_combat_can_still_be_the_better_unlock()
+    public void A_package_worth_less_in_combat_can_still_be_the_better_purchase()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
 
         scorer.Estimate(board[0], TestContent.Guard, board)
             .ShouldBeLessThan(scorer.Estimate(board[0], TestContent.Strike, board));
-        scorer.UnlockValue(board[0], TestContent.Guard, board)
-            .ShouldBeGreaterThan(scorer.UnlockValue(board[0], TestContent.Strike, board));
+        scorer.PurchaseValue(board[0], TestContent.GuardPack, board)
+            .ShouldBeGreaterThan(scorer.PurchaseValue(board[0], TestContent.StrikePack, board));
     }
 
-    /// <summary>At a weight of zero an unlock is worth exactly what it does in combat, and tempo buys nothing.</summary>
+    /// <summary>At a weight of zero a purchase is worth exactly what it does in combat, and tempo buys nothing.</summary>
     [Fact]
-    public void An_initiative_weight_of_zero_prices_an_unlock_at_its_combat_value_less_its_cost()
+    public void An_initiative_weight_of_zero_prices_a_purchase_at_its_combat_value_less_its_cost()
     {
         var board = Board(enemyHealth: 20);
         var indifferent = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default with { Initiative = 0 });
 
-        indifferent.UnlockValue(board[0], TestContent.Guard, board)
+        indifferent.PurchaseValue(board[0], TestContent.GuardPack, board)
             .ShouldBe(indifferent.Estimate(board[0], TestContent.Guard, board) - PerEnergy, 1e-9);
     }
 
@@ -448,7 +448,7 @@ public sealed class ActionScorerTests
     /// Both weights at zero leaves the combat value alone, which is the seam the other two are measured from.
     /// </summary>
     [Fact]
-    public void An_energy_weight_of_zero_prices_an_unlock_at_its_combat_value_alone()
+    public void An_energy_weight_of_zero_prices_a_purchase_at_its_combat_value_alone()
     {
         var board = Board(enemyHealth: 20);
         var free = new ActionScorer(
@@ -456,7 +456,7 @@ public sealed class ActionScorerTests
             MatchStore.TwoOnTwo(),
             ScoringWeights.Default with { Initiative = 0, Energy = 0 });
 
-        free.UnlockValue(board[0], TestContent.Guard, board)
+        free.PurchaseValue(board[0], TestContent.GuardPack, board)
             .ShouldBe(free.Estimate(board[0], TestContent.Guard, board), 1e-9);
     }
 
@@ -467,14 +467,14 @@ public sealed class ActionScorerTests
     /// spell costs, and two spells it cannot afford used to price the same.
     /// </summary>
     [Fact]
-    public void A_creature_that_cannot_afford_an_unlock_still_prices_what_it_will_cost()
+    public void A_creature_that_cannot_afford_a_package_still_prices_what_it_will_cost()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20);
         board[0].Energy.Value.ShouldBe(0, "the case is about a creature that can afford neither");
 
-        var free = scorer.UnlockValue(board[0], TestContent.Strike, board);
-        var paid = scorer.UnlockValue(board[0], TestContent.Slam, board);
+        var free = scorer.PurchaseValue(board[0], TestContent.StrikePack, board);
+        var paid = scorer.PurchaseValue(board[0], TestContent.SlamPack, board);
 
         (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(Tempo, 1e-9);
         (paid - scorer.Estimate(board[0], TestContent.Slam, board)).ShouldBe(Tempo - (PerEnergy * 2), 1e-9);
@@ -489,27 +489,27 @@ public sealed class ActionScorerTests
     [Theory]
     [InlineData(2)]
     [InlineData(4)]
-    public void A_creature_that_can_afford_an_unlock_is_not_charged_for_it_twice(int energy)
+    public void A_creature_that_can_afford_a_package_is_not_charged_for_it_twice(int energy)
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20, actorEnergy: energy);
 
-        foreach (var spell in new[] { TestContent.Strike, TestContent.Guard, TestContent.Slam })
+        foreach (var (tier, spell) in new[] { (TestContent.StrikePack, TestContent.Strike), (TestContent.GuardPack, TestContent.Guard), (TestContent.SlamPack, TestContent.Slam) })
         {
-            var initiative = spell == TestContent.Guard ? Tempo * 6 : Tempo;
-            (scorer.UnlockValue(board[0], spell, board) - scorer.Estimate(board[0], spell, board))
+            var initiative = tier == TestContent.GuardPack ? Tempo * 6 : Tempo;
+            (scorer.PurchaseValue(board[0], tier, board) - scorer.Estimate(board[0], spell, board))
                 .ShouldBe(initiative, 1e-9, $"{spell} costs at most {energy}, so its cost is already in the estimate");
         }
     }
 
     /// <summary>Between the two: at 1 energy, Slam's 2 is half affordable, and only the half that is not is charged.</summary>
     [Fact]
-    public void Only_the_part_of_a_cost_a_creature_cannot_cover_is_charged_at_the_unlock()
+    public void Only_the_part_of_a_cost_a_creature_cannot_cover_is_charged_at_the_purchase()
     {
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20, actorEnergy: 1);
 
-        (scorer.UnlockValue(board[0], TestContent.Slam, board) - scorer.Estimate(board[0], TestContent.Slam, board))
+        (scorer.PurchaseValue(board[0], TestContent.SlamPack, board) - scorer.Estimate(board[0], TestContent.Slam, board))
             .ShouldBe(Tempo - PerEnergy, 1e-9);
     }
 
@@ -648,6 +648,24 @@ public sealed class ActionScorerTests
             .ShouldBe((0.65 * (6.3 - 2.3)) + 5, 1e-9);
     }
 
+    /// <summary>
+    /// A package is priced at the best of its spells and not at the sum of them, because a creature casts one
+    /// spell a round: summing would make a three-spell package read as three simultaneous casts (ADR 0056).
+    /// </summary>
+    [Fact]
+    public void A_package_of_two_spells_is_worth_the_better_of_them_and_not_both()
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        var board = Board(enemyHealth: 20);
+
+        var both = scorer.PurchaseValue(board[0], TestContent.BothPack, board);
+        var strike = scorer.PurchaseValue(board[0], TestContent.StrikePack, board);
+        var slam = scorer.PurchaseValue(board[0], TestContent.SlamPack, board);
+
+        both.ShouldBe(Math.Max(strike, slam), 1e-9);
+        both.ShouldBeLessThan(strike + slam);
+    }
+
     [Fact]
     public void Invalid_inputs_are_rejected()
     {
@@ -657,7 +675,7 @@ public sealed class ActionScorerTests
         Should.Throw<ArgumentNullException>(() => Scorer.Expected(Strike(One, Three), null!));
         Should.Throw<ArgumentNullException>(() => Scorer.Best(null!, TestContent.Strike, board));
         Should.Throw<ArgumentNullException>(() => Scorer.Estimate(board[0], null!, board));
-        Should.Throw<ArgumentNullException>(() => Scorer.UnlockValue(board[0], null!, board));
+        Should.Throw<ArgumentNullException>(() => Scorer.PurchaseValue(board[0], null!, board));
         Should.Throw<ArgumentNullException>(() => Scorer.Score(null!, board));
         Should.Throw<ArgumentNullException>(() => Scorer.Kills(Strike(One, Three), null!));
         Scorer.Weights.ShouldBe(ScoringWeights.Default);

@@ -84,9 +84,9 @@ public sealed class Creature : Entity<CreatureId>
         .Minus(_conditions.Sum<DefenseDebuff>(debuff => debuff.Amount));
 
     /// <summary>
-    /// The creature's own initiative, before any condition: the definition's, raised for good by the Spell
-    /// initiative of every spell it has unlocked in this match (ADR 0017). Starting spells are part of the
-    /// definition's block and do not raise it.
+    /// The creature's own initiative, before any condition: the definition's, raised for good by the bonus of
+    /// every package it has bought in this match (ADR 0056). The starting kit is part of the definition's
+    /// block and is not a package, so it raises nothing.
     /// </summary>
     public Initiative BaseInitiative { get; private set; }
 
@@ -113,23 +113,28 @@ public sealed class Creature : Entity<CreatureId>
     /// door into a creature that did not spawn at full health: <see cref="Rules.Advance"/> uses it to answer
     /// what a board would be after a move a match has not played (ADR 0047), and nothing else does. A snapshot
     /// is a copy of a real creature, so its health cannot exceed the definition's and it knows its starting
-    /// spells and nothing its talent tree does not offer; a caller that hands one where that fails has a
-    /// bug, not a rule violation.
+    /// spells and nothing but those and what its packages taught it; a caller that hands one where that fails
+    /// has a bug, not a rule violation.
     /// </summary>
-    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, TalentTree tree)
+    /// <param name="acquired">
+    /// The packages <paramref name="snapshot"/> says it owns, resolved from the catalogue by the caller. It is
+    /// asked for rather than looked up so that a snapshot naming a package nobody authored cannot be restored
+    /// at all, and because <see cref="Creature"/> has no catalogue of its own.
+    /// </param>
+    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, IReadOnlyList<Tier> acquired)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(definition);
-        ArgumentNullException.ThrowIfNull(tree);
+        ArgumentNullException.ThrowIfNull(acquired);
 
         if (definition.Id != snapshot.DefinitionId)
         {
             throw new ArgumentException($"Creature {snapshot.Id} was spawned from '{snapshot.DefinitionId.Value}', not '{definition.Id.Value}'.", nameof(definition));
         }
 
-        if (tree.Id != definition.TalentTree)
+        if (acquired.Count != snapshot.AcquiredTiers.Count || !acquired.All(tier => snapshot.OwnsTier(tier.Id)))
         {
-            throw new ArgumentException($"Creature {snapshot.Id} unlocks from '{definition.TalentTree.Value}', not '{tree.Id.Value}'.", nameof(tree));
+            throw new ArgumentException($"Creature {snapshot.Id} owns {snapshot.AcquiredTiers.Count} package(s), and {acquired.Count} other one(s) were handed in.", nameof(acquired));
         }
 
         if (snapshot.Health > definition.BaseStats.Health)
@@ -137,12 +142,14 @@ public sealed class Creature : Entity<CreatureId>
             throw new ArgumentException($"Creature {snapshot.Id} cannot have {snapshot.Health} health out of {definition.BaseStats.Health}.", nameof(snapshot));
         }
 
-        // What a creature knows is what it spawned with plus what it unlocked, and an unlock comes from the
-        // tree: a spell from anywhere else would let the hypothetical board cast past the evolution rules.
+        // What a creature knows is what it spawned with plus what its packages taught it (ADR 0056). A spell
+        // from anywhere else would let the hypothetical board cast past the evolution rules. The talent tree
+        // used to be the third source here, and is not one any more: it gates nothing a pick buys.
+        var taught = acquired.SelectMany(tier => tier.Spells).ToHashSet();
         if (!definition.StartingSpells.All(snapshot.KnownSpells.Contains)
-            || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell) || tree.Spells.Any(offered => offered.Id == spell)))
+            || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell) || taught.Contains(spell)))
         {
-            throw new ArgumentException($"Creature {snapshot.Id} knows spells its definition and tree do not give it, or lacks a starting one.", nameof(snapshot));
+            throw new ArgumentException($"Creature {snapshot.Id} knows spells its starting kit and its packages do not give it, or lacks a starting one.", nameof(snapshot));
         }
 
         // The rules that price an action read the snapshot's derived values; the rules that apply it read the
@@ -201,7 +208,7 @@ public sealed class Creature : Entity<CreatureId>
         _acquiredTiers.Add(tier.Id);
         foreach (var spell in tier.Spells)
         {
-            _knownSpells.Add(spell);
+            Learn(spell);
         }
 
         BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value);
@@ -212,22 +219,15 @@ public sealed class Creature : Entity<CreatureId>
     /// Learns a spell and raises the base initiative by its Spell initiative, for the rest of the match. A
     /// refused unlock raises nothing: a creature that already knows the spell, or is dead, keeps its base.
     /// </summary>
-    internal Result UnlockSpell(Spell spell)
+    /// <summary>
+    /// Adds a spell to what this creature knows, idempotently. It grants no initiative of its own: a bonus
+    /// belongs to the package that teaches the spell and is paid once, when the package is bought (ADR 0056).
+    /// Idempotent because two packages may legitimately teach the same spell.
+    /// </summary>
+    internal void Learn(SpellId spell)
     {
         ArgumentNullException.ThrowIfNull(spell);
-
-        if (IsDead)
-        {
-            return Result.Failure(CreatureErrors.Dead);
-        }
-
-        if (!_knownSpells.Add(spell.Id))
-        {
-            return Result.Failure(CreatureErrors.SpellAlreadyKnown);
-        }
-
-        BaseInitiative = BaseInitiative.Plus(spell.Stats.SpellInitiative.Value);
-        return Result.Success();
+        _knownSpells.Add(spell);
     }
 
     /// <summary>

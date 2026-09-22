@@ -29,8 +29,8 @@ public sealed class ActionEncoderTests
     {
         ActionEncoder.Pass().ShouldBe(new EncodedAction("pass", ActionCode.Pass));
         ActionCode.Pass.ShouldBe(new ActionCode(ActionKind.Pass, -1, -1, -1, 0));
-        Encoder.Evolve(Slots, new EvolutionChoice(Two, TestContent.Guard))
-            .ShouldBe(new EncodedAction("evolve:1:spell:guard:v1", new ActionCode(ActionKind.Evolve, 1, 0, -1, 0)));
+        Encoder.Evolve(Slots, new EvolutionChoice(Two, TestContent.GuardPack))
+            .ShouldBe(new EncodedAction("evolve:1:tier:guard:v1", new ActionCode(ActionKind.Evolve, 1, 1, -1, 0)));
         ActionEncoder.Speed(Slots, new SpeedChoice(One, Speed.Quick))
             .ShouldBe(new EncodedAction("speed:0:Quick", new ActionCode(ActionKind.Speed, 0, -1, 0, 0)));
         ActionEncoder.Speed(Slots, new SpeedChoice(Two, Speed.Standard))
@@ -56,16 +56,21 @@ public sealed class ActionEncoderTests
     }
 
     [Fact]
-    public void Evolution_candidates_list_every_unlock_then_the_pass()
+    public void Evolution_candidates_list_every_purchase_then_the_pass()
     {
         var options = PlayerOptionsProjection.Build(new MatchStore().Started(), PlayerSlot.Player1, TestContent.Resources);
         options.Kind.ShouldBe(PlayerOptionsKind.Evolution);
 
         var candidates = Encoder.Candidates(Slots, options);
 
-        candidates.Select(candidate => candidate.Key).ShouldBe(["evolve:0:spell:guard:v1", "evolve:1:spell:guard:v1", "pass"]);
+        candidates.Select(candidate => candidate.Key).ShouldBe(
+        [
+            "evolve:0:tier:both:v1", "evolve:0:tier:guard:v1", "evolve:0:tier:strike:v1",
+            "evolve:1:tier:both:v1", "evolve:1:tier:guard:v1", "evolve:1:tier:strike:v1",
+            "pass",
+        ]);
         candidates[0].Code.ShouldBe(new ActionCode(ActionKind.Evolve, 0, 0, -1, 0));
-        candidates[2].Code.ShouldBe(ActionCode.Pass);
+        candidates[^1].Code.ShouldBe(ActionCode.Pass);
     }
 
     [Fact]
@@ -171,7 +176,7 @@ public sealed class ActionEncoderTests
     [Fact]
     public void Invalid_inputs_are_rejected()
     {
-        Should.Throw<ArgumentNullException>(() => Encoder.Evolve(null!, new EvolutionChoice(One, TestContent.Guard)));
+        Should.Throw<ArgumentNullException>(() => Encoder.Evolve(null!, new EvolutionChoice(One, TestContent.GuardPack)));
         Should.Throw<ArgumentNullException>(() => Encoder.Evolve(Slots, null!));
         Should.Throw<ArgumentNullException>(() => ActionEncoder.Speed(null!, new SpeedChoice(One, Speed.Quick)));
         Should.Throw<ArgumentNullException>(() => ActionEncoder.Speed(Slots, null!));

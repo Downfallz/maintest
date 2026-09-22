@@ -6,37 +6,16 @@ using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Domain.Tests.Matches.Rules.Planning;
 
+/// <summary>
+/// What is left of the talent tree once a pick buys a package: structural reachability, which is the question
+/// the content audit asks. The one-step gate this class used to apply went with the per-spell unlock
+/// (ADR 0056), and so did the test that held the two in agreement — there is no longer a second function to
+/// agree with.
+/// </summary>
 public sealed class TalentUnlocksTests
 {
-    [Fact]
-    public void Only_spells_whose_node_and_own_prerequisites_are_met_and_not_yet_known_are_unlockable()
-    {
-        var knight = Arena.Spawn(Arena.Knight, PlayerSlot.Player1);
-        var tree = Arena.Resources.GetTalentTree(knight.Definition.TalentTree);
-
-        TalentUnlocks.UnlockableSpells(knight.Snapshot(), tree).ShouldBe([Arena.Guard]);
-
-        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
-
-        TalentUnlocks.UnlockableSpells(knight.Snapshot(), tree).ShouldBe([Arena.Slam]);
-
-        knight.UnlockSpell(Arena.SpellOf(Arena.Slam));
-
-        TalentUnlocks.UnlockableSpells(knight.Snapshot(), tree).ShouldBeEmpty();
-    }
-
-    [Fact]
-    public void A_dead_creature_unlocks_nothing()
-    {
-        var knight = Arena.Spawn(Arena.Knight, PlayerSlot.Player1);
-        knight.TakeDamage(99);
-
-        TalentUnlocks.UnlockableSpells(knight.Snapshot(), Arena.Resources.GetTalentTree(knight.Definition.TalentTree)).ShouldBeEmpty();
-    }
-
     /// <summary>
-    /// The unlockable set is one step; this is that step run to exhaustion, which is the question "could this
-    /// creature ever come to know that spell" the content audit asks.
+    /// "Could this creature ever come to know that spell", read through the tree's own gates.
     /// </summary>
     [Fact]
     public void Everything_the_gates_open_in_the_end_is_reachable_from_the_starting_spells()
@@ -65,26 +44,17 @@ public sealed class TalentUnlocksTests
     }
 
     /// <summary>
-    /// Reachability has to agree with the rule it is the closure of, or the audit would call unreachable what a
-    /// match goes on to offer.
+    /// Reachability grows with what is known and stops there: a creature that starts knowing more reaches no
+    /// less. This is the property the audit relies on, and it no longer has a one-step rule to match.
     /// </summary>
     [Fact]
-    public void Reachability_is_the_unlockable_set_taken_until_it_stops_growing()
+    public void Knowing_more_reaches_no_less()
     {
-        var knight = Arena.Spawn(Arena.Knight, PlayerSlot.Player1);
-        var tree = Arena.Resources.GetTalentTree(knight.Definition.TalentTree);
+        var tree = Arena.Tree;
 
-        var stepped = new HashSet<SpellId>(knight.Snapshot().KnownSpells);
-        while (TalentUnlocks.UnlockableSpells(knight.Snapshot(), tree) is { Count: > 0 } next)
-        {
-            foreach (var spell in next)
-            {
-                knight.UnlockSpell(Arena.SpellOf(spell));
-                stepped.Add(spell);
-            }
-        }
+        var fromStrike = TalentUnlocks.ReachableSpells([Arena.Strike], tree);
+        var fromStrikeAndGuard = TalentUnlocks.ReachableSpells([Arena.Strike, Arena.Guard], tree);
 
-        TalentUnlocks.ReachableSpells(Arena.Spawn(Arena.Knight, PlayerSlot.Player1).Snapshot().KnownSpells, tree)
-            .ShouldBe(stepped, ignoreOrder: true);
+        fromStrike.ShouldBeSubsetOf(fromStrikeAndGuard);
     }
 }

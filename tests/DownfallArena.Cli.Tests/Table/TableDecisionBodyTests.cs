@@ -12,14 +12,15 @@ namespace DownfallArena.Cli.Tests.Table;
 public sealed class TableDecisionBodyTests
 {
     [Fact]
-    public void An_unlock_names_the_creature_and_the_spell_it_unlocks()
+    public void A_purchase_names_the_creature_and_the_package_it_buys()
     {
-        var decision = new TableDecisionBody { Kind = "Evolution", Creature = 2, Spell = "spell:pummel:v1" }.ToDecision(out _);
+        var decision = new TableDecisionBody { Kind = "Evolution", Creature = 2, Tier = "tier:brute:v1" }.ToDecision(out _);
 
         decision.ShouldNotBeNull();
         decision.Kind.ShouldBe(PlayerOptionsKind.Evolution);
         decision.Creature!.Value.Value.ShouldBe(2);
-        decision.Spell!.Value.ToString().ShouldBe("spell:pummel:v1");
+        decision.Tier!.Value.ToString().ShouldBe("tier:brute:v1");
+        decision.Spell.ShouldBeNull("a purchase names no spell: a package is not a cast");
         decision.IsPass.ShouldBeFalse();
     }
 

@@ -81,7 +81,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
         var decision = Ask(new Question(PlayerOptionsKind.Evolution, Creature: null));
         return decision.IsPass
             ? EvolutionDecision.Pass
-            : EvolutionDecision.Unlock(new EvolutionChoice(Required(decision.Creature), Required(decision.Spell)));
+            : EvolutionDecision.Unlock(new EvolutionChoice(Required(decision.Creature), Required(decision.Tier)));
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>

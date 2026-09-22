@@ -101,7 +101,7 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         var decision = agent.DecideEvolution(board, options);
         if (decision.Choice is { } choice)
         {
-            Accept(await commands.SubmitEvolutionChoice.HandleAsync(new SubmitEvolutionChoice(matchId, slot, choice.Creature, choice.Spell), cancellationToken));
+            Accept(await commands.SubmitEvolutionChoice.HandleAsync(new SubmitEvolutionChoice(matchId, slot, choice.Creature, choice.Tier), cancellationToken));
         }
         else
         {

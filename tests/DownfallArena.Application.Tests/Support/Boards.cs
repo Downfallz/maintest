@@ -31,6 +31,23 @@ internal static class Boards
         Conditions = [],
     };
 
+    /// <summary>
+    /// The creature with a package bought: the purchase on the record and every spell it teaches known. That
+    /// is the only shape a real board has (ADR 0056), and a snapshot whose spells no package of its own
+    /// explains cannot be restored — so a hand-made board that just adds a spell is one no rollout can read.
+    /// </summary>
+    public static CreatureSnapshot Bought(this CreatureSnapshot creature, TierId tier)
+    {
+        ArgumentNullException.ThrowIfNull(creature);
+
+        var package = TestContent.Resources.GetTier(tier);
+        return creature with
+        {
+            AcquiredTiers = new HashSet<TierId>(creature.AcquiredTiers) { tier },
+            KnownSpells = new HashSet<SpellId>([.. creature.KnownSpells, .. package.Spells]),
+        };
+    }
+
     /// <summary>A board as a player sees it at the start of a two-on-two match, with these creatures instead of the match's.</summary>
     public static PlayerBoardState Board(PlayerSlot slot, IReadOnlyList<CreatureSnapshot> allies, IReadOnlyList<CreatureSnapshot> enemies) =>
         PlayerBoardStateProjection.Build(new MatchStore().Started(), slot) with { Allies = allies, Enemies = enemies };

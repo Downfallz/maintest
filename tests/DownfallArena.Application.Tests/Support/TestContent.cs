@@ -21,13 +21,26 @@ internal static class TestContent
     public static readonly SpellId Slam = SpellId.Parse("spell:slam:v1");
     public static readonly TalentTreeId Tree = TalentTreeId.Parse("talent-tree:base:v1");
 
+    /// <summary>
+    /// The packages (ADR 0056). Guard and Strike open, Slam sits behind Guard, and Both teaches two spells so
+    /// that a package worth more than one cast can be priced.
+    /// </summary>
+    public static readonly TierId GuardPack = TierId.Parse("tier:guard:v1");
+
+    public static readonly TierId SlamPack = TierId.Parse("tier:slam:v1");
+
+    public static readonly TierId StrikePack = TierId.Parse("tier:strike:v1");
+
+    public static readonly TierId BothPack = TierId.Parse("tier:both:v1");
+
     public static GameResources Resources { get; } = Build(guardInitiative: 1);
 
     /// <summary>
-    /// The same content with Guard at a Spell initiative of 6 against everything else's 1, enough that the
-    /// initiative it buys outweighs Strike's damage under the built-in weights. Every spell in
-    /// <see cref="Resources"/> shares one initiative, which is what the flat-stat audit finding needs; a test
-    /// about the initiative an unlock buys (ADR 0018) needs two that differ, and one catalogue cannot be both.
+    /// The same content with the Guard package worth 6 initiative against everything else's 1, enough that
+    /// the initiative it buys outweighs Strike's damage under the built-in weights. Every package in
+    /// <see cref="Resources"/> is worth the same, which is what the flat-stat audit finding needs; a test
+    /// about the initiative a purchase buys (ADR 0018) needs two that differ, and one catalogue cannot be
+    /// both.
     /// </summary>
     public static GameResources GuardIsFaster { get; } = Build(guardInitiative: 6);
 
@@ -65,6 +78,12 @@ internal static class TestContent
                     TalentPrerequisites.None,
                     [new TalentSpell(Strike, TalentPrerequisites.None), new TalentSpell(Guard, TalentPrerequisites.Of([Strike], []))],
                     [new TalentNode("brawler", "Brawler", TalentPrerequisites.Of([Guard], []), [new TalentSpell(Slam, TalentPrerequisites.None)], [])])),
+        ],
+        [
+            Tier.Create(GuardPack, "Guard", 1, [], [Guard], Initiative.Of(guardInitiative)),
+            Tier.Create(SlamPack, "Slam", 2, [GuardPack], [Slam], Initiative.Of(1)),
+            Tier.Create(StrikePack, "Strike", 1, [], [Strike], Initiative.Of(1)),
+            Tier.Create(BothPack, "Both", 1, [], [Strike, Slam], Initiative.Of(1)),
         ]);
 
     private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, int initiative, params Effect[] effects) =>

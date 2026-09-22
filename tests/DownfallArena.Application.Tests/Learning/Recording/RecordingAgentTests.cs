@@ -14,7 +14,7 @@ namespace DownfallArena.Application.Tests.Learning.Recording;
 public sealed class RecordingAgentTests
 {
     private static readonly FeatureSchema Schema = FeatureSchema.Build(TestContent.Resources, MatchStore.TwoOnTwo());
-    private static readonly ObservationBuilder Observations = new(Schema, TestContent.Resources);
+    private static readonly ObservationBuilder Observations = new(Schema);
     private static readonly ActionEncoder Actions = new(Schema);
     private static readonly CandidateTerms Terms = new(TestContent.Resources, MatchStore.TwoOnTwo());
 
@@ -52,7 +52,7 @@ public sealed class RecordingAgentTests
         inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         var steps = new List<StepRecord>();
         var board = Board();
-        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.GuardPack])]);
 
         var decision = new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideEvolution(board, options);
 
@@ -61,7 +61,7 @@ public sealed class RecordingAgentTests
         step.Kind.ShouldBe(ActionKind.Pass);
         step.Action.ShouldBe("pass");
         step.Code.ShouldBe(ActionCode.Pass);
-        step.Candidates.ShouldBe(["evolve:0:spell:guard:v1", "pass"]);
+        step.Candidates.ShouldBe(["evolve:0:tier:guard:v1", "pass"]);
         step.CandidateTerms.Count.ShouldBe(2);
         step.CandidateTerms[1].ShouldAllBe(term => term == 0f, "a pass reads zero on every term");
         step.Slot.ShouldBe(PlayerSlot.Player1);
@@ -98,13 +98,13 @@ public sealed class RecordingAgentTests
     {
         var inner = Substitute.For<IPlayerAgent>();
         inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
-            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.Slam)));
+            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.SlamPack)));
         var steps = new List<StepRecord>();
-        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.GuardPack])]);
 
         var exception = Should.Throw<InvalidOperationException>(() => new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideEvolution(Board(), options));
 
-        exception.Message.ShouldContain("evolve:0:spell:slam:v1");
+        exception.Message.ShouldContain("evolve:0:tier:slam:v1");
         steps.ShouldBeEmpty();
     }
 
@@ -133,7 +133,7 @@ public sealed class RecordingAgentTests
         var inner = Substitute.For<IPlayerAgent>();
         inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         var steps = new List<StepRecord>();
-        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.GuardPack])]);
         var recording = new RecordingAgent(inner, Observations, Actions, Terms, steps, _ => new Decider(inner, "human:mk"));
 
         recording.DecideEvolution(Board(), options);
@@ -151,7 +151,7 @@ public sealed class RecordingAgentTests
         var inner = Substitute.For<IPlayerAgent>();
         inner.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         var steps = new List<StepRecord>();
-        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.GuardPack])]);
 
         new RecordingAgent(inner, Observations, Actions, Terms, steps).DecideEvolution(Board(), options);
 
@@ -172,11 +172,11 @@ public sealed class RecordingAgentTests
     {
         var wrapped = Substitute.For<IPlayerAgent>();
         wrapped.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
-            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.Guard)));
+            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)));
         var named = Substitute.For<IPlayerAgent>();
         named.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         var steps = new List<StepRecord>();
-        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.GuardPack])]);
 
         var decision = new RecordingAgent(inner: wrapped, Observations, Actions, Terms, steps, _ => new Decider(named, "human:mk"))
             .DecideEvolution(Board(), options);

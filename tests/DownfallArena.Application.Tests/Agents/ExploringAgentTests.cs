@@ -31,7 +31,7 @@ public sealed class ExploringAgentTests
         var board = Board(enemyHealth: 20, enemy1Health: 3);
         var intent = new IntentOption(Two, [TestContent.Rend, TestContent.Strike]);
         var targets = new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
-        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard])]);
+        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack])]);
 
         agent.DecideIntent(board, intent).ShouldBe(Greedy.DecideIntent(board, intent));
         agent.DecideTargets(board, targets).ShouldBe(Greedy.DecideTargets(board, targets));
@@ -62,12 +62,12 @@ public sealed class ExploringAgentTests
     public void Exploration_can_pass_although_an_unlock_is_available()
     {
         var board = Board(enemyHealth: 20);
-        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack])]);
 
         // 0.0 explores, then 1 of the two candidates (the one unlock, then passing) is the second.
         Agent(1.0, new ScriptedRandom(0, 1)).DecideEvolution(board, options).IsPass.ShouldBeTrue();
         Agent(1.0, new ScriptedRandom(0, 2)).DecideEvolution(board, options).Choice
-            .ShouldBe(new EvolutionChoice(One, TestContent.Guard), "an even draw lands on the unlock");
+            .ShouldBe(new EvolutionChoice(One, TestContent.GuardPack), "an even draw lands on the purchase");
         Greedy.DecideEvolution(board, options).IsPass.ShouldBeFalse("which is why only exploration reaches it");
         new RandomAgent(new ScriptedRandom(0, 1)).DecideEvolution(board, options).IsPass
             .ShouldBeFalse("the random agent unlocks whenever it can, so it cannot stand in for this");
@@ -78,20 +78,20 @@ public sealed class ExploringAgentTests
     /// creature first would favour the one with fewer spells.
     /// </summary>
     [Theory]
-    [InlineData(0u, 1, "spell:guard:v1")]
-    [InlineData(1u, 2, "spell:slam:v1")]
-    [InlineData(2u, 2, "spell:strike:v1")]
+    [InlineData(0u, 1, "tier:guard:v1")]
+    [InlineData(1u, 2, "tier:slam:v1")]
+    [InlineData(2u, 2, "tier:strike:v1")]
     [InlineData(3u, null, null)]
-    public void Every_unlock_and_passing_share_the_weight(uint draw, int? creature, string? spell)
+    public void Every_purchase_and_passing_share_the_weight(uint draw, int? creature, string? tier)
     {
         var options = new EvolutionOptions(2, [
-            new EvolutionOption(One, [TestContent.Guard]),
-            new EvolutionOption(Two, [TestContent.Slam, TestContent.Strike]),
+            new EvolutionOption(One, [TestContent.GuardPack]),
+            new EvolutionOption(Two, [TestContent.SlamPack, TestContent.StrikePack]),
         ]);
 
         var decision = Agent(1.0, new ScriptedRandom(0, draw)).DecideEvolution(Board(enemyHealth: 20), options);
 
-        decision.Choice.ShouldBe(creature is null ? (EvolutionChoice?)null : new EvolutionChoice(CreatureId.From(creature.Value), SpellId.Parse(spell!)));
+        decision.Choice.ShouldBe(creature is null ? (EvolutionChoice?)null : new EvolutionChoice(CreatureId.From(creature.Value), TierId.Parse(tier!)));
     }
 
     /// <summary>

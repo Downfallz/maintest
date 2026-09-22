@@ -63,9 +63,13 @@ function page() {
   const script = readFileSync(new URL('./table.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
   vm.runInContext(script, context);
   const cards = new Map([['one', { id: 'one', name: 'First card', cost: 2 }], ['two', { id: 'two', name: 'Second card', cost: 3 }]]);
+  const packages = new Map([
+    ['tier:one:v1', { id: 'tier:one:v1', name: 'First package', level: 1, prerequisites: [], spells: ['one'], initiativeBonus: 1 }],
+    ['tier:two:v1', { id: 'tier:two:v1', name: 'Second package', level: 2, prerequisites: ['tier:one:v1'], spells: ['two'], initiativeBonus: 0 }],
+  ]);
   const state = { views: [], rendered: null, revision: 0, polling: false, error: '', evolving: null, seats: [], holder: 'player1', shown: null,
-    acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards,
-    catalogue: { cards: [...cards.values()], rules: { roundCap: 16 } }, tab: 'board', feeds: new Map(),
+    acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards, packages,
+    catalogue: { cards: [...cards.values()], packages: [...packages.values()], rules: { roundCap: 16 } }, tab: 'board', feeds: new Map(),
   };
   const view = { waitingFor: 'Intent', waitingCreature: 1, waitingAsked: 1, options: { intent: { creatures: [{ creature: 1, castableSpells: ['one', 'two'] }] } },
     board: { roundNumber: 1, subPhase: 'IntentSelection', allies: [{ id: 1, name: 'First', health: 20, maxHealth: 20, energy: 4, knownSpells: ['one', 'two'] }], enemies: [{ id: 2, health: 10, maxHealth: 20 }], intents: [], timeline: [] }, feed: [],
@@ -114,14 +118,27 @@ test('legal targets are keyboard operable and still obey the host maximum', () =
   assert.equal(p.state.picked.length, 1);
 });
 
-test('evolution keeps every creature accessible without mixing their unlock buttons', () => {
+test('evolution keeps every creature accessible without mixing their package buttons', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
-  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, unlockableSpells: ['one'] }, { creature: 3, unlockableSpells: ['two'] }] } }; p.draw();
-  assert.match(p.nodes.choices.textContent, /First card/);
-  assert.doesNotMatch(p.nodes.choices.textContent, /Second card/);
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:two:v1'] }] } }; p.draw();
+  assert.match(p.nodes.choices.textContent, /First package/);
+  assert.doesNotMatch(p.nodes.choices.textContent, /Second package/);
   p.nodes.choices.children[0].children[1].events.click();
-  assert.match(p.nodes.choices.textContent, /Second card/);
-  assert.doesNotMatch(p.nodes.choices.textContent, /First card/);
+  assert.match(p.nodes.choices.textContent, /Second package/);
+  assert.doesNotMatch(p.nodes.choices.textContent, /First package/);
+});
+
+// A package is bought whole and the card has to say so: its level, the initiative it is worth for the rest of
+// the match, and every spell it teaches. A card that showed only the name would hide two thirds of the choice.
+test('a package card names its level, its initiative and every spell it teaches', () => {
+  const p = page(); p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1', 'tier:two:v1'] }] } }; p.draw();
+  const text = p.nodes.choices.textContent;
+  assert.match(text, /First package/);
+  assert.match(text, /tier 1/);
+  assert.match(text, /\+1 initiative/);
+  assert.match(text, /First card/);
+  assert.match(text, /no initiative/);
 });
 
 test('a seat change hides the table until the next player acknowledges it', () => {
