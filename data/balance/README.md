@@ -130,17 +130,22 @@ agent A is read as a panel: agent B is the opponent it is measured against, and 
 there. It also refuses an empty panel, and a knobs file whose evaluation names a weights or policy file that
 is not there, because otherwise the engine fails one candidate at a time, once a search has already started.
 
-Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
-of the talent tree, which is the set a player is choosing between at that moment — and report the worst
-tier: `tierUsageShare` (does one spell own its tier), `tierDamageSpread` (do its attacks hit comparably
-hard, per target of a landed cast) and `tierWinSpread` (do they win comparably often). They exist because the
-catalogue-wide reading hides a monopolised tier: on the nine-spell core content `spellUsageShare` reads
-0.855 while `tierUsageShare` reads 1.000, because `heavy_strike` takes every landed cast of tier 0 and the
-starting kit is not a choice at all.
+Most targets read a metric of the whole run. Three read a **package** instead — the spells one evolution pick
+buys together ([ADR 0058](../../docs/adr/0058-a-tier-is-the-package-the-balance-objective-reads.md)) — and
+report the worst package: `tierUsageShare` (do its casts all go to one of them), `tierDamageSpread` (do its
+attacks hit comparably hard, per target of a landed cast) and `tierWinSpread` (do they win comparably often).
+They exist because the catalogue-wide reading hides a package that sold its pick short: on the shipped
+catalogue `spellUsageShare` reads 0.297 while `tierUsageShare` reads 0.928, because `tier:prowler:v1` splits
+1813 casts of `poison_slash` against 140 of `throwing_star`.
 
-Each skips what it cannot read rather than guessing: a tier nobody cast (that is `spellsNeverCast`), a spell
-that is not an attack (a heal and an attack share no unit), and a spell too few sides declared for its own
-number to be anything but noise. Whether a spell is an attack is read from the content, never from what its
+The spells of a package are a bundle and not alternatives — one pick buys all of them — so this is not the
+"is it a choice" the tree depth claimed to read. It is the narrower question: did the other spells in the
+package come along for nothing.
+
+Each skips what it cannot read rather than guessing: a package nobody cast (that is `spellsNeverCast`), a
+package teaching one spell (a lone spell takes all of its own casts whatever the content does, and nine of
+the twenty-one shipped packages teach one), a spell that is not an attack (a heal and an attack share no
+unit), and a spell too few sides declared for its own number to be anything but noise. Whether a spell is an attack is read from the content, never from what its
 casts landed: otherwise lowering an attack until its hits are all absorbed would drop it out of the
 comparison and *improve* the reading, paying the search to break spells.
 

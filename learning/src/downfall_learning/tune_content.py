@@ -353,7 +353,7 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
     measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
-    barely = _barely_cast(landed, by_alias, content.tiers)
+    barely = _barely_cast(landed, by_alias, content.packages)
     if barely is not None:
         measured["spellsBarelyCast"] = barely
     # Which spells are compared as attacks, read from the content and never from what a run happened to
@@ -366,7 +366,7 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
         for identifier, alias in by_alias.items()
         if damage_is_the_point(content.spells[alias], weights)
     }
-    measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
+    measured.update(_tier_metrics(outcomes, by_alias, content.packages, damaging))
     return measured
 
 
@@ -375,9 +375,9 @@ BARELY_CAST_SHARE = 0.01
 
 
 def _barely_cast(
-    landed: Mapping[str, int], by_alias: Mapping[str, str], tiers: Mapping[str, int]
+    landed: Mapping[str, int], by_alias: Mapping[str, str], packages: Mapping[str, tuple[str, ...]]
 ) -> float | None:
-    """How many spells are cast, but take less than :data:`BARELY_CAST_SHARE` of their own tier's casts.
+    """How many spells are cast, but take less than :data:`BARELY_CAST_SHARE` of their own package's casts.
 
     ``spellsNeverCast`` counts exact zeros, and this is the hole that leaves. On the nine-spell core content
     ``pummel`` took 6 of 5283 landed casts of a mirrored run: dead in every sense that decides a game, and
@@ -388,26 +388,32 @@ def _barely_cast(
     targets carry the same band and the same weight, so counting it here as well would charge a dead spell
     twice and quietly double what the objective asks of that one case.
 
-    The share is read against the tier and not the catalogue because a tier is the set a player chooses
-    between at one moment: a spell can be rare overall and still be the right pick where it is offered. A
-    tier nobody cast at all cannot produce a share, so it is skipped -- and a run whose content carries no
-    tiers at all reads as ``None`` rather than as zero, which the objective reports as missing instead of
-    counting as a metric on target. The tiers have gone missing once already (:meth:`Content.with_spells`).
+    The share is read against the package and not the catalogue because the package is what one pick buys
+    (ADR 0058): a spell can be rare overall and still be worth the pick that brought it, and a package
+    carrying one spell nobody casts sold that pick short. A package nobody cast at all cannot produce a
+    share, so it is skipped -- and a run whose content carries no packages reads as ``None`` rather than as
+    zero, which the objective reports as missing instead of counting as a metric on target. The grouping has
+    gone missing once already (:meth:`Content.with_spells`).
+
+    A spell several packages teach is read against each of them and counted once if any is too thin: every
+    package that sells it is a package that sold a pick short.
     """
-    per_tier: dict[int, int] = {}
+    per_package: dict[str, int] = {}
     for identifier, alias in by_alias.items():
-        tier = tiers.get(alias)
-        if tier is not None:
-            per_tier[tier] = per_tier.get(tier, 0) + landed.get(identifier, 0)
-    if not any(cast > 0 for cast in per_tier.values()):
+        for package in packages.get(alias, ()):
+            per_package[package] = per_package.get(package, 0) + landed.get(identifier, 0)
+    if not any(cast > 0 for cast in per_package.values()):
         return None
 
     barely = 0
     for identifier, alias in by_alias.items():
-        tier = tiers.get(alias)
-        cast = per_tier.get(tier, 0) if tier is not None else 0
         casts = landed.get(identifier, 0)
-        if cast > 0 and 0 < casts / cast < BARELY_CAST_SHARE:
+        shares = [
+            casts / per_package[package]
+            for package in packages.get(alias, ())
+            if per_package.get(package, 0) > 0
+        ]
+        if any(0 < share < BARELY_CAST_SHARE for share in shares):
             barely += 1
     return float(barely)
 
@@ -415,21 +421,24 @@ def _barely_cast(
 def _tier_metrics(
     outcomes: Sequence[Mapping[str, object]],
     by_alias: Mapping[str, str],
-    tiers: Mapping[str, int],
+    packages: Mapping[str, tuple[str, ...]],
     damaging: Collection[str],
 ) -> dict[str, float]:
-    """The three readings of "are the spells of one tier a choice", each on its worst tier.
+    """The three readings of "do the spells of one package all earn their pick", each on its worst package.
 
-    A tier nobody cast is not read here: that is what ``spellsNeverCast`` is for. Each reading drops a tier
-    it cannot speak about rather than guessing a number, and a reading no tier could produce is left out
-    entirely, which the objective reports as missing rather than counting as zero.
+    The spells of a package are not alternatives -- one pick buys all of them at once (ADR 0058) -- so this
+    is not the "is it a choice" the tree depth claimed to read. It is the narrower and truer question: a
+    package whose casts all go to one of its spells sold the others for nothing.
+
+    A package nobody cast is not read here: that is what ``spellsNeverCast`` is for. Each reading drops a
+    package it cannot speak about rather than guessing a number, and a reading no package could produce is
+    left out entirely, which the objective reports as missing rather than counting as zero.
     """
-    grouped: dict[int, list[Mapping[str, object]]] = {}
+    grouped: dict[str, list[Mapping[str, object]]] = {}
     for outcome in outcomes:
         alias = by_alias.get(str(outcome["spell"]))
-        tier = tiers.get(alias) if alias else None
-        if tier is not None:
-            grouped.setdefault(tier, []).append(outcome)
+        for package in packages.get(alias, ()) if alias else ():
+            grouped.setdefault(package, []).append(outcome)
 
     readings = {
         "tierUsageShare": _usage_share,
@@ -445,7 +454,15 @@ def _tier_metrics(
 
 
 def _usage_share(members: Sequence[Mapping[str, object]]) -> float | None:
-    """The share of a tier's landed casts its most-cast spell takes. None when the tier was never cast."""
+    """The share of a package's landed casts its most-cast spell takes.
+
+    None when the package was never cast, and none when it teaches one spell: a lone spell takes all of its
+    own package's casts by construction, so reading it would pin the metric at 1.0 whatever the content did.
+    Nine of the twenty-one shipped packages teach one spell. The two readings beside this one already drop a
+    group they cannot speak about; this one has to as well, for the same reason (ADR 0058).
+    """
+    if len(members) < 2:
+        return None
     landed = [int(member.get("resolved", 0)) for member in members]
     return max(landed) / sum(landed) if sum(landed) > 0 else None
 

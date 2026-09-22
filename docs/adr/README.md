@@ -39,7 +39,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0031](0031-an-effect-that-lands-on-the-caster.md) | An effect that lands on the caster | Accepted |
 | [0032](0032-measure-the-initiative-weight.md) | Measure the initiative weight, and move it from 0.5 to 2.1 | Accepted |
 | [0033](0033-a-critical-cast-multiplies-a-direct-heal.md) | A critical cast multiplies a direct heal | Accepted |
-| [0034](0034-a-tier-is-a-depth-a-player-climbs.md) | A tier is a depth a player climbs, not a node in the file | Accepted |
+| [0034](0034-a-tier-is-a-depth-a-player-climbs.md) | A tier is a depth a player climbs, not a node in the file | Superseded by [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) |
 | [0035](0035-lowering-defense-and-taking-energy.md) | Lowering defense and taking energy | Accepted |
 | [0036](0036-raising-initiative-the-mirror-that-was-left-out.md) | Raising initiative, the mirror that was left out | Accepted |
 | [0037](0037-measure-the-energy-weight-and-move-it-from-0-2-to-0-3.md) | Measure the energy weight, and move it from 0.2 to 0.3 | Accepted |
@@ -62,3 +62,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0054](0054-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
 | [0055](0055-a-searching-agent-may-be-built-on-a-policy.md) | A searching agent may be built on a policy, so the loop has an operator that improves one | Proposed |
 | [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted |
+| [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
