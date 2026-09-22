@@ -20,15 +20,22 @@ public interface IGameResources
 
     IReadOnlyCollection<TalentTree> TalentTrees { get; }
 
+    /// <summary>The packages one evolution pick buys. Empty until the tier migration lands its content.</summary>
+    IReadOnlyCollection<Tier> Tiers { get; }
+
     CreatureDefinition GetCreature(CreatureDefinitionId id);
 
     Spell GetSpell(SpellId id);
 
     TalentTree GetTalentTree(TalentTreeId id);
 
+    Tier GetTier(TierId id);
+
     bool TryGetCreature(CreatureDefinitionId id, [NotNullWhen(true)] out CreatureDefinition? creature);
 
     bool TryGetSpell(SpellId id, [NotNullWhen(true)] out Spell? spell);
 
     bool TryGetTalentTree(TalentTreeId id, [NotNullWhen(true)] out TalentTree? talentTree);
+
+    bool TryGetTier(TierId id, [NotNullWhen(true)] out Tier? tier);
 }

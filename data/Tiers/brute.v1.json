@@ -1,0 +1,11 @@
+{
+  "id": "tier:brute:v1",
+  "name": "Brute",
+  "level": 1,
+  "prerequisites": [],
+  "spells": [
+    "spell:pummel:v1",
+    "spell:guard:v1"
+  ],
+  "initiativeBonus": 1
+}

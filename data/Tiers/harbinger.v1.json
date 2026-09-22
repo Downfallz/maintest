@@ -1,0 +1,13 @@
+{
+  "id": "tier:harbinger:v1",
+  "name": "Harbinger",
+  "level": 3,
+  "prerequisites": [
+    "tier:elementalist:v1"
+  ],
+  "spells": [
+    "spell:engulfing_flames:v1",
+    "spell:ice_spear:v1"
+  ],
+  "initiativeBonus": 3
+}

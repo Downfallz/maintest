@@ -6,6 +6,10 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
 - `Spells/**/*.json`: spells, nested by class and specialisation for readability only. What each one does,
   and where its numbers come from, is in `docs/domain/spells.md`.
 - `TalentTrees/*.json`: talent trees.
+- `Tiers/*.json`: the packages one evolution pick buys (`docs/domain/tier-evolution-plan.md`). **Derived, not
+  hand-authored**: `scripts/build-tiers.py` writes them from the tree, so edit the tree and re-run it. The data
+  builder validates them and carries them into the consolidated schema, which is then version 2; a catalogue
+  with no packages is the version-1 document it always was, hash included. Nothing *plays* them yet.
 - `aliases.json`: unversioned ids (`spell:pummel`) to their current versioned id (`spell:pummel:v1`).
 
 References between items (starting spells, talent prerequisites) may use either form; the data builder resolves

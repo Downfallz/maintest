@@ -1,0 +1,12 @@
+{
+  "id": "tier:necromancer:v1",
+  "name": "Necromancer",
+  "level": 2,
+  "prerequisites": [
+    "tier:occultist:v1"
+  ],
+  "spells": [
+    "spell:summon_minions:v1"
+  ],
+  "initiativeBonus": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "tier:parasite:v1",
+  "name": "Parasite",
+  "level": 2,
+  "prerequisites": [
+    "tier:prowler:v1"
+  ],
+  "spells": [
+    "spell:parasite_jab:v1"
+  ],
+  "initiativeBonus": 1
+}

@@ -1,0 +1,12 @@
+{
+  "id": "tier:berserker:v1",
+  "name": "Berserker",
+  "level": 2,
+  "prerequisites": [
+    "tier:brute:v1"
+  ],
+  "spells": [
+    "spell:enraged_charge:v1"
+  ],
+  "initiativeBonus": 1
+}

@@ -1,0 +1,13 @@
+{
+  "id": "tier:dreadnought:v1",
+  "name": "Dreadnought",
+  "level": 3,
+  "prerequisites": [
+    "tier:ironbound:v1"
+  ],
+  "spells": [
+    "spell:restorative_gush:v1",
+    "spell:crushing_stomp:v1"
+  ],
+  "initiativeBonus": 3
+}

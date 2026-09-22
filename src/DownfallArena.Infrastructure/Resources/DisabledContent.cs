@@ -13,6 +13,13 @@ namespace DownfallArena.Infrastructure.Resources;
 /// problems. That last one matters because an empty <c>anyOf</c> means "no requirement", so pruning it would
 /// silently unlock the node rather than close it.
 /// </para>
+/// <para>
+/// A tier is pruned by neither rule, because both ways of pruning one would change what a player may buy. A
+/// package that lost a disabled spell is a package nobody authored, and a package whose prerequisite was
+/// disabled is a package with nothing in front of it -- which opens a descendant rather than closing it, the
+/// same failure as the empty <c>anyOf</c>. Both are problems, so disabling a spell or a tier that something
+/// still depends on has to be done deliberately rather than absorbed.
+/// </para>
 /// </summary>
 internal static class DisabledContent
 {
@@ -23,10 +30,30 @@ internal static class DisabledContent
 
         var disabledSpells = authored.Spells.Where(spell => spell.Enabled is false).Select(spell => spell.Id).ToHashSet(StringComparer.Ordinal);
         var disabledTrees = authored.TalentTrees.Where(tree => tree.Enabled is false).Select(tree => tree.Id).ToHashSet(StringComparer.Ordinal);
+        var authoredTiers = authored.Tiers ?? [];
+        var disabledTiers = authoredTiers.Where(tier => tier.Enabled is false).Select(tier => tier.Id).ToHashSet(StringComparer.Ordinal);
 
         Note(notes, disabledSpells, "spell");
         Note(notes, disabledTrees, "talent tree");
+        Note(notes, disabledTiers, "tier");
         Note(notes, authored.Creatures.Where(creature => creature.Enabled is false).Select(creature => creature.Id), "creature");
+
+        foreach (var tier in authoredTiers.Where(tier => tier.Enabled is not false))
+        {
+            foreach (var spell in tier.Spells.Where(disabledSpells.Contains))
+            {
+                problems.Add(
+                    $"Tier '{tier.Id}' teaches disabled spell '{spell}'. A package is bought whole, so dropping one of "
+                    + "its spells would sell something nobody authored: disable the tier too, or re-author it.");
+            }
+
+            foreach (var required in tier.Prerequisites.Where(disabledTiers.Contains))
+            {
+                problems.Add(
+                    $"Tier '{tier.Id}' requires disabled tier '{required}'. Dropping the requirement would open the "
+                    + "package instead of closing it: disable this tier too, or give it another prerequisite.");
+            }
+        }
 
         return authored with
         {
@@ -38,6 +65,7 @@ internal static class DisabledContent
             ],
             Spells = [.. authored.Spells.Where(spell => spell.Enabled is not false).Select(spell => spell with { Enabled = null })],
             TalentTrees = [.. authored.TalentTrees.Where(tree => tree.Enabled is not false).Select(tree => Prune(tree, disabledSpells, notes, problems))],
+            Tiers = [.. authoredTiers.Where(tier => tier.Enabled is not false).Select(tier => tier with { Enabled = null })],
         };
     }
 

@@ -1,0 +1,13 @@
+{
+  "id": "tier:deathstalker:v1",
+  "name": "Deathstalker",
+  "level": 3,
+  "prerequisites": [
+    "tier:assassin:v1"
+  ],
+  "spells": [
+    "spell:death_squad:v1",
+    "spell:mortal_wound:v1"
+  ],
+  "initiativeBonus": 5
+}

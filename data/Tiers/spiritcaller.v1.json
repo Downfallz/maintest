@@ -1,0 +1,13 @@
+{
+  "id": "tier:spiritcaller:v1",
+  "name": "Spiritcaller",
+  "level": 3,
+  "prerequisites": [
+    "tier:shaman:v1"
+  ],
+  "spells": [
+    "spell:toxic_waves:v1",
+    "spell:restorative_burst:v1"
+  ],
+  "initiativeBonus": 3
+}

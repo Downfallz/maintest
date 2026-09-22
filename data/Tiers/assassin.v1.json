@@ -1,0 +1,12 @@
+{
+  "id": "tier:assassin:v1",
+  "name": "Assassin",
+  "level": 2,
+  "prerequisites": [
+    "tier:prowler:v1"
+  ],
+  "spells": [
+    "spell:momentum:v1"
+  ],
+  "initiativeBonus": 3
+}
