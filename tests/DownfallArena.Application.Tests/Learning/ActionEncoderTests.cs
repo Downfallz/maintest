@@ -36,11 +36,11 @@ public sealed class ActionEncoderTests
         ActionEncoder.Speed(Slots, new SpeedChoice(Two, Speed.Standard))
             .ShouldBe(new EncodedAction("speed:1:Standard", new ActionCode(ActionKind.Speed, 1, -1, 1, 0)));
         Encoder.Intent(Slots, new CombatIntent(One, TestContent.Strike))
-            .ShouldBe(new EncodedAction("intent:0:spell:strike:v1", new ActionCode(ActionKind.Intent, 0, 3, -1, 0)));
+            .ShouldBe(new EncodedAction("intent:0:spell:strike:v1", new ActionCode(ActionKind.Intent, 0, 4, -1, 0)));
         Encoder.Targets(Slots, Two, TestContent.Slam, [Four, Three])
-            .ShouldBe(new EncodedAction("targets:1:spell:slam:v1:2,3", new ActionCode(ActionKind.Targets, 1, 2, -1, 0b1100)));
+            .ShouldBe(new EncodedAction("targets:1:spell:slam:v1:2,3", new ActionCode(ActionKind.Targets, 1, 3, -1, 0b1100)));
         Encoder.Targets(Slots, One, TestContent.Strike, [])
-            .ShouldBe(new EncodedAction("targets:0:spell:strike:v1:", new ActionCode(ActionKind.Targets, 0, 3, -1, 0)));
+            .ShouldBe(new EncodedAction("targets:0:spell:strike:v1:", new ActionCode(ActionKind.Targets, 0, 4, -1, 0)));
         Encoder.Schema.ShouldBeSameAs(Schema);
     }
 
@@ -65,8 +65,8 @@ public sealed class ActionEncoderTests
 
         candidates.Select(candidate => candidate.Key).ShouldBe(
         [
-            "evolve:0:tier:both:v1", "evolve:0:tier:guard:v1", "evolve:0:tier:strike:v1",
-            "evolve:1:tier:both:v1", "evolve:1:tier:guard:v1", "evolve:1:tier:strike:v1",
+            "evolve:0:tier:both:v1", "evolve:0:tier:guard:v1", "evolve:0:tier:jab:v1",
+            "evolve:1:tier:both:v1", "evolve:1:tier:guard:v1", "evolve:1:tier:jab:v1",
             "pass",
         ]);
         candidates[0].Code.ShouldBe(new ActionCode(ActionKind.Evolve, 0, 0, -1, 0));
@@ -160,7 +160,7 @@ public sealed class ActionEncoderTests
             Target = new TargetOptions(Two, TestContent.Strike, new LegalTargets(1, 1, [])),
         };
 
-        Encoder.Candidates(Slots, options).ShouldBe([new EncodedAction("targets:1:spell:strike:v1:", new ActionCode(ActionKind.Targets, 1, 3, -1, 0))]);
+        Encoder.Candidates(Slots, options).ShouldBe([new EncodedAction("targets:1:spell:strike:v1:", new ActionCode(ActionKind.Targets, 1, 4, -1, 0))]);
     }
 
     [Theory]

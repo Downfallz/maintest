@@ -142,13 +142,13 @@ public sealed class HeuristicAgentTests
     public void An_evolution_pick_can_be_taken_for_the_initiative_it_buys_rather_than_the_damage()
     {
         var board = Board(enemyHealth: 20, actorSpells: []);
-        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.StrikePack, TestContent.GuardPack])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.JabPack, TestContent.GuardPack])]);
 
         new HeuristicAgent(ScoringWeights.Default, TestContent.GuardIsFaster, Rules)
             .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.GuardPack));
 
         new HeuristicAgent(ScoringWeights.Default with { Initiative = 0 }, TestContent.GuardIsFaster, Rules)
-            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.StrikePack));
+            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.JabPack));
     }
 
     [Fact]

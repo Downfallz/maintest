@@ -80,13 +80,13 @@ public sealed class ExploringAgentTests
     [Theory]
     [InlineData(0u, 1, "tier:guard:v1")]
     [InlineData(1u, 2, "tier:slam:v1")]
-    [InlineData(2u, 2, "tier:strike:v1")]
+    [InlineData(2u, 2, "tier:jab:v1")]
     [InlineData(3u, null, null)]
     public void Every_purchase_and_passing_share_the_weight(uint draw, int? creature, string? tier)
     {
         var options = new EvolutionOptions(2, [
             new EvolutionOption(One, [TestContent.GuardPack]),
-            new EvolutionOption(Two, [TestContent.SlamPack, TestContent.StrikePack]),
+            new EvolutionOption(Two, [TestContent.SlamPack, TestContent.JabPack]),
         ]);
 
         var decision = Agent(1.0, new ScriptedRandom(0, draw)).DecideEvolution(Board(enemyHealth: 20), options);

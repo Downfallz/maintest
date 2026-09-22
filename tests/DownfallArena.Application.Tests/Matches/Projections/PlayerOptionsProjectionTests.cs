@@ -50,8 +50,8 @@ public sealed class PlayerOptionsProjectionTests
         evolution.RemainingPicks.ShouldBe(2);
         evolution.Creatures.ShouldBe(
         [
-            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.GuardPack, TestContent.StrikePack]),
-            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.StrikePack]),
+            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack]),
+            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack]),
         ],
         "every level-1 package is open to every creature: prerequisites are the only gate, so multiclassing is free (ADR 0056)");
 
@@ -60,8 +60,8 @@ public sealed class PlayerOptionsProjectionTests
         afterOne.RemainingPicks.ShouldBe(1);
         afterOne.Creatures.ShouldBe(
         [
-            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.SlamPack, TestContent.StrikePack]),
-            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.StrikePack]),
+            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.JabPack, TestContent.SlamPack]),
+            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack]),
         ],
         "the creature that bought Guard has Slam open and Guard gone; the other is where it was");
 

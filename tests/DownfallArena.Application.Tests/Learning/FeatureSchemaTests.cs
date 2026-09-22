@@ -37,8 +37,8 @@ public sealed class FeatureSchemaTests
     [Fact]
     public void The_length_is_the_globals_plus_one_block_per_board_slot()
     {
-        // 6 creature features, 8 condition pairs, 4 spells, 4 packages.
-        Schema.CreatureLength.ShouldBe(6 + (2 * 8) + 4 + 4);
+        // 6 creature features, 8 condition pairs, 5 spells, 4 packages.
+        Schema.CreatureLength.ShouldBe(6 + (2 * 8) + 5 + 4);
         Schema.Length.ShouldBe(5 + (2 * 2 * Schema.CreatureLength));
         Schema.FeatureNames.Count.ShouldBe(Schema.Length);
         Schema.FeatureNames.Distinct(StringComparer.Ordinal).Count().ShouldBe(Schema.Length);
@@ -61,13 +61,13 @@ public sealed class FeatureSchemaTests
         Schema.IndexOf("own0_InitiativeBuff_amount").ShouldBe(23);
         Schema.IndexOf("own0_InitiativeDebuff_remaining").ShouldBe(26);
         Schema.IndexOf("own0_knows_spell:guard:v1").ShouldBe(27);
-        Schema.IndexOf("own0_knows_spell:strike:v1").ShouldBe(30);
-        Schema.IndexOf("own0_owns_tier:both:v1").ShouldBe(31);
-        Schema.IndexOf("own0_owns_tier:strike:v1").ShouldBe(34);
-        Schema.IndexOf("own1_alive").ShouldBe(35);
-        Schema.IndexOf("enemy0_alive").ShouldBe(65);
-        Schema.IndexOf("enemy1_alive").ShouldBe(95);
-        Schema.IndexOf("enemy1_owns_tier:strike:v1").ShouldBe(124);
+        Schema.IndexOf("own0_knows_spell:strike:v1").ShouldBe(31);
+        Schema.IndexOf("own0_owns_tier:both:v1").ShouldBe(32);
+        Schema.IndexOf("own0_owns_tier:slam:v1").ShouldBe(35);
+        Schema.IndexOf("own1_alive").ShouldBe(36);
+        Schema.IndexOf("enemy0_alive").ShouldBe(67);
+        Schema.IndexOf("enemy1_alive").ShouldBe(98);
+        Schema.IndexOf("enemy1_owns_tier:slam:v1").ShouldBe(128);
         Should.Throw<ArgumentOutOfRangeException>(() => Schema.IndexOf("own2_alive"));
     }
 
@@ -85,13 +85,13 @@ public sealed class FeatureSchemaTests
     [Fact]
     public void Spells_and_packages_are_indexed_in_ordinal_order()
     {
-        Schema.Spells.ShouldBe([TestContent.Guard, TestContent.Rend, TestContent.Slam, TestContent.Strike]);
+        Schema.Spells.ShouldBe([TestContent.Guard, TestContent.Jab, TestContent.Rend, TestContent.Slam, TestContent.Strike]);
         Schema.SpellIndex(TestContent.Guard).ShouldBe(0);
-        Schema.SpellIndex(TestContent.Strike).ShouldBe(3);
+        Schema.SpellIndex(TestContent.Strike).ShouldBe(4);
         Schema.SpellIndex(SpellId.Parse("spell:unknown:v1")).ShouldBe(-1);
-        Schema.Tiers.ShouldBe([TestContent.BothPack, TestContent.GuardPack, TestContent.SlamPack, TestContent.StrikePack]);
+        Schema.Tiers.ShouldBe([TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack, TestContent.SlamPack]);
         Schema.TierIndex(TestContent.BothPack).ShouldBe(0);
-        Schema.TierIndex(TestContent.StrikePack).ShouldBe(3);
+        Schema.TierIndex(TestContent.SlamPack).ShouldBe(3);
         Schema.TierIndex(TierId.Parse("tier:unknown:v1")).ShouldBe(-1);
     }
 

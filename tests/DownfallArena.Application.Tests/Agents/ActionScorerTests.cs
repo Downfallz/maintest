@@ -413,7 +413,7 @@ public sealed class ActionScorerTests
         // The board starts at 0 energy, so the whole cost is the part the estimate cannot see. The three costs
         // -- Strike 0, Guard 1, Slam 2 -- price at nothing, one point of energy and two.
         scorer.PurchaseValue(board[0], TestContent.GuardPack, board).ShouldBe((0.65 * 2 * 2) + (Tempo * 6) - PerEnergy, 1e-9);
-        scorer.PurchaseValue(board[0], TestContent.StrikePack, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
+        scorer.PurchaseValue(board[0], TestContent.JabPack, board).ShouldBe((0.95 * 3) + (0.05 * 6) + Tempo, 1e-9);
         scorer.PurchaseValue(board[0], TestContent.SlamPack, board).ShouldBe((0.95 * 10) + (0.05 * 14) + Tempo - (PerEnergy * 2), 1e-9);
     }
 
@@ -430,7 +430,7 @@ public sealed class ActionScorerTests
         scorer.Estimate(board[0], TestContent.Guard, board)
             .ShouldBeLessThan(scorer.Estimate(board[0], TestContent.Strike, board));
         scorer.PurchaseValue(board[0], TestContent.GuardPack, board)
-            .ShouldBeGreaterThan(scorer.PurchaseValue(board[0], TestContent.StrikePack, board));
+            .ShouldBeGreaterThan(scorer.PurchaseValue(board[0], TestContent.JabPack, board));
     }
 
     /// <summary>At a weight of zero a purchase is worth exactly what it does in combat, and tempo buys nothing.</summary>
@@ -473,7 +473,7 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20);
         board[0].Energy.Value.ShouldBe(0, "the case is about a creature that can afford neither");
 
-        var free = scorer.PurchaseValue(board[0], TestContent.StrikePack, board);
+        var free = scorer.PurchaseValue(board[0], TestContent.JabPack, board);
         var paid = scorer.PurchaseValue(board[0], TestContent.SlamPack, board);
 
         (free - scorer.Estimate(board[0], TestContent.Strike, board)).ShouldBe(Tempo, 1e-9);
@@ -494,7 +494,7 @@ public sealed class ActionScorerTests
         var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
         var board = Board(enemyHealth: 20, actorEnergy: energy);
 
-        foreach (var (tier, spell) in new[] { (TestContent.StrikePack, TestContent.Strike), (TestContent.GuardPack, TestContent.Guard), (TestContent.SlamPack, TestContent.Slam) })
+        foreach (var (tier, spell) in new[] { (TestContent.JabPack, TestContent.Strike), (TestContent.GuardPack, TestContent.Guard), (TestContent.SlamPack, TestContent.Slam) })
         {
             var initiative = tier == TestContent.GuardPack ? Tempo * 6 : Tempo;
             (scorer.PurchaseValue(board[0], tier, board) - scorer.Estimate(board[0], spell, board))
@@ -659,7 +659,7 @@ public sealed class ActionScorerTests
         var board = Board(enemyHealth: 20);
 
         var both = scorer.PurchaseValue(board[0], TestContent.BothPack, board);
-        var strike = scorer.PurchaseValue(board[0], TestContent.StrikePack, board);
+        var strike = scorer.PurchaseValue(board[0], TestContent.JabPack, board);
         var slam = scorer.PurchaseValue(board[0], TestContent.SlamPack, board);
 
         both.ShouldBe(Math.Max(strike, slam), 1e-9);

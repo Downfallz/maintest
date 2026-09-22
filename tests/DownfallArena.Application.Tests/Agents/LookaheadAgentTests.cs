@@ -51,7 +51,7 @@ public sealed class LookaheadAgentTests
         var weights = ScoringWeights.Default with { Stun = 0 };
         var board = FourAboutToKillTwo() with
         {
-            Allies = [(FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2) }).Bought(TestContent.BothPack), FourAboutToKillTwo().Allies[1]],
+            Allies = [(FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack), FourAboutToKillTwo().Allies[1]],
             Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
         };
         var option = new IntentOption(One, [TestContent.Slam, TestContent.Strike]);
@@ -92,7 +92,7 @@ public sealed class LookaheadAgentTests
     public void A_round_that_wins_the_match_outranks_any_score_whatever_the_weights()
     {
         var weights = ScoringWeights.Default with { Damage = 0.001, Kill = 0, Energy = 1000 };
-        var one = (Boards.Creature(1, PlayerSlot.Player1) with { Energy = Energy.Of(2) }).Bought(TestContent.BothPack);
+        var one = (Boards.Creature(1, PlayerSlot.Player1) with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack);
         var board = Boards.Board(PlayerSlot.Player1, [one], [Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(2) }, Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(2) }]) with
         {
             RoundNumber = 1,

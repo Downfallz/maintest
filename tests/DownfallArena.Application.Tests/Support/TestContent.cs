@@ -19,6 +19,15 @@ internal static class TestContent
     public static readonly SpellId Strike = SpellId.Parse("spell:strike:v1");
     public static readonly SpellId Guard = SpellId.Parse("spell:guard:v1");
     public static readonly SpellId Slam = SpellId.Parse("spell:slam:v1");
+
+    /// <summary>
+    /// The plain damage spell a package may teach, and the reason it exists: a package may not teach a spell
+    /// every creature starts with, and Strike is the starting kit (ADR 0056). Jab carries Strike's numbers
+    /// exactly so the scoring tests read the same as they did, which means the content audit calls the two
+    /// indistinguishable -- correctly, and <c>ContentAuditTests</c> names that one finding rather than hiding
+    /// it. The tree teaches Jab so it is reachable, since the audit reads the tree.
+    /// </summary>
+    public static readonly SpellId Jab = SpellId.Parse("spell:jab:v1");
     public static readonly TalentTreeId Tree = TalentTreeId.Parse("talent-tree:base:v1");
 
     /// <summary>
@@ -29,7 +38,7 @@ internal static class TestContent
 
     public static readonly TierId SlamPack = TierId.Parse("tier:slam:v1");
 
-    public static readonly TierId StrikePack = TierId.Parse("tier:strike:v1");
+    public static readonly TierId JabPack = TierId.Parse("tier:jab:v1");
 
     public static readonly TierId BothPack = TierId.Parse("tier:both:v1");
 
@@ -67,6 +76,7 @@ internal static class TestContent
             MakeSpell(Guard, "Guard", TargetingSpec.SingleTarget(TargetOrigin.Self), cost: 1, initiative: guardInitiative, DefenseBuff.Of(2, Duration.OfRounds(1))),
             MakeSpell(Slam, "Slam", TargetingSpec.Multi(TargetOrigin.Enemy, 2), cost: 2, initiative: 1, Damage.Of(2), Stun.For(1)),
             MakeSpell(Rend, "Rend", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, initiative: 1, Damage.Of(1), Bleed.Of(19, rounds: 1)),
+            MakeSpell(Jab, "Jab", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, initiative: 1, Damage.Of(3)),
         ],
         [
             TalentTree.Create(
@@ -76,14 +86,14 @@ internal static class TestContent
                     "root",
                     "Root",
                     TalentPrerequisites.None,
-                    [new TalentSpell(Strike, TalentPrerequisites.None), new TalentSpell(Guard, TalentPrerequisites.Of([Strike], []))],
+                    [new TalentSpell(Strike, TalentPrerequisites.None), new TalentSpell(Jab, TalentPrerequisites.None), new TalentSpell(Guard, TalentPrerequisites.Of([Strike], []))],
                     [new TalentNode("brawler", "Brawler", TalentPrerequisites.Of([Guard], []), [new TalentSpell(Slam, TalentPrerequisites.None)], [])])),
         ],
         [
             Tier.Create(GuardPack, "Guard", 1, [], [Guard], Initiative.Of(guardInitiative)),
             Tier.Create(SlamPack, "Slam", 2, [GuardPack], [Slam], Initiative.Of(1)),
-            Tier.Create(StrikePack, "Strike", 1, [], [Strike], Initiative.Of(1)),
-            Tier.Create(BothPack, "Both", 1, [], [Strike, Slam], Initiative.Of(1)),
+            Tier.Create(JabPack, "Jab", 1, [], [Jab], Initiative.Of(1)),
+            Tier.Create(BothPack, "Both", 1, [], [Jab, Slam], Initiative.Of(1)),
         ]);
 
     private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, int initiative, params Effect[] effects) =>
