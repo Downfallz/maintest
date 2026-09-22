@@ -119,3 +119,29 @@ test('a creature that already starts with a spell the package teaches is named',
   assert.deepEqual(startersOverlapping(ADVANCED.document, [knight, archer], resolve), []);
   assert.deepEqual(startersOverlapping(undefined, undefined), []);
 });
+
+// ContentStore keeps the raw document of a file that does not parse into its DTO, so the studio can list it
+// with what is wrong. Every field here may therefore be any JSON at all. These run from the spell sheets too,
+// so one malformed package that threw would stop unrelated sheets from opening at all.
+test('a package whose list fields are not lists is read as empty rather than thrown on', () => {
+  const broken = { id: 'tier:torn:v1', name: 'Torn', path: 'Tiers/torn.json', problem: 'spells: expected an array', document: { id: 'tier:torn:v1', level: 1, spells: 3, prerequisites: 'tier:brute:v1' } };
+  const catalogue = [OPENER, broken];
+
+  assert.deepEqual(tiersTeaching('spell:guard:v1', catalogue), [OPENER]);
+  assert.deepEqual(tiersBehind('tier:brute:v1', catalogue), []);
+  assert.deepEqual(startersOverlapping(broken.document, [{ document: { startingSpellIds: 'spell:guard:v1' } }]), []);
+  assert.deepEqual(tierWarnings(broken.document, catalogue), [
+    'A package has to teach at least one spell: a pick that buys nothing is refused.',
+  ]);
+});
+
+// GameResources.ValidateClimb does not gate the level-above rule on the package's own level, and level 1 is
+// where it bites: nothing sits above it, so any prerequisite a level-1 package names is one the builder
+// refuses. Gating the warning on level > 1 left that case silent until the build failed.
+test('a level-one package with any prerequisite is warned about, because nothing sits above level one', () => {
+  const rooted = { id: 'tier:rooted:v1', level: 1, prerequisites: ['tier:brute:v1'], spells: ['spell:slam:v1'] };
+
+  assert.deepEqual(tierWarnings(rooted, CATALOGUE), [
+    'A prerequisite has to sit above what it opens, so its level has to be lower than this one.',
+  ]);
+});

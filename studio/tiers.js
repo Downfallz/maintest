@@ -10,6 +10,17 @@
 // a reading that disagrees with the builder is a bug here, not a second opinion.
 
 /**
+ * A list field as a list. `ContentStore.ReadAll` keeps the raw document of a file that does not parse into its
+ * DTO, so the studio can list it with what is wrong, which means every field here may be any JSON at all: a
+ * `spells` that is a number reaches this module as a number. Iterating it would throw, and these run from the
+ * spell sheets as well as the package ones -- so one malformed package file would stop unrelated sheets from
+ * opening at all, instead of the catalogue showing its problem.
+ */
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+/**
  * The package a reference names, or null.
  *
  * Through the alias map, because `GameSchemaBuilder.Canonical` resolves a package's id and its prerequisites
@@ -19,7 +30,7 @@
  */
 export function tierNamed(reference, tiers, resolve = value => value) {
   const target = resolve(reference);
-  return (tiers || []).find(tier => tier.id === target) || null;
+  return asArray(tiers).find(tier => tier.id === target) || null;
 }
 
 /**
@@ -32,9 +43,9 @@ export function tierNamed(reference, tiers, resolve = value => value) {
 export function tierWarnings(draft, tiers, resolve = value => value) {
   const warnings = [];
   const level = Number(draft?.level);
-  const prerequisites = (draft?.prerequisites || []).filter(Boolean);
+  const prerequisites = asArray(draft?.prerequisites).filter(Boolean);
 
-  if (!(draft?.spells || []).filter(Boolean).length) {
+  if (!asArray(draft?.spells).filter(Boolean).length) {
     warnings.push('A package has to teach at least one spell: a pick that buys nothing is refused.');
   }
 
@@ -49,13 +60,17 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
     .map(reference => Number(tierNamed(reference, tiers, resolve)?.document?.level))
     .filter(Number.isFinite);
 
-  if (Number.isFinite(level) && level > 1) {
+  if (Number.isFinite(level)) {
     // Checked only once every prerequisite is known, so one mistake reads as one problem -- the same order
-    // `GameResources.ValidateClimb` uses, and for the same reason.
-    if (levels.length === prerequisites.length && !levels.includes(level - 1)) {
+    // `GameResources.ValidateClimb` uses, and for the same reason. Only this half is about climbing, so only
+    // this half asks for a level above one.
+    if (level > 1 && levels.length === prerequisites.length && !levels.includes(level - 1)) {
       warnings.push(`A package at level ${level} needs a prerequisite at level ${level - 1}: a family is climbed one level at a time.`);
     }
 
+    // Every level, including the first. `ValidateClimb` does not gate this one either, and a level-1 package
+    // with a prerequisite is the case that makes the difference: nothing sits above level 1, so any
+    // prerequisite it names is one the builder refuses.
     if (levels.some(behind => behind >= level)) {
       warnings.push('A prerequisite has to sit above what it opens, so its level has to be lower than this one.');
     }
@@ -69,12 +84,12 @@ export function tierWarnings(draft, tiers, resolve = value => value) {
  * no package teaches is one nobody can ever acquire.
  */
 export function tiersTeaching(spellId, tiers, resolve = reference => reference) {
-  return (tiers || []).filter(tier => (tier.document?.spells || []).some(reference => resolve(reference) === spellId));
+  return asArray(tiers).filter(tier => asArray(tier.document?.spells).some(reference => resolve(reference) === spellId));
 }
 
 /** The packages bought behind this one, which is what disabling or renaming it would strand. */
 export function tiersBehind(tierId, tiers, resolve = value => value) {
-  return (tiers || []).filter(tier => (tier.document?.prerequisites || []).some(reference => resolve(reference) === tierId));
+  return asArray(tiers).filter(tier => asArray(tier.document?.prerequisites).some(reference => resolve(reference) === tierId));
 }
 
 /**
@@ -83,7 +98,7 @@ export function tiersBehind(tierId, tiers, resolve = value => value) {
  * sheet names them.
  */
 export function startersOverlapping(draft, creatures, resolve = reference => reference) {
-  const taught = new Set((draft?.spells || []).map(resolve));
-  return (creatures || []).filter(creature =>
-    (creature.document?.startingSpellIds || []).map(resolve).some(spell => taught.has(spell)));
+  const taught = new Set(asArray(draft?.spells).map(resolve));
+  return asArray(creatures).filter(creature =>
+    asArray(creature.document?.startingSpellIds).map(resolve).some(spell => taught.has(spell)));
 }

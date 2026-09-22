@@ -596,23 +596,24 @@ function tierLink(reference) {
 }
 
 /** An editable list of spell references: a picker per row, plus one to add. */
-function spellList(target, key) {
+function spellList(target, key, { onChange = null } = {}) {
   const container = element('div');
   const redraw = () => {
     const rows = (target[key] || []).map((reference, index) => {
       const holder = { value: reference };
       const select = picker(holder, 'value', spellReferences());
-      select.addEventListener('change', () => { target[key][index] = holder.value; markDirty(); redraw(); });
+      select.addEventListener('change', () => { target[key][index] = holder.value; markDirty(); onChange?.(); redraw(); });
       return element('div', { className: 'row' }, [
         element('span', { className: 'grow' }, [select]),
         spellLink(reference),
-        miniButton('Remove', () => { target[key].splice(index, 1); markDirty(); redraw(); }, 'mini remove'),
+        miniButton('Remove', () => { target[key].splice(index, 1); markDirty(); onChange?.(); redraw(); }, 'mini remove'),
       ]);
     });
     rows.push(element('div', { className: 'row' }, [
       miniButton('Add spell', () => {
         target[key] = [...(target[key] || []), spellReferences()[0] || ''];
         markDirty();
+        onChange?.();
         redraw();
       }),
     ]));
@@ -1040,17 +1041,22 @@ function tierList(target, key) {
     const rows = (target[key] || []).map((reference, index) => {
       const holder = { value: reference };
       const select = picker(holder, 'value', tierReferences());
-      select.addEventListener('change', () => { target[key][index] = holder.value; markDirty(); redraw(); });
+      select.addEventListener('change', () => { target[key][index] = holder.value; markDirty(); refreshTierWarnings(); redraw(); });
       return element('div', { className: 'row' }, [
         element('span', { className: 'grow' }, [select]),
         tierLink(reference),
-        miniButton('Remove', () => { target[key].splice(index, 1); markDirty(); redraw(); }, 'mini remove'),
+        miniButton('Remove', () => { target[key].splice(index, 1); markDirty(); refreshTierWarnings(); redraw(); }, 'mini remove'),
       ]);
     });
     rows.push(element('div', { className: 'row' }, [
+      // Never this package. Only a package the studio created or versioned has an alias, so a new one's alias
+      // sorts ahead of every versioned id and would otherwise be the reference a first prerequisite starts at
+      // -- seeding the one requirement no package may have.
       miniButton('Add prerequisite', () => {
-        target[key] = [...(target[key] || []), tierReferences()[0] || ''];
+        const self = resolveReference(state.draft?.id);
+        target[key] = [...(target[key] || []), tierReferences().find(reference => resolveReference(reference) !== self) || ''];
         markDirty();
+        refreshTierWarnings();
         redraw();
       }),
     ]));
@@ -1066,7 +1072,7 @@ function tierEditor() {
   const card = element('div', { className: 'card' }, [
     element('h3', { textContent: 'Package' }),
     fields([
-      ['Id', textBox(draft, 'id')],
+      ['Id', textBox(draft, 'id', { dirty: () => { markDirty(); refreshTierWarnings(); } })],
       ['Name', textBox(draft, 'name')],
       ['Level', numberBox(draft, 'level', { min: 1, onChange: refreshTierWarnings })],
       ['Initiative bonus', numberBox(draft, 'initiativeBonus', { min: 0 })],
@@ -1076,7 +1082,7 @@ function tierEditor() {
 
   const spells = element('div', { className: 'card' }, [
     element('h3', { textContent: 'Spells it teaches' }),
-    spellList(draft, 'spells'),
+    spellList(draft, 'spells', { onChange: refreshTierWarnings }),
   ]);
 
   const prerequisites = element('div', { className: 'card' }, [
