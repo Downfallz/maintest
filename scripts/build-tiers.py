@@ -9,7 +9,10 @@ Initiative is seeded by summing the spells' former per-spell bonuses. That is a 
 balance decision: it hands tier 1 a spread of 1 to 3 and gives Shaman a package worth nothing. Somebody
 authors the twenty-one real numbers later; this only refuses to invent them.
 
-Re-run after editing the tree, and diff the result:
+**It has run, and data/Tiers is authored now** (ADR 0057). The studio edits a package where the engine reads
+it, so this script is the record of how the 21 were first produced rather than the way they are maintained.
+Re-running it rewrites every file from the tree and destroys what has been authored since -- including the
+initiative numbers it exists to say it did not invent. Read the diff before keeping it:
 
     python3 scripts/build-tiers.py && git diff --stat data/Tiers
 """
