@@ -434,4 +434,23 @@ public sealed class CreatureTests
         restored.AcquiredTiers.ShouldBe(creature.AcquiredTiers);
         restored.Snapshot().BaseInitiative.ShouldBe(snapshot.BaseInitiative);
     }
+
+    /// <summary>
+    /// What a creature knows and what it owns are handed out read-only in the strong sense. Ownership is held
+    /// rather than inferred precisely so it cannot drift from the spells and the initiative that were paid for
+    /// it; a caller that reached back through the returned set and granted a package would produce that drift
+    /// without going through <see cref="Creature.BuyTier"/>.
+    /// </summary>
+    [Fact]
+    public void What_a_creature_knows_and_owns_cannot_be_changed_through_the_sets_it_hands_out()
+    {
+        var creature = Spawn();
+        creature.BuyTier(Package("tier:brute:v1", spells: ["spell:guard:v1"])).IsSuccess.ShouldBeTrue();
+
+        Should.Throw<NotSupportedException>(() => ((ISet<TierId>)creature.AcquiredTiers).Add(TierId.Parse("tier:marauder:v1")));
+        Should.Throw<NotSupportedException>(() => ((ISet<SpellId>)creature.KnownSpells).Clear());
+
+        creature.AcquiredTiers.ShouldBe([TierId.Parse("tier:brute:v1")]);
+        creature.KnowsSpell(SpellId.Parse("spell:guard:v1")).ShouldBeTrue();
+    }
 }
