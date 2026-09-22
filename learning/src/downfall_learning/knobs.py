@@ -8,7 +8,7 @@ an evaluation already reports. Everything here reads the authored content in ``d
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
@@ -324,38 +324,64 @@ def _packages(
     to no package -- the same thing the old depth 0 meant. A spell taught by several packages is grouped
     under each of them, because each package sells it and each package's own balance is a question; its level
     is the shallowest, which is how soon a creature can actually have it.
-
-    A disabled package is not in the build (ADR 0015), so it teaches nothing here.
     """
+    resolve = _resolver(by_id)
+    levels = _starting_levels(data_directory, resolve)
     teachers: dict[str, list[str]] = {}
-    levels: dict[str, int] = {}
-
-    def alias_of(reference: str) -> str | None:
-        return reference if reference in by_id.values() else by_id.get(reference)
-
-    for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
-        creature = _read_json(file)
-        if creature.get("enabled", True):
-            for reference in _names(creature.get("startingSpellIds")):
-                alias = alias_of(reference)
-                if alias is not None:
-                    levels[alias] = 0
-
-    for file in sorted((data_directory / TIERS_FOLDER).rglob(JSON_FILES)):
-        package = _read_json(file)
-        if not package.get("enabled", True):
-            continue
-        identifier = str(package.get("id", file.stem))
-        level = package.get("level")
-        for reference in _names(package.get("spells")):
-            alias = alias_of(reference)
-            if alias is None:
-                continue
+    for identifier, level, taught in _authored_packages(data_directory, resolve):
+        for alias in taught:
             teachers.setdefault(alias, []).append(identifier)
+            # A package whose level is not a number still sells its spells, so it still groups them; it just
+            # says nothing about how soon they are had. The data builder is what refuses the file.
             if isinstance(level, int):
                 levels[alias] = min(levels.get(alias, level), level)
 
     return {alias: tuple(sorted(named)) for alias, named in teachers.items()}, levels
+
+
+def _resolver(by_id: Mapping[str, str]) -> Callable[[str], str | None]:
+    """A reference to the alias it names, or ``None``. A reference that is already an alias passes through."""
+    aliases = set(by_id.values())
+
+    def resolve(reference: str) -> str | None:
+        return reference if reference in aliases else by_id.get(reference)
+
+    return resolve
+
+
+def _starting_levels(data_directory: Path, resolve: Callable[[str], str | None]) -> dict[str, int]:
+    """Every spell a creature spawns with, at level 0.
+
+    It is had before anything is chosen, so no pick paid for it and no package sells it.
+    """
+    levels: dict[str, int] = {}
+    for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
+        creature = _read_json(file)
+        if creature.get("enabled", True):
+            levels.update(dict.fromkeys(_aliases(creature.get("startingSpellIds"), resolve), 0))
+    return levels
+
+
+def _authored_packages(
+    data_directory: Path, resolve: Callable[[str], str | None]
+) -> Iterator[tuple[str, object, list[str]]]:
+    """Each enabled package: its id, its level as authored, and the aliases it teaches.
+
+    A disabled package is not in the build (ADR 0015), so it teaches nothing and nothing is grouped under it.
+    """
+    for file in sorted((data_directory / TIERS_FOLDER).rglob(JSON_FILES)):
+        package = _read_json(file)
+        if package.get("enabled", True):
+            yield (
+                str(package.get("id", file.stem)),
+                package.get("level"),
+                _aliases(package.get("spells"), resolve),
+            )
+
+
+def _aliases(listed: object, resolve: Callable[[str], str | None]) -> list[str]:
+    """The aliases a list of references names, dropping every reference nothing resolves."""
+    return [alias for alias in map(resolve, _names(listed)) if alias is not None]
 
 
 def read_value(document: Mapping[str, object], pointer: str) -> float:
