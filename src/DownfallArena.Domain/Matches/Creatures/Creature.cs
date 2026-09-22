@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Resources.Talents;
@@ -17,6 +18,14 @@ public sealed class Creature : Entity<CreatureId>
 {
     private readonly HashSet<SpellId> _knownSpells;
     private readonly HashSet<TierId> _acquiredTiers;
+
+    // Handed out in place of the sets themselves. IReadOnlySet<T> on a HashSet<T> is one cast away from
+    // ISet<T>, so a caller holding a creature could teach it a spell or grant it a package without the method
+    // that protects the invariant -- which is exactly the drift ownership is held to prevent. The wrapper is
+    // built once over the live set, so a read costs nothing and still sees every change the mutators make.
+    private readonly ReadOnlySet<SpellId> _knownSpellsView;
+    private readonly ReadOnlySet<TierId> _acquiredTiersView;
+
     private readonly ConditionSet _conditions;
 
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
@@ -29,6 +38,8 @@ public sealed class Creature : Entity<CreatureId>
         BaseInitiative = definition.BaseStats.Initiative;
         _knownSpells = [.. definition.StartingSpells];
         _acquiredTiers = [];
+        _knownSpellsView = new ReadOnlySet<SpellId>(_knownSpells);
+        _acquiredTiersView = new ReadOnlySet<TierId>(_acquiredTiers);
         _conditions = new ConditionSet();
     }
 
@@ -45,6 +56,8 @@ public sealed class Creature : Entity<CreatureId>
         // The snapshot's base initiative already includes every bonus the creature bought, so restoring the
         // tiers must not add them again. The list is what it owns, not a script to replay.
         _acquiredTiers = [.. snapshot.AcquiredTiers];
+        _knownSpellsView = new ReadOnlySet<SpellId>(_knownSpells);
+        _acquiredTiersView = new ReadOnlySet<TierId>(_acquiredTiers);
         _conditions = new ConditionSet(snapshot.Conditions);
     }
 
@@ -66,10 +79,10 @@ public sealed class Creature : Entity<CreatureId>
 
     public Energy Energy { get; private set; }
 
-    public IReadOnlySet<SpellId> KnownSpells => _knownSpells;
+    public IReadOnlySet<SpellId> KnownSpells => _knownSpellsView;
 
     /// <summary>The packages this creature has bought, in no particular order.</summary>
-    public IReadOnlySet<TierId> AcquiredTiers => _acquiredTiers;
+    public IReadOnlySet<TierId> AcquiredTiers => _acquiredTiersView;
 
     public IReadOnlyList<Condition> Conditions => _conditions.Active;
 
