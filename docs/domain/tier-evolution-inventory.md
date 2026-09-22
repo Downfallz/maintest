@@ -158,7 +158,30 @@ rounds — so it is a rule, not a detail, and it belongs in the ADR with the cad
 Tuning the rest (initiative values, health, match length) is explicitly deferred by the owner. Raising health
 lengthens matches, which adds opportunities, so the two knobs are not independent.
 
-### 3.4 A surface the grep could not find: `Creature.Restore`
+### 3.4 An added schema member rehashes every catalogue that never had one
+
+The consolidated document is its own hash: `ComputeHash` serialises the whole `GameSchema` and `Load` refuses
+a file whose stored hash disagrees. So a member added to that record reaches the canonical form of *every*
+catalogue, including the ones built before it existed. Adding `tiers` as an always-present list therefore
+broke files nobody touched — `runs/tune-4/work/data/dst/game.schema.json`, stored hash `7dc96614…`, hashed to
+`f5066a7d…` and loaded as "rebuild it with the data builder", which reads like corrupted content rather than
+a shape change. The stage 1 review caught this; the audit had not looked for it.
+
+Two rules come out of it, and the plan's section 4 already asked for both ("version the consolidated schema
+because this changes contract meaning"):
+
+- A catalogue with no packages emits **no member at all** and stays version 1, so it is byte-for-byte the
+  document it was, hash included. The precedent is ADR 0031's empty caster-effect list and ADR 0015's
+  `enabled` switch, both dropped for exactly this reason.
+- A catalogue that carries packages is **version 2**, because a reader written before the member refuses it as
+  an unknown field. The version is the lowest one that can read the document, not the newest the builder
+  knows, and it is verified against what the document carries in both directions: one content hash, one
+  document.
+
+The migration's own content moved from `4f453e87…` to `d367db1c…` when the version did, with all 400
+benchmark entries byte-identical — a document change, not a game change.
+
+### 3.5 A surface the grep could not find: `Creature.Restore`
 
 Found while writing the domain slice, not by the counts below. `Creature.Restore` validates that every spell
 a restored creature knows came from its definition's starting kit **or its talent tree**:

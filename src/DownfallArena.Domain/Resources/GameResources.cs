@@ -135,8 +135,9 @@ public sealed class GameResources : IGameResources
 
     /// <summary>
     /// What a package must satisfy beyond its own construction: the spells and prerequisites it names have to
-    /// exist, and the prerequisite graph has to be one a creature can actually climb -- acyclic, and with each
-    /// step deeper than the one it requires. A negative bonus is not checked here because
+    /// exist, and the prerequisite graph has to be one a creature can actually climb -- acyclic, with each step
+    /// deeper than the one it requires, and reached one level at a time rather than jumped to. A negative bonus
+    /// is not checked here because
     /// <see cref="Initiative" /> already refuses one, and a second rule saying the same thing is a second rule
     /// to keep in agreement.
     /// </summary>
@@ -152,6 +153,7 @@ public sealed class GameResources : IGameResources
                 problems.Add($"Tier '{tier.Id.Value}' teaches unknown spell '{spell.Value}'.");
             }
 
+            var known = new List<Tier>();
             foreach (var required in tier.Prerequisites)
             {
                 if (!tiers.TryGetValue(required, out var prerequisite))
@@ -159,6 +161,8 @@ public sealed class GameResources : IGameResources
                     problems.Add($"Tier '{tier.Id.Value}' requires unknown tier '{required.Value}'.");
                     continue;
                 }
+
+                known.Add(prerequisite);
 
                 // A prerequisite deeper than or level with what it opens cannot be reached first, which is a
                 // cycle that a cycle check phrased in terms of reachability would take longer to find.
@@ -168,6 +172,16 @@ public sealed class GameResources : IGameResources
                         $"Tier '{tier.Id.Value}' at level {tier.Level} requires '{required.Value}' at level {prerequisite.Level}; "
                         + "a prerequisite has to sit above what it opens.");
                 }
+            }
+
+            // Sitting above is not enough: a level-3 package whose only prerequisite opens the family is bought
+            // with two picks rather than three, so the level it is priced and paced at is not the one a player
+            // pays. Checked only once every prerequisite is known, so one mistake reads as one problem.
+            if (tier.Level > 1 && known.Count == tier.Prerequisites.Count && !known.Exists(prerequisite => prerequisite.Level == tier.Level - 1))
+            {
+                problems.Add(
+                    $"Tier '{tier.Id.Value}' at level {tier.Level} has no prerequisite at level {tier.Level - 1}; "
+                    + "a package is reached one level at a time, so an advanced package has to follow the level below it.");
             }
         }
 

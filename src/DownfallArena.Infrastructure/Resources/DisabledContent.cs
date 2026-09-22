@@ -30,14 +30,15 @@ internal static class DisabledContent
 
         var disabledSpells = authored.Spells.Where(spell => spell.Enabled is false).Select(spell => spell.Id).ToHashSet(StringComparer.Ordinal);
         var disabledTrees = authored.TalentTrees.Where(tree => tree.Enabled is false).Select(tree => tree.Id).ToHashSet(StringComparer.Ordinal);
-        var disabledTiers = authored.Tiers.Where(tier => tier.Enabled is false).Select(tier => tier.Id).ToHashSet(StringComparer.Ordinal);
+        var authoredTiers = authored.Tiers ?? [];
+        var disabledTiers = authoredTiers.Where(tier => tier.Enabled is false).Select(tier => tier.Id).ToHashSet(StringComparer.Ordinal);
 
         Note(notes, disabledSpells, "spell");
         Note(notes, disabledTrees, "talent tree");
         Note(notes, disabledTiers, "tier");
         Note(notes, authored.Creatures.Where(creature => creature.Enabled is false).Select(creature => creature.Id), "creature");
 
-        foreach (var tier in authored.Tiers.Where(tier => tier.Enabled is not false))
+        foreach (var tier in authoredTiers.Where(tier => tier.Enabled is not false))
         {
             foreach (var spell in tier.Spells.Where(disabledSpells.Contains))
             {
@@ -64,7 +65,7 @@ internal static class DisabledContent
             ],
             Spells = [.. authored.Spells.Where(spell => spell.Enabled is not false).Select(spell => spell with { Enabled = null })],
             TalentTrees = [.. authored.TalentTrees.Where(tree => tree.Enabled is not false).Select(tree => Prune(tree, disabledSpells, notes, problems))],
-            Tiers = [.. authored.Tiers.Where(tier => tier.Enabled is not false).Select(tier => tier with { Enabled = null })],
+            Tiers = [.. authoredTiers.Where(tier => tier.Enabled is not false).Select(tier => tier with { Enabled = null })],
         };
     }
 

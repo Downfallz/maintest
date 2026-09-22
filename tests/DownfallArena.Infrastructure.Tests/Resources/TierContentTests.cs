@@ -89,6 +89,51 @@ public sealed class TierContentTests
     }
 
     /// <summary>
+    /// Sitting above what it opens is not enough. A level-3 package whose only prerequisite opens the family is
+    /// bought with two picks rather than three, so the depth it is priced and paced at is not the depth a player
+    /// pays -- and the pacing is the whole point of levels.
+    /// </summary>
+    [Fact]
+    public void An_advanced_package_cannot_skip_the_level_below_it()
+    {
+        using var content = Content()
+            .WithFile("Tiers/brute.v1.json", Opener)
+            .WithFile("Tiers/warmonger.v1.json", """
+                { "id": "tier:warmonger:v1", "name": "Warmonger", "level": 3, "prerequisites": ["tier:brute:v1"], "spells": ["spell:guard"], "initiativeBonus": 2 }
+                """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)))
+            .Message.ShouldContain("no prerequisite at level 2");
+    }
+
+    /// <summary>The same rule read from the other end: nothing above the first level is bought straight away.</summary>
+    [Fact]
+    public void A_package_above_the_first_level_needs_a_prerequisite()
+    {
+        using var content = Content().WithFile("Tiers/marauder.v1.json", """
+            { "id": "tier:marauder:v1", "name": "Marauder", "level": 2, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 0 }
+            """);
+
+        Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path)))
+            .Message.ShouldContain("no prerequisite at level 1");
+    }
+
+    /// <summary>
+    /// One mistake is one problem: a package that names a prerequisite nobody authored is missing that
+    /// prerequisite, not missing a level, and reporting both would send the author looking for two.
+    /// </summary>
+    [Fact]
+    public void An_unknown_prerequisite_is_not_also_reported_as_a_skipped_level()
+    {
+        using var content = Content().WithFile("Tiers/marauder.v1.json", Advanced);
+
+        var message = Should.Throw<InvalidGameContentException>(() => GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path))).Message;
+
+        message.ShouldContain("unknown tier");
+        message.ShouldNotContain("no prerequisite at level");
+    }
+
+    /// <summary>
     /// Refused by <c>Initiative</c> rather than by a content rule. An earlier draft of the catalogue check
     /// repeated it and could never fire, which reads like a guarantee that is actually made somewhere else.
     /// </summary>
@@ -165,7 +210,7 @@ public sealed class TierContentTests
 
         var schema = GameSchemaBuilder.Build(content.Path);
 
-        schema.Tiers.Select(tier => tier.Id).ShouldBe(["tier:brute:v1"]);
+        schema.Tiers.ShouldNotBeNull().Select(tier => tier.Id).ShouldBe(["tier:brute:v1"]);
         schema.Tiers.ShouldAllBe(tier => tier.Enabled == null);
     }
 
