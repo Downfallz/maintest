@@ -171,13 +171,25 @@ public sealed class GameResources : IGameResources
             }
         }
 
+        // Kept although the level rule above already makes a cycle impossible: a prerequisite chain that must
+        // strictly decrease in level cannot close, so this can only ever fire beside that rule and never
+        // alone. It stays because the level rule is the part likeliest to be relaxed -- a sibling prerequisite
+        // at the same level is a reasonable thing to want -- and this is what would be left guarding the graph.
         foreach (var tier in tiers.Values.Where(tier => Reaches(tier.Id, tier.Id, tiers, [])))
         {
             problems.Add($"Tier '{tier.Id.Value}' requires itself through its prerequisites.");
         }
     }
 
-    /// <summary>Whether <paramref name="target"/> is reachable from <paramref name="from"/> by prerequisites.</summary>
+    /// <summary>
+    /// Whether <paramref name="target"/> is reachable from <paramref name="from"/> by prerequisites.
+    /// <para>
+    /// <paramref name="seen"/> is shared across the whole walk, which is sound because the target is fixed for
+    /// one call: "does this tier reach the target" depends on the tier and not on the path taken to it, so a
+    /// node that failed once cannot succeed from somewhere else. A direct edge is compared before the pruning,
+    /// so an immediate self-requirement is found whatever has been visited.
+    /// </para>
+    /// </summary>
     private static bool Reaches(TierId from, TierId target, Dictionary<TierId, Tier> tiers, HashSet<TierId> seen)
     {
         if (!tiers.TryGetValue(from, out var tier))

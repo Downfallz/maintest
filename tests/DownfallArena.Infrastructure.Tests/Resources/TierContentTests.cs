@@ -170,6 +170,30 @@ public sealed class TierContentTests
     }
 
     /// <summary>
+    /// Two packages reaching the same prerequisite is not a cycle, and the pruning that makes the cycle walk
+    /// terminate must not report one. This is the shape that pruning gets wrong when it is threaded badly: the
+    /// second path to a shared ancestor is skipped, and a check that confused skipping with finding would fail
+    /// the content here.
+    /// </summary>
+    [Fact]
+    public void Two_packages_sharing_a_prerequisite_is_not_a_cycle()
+    {
+        using var content = Content()
+            .WithFile("Tiers/brute.v1.json", Opener)
+            .WithFile("Tiers/marauder.v1.json", Advanced)
+            .WithFile("Tiers/ironbound.v1.json", """
+                { "id": "tier:ironbound:v1", "name": "Ironbound", "level": 2, "prerequisites": ["tier:brute:v1"], "spells": ["spell:strike"], "initiativeBonus": 1 }
+                """)
+            .WithFile("Tiers/warmonger.v1.json", """
+                { "id": "tier:warmonger:v1", "name": "Warmonger", "level": 3, "prerequisites": ["tier:marauder:v1", "tier:ironbound:v1"], "spells": ["spell:guard"], "initiativeBonus": 2 }
+                """);
+
+        var resources = GameSchemaMapper.ToGameResources(GameSchemaBuilder.Build(content.Path));
+
+        resources.Tiers.Count.ShouldBe(4);
+    }
+
+    /// <summary>
     /// Catalogues without tiers are what exists today, and the migration is not finished, so the builder has
     /// to keep accepting them rather than demanding content nobody has authored yet.
     /// </summary>
