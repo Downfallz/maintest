@@ -269,3 +269,9 @@ ADRs to supersede exist as the plan says: `0017-spell-initiative-on-unlock.md` a
   (#160), and why is not understood. A tier migration moves initiative, which is what the timeline orders by,
   so regenerating the baseline after both changes would make the two causes inseparable. Either the 70.5 % is
   explained first, or stage 6 records a baseline nobody can attribute.
+- **When the `Tiers` folder stops being optional** (stage 1 left this one). It is optional today because a
+  catalogue authored before packages has no such folder and is still a catalogue. It must stop being optional
+  when a pick buys a package, because a catalogue with no packages then has no legal evolution choice at all.
+  The marker is mechanical rather than a note to remember: such a catalogue is schema version 1, so the check
+  to add is "a version-1 document cannot start a match", in the domain, and it retires the option the day it
+  exists.
