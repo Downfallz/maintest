@@ -110,20 +110,30 @@ export function aliasOfPackage(packageId, aliases) {
 }
 
 /**
- * Every knobs entry an item owns, by the id it is saved under: the entries its deletion has to take with it
- * (ADR 0025). A spell owns one per alias pointing at it -- two aliases on one spell are two entries, and
- * pruning one would leave the other naming nothing. A package is usually reached by no alias at all, so
- * without one it owns the entry `aliasOfPackage` names it by. Anything else owns none.
+ * Every knobs entry deleting an item has to take with it, by the id it is saved under (ADR 0025). A spell
+ * owns one per alias pointing at it -- two aliases on one spell are two entries, and pruning one would leave
+ * the other naming nothing. A package is usually reached by no alias at all, so without one it owns the entry
+ * `aliasOfPackage` names it by. Anything else owns none.
+ *
+ * A package's entry can outlive it. After **Save as next version** the old file stays on disk while the alias
+ * points at the new one; delete the new one and the alias goes with it, which leaves the old version named by
+ * its id without the version -- the same key. `siblings`, the items of the same kind on disk, is how that is
+ * seen: an entry another version will be keyed by once this one's aliases are gone stays where it is.
  */
-export function entryAliasesOf(itemId, aliases) {
+export function entryAliasesOf(itemId, aliases, siblings = []) {
   const map = isRecord(aliases) ? aliases : {};
   const id = text(itemId);
   const isPackage = id.startsWith(PACKAGE_PREFIX);
   if (!isPackage && !id.startsWith('spell:')) return [];
   const pointing = Object.keys(map).filter(alias => map[alias] === id);
-  if (pointing.length || !isPackage) return pointing;
-  const owned = aliasOfPackage(id, map);
-  return owned ? [owned] : [];
+  if (!isPackage) return pointing;
+  const owned = pointing.length ? pointing : [aliasOfPackage(id, map)].filter(Boolean);
+  const after = Object.fromEntries(Object.entries(map).filter(([, target]) => target !== id));
+  const inherited = new Set(list(siblings)
+    .map(sibling => text(sibling?.id))
+    .filter(other => other && other !== id)
+    .map(other => aliasOfPackage(other, after)));
+  return owned.filter(key => !inherited.has(key));
 }
 
 /**

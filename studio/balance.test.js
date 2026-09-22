@@ -566,6 +566,21 @@ test('a superseded package owns no entry: it follows the alias to the version th
   assert.deepEqual(entryAliasesOf('tier:prowler:v2', { 'tier:prowler': 'tier:prowler:v2' }), ['tier:prowler']);
 });
 
+test('deleting the current version of a package keeps the entry the older version takes back', () => {
+  // After Save as next version: v1 still on disk, the alias on v2. Deleting v2 drops the alias, and v1 is
+  // named tier:prowler again by its own id -- so the entry is still owed, and check-knobs fails without it.
+  const aliases = { 'tier:prowler': 'tier:prowler:v2' };
+  const onDisk = [{ id: 'tier:prowler:v1', enabled: true }, { id: 'tier:prowler:v2', enabled: true }];
+
+  assert.deepEqual(entryAliasesOf('tier:prowler:v2', aliases, onDisk), []);
+});
+
+test('deleting the only version of a package still takes its entry', () => {
+  const onDisk = [{ id: 'tier:prowler:v1', enabled: true }, { id: 'tier:brute:v1', enabled: true }];
+
+  assert.deepEqual(entryAliasesOf('tier:prowler:v1', {}, onDisk), ['tier:prowler']);
+});
+
 test('a creature or a tree owns no knobs entry', () => {
   assert.deepEqual(entryAliasesOf('creature:main:v1', { 'creature:main': 'creature:main:v1' }), []);
 });

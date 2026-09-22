@@ -2216,8 +2216,9 @@ async function remove(item) {
   // pruning a single entry would leave the others naming a spell nothing resolves to -- which is the second
   // door ADR 0025 exists to close, and `survey` already reasons about two aliases on one spell.
   // A package is usually reached by no alias at all, so its entry is keyed by its id without the version,
-  // which `entryAliasesOf` works out the way `load_content` does.
-  const aliases = entryAliasesOf(item.id, state.catalogue.aliases);
+  // which `entryAliasesOf` works out the way `load_content` does -- including an older version on disk that
+  // will take the same key back once this one is gone, whose entry must stay.
+  const aliases = entryAliasesOf(item.id, state.catalogue.aliases, documentsOf(state.tab));
   const entries = balance ? aliases.filter(name => entryFor(balance, name)) : [];
   // A constraint names its spells by hand. Deleting one of them does not fail the knobs file the way an
   // orphaned entry does -- it leaves the constraint checking nothing, quietly, which is worse (ADR 0025), so
