@@ -237,6 +237,13 @@ public static class GameSchemaBuilder
     /// Every JSON file under a content folder. A missing folder is a problem unless <paramref name="optional"/>
     /// says otherwise, which only <c>Tiers</c> is while the migration runs: a catalogue authored before tiers
     /// existed has no such folder and is still a catalogue.
+    /// <para>
+    /// The option goes when a pick is spent on a package rather than on a spell. A catalogue with no packages
+    /// has no legal evolution choice at that point, so it stops being playable content and the folder stops
+    /// being optional. The marker is mechanical rather than a note to remember: such a catalogue is schema
+    /// version 1, so "a version-1 document cannot start a match" is the check to add, in the domain, and the
+    /// day it exists this argument has nothing left to allow.
+    /// </para>
     /// </summary>
     private static List<T> LoadAll<T>(string directory, List<string> problems, bool optional = false)
         where T : class
