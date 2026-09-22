@@ -42,6 +42,7 @@ public sealed class ContentStore
         ContentKind.Creature => GameSchemaBuilder.CreaturesFolder,
         ContentKind.Spell => GameSchemaBuilder.SpellsFolder,
         ContentKind.TalentTree => GameSchemaBuilder.TalentTreesFolder,
+        ContentKind.Tier => GameSchemaBuilder.TiersFolder,
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
@@ -81,6 +82,7 @@ public sealed class ContentStore
             Creatures = ReadAll<CreatureDefinitionDto>(ContentKind.Creature),
             Spells = ReadAll<SpellDto>(ContentKind.Spell),
             TalentTrees = ReadAll<TalentTreeDto>(ContentKind.TalentTree),
+            Tiers = ReadAll<TierDto>(ContentKind.Tier),
             Aliases = ReadAliases(notes),
             // After the build, because a knobs file that does not parse is a note and never a problem: it is not
             // build input, and reporting it as one would tell an author their content is broken when it is not.
@@ -238,6 +240,7 @@ public sealed class ContentStore
                 ContentKind.Creature => (object?)JsonSerializer.Deserialize<CreatureDefinitionDto>(json, GameSchemaJson.ReadOptions),
                 ContentKind.Spell => JsonSerializer.Deserialize<SpellDto>(json, GameSchemaJson.ReadOptions),
                 ContentKind.TalentTree => JsonSerializer.Deserialize<TalentTreeDto>(json, GameSchemaJson.ReadOptions),
+                ContentKind.Tier => JsonSerializer.Deserialize<TierDto>(json, GameSchemaJson.ReadOptions),
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
 

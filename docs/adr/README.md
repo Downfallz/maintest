@@ -62,3 +62,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0054](0054-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
 | [0055](0055-a-searching-agent-may-be-built-on-a-policy.md) | A searching agent may be built on a policy, so the loop has an operator that improves one | Proposed |
 | [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted |
+| [0057](0057-a-package-is-authored-not-derived.md) | Author the packages, and retire the script that derived them | Accepted |
