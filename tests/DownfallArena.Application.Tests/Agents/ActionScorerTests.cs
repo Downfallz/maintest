@@ -774,7 +774,7 @@ public sealed class ActionScorerTests
             "Recoil",
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            new SpellStats(Energy.Of(0), CriticalChance.None),
             TargetingSpec.SingleTarget(TargetOrigin.Enemy),
             [Damage.Of(3)],
             casterEffects);

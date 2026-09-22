@@ -177,7 +177,7 @@ public sealed class CatalogueProjectionTests
             name,
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            new SpellStats(Energy.Of(0), CriticalChance.None),
             TargetingSpec.SingleTarget(TargetOrigin.Enemy),
             [Damage.Of(1)]);
 
@@ -278,7 +278,7 @@ public sealed class CatalogueProjectionTests
             "Probe",
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.Of(critical)),
+            new SpellStats(Energy.Of(0), CriticalChance.Of(critical)),
             targeting,
             [Damage.Of(1)],
             casterEffects);

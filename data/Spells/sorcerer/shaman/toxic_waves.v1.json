@@ -3,7 +3,6 @@
   "name": "Toxic Waves",
   "spellType": "Offensive",
   "creatureClass": "Shaman",
-  "initiative": 1,
   "energyCost": 3,
   "criticalChance": 0.33,
   "targeting": {

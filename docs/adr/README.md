@@ -22,7 +22,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0014](0014-exploration-in-recorded-datasets.md) | Record datasets with an exploring agent instead of reaching for reinforcement learning | Accepted |
 | [0015](0015-content-studio.md) | A local content studio: browse, edit, version and try the game content | Accepted |
 | [0016](0016-value-learning-on-an-advantage-baseline.md) | Learn action values against a state baseline instead of the raw match return | Accepted |
-| [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Accepted |
+| [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Superseded by [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) |
 | [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |
 | [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |
 | [0020](0020-energy-regeneration-and-the-price-of-energy.md) | Energy regeneration, and the price of energy | Accepted |
@@ -64,3 +64,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted |
 | [0057](0057-a-package-is-authored-not-derived.md) | Author the packages, and retire the script that derived them | Accepted |
 | [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
+| [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |

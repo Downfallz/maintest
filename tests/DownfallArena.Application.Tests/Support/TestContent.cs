@@ -72,11 +72,11 @@ internal static class TestContent
                 [Strike, Rend]),
         ],
         [
-            MakeSpell(Strike, "Strike", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, initiative: 1, Damage.Of(3)),
-            MakeSpell(Guard, "Guard", TargetingSpec.SingleTarget(TargetOrigin.Self), cost: 1, initiative: guardInitiative, DefenseBuff.Of(2, Duration.OfRounds(1))),
-            MakeSpell(Slam, "Slam", TargetingSpec.Multi(TargetOrigin.Enemy, 2), cost: 2, initiative: 1, Damage.Of(2), Stun.For(1)),
-            MakeSpell(Rend, "Rend", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, initiative: 1, Damage.Of(1), Bleed.Of(19, rounds: 1)),
-            MakeSpell(Jab, "Jab", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, initiative: 1, Damage.Of(3)),
+            MakeSpell(Strike, "Strike", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(3)),
+            MakeSpell(Guard, "Guard", TargetingSpec.SingleTarget(TargetOrigin.Self), cost: 1, DefenseBuff.Of(2, Duration.OfRounds(1))),
+            MakeSpell(Slam, "Slam", TargetingSpec.Multi(TargetOrigin.Enemy, 2), cost: 2, Damage.Of(2), Stun.For(1)),
+            MakeSpell(Rend, "Rend", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(1), Bleed.Of(19, rounds: 1)),
+            MakeSpell(Jab, "Jab", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(3)),
         ],
         [
             TalentTree.Create(
@@ -96,13 +96,13 @@ internal static class TestContent
             Tier.Create(BothPack, "Both", 1, [], [Jab, Slam], Initiative.Of(1)),
         ]);
 
-    private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, int initiative, params Effect[] effects) =>
+    private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, params Effect[] effects) =>
         Spell.Create(
             id,
             name,
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(initiative), Energy.Of(cost), CriticalChance.None),
+            new SpellStats(Energy.Of(cost), CriticalChance.None),
             targeting,
             effects);
 }

@@ -3,7 +3,6 @@
   "name": "Heavy Strike",
   "spellType": "Offensive",
   "creatureClass": "Creature",
-  "initiative": 1,
   "energyCost": 2,
   "criticalChance": 0,
   "targeting": {

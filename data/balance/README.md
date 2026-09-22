@@ -180,7 +180,7 @@ Hard rules. A candidate that breaks one is not scored at all.
 | Constraint | What it refuses |
 | --- | --- |
 | `noNewStrictDominance` | A new pair where one spell is better than another on every axis and worse on none, **at the same depth in the talent tree or shallower**. A deeper spell outclassing a shallower one is what the tree is for and is not a pair. |
-| `noIndistinguishableSpells` | Two spells with the same cost, Spell initiative, critical chance, targeting and effects. Effects are compared whole and as a multiset, the way the engine's `Spell.Indistinguishable` audit compares them; the engine reads the built schema and stays the authority. |
+| `noIndistinguishableSpells` | Two spells with the same cost, critical chance, targeting and effects. Effects are compared whole and as a multiset, the way the engine's `Spell.Indistinguishable` audit compares them; the engine reads the built schema and stays the authority. |
 | `startingKitOffersAChoice` | Any of the three spells every creature starts with being strictly better than another. |
 
 Dominance reads the talent tree. A spell is only compared against another at its own depth or deeper:
@@ -261,8 +261,10 @@ answer to a finished search from the best a killed one had reached — the run s
 
 **Run more than one seed.** A hill climb keeps only what improves, so which knobs it happens to draw first
 decides what it finds. On this catalogue, `--seed 1` at the full budget draws 32 candidates and improves
-nothing, while `--seed 11` finds a move in its first two: Ice Spear's Spell initiative from 2 to 1, and the
-score from 33.7 to 29.6. Neither run is wrong; the space is mostly flat and the good moves are sparse.
+nothing, while `--seed 11` found a move in its first two: Ice Spear's Spell initiative from 2 to 1, and the
+score from 33.7 to 29.6. Neither run was wrong; the space is mostly flat and the good moves are sparse. That
+particular move is no longer available — no spell carries an initiative since ADR 0059 — and the shape of the
+lesson is what survives, not the example.
 
 What to expect here today: 26 of the 36 spells are never cast in a mirrored run, so a third of the
 candidates change no metric at all and the report names them. Two thirds of the score is that dead content
@@ -302,12 +304,13 @@ The reading is coarse on purpose — no board, no defense, no cap at a target's 
 behind a defensive effect (so a `DefenseBuff` is priced as `defense x amount x rounds`, a stand-in and not
 what the scorer does with one, and a `DefenseDebuff` is the same stand-in the other way, blind in the same
 way to the damage the shred lets through), no kill term, which is the largest weight in the game and a threshold so it
-rewards a reliable hit over a bigger average one, and neither the energy cost nor the Spell initiative that
-`ActionScorer` prices when it picks an unlock.
+rewards a reliable hit over a bigger average one, and not the energy cost that `ActionScorer` prices when it
+picks a package.
 
-That last one is why `throwing_star` is reported: its entry
-says its Spell initiative is worth more to the class than its damage, and none of that is in the number the
-report prints. It is read off the agents'
+`throwing_star` used to be the case this reading missed, and is no longer: its entry said its Spell
+initiative was worth more to the class than its damage, and none of that was in the number the report
+printed. The bonus belongs to its package now (ADR 0059), so the ceiling is the whole truth about the spell
+and the finding against it is a finding. The kill and threat terms are read off the agents'
 own weights (`learning/weights/greedy.json`, which mirrors `ScoringWeights.Default`) rather than restated.
 
 An attack is only compared with another attack, and a spell that deals no damage only with another that

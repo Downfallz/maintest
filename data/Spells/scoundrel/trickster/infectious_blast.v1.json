@@ -3,7 +3,6 @@
   "name": "Infectious Blast",
   "spellType": "Offensive",
   "creatureClass": "Trickster",
-  "initiative": 2,
   "energyCost": 1,
   "criticalChance": 0,
   "targeting": {

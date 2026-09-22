@@ -2,7 +2,7 @@
 
 Date: 2026-09-09
 
-Status: Accepted
+Status: Superseded by [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md)
 
 ## Context
 

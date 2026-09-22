@@ -3,7 +3,6 @@
   "name": "Chain Slash",
   "spellType": "Offensive",
   "creatureClass": "Mercenary",
-  "initiative": 2,
   "energyCost": 3,
   "criticalChance": 0.5,
   "targeting": {

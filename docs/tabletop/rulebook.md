@@ -2,6 +2,16 @@
 
 Status: **Draft** (2026-09-14). Phase 4 of [plan.md](plan.md).
 
+> **The evolution rules below describe the game before
+> [ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md).** A pick bought one Spell and every
+> unlock raised Base initiative by that Spell's own number; a pick buys a whole package now, twice at round 1
+> and every second round after, and the package pays one initiative bonus. The per-Spell number is gone
+> entirely ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), so any row here
+> that cites `Spell initiative` or `Creature.UnlockSpell` names something the engine no longer has. Re-auditing
+> the tabletop translation against the package model is phase 7 of
+> [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md) and has not been done. Everything
+> outside evolution — combat, the timeline, conditions, the win condition — is unaffected.
+
 This book teaches the game. [`docs/domain/game-rules.md`](../domain/game-rules.md) is the specification; this
 is its second reading. Where the two disagree, one of them is a bug — say which, and fix that one. Part 9
 traces every rule here back to a rule there.

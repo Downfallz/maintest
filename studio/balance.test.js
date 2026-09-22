@@ -26,7 +26,6 @@ function spellFiles(directory = new URL('../data/Spells/', import.meta.url)) {
 const pummel = () => ({
   id: 'spell:pummel:v1',
   name: 'Pummel',
-  initiative: 1,
   energyCost: 1,
   criticalChance: 0.667,
   effects: [{ kind: 'Damage', amount: 2 }],
@@ -182,7 +181,7 @@ test('a duplicate pointer, bounds the wrong way round and a step of zero are eac
   const summary = of(withKnobs([
     { path: '/energyCost', min: 0, max: 2, step: 1 },
     { path: '/energyCost', min: 0, max: 2, step: 1 },
-    { path: '/initiative', min: 3, max: 1, step: 1 },
+    { path: '/criticalChance', min: 0.8, max: 0.4, step: 0.05 },
     { path: '/effects/0/amount', min: 1, max: 3, step: 0 },
   ]), 'spell:pummel', pummel());
 
@@ -625,13 +624,13 @@ test('a document that is one bare number offers nothing, because there is no poi
 test('the first unclaimed number is the one a new knob lands on', () => {
   const entry = { knobs: [{ path: '/energyCost' }] };
 
-  assert.equal(unclaimedPointer(entry, { energyCost: 1, initiative: 2 }), '/initiative');
+  assert.equal(unclaimedPointer(entry, { energyCost: 1, criticalChance: 0.5 }), '/criticalChance');
 });
 
 test('a spell whose every number already has a knob offers none', () => {
-  const entry = { knobs: [{ path: '/energyCost' }, { path: '/initiative' }] };
+  const entry = { knobs: [{ path: '/energyCost' }, { path: '/criticalChance' }] };
 
-  assert.equal(unclaimedPointer(entry, { energyCost: 1, initiative: 2 }), null);
+  assert.equal(unclaimedPointer(entry, { energyCost: 1, criticalChance: 0.5 }), null);
 });
 
 test('a new knob is pinned where the content sits, so the page decides no bound', () => {

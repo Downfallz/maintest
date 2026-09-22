@@ -3,7 +3,6 @@
   "name": "Guard",
   "spellType": "Defensive",
   "creatureClass": "Brawler",
-  "initiative": 1,
   "energyCost": 1,
   "criticalChance": 0,
   "targeting": {

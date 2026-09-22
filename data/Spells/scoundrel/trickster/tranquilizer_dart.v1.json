@@ -3,7 +3,6 @@
   "name": "Tranquilizer Dart",
   "spellType": "Offensive",
   "creatureClass": "Trickster",
-  "initiative": 2,
   "energyCost": 2,
   "criticalChance": 0,
   "targeting": {

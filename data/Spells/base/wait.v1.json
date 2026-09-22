@@ -3,7 +3,6 @@
   "name": "Wait",
   "spellType": "Defensive",
   "creatureClass": "Creature",
-  "initiative": 1,
   "energyCost": 0,
   "criticalChance": 0,
   "targeting": {

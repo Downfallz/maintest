@@ -839,10 +839,11 @@ function spellEditor() {
     ['Name', textBox(draft, 'name')],
     ['Type', picker(draft, 'spellType', SPELL_TYPES)],
     ['Class', picker(draft, 'creatureClass', CREATURE_CLASSES)],
-    // No spell initiative row. A spell buys none of its own any more: the package that teaches it pays one
-    // bonus, once, and that number is edited on the package (ADR 0056). The field is still in the file and is
-    // carried through a save untouched -- the draft is the whole document -- but the page stops offering a
-    // rule the engine stopped applying, which is how a screen quietly teaches the wrong game.
+    // No spell initiative row, and no longer any field behind one: the package that teaches a spell pays the
+    // bonus, once, and that number is edited on the package (ADR 0056, ADR 0059). A document that still
+    // carries `initiative` is content written for rules that are gone, and the store refuses it at the save
+    // rather than dropping it quietly -- a silently ignored field is a number an author believes they are
+    // editing.
     ['Energy cost', numberBox(draft, 'energyCost', { min: 0 })],
     ['Critical chance bonus', critField(draft)],
     ['Target origin', picker(draft.targeting, 'origin', TARGET_ORIGINS)],
