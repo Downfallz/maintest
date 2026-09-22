@@ -502,6 +502,24 @@ public sealed class ActionScorerTests
         }
     }
 
+    /// <summary>
+    /// A spell the creature already knows is not part of what a package sells. Two packages may teach the same
+    /// spell and <c>BuyTier</c> grants it idempotently (ADR 0056), so pricing it again would have an agent pay
+    /// a pick for a combat option it already has. A package with nothing left to teach is still worth its
+    /// initiative bonus, and nothing else.
+    /// </summary>
+    [Fact]
+    public void A_package_is_priced_only_on_the_spells_the_creature_does_not_already_know()
+    {
+        var scorer = new ActionScorer(TestContent.GuardIsFaster, MatchStore.TwoOnTwo(), ScoringWeights.Default);
+        var knowsJab = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Jab]);
+        var knowsEverything = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Jab, TestContent.Slam]);
+
+        scorer.PurchaseValue(knowsJab[0], TestContent.BothPack, knowsJab)
+            .ShouldBe(scorer.PurchaseValue(knowsJab[0], TestContent.SlamPack, knowsJab), 1e-9);
+        scorer.PurchaseValue(knowsEverything[0], TestContent.BothPack, knowsEverything).ShouldBe(Tempo, 1e-9);
+    }
+
     /// <summary>Between the two: at 1 energy, Slam's 2 is half affordable, and only the half that is not is charged.</summary>
     [Fact]
     public void Only_the_part_of_a_cost_a_creature_cannot_cover_is_charged_at_the_purchase()

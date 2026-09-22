@@ -163,6 +163,12 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// one-step reading can price, and that is the error this takes. Every weight here was fitted against one
     /// spell per pick, so this pricing is provisional until they are refitted (ADR 0056).
     /// </para>
+    /// <para>
+    /// A spell the creature already knows is not part of what the package sells: two packages may teach the
+    /// same spell, and <see cref="Domain.Matches.Creatures.Creature.BuyTier"/> grants it idempotently, so
+    /// pricing it again would have an agent pay a pick for a combat option it already has. A package whose
+    /// every spell is already known is still worth its initiative bonus, and nothing else.
+    /// </para>
     /// </summary>
     public double PurchaseValue(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures) =>
         weights.Apply(PurchaseTerms(actor, tierId, creatures));
@@ -177,7 +183,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var tier = resources.GetTier(tierId);
         var best = ScoreTerms.Zero;
         var bestScore = double.NegativeInfinity;
-        foreach (var spellId in tier.Spells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        foreach (var spellId in tier.Spells.Where(spell => !actor.KnownSpells.Contains(spell)).OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
             var stats = resources.GetSpell(spellId).Stats;
             var combat = EstimateTerms(actor, spellId, creatures);

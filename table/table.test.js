@@ -256,3 +256,19 @@ test('a full previous round survives trimming the short activity log on a late f
   assert.equal(p.nodes['recap-actions'].children.length, 70);
   assert.match(p.nodes['recap-actions'].textContent, /First card/);
 });
+
+// The rule line is how a deck and a screen are checked to be the same game (ADR 0054), so a value that changes
+// play has to reach it. Two schedules with the same interval and a different first round are two games.
+test('the rule line separates schedules that share an interval but not their first opportunity', () => {
+  const p = page();
+  const rules = { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, roundCap: 30, criticalMultiplier: 2 };
+
+  const odd = p.context.ruleLine({ contentHash: 'abcdef012345', rules: { ...rules, firstEvolutionRound: 1, evolutionInterval: 2 } });
+  const even = p.context.ruleLine({ contentHash: 'abcdef012345', rules: { ...rules, firstEvolutionRound: 2, evolutionInterval: 2 } });
+  const each = p.context.ruleLine({ contentHash: 'abcdef012345', rules: { ...rules, firstEvolutionRound: 3, evolutionInterval: 1 } });
+
+  assert.match(odd, /2 picks every 2 rounds from round 1/);
+  assert.match(even, /2 picks every 2 rounds from round 2/);
+  assert.match(each, /2 picks every round from round 3/);
+  assert.notEqual(odd, even);
+});

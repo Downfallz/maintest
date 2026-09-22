@@ -206,6 +206,28 @@ intends: the plan retires per-spell acquisition gates and makes tier prerequisit
 or `UnlockValue`. It reads the tree without naming it in any of the terms an audit would think to grep, which
 is the concrete form of the caveat under the table below — a floor, not a ceiling.
 
+### 3.6 A third surface a grep could not find: the spell card still printed the retired rules
+
+Found by review of the phase 2 slice. `CatalogueProjection` served every spell card with three fields the
+engine had just stopped honouring: `Initiative` (what the unlock bought, ADR 0017), `Tier` (the depth of its
+talent node, ADR 0034) and `Requires` (the node's and the spell's own gate). `table/card.js` printed all three,
+so the page told a table `Requires: Guard, Strike` and `Unlock: +3 initiative` for rules nobody now plays.
+
+The three are removed from `CardFace` and from the page, with the computation behind them (`Gate`, `Tiers` and
+the recursive `Tier`/`Behind` walk, ~120 lines). What a pick costs and what it buys is on the package card,
+which already carried its prerequisites and its one bonus.
+
+**Why the surface count missed it.** The projection names none of the audited terms either: it reads
+`spell.Stats.SpellInitiative` through a positional constructor and computes the gate from `TalentPrerequisites`
+without saying `TalentUnlocks` or `UnlockValue` anywhere. Same shape as 3.5 — a reading of retired rules that
+never spells their names.
+
+**Still stale, deliberately.** `docs/tabletop/components.md` specifies the printed face: §2.1's field table,
+the three worked cards around lines 429-490, the print generator sketch, and the traceability rows at the end
+all describe `Unlock: +N initiative` and `Requires: ...`. They are left as they are, because the tabletop
+documents are their own stage of the plan (line 117) and splitting that rewrite across two PRs would leave the
+rulebook and the manifest disagreeing with the card spec in between.
+
 ## 4. Surfaces, counted
 
 Tracked files containing each term, excluding `legacy/` and excluding these two audit documents themselves.

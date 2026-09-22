@@ -182,7 +182,10 @@ function renderShape(round) {
 function ruleLine(catalogue) {
   const rules = catalogue?.rules;
   if (!rules) return '';
-  const cadence = rules.evolutionInterval === 1 ? 'every round' : `every ${rules.evolutionInterval} rounds`;
+  // The first round is printed beside the interval, not folded into it: rounds 1, 3, 5 and rounds 2, 4, 6 are
+  // the same interval and a different game, and this line exists to tell two games apart at a glance.
+  const every = rules.evolutionInterval === 1 ? 'every round' : `every ${rules.evolutionInterval} rounds`;
+  const cadence = `${every} from round ${rules.firstEvolutionRound}`;
   return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerOpportunity} picks ${cadence} · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
 }
 
