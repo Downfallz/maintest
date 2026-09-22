@@ -41,7 +41,7 @@ def test_the_viewer_sample_evaluation_loads() -> None:
     assert evaluation.matches == 6
     assert evaluation.agent_a.agent == "Random"
     assert 0.0 <= evaluation.agent_a.score.mean <= 1.0
-    assert evaluation.agent_a.spell_usage["spell:strike:v1"] == 19
+    assert evaluation.agent_a.spell_usage["spell:strike:v1"] == 25
 
 
 def test_every_step_is_a_view_on_the_run_s_one_observation_array(tmp_path: Path) -> None:

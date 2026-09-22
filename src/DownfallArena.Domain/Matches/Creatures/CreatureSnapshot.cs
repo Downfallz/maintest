@@ -38,6 +38,13 @@ public sealed record CreatureSnapshot
 
     public required IReadOnlySet<SpellId> KnownSpells { get; init; }
 
+    /// <summary>
+    /// The packages this creature has bought. Held rather than inferred from <see cref="KnownSpells"/>: a
+    /// starting kit, a spell two packages could teach, and a match restored from an older shape all make the
+    /// spells an unreliable witness to what was purchased.
+    /// </summary>
+    public IReadOnlySet<TierId> AcquiredTiers { get; init; } = new HashSet<TierId>();
+
     public required IReadOnlyList<ConditionSnapshot> Conditions { get; init; }
 
     public bool IsDead => Health.IsZero;
@@ -45,4 +52,6 @@ public sealed record CreatureSnapshot
     public bool IsAlive => !IsDead;
 
     public bool KnowsSpell(SpellId spellId) => KnownSpells.Contains(spellId);
+
+    public bool OwnsTier(TierId tierId) => AcquiredTiers.Contains(tierId);
 }

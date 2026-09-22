@@ -3,6 +3,7 @@ namespace DownfallArena.Cli.Tests.Studio;
 /// <summary>
 /// A scratch content directory with a small, valid content set, deleted when the test ends. The Cli tests keep
 /// their own rather than reaching into the Infrastructure tests' one: the studio is a different consumer.
+/// It carries one package, because a host that serves an evolution question needs something to buy (ADR 0056).
 /// </summary>
 internal sealed class StudioContent : IDisposable
 {
@@ -38,6 +39,12 @@ internal sealed class StudioContent : IDisposable
             }
             """);
         Write("Spells/brawler/guard.v1.json", Guard);
+        Write("Tiers/guard.v1.json", """
+            {
+              "id": "tier:guard:v1", "name": "Guard", "level": 1,
+              "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 2
+            }
+            """);
         Write("TalentTrees/base.v1.json", """
             {
               "id": "talent-tree:base:v1", "name": "Base",

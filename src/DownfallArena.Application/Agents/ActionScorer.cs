@@ -145,9 +145,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     }
 
     /// <summary>
-    /// What unlocking a spell is worth: what the spell would do in combat, plus the base initiative it buys for
-    /// the rest of the match (ADR 0017), priced by the initiative weight (ADR 0018), minus the part of the cost
-    /// the combat reading cannot see, priced by the energy weight (ADR 0020, ADR 0026).
+    /// What buying a package is worth: the best of its spells in combat, plus the base initiative the package
+    /// buys for the rest of the match (ADR 0056), priced by the initiative weight (ADR 0018), minus the part of
+    /// that spell's cost the combat reading cannot see, priced by the energy weight (ADR 0020, ADR 0026).
     /// <para>
     /// Without the second term a pick taken for tempo scores as if it bought nothing. The third exists because
     /// <see cref="Estimate"/> raises the actor's energy to at least the spell's cost, so that a spell too
@@ -156,24 +156,48 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// whatever the spell costs. Below its cost the difference is invisible, so it is charged here; at or above
     /// it the keep term already prices every point, and charging again would price it twice.
     /// </para>
+    /// <para>
+    /// The best of the package's spells rather than the sum of them, because a creature casts one spell a
+    /// round: summing would price a three-spell package as three simultaneous casts and make the deepest
+    /// packages look three times as good as they play. It undervalues the option a second spell is, which no
+    /// one-step reading can price, and that is the error this takes. Every weight here was fitted against one
+    /// spell per pick, so this pricing is provisional until they are refitted (ADR 0056).
+    /// </para>
+    /// <para>
+    /// A spell the creature already knows is not part of what the package sells: two packages may teach the
+    /// same spell, and <see cref="Domain.Matches.Creatures.Creature.BuyTier"/> grants it idempotently, so
+    /// pricing it again would have an agent pay a pick for a combat option it already has. A package whose
+    /// every spell is already known is still worth its initiative bonus, and nothing else.
+    /// </para>
     /// </summary>
-    public double UnlockValue(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures) =>
-        weights.Apply(UnlockTerms(actor, spellId, creatures));
+    public double PurchaseValue(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures) =>
+        weights.Apply(PurchaseTerms(actor, tierId, creatures));
 
-    /// <summary>The terms behind <see cref="UnlockValue"/>: the combat estimate, the initiative bought, the cost not covered.</summary>
-    public ScoreTerms UnlockTerms(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures)
+    /// <summary>The terms behind <see cref="PurchaseValue"/>: the best spell's combat estimate, the initiative bought, the cost not covered.</summary>
+    public ScoreTerms PurchaseTerms(CreatureSnapshot actor, TierId tierId, IReadOnlyList<CreatureSnapshot> creatures)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        ArgumentNullException.ThrowIfNull(spellId);
+        ArgumentNullException.ThrowIfNull(tierId);
         ArgumentNullException.ThrowIfNull(creatures);
 
-        var stats = resources.GetSpell(spellId).Stats;
-        var combat = EstimateTerms(actor, spellId, creatures);
-        return combat with
+        var tier = resources.GetTier(tierId);
+        var best = ScoreTerms.Zero;
+        var bestScore = double.NegativeInfinity;
+        foreach (var spellId in tier.Spells.Where(spell => !actor.KnownSpells.Contains(spell)).OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
-            Initiative = combat.Initiative + stats.SpellInitiative.Value,
-            Energy = combat.Energy - Math.Max(0, stats.Cost.Value - actor.Energy.Value),
-        };
+            var stats = resources.GetSpell(spellId).Stats;
+            var combat = EstimateTerms(actor, spellId, creatures);
+            var terms = combat with { Energy = combat.Energy - Math.Max(0, stats.Cost.Value - actor.Energy.Value) };
+
+            var score = weights.Apply(terms);
+            if (score > bestScore)
+            {
+                best = terms;
+                bestScore = score;
+            }
+        }
+
+        return best with { Initiative = best.Initiative + tier.InitiativeBonus.Value };
     }
 
     /// <summary>

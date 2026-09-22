@@ -37,7 +37,9 @@ def stamp_json(**overrides: Any) -> dict[str, Any]:
         "ruleSet": {
             "teamSize": 3,
             "energyPerRound": 2,
-            "evolutionPicksPerRound": 2,
+            "evolutionPicksPerOpportunity": 2,
+            "firstEvolutionRound": 1,
+            "evolutionInterval": 2,
             "roundCap": 30,
             "criticalMultiplier": 2.0,
         },

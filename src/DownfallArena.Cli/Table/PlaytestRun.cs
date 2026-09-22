@@ -144,7 +144,7 @@ internal sealed class PlaytestRun
         var recorder = new RunRecorder(
             writer,
             stamp,
-            new ObservationBuilder(schema, setup.Resources),
+            new ObservationBuilder(schema),
             new ActionEncoder(schema),
             new CandidateTerms(setup.Resources, setup.Rules),
             clock,

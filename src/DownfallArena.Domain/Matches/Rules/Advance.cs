@@ -96,7 +96,7 @@ public static class Advance
     private static Creature Restore(CreatureSnapshot snapshot, IGameResources resources)
     {
         var definition = resources.GetCreature(snapshot.DefinitionId);
-        return Creature.Restore(snapshot, definition, resources.GetTalentTree(definition.TalentTree));
+        return Creature.Restore(snapshot, definition, [.. snapshot.AcquiredTiers.Select(resources.GetTier)]);
     }
 
     private static List<CreatureSnapshot> Snapshots(List<Creature> creatures) =>

@@ -21,10 +21,10 @@ public static class PlayerBoardStateProjection
             Outcome = match.Outcome,
         };
 
-        return match.CurrentRound is { } round ? WithRound(state, round, slot) : state;
+        return match.CurrentRound is { } round ? WithRound(state, round, slot, match.RuleSet) : state;
     }
 
-    private static PlayerBoardState WithRound(PlayerBoardState state, Round round, PlayerSlot slot)
+    private static PlayerBoardState WithRound(PlayerBoardState state, Round round, PlayerSlot slot, RuleSet rules)
     {
         var ownCreatures = state.Allies.Select(creature => creature.Id).ToHashSet();
         return state with
@@ -34,6 +34,7 @@ public static class PlayerBoardStateProjection
             SubPhase = round.SubPhase,
             EvolutionChoices = [.. round.EvolutionChoicesOf(slot)],
             HasPassedEvolution = round.HasPassedEvolution(slot),
+            NextEvolutionRound = rules.NextEvolutionRound(round.Number),
             SpeedChoices = [.. round.SpeedChoices.Where(choice => ownCreatures.Contains(choice.Creature))],
             Intents = [.. round.IntentsOf(slot)],
             Timeline = round.Timeline.Slots,

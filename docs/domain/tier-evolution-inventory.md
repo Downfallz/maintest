@@ -181,6 +181,53 @@ because this changes contract meaning"):
 The migration's own content moved from `4f453e87…` to `d367db1c…` when the version did, with all 400
 benchmark entries byte-identical — a document change, not a game change.
 
+### 3.5 A surface the grep could not find: `Creature.Restore`
+
+Found while writing the domain slice, not by the counts below. `Creature.Restore` validates that every spell
+a restored creature knows came from its definition's starting kit **or its talent tree**:
+
+```csharp
+if (!definition.StartingSpells.All(snapshot.KnownSpells.Contains)
+    || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell)
+        || tree.Spells.Any(offered => offered.Id == spell)))
+```
+
+A tier is a third source of spells, and this check does not know about it. The moment a package teaches a
+spell the tree does not offer, every restore of a creature that bought it throws — which includes every
+hypothetical board a search reconstructs, so the failure would arrive inside the agents rather than at the
+content boundary.
+
+It cannot fire today, because `scripts/build-tiers.py` derives the packages *from* the tree and every tier
+spell is therefore a tree spell. It fires the first time the two are allowed to diverge, which the migration
+intends: the plan retires per-spell acquisition gates and makes tier prerequisites authoritative.
+
+**Why the surface count missed it.** `Creature.Restore` contains none of `creatureClass`, `talentTree`,
+`EvolutionChoice`, `EvolutionOption`, `DecideEvolution`, `SpellInitiative`, `TalentUnlocks`, `EvolutionRules`
+or `UnlockValue`. It reads the tree without naming it in any of the terms an audit would think to grep, which
+is the concrete form of the caveat under the table below — a floor, not a ceiling.
+
+### 3.6 A third surface a grep could not find: the spell card still printed the retired rules
+
+Found by review of the phase 2 slice. `CatalogueProjection` served every spell card with three fields the
+engine had just stopped honouring: `Initiative` (what the unlock bought, ADR 0017), `Tier` (the depth of its
+talent node, ADR 0034) and `Requires` (the node's and the spell's own gate). `table/card.js` printed all three,
+so the page told a table `Requires: Guard, Strike` and `Unlock: +3 initiative` for rules nobody now plays.
+
+The three are removed from `CardFace` and from the page, with the computation behind them (`Gate`, `Tiers` and
+the recursive `Tier`/`Behind` walk, ~120 lines). What a pick costs and what it buys is on the package card,
+which already carried its prerequisites and its one bonus.
+
+**Why the surface count missed it.** The projection names none of the audited terms either: it reads
+`spell.Stats.SpellInitiative` through a positional constructor and computes the gate from `TalentPrerequisites`
+without saying `TalentUnlocks` or `UnlockValue` anywhere. Same shape as 3.5 — a reading of retired rules that
+never spells their names.
+
+**Still stale, deliberately.** `docs/tabletop/components.md` specifies the printed face: §2.1's field table,
+the three worked cards around lines 429-490, the print generator sketch, and the traceability rows at the end
+all describe `Unlock: +N initiative` and `Requires: ...`. They are left as they are, because the tabletop
+documents are their own stage of the plan (line 117) and splitting that rewrite across two PRs would leave the
+rulebook and the manifest disagreeing with the card spec in between.
+
 ## 4. Surfaces, counted
 
 Tracked files containing each term, excluding `legacy/` and excluding these two audit documents themselves.

@@ -256,7 +256,7 @@ internal sealed class GameSession
         new(
             new FileArtifactWriter(runDirectory),
             Stamp(scenario.Player1Agent.ToString(), scenario.Player2Agent.ToString()),
-            new ObservationBuilder(_schema, _resources),
+            new ObservationBuilder(_schema),
             new ActionEncoder(_schema),
             new CandidateTerms(_resources, _rules),
             TimeProvider.System,

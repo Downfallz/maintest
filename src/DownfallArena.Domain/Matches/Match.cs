@@ -131,18 +131,20 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         // Resolved before the round records the pick: an unknown id would throw, and half a mutation is worse
-        // than a refusal. Unreachable while ValidateChoice only passes spells the talent tree names.
-        var spell = _resources.GetSpell(choice.Spell);
+        // than a refusal. Unreachable while ValidateChoice only passes packages the catalogue holds.
+        var tier = _resources.GetTier(choice.Tier);
         var accepted = round.SubmitEvolutionChoice(slot, choice);
         if (accepted.IsFailure)
         {
             return accepted;
         }
 
-        var unlocked = CreatureOf(choice.Creature).UnlockSpell(spell);
-        if (unlocked.IsFailure)
+        // The whole package or none of it: BuyTier checks everything before it changes anything, so a refusal
+        // here would mean the validation and the entity disagree, which is a bug rather than a rule.
+        var bought = CreatureOf(choice.Creature).BuyTier(tier);
+        if (bought.IsFailure)
         {
-            throw new InvalidOperationException($"Creature {choice.Creature} refused a validated unlock: {unlocked.Error.Message}");
+            throw new InvalidOperationException($"Creature {choice.Creature} refused a validated purchase: {bought.Error.Message}");
         }
 
         RaiseDomainEvent(new EvolutionChoiceSubmitted(Id, round.Id, slot, choice));

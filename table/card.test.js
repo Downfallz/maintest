@@ -8,15 +8,12 @@ const card = {
   id: 'spell:probe:v1',
   name: 'Probe',
   cost: 2,
-  initiative: 3,
   creatureClass: 'Scoundrel',
-  tier: 3,
   targeting: 'Up to 2 enemies',
   effects: ['Damage 7', 'Bleed 4 a round, 2 rounds'],
   casterEffects: ['Caster: Heal 2'],
   critical: '35%',
   criticalThreshold: 14,
-  requires: 'Guard, Strike',
 };
 
 test('every line of a card comes from the card', () => {
@@ -26,12 +23,10 @@ test('every line of a card comes from the card', () => {
     'Bleed 4 a round, 2 rounds',
     'Caster: Heal 2',
     'Crit 35% · d20 14+',
-    'Unlock: +3 initiative',
-    'Requires: Guard, Strike',
   ]);
   assert.equal(cardTitle(card), 'Probe');
   assert.equal(cardCost(card), '2');
-  assert.equal(cardHead(card), 'Scoundrel · Tier 3');
+  assert.equal(cardHead(card), 'Scoundrel');
 });
 
 // The one that makes the sweep over the shipped files mean something: with nothing to draw from, the renderer
@@ -53,12 +48,13 @@ test('a cost of zero is printed, because free is a rule the page would be invent
   assert.equal(cardCost({ cost: 0 }), '0');
 });
 
-// Three spells of the shipped catalogue buy no initiative at their unlock. A card that dropped the line would
-// read as a card missing one, which is the difference between "buys nothing" and "we did not say".
-test('an unlock that buys no initiative still prints its line', () => {
-  assert.deepEqual(cardLines({ initiative: 0 }), ['Unlock: +0 initiative']);
-  assert.deepEqual(cardLines({ initiative: 3 }), ['Unlock: +3 initiative']);
-  assert.deepEqual(cardLines({}), []);
+// A spell is acquired by buying the package that teaches it, so what it takes and what it buys are printed on
+// that package's card and only there (ADR 0056). A face that still carried a talent gate, a tree depth or a
+// per-spell unlock bonus would print three rules the engine stopped applying -- and a table plays its cards.
+test('a card prints no gate, no tree depth and no unlock bonus, whatever it is handed', () => {
+  assert.deepEqual(cardLines({ initiative: 0, requires: 'Guard, Strike' }), []);
+  assert.deepEqual(cardLines({ initiative: 3, requires: 'Guard' }), []);
+  assert.equal(cardHead({ creatureClass: 'Scoundrel', tier: 3 }), 'Scoundrel');
 });
 
 // Until the catalogue is snapped to the d20 grid, a chance is a percentage and there is no face to roll. The

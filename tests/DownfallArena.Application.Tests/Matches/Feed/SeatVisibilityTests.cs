@@ -62,7 +62,7 @@ public sealed class SeatVisibilityTests
     [Fact]
     public void An_unlock_and_a_pass_are_public_because_the_board_already_shows_them()
     {
-        var unlock = new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, SpellId.Parse("spell:guard:v1")));
+        var unlock = new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1")));
         var passed = new EvolutionPassed(Match, Round, PlayerSlot.Player1);
 
         SeatVisibility.CanSee(unlock, PlayerSlot.Player2).ShouldBeTrue();
@@ -86,7 +86,7 @@ public sealed class SeatVisibilityTests
         new MatchStarted(Match, PlayerId.New(), PlayerId.New(), "content"),
         new MatchEnded(Match, Round, new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination)),
         new PlayerJoined(Match, PlayerSlot.Player1, PlayerId.New()),
-        new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, SpellId.Parse("spell:guard:v1"))),
+        new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1"))),
         new EvolutionPassed(Match, Round, PlayerSlot.Player1),
     ];
 

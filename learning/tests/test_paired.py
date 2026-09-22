@@ -49,7 +49,7 @@ def evaluation(
                     "engineVersion": engine,
                     "contentHash": content,
                     "ruleSet": rule_set or {},
-                    "featureSchema": "features:v5",
+                    "featureSchema": "features:v6",
                     "player1Agent": agent,
                     "player2Agent": opponent,
                     "baseSeed": 0,

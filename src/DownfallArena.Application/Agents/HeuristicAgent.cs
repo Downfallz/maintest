@@ -20,7 +20,7 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
     public ScoringWeights Weights => weights;
 
-    /// <summary>Unlocks the spell worth the most on the current board, combat value plus the initiative it buys less the part of its cost the actor cannot cover; passes only when nothing can be unlocked.</summary>
+    /// <summary>Buys the package worth the most on the current board, its best spell's combat value plus the initiative the package buys less the part of that spell's cost the actor cannot cover; passes only when nothing can be bought.</summary>
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
         ArgumentNullException.ThrowIfNull(board);
@@ -32,12 +32,12 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         foreach (var option in options.Creatures)
         {
             var actor = creatures.First(creature => creature.Id == option.Creature);
-            foreach (var spell in option.UnlockableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+            foreach (var tier in option.AvailableTiers)
             {
-                var score = _scorer.UnlockValue(actor, spell, creatures);
+                var score = _scorer.PurchaseValue(actor, tier, creatures);
                 if (score > bestScore)
                 {
-                    best = new EvolutionChoice(option.Creature, spell);
+                    best = new EvolutionChoice(option.Creature, tier);
                     bestScore = score;
                 }
             }

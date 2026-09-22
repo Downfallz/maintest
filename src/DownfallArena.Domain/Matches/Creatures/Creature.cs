@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Resources.Talents;
@@ -16,6 +17,15 @@ namespace DownfallArena.Domain.Matches.Creatures;
 public sealed class Creature : Entity<CreatureId>
 {
     private readonly HashSet<SpellId> _knownSpells;
+    private readonly HashSet<TierId> _acquiredTiers;
+
+    // Handed out in place of the sets themselves. IReadOnlySet<T> on a HashSet<T> is one cast away from
+    // ISet<T>, so a caller holding a creature could teach it a spell or grant it a package without the method
+    // that protects the invariant -- which is exactly the drift ownership is held to prevent. The wrapper is
+    // built once over the live set, so a read costs nothing and still sees every change the mutators make.
+    private readonly ReadOnlySet<SpellId> _knownSpellsView;
+    private readonly ReadOnlySet<TierId> _acquiredTiersView;
+
     private readonly ConditionSet _conditions;
 
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
@@ -27,6 +37,9 @@ public sealed class Creature : Entity<CreatureId>
         Energy = definition.BaseStats.Energy;
         BaseInitiative = definition.BaseStats.Initiative;
         _knownSpells = [.. definition.StartingSpells];
+        _acquiredTiers = [];
+        _knownSpellsView = new ReadOnlySet<SpellId>(_knownSpells);
+        _acquiredTiersView = new ReadOnlySet<TierId>(_acquiredTiers);
         _conditions = new ConditionSet();
     }
 
@@ -39,6 +52,12 @@ public sealed class Creature : Entity<CreatureId>
         Energy = snapshot.Energy;
         BaseInitiative = snapshot.BaseInitiative;
         _knownSpells = [.. snapshot.KnownSpells];
+
+        // The snapshot's base initiative already includes every bonus the creature bought, so restoring the
+        // tiers must not add them again. The list is what it owns, not a script to replay.
+        _acquiredTiers = [.. snapshot.AcquiredTiers];
+        _knownSpellsView = new ReadOnlySet<SpellId>(_knownSpells);
+        _acquiredTiersView = new ReadOnlySet<TierId>(_acquiredTiers);
         _conditions = new ConditionSet(snapshot.Conditions);
     }
 
@@ -60,7 +79,10 @@ public sealed class Creature : Entity<CreatureId>
 
     public Energy Energy { get; private set; }
 
-    public IReadOnlySet<SpellId> KnownSpells => _knownSpells;
+    public IReadOnlySet<SpellId> KnownSpells => _knownSpellsView;
+
+    /// <summary>The packages this creature has bought, in no particular order.</summary>
+    public IReadOnlySet<TierId> AcquiredTiers => _acquiredTiersView;
 
     public IReadOnlyList<Condition> Conditions => _conditions.Active;
 
@@ -75,9 +97,9 @@ public sealed class Creature : Entity<CreatureId>
         .Minus(_conditions.Sum<DefenseDebuff>(debuff => debuff.Amount));
 
     /// <summary>
-    /// The creature's own initiative, before any condition: the definition's, raised for good by the Spell
-    /// initiative of every spell it has unlocked in this match (ADR 0017). Starting spells are part of the
-    /// definition's block and do not raise it.
+    /// The creature's own initiative, before any condition: the definition's, raised for good by the bonus of
+    /// every package it has bought in this match (ADR 0056). The starting kit is part of the definition's
+    /// block and is not a package, so it raises nothing.
     /// </summary>
     public Initiative BaseInitiative { get; private set; }
 
@@ -104,23 +126,28 @@ public sealed class Creature : Entity<CreatureId>
     /// door into a creature that did not spawn at full health: <see cref="Rules.Advance"/> uses it to answer
     /// what a board would be after a move a match has not played (ADR 0047), and nothing else does. A snapshot
     /// is a copy of a real creature, so its health cannot exceed the definition's and it knows its starting
-    /// spells and nothing its talent tree does not offer; a caller that hands one where that fails has a
-    /// bug, not a rule violation.
+    /// spells and nothing but those and what its packages taught it; a caller that hands one where that fails
+    /// has a bug, not a rule violation.
     /// </summary>
-    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, TalentTree tree)
+    /// <param name="acquired">
+    /// The packages <paramref name="snapshot"/> says it owns, resolved from the catalogue by the caller. It is
+    /// asked for rather than looked up so that a snapshot naming a package nobody authored cannot be restored
+    /// at all, and because <see cref="Creature"/> has no catalogue of its own.
+    /// </param>
+    internal static Creature Restore(CreatureSnapshot snapshot, CreatureDefinition definition, IReadOnlyList<Tier> acquired)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(definition);
-        ArgumentNullException.ThrowIfNull(tree);
+        ArgumentNullException.ThrowIfNull(acquired);
 
         if (definition.Id != snapshot.DefinitionId)
         {
             throw new ArgumentException($"Creature {snapshot.Id} was spawned from '{snapshot.DefinitionId.Value}', not '{definition.Id.Value}'.", nameof(definition));
         }
 
-        if (tree.Id != definition.TalentTree)
+        if (acquired.Count != snapshot.AcquiredTiers.Count || !acquired.All(tier => snapshot.OwnsTier(tier.Id)))
         {
-            throw new ArgumentException($"Creature {snapshot.Id} unlocks from '{definition.TalentTree.Value}', not '{tree.Id.Value}'.", nameof(tree));
+            throw new ArgumentException($"Creature {snapshot.Id} owns {snapshot.AcquiredTiers.Count} package(s), and {acquired.Count} other one(s) were handed in.", nameof(acquired));
         }
 
         if (snapshot.Health > definition.BaseStats.Health)
@@ -128,12 +155,14 @@ public sealed class Creature : Entity<CreatureId>
             throw new ArgumentException($"Creature {snapshot.Id} cannot have {snapshot.Health} health out of {definition.BaseStats.Health}.", nameof(snapshot));
         }
 
-        // What a creature knows is what it spawned with plus what it unlocked, and an unlock comes from the
-        // tree: a spell from anywhere else would let the hypothetical board cast past the evolution rules.
+        // What a creature knows is what it spawned with plus what its packages taught it (ADR 0056). A spell
+        // from anywhere else would let the hypothetical board cast past the evolution rules. The talent tree
+        // used to be the third source here, and is not one any more: it gates nothing a pick buys.
+        var taught = acquired.SelectMany(tier => tier.Spells).ToHashSet();
         if (!definition.StartingSpells.All(snapshot.KnownSpells.Contains)
-            || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell) || tree.Spells.Any(offered => offered.Id == spell)))
+            || !snapshot.KnownSpells.All(spell => definition.StartingSpells.Contains(spell) || taught.Contains(spell)))
         {
-            throw new ArgumentException($"Creature {snapshot.Id} knows spells its definition and tree do not give it, or lacks a starting one.", nameof(snapshot));
+            throw new ArgumentException($"Creature {snapshot.Id} knows spells its starting kit and its packages do not give it, or lacks a starting one.", nameof(snapshot));
         }
 
         // The rules that price an action read the snapshot's derived values; the rules that apply it read the
@@ -155,25 +184,63 @@ public sealed class Creature : Entity<CreatureId>
     public bool KnowsSpell(SpellId spellId) => _knownSpells.Contains(spellId);
 
     /// <summary>
-    /// Learns a spell and raises the base initiative by its Spell initiative, for the rest of the match. A
-    /// refused unlock raises nothing: a creature that already knows the spell, or is dead, keeps its base.
+    /// Whether this creature bought a package. Asked of the tier and never of its spells: a creature can know
+    /// every spell of a package without having bought it, and the prerequisite rule is about the purchase.
     /// </summary>
-    internal Result UnlockSpell(Spell spell)
+    public bool OwnsTier(TierId tierId) => _acquiredTiers.Contains(tierId);
+
+    /// <summary>
+    /// Buys a package: every spell it teaches at once, and its initiative bonus exactly once, for the rest of
+    /// the match.
+    /// <para>
+    /// Everything is checked before anything changes, so a refused purchase leaves the creature as it was --
+    /// no half-taught package, and no bonus without the tier that paid for it. A spell the creature already
+    /// knows is granted idempotently rather than refused, because the package is what is being bought and
+    /// two packages may legitimately teach the same spell; owning the <em>tier</em> is what blocks a repeat.
+    /// </para>
+    /// </summary>
+    internal Result BuyTier(Tier tier)
     {
-        ArgumentNullException.ThrowIfNull(spell);
+        ArgumentNullException.ThrowIfNull(tier);
 
         if (IsDead)
         {
             return Result.Failure(CreatureErrors.Dead);
         }
 
-        if (!_knownSpells.Add(spell.Id))
+        if (_acquiredTiers.Contains(tier.Id))
         {
-            return Result.Failure(CreatureErrors.SpellAlreadyKnown);
+            return Result.Failure(CreatureErrors.TierAlreadyOwned);
         }
 
-        BaseInitiative = BaseInitiative.Plus(spell.Stats.SpellInitiative.Value);
+        if (!tier.Prerequisites.All(_acquiredTiers.Contains))
+        {
+            return Result.Failure(CreatureErrors.TierPrerequisiteMissing);
+        }
+
+        _acquiredTiers.Add(tier.Id);
+        foreach (var spell in tier.Spells)
+        {
+            Learn(spell);
+        }
+
+        BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value);
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Learns a spell and raises the base initiative by its Spell initiative, for the rest of the match. A
+    /// refused unlock raises nothing: a creature that already knows the spell, or is dead, keeps its base.
+    /// </summary>
+    /// <summary>
+    /// Adds a spell to what this creature knows, idempotently. It grants no initiative of its own: a bonus
+    /// belongs to the package that teaches the spell and is paid once, when the package is bought (ADR 0056).
+    /// Idempotent because two packages may legitimately teach the same spell.
+    /// </summary>
+    internal void Learn(SpellId spell)
+    {
+        ArgumentNullException.ThrowIfNull(spell);
+        _knownSpells.Add(spell);
     }
 
     /// <summary>
@@ -293,6 +360,7 @@ public sealed class Creature : Entity<CreatureId>
         CriticalChance = CriticalChance,
         IsStunned = IsStunned,
         KnownSpells = _knownSpells.ToHashSet(),
+        AcquiredTiers = _acquiredTiers.ToHashSet(),
         Conditions = [.. _conditions.Active.Select(condition => condition.Snapshot())],
     };
 }

@@ -125,11 +125,11 @@ public sealed class CandidateTermsTests
         var creatures = Foresight.Creatures(board);
         var actor = creatures.First(creature => creature.Id == One);
 
-        var terms = Terms.Evolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard, TestContent.Slam])]));
+        var terms = Terms.Evolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack, TestContent.SlamPack])]));
 
-        terms.Count.ShouldBe(3, "two unlocks and the pass");
-        Apply(terms[0]).ShouldBe(Scorer.UnlockValue(actor, TestContent.Guard, creatures), 1e-5);
-        Apply(terms[1]).ShouldBe(Scorer.UnlockValue(actor, TestContent.Slam, creatures), 1e-5);
+        terms.Count.ShouldBe(3, "two purchases and the pass");
+        Apply(terms[0]).ShouldBe(Scorer.PurchaseValue(actor, TestContent.GuardPack, creatures), 1e-5);
+        Apply(terms[1]).ShouldBe(Scorer.PurchaseValue(actor, TestContent.SlamPack, creatures), 1e-5);
         terms[2].ShouldAllBe(term => term == 0f);
     }
 
@@ -144,7 +144,7 @@ public sealed class CandidateTermsTests
         var store = new MatchStore();
         var match = store.Started(random: new TestRandom(7));
         var steps = new List<StepRecord>();
-        var observations = new ObservationBuilder(Schema, TestContent.Resources);
+        var observations = new ObservationBuilder(Schema);
         var actions = new ActionEncoder(Schema);
         IPlayerAgent Heuristic() => new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules);
 

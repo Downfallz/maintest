@@ -11,6 +11,8 @@ public sealed class RoundTests
     private static readonly CreatureId Ghoul = CreatureId.From(4);
     private static readonly SpellId Strike = SpellId.Parse("spell:strike:v1");
     private static readonly SpellId Guard = SpellId.Parse("spell:guard:v1");
+    private static readonly TierId GuardPack = TierId.Parse("tier:guard:v1");
+    private static readonly TierId SlamPack = TierId.Parse("tier:slam:v1");
 
     private static readonly CombatTimeline Timeline = CombatTimeline.Of(
     [
@@ -58,7 +60,7 @@ public sealed class RoundTests
     public void Evolution_choices_are_accepted_once_each_during_evolution_only()
     {
         var round = Round.First();
-        var choice = new EvolutionChoice(Knight, Guard);
+        var choice = new EvolutionChoice(Knight, GuardPack);
 
         round.SubmitEvolutionChoice(PlayerSlot.Player1, choice).Error.ShouldBe(RoundErrors.EvolutionNotOpen);
 
@@ -66,7 +68,7 @@ public sealed class RoundTests
 
         round.SubmitEvolutionChoice(PlayerSlot.Player1, choice).IsSuccess.ShouldBeTrue();
         round.SubmitEvolutionChoice(PlayerSlot.Player1, choice).Error.ShouldBe(RoundErrors.EvolutionAlreadySubmitted);
-        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Knight, Strike)).IsSuccess.ShouldBeTrue();
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Knight, SlamPack)).IsSuccess.ShouldBeTrue();
         round.EvolutionChoicesOf(PlayerSlot.Player1).Count.ShouldBe(2);
         round.EvolutionChoicesOf(PlayerSlot.Player2).ShouldBeEmpty();
     }

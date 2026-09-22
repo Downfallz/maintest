@@ -21,7 +21,7 @@ public sealed class RandomAgent(IRandomSource random) : IPlayerAgent
         }
 
         var creature = Pick(options.Creatures);
-        return EvolutionDecision.Unlock(new EvolutionChoice(creature.Creature, Pick(creature.UnlockableSpells)));
+        return EvolutionDecision.Unlock(new EvolutionChoice(creature.Creature, Pick(creature.AvailableTiers)));
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>

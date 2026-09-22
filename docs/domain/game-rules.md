@@ -19,13 +19,15 @@ listed in [spells.md](spells.md).
   and the targeted actions bound in timeline order; a reveal cursor and a resolve cursor track combat. Wrong
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
-- Planning rules (phase 5): a spell is unlockable when its talent node's prerequisites and its own are met by
-  the creature's known spells; an evolution choice must target an own, living creature, an unlockable spell,
-  within the rule set's picks per round, and the sub-phase completes when no player has an effective pick left
-  (capped by what their living creatures can unlock). A speed choice must target an own, living, unstunned
-  creature, and the sub-phase completes when every such creature has one. The timeline orders Quick before
-  Standard, initiative descending, then player slot, then creature id. The `RuleSet` value object carries team
-  size, energy per round, evolution picks per round, the round cap, and the critical multiplier.
+- Planning rules (phase 5): a package is available to a creature when it does not own it and owns every
+  package it requires; an evolution choice must target an own, living creature and an available package,
+  within the picks the rule set's schedule gives that round, and the sub-phase completes when no player has an
+  effective pick left (capped by what their living creatures can buy) -- which is immediately, in a round the
+  schedule offers no opportunity. A speed choice must target an own, living, unstunned creature, and the
+  sub-phase completes when every such creature has one. The timeline orders Quick before Standard, initiative
+  descending, then player slot, then creature id. The `RuleSet` value object carries team size, energy per
+  round, evolution picks per opportunity, the first evolution round and the interval between opportunities,
+  the round cap, and the critical multiplier (ADR 0056).
 
 - Combat rules (phase 6): an intent is valid for an own, living, unstunned creature that knows the spell and can
   afford it; the sub-phase completes when every creature on the timeline has one. Binding targets checks the
@@ -76,15 +78,20 @@ listed in [spells.md](spells.md).
       first, so a Creature its own Bleed kills that Round still gained it; nothing about Health depends on
       that position (ADR 0020).
 2. **Planning**
-   1. `Evolution`: each Player may unlock Spells from the Talent tree, up to the Rule set's picks per round
-      (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. A
-      Player may pass their remaining picks. The sub-phase completes when both Players have no pick left,
-      nothing left to unlock, or passed. **An unlock raises the Creature's Base initiative by the unlocked
-      Spell's Spell initiative, for the rest of the Match** (ADR 0017): evolving is also how a Creature gets
-      faster, and it is paid once, at the unlock, not at each cast. The Current initiative the timeline orders
-      on is that base plus the Creature's active initiative buffs and less its active debuffs, floored at zero
-      (ADR 0036), so a Condition can still push a Creature forward or pull it back. A refused unlock raises
-      nothing.
+   1. `Evolution`: each Player may buy **Tiers** -- named packages of Spells -- for living Creatures, up to
+      the picks the Rule set's schedule gives that Round: two, at Round 1 and every second Round after it
+      (ADR 0056). A Round the schedule skips gives nobody a pick, and the sub-phase completes as it opens
+      rather than asking anyone to pass. A Creature may buy a package it does not own and whose prerequisite
+      packages it does own, whatever family they belong to: **prerequisites are the only rule, so
+      multiclassing is free**. One pick buys the whole package -- every Spell in it at once, a Spell it
+      already knows granted without complaint -- and the two picks of an opportunity resolve **in sequence**,
+      so the second sees what the first bought and a Creature can climb two levels in one Round. A Player may
+      pass their remaining picks. **A purchase raises the Creature's Base initiative by the package's bonus,
+      once, for the rest of the Match**: evolving is also how a Creature gets faster, and the bonus belongs to
+      the package rather than to any Spell in it. The Current initiative the timeline orders on is that base
+      plus the Creature's active initiative buffs and less its active debuffs, floored at zero (ADR 0036), so
+      a Condition can still push a Creature forward or pull it back. A refused purchase changes nothing: no
+      half-taught package, and no bonus without the Tier that paid for it.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
       such Creature has a choice. **The choice is a trade: a `Quick` Creature acts before every `Standard`

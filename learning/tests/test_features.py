@@ -17,7 +17,7 @@ def test_every_published_version_is_readable() -> None:
     assert check_schema("features:v2+31987e1de3a9") == "features:v2"
     assert check_schema("features:v3+31987e1de3a9") == "features:v3"
     assert check_schema("features:v4+31987e1de3a9") == "features:v4"
-    assert check_schema("features:v5+31987e1de3a9") == "features:v5"
+    assert check_schema("features:v6+31987e1de3a9") == "features:v6"
 
 
 def test_an_unknown_version_is_refused() -> None:

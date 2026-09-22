@@ -28,9 +28,9 @@ public sealed class AdvanceTests
     public void A_board_advanced_through_every_step_of_a_match_lands_where_the_match_does()
     {
         var match = Table.Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.Guard)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.Slam)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Three, Arena.Guard)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Three, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         PlayCombat(match, new()
         {
