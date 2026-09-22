@@ -10,17 +10,53 @@ namespace DownfallArena.Domain.Tests.Matches.Rules.Planning;
 
 public sealed class EvolutionRulesTests
 {
+    private static readonly TierId Unknown = TierId.Parse("tier:nobody:v1");
+
     [Fact]
-    public void A_valid_choice_targets_an_own_living_creature_with_an_unlockable_spell_and_a_pick_left()
+    public void A_valid_choice_targets_an_own_living_creature_with_an_available_package_and_a_pick_left()
     {
         var creatures = Arena.Snapshots(Arena.FourCreatures());
         var round = Arena.RoundAt(RoundSubPhase.Evolution);
 
-        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Guard), creatures, round).IsSuccess.ShouldBeTrue();
-        Validate(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(9), Arena.Guard), creatures, round).Error.ShouldBe(PlanningErrors.UnknownCreature);
-        Validate(PlayerSlot.Player2, new EvolutionChoice(Arena.Knight, Arena.Guard), creatures, round).Error.ShouldBe(PlanningErrors.NotYourCreature);
-        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Strike), creatures, round).Error.ShouldBe(PlanningErrors.SpellAlreadyKnown);
-        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Slam), creatures, round).Error.ShouldBe(PlanningErrors.SpellNotUnlockable);
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), creatures, round).IsSuccess.ShouldBeTrue();
+        Validate(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(9), Arena.GuardPack), creatures, round).Error.ShouldBe(PlanningErrors.UnknownCreature);
+        Validate(PlayerSlot.Player2, new EvolutionChoice(Arena.Knight, Arena.GuardPack), creatures, round).Error.ShouldBe(PlanningErrors.NotYourCreature);
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Unknown), creatures, round).Error.ShouldBe(PlanningErrors.UnknownTier);
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.SlamPack), creatures, round).Error.ShouldBe(PlanningErrors.TierNotAvailable);
+    }
+
+    /// <summary>
+    /// The package is what blocks a repeat, not the spells it teaches: a creature that knows every spell of a
+    /// package it never bought may still buy it, and one that owns it may not buy it again (ADR 0056).
+    /// </summary>
+    [Fact]
+    public void A_package_already_owned_is_refused_and_knowing_its_spells_is_not_owning_it()
+    {
+        var living = Arena.FourCreatures();
+        var round = Arena.RoundAt(RoundSubPhase.Evolution);
+
+        living[0].Learn(Arena.Guard);
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), Arena.Snapshots(living), round).IsSuccess.ShouldBeTrue();
+
+        living[0].BuyTier(Arena.Resources.GetTier(Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), Arena.Snapshots(living), round).Error.ShouldBe(PlanningErrors.TierAlreadyOwned);
+    }
+
+    /// <summary>
+    /// The prerequisite is owned by the creature, not by the team: the Slam package opens for the creature
+    /// that bought Guard and for no other.
+    /// </summary>
+    [Fact]
+    public void A_package_opens_only_for_the_creature_that_owns_its_prerequisite()
+    {
+        var living = Arena.FourCreatures();
+        var round = Arena.RoundAt(RoundSubPhase.Evolution);
+        living[0].BuyTier(Arena.Resources.GetTier(Arena.GuardPack));
+
+        var creatures = Arena.Snapshots(living);
+
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.SlamPack), creatures, round).IsSuccess.ShouldBeTrue();
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Archer, Arena.SlamPack), creatures, round).Error.ShouldBe(PlanningErrors.TierNotAvailable);
     }
 
     [Fact]
@@ -30,23 +66,55 @@ public sealed class EvolutionRulesTests
         living[0].TakeDamage(99);
         var round = Arena.RoundAt(RoundSubPhase.Evolution);
 
-        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Guard), Arena.Snapshots(living), round).Error.ShouldBe(PlanningErrors.CreatureDead);
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), Arena.Snapshots(living), round).Error.ShouldBe(PlanningErrors.CreatureDead);
     }
 
     [Fact]
     public void Picks_are_limited_by_the_rule_set()
     {
-        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var living = Arena.FourCreatures();
+        var creatures = Arena.Snapshots(living);
         var round = Arena.RoundAt(RoundSubPhase.Evolution);
-        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Guard));
-        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Archer, Arena.Guard));
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack));
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Archer, Arena.GuardPack));
 
-        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Slam), creatures, round).Error.ShouldBe(PlanningErrors.NoPicksLeft);
-        Validate(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, Arena.Guard), creatures, round).IsSuccess.ShouldBeTrue();
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.SlamPack), creatures, round).Error.ShouldBe(PlanningErrors.NoPicksLeft);
+        Validate(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, Arena.GuardPack), creatures, round).IsSuccess.ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A round the schedule gives no opportunity answers the same way as a round whose picks are spent, and
+    /// the phase is complete the moment it opens: nobody is asked for an input they do not have (ADR 0056).
+    /// </summary>
+    [Fact]
+    public void A_round_the_schedule_skips_offers_no_pick_at_all()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var second = Arena.RoundAt(RoundSubPhase.Evolution, number: 2);
+
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), creatures, second).Error.ShouldBe(PlanningErrors.NoPicksLeft);
+        EvolutionRules.Evaluate(creatures, second, Arena.Resources, RuleSet.Default).ShouldBe(new EvolutionGateResult(true, 0, 0));
+
+        var third = Arena.RoundAt(RoundSubPhase.Evolution, number: 3);
+
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), creatures, third).IsSuccess.ShouldBeTrue();
+        EvolutionRules.Evaluate(creatures, third, Arena.Resources, RuleSet.Default).CanAdvance.ShouldBeFalse();
+    }
+
+    /// <summary>The schedule is the rule set's, so a rule set that offers every round is answered that way.</summary>
+    [Fact]
+    public void A_rule_set_with_an_interval_of_one_offers_every_round()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var every = RuleSet.Create(3, 2, 2, 30, 2.0, firstEvolutionRound: 1, evolutionInterval: 1);
+        var second = Arena.RoundAt(RoundSubPhase.Evolution, number: 2);
+
+        EvolutionRules.ValidateChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), creatures, second, Arena.Resources, every)
+            .IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
-    public void The_gate_counts_remaining_picks_capped_by_what_can_be_unlocked()
+    public void The_gate_counts_remaining_picks_capped_by_what_can_be_bought()
     {
         var living = Arena.FourCreatures();
         var round = Arena.RoundAt(RoundSubPhase.Evolution);
@@ -56,17 +124,17 @@ public sealed class EvolutionRulesTests
         fresh.RemainingPicksOf(PlayerSlot.Player1).ShouldBe(2);
         fresh.RemainingPicksOf(PlayerSlot.Player2).ShouldBe(2);
 
-        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Guard));
-        living[0].UnlockSpell(Arena.SpellOf(Arena.Guard));
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack));
+        living[0].BuyTier(Arena.Resources.GetTier(Arena.GuardPack));
         living[1].TakeDamage(99);
 
         var afterOnePick = EvolutionRules.Evaluate(Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default);
         afterOnePick.Player1RemainingPicks.ShouldBe(1);
 
-        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Slam));
-        living[0].UnlockSpell(Arena.SpellOf(Arena.Slam));
-        round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, Arena.Guard));
-        round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Wraith, Arena.Guard));
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.SlamPack));
+        living[0].BuyTier(Arena.Resources.GetTier(Arena.SlamPack));
+        round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, Arena.GuardPack));
+        round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Wraith, Arena.GuardPack));
 
         var done = EvolutionRules.Evaluate(Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default);
         done.CanAdvance.ShouldBeTrue();
@@ -74,13 +142,13 @@ public sealed class EvolutionRulesTests
     }
 
     [Fact]
-    public void The_gate_advances_when_nothing_is_left_to_unlock_even_with_picks_left()
+    public void The_gate_advances_when_nothing_is_left_to_buy_even_with_picks_left()
     {
         var living = Arena.FourCreatures();
         foreach (var creature in living)
         {
-            creature.UnlockSpell(Arena.SpellOf(Arena.Guard));
-            creature.UnlockSpell(Arena.SpellOf(Arena.Slam));
+            creature.BuyTier(Arena.Resources.GetTier(Arena.GuardPack));
+            creature.BuyTier(Arena.Resources.GetTier(Arena.SlamPack));
         }
 
         var gate = EvolutionRules.Evaluate(Arena.Snapshots(living), Arena.RoundAt(RoundSubPhase.Evolution), Arena.Resources, RuleSet.Default);
@@ -95,7 +163,7 @@ public sealed class EvolutionRulesTests
         var round = Arena.RoundAt(RoundSubPhase.Evolution);
         round.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
 
-        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.Guard), creatures, round).Error.ShouldBe(PlanningErrors.NoPicksLeft);
+        Validate(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack), creatures, round).Error.ShouldBe(PlanningErrors.NoPicksLeft);
         var gate = EvolutionRules.Evaluate(creatures, round, Arena.Resources, RuleSet.Default);
         gate.ShouldBe(new EvolutionGateResult(false, 0, 2));
 

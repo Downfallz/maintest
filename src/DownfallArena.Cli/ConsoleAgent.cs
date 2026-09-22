@@ -18,8 +18,8 @@ internal sealed class ConsoleAgent(TextReader input, TextWriter output) : IPlaye
 
         ShowBoard(board);
         output.WriteLine($"Evolution: {options.RemainingPicks} pick(s) left.");
-        List<EvolutionChoice> choices = [.. options.Creatures.SelectMany(creature => creature.UnlockableSpells.Select(spell => new EvolutionChoice(creature.Creature, spell)))];
-        var picked = Pick("Unlock", [.. choices.Select(choice => $"creature {choice.Creature}: {choice.Spell.Value}")], allowNone: "pass");
+        List<EvolutionChoice> choices = [.. options.Creatures.SelectMany(creature => creature.AvailableTiers.Select(tier => new EvolutionChoice(creature.Creature, tier)))];
+        var picked = Pick("Buy", [.. choices.Select(choice => $"creature {choice.Creature}: {choice.Tier.Value}")], allowNone: "pass");
         return picked is { } index ? EvolutionDecision.Unlock(choices[index]) : EvolutionDecision.Pass;
     }
 

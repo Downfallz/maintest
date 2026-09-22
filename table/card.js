@@ -1,7 +1,7 @@
 // A card, as the page draws it.
 //
-// Every word comes from the card the host served: what a spell does, who it hits, how often it crits, what it
-// costs and what gates it are all computed by the catalogue projection, in the same words the printed deck uses
+// Every word comes from the card the host served: what a spell does, who it hits, how often it crits and what
+// it costs are all computed by the catalogue projection, in the same words the printed deck uses
 // (docs/tabletop/components.md §2.1). That is what lets a tuning pass be a rebuild and a restart rather than a
 // change to this page -- and it only holds while nothing here defaults. A field a card does not carry is a line
 // the card does not have, never a blank to fill in.
@@ -16,23 +16,25 @@ export function cardCost(card) {
   return Number.isInteger(card?.cost) ? String(card.cost) : '';
 }
 
-// The class, and how far into the tree the card sits. The tier is a number the host computed over the whole
-// gate graph: the page says "Tier 3" and has no idea what is behind it.
+// The class the spell belongs to. A depth into the talent tree used to print beside it; it does not any more,
+// because a package's prerequisites are what a creature climbs and the tree gates nothing (ADR 0056).
 export function cardHead(card) {
-  const tier = Number.isInteger(card?.tier) && card.tier > 0 ? `Tier ${card.tier}` : '';
-  return [card?.creatureClass, tier].filter(Boolean).join(' · ');
+  return card?.creatureClass ?? '';
 }
 
 // The body of the card, in the order the printed one reads: who it hits, what it does to them, what it does to
-// the caster, how often it crits, what the unlock buys, and what has to be known first.
+// the caster, and how often it crits.
+//
+// What it takes to get the spell is not on it. A spell is acquired by buying the package that teaches it, so
+// the requirement and the initiative it buys belong to that package's card and are printed there once, whole.
+// Repeating a per-spell gate and a per-spell unlock bonus here would print two rules the engine stopped
+// applying, which a table reads as the rules (ADR 0056).
 export function cardLines(card) {
   return [
     card?.targeting,
     ...(card?.effects ?? []),
     ...(card?.casterEffects ?? []),
     criticalLine(card),
-    unlockLine(card),
-    requiresLine(card),
   ].filter(Boolean);
 }
 
@@ -41,16 +43,6 @@ export function cardLines(card) {
 export function criticalLine(card) {
   if (!card?.critical) return '';
   return card.criticalThreshold ? `Crit ${card.critical} · d20 ${card.criticalThreshold}+` : `Crit ${card.critical}`;
-}
-
-// Zero is a bonus and is printed, exactly as a zero cost is: three spells of the shipped catalogue buy no
-// initiative at their unlock, and a card that stayed silent about it would read as a card missing a line.
-function unlockLine(card) {
-  return Number.isInteger(card?.initiative) ? `Unlock: +${card.initiative} initiative` : '';
-}
-
-function requiresLine(card) {
-  return card?.requires ? `Requires: ${card.requires}` : '';
 }
 
 // The catalogue as a lookup, so a spell id on a decision finds its card. A spell the catalogue does not carry

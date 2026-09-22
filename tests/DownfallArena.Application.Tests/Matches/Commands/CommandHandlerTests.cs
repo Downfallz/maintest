@@ -52,7 +52,7 @@ public sealed class CommandHandlerTests
         var store = new MatchStore();
         var match = store.Started();
 
-        (await new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(new SubmitEvolutionChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Guard), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(new SubmitEvolutionChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.GuardPack), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await new SubmitSpeedChoiceHandler(store.Workflow).HandleAsync(new SubmitSpeedChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), Speed.Quick), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();

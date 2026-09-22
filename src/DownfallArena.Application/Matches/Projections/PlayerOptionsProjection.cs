@@ -53,8 +53,8 @@ public static class PlayerOptionsProjection
 
         var creatures = snapshots
             .Where(creature => creature.Owner == slot && creature.IsAlive)
-            .Select(creature => new EvolutionOption(creature.Id, TalentUnlocks.UnlockableSpells(creature, resources.GetTalentTree(creature.TalentTree))))
-            .Where(option => option.UnlockableSpells.Count > 0)
+            .Select(creature => new EvolutionOption(creature.Id, TierEligibility.AvailableTiers(creature, resources)))
+            .Where(option => option.AvailableTiers.Count > 0)
             .ToList();
 
         return new PlayerOptions

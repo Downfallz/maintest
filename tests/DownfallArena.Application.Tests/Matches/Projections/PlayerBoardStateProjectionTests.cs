@@ -30,7 +30,7 @@ public sealed class PlayerBoardStateProjectionTests
     public void Each_player_sees_their_own_choices_and_intents_and_the_public_timeline()
     {
         var match = new MatchStore().Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Guard));
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack));
         MatchStore.PassEvolution(match);
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(1), Speed.Quick));
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(2), Speed.Standard));
@@ -46,7 +46,7 @@ public sealed class PlayerBoardStateProjectionTests
         player1.SubPhase.ShouldBe(RoundSubPhase.IntentSelection);
         player1.Allies.Select(creature => creature.Id).ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
         player1.Enemies.Select(creature => creature.Id).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
-        player1.EvolutionChoices.ShouldBe([new EvolutionChoice(CreatureId.From(1), TestContent.Guard)]);
+        player1.EvolutionChoices.ShouldBe([new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)]);
         player1.HasPassedEvolution.ShouldBeTrue();
         player1.SpeedChoices.Select(choice => choice.Creature).ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
         player1.Intents.ShouldBe([new CombatIntent(CreatureId.From(1), TestContent.Strike)]);

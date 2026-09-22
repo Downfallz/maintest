@@ -1,6 +1,5 @@
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches.Creatures;
-using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 
 namespace DownfallArena.Application.Learning;
@@ -9,7 +8,7 @@ namespace DownfallArena.Application.Learning;
 /// Builds the observation of a player's board under a feature schema. Pure and deterministic: the same board
 /// gives the same vector, and the two players' vectors mirror each other.
 /// </summary>
-public sealed class ObservationBuilder(FeatureSchema schema, IGameResources resources)
+public sealed class ObservationBuilder(FeatureSchema schema)
 {
     /// <summary>The "remaining rounds" value of a permanent condition.</summary>
     public const float PermanentCondition = -1f;
@@ -58,7 +57,7 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
         WriteConditions(creature, features, conditions);
         var spells = conditions + (2 * FeatureSchema.ConditionKinds.Count);
         WriteSpells(creature, features, spells);
-        WriteNodes(creature, features, spells + schema.Spells.Count);
+        WriteTiers(creature, features, spells + schema.Spells.Count);
     }
 
     private static void WriteConditions(CreatureSnapshot creature, float[] features, int offset)
@@ -80,15 +79,14 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
         }
     }
 
-    /// <summary>A node counts as unlocked once every spell it offers is known.</summary>
-    private void WriteNodes(CreatureSnapshot creature, float[] features, int offset)
+    /// <summary>
+    /// One bit per package the creature bought. Read off the purchase rather than guessed from the spells: a
+    /// creature can know every spell of a package it never bought, and the prerequisite rules are about the
+    /// purchase (ADR 0056).
+    /// </summary>
+    private void WriteTiers(CreatureSnapshot creature, float[] features, int offset)
     {
-        var tree = resources.GetTalentTree(creature.TalentTree);
-        var unlocked = tree.Nodes
-            .Where(node => node.Spells.Count > 0 && node.Spells.All(spell => creature.KnowsSpell(spell.Id)))
-            .Select(node => schema.TalentNodeIndex(FeatureSchema.NodeKey(tree.Id, node.Code)))
-            .Where(index => index >= 0);
-        foreach (var index in unlocked)
+        foreach (var index in creature.AcquiredTiers.Select(schema.TierIndex).Where(index => index >= 0))
         {
             features[offset + index] = 1f;
         }

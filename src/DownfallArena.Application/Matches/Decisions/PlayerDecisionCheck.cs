@@ -48,9 +48,9 @@ public static class PlayerDecisionCheck
             return Result.Failure(DecisionErrors.CreatureNotOffered);
         }
 
-        return offered.UnlockableSpells.Contains(decision.Spell)
+        return decision.Tier is { } tier && offered.AvailableTiers.Contains(tier)
             ? Result.Success()
-            : Result.Failure(DecisionErrors.SpellNotOffered);
+            : Result.Failure(DecisionErrors.TierNotOffered);
     }
 
     private static Result SpeedChoice(SpeedOptions options, PlayerDecision decision)

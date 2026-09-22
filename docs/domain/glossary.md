@@ -10,7 +10,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Match | A complete game between two Players, played as a sequence of Rounds until the Win condition is met. The aggregate root of the Matches context. | decided |
 | Player | A participant in a Match. Controls one Team. Occupies a Player slot (`Player1`, `Player2`). | decided |
 | Team | The set of Creatures a Player commands during a Match. Defeated when all its Creatures are dead. | decided |
-| Rule set | The tunable parameters of a Match: team size, evolution picks per round, energy gain per round, round cap, damage and crit formulas. | decided |
+| Rule set | The tunable parameters of a Match: team size, evolution picks per opportunity, the first evolution Round and the interval between opportunities, energy gain per round, round cap, damage and crit formulas. It answers the schedule for everything that needs it, so no client works out which Rounds offer a pick (ADR 0056). | decided |
 | Win condition | The match ends when a Team is defeated at the end of a round, or when the round cap is reached (ADR 0011). | decided |
 | Match outcome | How a Match ended: the winning Player slot, or a draw, and the reason (`Elimination`, `RoundCap`). | decided |
 | Match state | Where a Match is in its life: `WaitingForPlayers`, `InProgress`, `Ended`. | decided |
@@ -21,14 +21,14 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 
 | Term | Definition | Status |
 | --- | --- | --- |
-| Creature | A combat unit on a Team, instantiated from a Creature definition, with Health, Energy, Defense, Initiative, Critical chance, known Spells, and active Conditions. It carries a Base initiative that unlocks raise and a Current initiative that debuffs lower. | decided |
+| Creature | A combat unit on a Team, instantiated from a Creature definition, with Health, Energy, Defense, Initiative, Critical chance, known Spells, the Tiers it has bought, and active Conditions. It carries a Base initiative that purchases raise and a Current initiative that debuffs lower. | decided |
 | Creature definition | Static content describing a kind of Creature (base stats, starting Spells, Talent tree). Loaded from Game resources, never created during play. | decided |
 | Stat | A non-negative value object on a Creature: Health, Energy, Defense, Initiative. Critical chance is a probability in [0, 1]. | decided |
 | Creature stats | The stat block of a Creature: Health, Energy, Defense, Initiative, Critical chance. A Creature definition carries the base block. | decided |
 | Spell stats | The numbers of a Spell: Spell initiative, energy cost, Critical chance bonus. | decided |
 | Critical chance bonus | What a Spell adds to its caster's own Critical chance before the roll, clamped into [0, 1]. A Spell at zero does not mean a cast that never crits: it means the Spell moves nothing. One roll decides the cast and multiplies what it puts on a target's health now -- Damage and a direct Heal (ADR 0033) -- never a lasting Effect, a Caster effect, or energy. | decided |
-| Spell initiative | What a Spell adds to a Creature's Base initiative, for the rest of the Match, when that Creature unlocks it (ADR 0017). It is paid once at the unlock, not at each cast, and a Spell the Creature already knows or starts with adds nothing. | decided |
-| Base initiative | A Creature's own Initiative before any Condition: its Creature definition's, raised by the Spell initiative of everything it has unlocked this Match. It only ever grows. | decided |
+| Spell initiative | The per-Spell initiative bonus of the progression that came before Tiers (ADR 0017). The game no longer reads it: a purchase pays the Tier's bonus instead (ADR 0056), and the field survives in the content as what the Tier bonuses were derived from, until the content migration removes it. | inherited from legacy |
+| Base initiative | A Creature's own Initiative before any Condition: its Creature definition's, raised by the bonus of every Tier it has bought this Match. It only ever grows. | decided |
 | Current initiative | The Base initiative plus the Creature's active initiative buffs and less its debuffs, floored at zero. This is what the Combat timeline orders on. | decided |
 | Spell | An action a Creature can perform in Combat: type, class, Spell initiative, energy cost, Critical chance bonus, targeting spec, and effects. The catalogue is [spells.md](spells.md). | decided |
 | Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012, extended by ADR 0019, ADR 0020, ADR 0035 and ADR 0036): instant `Damage`, `Heal`, `EnergyGain`, `EnergyDrain`; lasting `Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`, `DefenseDebuff`, `InitiativeBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
@@ -60,7 +60,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Progression gate | A pure domain service that says whether the current Sub-phase is complete and, if not, what is missing (which Creatures, how many picks). Shared by the engine, the UI, and bots. | decided |
 | Phase driver | The loop inside the Match that runs each automatic step or asks the Progression gate, advances the Sub-phase, and raises an event, until the Round waits on a Player or the Match ends. | decided |
 | Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built. | decided |
-| Evolution | A Planning decision where a Player unlocks a Spell for a Creature from its Talent tree, within the picks allowed by the Rule set. The unlock also raises the Creature's Initiative by the Spell initiative (ADR 0017). | decided |
+| Evolution | A Planning decision where a Player buys a Tier for a Creature, within the picks the Rule set's schedule gives that Round. The purchase teaches every Spell of the package at once and raises the Creature's Base initiative by the package's bonus, once (ADR 0056). The two picks of an opportunity resolve in sequence, so the second sees what the first bought. | decided |
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
 | Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
@@ -122,7 +122,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Weight search | Tuning the Scoring weights of the Heuristic agent by evaluating candidate weights files with the engine on the Benchmark seeds (cross-entropy method). | decided |
 | Balance knob | One number of one Spell a balance pass may move, with its bounds and its step, declared in `data/balance/knobs.json` as a JSON pointer into the Spell's own document. What is not declared is the Spell's identity and does not move (ADR 0021). | decided |
 | Balance objective | What balanced means for a content set, written beside the Balance knobs: bands over the Iteration report's metrics, each with a scale and a weight. A candidate scores the sum of its squared, scaled distances outside them; zero is on target. | decided |
-| Tier | How deep a Spell sits: 0 for a starting Spell or a root node of the Talent tree, one more per node below. The Spells of one Tier are offered together, so they are the set a balance pass compares against each other. | decided |
+| Tier | A named package of Spells one evolution pick buys, with a level (1 opens a family, 3 closes one), the Tiers it requires, and one initiative bonus. Prerequisites are the only rule that decides what a Creature may buy, and a Tier must require one exactly a level below it (ADR 0056). | decided |
+| Spell depth | How deep a Spell sits in the Talent tree: 0 for a starting Spell or a root node, one more per node below, raised by what its prerequisites name (ADR 0034). It is what the content scorer still calls a tier, and it is not the Tier a pick buys -- the tuner moves to packages in its own stage. | inherited from legacy |
 | Content tuning | Searching the Balance knobs for a catalogue closer to the Balance objective, every candidate built by the data builder and played by the engine on the Benchmark seeds. The content's counterpart of Weight search (ADR 0021). | decided |
 | Strict dominance | A Spell at least as good as another on every axis a match reads — targeting, cost, Spell initiative, critical chance, effects — and better on one, where the two are offered at the same depth of the Talent tree or the better one is shallower. A deeper Spell outclassing a shallower one is progression, not dominance: the picks and prerequisites are what paid for it. | decided |
 | Behaviour cloning | Training a Policy to reproduce the actions of a recorded Dataset: a classifier from Observation to action key. | decided |

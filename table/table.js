@@ -52,7 +52,7 @@ function start(seats) {
     acknowledged: null, announced: null, announcing: null,
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
-    cards: new Map(), catalogue: null, tab: 'board', feeds: new Map(),
+    cards: new Map(), packages: new Map(), catalogue: null, tab: 'board', feeds: new Map(),
   };
   load(state);
   element('pass-ready').addEventListener('click', () => {
@@ -151,6 +151,7 @@ async function load(state) {
     return; // The seat poll reports connection failures; a later poll retries the catalogue.
   }
   state.cards = new Map((state.catalogue?.cards ?? []).map(card => [card.id, card]));
+  state.packages = new Map((state.catalogue?.packages ?? []).map(face => [face.id, face]));
   element('rules').textContent = ruleLine(state.catalogue);
   renderShape(state.catalogue?.round);
   redraw(state);
@@ -181,7 +182,11 @@ function renderShape(round) {
 function ruleLine(catalogue) {
   const rules = catalogue?.rules;
   if (!rules) return '';
-  return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerRound} picks · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
+  // The first round is printed beside the interval, not folded into it: rounds 1, 3, 5 and rounds 2, 4, 6 are
+  // the same interval and a different game, and this line exists to tell two games apart at a glance.
+  const every = rules.evolutionInterval === 1 ? 'every round' : `every ${rules.evolutionInterval} rounds`;
+  const cadence = `${every} from round ${rules.firstEvolutionRound}`;
+  return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerOpportunity} picks ${cadence} · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
 }
 
 // Only one poll can be in flight. An old response must never replace a newer decision.
@@ -837,7 +842,7 @@ function renderDecision(state, current) {
 
 function titleOf(state, view) {
   switch (view.waitingFor) {
-    case 'Evolution': return `Unlock a spell · ${view.options.evolution?.remainingPicks ?? 0} pick(s) left`;
+    case 'Evolution': return `Buy a package · ${view.options.evolution?.remainingPicks ?? 0} pick(s) left`;
     case 'Speed': return `Speed of creature ${view.waitingCreature}`;
     case 'Intent': return `What does creature ${view.waitingCreature} do?`;
     case 'Target': {
@@ -870,7 +875,7 @@ function buttonsFor(state, current) {
 }
 
 
-// Only one creature's unlocks occupy the sheet at a time; every server-offered creature stays reachable.
+// Only one creature's packages occupy the sheet at a time; every server-offered creature stays reachable.
 function evolutionButtons(state, current) {
   const creatures = current.view.options.evolution?.creatures ?? [];
   const selected = creatures.find(one => one.creature === state.evolving) ?? creatures[0];
@@ -889,15 +894,49 @@ function evolutionButtons(state, current) {
   }
   const cards = document.createElement('div');
   cards.className = 'choice-cards';
-  for (const spell of selected?.unlockableSpells ?? []) {
-    cards.append(card(state, spell, '', () => submit(state, current, { kind: 'Evolution', creature: selected.creature, spell })));
+  for (const tier of selected?.availableTiers ?? []) {
+    cards.append(packageCard(state, tier, () => submit(state, current, { kind: 'Evolution', creature: selected.creature, tier })));
   }
   const hint = document.createElement('p');
   hint.className = 'choice-help';
-  hint.textContent = cards.children.length ? 'Choose a creature, then tap a spell to unlock it.' : 'No spells to unlock for this creature. Choose another creature or pass.';
+  hint.textContent = cards.children.length ? 'Choose a creature, then tap a package to buy it whole.' : 'No package left for this creature. Choose another creature or pass.';
   const pass = button('Pass this pick', () => submit(state, current, { kind: 'Evolution', pass: true }));
   pass.className = 'secondary';
   return [picker, hint, cards, pass];
+}
+
+// One package as a tappable card. A pick buys the whole thing, so the card names the whole thing: what it is,
+// how deep it sits, the initiative it is worth for the rest of the match, and every spell it teaches. A player
+// choosing between packages on the spell names alone would be choosing on a third of what they are buying.
+function packageCard(state, tier, onClick) {
+  const face = state.packages.get(tier);
+  if (!face) {
+    return button(tier, onClick);
+  }
+
+  const choice = document.createElement('button');
+  choice.type = 'button';
+  choice.className = 'card';
+  choice.dataset.focus = `package-${tier}`;
+  choice.addEventListener('click', onClick);
+
+  const head = document.createElement('div');
+  head.className = 'card-head';
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  title.textContent = face.name;
+  const meta = document.createElement('span');
+  meta.className = 'card-meta';
+  meta.textContent = [`tier ${face.level}`, face.initiativeBonus > 0 ? `+${face.initiativeBonus} initiative` : 'no initiative'].join(' · ');
+  title.append(meta);
+  head.append(title);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  body.textContent = face.spells.map(spell => cardTitle(state.cards.get(spell)) || spell).join(' · ');
+
+  choice.append(head, body);
+  return choice;
 }
 
 // An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most

@@ -34,6 +34,12 @@ public sealed record PlayerBoardState
 
     public bool HasPassedEvolution { get; init; }
 
+    /// <summary>
+    /// The next round that offers an evolution opportunity, this one included. Served rather than worked out
+    /// by the client, which would be a second copy of the schedule (ADR 0056).
+    /// </summary>
+    public int? NextEvolutionRound { get; init; }
+
     /// <summary>The player's own speed choices this round.</summary>
     public IReadOnlyList<SpeedChoice> SpeedChoices { get; init; } = [];
 

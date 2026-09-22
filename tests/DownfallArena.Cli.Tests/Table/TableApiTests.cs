@@ -242,7 +242,7 @@ public sealed partial class TableApiTests : IDisposable
     {
         var table = await Seated();
         var same = Api(table, Rules);
-        var other = Api(table, RuleSet.Create(Rules.TeamSize, Rules.EnergyPerRound, Rules.EvolutionPicksPerRound, Rules.RoundCap + 6, Rules.CriticalMultiplier));
+        var other = Api(table, RuleSet.Create(Rules.TeamSize, Rules.EnergyPerRound, Rules.EvolutionPicksPerOpportunity, Rules.RoundCap + 6, Rules.CriticalMultiplier));
 
         var first = Tag(await same.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
         var second = Tag(await other.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));

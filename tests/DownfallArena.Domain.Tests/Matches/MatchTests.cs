@@ -77,7 +77,7 @@ public sealed class MatchTests
         var match = Table.Empty();
         var creature = CreatureId.From(1);
 
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(creature, Arena.Guard)).Error.ShouldBe(MatchErrors.NotInProgress);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(creature, Arena.GuardPack)).Error.ShouldBe(MatchErrors.NotInProgress);
         match.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(MatchErrors.NotInProgress);
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(creature, Speed.Quick)).Error.ShouldBe(MatchErrors.NotInProgress);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(creature, Arena.Strike)).Error.ShouldBe(MatchErrors.NotInProgress);
@@ -98,23 +98,23 @@ public sealed class MatchTests
 
         Table.PassEvolution(match);
 
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(creature, Arena.Guard)).Error.ShouldBe(RoundErrors.EvolutionNotOpen);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(creature, Arena.GuardPack)).Error.ShouldBe(RoundErrors.EvolutionNotOpen);
         match.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(RoundErrors.EvolutionNotOpen);
     }
 
     /// <summary>
-    /// Every Arena spell has a Spell initiative of 1, so one unlock buys one point. Creature 3 belongs to
-    /// Player2, who loses every tie, which is what makes the move up the timeline visible.
+    /// The Guard package is worth one point of initiative, so one purchase buys one point. Creature 3 belongs
+    /// to Player2, who loses every tie, which is what makes the move up the timeline visible.
     /// </summary>
     [Fact]
-    public void An_unlocked_spell_raises_the_creature_initiative_and_moves_it_up_the_timeline()
+    public void A_bought_package_raises_the_creature_initiative_and_moves_it_up_the_timeline()
     {
         var match = Table.Started();
         var ghoul = CreatureId.From(3);
 
         Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(5));
 
-        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(ghoul, Arena.Guard)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(ghoul, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
 
         Table.CreatureNumber(match, 3).BaseInitiative.ShouldBe(Initiative.Of(6));
         Table.CreatureNumber(match, 3).CurrentInitiative.ShouldBe(Initiative.Of(6));
@@ -130,28 +130,47 @@ public sealed class MatchTests
     }
 
     [Fact]
-    public void An_evolution_choice_unlocks_the_spell_and_the_sub_phase_ends_when_both_players_are_done()
+    public void An_evolution_choice_buys_the_package_and_the_sub_phase_ends_when_both_players_are_done()
     {
         var match = Table.Started();
         var knight = CreatureId.From(1);
 
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.Slam)).Error.ShouldBe(PlanningErrors.SpellNotUnlockable);
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.Guard)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.Guard)).Error.ShouldBe(PlanningErrors.SpellAlreadyKnown);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).Error.ShouldBe(PlanningErrors.TierNotAvailable);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).Error.ShouldBe(PlanningErrors.TierAlreadyOwned);
 
         Table.CreatureNumber(match, 1).KnowsSpell(Arena.Guard).ShouldBeTrue();
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeTrue();
         match.CurrentRound.ShouldNotBeNull().SubPhase.ShouldBe(RoundSubPhase.Evolution);
 
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(RoundErrors.EvolutionAlreadyPassed);
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(2), Arena.Guard)).Error.ShouldBe(PlanningErrors.NoPicksLeft);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(2), Arena.GuardPack)).Error.ShouldBe(PlanningErrors.NoPicksLeft);
         match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.Evolution);
 
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
 
         match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.Speed);
-        match.DomainEvents.OfType<EvolutionChoiceSubmitted>().Single().Choice.ShouldBe(new EvolutionChoice(knight, Arena.Guard));
+        match.DomainEvents.OfType<EvolutionChoiceSubmitted>().Single().Choice.ShouldBe(new EvolutionChoice(knight, Arena.GuardPack));
         match.DomainEvents.OfType<EvolutionPassed>().Select(passed => passed.Slot).ShouldBe([PlayerSlot.Player1, PlayerSlot.Player2]);
+    }
+
+    /// <summary>
+    /// The second pick of an opportunity sees what the first one bought, which is what makes the two picks
+    /// sequential rather than simultaneous (ADR 0056): a creature reaches the top of a line in one round.
+    /// </summary>
+    [Fact]
+    public void The_second_pick_of_a_round_sees_what_the_first_one_bought()
+    {
+        var match = Table.Started();
+        var knight = CreatureId.From(1);
+
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.SlamPack).ShouldBeTrue();
+        Table.CreatureNumber(match, 1).KnowsSpell(Arena.Slam).ShouldBeTrue();
+        Table.CreatureNumber(match, 1).BaseInitiative.ShouldBe(Initiative.Of(8));
     }
 
     [Fact]
@@ -222,7 +241,10 @@ public sealed class MatchTests
         match.Creatures.ShouldAllBe(creature => creature.Energy == Energy.Of(4));
         var round = match.CurrentRound.ShouldNotBeNull();
         round.Number.ShouldBe(2);
-        round.SubPhase.ShouldBe(RoundSubPhase.Evolution);
+
+        // Round 2 offers no evolution opportunity, so the sub-phase completes as it opens and the round is
+        // waiting on speeds instead (ADR 0056).
+        round.SubPhase.ShouldBe(RoundSubPhase.Speed);
         match.DomainEvents.OfType<CombatActionResolved>().Count().ShouldBe(4);
         match.DomainEvents.OfType<ConditionsExpired>().Single().Expired.ShouldBeEmpty();
         match.DomainEvents.OfType<RoundEnded>().Single().RoundId.ShouldBe(RoundId.First);

@@ -9,6 +9,12 @@ committed policy must not outlive the evidence for it. The format is in
 `docs/learning/training.md`; the Python side writes them (`train-clone`, `train-value`), the engine's policy
 agent reads them (L7).
 
+> **Every policy committed here is refused by the current engine.** They carry `features:v5`, and a pick buys
+> a package now: an evolution action's index is a tier index, and nothing tells one from a spell index by
+> shape, so the loader rejects the version instead of reading it (ADR 0056). They stay as the record of what
+> was trained and what it scored — not as agents this engine can play. The first policy trained under
+> `features:v6` replaces them.
+
 A policy lands here by a decision, never by a run finishing. The "Learning loop" workflow proposes one on a
 branch when `commit` is asked for and the policy scores at least `commit_above` against `Greedy` (0.5 is even
 with it), beats `Random` — an agent that cannot beat `Random` is not a model whatever the bar says — and,

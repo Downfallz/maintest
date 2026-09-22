@@ -18,14 +18,21 @@ public sealed class ContentAuditTests
     private static readonly SpellId Follow = SpellId.Parse("spell:follow:v1");
     private static readonly SpellId Lost = SpellId.Parse("spell:lost:v1");
 
+    /// <summary>
+    /// The shared test content reports one thing, deliberately: Jab carries Strike's numbers because a package
+    /// may not teach a spell every creature starts with (ADR 0056) and the scoring tests need a plain damage
+    /// spell that one can teach. The audit is right to call them indistinguishable -- that is what it is for --
+    /// so the finding is named here rather than hidden, and anything else the audit finds still fails.
+    /// </summary>
     [Fact]
-    public void Content_every_creature_can_reach_has_nothing_to_report()
+    public void Content_every_creature_can_reach_reports_only_the_deliberate_twin()
     {
         var report = ContentAudit.Of(TestContent.Resources, RuleSet.Default);
 
-        ItemFindings(report).ShouldBeEmpty();
+        ItemFindings(report).Select(finding => (finding.Code, finding.Subject))
+            .ShouldBe([("Spell.Indistinguishable", "spell:jab:v1")]);
         report.ContentVersion.ShouldBe(TestContent.Resources.Version);
-        report.Spells.ShouldBe(4);
+        report.Spells.ShouldBe(5);
         report.RoundCap.ShouldBe(RuleSet.Default.RoundCap);
     }
 
@@ -79,7 +86,7 @@ public sealed class ContentAuditTests
     [Fact]
     public void A_spell_costing_more_energy_than_a_whole_match_hands_out_is_uncastable()
     {
-        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerRound: 2, roundCap: 30, criticalMultiplier: 2.0);
+        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, roundCap: 30, criticalMultiplier: 2.0);
         var resources = GameResources.Create(
             "expensive",
             [Creature(Fighter, Tree, [Strike], energy: 0)],
@@ -102,7 +109,7 @@ public sealed class ContentAuditTests
     [Fact]
     public void A_spell_that_gives_energy_only_to_enemies_does_not_lift_its_casters_ceiling()
     {
-        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerRound: 2, roundCap: 30, criticalMultiplier: 2.0);
+        var rules = RuleSet.Create(teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, roundCap: 30, criticalMultiplier: 2.0);
         var resources = GameResources.Create(
             "enemy-only-energy",
             [Creature(Fighter, Tree, [Strike], energy: 0)],

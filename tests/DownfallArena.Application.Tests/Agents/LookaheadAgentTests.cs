@@ -51,7 +51,7 @@ public sealed class LookaheadAgentTests
         var weights = ScoringWeights.Default with { Stun = 0 };
         var board = FourAboutToKillTwo() with
         {
-            Allies = [FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2), KnownSpells = new HashSet<SpellId> { TestContent.Slam, TestContent.Strike } }, FourAboutToKillTwo().Allies[1]],
+            Allies = [(FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack), FourAboutToKillTwo().Allies[1]],
             Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
         };
         var option = new IntentOption(One, [TestContent.Slam, TestContent.Strike]);
@@ -68,7 +68,7 @@ public sealed class LookaheadAgentTests
     [Fact]
     public void Targets_are_bound_on_the_board_the_revealed_actions_leave()
     {
-        var four = Boards.Creature(4, PlayerSlot.Player2) with { Energy = Energy.Of(1), KnownSpells = new HashSet<SpellId> { TestContent.Strike, TestContent.Guard } };
+        var four = (Boards.Creature(4, PlayerSlot.Player2) with { Energy = Energy.Of(1) }).Bought(TestContent.GuardPack);
         // Four first on the board, so a reading that cannot tell the two apart takes it by order.
         var board = Boards.Board(PlayerSlot.Player1, [Boards.Creature(1, PlayerSlot.Player1)], [four, Boards.Creature(3, PlayerSlot.Player2)]) with
         {
@@ -92,7 +92,7 @@ public sealed class LookaheadAgentTests
     public void A_round_that_wins_the_match_outranks_any_score_whatever_the_weights()
     {
         var weights = ScoringWeights.Default with { Damage = 0.001, Kill = 0, Energy = 1000 };
-        var one = Boards.Creature(1, PlayerSlot.Player1) with { Energy = Energy.Of(2), KnownSpells = new HashSet<SpellId> { TestContent.Slam, TestContent.Strike } };
+        var one = (Boards.Creature(1, PlayerSlot.Player1) with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack);
         var board = Boards.Board(PlayerSlot.Player1, [one], [Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(2) }, Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(2) }]) with
         {
             RoundNumber = 1,
@@ -113,7 +113,7 @@ public sealed class LookaheadAgentTests
     {
         var heuristic = new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules);
         var board = FourAboutToKillTwo();
-        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard]), new EvolutionOption(Two, [TestContent.Guard])]);
+        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack]), new EvolutionOption(Two, [TestContent.GuardPack])]);
 
         Agent.DecideEvolution(board, evolution).Choice.ShouldBe(heuristic.DecideEvolution(board, evolution).Choice);
         Agent.DecideSpeed(board, One).ShouldBe(heuristic.DecideSpeed(board, One));
@@ -175,7 +175,7 @@ public sealed class LookaheadAgentTests
         var inner = Substitute.For<IPlayerAgent>();
         var agent = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: false, inner);
         var board = FourAboutToKillTwo();
-        var options = new EvolutionOptions(1, [new EvolutionOption(One, [TestContent.Guard])]);
+        var options = new EvolutionOptions(1, [new EvolutionOption(One, [TestContent.GuardPack])]);
 
         agent.DecideEvolution(board, options);
         agent.DecideSpeed(board, One);

@@ -75,12 +75,12 @@ public sealed class PolicyAgentTests
     public void Speed_and_evolution_follow_their_keys()
     {
         var board = Board(enemyHealth: 20);
-        var unlock = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard])]);
+        var unlock = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack])]);
 
         Agent(Policy(("speed:0:Quick", 1.0), ("speed:0:Standard", 0.0))).DecideSpeed(board, One).ShouldBe(Speed.Quick);
         Agent(Policy(("speed:0:Quick", 0.0), ("speed:0:Standard", 1.0))).DecideSpeed(board, One).ShouldBe(Speed.Standard);
-        Agent(Policy(("evolve:0:spell:guard:v1", 1.0), ("pass", 0.0))).DecideEvolution(board, unlock).Choice.ShouldBe(new EvolutionChoice(One, TestContent.Guard));
-        Agent(Policy(("evolve:0:spell:guard:v1", 0.0), ("pass", 1.0))).DecideEvolution(board, unlock).IsPass.ShouldBeTrue();
+        Agent(Policy(("evolve:0:tier:guard:v1", 1.0), ("pass", 0.0))).DecideEvolution(board, unlock).Choice.ShouldBe(new EvolutionChoice(One, TestContent.GuardPack));
+        Agent(Policy(("evolve:0:tier:guard:v1", 0.0), ("pass", 1.0))).DecideEvolution(board, unlock).IsPass.ShouldBeTrue();
         Agent(Policy(("pass", -1.0))).DecideEvolution(board, new EvolutionOptions(2, [])).IsPass.ShouldBeTrue("passing is the only candidate");
     }
 
@@ -89,7 +89,7 @@ public sealed class PolicyAgentTests
     {
         var source = Substitute.For<IPolicySource>();
         source.Load("good.json").Returns(Policy((RendIntent, 1.0)));
-        source.Load("other.json").Returns(Policy((RendIntent, 1.0)) with { SchemaId = "features:v5+000000000000" });
+        source.Load("other.json").Returns(Policy((RendIntent, 1.0)) with { SchemaId = "features:v6+000000000000" });
         source.Load("reordered.json").Returns(Policy((RendIntent, 1.0)) with { FeatureNames = [.. Schema.FeatureNames.Reverse()] });
         var factory = Handlers.Agents(source);
 
@@ -129,7 +129,7 @@ public sealed class PolicyAgentTests
         var policy = Policy((RendIntent, 1.0));
 
         Should.Throw<InvalidDataException>(() => (policy with { Kind = "tree" }).Validated()).Message.ShouldContain("clone, value");
-        Should.Throw<InvalidDataException>(() => (policy with { SchemaVersion = "features:v9", SchemaId = "features:v9+0123456789ab" }).Validated()).Message.ShouldContain("features:v5");
+        Should.Throw<InvalidDataException>(() => (policy with { SchemaVersion = "features:v9", SchemaId = "features:v9+0123456789ab" }).Validated()).Message.ShouldContain("features:v6");
         Should.Throw<InvalidDataException>(() => (policy with { SchemaId = "features:v1+0123456789ab" }).Validated());
         Should.Throw<InvalidDataException>(() => (policy with { ActionKeys = [RendIntent, RendIntent], Weights = Rows(Schema.Length, 2), Bias = [0.0, 0.0] }).Validated());
         Should.Throw<InvalidDataException>(() => (policy with { Bias = [0.0, 0.0] }).Validated());
@@ -260,7 +260,7 @@ public sealed class PolicyAgentTests
     }
 
     private static PolicyAgent Agent(PolicyFile policy) =>
-        new(policy.Validated(), new ObservationBuilder(Schema, TestContent.Resources), new ActionEncoder(Schema), new CandidateTerms(TestContent.Resources, Rules));
+        new(policy.Validated(), new ObservationBuilder(Schema), new ActionEncoder(Schema), new CandidateTerms(TestContent.Resources, Rules));
 
     /// <summary>A policy under the test schema: the given keys with their bias, every weight zero, no fallback score.</summary>
     private static PolicyFile Policy(params (string Key, double Bias)[] keys) => Policy(Schema, keys);

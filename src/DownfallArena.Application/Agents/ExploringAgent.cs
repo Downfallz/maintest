@@ -41,7 +41,7 @@ public sealed class ExploringAgent : IPlayerAgent
     /// <summary>The share of decisions taken at random rather than by the inner agent.</summary>
     public double Rate { get; }
 
-    /// <summary>Every unlock, then passing, which stays legal while an unlock is available.</summary>
+    /// <summary>Every purchase, then passing, which stays legal while a purchase is available.</summary>
     public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -50,11 +50,11 @@ public sealed class ExploringAgent : IPlayerAgent
             return _inner.DecideEvolution(board, options);
         }
 
-        var unlocks = options.Creatures
-            .SelectMany(creature => creature.UnlockableSpells.Select(spell => new EvolutionChoice(creature.Creature, spell)))
+        var purchases = options.Creatures
+            .SelectMany(creature => creature.AvailableTiers.Select(tier => new EvolutionChoice(creature.Creature, tier)))
             .ToList();
-        var index = _source.NextInt32(0, unlocks.Count + 1);
-        return index == unlocks.Count ? EvolutionDecision.Pass : EvolutionDecision.Unlock(unlocks[index]);
+        var index = _source.NextInt32(0, purchases.Count + 1);
+        return index == purchases.Count ? EvolutionDecision.Pass : EvolutionDecision.Unlock(purchases[index]);
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
