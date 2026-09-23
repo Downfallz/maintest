@@ -63,6 +63,25 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
+    /// ADR 0073: a bleed ignores defense, so against a target with defense 3 the three points a hit would
+    /// lose to it each round are priced at the damage price as well. Rend's hit of 1 (2 on a crit) is
+    /// absorbed whole, so both branches read the same: the bleed's 19 at 0.8, and 3 of them at 1.0 on top.
+    /// Against no defense the same bleed reads as it always did (the test above).
+    /// </summary>
+    [Fact]
+    public void A_bleed_on_a_defended_target_is_also_priced_as_the_damage_the_defense_would_block()
+    {
+        var board = Board(enemyHealth: 20, actorSpells: [TestContent.Strike, TestContent.Rend]);
+        board[1] = board[1] with { TotalDefense = Defense.Of(3) };
+
+        var terms = Scorer.ExpectedTerms(Action(One, TestContent.Rend, Three), board);
+
+        terms.Bleed.ShouldBe(19, 1e-9);
+        terms.Damage.ShouldBe(3, 1e-9);
+        Scorer.Expected(Action(One, TestContent.Rend, Three), board).ShouldBe((0.8 * 19) + 3, 1e-9);
+    }
+
+    /// <summary>
     /// An action that comes to nothing is worth nothing, and is not charged on top of that (ADR 0040). It
     /// still loses to anything that does something, which is what the weight was there for.
     /// </summary>

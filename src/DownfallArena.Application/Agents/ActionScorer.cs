@@ -346,7 +346,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         return effect switch
         {
             Stun => ScoreTerms.Zero with { Stun = sign * rounds },
-            Bleed bleed => ScoreTerms.Zero with { Bleed = sign * Math.Min(bleed.AmountPerRound * rounds, remainingHealth) },
+            Bleed bleed => BleedTerms(sign, Math.Min(bleed.AmountPerRound * rounds, remainingHealth), target.TotalDefense.Value * rounds),
             Regeneration regeneration => ScoreTerms.Zero with { Heal = -sign * Math.Min(regeneration.AmountPerRound * rounds, target.MaxHealth.Value - remainingHealth) },
             EnergyRegeneration energyRegeneration => ScoreTerms.Zero with { Energy = -sign * energyRegeneration.AmountPerRound * rounds },
             DefenseBuff => ScoreTerms.Zero,  // priced per target, with the rest of what the cast defends: see DefensiveTerms
@@ -364,6 +364,17 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             _ => ScoreTerms.Zero,
         };
     }
+
+    /// <summary>
+    /// A bleed at the bleed price, and, for the points a direct hit on the same target would lose to its
+    /// defense, at the damage price too: a bleed ignores defense, so against a target that has stacked it the
+    /// bleed is damage that gets through where a hit would not (ADR 0073). <paramref name="blocked"/> is the
+    /// target's total defense over the bleed's rounds, one hit a round's worth. Against a target with no
+    /// defense nothing is added and a bleed reads as it always has, so a board without defense scores as
+    /// before; as the defense rises, so does what a bleed is worth beside a hit.
+    /// </summary>
+    private static ScoreTerms BleedTerms(int sign, int points, int blocked) =>
+        ScoreTerms.Zero with { Bleed = sign * points, Damage = sign * Math.Min(points, blocked) };
 
     /// <summary>
     /// What a cast is worth for what it defends, priced once per creature it touches (ADR 0022): the damage

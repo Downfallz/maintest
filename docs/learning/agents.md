@@ -43,6 +43,7 @@ The score of one resolution, with the weights `w`:
 | `w.kill` per denied kill | a heal or a defense buff that takes its target from dying to this round's threat to surviving it (ADR 0022) | for an ally, against an enemy |
 | `w.stun` x rounds stunned | a Stun on a target still alive after the damage | for an enemy, against an ally |
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
+| `w.damage` x bleed the target's defense would have blocked | the same bleed points, up to the target's total defense x the bleed's rounds: what a hit a round would lose to that defense and the bleed does not (ADR 0073) | for an enemy, against an ally |
 | `w.heal` x expected regeneration | amount per round x rounds, capped at what the target is still missing after the hit | for an ally, against an enemy |
 | `w.defense` x damage prevented | a DefenseBuff, and only a DefenseBuff: amount x rounds x the hits the target is expected to face, its attackers spread over its living allies (ADR 0022) | for an ally, against an enemy |
 | `w.defense` x amount x rounds | a DefenseDebuff (a permanent condition counts three). A stand-in, not the reading above: it does not know what the debuff lets through, and it never reaches the threat term, so the bot cannot see that lowering a defense raises what the next hit takes (ADR 0035) | on an enemy counts for, on an ally against |
