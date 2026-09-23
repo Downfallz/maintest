@@ -410,15 +410,17 @@
     "spell:throwing_star": {
       "name": "Throwing Star",
       "class": "Scoundrel",
-      "intent": "One energy for a small hit. It used to be more than that: two points of Base initiative when it was unlocked, which is what made it the Scoundrel's tempo pick rather than its weak attack. A pick buys a package now and `tier:prowler:v1` pays that bonus once for both of its spells (ADR 0059), so what this entry describes is a cheap jab with nothing to distinguish it from `basic_attack` but a point of damage and its class.",
+      "intent": "The Prowler's second verb. Its packagemate `poison_slash` concentrates -- one target, hit now and bleeding after -- and this one spreads: the same activation, the same price, across two enemies. A thrown weapon reaching more than one thing it is thrown at is the one shape an opener can carry that the class does not already have, and it is what makes the pick a decision every round rather than a decision once. It used to be the tempo half of the package instead, on two points of Base initiative bought at unlock; the package pays that now and pays it whole (ADR 0059), which left the spell as a smaller copy of its sibling.",
       "keep": [
-        "One energy: it is the cheap attack the class is priced around",
-        "Open: what it is for. The tempo it used to buy belongs to its package now"
+        "Reach is the point: the day it hits one target it is `heavy_strike` with a class on it",
+        "Never more targets than `meteor`, which is what a Wizard climbs two levels for",
+        "Priced level with `poison_slash`: the choice is the shape of the damage, never what it costs"
       ],
-      "note": "`check-knobs` reports this spell as outclassed, and until ADR 0059 that finding was an artifact with a written-down defence: its box topped out at 3.00 a round against `lightning_bolt`'s 6.47 because `cast_value` prices a cast, while this spell's point was bought once and kept -- two points of Base initiative for the rest of the match, at 2.1 a point in the agents' own weights. That defence is spent. The bonus belonged to the spell and the spell no longer grants one, so the ceiling is now the whole truth about it and the finding is a finding. The play backs it: on content `d367db1c` the package it sits in split its casts **1813 to 140** toward `poison_slash` (#169), so the spell a pick used to be taken *for* is the 7 % half of what that pick buys. Deliberately not fixed here: giving it an identity is a content decision and this change only removes a stat. What the bounds can reach is a point of damage, which is `basic_attack` with a class on it.",
+      "note": "The pair it belongs to was the worst reading in the catalogue. On content `d367db1c` the package split its casts **1813 to 140** -- 93 % to `poison_slash` -- because the two spells did the same thing and one did more of it: identical damage per energy at 3.0, and `poison_slash` taking 6 off a target per activation against 3. Costing 1 was the only edge this spell had, and it is worth nothing here: of **123,592** recorded states where a creature knew it, **1.0 %** sat below 2 energy and 77 % sat at 6 or more. The activation is the scarce thing, not the energy. So the cost went level with its sibling and the reach became the difference, which is a difference the board decides and not the price list. What it must not become is the catalogue's cheap sweep: `meteor` is 3 energy for three targets at level 2, and this is 2 for two at level 1 -- dearer per target, shorter reach, and that ordering is the reason a Wizard still climbs. If a tuning pass ever makes this the better sweep, the finding is about `meteor`. Measured on the benchmark seeds, the split did not balance, it flipped: this spell went from **7 % to 85 %** of the pair's landed casts on `variety`, and one point less damage or one energy more each sends it back to about 10 %. Against a deterministic greedy a pair's usage is a step in its numbers, and the step sits between two integers, so `criticalChance` is here as the continuous lever to walk it with. Tuning it is still to do.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 }
       ]
     },
     "spell:parasite_jab": {
