@@ -46,6 +46,11 @@ Spells are keyed by their **unversioned alias** (`spell:pummel`), never by the v
 in the studio repoints the alias, and the entry follows the spell instead of going stale on the version it
 replaced.
 
+Packages are keyed the same way (`tier:prowler`), in their own `packages` section (ADR 0061). The alias map
+decides which version an entry means when it names one, which is what the studio writes when it cuts a
+package's next version; without an alias the id with its `:vN` cut off names it. Two enabled versions of one
+package and no alias is reported by `check-knobs` rather than guessed at.
+
 ## A knob
 
 ```json
@@ -78,6 +83,23 @@ Several entries say that a spell is currently half of itself: the caster-side ef
 energy debuffs, and the minions did not survive the port (`docs/domain/spells.md`). Those spells are marked
 as waiting on a rule, and the point of saying so here is that a search must not "fix" them by making the
 half that exists strong enough to compensate.
+
+## What a package entry carries
+
+The same fields as a spell's, without a class, and **one knob at most**: `/initiativeBonus`, what a purchase
+adds to the buyer's Base initiative for the rest of the match (ADR 0056). A package's level, prerequisites and
+spells are the progression itself, and `check-knobs` refuses a knob on any of them.
+
+Every enabled package needs an entry with an intent, as every enabled spell does; the studio seeds one when it
+creates a package and prunes it when it deletes one. The 21 bonuses are the sums `scripts/build-tiers.py`
+seeded from the per-spell numbers it replaced (ADR 0057), which is what each entry's intent says.
+
+**Do not run a tuning pass with these knobs yet.** They are live — moving `tier:prowler` from 3 to 5 moves 54
+of the 71 objective metrics — and that is the problem: the same move takes the objective from 285.77 to
+101.76, all of it from `mirror.player1WinShare` (243.00 to 41.07) while every variety term gets worse. That
+term reads the seat advantage between two identical greedy agents, a mirror that is degenerate under packages:
+equal initiative is broken by the seat, so Player 1 takes 400 of 400. Initiative is exactly the lever that
+reaches it, so a search would buy seat asymmetry rather than balance (ADR 0061). The mirror reading is next.
 
 ## The objective
 

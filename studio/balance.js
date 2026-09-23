@@ -29,6 +29,11 @@ const EPSILON = 1e-9;
 /** Ordinal, like `StringComparer.Ordinal` in the host and `sorted` in check-knobs. Never `localeCompare`. */
 const ordinal = (left, right) => (left < right ? -1 : Number(left > right));
 
+// A package's entry lives in its own section of the knobs file, next to the spells (ADR 0061). The prefix is
+// what tells the two apart, the way `load_knobs` tells them apart, so no caller has to say which it means.
+const PACKAGE_PREFIX = 'tier:';
+const sectionOf = alias => (text(alias).startsWith(PACKAGE_PREFIX) ? 'packages' : 'spells');
+
 const isRecord = value => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isNumber = value => typeof value === 'number' && Number.isFinite(value);
 const text = value => (typeof value === 'string' ? value : '');
@@ -88,6 +93,50 @@ export function readBalance(catalogue) {
 }
 
 /**
+ * The unversioned alias a package id answers to, the key its knobs entry sits under -- or `null` when the
+ * entry belongs to another version. The same rule `load_content` reads by: an alias in the map decides it,
+ * which is what the studio writes when it cuts a package's next version; without one the id with its `:vN`
+ * cut off names it, unless that name is an alias pointing at a *different* version, in which case this file
+ * is the superseded one and the entry follows the alias away from it.
+ */
+export function aliasOfPackage(packageId, aliases) {
+  const map = isRecord(aliases) ? aliases : {};
+  const id = text(packageId);
+  if (!id) return null;
+  const named = Object.keys(map).find(alias => map[alias] === id);
+  if (named) return named;
+  const unversioned = id.replace(/:v\d+$/, '');
+  return Object.hasOwn(map, unversioned) ? null : unversioned;
+}
+
+/**
+ * Every knobs entry deleting an item has to take with it, by the id it is saved under (ADR 0025). A spell
+ * owns one per alias pointing at it -- two aliases on one spell are two entries, and pruning one would leave
+ * the other naming nothing. A package is usually reached by no alias at all, so without one it owns the entry
+ * `aliasOfPackage` names it by. Anything else owns none.
+ *
+ * A package's entry can outlive it. After **Save as next version** the old file stays on disk while the alias
+ * points at the new one; delete the new one and the alias goes with it, which leaves the old version named by
+ * its id without the version -- the same key. `siblings`, the items of the same kind on disk, is how that is
+ * seen: an entry another version will be keyed by once this one's aliases are gone stays where it is.
+ */
+export function entryAliasesOf(itemId, aliases, siblings = []) {
+  const map = isRecord(aliases) ? aliases : {};
+  const id = text(itemId);
+  const isPackage = id.startsWith(PACKAGE_PREFIX);
+  if (!isPackage && !id.startsWith('spell:')) return [];
+  const pointing = Object.keys(map).filter(alias => map[alias] === id);
+  if (!isPackage) return pointing;
+  const owned = pointing.length ? pointing : [aliasOfPackage(id, map)].filter(Boolean);
+  const after = Object.fromEntries(Object.entries(map).filter(([, target]) => target !== id));
+  const inherited = new Set(list(siblings)
+    .map(sibling => text(sibling?.id))
+    .filter(other => other && other !== id)
+    .map(other => aliasOfPackage(other, after)));
+  return owned.filter(key => !inherited.has(key));
+}
+
+/**
  * The unversioned alias a spell id answers to, which is how the knobs file names it. The alias map is the
  * authority -- `spell:pummel` is only this spell's alias while it points here -- so the id with its `:vN` cut
  * off is a candidate to confirm, never an answer on its own.
@@ -101,9 +150,12 @@ export function aliasOfSpell(spellId, aliases) {
   return Object.keys(map).find(alias => map[alias] === id) ?? null;
 }
 
-/** One spell's entry, with every field the renderer reads made safe to read. Null when the file has none. */
+/**
+ * One entry, a spell's or a package's, with every field the renderer reads made safe to read. Null when the
+ * file has none. A package has no class, so `creatureClass` reads empty for one.
+ */
 export function entryFor(balance, alias) {
-  const raw = balance?.spells?.[alias];
+  const raw = balance?.[sectionOf(alias)]?.[alias];
   if (!isRecord(raw)) return null;
   return {
     alias,
@@ -474,17 +526,18 @@ function constraintProblems(balance, known) {
 export function withEntry(balance, alias, entry) {
   const key = text(alias);
   if (!key) return balance;
-  const spells = {};
-  for (const [name, body] of Object.entries(balance?.spells ?? {})) {
+  const section = sectionOf(key);
+  const entries = {};
+  for (const [name, body] of Object.entries(balance?.[section] ?? {})) {
     if (name !== key) {
-      spells[name] = body;
+      entries[name] = body;
     } else if (entry) {
-      spells[name] = entry;
+      entries[name] = entry;
     }
   }
 
-  if (entry && !Object.hasOwn(spells, key)) spells[key] = entry;
-  return { ...balance, spells };
+  if (entry && !Object.hasOwn(entries, key)) entries[key] = entry;
+  return { ...balance, [section]: entries };
 }
 
 /**
@@ -493,9 +546,12 @@ export function withEntry(balance, alias, entry) {
  * `check-knobs` fails on an empty one, which is the page's cue to ask rather than to guess.
  */
 export function seedEntry(document, intent = '') {
-  const entry = { name: text(document?.name), class: text(document?.creatureClass), intent: text(intent).trim() };
-  // No knobs: every number of a new spell is its identity until someone says which of them may move.
-  return { ...entry, keep: [], knobs: [] };
+  const name = text(document?.name);
+  const why = text(intent).trim();
+  // No knobs: every number of a new spell or package is its identity until someone says which of them may
+  // move. A package has no class to carry, so its entry does not invent one.
+  if (text(document?.id).startsWith(PACKAGE_PREFIX)) return { name, intent: why, keep: [], knobs: [] };
+  return { name, class: text(document?.creatureClass), intent: why, keep: [], knobs: [] };
 }
 
 /** An entry as the file holds it, from the shape `entryFor` reads it into. The round trip has to be lossless. */

@@ -534,7 +534,8 @@ def _check_knobs(arguments: argparse.Namespace) -> int:
     for report in reports:
         print(f"finding: {report}")
     print(
-        f"{len(knobs)} knobs over {len(knobs.spells)} spells, {len(content)} enabled spells in the content."
+        f"{len(knobs)} knobs over {len(knobs.spells)} spells and {len(knobs.packages)} packages, "
+        f"{len(content)} enabled spells and {len(content.package_documents)} enabled packages in the content."
     )
     if problems:
         return 1
