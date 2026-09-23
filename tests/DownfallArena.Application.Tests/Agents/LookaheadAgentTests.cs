@@ -142,6 +142,18 @@ public sealed class LookaheadAgentTests
         Agent.DecideTieOrder(board, options).ShouldBe([Two, One]);
     }
 
+    /// <summary>
+    /// A tie of twenty-one creatures has more seatings than a long holds; the count stops at the limit instead
+    /// of wrapping below it, so the roll is kept at once rather than enumerated.
+    /// </summary>
+    [Fact]
+    public void A_tie_with_more_seatings_than_the_limit_keeps_the_roll()
+    {
+        IReadOnlyList<CreatureId> tie = [.. Enumerable.Range(1, 21).Select(CreatureId.From)];
+
+        Agent.DecideTieOrder(OneAboutToDie(), new TieOrderOptions([tie])).ShouldBe(tie);
+    }
+
     [Fact]
     public void An_uncastable_spell_binds_no_target()
     {

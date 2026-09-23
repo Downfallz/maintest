@@ -84,7 +84,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         ArgumentNullException.ThrowIfNull(options);
 
         var best = options.AsRolled;
-        if (options.Ties.Aggregate(1L, (product, tie) => product * Factorial(tie.Count)) > MostSeatings)
+        if (Seatings(options.Ties) > MostSeatings)
         {
             return best;
         }
@@ -109,7 +109,27 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// <summary>The most seatings a tie order plays out: a team of four, all tied.</summary>
     private const int MostSeatings = 24;
 
-    private static long Factorial(int count) => count <= 1 ? 1 : count * Factorial(count - 1);
+    /// <summary>
+    /// How many seatings the ties have, counted only as far as <see cref="MostSeatings"/>: past it the count
+    /// stops at one more, so a tie of twenty-one creatures cannot overflow the product back under the limit.
+    /// </summary>
+    private static int Seatings(IReadOnlyList<IReadOnlyList<CreatureId>> ties)
+    {
+        var seatings = 1;
+        foreach (var tie in ties)
+        {
+            for (var factor = 2; factor <= tie.Count; factor++)
+            {
+                seatings *= factor;
+                if (seatings > MostSeatings)
+                {
+                    return MostSeatings + 1;
+                }
+            }
+        }
+
+        return seatings;
+    }
 
     /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with

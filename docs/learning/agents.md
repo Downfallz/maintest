@@ -116,7 +116,7 @@ the match's own rules on them, so the agent can put a move on the board and keep
 - **Speed and evolution** are the heuristic agent's: neither is a combat move, and the round they plan has no
   timeline yet to play out.
 - **Tie order** is its own, because it comes once the timeline is built; the agent it is built on is not
-  asked. Every seating of its tied creatures in the places its side holds is played out from the first slot,
+  asked (ADR 0067). Every seating of its tied creatures in the places its side holds is played out from the first slot,
   with no intent declared on either side: each ally plays what the agent it is built on would declare, each
   on its own, each enemy what the scorer would, the enemy's own tie as rolled, and every roll is a miss. The
   seating whose round is worth most wins, the order as rolled on a tie. That is team size factorial seatings,
