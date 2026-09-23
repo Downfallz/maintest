@@ -7,7 +7,7 @@ The agents the engine ships without a model (learning phase L5), the scoring the
 | Random | `random` | Picks uniformly among the options. The floor every other agent is measured against; deterministic for a seed. |
 | Greedy | `greedy` | One-step lookahead with the built-in weights below. The deterministic baseline of the benchmark digest. |
 | Heuristic | `heuristic:<weights file>` | The same lookahead with the weights read from a JSON file (`learning/weights/greedy.json` is the built-in set), so the weights can be searched (L6) without a model runtime. |
-| Lookahead | `lookahead[:<weights file>\|:<agent>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. Deterministic. Evolution, speed and the seats it has to guess are Greedy's, or the agent named after the kind — `lookahead:policy:<file>` searches over a trained policy (ADR 0055). See [the round played out](#the-round-played-out). |
+| Lookahead | `lookahead[:<weights file>\|:<agent>]` | Plays the round out on a hypothetical board before each combat move (ADR 0047) and keeps the move whose round ends best; the built-in weights, or a file's. Deterministic. Evolution, speed and the seats it has to guess are Greedy's, or the agent named after the kind; it orders its own ties by playing each seating out — `lookahead:policy:<file>` searches over a trained policy (ADR 0055). See [the round played out](#the-round-played-out). |
 | Minimax | `minimax[:<weights file>\|:<agent>]` | The lookahead with every enemy slot still ahead played as the reply that costs the actor most, rather than as the guessed one: the floor of a move's worth. Deterministic. See [the worst reply](#the-worst-reply). |
 | Policy | `policy:<policy.json>` | A trained policy (`docs/learning/training.md`): scores the candidate actions with one weight row per action key and takes the best. Refused when its feature schema is not the current one. |
 | Exploring | `explore:<rate>[:<agent>]` | Another agent, except that the given share of decisions is taken uniformly at random (ADR 0014). Bare, it wraps Greedy; a second colon names the agent it deviates from instead — `explore:0.2:heuristic:<weights>`, `explore:0.2:policy:<file>`, or a bare path as the shorthand for a weights file. For recording datasets a value regression can learn from, never for a baseline: it draws from a random source, so it is deterministic for a seed but not for the digest. |
@@ -69,8 +69,9 @@ Decisions:
   (ADR 0039).
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
 - **Tie order**: the order the roll-off left (ADR 0063). The scorer reads one action at a time and has no view
-  of which of two of its own creatures should act first, so it does not pretend to; the random agent shuffles
-  each tie and the exploring one does at its rate.
+  of which of two of its own creatures should act first, so it does not pretend to; the lookahead plays each
+  seating out ([the round played out](#the-round-played-out)), the random agent shuffles each tie and the
+  exploring one does at its rate.
 - **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
   best target set on the current board), plus `w.initiative` x the spell's Spell initiative, the base
   initiative the unlock buys for the rest of the match (ADR 0017, priced by ADR 0018), minus `w.energy` x
@@ -114,6 +115,13 @@ the match's own rules on them, so the agent can put a move on the board and keep
   that crits three casts in four was priced at half its worth and never cast.
 - **Speed and evolution** are the heuristic agent's: neither is a combat move, and the round they plan has no
   timeline yet to play out.
+- **Tie order** is its own, because it comes once the timeline is built. Every seating of its tied creatures
+  in the places its side holds is played out from the first slot, with no intent declared on either side:
+  each ally plays what the agent it is built on would declare, each enemy what the scorer would, and every roll
+  is a miss. The seating whose round is worth most wins, the order as rolled on a tie. A side holds at most
+  its team in ties, so that is at most six rounds. The minimax agent reads it the same way: a worst reply is
+  defined against one actor's move, and here every ally moves. On the benchmark seeds it almost never moves a
+  creature (journal, 2026-09-23): the ties fall in the first rounds, before anyone can kill or stun first.
 
 Summing the scorer's own scores keeps its calibration: a move with no consequence for the rest of the round
 is worth exactly what Greedy says it is, and only the interactions are new. The first version valued the

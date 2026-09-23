@@ -37,7 +37,8 @@ namespace DownfallArena.Application.Agents;
 /// </para>
 /// <para>
 /// Evolution and speed are the heuristic agent's: neither is a combat move, and the round they plan has no
-/// timeline yet to play out.
+/// timeline yet to play out. The tie order is this agent's own: it comes once the timeline is built, so the
+/// round each order leads to can be played out like any other move.
 /// </para>
 /// </summary>
 public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, bool adversarial = false, IPlayerAgent? inner = null) : IPlayerAgent
@@ -63,7 +64,35 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => _oneStep.DecideSpeed(board, creature);
 
-    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => _oneStep.DecideTieOrder(board, options);
+    /// <summary>
+    /// The seating of its own tied creatures whose round ends best (ADR 0063): each way of putting them in
+    /// the places the roll-off gave this side, the round played out from the first slot on it. No intent is
+    /// declared yet, on either side, so every creature plays what this agent would guess for it: an ally what
+    /// the agent it is built on would declare, an enemy what the scorer would. The minimax agent reads it the
+    /// same way, since a worst reply is only defined against one actor's move and here every ally moves.
+    /// Ties go to the order as rolled. A side holds at most its team in ties, so this plays at most six rounds.
+    /// </summary>
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var creatures = Creatures(board);
+        var best = options.AsRolled;
+        var bestValue = RoundValue.Lowest;
+        foreach (var order in Orders(options.Ties))
+        {
+            var seated = board with { Timeline = Seat(board.Timeline, order) };
+            var value = PlayOut(seated, creatures, 0, null, Guesses(seated, creatures), _ => null, ForcedRandom.NotCritical);
+            if (value.CompareTo(bestValue) > 0)
+            {
+                best = order;
+                bestValue = value;
+            }
+        }
+
+        return best;
+    }
 
     /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
@@ -243,11 +272,15 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         return chance == 0 ? plain : RoundValue.Mix(chance, PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.Critical), plain);
     }
 
+    /// <summary>
+    /// The round from a slot with the actor on its candidate and its roll, or, with no actor, every creature on
+    /// what can be read or guessed of it and every roll plain.
+    /// </summary>
     private RoundValue PlayOut(
         PlayerBoardState board,
         IReadOnlyList<CreatureSnapshot> start,
         int fromSlot,
-        CreatureId actor,
+        CreatureId? actor,
         Dictionary<CreatureId, SpellId?> declared,
         Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate,
         ForcedRandom roll)
@@ -366,6 +399,74 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             spells[creature] = snapshot.Owner != board.Slot
                 ? GreedyIntent(snapshot, beforeCombat)
                 : board.Intents.FirstOrDefault(intent => intent.Actor == creature)?.Spell ?? AllyIntent(withCandidate, snapshot);
+        }
+
+        return spells;
+    }
+
+    /// <summary>
+    /// Every tie's orders, one tie after the other, the order as rolled first: the product of each tie's
+    /// permutations, flattened in timeline order the way a submitted tie order is.
+    /// </summary>
+    private static IEnumerable<IReadOnlyList<CreatureId>> Orders(IReadOnlyList<IReadOnlyList<CreatureId>> ties)
+    {
+        IEnumerable<IReadOnlyList<CreatureId>> orders = [[]];
+        foreach (var tie in ties)
+        {
+            var captured = orders;
+            orders = captured.SelectMany(before => Permutations(tie).Select(after => (IReadOnlyList<CreatureId>)[.. before, .. after]));
+        }
+
+        return orders;
+    }
+
+    /// <summary>A list's permutations, the list itself first.</summary>
+    private static IEnumerable<IReadOnlyList<CreatureId>> Permutations(IReadOnlyList<CreatureId> tie)
+    {
+        if (tie.Count <= 1)
+        {
+            yield return tie;
+            yield break;
+        }
+
+        for (var first = 0; first < tie.Count; first++)
+        {
+            var rest = tie.Where((_, index) => index != first).ToList();
+            foreach (var tail in Permutations(rest))
+            {
+                yield return [tie[first], .. tail];
+            }
+        }
+    }
+
+    /// <summary>
+    /// The timeline with an order's creatures in the places they hold, in that order. The places are theirs,
+    /// in timeline order, and the slots move whole: two slots in one tie differ only in whose they are.
+    /// </summary>
+    private static List<ActivationSlot> Seat(IReadOnlyList<ActivationSlot> timeline, IReadOnlyList<CreatureId> order)
+    {
+        var slots = timeline.Where(slot => order.Contains(slot.Creature)).ToDictionary(slot => slot.Creature);
+        var seated = timeline.ToList();
+        var next = 0;
+        for (var index = 0; index < seated.Count; index++)
+        {
+            if (slots.ContainsKey(seated[index].Creature))
+            {
+                seated[index] = slots[order[next++]];
+            }
+        }
+
+        return seated;
+    }
+
+    /// <summary>What every creature on the timeline is taken to declare before anyone has: an ally what the agent this one is built on would, an enemy what the scorer would.</summary>
+    private Dictionary<CreatureId, SpellId?> Guesses(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var spells = new Dictionary<CreatureId, SpellId?>();
+        foreach (var creature in board.Timeline.Select(slot => slot.Creature).Distinct())
+        {
+            var snapshot = creatures.First(other => other.Id == creature);
+            spells[creature] = snapshot.Owner == board.Slot ? AllyIntent(board, snapshot) : GreedyIntent(snapshot, creatures);
         }
 
         return spells;
