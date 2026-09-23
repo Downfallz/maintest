@@ -14,9 +14,10 @@ listed in [spells.md](spells.md).
   a dead creature ignores damage, healing, energy, spells, and conditions. Conditions follow the stacking policy
   of their effect and count down when the rules tick them; stun, total defense, and current initiative are
   derived from the active conditions. A team is defeated when none of its creatures is alive.
-- Round (phase 4): a forward-only walk through the ten sub-phases of ADR 0010. The round stores evolution
-  choices per player, one speed choice per creature, one intent per creature (kept per player until revealed),
-  and the targeted actions bound in timeline order; a reveal cursor and a resolve cursor track combat. Wrong
+- Round (phase 4): a forward-only walk through the sub-phases of ADR 0010, eleven since `TieOrder` (ADR 0063).
+  The round stores evolution choices per player, one speed choice per creature, at most one tie order per
+  player, one intent per creature (kept per player until revealed), and the targeted actions bound in
+  timeline order; a reveal cursor and a resolve cursor track combat. Wrong
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
 - Planning rules (phase 5): a package is available to a creature when it does not own it and owns every
@@ -25,7 +26,9 @@ listed in [spells.md](spells.md).
   effective pick left (capped by what their living creatures can buy) -- which is immediately, in a round the
   schedule offers no opportunity. A speed choice must target an own, living, unstunned creature, and the
   sub-phase completes when every such creature has one. The timeline orders Quick before Standard, initiative
-  descending, and rolls off a tie on a d20: the highest roll first, equal rolls rolled again (ADR 0063). The `RuleSet` value object carries team size, energy per
+  descending, and rolls off a tie between the two sides on a d20 for the places each side holds; each Player
+  then orders their own Creatures among their places in the tie (ADR 0063). A tie order must name every
+  Creature of the Player's ties once, and only those. The `RuleSet` value object carries team size, energy per
   round, evolution picks per opportunity, the first evolution round and the interval between opportunities,
   the round cap, and the critical multiplier (ADR 0056).
 
@@ -98,8 +101,13 @@ listed in [spells.md](spells.md).
       one and cannot roll a critical that Round, whatever its own and its Spell's chances add up to.** Without
       that cost the choice decides nothing, since acting earlier is never worse.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
-      then Standard slots by Initiative descending. Creatures tied in a band each roll a d20 and the highest acts
-      first; equal rolls roll again among themselves. The seat breaks no tie (ADR 0063).
+      then Standard slots by Initiative descending. A tie between the two sides is rolled off: every tied
+      Creature rolls a d20 and the highest acts first, and Creatures of different sides that roll the same
+      number roll again. That decides which places each side holds. A tie held by one side alone rolls nothing.
+      The seat breaks no tie (ADR 0063).
+   4. `TieOrder`: each Player who holds two places or more in one tie orders their own Creatures among those
+      places; the other side's places do not move. Completes when every such Player has; a Round where no
+      side holds two places in a tie passes through it without asking anyone.
 3. **Combat**
    1. `IntentSelection`: each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
       valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature

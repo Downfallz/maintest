@@ -104,7 +104,8 @@ public sealed class MatchTests
 
     /// <summary>
     /// The Guard package is worth one point of initiative, so one purchase buys one point. Creature 3 belongs
-    /// to Player2, who loses every tie, which is what makes the move up the timeline visible.
+    /// to Player2, whose creatures this fixture's rolls put after Player1's in a tie, which is what makes the
+    /// move up the timeline visible.
     /// </summary>
     [Fact]
     public void A_bought_package_raises_the_creature_initiative_and_moves_it_up_the_timeline()
@@ -212,6 +213,76 @@ public sealed class MatchTests
 
         match.CurrentRound.ShouldNotBeNull().Timeline.Slots.Select(slot => slot.Creature)
             .ShouldBe([CreatureId.From(4), CreatureId.From(1), CreatureId.From(3), CreatureId.From(2)]);
+        match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.IntentSelection, "no side holds two places in one tie, so nobody has an order to give");
+    }
+
+    /// <summary>
+    /// ADR 0063: the rolls give Player 1 the first and third places and Player 2 the second and fourth; each
+    /// player then puts their own creatures in those places in the order they want.
+    /// </summary>
+    [Fact]
+    public void A_player_orders_their_own_tied_creatures_among_the_places_their_side_won()
+    {
+        var match = Table.Started(random: new ScriptedRolls(20, 5, 15, 1));
+        Table.PassEvolution(match);
+        ChooseAllStandard(match);
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.SubPhase.ShouldBe(RoundSubPhase.TieOrder);
+        round.Timeline.Slots.Select(slot => slot.Creature).ShouldBe([CreatureId.From(1), CreatureId.From(3), CreatureId.From(2), CreatureId.From(4)]);
+
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(2), CreatureId.From(1)]).IsSuccess.ShouldBeTrue();
+        round.SubPhase.ShouldBe(RoundSubPhase.TieOrder, "Player 2 has a tie of their own to order");
+        match.SubmitTieOrder(PlayerSlot.Player2, [CreatureId.From(3), CreatureId.From(4)]).IsSuccess.ShouldBeTrue();
+
+        round.SubPhase.ShouldBe(RoundSubPhase.IntentSelection);
+        round.Timeline.Slots.Select(slot => slot.Creature).ShouldBe([CreatureId.From(2), CreatureId.From(3), CreatureId.From(1), CreatureId.From(4)]);
+        match.DomainEvents.OfType<TieOrderSubmitted>().Select(submitted => submitted.Slot).ShouldBe([PlayerSlot.Player1, PlayerSlot.Player2]);
+        match.DomainEvents.OfType<TiesOrdered>().Single().Timeline.ShouldBeSameAs(round.Timeline);
+    }
+
+    [Fact]
+    public void A_tie_order_is_refused_outside_its_sub_phase_twice_or_when_it_does_not_name_the_tie()
+    {
+        var match = Table.Started(random: new ScriptedRolls(20, 5, 15, 1));
+        Table.PassEvolution(match);
+
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(1), CreatureId.From(2)]).Error.ShouldBe(RoundErrors.TieOrderNotOpen);
+
+        ChooseAllStandard(match);
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(1)]).Error.ShouldBe(PlanningErrors.TieOrderMismatch);
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(1), CreatureId.From(3)]).Error.ShouldBe(PlanningErrors.TieOrderMismatch);
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(1), CreatureId.From(2), CreatureId.From(2)]).Error.ShouldBe(PlanningErrors.TieOrderMismatch);
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(1), CreatureId.From(2)]).IsSuccess.ShouldBeTrue();
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(2), CreatureId.From(1)]).Error.ShouldBe(RoundErrors.TieOrderAlreadySubmitted);
+    }
+
+    [Fact]
+    public void A_player_whose_creatures_tie_with_none_of_their_own_has_no_order_to_give()
+    {
+        var match = Table.Started(random: new ScriptedRolls(1, 20, 15));
+        Table.PassEvolution(match);
+        match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(1), Speed.Quick)).IsSuccess.ShouldBeTrue();
+        match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(2), Speed.Standard)).IsSuccess.ShouldBeTrue();
+        match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(3), Speed.Standard)).IsSuccess.ShouldBeTrue();
+        match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(4), Speed.Standard)).IsSuccess.ShouldBeTrue();
+
+        match.CurrentRound.ShouldNotBeNull().SubPhase.ShouldBe(RoundSubPhase.TieOrder);
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(2)]).Error.ShouldBe(PlanningErrors.NoTieToOrder);
+        match.SubmitTieOrder(PlayerSlot.Player2, [CreatureId.From(4), CreatureId.From(3)]).IsSuccess.ShouldBeTrue();
+
+        match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.IntentSelection);
+        match.CurrentRound.Timeline.Slots.Select(slot => slot.Creature).ShouldBe([CreatureId.From(1), CreatureId.From(4), CreatureId.From(3), CreatureId.From(2)]);
+    }
+
+    private static void ChooseAllStandard(Match match)
+    {
+        foreach (var slot in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
+        {
+            foreach (var creature in Table.Living(match, slot))
+            {
+                match.SubmitSpeedChoice(slot, new SpeedChoice(creature.Id, Speed.Standard)).IsSuccess.ShouldBeTrue();
+            }
+        }
     }
 
     [Fact]

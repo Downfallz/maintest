@@ -67,6 +67,9 @@ public sealed class ExploringAgent : IPlayerAgent
         return _source.NextInt32(0, 2) == 0 ? Speed.Quick : Speed.Standard;
     }
 
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) =>
+        Explores() ? TieShuffle.Of(options, _source) : _inner.DecideTieOrder(board, options);
+
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);

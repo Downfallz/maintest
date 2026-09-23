@@ -59,6 +59,7 @@ accepted" (`PlayerOptions.cs:5-8`).
 | --- | --- | --- | --- |
 | `Evolution` | `PlayerOptionsKind.Evolution` | `EvolutionOptions(RemainingPicks, Creatures)` (`EvolutionOptions.cs:7`), each `EvolutionOption(Creature, UnlockableSpells)` (`EvolutionOption.cs:5`) | `EvolutionRules.Evaluate(...).RemainingPicksOf(slot)` (`PlayerOptionsProjection.cs:48`) |
 | `Speed` | `Speed` | `SpeedOptions(Missing)` (`SpeedOptions.cs:8`) | `SpeedRules.Evaluate(...).MissingOf(slot)` (`PlayerOptionsProjection.cs:70`) |
+| `TieOrder` | `TieOrder` | `TieOrderOptions(Groups)` (`TieOrderOptions.cs`), the seat's creatures in each tie it holds two places in, as rolled | `TieOrderRules.Waiting(round)` (ADR 0063) |
 | `IntentSelection` | `Intent` | `IntentOptions(Creatures)` (`IntentOptions.cs:6`), each `IntentOption(Creature, CastableSpells)` (`IntentOption.cs:5`) | `IntentRules.Evaluate(round).Missing` (`PlayerOptionsProjection.cs:79`) |
 | `RevealAndTarget` | `Target` | `TargetOptions(Actor, Spell, LegalTargets)` (`TargetOptions.cs:10`), with `MinTargets`, `MaxTargets`, `Candidates`, `IsCastable` (`LegalTargets.cs:8-10`) | `round.NextSlotToReveal` and `TargetingRules.LegalTargets` (`PlayerOptionsProjection.cs:89-107`) |
 | `ActionResolution` | `Resolution` | none | "A combat action waits for resolution; any host may drive it" (`PlayerOptionsKind.cs:20-21`) |

@@ -298,7 +298,8 @@ A dead Creature is not in the Round either, for the same reason and one step ear
 ### 5.5 Turn order resolution
 
 **Trigger.** Every living, unstunned Creature has a Speed choice.
-**Actor.** Both Players, together. Nothing is decided here.
+**Actor.** Both Players, together. The only decision here is step 5, and only for a Player who holds two
+places in one tie.
 **Result.** Build the Combat timeline on the initiative track:
 
 1. Count the Quick tokens and set the divider so the Quick band holds that many slots.
@@ -306,8 +307,12 @@ A dead Creature is not in the Round either, for the same reason and one step ear
    its Initiative debuff Conditions, and never below zero.
 3. Place the Quick Creatures' markers in the Quick band, highest Current initiative first. Then the Standard
    Creatures' markers in the Standard band, the same way.
-4. Roll off every tie: each tied Creature's owner rolls a d20 for it, the highest roll goes first, and
-   Creatures that rolled the same number roll again among themselves ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
+4. Roll off every tie between the two sides: each tied Creature's owner rolls a d20 for it, the highest roll
+   takes the first place, and Creatures of different sides that rolled the same number roll again. A tie
+   held by one side alone is not rolled.
+5. **Order your own ties.** Where you hold two places or more in one tie, put your Creatures in those places
+   in the order you want. The other side's places do not move. Both Players do this at the same time, before
+   any Intent ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
 
 Quick always beats Standard. A Quick Creature with Current initiative 0 still acts before a Standard Creature
 with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
@@ -319,8 +324,10 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 > Quick band: Creature 1 and Creature 4 are tied at 6, so they roll off: 8 for Creature 1, 15 for Creature 4.
 > 4, then 1.
 > Standard band: Creatures 3, 5 and 6 are tied at 5 and roll 11, 11 and 2. Creature 6 is last of the three;
-> Creatures 3 and 5 roll again, 4 and 17: 5, then 3, then 6. Creature 2 at 3 is last and rolls nothing.
-> The timeline is **4, 1, 5, 3, 6, 2**.
+> Creatures 3 and 5 are on different sides and roll again, 4 and 17. The places go Player 2, Player 1, Player 2.
+> Player 2 holds two of them and wants Creature 6 to act first, so 6 takes the first place and 5 the third:
+> 6, then 3, then 5. Creature 2 at 3 is last and rolls nothing.
+> The timeline is **4, 1, 6, 3, 5, 2**.
 
 ### 5.6 Intent selection
 
@@ -555,13 +562,17 @@ into the `new` lane. Only a Stun refreshes; see
 
 1. **Quick before Standard.** Always, whatever the numbers.
 2. **Higher Current initiative first.**
-3. **The roll-off.** Every Creature still tied rolls a d20; the highest goes first. Creatures that rolled the
-   same number roll again, among themselves only, until each is separated.
+3. **The roll-off, between the sides.** Every Creature still tied with a Creature of the other side rolls a
+   d20; the highest takes the first place. Creatures of different sides that rolled the same number roll
+   again. This decides which places each side holds, and nothing else.
+4. **Your own order, within your side.** Where you hold two places or more in the same tie, you choose which of
+   your Creatures takes which. A tie held by your side alone is yours to order without a roll.
 
 The seat decides nothing ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). Under packages two
 sides buying the same package in the same round tie on every Creature, and a tie that always went to Player 1
-decided the whole match. Roll in board order, lowest number first, so nobody argues about who rolls when; the
-order of rolling changes nothing. A Creature that ties with nobody does not roll.
+decided the whole match. The dice settle what is between the two Players; what is between your own Creatures
+is a decision, like the Speed you gave them. Roll in board order, lowest number first, so nobody argues about
+who rolls when; the order of rolling changes nothing. A Creature that ties with nobody does not roll.
 
 Current initiative is read **once**, when the timeline is built. An Initiative debuff that lands during Combat
 does not reshuffle the Round it landed in.

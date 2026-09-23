@@ -32,6 +32,9 @@ internal sealed record TableDecisionBody
 
     public IReadOnlyList<int>? Targets { get; init; }
 
+    /// <summary>A tie order: the seat's tied creatures, first to act first (ADR 0063).</summary>
+    public IReadOnlyList<int>? Order { get; init; }
+
     public bool Pass { get; init; }
 
     /// <summary>
@@ -50,6 +53,8 @@ internal sealed record TableDecisionBody
                 return PlayerDecision.Buy(CreatureId.From(creature), TierId.Parse(tier));
             case "Speed" when Creature is { } creature && Enum.TryParse<Speed>(Speed, out var speed) && Enum.IsDefined(speed):
                 return PlayerDecision.ChooseSpeed(CreatureId.From(creature), speed);
+            case "TieOrder" when Order is { } order:
+                return PlayerDecision.OrderTies([.. order.Select(CreatureId.From)]);
             case "Intent" when Creature is { } creature && Spell is { } spell:
                 return PlayerDecision.DeclareIntent(CreatureId.From(creature), SpellId.Parse(spell));
             case "Target":
@@ -68,5 +73,5 @@ internal sealed record TableDecisionBody
     public static string Kinds => string.Join(", ", Decidable);
 
     private static readonly PlayerOptionsKind[] Decidable =
-        [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.Intent, PlayerOptionsKind.Target];
+        [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.TieOrder, PlayerOptionsKind.Intent, PlayerOptionsKind.Target];
 }

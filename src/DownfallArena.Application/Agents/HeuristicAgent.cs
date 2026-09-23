@@ -64,6 +64,16 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
     /// round no agent here can evaluate by playing it out.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// The order the roll-off left. The scorer reads one action at a time and has no view of which of two of
+    /// its own creatures should act first, so it does not pretend to: a searching agent is where that belongs.
+    /// </summary>
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.AsRolled;
+    }
+
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
     {
         ArgumentNullException.ThrowIfNull(board);

@@ -34,6 +34,7 @@ public static class PlayerOptionsProjection
         {
             RoundSubPhase.Evolution => Evolution(match, round, slot, snapshots, resources),
             RoundSubPhase.Speed => Speed(round, slot, snapshots),
+            RoundSubPhase.TieOrder => TieOrder(round, slot),
             RoundSubPhase.IntentSelection => Intent(round, slot, snapshots, resources),
             RoundSubPhase.RevealAndTarget => Target(round, slot, snapshots, resources),
             RoundSubPhase.ActionResolution => new PlayerOptions { Kind = PlayerOptionsKind.Resolution, SubPhase = round.SubPhase },
@@ -72,6 +73,11 @@ public static class PlayerOptionsProjection
             ? Waiting(round)
             : new PlayerOptions { Kind = PlayerOptionsKind.Speed, SubPhase = round.SubPhase, Speed = new SpeedOptions(missing) };
     }
+
+    private static PlayerOptions TieOrder(Round round, PlayerSlot slot) =>
+        TieOrderRules.Waiting(round).Contains(slot)
+            ? new PlayerOptions { Kind = PlayerOptionsKind.TieOrder, SubPhase = round.SubPhase, TieOrder = new TieOrderOptions(TieOrderRules.GroupsOf(round.Timeline, slot)) }
+            : Waiting(round);
 
     private static PlayerOptions Intent(Round round, PlayerSlot slot, IReadOnlyList<CreatureSnapshot> snapshots, IGameResources resources)
     {

@@ -47,11 +47,13 @@ public static class TimelineBuilder
 
     /// <summary>
     /// Every tied creature rolls the die and the highest acts first; creatures that roll the same number roll
-    /// again among themselves. What a table does with a d20, so the seat decides nothing.
+    /// again among themselves. What a table does with a d20, so the seat decides nothing. A tie held by one
+    /// side alone rolls nothing: its owner orders it (<see cref="TieOrderRules"/>), and so the owner orders
+    /// their own creatures in a mixed tie too, among the places the rolls gave their side.
     /// </summary>
     private static List<ActivationSlot> RollOff(List<ActivationSlot> tied, IRandomSource random)
     {
-        if (tied.Count == 1)
+        if (tied.Select(slot => slot.Owner).Distinct().Count() == 1)
         {
             return tied;
         }

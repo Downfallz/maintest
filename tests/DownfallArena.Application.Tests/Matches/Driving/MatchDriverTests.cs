@@ -101,7 +101,7 @@ public sealed class MatchDriverTests
     }
 
     /// <summary>
-    /// An agent that passes, chooses Standard, declares the given spell, and hits the first legal target that no
+    /// An agent that passes, chooses Standard, keeps the order the roll-off left, declares the given spell, and hits the first legal target that no
     /// revealed action of the round targets yet (or the first one when every candidate is taken).
     /// </summary>
     private static IPlayerAgent Scripted(SpellId spell)
@@ -109,6 +109,7 @@ public sealed class MatchDriverTests
         var agent = Substitute.For<IPlayerAgent>();
         agent.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         agent.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(Speed.Standard);
+        agent.DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>()).Returns(call => call.Arg<TieOrderOptions>().AsRolled);
         agent.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(spell);
         agent.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(call => FreshTarget(call.Arg<PlayerBoardState>(), call.Arg<TargetOptions>()));
         return agent;
@@ -128,6 +129,7 @@ public sealed class MatchDriverTests
                 new SubmitEvolutionChoiceHandler(store.Workflow),
                 new PassEvolutionHandler(store.Workflow),
                 new SubmitSpeedChoiceHandler(store.Workflow),
+                new SubmitTieOrderHandler(store.Workflow),
                 new SubmitIntentHandler(store.Workflow),
                 new SubmitActionHandler(store.Workflow),
                 new ResolveNextActionHandler(store.Workflow)),

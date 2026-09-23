@@ -129,6 +129,23 @@ public sealed class TimelineBuilderTests
             "equal initiative at different speeds is not a tie, and neither is a buffed creature above one");
     }
 
+    /// <summary>A tie held by one side alone is its owner's to order (ADR 0063), so no die is rolled for it.</summary>
+    [Fact]
+    public void A_tie_held_by_one_side_alone_rolls_nothing()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+
+        var timeline = TimelineBuilder.Build(creatures,
+        [
+            new SpeedChoice(Arena.Knight, Speed.Quick),
+            new SpeedChoice(Arena.Archer, Speed.Quick),
+            new SpeedChoice(Arena.Ghoul, Speed.Standard),
+            new SpeedChoice(Arena.Wraith, Speed.Standard),
+        ], new ScriptedRolls());
+
+        timeline.Slots.Select(slot => slot.Creature).ShouldBe([Arena.Knight, Arena.Archer, Arena.Ghoul, Arena.Wraith]);
+    }
+
     private static SpeedChoice[] AllQuick() =>
     [
         new SpeedChoice(Arena.Knight, Speed.Quick),

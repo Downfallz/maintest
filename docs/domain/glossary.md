@@ -58,14 +58,15 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Sub-phase | A step inside a Phase with its own expected player actions and completion rule. | decided |
 | Progression gate | A pure domain service that says whether the current Sub-phase is complete and, if not, what is missing (which Creatures, how many picks). Shared by the engine, the UI, and bots. | decided |
 | Phase driver | The loop inside the Match that runs each automatic step or asks the Progression gate, advances the Sub-phase, and raises an event, until the Round waits on a Player or the Match ends. | decided |
-| Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built. | decided |
+| Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built and any Tie order given. | decided |
 | Evolution | A Planning decision where a Player buys a Tier for a Creature, within the picks the Rule set's schedule gives that Round. The purchase teaches every Spell of the package at once and raises the Creature's Base initiative by the package's bonus, once (ADR 0056). The two picks of an opportunity resolve in sequence, so the second sees what the first bought. | decided |
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
 | Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
-| Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by a Roll-off. | decided |
+| Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by a Roll-off between the sides and a Tie order within one. | decided |
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
-| Roll-off | How Creatures tied on the Combat timeline, in one band with the same Current initiative, are ordered: each rolls a d20, the highest acts first, and equal rolls roll again among themselves (ADR 0063). | decided |
+| Roll-off | How a tie between the two sides on the Combat timeline, in one band with the same Current initiative, decides which places each side holds: every tied Creature rolls a d20, the highest takes the first place, and equal rolls roll again among themselves. A tie held by one side alone rolls nothing (ADR 0063). | decided |
+| Tie order | A Planning decision in which a Player orders their own tied Creatures among the places their side holds in a tie, after the Roll-off and before any Intent (ADR 0063). | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |
 | Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
 | Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. It carries one share per Condition source, adding up to exactly what the Creature took. | decided |

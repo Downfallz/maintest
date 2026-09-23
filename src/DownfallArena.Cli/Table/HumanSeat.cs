@@ -87,6 +87,9 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
         Required(Ask(new Question(PlayerOptionsKind.Speed, creature)).Speed);
 
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) =>
+        Ask(new Question(PlayerOptionsKind.TieOrder, Creature: null)).Order;
+
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);
@@ -139,8 +142,8 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     /// <summary>
     /// What the match is asking this seat. The creature is the one being asked about for a speed choice, an
-    /// intent and a target binding, and none for evolution, which is asked of the player rather than of one
-    /// creature.
+    /// intent and a target binding, and none for evolution or a tie order, which are asked of the player rather
+    /// than of one creature.
     /// </summary>
     /// <param name="Asked">
     /// Which asking this is, counted by the seat. It exists so that two questions of the same shape are two

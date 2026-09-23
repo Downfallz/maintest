@@ -26,6 +26,7 @@ public sealed class Round : Entity<RoundId>
     private readonly HashSet<PlayerSlot> _evolutionPasses = [];
     private readonly Dictionary<CreatureId, SpeedChoice> _speedChoices = [];
     private readonly Dictionary<CreatureId, CombatAction> _actions = [];
+    private readonly Dictionary<PlayerSlot, IReadOnlyList<CreatureId>> _tieOrders = [];
 
     private Round(RoundId id)
         : base(id)
@@ -138,6 +139,42 @@ public sealed class Round : Entity<RoundId>
         Timeline = timeline;
         RevealCursor = TurnCursor.Start;
         ResolveCursor = TurnCursor.Start;
+    }
+
+    /// <summary>The tie orders submitted this round, by player (ADR 0063).</summary>
+    public IReadOnlyDictionary<PlayerSlot, IReadOnlyList<CreatureId>> TieOrders => _tieOrders;
+
+    public IReadOnlyList<CreatureId>? TieOrderOf(PlayerSlot slot) => _tieOrders.GetValueOrDefault(slot);
+
+    internal Result SubmitTieOrder(PlayerSlot slot, IReadOnlyList<CreatureId> order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        if (SubPhase != RoundSubPhase.TieOrder)
+        {
+            return Result.Failure(RoundErrors.TieOrderNotOpen);
+        }
+
+        return _tieOrders.TryAdd(slot, [.. order])
+            ? Result.Success()
+            : Result.Failure(RoundErrors.TieOrderAlreadySubmitted);
+    }
+
+    /// <summary>
+    /// Installs the timeline the tie orders produced. Only the order changes: the same slots, cursors at the
+    /// start, since nothing has been revealed yet.
+    /// </summary>
+    internal void ReorderTimeline(CombatTimeline timeline)
+    {
+        ArgumentNullException.ThrowIfNull(timeline);
+        RequireSubPhase(RoundSubPhase.TieOrder, "reorder the timeline");
+
+        if (timeline.Count != Timeline.Count || timeline.Slots.Any(slot => !Timeline.Slots.Contains(slot)))
+        {
+            throw new InvalidOperationException($"Round {Number}: a tie order may move slots, never add or remove one.");
+        }
+
+        Timeline = timeline;
     }
 
     /// <summary>

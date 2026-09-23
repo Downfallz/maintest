@@ -29,6 +29,32 @@ internal sealed class ConsoleAgent(TextReader input, TextWriter output) : IPlaye
         return index == 0 ? Speed.Quick : Speed.Standard;
     }
 
+    /// <summary>
+    /// One tie at a time, the first place first: the player picks which of the creatures left takes it, and
+    /// the last one takes the last place without being asked.
+    /// </summary>
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        ShowBoard(board);
+        var order = new List<CreatureId>();
+        foreach (var group in options.Groups)
+        {
+            List<CreatureId> left = [.. group];
+            while (left.Count > 1)
+            {
+                var index = Pick($"Tied at the same initiative: which of your creatures acts first of [{string.Join(", ", left)}]", [.. left.Select(creature => $"creature {creature}")]);
+                order.Add(left[index ?? 0]);
+                left.RemoveAt(index ?? 0);
+            }
+
+            order.AddRange(left);
+        }
+
+        return order;
+    }
+
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);

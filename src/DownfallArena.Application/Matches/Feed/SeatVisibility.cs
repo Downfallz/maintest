@@ -34,6 +34,8 @@ public static class SeatVisibility
         typeof(ConditionsExpired),
         typeof(OngoingEffectsApplied),
         typeof(TimelineBuilt),
+        typeof(TieOrderSubmitted),
+        typeof(TiesOrdered),
         typeof(RoundStarted),
         typeof(RoundEnded),
         typeof(SubPhaseEntered),
@@ -47,8 +49,8 @@ public static class SeatVisibility
         ArgumentNullException.ThrowIfNull(matchEvent);
         return matchEvent switch
         {
-            // The two hidden decisions of the game. An intent is face down until the timeline reveals it, and
-            // a speed choice is what the timeline is built from; either one read early is the whole match.
+            // Hidden decisions, with the tie order below. An intent is face down until the timeline reveals it,
+            // and a speed choice is what the timeline is built from; either one read early is the whole match.
             IntentSubmitted intent => intent.Slot == slot,
             SpeedChoiceSubmitted speed => speed.Slot == slot,
 
@@ -68,6 +70,11 @@ public static class SeatVisibility
             // The timeline is public the moment it is built -- it is served on every board -- and the round's
             // position is what the round track shows.
             TimelineBuilt => true,
+
+            // A tie order is hidden while the other player may still be ordering their own, like a speed
+            // choice; the timeline it produces is public as soon as both are in, the same as the one it replaces.
+            TieOrderSubmitted order => order.Slot == slot,
+            TiesOrdered => true,
             RoundStarted => true,
             RoundEnded => true,
             SubPhaseEntered => true,

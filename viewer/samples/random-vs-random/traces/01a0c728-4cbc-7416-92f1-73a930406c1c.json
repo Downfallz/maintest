@@ -4340,12 +4340,1420 @@
     {
       "sequence": 17,
       "round": 1,
-      "subPhase": "IntentSelection",
+      "subPhase": "TieOrder",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
         "roundId": 1,
         "subPhase": "TurnOrderResolution"
+      },
+      "player1": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player1",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 1,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 2,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 1,
+            "speed": "Standard"
+          },
+          {
+            "creature": 2,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      },
+      "player2": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player2",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 4,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 3,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 3,
+            "speed": "Quick"
+          },
+          {
+            "creature": 4,
+            "speed": "Quick"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      }
+    },
+    {
+      "sequence": 18,
+      "round": 1,
+      "subPhase": "TieOrder",
+      "event": {
+        "kind": "TimelineBuilt",
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "roundId": 1,
+        "timeline": {
+          "slots": [
+            {
+              "owner": "Player2",
+              "creature": 3,
+              "speed": "Quick",
+              "initiative": 7
+            },
+            {
+              "owner": "Player2",
+              "creature": 4,
+              "speed": "Quick",
+              "initiative": 7
+            },
+            {
+              "owner": "Player1",
+              "creature": 1,
+              "speed": "Standard",
+              "initiative": 7
+            },
+            {
+              "owner": "Player1",
+              "creature": 2,
+              "speed": "Standard",
+              "initiative": 7
+            }
+          ],
+          "count": 4
+        }
+      },
+      "player1": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player1",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 1,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 2,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 1,
+            "speed": "Standard"
+          },
+          {
+            "creature": 2,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      },
+      "player2": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player2",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 4,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 3,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 3,
+            "speed": "Quick"
+          },
+          {
+            "creature": 4,
+            "speed": "Quick"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      }
+    },
+    {
+      "sequence": 19,
+      "round": 1,
+      "subPhase": "TieOrder",
+      "event": {
+        "kind": "SubPhaseEntered",
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "roundId": 1,
+        "subPhase": "TieOrder"
+      },
+      "player1": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player1",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 1,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 2,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 1,
+            "speed": "Standard"
+          },
+          {
+            "creature": 2,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      },
+      "player2": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player2",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 4,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 3,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 3,
+            "speed": "Quick"
+          },
+          {
+            "creature": 4,
+            "speed": "Quick"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      }
+    },
+    {
+      "sequence": 20,
+      "round": 1,
+      "subPhase": "TieOrder",
+      "event": {
+        "kind": "TieOrderSubmitted",
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "roundId": 1,
+        "slot": "Player1",
+        "order": [
+          1,
+          2
+        ]
+      },
+      "player1": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player1",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 1,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 2,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 1,
+            "speed": "Standard"
+          },
+          {
+            "creature": 2,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      },
+      "player2": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player2",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 1,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 2,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [
+          {
+            "creature": 4,
+            "tier": "tier:guard:v1"
+          },
+          {
+            "creature": 3,
+            "tier": "tier:guard:v1"
+          }
+        ],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 1,
+        "speedChoices": [
+          {
+            "creature": 3,
+            "speed": "Quick"
+          },
+          {
+            "creature": 4,
+            "speed": "Quick"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      }
+    },
+    {
+      "sequence": 21,
+      "round": 1,
+      "subPhase": "IntentSelection",
+      "event": {
+        "kind": "TieOrderSubmitted",
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "roundId": 1,
+        "slot": "Player2",
+        "order": [
+          3,
+          4
+        ]
       },
       "player1": {
         "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
@@ -4681,11 +6089,11 @@
       }
     },
     {
-      "sequence": 18,
+      "sequence": 22,
       "round": 1,
       "subPhase": "IntentSelection",
       "event": {
-        "kind": "TimelineBuilt",
+        "kind": "TiesOrdered",
         "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
         "roundId": 1,
         "timeline": {
@@ -5052,7 +6460,7 @@
       }
     },
     {
-      "sequence": 19,
+      "sequence": 23,
       "round": 1,
       "subPhase": "IntentSelection",
       "event": {
@@ -5395,7 +6803,7 @@
       }
     },
     {
-      "sequence": 20,
+      "sequence": 24,
       "round": 1,
       "subPhase": "IntentSelection",
       "event": {
@@ -5747,7 +7155,7 @@
       }
     },
     {
-      "sequence": 21,
+      "sequence": 25,
       "round": 1,
       "subPhase": "IntentSelection",
       "event": {
@@ -6103,7 +7511,7 @@
       }
     },
     {
-      "sequence": 22,
+      "sequence": 26,
       "round": 1,
       "subPhase": "IntentSelection",
       "event": {
@@ -6464,7 +7872,7 @@
       }
     },
     {
-      "sequence": 23,
+      "sequence": 27,
       "round": 1,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -6829,7 +8237,7 @@
       }
     },
     {
-      "sequence": 24,
+      "sequence": 28,
       "round": 1,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -7190,7 +8598,7 @@
       }
     },
     {
-      "sequence": 25,
+      "sequence": 29,
       "round": 1,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -7573,7 +8981,7 @@
       }
     },
     {
-      "sequence": 26,
+      "sequence": 30,
       "round": 1,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -7970,7 +9378,7 @@
       }
     },
     {
-      "sequence": 27,
+      "sequence": 31,
       "round": 1,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -8381,7 +9789,7 @@
       }
     },
     {
-      "sequence": 28,
+      "sequence": 32,
       "round": 1,
       "subPhase": "ActionResolution",
       "event": {
@@ -8806,7 +10214,7 @@
       }
     },
     {
-      "sequence": 29,
+      "sequence": 33,
       "round": 1,
       "subPhase": "ActionResolution",
       "event": {
@@ -9225,7 +10633,7 @@
       }
     },
     {
-      "sequence": 30,
+      "sequence": 34,
       "round": 1,
       "subPhase": "ActionResolution",
       "event": {
@@ -9273,6 +10681,13 @@
           ]
         },
         "appliedOutcomes": [
+          {
+            "kind": "DamageOutcome",
+            "amount": 0,
+            "critical": false,
+            "target": 1,
+            "onCaster": false
+          },
           {
             "kind": "ConditionOutcome",
             "effect": {
@@ -9735,7 +11150,7 @@
       }
     },
     {
-      "sequence": 31,
+      "sequence": 35,
       "round": 1,
       "subPhase": "ActionResolution",
       "event": {
@@ -10279,7 +11694,7 @@
       }
     },
     {
-      "sequence": 32,
+      "sequence": 36,
       "round": 1,
       "subPhase": "ActionResolution",
       "event": {
@@ -10850,7 +12265,7 @@
       }
     },
     {
-      "sequence": 33,
+      "sequence": 37,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -11295,7 +12710,7 @@
       }
     },
     {
-      "sequence": 34,
+      "sequence": 38,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -11692,7 +13107,7 @@
       }
     },
     {
-      "sequence": 35,
+      "sequence": 39,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -12089,7 +13504,7 @@
       }
     },
     {
-      "sequence": 36,
+      "sequence": 40,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -12486,7 +13901,7 @@
       }
     },
     {
-      "sequence": 37,
+      "sequence": 41,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -12882,7 +14297,7 @@
       }
     },
     {
-      "sequence": 38,
+      "sequence": 42,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -13278,7 +14693,7 @@
       }
     },
     {
-      "sequence": 39,
+      "sequence": 43,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -13675,7 +15090,7 @@
       }
     },
     {
-      "sequence": 40,
+      "sequence": 44,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -14072,7 +15487,7 @@
       }
     },
     {
-      "sequence": 41,
+      "sequence": 45,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -14492,7 +15907,7 @@
       }
     },
     {
-      "sequence": 42,
+      "sequence": 46,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -14889,7 +16304,7 @@
       }
     },
     {
-      "sequence": 43,
+      "sequence": 47,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -15286,7 +16701,7 @@
       }
     },
     {
-      "sequence": 44,
+      "sequence": 48,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -15692,7 +17107,7 @@
       }
     },
     {
-      "sequence": 45,
+      "sequence": 49,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -16102,7 +17517,7 @@
       }
     },
     {
-      "sequence": 46,
+      "sequence": 50,
       "round": 2,
       "subPhase": "Speed",
       "event": {
@@ -16517,7 +17932,7 @@
       }
     },
     {
-      "sequence": 47,
+      "sequence": 51,
       "round": 2,
       "subPhase": "IntentSelection",
       "event": {
@@ -16986,7 +18401,7 @@
       }
     },
     {
-      "sequence": 48,
+      "sequence": 52,
       "round": 2,
       "subPhase": "IntentSelection",
       "event": {
@@ -17451,7 +18866,7 @@
       }
     },
     {
-      "sequence": 49,
+      "sequence": 53,
       "round": 2,
       "subPhase": "IntentSelection",
       "event": {
@@ -17944,7 +19359,7 @@
       }
     },
     {
-      "sequence": 50,
+      "sequence": 54,
       "round": 2,
       "subPhase": "IntentSelection",
       "event": {
@@ -18409,7 +19824,7 @@
       }
     },
     {
-      "sequence": 51,
+      "sequence": 55,
       "round": 2,
       "subPhase": "IntentSelection",
       "event": {
@@ -18883,7 +20298,7 @@
       }
     },
     {
-      "sequence": 52,
+      "sequence": 56,
       "round": 2,
       "subPhase": "IntentSelection",
       "event": {
@@ -19361,7 +20776,7 @@
       }
     },
     {
-      "sequence": 53,
+      "sequence": 57,
       "round": 2,
       "subPhase": "IntentSelection",
       "event": {
@@ -19844,7 +21259,7 @@
       }
     },
     {
-      "sequence": 54,
+      "sequence": 58,
       "round": 2,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -20331,7 +21746,7 @@
       }
     },
     {
-      "sequence": 55,
+      "sequence": 59,
       "round": 2,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -20814,7 +22229,7 @@
       }
     },
     {
-      "sequence": 56,
+      "sequence": 60,
       "round": 2,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -21319,7 +22734,7 @@
       }
     },
     {
-      "sequence": 57,
+      "sequence": 61,
       "round": 2,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -21838,7 +23253,7 @@
       }
     },
     {
-      "sequence": 58,
+      "sequence": 62,
       "round": 2,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -22371,7 +23786,7 @@
       }
     },
     {
-      "sequence": 59,
+      "sequence": 63,
       "round": 2,
       "subPhase": "ActionResolution",
       "event": {
@@ -22918,7 +24333,7 @@
       }
     },
     {
-      "sequence": 60,
+      "sequence": 64,
       "round": 2,
       "subPhase": "ActionResolution",
       "event": {
@@ -23459,7 +24874,7 @@
       }
     },
     {
-      "sequence": 61,
+      "sequence": 65,
       "round": 2,
       "subPhase": "ActionResolution",
       "event": {
@@ -24033,7 +25448,7 @@
       }
     },
     {
-      "sequence": 62,
+      "sequence": 66,
       "round": 2,
       "subPhase": "ActionResolution",
       "event": {
@@ -24658,7 +26073,7 @@
       }
     },
     {
-      "sequence": 63,
+      "sequence": 67,
       "round": 2,
       "subPhase": "ActionResolution",
       "event": {
@@ -25268,7 +26683,7 @@
       }
     },
     {
-      "sequence": 64,
+      "sequence": 68,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -25790,7 +27205,7 @@
       }
     },
     {
-      "sequence": 65,
+      "sequence": 69,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -26257,7 +27672,7 @@
       }
     },
     {
-      "sequence": 66,
+      "sequence": 70,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -26724,7 +28139,7 @@
       }
     },
     {
-      "sequence": 67,
+      "sequence": 71,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -27191,7 +28606,7 @@
       }
     },
     {
-      "sequence": 68,
+      "sequence": 72,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -27657,7 +29072,7 @@
       }
     },
     {
-      "sequence": 69,
+      "sequence": 73,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -28123,7 +29538,7 @@
       }
     },
     {
-      "sequence": 70,
+      "sequence": 74,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -28590,7 +30005,7 @@
       }
     },
     {
-      "sequence": 71,
+      "sequence": 75,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -29057,7 +30472,7 @@
       }
     },
     {
-      "sequence": 72,
+      "sequence": 76,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -29547,7 +30962,7 @@
       }
     },
     {
-      "sequence": 73,
+      "sequence": 77,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -30014,7 +31429,7 @@
       }
     },
     {
-      "sequence": 74,
+      "sequence": 78,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -30481,7 +31896,7 @@
       }
     },
     {
-      "sequence": 75,
+      "sequence": 79,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -30957,7 +32372,7 @@
       }
     },
     {
-      "sequence": 76,
+      "sequence": 80,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -31437,7 +32852,7 @@
       }
     },
     {
-      "sequence": 77,
+      "sequence": 81,
       "round": 3,
       "subPhase": "Speed",
       "event": {
@@ -31922,7 +33337,7 @@
       }
     },
     {
-      "sequence": 78,
+      "sequence": 82,
       "round": 3,
       "subPhase": "IntentSelection",
       "event": {
@@ -32461,7 +33876,7 @@
       }
     },
     {
-      "sequence": 79,
+      "sequence": 83,
       "round": 3,
       "subPhase": "IntentSelection",
       "event": {
@@ -32996,7 +34411,7 @@
       }
     },
     {
-      "sequence": 80,
+      "sequence": 84,
       "round": 3,
       "subPhase": "IntentSelection",
       "event": {
@@ -33559,7 +34974,7 @@
       }
     },
     {
-      "sequence": 81,
+      "sequence": 85,
       "round": 3,
       "subPhase": "IntentSelection",
       "event": {
@@ -34094,7 +35509,7 @@
       }
     },
     {
-      "sequence": 82,
+      "sequence": 86,
       "round": 3,
       "subPhase": "IntentSelection",
       "event": {
@@ -34638,7 +36053,7 @@
       }
     },
     {
-      "sequence": 83,
+      "sequence": 87,
       "round": 3,
       "subPhase": "IntentSelection",
       "event": {
@@ -35186,7 +36601,7 @@
       }
     },
     {
-      "sequence": 84,
+      "sequence": 88,
       "round": 3,
       "subPhase": "IntentSelection",
       "event": {
@@ -35739,7 +37154,7 @@
       }
     },
     {
-      "sequence": 85,
+      "sequence": 89,
       "round": 3,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -36296,7 +37711,7 @@
       }
     },
     {
-      "sequence": 86,
+      "sequence": 90,
       "round": 3,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -36849,7 +38264,7 @@
       }
     },
     {
-      "sequence": 87,
+      "sequence": 91,
       "round": 3,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -37424,7 +38839,7 @@
       }
     },
     {
-      "sequence": 88,
+      "sequence": 92,
       "round": 3,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -38013,7 +39428,7 @@
       }
     },
     {
-      "sequence": 89,
+      "sequence": 93,
       "round": 3,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -38616,7 +40031,7 @@
       }
     },
     {
-      "sequence": 90,
+      "sequence": 94,
       "round": 3,
       "subPhase": "ActionResolution",
       "event": {
@@ -39233,7 +40648,7 @@
       }
     },
     {
-      "sequence": 91,
+      "sequence": 95,
       "round": 3,
       "subPhase": "ActionResolution",
       "event": {
@@ -39844,7 +41259,7 @@
       }
     },
     {
-      "sequence": 92,
+      "sequence": 96,
       "round": 3,
       "subPhase": "ActionResolution",
       "event": {
@@ -40488,7 +41903,7 @@
       }
     },
     {
-      "sequence": 93,
+      "sequence": 97,
       "round": 3,
       "subPhase": "ActionResolution",
       "event": {
@@ -41188,7 +42603,7 @@
       }
     },
     {
-      "sequence": 94,
+      "sequence": 98,
       "round": 3,
       "subPhase": "ActionResolution",
       "event": {
@@ -41866,7 +43281,7 @@
       }
     },
     {
-      "sequence": 95,
+      "sequence": 99,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -42388,7 +43803,7 @@
       }
     },
     {
-      "sequence": 96,
+      "sequence": 100,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -42855,7 +44270,7 @@
       }
     },
     {
-      "sequence": 97,
+      "sequence": 101,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -43359,7 +44774,7 @@
       }
     },
     {
-      "sequence": 98,
+      "sequence": 102,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -43826,7 +45241,7 @@
       }
     },
     {
-      "sequence": 99,
+      "sequence": 103,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -44292,7 +45707,7 @@
       }
     },
     {
-      "sequence": 100,
+      "sequence": 104,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -44758,7 +46173,7 @@
       }
     },
     {
-      "sequence": 101,
+      "sequence": 105,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -45225,7 +46640,7 @@
       }
     },
     {
-      "sequence": 102,
+      "sequence": 106,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -45692,7 +47107,7 @@
       }
     },
     {
-      "sequence": 103,
+      "sequence": 107,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -46188,7 +47603,7 @@
       }
     },
     {
-      "sequence": 104,
+      "sequence": 108,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -46655,7 +48070,7 @@
       }
     },
     {
-      "sequence": 105,
+      "sequence": 109,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -47122,7 +48537,7 @@
       }
     },
     {
-      "sequence": 106,
+      "sequence": 110,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -47598,7 +49013,7 @@
       }
     },
     {
-      "sequence": 107,
+      "sequence": 111,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -48078,7 +49493,7 @@
       }
     },
     {
-      "sequence": 108,
+      "sequence": 112,
       "round": 4,
       "subPhase": "Speed",
       "event": {
@@ -48563,7 +49978,7 @@
       }
     },
     {
-      "sequence": 109,
+      "sequence": 113,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -49102,7 +50517,7 @@
       }
     },
     {
-      "sequence": 110,
+      "sequence": 114,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -49637,7 +51052,7 @@
       }
     },
     {
-      "sequence": 111,
+      "sequence": 115,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -50200,7 +51615,7 @@
       }
     },
     {
-      "sequence": 112,
+      "sequence": 116,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -50735,7 +52150,7 @@
       }
     },
     {
-      "sequence": 113,
+      "sequence": 117,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -51279,7 +52694,7 @@
       }
     },
     {
-      "sequence": 114,
+      "sequence": 118,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -51827,7 +53242,7 @@
       }
     },
     {
-      "sequence": 115,
+      "sequence": 119,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -52380,7 +53795,7 @@
       }
     },
     {
-      "sequence": 116,
+      "sequence": 120,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -52937,7 +54352,7 @@
       }
     },
     {
-      "sequence": 117,
+      "sequence": 121,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -53490,7 +54905,7 @@
       }
     },
     {
-      "sequence": 118,
+      "sequence": 122,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -54065,7 +55480,7 @@
       }
     },
     {
-      "sequence": 119,
+      "sequence": 123,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -54654,7 +56069,7 @@
       }
     },
     {
-      "sequence": 120,
+      "sequence": 124,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -55257,7 +56672,7 @@
       }
     },
     {
-      "sequence": 121,
+      "sequence": 125,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -55874,7 +57289,7 @@
       }
     },
     {
-      "sequence": 122,
+      "sequence": 126,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -56485,7 +57900,7 @@
       }
     },
     {
-      "sequence": 123,
+      "sequence": 127,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -57129,7 +58544,7 @@
       }
     },
     {
-      "sequence": 124,
+      "sequence": 128,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -57829,7 +59244,7 @@
       }
     },
     {
-      "sequence": 125,
+      "sequence": 129,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -58507,7 +59922,7 @@
       }
     },
     {
-      "sequence": 126,
+      "sequence": 130,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -59058,7 +60473,7 @@
       }
     },
     {
-      "sequence": 127,
+      "sequence": 131,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -59561,7 +60976,7 @@
       }
     },
     {
-      "sequence": 128,
+      "sequence": 132,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -60084,7 +61499,7 @@
       }
     },
     {
-      "sequence": 129,
+      "sequence": 133,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -60587,7 +62002,7 @@
       }
     },
     {
-      "sequence": 130,
+      "sequence": 134,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -61089,7 +62504,7 @@
       }
     },
     {
-      "sequence": 131,
+      "sequence": 135,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -61591,7 +63006,7 @@
       }
     },
     {
-      "sequence": 132,
+      "sequence": 136,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -62094,7 +63509,7 @@
       }
     },
     {
-      "sequence": 133,
+      "sequence": 137,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -62597,7 +64012,7 @@
       }
     },
     {
-      "sequence": 134,
+      "sequence": 138,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -63142,7 +64557,7 @@
       }
     },
     {
-      "sequence": 135,
+      "sequence": 139,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -63645,7 +65060,7 @@
       }
     },
     {
-      "sequence": 136,
+      "sequence": 140,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -64148,7 +65563,7 @@
       }
     },
     {
-      "sequence": 137,
+      "sequence": 141,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -64660,7 +66075,7 @@
       }
     },
     {
-      "sequence": 138,
+      "sequence": 142,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -65176,7 +66591,7 @@
       }
     },
     {
-      "sequence": 139,
+      "sequence": 143,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -65697,7 +67112,7 @@
       }
     },
     {
-      "sequence": 140,
+      "sequence": 144,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -66272,7 +67687,7 @@
       }
     },
     {
-      "sequence": 141,
+      "sequence": 145,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -66843,7 +68258,7 @@
       }
     },
     {
-      "sequence": 142,
+      "sequence": 146,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -67442,7 +68857,7 @@
       }
     },
     {
-      "sequence": 143,
+      "sequence": 147,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -68013,7 +69428,7 @@
       }
     },
     {
-      "sequence": 144,
+      "sequence": 148,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -68593,7 +70008,7 @@
       }
     },
     {
-      "sequence": 145,
+      "sequence": 149,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -69177,7 +70592,7 @@
       }
     },
     {
-      "sequence": 146,
+      "sequence": 150,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -69766,7 +71181,7 @@
       }
     },
     {
-      "sequence": 147,
+      "sequence": 151,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -70359,7 +71774,7 @@
       }
     },
     {
-      "sequence": 148,
+      "sequence": 152,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -70948,7 +72363,7 @@
       }
     },
     {
-      "sequence": 149,
+      "sequence": 153,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -71559,7 +72974,7 @@
       }
     },
     {
-      "sequence": 150,
+      "sequence": 154,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -72184,7 +73599,7 @@
       }
     },
     {
-      "sequence": 151,
+      "sequence": 155,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -72823,7 +74238,7 @@
       }
     },
     {
-      "sequence": 152,
+      "sequence": 156,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -73476,7 +74891,7 @@
       }
     },
     {
-      "sequence": 153,
+      "sequence": 157,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -74123,7 +75538,7 @@
       }
     },
     {
-      "sequence": 154,
+      "sequence": 158,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -74859,7 +76274,7 @@
       }
     },
     {
-      "sequence": 155,
+      "sequence": 159,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -75629,7 +77044,7 @@
       }
     },
     {
-      "sequence": 156,
+      "sequence": 160,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -76377,7 +77792,7 @@
       }
     },
     {
-      "sequence": 157,
+      "sequence": 161,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -77121,7 +78536,7 @@
       }
     },
     {
-      "sequence": 158,
+      "sequence": 162,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -77810,7 +79225,7 @@
       }
     },
     {
-      "sequence": 159,
+      "sequence": 163,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -78538,7 +79953,7 @@
       }
     },
     {
-      "sequence": 160,
+      "sequence": 164,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -79227,7 +80642,7 @@
       }
     },
     {
-      "sequence": 161,
+      "sequence": 165,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -79915,7 +81330,7 @@
       }
     },
     {
-      "sequence": 162,
+      "sequence": 166,
       "round": 5,
       "subPhase": "Finalization",
       "event": {

@@ -158,6 +158,8 @@ internal sealed class SeatAgent : IPlayerAgent
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Deciding(board).Agent.DecideSpeed(board, creature);
 
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => Deciding(board).Agent.DecideTieOrder(board, options);
+
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Deciding(board).Agent.DecideIntent(board, intentOption);
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Deciding(board).Agent.DecideTargets(board, options);

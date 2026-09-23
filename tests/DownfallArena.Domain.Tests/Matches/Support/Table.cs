@@ -1,6 +1,7 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Randomness;
 
@@ -64,6 +65,26 @@ internal static class Table
             {
                 match.SubmitSpeedChoice(slot, new SpeedChoice(creature.Id, Speed.Standard)).IsSuccess.ShouldBeTrue();
             }
+        }
+
+        KeepTieOrder(match);
+    }
+
+    /// <summary>
+    /// Every player who owes a tie order keeps the order the timeline already holds (ADR 0063). A round with no
+    /// tie inside one side is past the sub-phase already, so there is nothing to submit.
+    /// </summary>
+    public static void KeepTieOrder(Match match)
+    {
+        foreach (var slot in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
+        {
+            var round = match.CurrentRound.ShouldNotBeNull();
+            if (round.SubPhase != RoundSubPhase.TieOrder || !TieOrderRules.Owes(round.Timeline, slot))
+            {
+                continue;
+            }
+
+            match.SubmitTieOrder(slot, [.. TieOrderRules.GroupsOf(round.Timeline, slot).SelectMany(group => group)]).IsSuccess.ShouldBeTrue();
         }
     }
 

@@ -14,6 +14,12 @@ public interface IPlayerAgent
 
     Speed DecideSpeed(PlayerBoardState board, CreatureId creature);
 
+    /// <summary>
+    /// The player's tied creatures, first to act first, each moved only within its own tie (ADR 0063).
+    /// <see cref="TieOrderOptions.AsRolled"/> is the order that changes nothing.
+    /// </summary>
+    IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options);
+
     SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption);
 
     IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options);

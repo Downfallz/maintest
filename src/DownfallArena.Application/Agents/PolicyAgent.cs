@@ -31,6 +31,13 @@ public sealed class PolicyAgent(PolicyFile policy, ObservationBuilder observatio
         return Best(board, candidates, policy.ReadsCandidateTerms ? terms.Evolution(board, options) : null);
     }
 
+    /// <summary>The order the roll-off left: no policy file has seen this decision, so none scores it.</summary>
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.AsRolled;
+    }
+
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
     {
         ArgumentNullException.ThrowIfNull(board);
