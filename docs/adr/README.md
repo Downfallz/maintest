@@ -67,3 +67,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |
 | [0060](0060-spells-sold-together-must-differ-in-play.md) | Spells sold together must differ in play, and Throwing Star buys reach | Accepted |
 | [0061](0061-a-package-initiative-bonus-is-a-balance-knob.md) | A package's initiative bonus is a balance knob, and the only one a package has | Accepted |
+| [0062](0062-read-the-seat-on-the-exploring-run.md) | Read the seat advantage on the exploring run, not on the greedy mirror | Accepted |
