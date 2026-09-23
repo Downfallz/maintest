@@ -90,6 +90,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -156,6 +157,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -278,6 +280,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -389,6 +392,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -512,6 +516,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -623,6 +628,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -744,6 +750,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -855,6 +862,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -977,6 +985,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1088,6 +1097,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1210,6 +1220,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1321,6 +1332,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1445,6 +1457,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1556,6 +1569,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1678,6 +1692,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1789,6 +1804,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -1923,6 +1939,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2037,6 +2054,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2174,6 +2192,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2296,6 +2315,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2440,6 +2460,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2565,6 +2586,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2712,6 +2734,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2844,6 +2867,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -2987,6 +3011,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -3119,6 +3144,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -3271,6 +3297,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -3403,6 +3430,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -3559,6 +3587,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -3691,6 +3720,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -3847,6 +3877,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -3984,6 +4015,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -4165,6 +4197,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -4331,6 +4364,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -4508,6 +4542,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -4674,6 +4709,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -4715,6 +4751,7 @@
               "initiative": 7
             }
           ],
+          "rollOffs": [],
           "count": 4
         }
       },
@@ -4879,6 +4916,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -5045,6 +5083,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -5222,6 +5261,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -5388,6 +5428,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -5569,6 +5610,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -5735,6 +5777,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -5916,6 +5959,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -6082,6 +6126,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -6123,6 +6168,7 @@
               "initiative": 7
             }
           ],
+          "rollOffs": [],
           "count": 4
         }
       },
@@ -6287,6 +6333,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -6453,6 +6500,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -6630,6 +6678,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -6796,6 +6845,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -6982,6 +7032,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -7148,6 +7199,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -7338,6 +7390,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -7504,6 +7557,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -7694,6 +7748,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -7865,6 +7920,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -8055,6 +8111,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -8230,6 +8287,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -8416,6 +8474,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -8591,6 +8650,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -8783,6 +8843,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -8966,6 +9027,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -9166,6 +9228,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -9356,6 +9419,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -9563,6 +9627,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -9760,6 +9825,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -9974,6 +10040,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -10178,6 +10245,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -10393,6 +10461,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -10597,6 +10666,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -10892,6 +10962,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -11114,6 +11185,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -11419,6 +11491,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -11658,6 +11731,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -11973,6 +12047,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -12229,6 +12304,7 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [],
         "revealedActions": [
           {
             "actor": 3,
@@ -12510,6 +12586,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -12703,6 +12780,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -12907,6 +12985,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -13100,6 +13179,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -13304,6 +13384,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -13497,6 +13578,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -13701,6 +13783,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -13894,6 +13977,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -14097,6 +14181,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -14290,6 +14375,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -14493,6 +14579,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -14686,6 +14773,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -14890,6 +14978,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -15083,6 +15172,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -15287,6 +15377,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -15480,6 +15571,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -15707,6 +15799,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -15900,6 +15993,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -16104,6 +16198,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -16297,6 +16392,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -16501,6 +16597,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -16694,6 +16791,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -16902,6 +17000,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -17100,6 +17199,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -17308,6 +17408,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -17510,6 +17611,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -17723,6 +17825,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -17925,6 +18028,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -18167,6 +18271,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -18392,6 +18522,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -18632,6 +18788,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -18859,6 +19041,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -18898,6 +19106,32 @@
               "creature": 4,
               "speed": "Standard",
               "initiative": 7
+            }
+          ],
+          "rollOffs": [
+            {
+              "creature": 2,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 3,
+              "rolls": [
+                13
+              ]
+            },
+            {
+              "creature": 1,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 4,
+              "rolls": [
+                13
+              ]
             }
           ],
           "count": 4
@@ -19125,6 +19359,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -19350,6 +19610,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -19590,6 +19876,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -19815,6 +20127,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -20059,6 +20397,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -20289,6 +20653,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -20533,6 +20923,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -20767,6 +21183,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -21016,6 +21458,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -21250,6 +21718,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -21503,6 +21997,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -21737,6 +22257,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -21986,6 +22532,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -22220,6 +22792,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -22475,6 +23073,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -22717,6 +23341,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -22980,6 +23630,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -23229,6 +23905,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -23499,6 +24201,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -23755,6 +24483,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -24032,6 +24786,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -24295,6 +25075,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -24573,6 +25379,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -24836,6 +25668,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -25147,6 +26005,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -25410,6 +26294,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -25754,6 +26664,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -26035,6 +26971,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -26364,6 +27326,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -26645,6 +27633,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -26970,6 +27984,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -27198,6 +28213,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -27437,6 +28453,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -27665,6 +28682,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -27904,6 +28922,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -28132,6 +29151,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -28371,6 +29391,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -28599,6 +29620,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -28837,6 +29859,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -29065,6 +30088,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -29303,6 +30327,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -29531,6 +30556,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -29770,6 +30796,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -29998,6 +31025,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -30237,6 +31265,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -30465,6 +31494,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -30727,6 +31757,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -30955,6 +31986,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -31194,6 +32226,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -31422,6 +32455,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -31661,6 +32695,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -31889,6 +32924,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -32137,6 +33173,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -32365,6 +33402,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -32617,6 +33655,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -32845,6 +33884,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -33097,6 +34137,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -33330,6 +34371,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -33607,6 +34649,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -33867,6 +34935,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -34142,6 +35236,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -34404,6 +35524,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -34443,6 +35589,32 @@
               "creature": 4,
               "speed": "Standard",
               "initiative": 7
+            }
+          ],
+          "rollOffs": [
+            {
+              "creature": 1,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 3,
+              "rolls": [
+                13
+              ]
+            },
+            {
+              "creature": 2,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 4,
+              "rolls": [
+                13
+              ]
             }
           ],
           "count": 4
@@ -34705,6 +35877,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -34965,6 +36163,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -35240,6 +36464,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -35500,6 +36750,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -35784,6 +37060,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -36044,6 +37346,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -36332,6 +37660,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -36592,6 +37946,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -36880,6 +38260,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -37145,6 +38551,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -37433,6 +38865,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -37702,6 +39160,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -37986,6 +39470,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -38255,6 +39765,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [],
@@ -38545,6 +40081,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -38822,6 +40384,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -39120,6 +40708,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -39404,6 +41018,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -39709,6 +41349,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -40000,6 +41666,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -40312,6 +42004,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -40610,6 +42328,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -40923,6 +42667,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -41221,6 +42991,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -41567,6 +43363,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -41865,6 +43687,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -42250,6 +44098,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -42565,6 +44439,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -42928,6 +44828,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -43243,6 +45169,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [
@@ -43568,6 +45520,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -43796,6 +45749,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -44035,6 +45989,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -44263,6 +46218,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -44539,6 +46495,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -44767,6 +46724,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -45006,6 +46964,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -45234,6 +47193,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -45472,6 +47432,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -45700,6 +47661,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -45938,6 +47900,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -46166,6 +48129,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -46405,6 +48369,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -46633,6 +48598,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -46872,6 +48838,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -47100,6 +49067,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -47368,6 +49336,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -47596,6 +49565,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -47835,6 +49805,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -48063,6 +50034,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -48302,6 +50274,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -48530,6 +50503,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -48778,6 +50752,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -49006,6 +50981,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -49258,6 +51234,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -49486,6 +51463,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -49738,6 +51716,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -49971,6 +51950,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -50248,6 +52228,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -50510,6 +52510,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -50519,12 +52539,1789 @@
     {
       "sequence": 114,
       "round": 4,
-      "subPhase": "IntentSelection",
+      "subPhase": "TieOrder",
       "event": {
         "kind": "SubPhaseEntered",
         "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
         "roundId": 4,
         "subPhase": "TurnOrderResolution"
+      },
+      "player1": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player1",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 4,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 13,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 1,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 1,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 19,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 2,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 7,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 8,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 5,
+        "speedChoices": [
+          {
+            "creature": 1,
+            "speed": "Quick"
+          },
+          {
+            "creature": 2,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      },
+      "player2": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player2",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 4,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 7,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 8,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 13,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 1,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 1,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 19,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 2,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 5,
+        "speedChoices": [
+          {
+            "creature": 3,
+            "speed": "Standard"
+          },
+          {
+            "creature": 4,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      }
+    },
+    {
+      "sequence": 115,
+      "round": 4,
+      "subPhase": "TieOrder",
+      "event": {
+        "kind": "TimelineBuilt",
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "roundId": 4,
+        "timeline": {
+          "slots": [
+            {
+              "owner": "Player1",
+              "creature": 1,
+              "speed": "Quick",
+              "initiative": 7
+            },
+            {
+              "owner": "Player1",
+              "creature": 2,
+              "speed": "Standard",
+              "initiative": 7
+            },
+            {
+              "owner": "Player2",
+              "creature": 3,
+              "speed": "Standard",
+              "initiative": 7
+            },
+            {
+              "owner": "Player2",
+              "creature": 4,
+              "speed": "Standard",
+              "initiative": 7
+            }
+          ],
+          "rollOffs": [
+            {
+              "creature": 2,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 3,
+              "rolls": [
+                13
+              ]
+            },
+            {
+              "creature": 4,
+              "rolls": [
+                9
+              ]
+            }
+          ],
+          "count": 4
+        }
+      },
+      "player1": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player1",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 4,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 13,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 1,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 1,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 19,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 2,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 7,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 8,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 5,
+        "speedChoices": [
+          {
+            "creature": 1,
+            "speed": "Quick"
+          },
+          {
+            "creature": 2,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      },
+      "player2": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player2",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 4,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 7,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 8,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 13,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 1,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 1,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 19,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 2,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 5,
+        "speedChoices": [
+          {
+            "creature": 3,
+            "speed": "Standard"
+          },
+          {
+            "creature": 4,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      }
+    },
+    {
+      "sequence": 116,
+      "round": 4,
+      "subPhase": "TieOrder",
+      "event": {
+        "kind": "SubPhaseEntered",
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "roundId": 4,
+        "subPhase": "TieOrder"
+      },
+      "player1": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player1",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 4,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 13,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 1,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 1,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 19,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 2,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 7,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 8,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 5,
+        "speedChoices": [
+          {
+            "creature": 1,
+            "speed": "Quick"
+          },
+          {
+            "creature": 2,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      },
+      "player2": {
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "slot": "Player2",
+        "state": "InProgress",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+        "roundNumber": 4,
+        "phase": "Planning",
+        "subPhase": "TieOrder",
+        "allies": [
+          {
+            "id": 3,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 7,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 4,
+            "owner": "Player2",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 20,
+            "maxHealth": 20,
+            "energy": 8,
+            "totalDefense": 1,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "enemies": [
+          {
+            "id": 1,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 13,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 1,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 1,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 4,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          },
+          {
+            "id": 2,
+            "owner": "Player1",
+            "definitionId": "creature:main:v1",
+            "name": "Main",
+            "talentTree": "talent-tree:base:v1",
+            "health": 19,
+            "maxHealth": 20,
+            "energy": 5,
+            "totalDefense": 3,
+            "baseInitiative": 7,
+            "currentInitiative": 7,
+            "criticalChance": 0.05,
+            "isStunned": false,
+            "knownSpells": [
+              "spell:strike:v1",
+              "spell:guard:v1"
+            ],
+            "acquiredTiers": [
+              "tier:guard:v1"
+            ],
+            "conditions": [
+              {
+                "effect": {
+                  "kind": "DefenseBuff",
+                  "amount": 2,
+                  "duration": {
+                    "rounds": null,
+                    "isPermanent": true
+                  },
+                  "stacking": "Ignore"
+                },
+                "remainingRounds": null,
+                "source": {
+                  "caster": 2,
+                  "spell": "spell:guard:v1"
+                },
+                "isFresh": false
+              },
+              {
+                "effect": {
+                  "kind": "Bleed",
+                  "amountPerRound": 1,
+                  "duration": {
+                    "rounds": 2,
+                    "isPermanent": false
+                  },
+                  "stacking": "Stack"
+                },
+                "remainingRounds": 2,
+                "source": {
+                  "caster": 3,
+                  "spell": "spell:strike:v1"
+                },
+                "isFresh": false
+              }
+            ],
+            "isDead": false,
+            "isAlive": true
+          }
+        ],
+        "evolutionChoices": [],
+        "hasPassedEvolution": false,
+        "nextEvolutionRound": 5,
+        "speedChoices": [
+          {
+            "creature": 3,
+            "speed": "Standard"
+          },
+          {
+            "creature": 4,
+            "speed": "Standard"
+          }
+        ],
+        "intents": [],
+        "timeline": [
+          {
+            "owner": "Player1",
+            "creature": 1,
+            "speed": "Quick",
+            "initiative": 7
+          },
+          {
+            "owner": "Player1",
+            "creature": 2,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 3,
+            "speed": "Standard",
+            "initiative": 7
+          },
+          {
+            "owner": "Player2",
+            "creature": 4,
+            "speed": "Standard",
+            "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
+        "revealedActions": [],
+        "revealCursor": 0,
+        "resolveCursor": 0,
+        "outcome": null
+      }
+    },
+    {
+      "sequence": 117,
+      "round": 4,
+      "subPhase": "IntentSelection",
+      "event": {
+        "kind": "TieOrderSubmitted",
+        "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
+        "roundId": 4,
+        "slot": "Player2",
+        "order": [
+          3,
+          4
+        ]
       },
       "player1": {
         "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
@@ -50783,6 +54580,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -51045,6 +54862,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -51052,11 +54889,11 @@
       }
     },
     {
-      "sequence": 115,
+      "sequence": 118,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
-        "kind": "TimelineBuilt",
+        "kind": "TiesOrdered",
         "matchId": "01a0c728-4cbc-7416-92f1-73a930406c1c",
         "roundId": 4,
         "timeline": {
@@ -51084,6 +54921,26 @@
               "creature": 4,
               "speed": "Standard",
               "initiative": 7
+            }
+          ],
+          "rollOffs": [
+            {
+              "creature": 2,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 3,
+              "rolls": [
+                13
+              ]
+            },
+            {
+              "creature": 4,
+              "rolls": [
+                9
+              ]
             }
           ],
           "count": 4
@@ -51346,6 +55203,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -51608,6 +55485,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -51615,7 +55512,7 @@
       }
     },
     {
-      "sequence": 116,
+      "sequence": 119,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -51881,6 +55778,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -52143,6 +56060,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -52150,7 +56087,7 @@
       }
     },
     {
-      "sequence": 117,
+      "sequence": 120,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -52425,6 +56362,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -52687,6 +56644,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -52694,7 +56671,7 @@
       }
     },
     {
-      "sequence": 118,
+      "sequence": 121,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -52973,6 +56950,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -53235,6 +57232,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -53242,7 +57259,7 @@
       }
     },
     {
-      "sequence": 119,
+      "sequence": 122,
       "round": 4,
       "subPhase": "IntentSelection",
       "event": {
@@ -53521,6 +57538,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -53788,6 +57825,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -53795,7 +57852,7 @@
       }
     },
     {
-      "sequence": 120,
+      "sequence": 123,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -54074,6 +58131,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -54345,6 +58422,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -54352,7 +58449,7 @@
       }
     },
     {
-      "sequence": 121,
+      "sequence": 124,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -54627,6 +58724,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -54898,6 +59015,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -54905,7 +59042,7 @@
       }
     },
     {
-      "sequence": 122,
+      "sequence": 125,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -55186,6 +59323,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -55465,6 +59622,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -55480,7 +59657,7 @@
       }
     },
     {
-      "sequence": 123,
+      "sequence": 126,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -55761,6 +59938,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -56047,6 +60244,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -56069,7 +60286,7 @@
       }
     },
     {
-      "sequence": 124,
+      "sequence": 127,
       "round": 4,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -56350,6 +60567,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -56643,6 +60880,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -56672,7 +60929,7 @@
       }
     },
     {
-      "sequence": 125,
+      "sequence": 128,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -56953,6 +61210,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -57253,6 +61530,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -57289,7 +61586,7 @@
       }
     },
     {
-      "sequence": 126,
+      "sequence": 129,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -57564,6 +61861,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -57864,6 +62181,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -57900,7 +62237,7 @@
       }
     },
     {
-      "sequence": 127,
+      "sequence": 130,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -58208,6 +62545,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -58508,6 +62865,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -58544,7 +62921,7 @@
       }
     },
     {
-      "sequence": 128,
+      "sequence": 131,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -58891,6 +63268,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -59208,6 +63605,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -59244,7 +63661,7 @@
       }
     },
     {
-      "sequence": 129,
+      "sequence": 132,
       "round": 4,
       "subPhase": "ActionResolution",
       "event": {
@@ -59569,6 +63986,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -59886,6 +64323,26 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              9
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 1,
@@ -59922,7 +64379,7 @@
       }
     },
     {
-      "sequence": 130,
+      "sequence": 133,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -60220,6 +64677,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -60466,6 +64924,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -60473,7 +64932,7 @@
       }
     },
     {
-      "sequence": 131,
+      "sequence": 134,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -60723,6 +65182,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -60969,6 +65429,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -60976,7 +65437,7 @@
       }
     },
     {
-      "sequence": 132,
+      "sequence": 135,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -61246,6 +65707,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -61492,6 +65954,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -61499,7 +65962,7 @@
       }
     },
     {
-      "sequence": 133,
+      "sequence": 136,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -61749,6 +66212,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -61995,6 +66459,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -62002,7 +66467,7 @@
       }
     },
     {
-      "sequence": 134,
+      "sequence": 137,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -62251,6 +66716,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -62497,6 +66963,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -62504,7 +66971,7 @@
       }
     },
     {
-      "sequence": 135,
+      "sequence": 138,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -62753,6 +67220,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -62999,6 +67467,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -63006,7 +67475,7 @@
       }
     },
     {
-      "sequence": 136,
+      "sequence": 139,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -63256,6 +67725,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -63502,6 +67972,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -63509,7 +67980,7 @@
       }
     },
     {
-      "sequence": 137,
+      "sequence": 140,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -63759,6 +68230,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -64005,6 +68477,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -64012,7 +68485,7 @@
       }
     },
     {
-      "sequence": 138,
+      "sequence": 141,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -64304,6 +68777,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -64550,6 +69024,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -64557,7 +69032,7 @@
       }
     },
     {
-      "sequence": 139,
+      "sequence": 142,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -64807,6 +69282,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -65053,6 +69529,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -65060,7 +69537,7 @@
       }
     },
     {
-      "sequence": 140,
+      "sequence": 143,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -65310,6 +69787,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -65556,6 +70034,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -65563,7 +70042,7 @@
       }
     },
     {
-      "sequence": 141,
+      "sequence": 144,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -65822,6 +70301,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -66068,6 +70548,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -66075,7 +70556,7 @@
       }
     },
     {
-      "sequence": 142,
+      "sequence": 145,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -66338,6 +70819,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -66584,6 +71066,7 @@
         "speedChoices": [],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -66591,7 +71074,7 @@
       }
     },
     {
-      "sequence": 143,
+      "sequence": 146,
       "round": 5,
       "subPhase": "Speed",
       "event": {
@@ -66854,6 +71337,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -67105,6 +71589,7 @@
         ],
         "intents": [],
         "timeline": [],
+        "rollOffs": [],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -67112,7 +71597,7 @@
       }
     },
     {
-      "sequence": 144,
+      "sequence": 147,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -67400,6 +71885,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -67680,6 +72191,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -67687,7 +72224,7 @@
       }
     },
     {
-      "sequence": 145,
+      "sequence": 148,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -67971,6 +72508,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -68251,6 +72814,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -68258,7 +72847,7 @@
       }
     },
     {
-      "sequence": 146,
+      "sequence": 149,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -68290,6 +72879,32 @@
               "creature": 4,
               "speed": "Standard",
               "initiative": 7
+            }
+          ],
+          "rollOffs": [
+            {
+              "creature": 2,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 3,
+              "rolls": [
+                13
+              ]
+            },
+            {
+              "creature": 1,
+              "rolls": [
+                17
+              ]
+            },
+            {
+              "creature": 4,
+              "rolls": [
+                13
+              ]
             }
           ],
           "count": 4
@@ -68570,6 +73185,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -68850,6 +73491,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -68857,7 +73524,7 @@
       }
     },
     {
-      "sequence": 147,
+      "sequence": 150,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -69141,6 +73808,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -69421,6 +74114,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -69428,7 +74147,7 @@
       }
     },
     {
-      "sequence": 148,
+      "sequence": 151,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -69721,6 +74440,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -70001,6 +74746,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -70008,7 +74779,7 @@
       }
     },
     {
-      "sequence": 149,
+      "sequence": 152,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -70305,6 +75076,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -70585,6 +75382,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -70592,7 +75415,7 @@
       }
     },
     {
-      "sequence": 150,
+      "sequence": 153,
       "round": 5,
       "subPhase": "IntentSelection",
       "event": {
@@ -70889,6 +75712,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -71174,6 +76023,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -71181,7 +76056,7 @@
       }
     },
     {
-      "sequence": 151,
+      "sequence": 154,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -71478,6 +76353,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -71767,6 +76668,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -71774,7 +76701,7 @@
       }
     },
     {
-      "sequence": 152,
+      "sequence": 155,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -72067,6 +76994,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -72356,6 +77309,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [],
         "revealCursor": 0,
         "resolveCursor": 0,
@@ -72363,7 +77342,7 @@
       }
     },
     {
-      "sequence": 153,
+      "sequence": 156,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -72662,6 +77641,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -72959,6 +77964,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -72974,7 +78005,7 @@
       }
     },
     {
-      "sequence": 154,
+      "sequence": 157,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -73273,6 +78304,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -73577,6 +78634,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -73599,7 +78682,7 @@
       }
     },
     {
-      "sequence": 155,
+      "sequence": 158,
       "round": 5,
       "subPhase": "RevealAndTarget",
       "event": {
@@ -73898,6 +78981,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -74209,6 +79318,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -74238,7 +79373,7 @@
       }
     },
     {
-      "sequence": 156,
+      "sequence": 159,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -74537,6 +79672,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -74855,6 +80016,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -74891,7 +80078,7 @@
       }
     },
     {
-      "sequence": 157,
+      "sequence": 160,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -75184,6 +80371,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -75502,6 +80715,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -75538,7 +80777,7 @@
       }
     },
     {
-      "sequence": 158,
+      "sequence": 161,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -75903,6 +81142,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -76238,6 +81503,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -76274,7 +81565,7 @@
       }
     },
     {
-      "sequence": 159,
+      "sequence": 162,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -76656,6 +81947,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -77008,6 +82325,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -77044,7 +82387,7 @@
       }
     },
     {
-      "sequence": 160,
+      "sequence": 163,
       "round": 5,
       "subPhase": "ActionResolution",
       "event": {
@@ -77404,6 +82747,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -77756,6 +83125,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -77792,7 +83187,7 @@
       }
     },
     {
-      "sequence": 161,
+      "sequence": 164,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -78157,6 +83552,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -78496,6 +83917,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -78536,7 +83983,7 @@
       }
     },
     {
-      "sequence": 162,
+      "sequence": 165,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -78846,6 +84293,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -79185,6 +84658,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -79225,7 +84724,7 @@
       }
     },
     {
-      "sequence": 163,
+      "sequence": 166,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -79574,6 +85073,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -79913,6 +85438,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -79953,7 +85504,7 @@
       }
     },
     {
-      "sequence": 164,
+      "sequence": 167,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -80263,6 +85814,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -80602,6 +86179,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -80642,7 +86245,7 @@
       }
     },
     {
-      "sequence": 165,
+      "sequence": 168,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -80951,6 +86554,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -81290,6 +86919,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -81330,7 +86985,7 @@
       }
     },
     {
-      "sequence": 166,
+      "sequence": 169,
       "round": 5,
       "subPhase": "Finalization",
       "event": {
@@ -81644,6 +87299,32 @@
             "initiative": 7
           }
         ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
+          }
+        ],
         "revealedActions": [
           {
             "actor": 2,
@@ -81981,6 +87662,32 @@
             "creature": 4,
             "speed": "Standard",
             "initiative": 7
+          }
+        ],
+        "rollOffs": [
+          {
+            "creature": 2,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 3,
+            "rolls": [
+              13
+            ]
+          },
+          {
+            "creature": 1,
+            "rolls": [
+              17
+            ]
+          },
+          {
+            "creature": 4,
+            "rolls": [
+              13
+            ]
           }
         ],
         "revealedActions": [

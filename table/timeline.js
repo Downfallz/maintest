@@ -47,3 +47,11 @@ export function cursorOf(board) {
 function index(cursor) {
   return Number.isInteger(cursor) ? cursor : -1;
 }
+
+// The d20 rolls behind a slot's place, as the strip prints them (ADR 0063): "d20 17", or "d20 11 → 4" when the
+// creature rolled again after the other side matched it. Empty for a creature that did not roll -- a tie held
+// by one side alone, or no tie at all -- which is most of them, so the strip stays as short as it was.
+export function rollText(rollOffs, creature) {
+  const rolls = (rollOffs ?? []).find(rollOff => rollOff?.creature === creature)?.rolls ?? [];
+  return rolls.length === 0 ? '' : `d20 ${rolls.join(' → ')}`;
+}

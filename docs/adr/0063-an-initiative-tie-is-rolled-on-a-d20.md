@@ -53,8 +53,8 @@ A tie is two questions, and each gets its own answer.
   change are not comparable with readings after it.
 - Bad: the greedy mirror is still one match played 400 times: all 400 entries end by Elimination in 6 rounds,
   38 health to 0, and the dice now decide what the seat decided. ADR 0062's move to the exploring run stands.
-- Neutral: the roll itself is not recorded on the Activation slot. A table sees the places the rolls produced,
-  not the numbers.
+- Neutral: the rolls travel with the timeline (`CombatTimeline.RollOffs`, public like the order), every roll a
+  creature made in the order it made them, and the table's initiative strip prints them beside each slot.
 
 ## Alternatives considered
 

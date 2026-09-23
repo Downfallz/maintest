@@ -97,6 +97,25 @@ public sealed class TieOrderRulesTests
     }
 
     [Fact]
+    public void A_tie_order_keeps_the_rolls_that_gave_each_side_its_places()
+    {
+        IReadOnlyList<RollOff> rolls = [new RollOff(Arena.Knight, [17]), new RollOff(Arena.Ghoul, [9]), new RollOff(Arena.Archer, [3])];
+
+        var reordered = TieOrderRules.Apply(Mixed.WithRollOffs(rolls), new Dictionary<PlayerSlot, IReadOnlyList<CreatureId>>
+        {
+            [PlayerSlot.Player1] = [Arena.Archer, Arena.Knight],
+        });
+
+        reordered.RollOffs.ShouldBe(rolls);
+    }
+
+    [Fact]
+    public void A_roll_for_a_creature_that_is_not_on_the_timeline_is_refused()
+    {
+        Should.Throw<ArgumentException>(() => Mixed.WithRollOffs([new RollOff(CreatureId.From(9), [20])]));
+    }
+
+    [Fact]
     public void Slots_that_tie_on_initiative_at_different_speeds_are_not_one_tie()
     {
         var timeline = CombatTimeline.Of(
