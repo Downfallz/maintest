@@ -5,7 +5,7 @@ import { cardCost, cardHead, cardLines, cardTitle, loadCatalogue } from './card.
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, revealedText, statPairs, targetedBy } from './board.js';
 import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine, retainRoundEvents, roundRecap } from './feed.js';
-import { bands, cursorOf, side, withCursor } from './timeline.js';
+import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { drawn, matBands } from './mat.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
@@ -411,6 +411,13 @@ function renderTimeline(board) {
       const one = document.createElement('div');
       one.className = `slot ${side(slot, board.slot)}${slot.isNow ? ' now' : ''}`;
       one.textContent = `${slot.creature} · ${slot.initiative}`;
+      const rolled = rollText(board.rollOffs, slot.creature);
+      if (rolled) {
+        const dice = document.createElement('span');
+        dice.className = 'roll';
+        dice.textContent = rolled;
+        one.append(dice);
+      }
       slots.append(one);
     }
 

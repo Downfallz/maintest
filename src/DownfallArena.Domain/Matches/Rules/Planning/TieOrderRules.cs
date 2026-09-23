@@ -77,7 +77,7 @@ public static class TieOrderRules
             ordered.AddRange(tie.Select(entry => queues[entry.Owner].Dequeue()));
         }
 
-        return CombatTimeline.Of(ordered);
+        return CombatTimeline.Of(ordered).WithRollOffs(timeline.RollOffs);
     }
 
     // A side holding one place in a tie has nothing to order there, and its owner's order, given for another
