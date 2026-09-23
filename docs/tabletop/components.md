@@ -386,7 +386,7 @@ Everything needed to resolve a cast without the rulebook. Each line names the fi
 | --- | --- | --- | --- |
 | Head | Name | `name` | |
 | Head | Energy cost, as a numeral in a filled circle | `energyCost` | An Intent is only legal if the Creature can afford it (`IntentRules.cs:50-69`), checked against a public Energy rail |
-| Head | The package that teaches it, and its level: `Lich . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchase brings it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058) |
+| Head | Every package that teaches it, with its level: `Lich . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `4d7a841c` every head names one |
 | Body | Targeting, one line | `targeting.origin`, `scope`, `maxTargets` | Origin, scope and count are one sentence: `Self`, `One enemy`, `One ally`, `Up to 2 enemies`, `Up to 3 allies` |
 | Body | One line per effect, with its amount and Duration | `effects[]` | |
 | Body | One line per caster effect, prefixed `Caster:` and set below a rule | `casterEffects[]` | ADR 0031: once per cast, never multiplied, none of them on a Fizzle. Seven Spells carry one, and it must not read as a target effect |
@@ -973,9 +973,10 @@ A purchase spends one pick token and is **three actions in a fixed order**, the 
    its stagger. This is the public record that the Creature owns the Tier, and it is what the opponent reads
    instead of the concealed hand.
 2. **Spell cards.** Take one copy of each Spell the package card names from the library into the hand. The
-   library is the 216 Spell cards filed by the package in their head, six copies of each Spell together. A
-   Spell the Creature already knows is not taken again (ADR 0056: the grant is idempotent). At `4d7a841c` no
-   Spell is taught by two Tiers, so this never happens, but authored content may make it happen.
+   library is the 216 Spell cards filed by the first package in their head, six copies of each Spell
+   together. A Spell the Creature already knows is not taken again (ADR 0056: the grant is idempotent). At
+   `4d7a841c` no Spell is taught by two Tiers, so this never happens, but authored content may make it
+   happen, and [2.1](#21-what-is-printed-and-where-it-comes-from) says what that card's head prints.
 3. **Initiative.** Move that Creature's Base initiative rails up by the card's bonus. **This is the only
    place Base initiative ever moves** (ADR 0056), which is why the package card prints it and no Spell card
    does. Values at `4d7a841c` are 0 to 5, so it is one marker move on the units rail, sometimes carrying into
