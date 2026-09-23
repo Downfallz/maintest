@@ -8,5 +8,5 @@
   "spells": [
     "spell:noxious_cure:v1"
   ],
-  "initiativeBonus": 0
+  "initiativeBonus": 1
 }

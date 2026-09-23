@@ -8,5 +8,5 @@
   "spells": [
     "spell:full_plate:v1"
   ],
-  "initiativeBonus": 0
+  "initiativeBonus": 1
 }

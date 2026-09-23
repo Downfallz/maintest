@@ -3,7 +3,7 @@
   "name": "Enraged Charge",
   "spellType": "Offensive",
   "creatureClass": "Berserker",
-  "energyCost": 4,
+  "energyCost": 3,
   "criticalChance": 0.8,
   "targeting": {
     "origin": "Enemy",

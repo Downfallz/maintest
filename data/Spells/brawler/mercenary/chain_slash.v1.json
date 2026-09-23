@@ -4,7 +4,7 @@
   "spellType": "Offensive",
   "creatureClass": "Mercenary",
   "energyCost": 3,
-  "criticalChance": 0.45,
+  "criticalChance": 0.5,
   "targeting": {
     "origin": "Enemy",
     "scope": "Multi",
