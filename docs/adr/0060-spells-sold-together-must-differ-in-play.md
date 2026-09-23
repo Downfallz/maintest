@@ -36,10 +36,15 @@ tempo at level 2), and a thrown weapon reaching more than one thing is what the 
 
 ## Consequences
 
-- Good: the pick becomes a decision every round instead of a decision once. `throwing_star` leaves the
-  `check-knobs` outclassed list, where it had been permanently — 9 findings to 8. Its coarse cast value goes
-  **3.00 to 6.00**, against `poison_slash` at 5.40 and `lightning_bolt`, the level-1 yardstick, at 6.47. Two
-  spells within 0.6 of each other is the precondition for a choice; 3.00 against 5.40 never was.
+- Good: the smaller spell stops being a trap. `throwing_star` leaves the `check-knobs` outclassed list, where
+  it had been permanently — 9 findings to 8 — and its coarse cast value goes **3.00 to 6.00**, against
+  `poison_slash` at 5.40 and `lightning_bolt`, the level-1 yardstick, at 6.47. In play, on `skill`, a side
+  casting it won 0.339 of the time against `poison_slash`'s 0.727 before; after, the two read 0.735 and 0.729.
+- Bad: the calibration overshoots. On the benchmark seeds its share of the pair's landed casts goes **7 % to
+  85 %** on `variety`, so the pick is still a decision once, now the other way round. One point less damage or
+  one energy more each sends it back to about 10 % and scores the objective 20 to 30 points worse. Against a
+  deterministic greedy a pair's usage is a step in its numbers, and the step sits between two integers:
+  `criticalChance` joins its knobs as the continuous lever to walk it, and that tuning is left to a later pass.
 - Good: the entry that argued its own finding away is gone. `data/balance/knobs.json` used the unlock bonus to
   claim the report against this spell was an artifact; the bonus left with ADR 0059 and the claim left with
   this.
@@ -47,9 +52,10 @@ tempo at level 2), and a thrown weapon reaching more than one thing is what the 
   ordering is held deliberately and written into the entry's `keep`: 2 energy for two targets against
   `meteor`'s 3 for three, dearer per target and shorter, with `meteor` still ahead on the coarse reading (8.10
   against 6.00). If a tuning pass ever inverts that, the finding is about `meteor`.
-- Bad: the content hash moves and the benchmark digest is regenerated. Unlike ADR 0059 this one **changes the
-  matches**: it is a real content change and the digest's entries move with it. Readings taken before it are
-  not comparable to readings after.
+- Bad: the content hash moves and the benchmark digest is regenerated. It is a real content change and
+  readings taken before it are not comparable to readings after, although the digest's 400 greedy-mirror
+  entries come out identical: that mirror ties every initiative and the seat decides it, whatever the
+  Prowler casts.
 - Neutral: `cast_value` overstates a `Multi` spell by construction — it prices every target as found, and
   later in a match they are not. 6.00 is the best case, which is why the pair is measured in the engine and
   not argued from that number.
@@ -78,6 +84,7 @@ tempo at level 2), and a thrown weapon reaching more than one thing is what the 
 
 - `data/Spells/scoundrel/throwing_star.v1.json`: `Multi`, 2 targets, 2 energy, 3 damage.
 - `data/balance/knobs.json`: the intent, the three `keep` lines that hold reach and the ordering against
-  `meteor`, the note, and bounds that no longer reach for a cost this spell does not want.
+  `meteor`, the note, bounds that no longer reach for a cost this spell does not want, and a `criticalChance`
+  knob for the tuning pass above.
 - `docs/domain/spells.md`: the catalogue row, and the open question this closes.
 - `benchmarks/`: a digest for the new content hash, with a journal entry recording that the matches moved.
