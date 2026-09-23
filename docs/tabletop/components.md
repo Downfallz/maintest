@@ -1,20 +1,28 @@
 # Components and print-and-play
 
-Status: **Specification** (2026-09-14). Phase 3 of [plan.md](plan.md). It answers the 41 **needs a component**
-rows of [translation.md](translation.md) and specifies a generator that is not written here.
+Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
+question 14, 2026-09-23, and to one package a Creature an opportunity the same day). Phase 3 of
+[plan.md](plan.md). It answers the **needs a component** rows of [translation.md](translation.md) and specifies
+a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
+under `tools/` or `scripts/` prints a sheet.
 
-> **The evolution rules below describe the game before
-> [ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md).** A pick bought one Spell and every
-> unlock raised Base initiative by that Spell's own number; a pick buys a whole package now, twice at round 1
-> and every second round after, and the package pays one initiative bonus. The per-Spell number is gone
-> entirely ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), so any row here
-> that cites `Spell initiative` or `Creature.UnlockSpell` names something the engine no longer has. Re-auditing
-> the tabletop translation against the package model is phase 7 of
-> [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md) and has not been done. Everything
-> outside evolution — combat, the timeline, conditions, the win condition — is unaffected, except one rule:
-> a timeline tie is rolled off on a d20 now, not broken by seat and Creature number
-> ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). A row here that calls the Creature number
-> the tiebreak is stale; the number only says the order tied Creatures roll in.
+What is current, exactly:
+
+- **Evolution is the package model.** A pick buys a whole Tier: every Spell in it and one initiative bonus
+  ([ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md)). Two picks at Round 1 and every second
+  Round after, each for a different Creature: a Creature buys at most one package an opportunity
+  ([ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md)). The packages are authored in
+  `data/Tiers/` ([ADR 0057](../adr/0057-a-package-is-authored-not-derived.md)). No Spell has an initiative of
+  its own, and no Spell card prints one
+  ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)).
+- **A timeline tie is rolled off on a d20** between the sides, and each Player orders their own tied Creatures
+  ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). The Creature number breaks no tie. It
+  names the Creature, and it fixes the order tied Creatures roll in.
+- **Every count is read at content `4d7a841c`** and the schedule in `docs/tabletop/playtest.rules.json`.
+  Re-run the commands when the hash moves.
+
+[Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
+(phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
 
 ## What this is
 
@@ -52,19 +60,31 @@ From [plan.md](plan.md), phase 2 and the Decisions section:
 - The Creature's base Critical chance is **zero**. A Spell's printed chance is the chance rolled. The 15
   Spells at zero never roll.
 - A Condition **stacks**, except a Stun, which **refreshes**. One application is one token.
-- A critical is a **die roll** and the catalogue will be authored onto the die's grid. **Which die is open**;
-  [Part 1.6](#16-dice) reports what each candidate costs and recommends one.
+- A critical is a **die roll** and the catalogue will be authored onto the die's grid. The die is a **d20**
+  ([d20-criticals.md](d20-criticals.md), settled, not built); [Part 1.6](#16-dice) keeps what each candidate
+  cost. A timeline tie between the sides is rolled on the same die (ADR 0063).
+- Evolution buys **packages** (Tiers), two picks at Round 1 and every second Round after, and a package's
+  prerequisites are the only rule for what a Creature may buy (ADR 0056). A Creature buys at most one
+  package an opportunity, so the two picks go to two Creatures (ADR 0066).
 
 The board this manifest is built on, and the commands that read it:
 
 ```bash
-sed -n '20,22p' src/DownfallArena.Domain/Matches/RuleSet.cs   # RuleSet.Default: 3, 2, 2, 30, 2.0
-cat data/Creatures/main.v1.json                                # Health 20, Energy 0, Defense 0, Base initiative 5
-find data/Spells -name '*.json' | wc -l                        # 36
+grep -n 'Default {' src/DownfallArena.Domain/Matches/RuleSet.cs   # new(3, 2, 2, 30, 2.0, 1, 2)
+cat docs/tabletop/playtest.rules.json                             # the table's rule set: the same, with a 12-Round cap
+cat data/Creatures/main.v1.json                                   # Health 20, Energy 0, Defense 0, Base initiative 5
+find data/Spells -name '*.json' | wc -l                           # 36
+ls data/Tiers/*.json | wc -l                                      # 21, none disabled
 ```
 
-`RuleSet.Default` is 3 Creatures a Team, 2 Energy a Round, 2 Evolution picks a Round, a 30-Round cap, a
-critical multiplier of 2.0. The cap is the one value the table replaces: the Round track is built for 16.
+`RuleSet.Default` is 3 Creatures a Team, 2 Energy a Round, 2 Evolution picks an opportunity, the first
+opportunity at Round 1 and one every 2 Rounds after it, a 30-Round cap, a critical multiplier of 2.0. The
+table's rule set file (`table --rules`) has the same numbers and a 12-Round cap. The cap is the one value the
+table replaces, and it is a setup: the Round track is built for 16.
+
+The 21 Tiers: 3 at level 1 with two Spells each, 9 at level 2 with one Spell each, 9 at level 3 with two
+Spells each. They teach 33 Spells, each exactly once. The other 3 are the starting kit, which no Tier
+teaches.
 
 ---
 
@@ -75,43 +95,91 @@ Totals first, then the derivation of each line.
 | Group | Pieces |
 | --- | --- |
 | Spell cards | 216 |
-| Boards and mats | 6 creature boards, 2 player mats, 2 talent tree mats, 1 initiative track, 1 round track |
-| Condition tokens | 144 in 8 kinds |
-| Markers and chits | 36 stat markers, 6 initiative markers, 6 speed tokens, 4 pick tokens, 2 round markers, 18 target markers, 82 talent pips, 18 overflow chits, 20 blanks |
+| Package cards | 126 |
+| Speed cards | 12 |
+| Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
+| Condition tokens | 150 in 8 kinds |
+| Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 target markers, 18 overflow chits, 20 blanks |
 | Player aids | 2 |
-| Dice | 2 (recommended: d20) |
-| Paper | about 35 A4 or Letter sheets |
+| Dice | 2 d20 |
+| Paper | about 49 A4 or Letter sheets |
 
-The paper: 24 sheets of cards (9 a sheet), 3 of creature boards (2 a sheet), 2 player mats, 2 talent tree
-mats, 1 for the initiative and round tracks, 2 of tokens (336 pieces at 15 mm, about 185 to a sheet), 1 of player aids. 35.
-Card backs would add 24 more; see Part 6, question 8.
+The paper: 24 sheets of Spell cards, 14 of package cards and 2 of Speed cards (9 a sheet; the second Speed
+sheet holds 3), 3 of creature boards (2 a sheet), 2 player mats, 1 for the initiative and round tracks, 2 of
+tokens (260 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
+add 40 more; see Part 6, question 8.
 
-### 1.1 Spell cards
+What moved when evolution became packages, and why:
+
+| Component | Before | Now | Why |
+| --- | --- | --- | --- |
+| Talent tree mat | 2 | **0** | The talent tree gates nothing (ADR 0056, ADR 0058). A mat that shows its gates would teach a rule the game does not have. |
+| Package card | - | **126** | translation.md's verdict on "A pick buys a whole Tier": Tier cards, 21 kinds. A bought card lies face up with its Creature and is the public record of what it owns. [1.1](#11-spell-cards-and-package-cards), [Part 4](#part-4-the-packages-as-an-object). |
+| Talent pips | 82 | **0** | The package card is the record, so nothing is marked on a mat. |
+| Paper | 35 sheets | **47** | 14 sheets of package cards in, 2 talent tree mats out. |
+| Pick tokens | 4 | **4** | Still 2 a Player, but only in a Round that offers an opportunity. Since ADR 0066 a token that buys lies on the buyer's board until the Sub-phase ends; one token marks one Creature, so the count holds. [1.5](#15-the-rest-of-the-pieces). |
+| Round track | 16 spaces | 16 spaces, **8 pick marks** | The schedule is printed where a Player looks for the Round. [3.6](#36-the-round-track). |
+| Base initiative, tens rail | 0 to 5 | **0 to 2** | The ceiling fell from 52 to 44 with packages, and to 29 when a Creature could buy only one an opportunity (ADR 0066). [3.4](#34-initiative-two-small-rails-instead-of-one-long-one), and Part 6, question 11. |
+| Spell card foot | `Unlock: +N initiative`, `Requires: ...` | **neither** | ADR 0059 and ADR 0056. [2.1](#21-what-is-printed-and-where-it-comes-from). |
+| Spell card head | class and tree depth | **the package that teaches it, and its level** | The class names collide with the package names, and the tree depth is a number the game no longer reads (ADR 0058). [2.1](#21-what-is-printed-and-where-it-comes-from). |
+| Tie order chit | - | **6** | The Tie order is hidden until both Players have given theirs (ADR 0063). [1.5](#15-the-rest-of-the-pieces). |
+| Condition tokens | 144 | **150** | Content, not packages: `ice_spear` lowers Initiative by 1 now, a new face. [1.4](#14-condition-tokens). |
+
+That table records the package change, and its paper line stops at 47. The maintainer's answer to Part 6,
+question 14 moved three lines after it: the 6 two-sided Speed tokens became **12 Speed cards**
+([1.5](#15-the-rest-of-the-pieces), [2.6](#26-the-speed-card)), the token pieces went from 266 to 260, and the
+paper from 47 to **49** sheets.
+
+### 1.1 Spell cards and package cards
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Spell card | **216** = 36 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell: nothing in the Talent tree is exclusive to a side, and both Players play the same Creature definition. Six copies is the ceiling. | 36 is a **VALUE** (content); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per knowing Creature is a **RULE** |
+| Spell card | **216** = 36 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell a Tier teaches: a package's prerequisites are the only rule, so multiclassing is free (ADR 0056), and both Players play the same Creature definition. Six copies is the ceiling. A Spell that is neither in the starting kit nor taught by an enabled Tier can never be known, and gets **no** copy; at `4d7a841c` there is none, so all 36 are printed. | 36 is a **VALUE** (content: 3 starting, 33 taught); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per Creature that could know it is a **RULE** |
+| Package card | **126** = 21 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a level-3 Tier costs a Creature 3 purchases at 3 opportunities, 9 for a whole Team, inside the 16 a Player makes in 16 Rounds. So all six Creatures can own the same Tier in one Match. 126 is exactly 14 sheets. | 21 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
 
-What a Match actually consumes is smaller, and it is the number the open question in Part 6 is about:
+What a Match actually consumes is smaller, and it is the number the open question in Part 6 is about. The
+command below also gives the Base initiative ceiling that
+[3.4](#34-initiative-two-small-rails-instead-of-one-long-one) uses. It tries every set of packages one
+Creature can own (prerequisites included, 2^21 sets, a few seconds):
 
 ```bash
-# starting spells per creature, and picks per player per round
-python3 -c "import json;d=json.load(open('data/Creatures/main.v1.json'));print(len(d['startingSpellIds']))"   # 3
+python3 -c "
+import json,glob
+R=json.load(open('docs/tabletop/playtest.rules.json'))
+T=[json.load(open(p)) for p in glob.glob('data/Tiers/*.json')];T=[t for t in T if t.get('enabled',True)]
+o=[r for r in range(1,17) if r>=R['firstEvolutionRound'] and (r-R['firstEvolutionRound'])%R['evolutionInterval']==0]
+P=R['evolutionPicksPerOpportunity']*len(o);C=len(o);ix={t['id']:i for i,t in enumerate(T)};n=len(T)
+need=[sum(1<<ix[q] for q in t['prerequisites']) for t in T];bb={};bs={}
+for m in range(1<<n):
+  own=[i for i in range(n) if m>>i&1]
+  if any(need[i]&~m for i in own): continue
+  k=len(own);bb[k]=max(bb.get(k,0),sum(T[i]['initiativeBonus'] for i in own));bs[k]=max(bs.get(k,0),len({s for i in own for s in T[i]['spells']}))
+f=lambda d,k:max(v for j,v in d.items() if j<=k)
+print('opportunities',o,'picks a Player',P,'purchases one Creature',C)   # one package a Creature an opportunity
+print('most Spells a Player adds',max(f(bs,a)+f(bs,b)+f(bs,P-a-b) for a in range(C+1) for b in range(C+1) if 0<=P-a-b<=C))   # a Team of 3
+print('most Base initiative one Creature buys',f(bb,C))"
+# opportunities [1, 3, 5, 7, 9, 11, 13, 15] picks a Player 16 purchases one Creature 8
+# most Spells a Player adds 28
+# most Base initiative one Creature buys 24
 ```
 
-6 Creatures x 3 starting Spells = 18 cards in hands at setup, plus at most 2 picks x 2 Players x 16 Rounds =
-64 unlocks, so **at most 82 cards are in hands in a 16-Round Match**. The box still carries 216 because which
-82 is a choice the Players make, and six Creatures may all choose the same Spell.
+6 Creatures x 3 starting Spells = 18 cards in hands at setup. A 16-Round Match offers 8 opportunities, so a
+Player makes at most 16 purchases, and one Creature at most 8 of them, one an opportunity (ADR 0066). The most
+Spells 16 purchases add is 28: the 3 level-1 packages on each of three Creatures (9 purchases, 18 Spells, two a
+purchase), then 4 level-2 packages and the 3 level-3 packages above them (7 purchases, 10 Spells), spread so
+that no Creature makes more than 8; ADR 0066 left the 28 where it was. So **at most 18 + 2 x 28 = 74 cards are
+in hands in a 16-Round Match**, down from 82 when a pick bought one Spell every Round. The box still carries
+216 because which 74 is a choice the Players make, and six Creatures may all buy the same package. The same
+holds for package cards: a Match lays out at most 2 x 16 = 32 of the 126, one a purchase.
 
 ### 1.2 Boards and mats
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Creature board | **6** | One per Creature in play: 2 Players x `RuleSet.TeamSize` 3. Each carries the number 1 to 6 that breaks initiative ties. | **VALUE** (team size) |
+| Creature board | **6** | One per Creature in play: 2 Players x `RuleSet.TeamSize` 3. Each carries the Creature's number, 1 to 6: who it is on the track and on a target marker, and the order tied Creatures roll in. The number breaks no tie (ADR 0063). | **VALUE** (team size) |
 | Player area mat | **2** | One per Player. A Match seats exactly two. | **RULE** |
-| Talent tree mat | **2** | One per Player, holding all 36 Spells of the tree with three pip boxes per Spell, one for each of that Player's Creatures. One tree is enabled (`data/TalentTrees/talent_tree.v1.json`; `core_classes.v1.json` carries `"enabled": false`), and all six Creatures are on it. | **VALUE** (the enabled tree, the team size) |
 | Initiative track | **1** | Six ordered slots, a Quick band above a Standard band. Six is the number of Activation slots a Round can have: one per living, unstunned Creature. | **VALUE** (team size) |
-| Round track | **1**, 16 spaces | A Match is 8 to 16 Rounds (given). The track is printed for the top of that band. The Round cap marker is placed on the space equal to the `RuleSet`'s cap at setup. | **RULE** for 16 (the given band); the cap marker is a **VALUE** |
+| Round track | **1**, 16 spaces, 8 pick marks | A Match is 8 to 16 Rounds (given). The track is printed for the top of that band. The Round cap marker is placed on the space equal to the `RuleSet`'s cap at setup. A pick mark is printed on every Round that offers an opportunity: Round 1 and every second Round after, so 1, 3, ..., 15 (`RuleSet.IsEvolutionRound`). | **RULE** for 16 (the given band); the cap marker and the pick marks are **VALUE**s (the cap; `FirstEvolutionRound`, `EvolutionInterval`) |
 
 ### 1.3 Stat markers and the rails they ride
 
@@ -120,12 +188,12 @@ counts and the ends.
 
 | Rail | Markers | Where it ends, and why | Follows |
 | --- | --- | --- | --- |
-| Health | 6 | 0 to 20. `baseHealth` is 20 and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:139`), so nothing goes above it. | **VALUE** (`baseHealth`) |
+| Health | 6 | 0 to 20. `baseHealth` is 20 and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:271`), so nothing goes above it. | **VALUE** (`baseHealth`) |
 | Energy | 6 | 0 to 32. See [1.7](#17-the-energy-track-what-ends-it). | **VALUE** (`EnergyPerRound`) x **RULE** (16 Rounds) |
 | Defense buffs | 6 | 0 to 20. See [3.3](#33-defense-two-rails-because-the-floor-is-applied-once). | **VALUE** (the largest Damage, the critical multiplier) |
 | Defense debuffs | 6 | 0 to 20, the same reason mirrored. | **VALUE** |
 | Base initiative, units | 6 | 0 to 9. | **RULE** (a decimal rail) |
-| Base initiative, tens | 6 | 0 to 5. Together the two rails read 0 to 59, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Current initiative of 58. | **VALUE** (the catalogue's Spell initiative, the picks a Round) |
+| Base initiative, tens | 6 | 0 to 2. Together the two rails read 0 to 29, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Base initiative of 29. | **VALUE** (the packages' `initiativeBonus`, the schedule) x **RULE** (one package a Creature an opportunity, ADR 0066) |
 
 **36 stat markers**, six of each of the six rails above. Print them as 10mm discs in six Creature colours.
 
@@ -160,18 +228,21 @@ for s in S:
 | Bleed | 4 a Round | 6 | `mortal_wound` on a target, `crazed_specter` and `revenant_guards` on their own caster; one each; 6 slots x 1 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
 | Energy regeneration | 2 a Round | 6 | `momentum`, Self only; 6 slots x 1 | **VALUE** |
-| Stun | - | 12 | A Stun **refreshes**, so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one fills the Speed slot so no Speed token can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. | **RULE** (the stacking policy, and the two places a Stun is shown) x **VALUE** (team size) |
+| Stun | - | 12 | A Stun **refreshes**, so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one sits in the Speed slot so no Speed card can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. | **RULE** (the stacking policy, and the two places a Stun is shown) x **VALUE** (team size) |
 | Defense buff | +1 | 6 | `guard`'s timed half, one ally; 6 slots x 1 | **VALUE** |
 | Defense buff | +2 | 18 | `revenant_guards`' timed half, up to 3 allies; 6 x 3 | **VALUE** |
 | Defense buff | +3 | 6 | `thundering_seal`'s timed half, one ally; 6 x 1 | **VALUE** |
 | Defense debuff | -2 | 18 | `noxious_cure` on up to 3 allies; 6 x 3. `psycho_rush`'s caster debuff is the same face. | **VALUE** |
 | Initiative buff | +2 | 18 | `death_squad`, up to 3 allies; 6 x 3 | **VALUE** |
-| Initiative debuff | -2 | 6 | `ice_spear` and `protective_slam`, one enemy; 6 x 1 | **VALUE** |
-| **Total** | | **144** | | |
+| Initiative debuff | -1 | 6 | `ice_spear`, one enemy; 6 x 1 | **VALUE** |
+| Initiative debuff | -2 | 6 | `protective_slam`, one enemy; 6 x 1 | **VALUE** |
+| **Total** | | **150** | | |
 
 Every amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 3; Energy
-regeneration is 2; timed Defense is 1, 2 or 3; every Initiative change is 2; every Defense debuff is 2. That
-is why a token set this small covers a 36-Spell catalogue.
+regeneration is 2; timed Defense is 1, 2 or 3; every Initiative buff is 2; an Initiative debuff is 1 or 2;
+every Defense debuff is 2. That is why a token set this small covers a 36-Spell catalogue. The -1 face is new
+at `4d7a841c` (`ice_spear` was -2 when this table was first read), and it is the whole of the change from
+144 to 150.
 
 **The supply is one Round at the maximum rate, and Durations run to 3.** A Bleed from `summon_minions` lives 3
 Rounds, so the rule's own ceiling is three times the table above for that face: 54 Bleed-2 tokens. It is
@@ -184,13 +255,13 @@ supply that runs out is replaced by a blank token with the value written on it; 
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Speed token, Quick on one face, Standard on the other | **6** | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`). Two-sided because the choice is one of two and is made face down. The Quick face needs a reminder that it forfeits the Critical roll (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. | **VALUE** (team size) |
-| Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number is the tiebreak (`TimelineBuilder.cs:27-28`): ids are handed out in join order (`Match.cs:286-296`), so 1 to 3 are Player 1's. | **VALUE** (team size) |
-| Evolution pick token | **4** | 2 per Player a Round (`RuleSet.EvolutionPicksPerRound`), spent and returned each Round. | **VALUE** |
+| Speed card, `Quick` or `Standard`, one common back, poker size | **12** = 6 per Player: a Quick and a Standard card for each Creature | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`), hidden until both Players have made theirs (`PlayerBoardStateProjection.cs:38`). A hidden choice of one of two needs both answers behind one back: the Player lays the chosen card face down in the Creature's Speed slot, keeps the other in hand, and both Players turn theirs together. Any Creature may take either Speed, and every Creature may take the same one, so a Player needs `RuleSet.TeamSize` cards of each: 2 Speeds x team size 3 x 2 Players. The Quick card carries the reminder that a Quick Creature rolls no critical that Round (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. Size, back and face: [2.6](#26-the-speed-card). The maintainer's answer to Part 6, question 14. | **VALUE** (team size) x **RULE** (two Speeds, one hidden simultaneous choice) |
+| Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number names the Creature on the track; ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`), so 1 to 3 are Player 1's. It breaks no tie: a tie between the sides is a d20 Roll-off, and tied Creatures roll in number order, which only fixes the order of the rolls (ADR 0063). | **VALUE** (team size) |
+| Tie order chit, `1st`, `2nd`, `3rd`, one common back | **6** = 3 per Player | The Tie order is given by both Players at the same time and hidden until both are in (ADR 0063, "like a Speed choice"), so it needs something that commits face down. A Player lays one chit face down on each of their tied Creatures' boards, and both Players turn them together. A Player orders at most all of their own Creatures, `RuleSet.TeamSize` = 3; two separate ties are each read low number first, so 3 chits cover any Round. This is translation.md's smallest answer ("three ordinal chits a Player"). | **VALUE** (team size) x **RULE** (a hidden, simultaneous Tie order) |
+| Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track. A purchase moves one from the mat onto the board of the Creature that bought, and it stays there until the Sub-phase ends: a Creature holding one has bought this opportunity and cannot be picked again (`Planning.CreatureAlreadyEvolved`, ADR 0066). A pass takes the tokens still on the mat off it; the end of the Sub-phase takes every token off the mats and the boards (rulebook §5.3). One token marks one Creature, and a Player's picks go to different Creatures, so 2 a Player still covers every opportunity. A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
 | Round marker | **1** | One position on the Round track. | **RULE** |
 | Round cap marker | **1** | Placed at setup on the space equal to the `RuleSet`'s Round cap, so the track's end is a component and not a memory. | **VALUE** |
-| Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 26 Spells at 1, one at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
-| Talent pip | **82** = 2 x 41 | A Player marks 3 starting Spells on each of 3 Creatures (9) and at most 2 picks x 16 Rounds (32). | **VALUE** (picks a Round, starting Spells) x **RULE** (16 Rounds) |
+| Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
 | Energy overflow chit, +32 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule, and the rule has no bound: permanent Defense buffs and debuffs both stack (ADR candidate 3, open). | **RULE** (no bound exists) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
@@ -198,9 +269,11 @@ supply that runs out is replaced by a blank token with the value written on it; 
 
 ### 1.6 Dice
 
-One critical roll a cast (`ResolutionRules.cs:56`), at most 6 casts a Round, resolved one after the other in
-timeline order. **One die is enough by the rule.** Two are in the box so each Player rolls their own casts,
-which is a convenience and not a rule.
+One critical roll a cast (`ResolutionRules.cs:59`), at most 6 casts a Round, resolved one after the other in
+timeline order. The Roll-off of a timeline tie uses the same die (ADR 0063): at most 6 tied Creatures, rolled
+one after the other in number order, before any Intent. **One die is enough by the rule**, for both. Two are
+in the box so each Player rolls their own casts and their own Creatures in a Roll-off, which is a convenience
+and not a rule. The Roll-off adds no die and no component: its result is the Places on the initiative track.
 
 Since the Creature's base chance is zero, only the Spells that print a chance roll at all:
 
@@ -209,11 +282,11 @@ python3 -c "
 import json,glob,collections
 v=collections.Counter(json.load(open(p))['criticalChance'] for p in glob.glob('data/Spells/**/*.json',recursive=True))
 print(sorted(v.items()))"
-# [(0, 15), (0.22, 1), (0.28, 1), (0.283, 1), (0.33, 4), (0.38, 1), (0.45, 2), (0.5, 7), (0.617, 1), (0.75, 1),
-#  (0.767, 1), (0.8, 1)]
+# [(0, 15), (0.22, 1), (0.28, 1), (0.283, 1), (0.33, 3), (0.35, 1), (0.38, 2), (0.45, 2), (0.5, 5), (0.55, 1),
+#  (0.617, 1), (0.75, 1), (0.767, 1), (0.8, 1)]
 ```
 
-**21 of 36 Spells roll. 15 never touch a die.** Thirteen distinct chances are printed at content `7e199df4`,
+**21 of 36 Spells roll. 15 never touch a die.** Thirteen distinct chances are printed at content `4d7a841c`,
 and the die's grid has to carry them. The table below is a reading, not a constant — the maintainer is tuning,
 so re-run the command rather than trusting the cells. What each candidate costs, snapping each of the 21 to
 the nearest face:
@@ -234,17 +307,17 @@ for d in (6,8,10,12,20,100):
 | d8 | 15 | 0.05 | 0.0232 | **No** | Ties the d10 exactly at this content - same moves, same worst, same mean - so nothing separates them but the grid, which the d10 is on and it is not; and a die many households do not have |
 | d10 | 15 | 0.05 | 0.0232 | **Yes**, 0.1 is a multiple of 0.05 | Ten faces for thirteen chances, and it cannot express 0.75, where `crushing_stomp` sits today |
 | d12 | 15 | 0.0367 | 0.0180 | **No** | Values no declared knob can reach, and it no longer buys the smallest mean error either |
-| **d20** | **10** | **0.02** (`rejuvenate` 0.22 to 0.20) | **0.0091** | **Yes**, exactly the declared step | One die, one reading, thresholds in whole numbers |
+| **d20** | **10** | **0.02** (`tornado` 0.38 to 0.40, and six others by the same amount) | **0.0091** | **Yes**, exactly the declared step | One die, one reading, thresholds in whole numbers |
 | d100 (2 dice) | 3 | 0.003 | 0.0004 | No, 0.01 | Two dice and a percentile read per cast, and it keeps the arbitrary precision fork B exists to remove |
 
 **Settled: a d20** ([d20-criticals.md](d20-criticals.md)), **and the card prints both the chance and the
 threshold** ("Critical 50% - d20: 11+",
-which is seven Spells as the catalogue stands). The recommendation survives tune run 8, and on better terms
+which is five Spells as the catalogue stands). The recommendation survives tune run 8, and on better terms
 than it was made: the d20 now wins the error as well. It moves the fewest Spells (10 of 21), has the smallest
 worst move (0.02) and, since run 8 pulled `crazed_specter` and `protective_slam` off the d12 grid, the
 smallest mean error of the five single dice. The load-bearing reason is still the grid rather than the error,
 because the error moves with every tuning pass and the grid does not: `data/balance/knobs.json` already
-declares `/criticalChance` a knob with a **step of 0.05 on 20 Spells**, so a d20 snap is inside the search
+declares `/criticalChance` a knob with a **step of 0.05 on 21 Spells**, so a d20 snap is inside the search
 space a tuning pass already has, and d6, d8, d12 and d100 are not.
 
 ```bash
@@ -252,16 +325,18 @@ python3 -c "
 import json,collections
 k=json.load(open('data/balance/knobs.json'))['spells']
 s=[(n,b) for n,e in k.items() for b in e.get('knobs',[]) if 'criticalChance' in b['path']]
-print(len(s), collections.Counter(b['step'] for _,b in s))"   # 20 Counter({0.05: 20})
+print(len(s), collections.Counter(b['step'] for _,b in s))"   # 21 Counter({0.05: 21})
 ```
+
+One of the 21 is `throwing_star`, which prints 0 today; the other 20 are Spells that roll.
 
 Two findings the maintainer owns before the snap is authored, neither of them this document's to decide:
 
 - **One Spell that prints a chance has no critical chance knob**: `revenant_guards` (0.33). A snap would move
   a number no declared knob covers.
-- **Nine of the 20 knobbed Spells are already off their own declared grid**: their printed value is not their
-  band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `crazed_specter` 0.38,
-  `tornado`, `engulfing_flames` and `toxic_waves` at 0.33, `noxious_cure` 0.28, `rejuvenate` 0.22, and
+- **Nine of the 21 knobbed Spells are already off their own declared grid**: their printed value is not their
+  band's `min` plus a whole number of steps. `pummel` 0.767, `protective_slam` 0.283, `crazed_specter` and
+  `tornado` at 0.38, `engulfing_flames` and `toxic_waves` at 0.33, `noxious_cure` 0.28, `rejuvenate` 0.22, and
   `lightning_bolt` 0.617 in a band of `[0.17, 0.8]`. Eight of the nine sit on a band whose `min` **is** a
   multiple of 0.05, so a d20 snap fixes them outright. The ninth is `lightning_bolt`, whose band floor 0.17 is
   the only knob band off its own grid, and it leaves the band itself to be moved: 0.17 plus multiples of 0.05
@@ -269,8 +344,9 @@ Two findings the maintainer owns before the snap is authored, neither of them th
 
 ### 1.7 The energy track: what ends it
 
-Energy has no maximum in the engine (`Energy.cs:3`, `Creature.cs:147-160`), and the maintainer has settled that
-the engine does not change: **the component is what ends it** (translation.md, ADR candidate 2).
+Energy has no maximum in the engine (`Energy.cs:3`, `GainEnergy` at `Creature.cs:279-290`), and the maintainer
+has settled that the engine does not change: **the component is what ends it** (translation.md, ADR candidate
+2).
 
 **The track runs 0 to 32.** The rule beside the count: a living Creature gains `RuleSet.EnergyPerRound` = 2
 every Round (`UpkeepRules.cs:13-22`), and a Match is at most 16 Rounds, so **2 x 16 = 32 is the Energy a
@@ -287,7 +363,7 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
   d=json.load(open(p))
   for e in d['effects']+d.get('casterEffects',[]):
     if 'Energy' in e['kind']: print(d['id'].split(':')[1], e)"
-# wait EnergyGain 2 | restorative_burst EnergyGain 2 | momentum EnergyRegeneration 2 for 3 rounds | soul_devourer EnergyDrain 2
+# wait EnergyGain 2 | restorative_burst EnergyGain 2 | momentum EnergyRegeneration 2 for 3 rounds | soul_devourer EnergyDrain 3
 ```
 
 The most one Creature can gain in one Round is **14**: 2 from the Round, 6 from three overlapping `momentum`
@@ -314,14 +390,27 @@ Everything needed to resolve a cast without the rulebook. Each line names the fi
 | --- | --- | --- | --- |
 | Head | Name | `name` | |
 | Head | Energy cost, as a numeral in a filled circle | `energyCost` | An Intent is only legal if the Creature can afford it (`IntentRules.cs:50-69`), checked against a public Energy rail |
-| Head | Class, then tier | `creatureClass`, the Talent tree | Where the card sits in the tree, at a glance |
+| Head | Every package that teaches it, with its level: `Lich . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `4d7a841c` every head names one |
 | Body | Targeting, one line | `targeting.origin`, `scope`, `maxTargets` | Origin, scope and count are one sentence: `Self`, `One enemy`, `One ally`, `Up to 2 enemies`, `Up to 3 allies` |
 | Body | One line per effect, with its amount and Duration | `effects[]` | |
 | Body | One line per caster effect, prefixed `Caster:` and set below a rule | `casterEffects[]` | ADR 0031: once per cast, never multiplied, none of them on a Fizzle. Seven Spells carry one, and it must not read as a target effect |
-| Foot | Critical chance, as a percentage and a die threshold | `criticalChance` | The printed chance is the chance rolled (ADR 0042) |
-| Foot | `Unlock: +N initiative` | `initiative` | ADR 0017: what the Creature's Base initiative gains once, at the unlock |
-| Foot | `Requires: ...` | the Talent tree node's and the Spell's `prerequisites` | The gate, so a pick can be checked on the card |
+| Foot | Critical chance, as a percentage, and the d20 threshold when the chance is a whole number of twentieths | `criticalChance` | The printed chance is the chance rolled (ADR 0042). A chance off the twentieths prints no threshold rather than a rounded one ([d20-criticals.md](d20-criticals.md)) |
 | Foot | Content hash, first 6 characters, and the Spell's versioned id | the build | A deck from two content hashes is a broken deck; see [Part 5](#part-5-the-generator-specified) |
+
+**No Spell card prints an initiative, and none prints a prerequisite.** The two foot lines this face used to
+carry, `Unlock: +N initiative` and `Requires: ...`, described rules the engine no longer applies. A Spell has
+no initiative (ADR 0059: the field is gone from the schema, and a spell file that carries it is refused at the
+build). What a Creature may buy is decided by package prerequisites alone, and the talent tree gates nothing
+(ADR 0056). Both belong to the package: its bonus and its prerequisites are printed once, on its package
+card ([Part 4](#part-4-the-packages-as-an-object)). A table plays what its cards say, so a card that
+kept printing them would teach two rules the game does not have. The table app's card face says the same
+(`CardFace`, `table/card.js`).
+
+The head used to print the Spell's `creatureClass`. It does not: the class names are the talent tree's, the
+package names are the Tiers', and at `4d7a841c` they disagree on 29 of the 33 taught Spells. Some collide:
+`tornado` is authored under the class `Berserker`, and the `Berserker` package does not teach it (`Ravager`
+does). A Spell card that says `Berserker` and a package card that says `Berserker` must mean the same
+package. The table app still prints the class; Part 6, question 10.
 
 Two rules that are **not** printed per card because they are true of every card, and belong on the player aid:
 a Multi Spell may take fewer targets than its maximum (`TargetingRules.cs:49`), and `Ally` includes the caster
@@ -356,17 +445,19 @@ The card is a **standard poker card, 63.5 x 88.9 mm**. Which print constraint ea
   hand-held guillotine.
 - **8 pt body text**, which is about **38 characters a line** at 53.5 mm in a humanist face.
 - **4 lines of body text**, 14 mm, which is what is left after the head, the foot and the rule above the
-  caster line.
+  caster line. The foot is shorter than it was: the `Unlock` line and the one or two lines of `Requires` are
+  gone. The body box keeps its 4 lines, because every card fits in 4, and the room the foot gave back is
+  margin.
 
 Measured against the real catalogue, rendering every card face from `data/`. Two of the four readings measure
 a **joined string**, so the join is part of the measurement and is stated here rather than left to a reader to
 guess. The **body** is the body lines of [2.1](#21-what-is-printed-and-where-it-comes-from) - the targeting
 line, one line per effect, one `Caster:` line per caster effect - joined by ` / `, the same separator
 [2.4](#24-the-seven-that-need-a-second-sentence) writes them with. The **statline** was never a defined
-string, so it is defined here: it is that body with the cost line in front of it and the critical and unlock
-lines behind it, joined the same way. Neither carries the Spell's name, its prerequisites or the content
-hash: the name is the head, and the other two gate a pick rather than resolve a cast. The command prints all
-four readings:
+string, so it is defined here: it is that body with the cost line in front of it and the critical line
+behind it, joined the same way. Neither carries the Spell's name, its package or the content hash: the name
+and the package are the head, and the hash names the deck rather than resolving a cast. The command prints
+all four readings:
 
 ```bash
 python3 -c "
@@ -385,7 +476,7 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
   d=json.load(open(p));t=d['targeting'];o,m=t['origin'],t['maxTargets'];n=d['id'].split(':')[1];c=d['criticalChance']
   body=['Self' if o=='Self' else (f'One {o.lower()}' if m==1 else f\"Up to {m} {'enemies' if o=='Enemy' else 'allies'}\")]
   body+=[eff(e) for e in d['effects']]+['Caster: '+eff(e) for e in d.get('casterEffects',[])]
-  stat=[f\"Cost {d['energyCost']}\"]+body+[f'Critical {round(c*100)}%' if c else 'No critical roll',f\"Unlock: +{d['initiative']} initiative\"]
+  stat=[f\"Cost {d['energyCost']}\"]+body+[f'Critical {round(c*100)}%' if c else 'No critical roll']
   W.append((max(len(x) for x in body),n));L.append(len(body))
   B.append((len(SEP.join(body)),n));S.append((len(SEP.join(stat)),n))
 def r(t,v): print(t,'max',max(v),'median',statistics.median(x[0] for x in v),'min',min(v))
@@ -393,7 +484,7 @@ print('widest line',max(W),' lines per card',sorted(collections.Counter(L).items
 r('body    ',B);r('statline',S)"
 # widest line (39, 'momentum')  lines per card [(2, 17), (3, 17), (4, 2)]
 # body     max (95, 'revenant_guards') median 38.0 min (16, 'wait')
-# statline max (143, 'revenant_guards') median 88.5 min (65, 'rejuvenate')
+# statline max (119, 'revenant_guards') median 64.5 min (41, 'rejuvenate')
 ```
 
 | Reading | Value | What it means for the layout |
@@ -401,7 +492,7 @@ r('body    ',B);r('statline',S)"
 | Body lines per card | 2, 3 or 4 | 17 cards at 2, 17 at 3, 2 at 4. The 4-line box is enough for every card in the catalogue. |
 | Widest single line | **39 characters** (`momentum`: `Energy regeneration 2 a round, 3 rounds`) | One character over the 38 a line holds. It wraps to a second line with a 3 mm hanging indent, and `momentum` has only 2 lines, so the card has the room. Nothing else in the catalogue wraps. |
 | Whole body, one string | max **95** characters (`revenant_guards`), median **38**, min **16** (`wait`) | 95 characters is under three full lines. No card is tight on the body alone. |
-| Whole statline (cost, targeting, effects, caster, critical, unlock) | max **143** (`revenant_guards`), median **88.5**, min **65** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 143 characters over a head, four body lines and a foot. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows. |
+| Whole statline (cost, targeting, effects, caster, critical) | max **119** (`revenant_guards`), median **64.5**, min **41** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 119 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows. |
 
 ### 2.4 The seven that need a second sentence
 
@@ -417,7 +508,7 @@ line holds:
 | `crazed_specter` | `Up to 3 enemies` (15) / `Damage 6` (8) / `Caster: Bleed 4 a round, 1 round` (32) | 32 | 3 |
 | `psycho_rush` | `One enemy` (9) / `Damage 10` (9) / `Caster: Defense -2, 1 round` (27) | 27 | 3 |
 | `summon_minions` | `Up to 3 enemies` (15) / `Bleed 2 a round, 3 rounds` (25) / `Caster: Damage 2` (16) | 25 | 3 |
-| `soul_devourer` | `One enemy` (9) / `Damage 5` (8) / `Energy -2` (9) / `Caster: Heal 4` (14) | 14 | **4** |
+| `soul_devourer` | `One enemy` (9) / `Damage 6` (8) / `Energy -3` (9) / `Caster: Heal 4` (14) | 14 | **4** |
 | `thundering_seal` | `One ally` (8) / `Defense +3, permanent` (21) / `Defense +3, 2 rounds` (20) | 21 | 3 |
 | `guard` | `One ally` (8) / `Defense +1, permanent` (21) / `Defense +1, 2 rounds` (20) | 21 | 3 |
 
@@ -430,7 +521,7 @@ Spells carry a Caster effect and are not in the seven because their statline is 
 
 ### 2.5 Three card faces, written out
 
-Real Spells, generated from `data/`. `[ ]` marks a printed zone. `938bef` is the first six characters of
+Real Spells, generated from `data/`. `[ ]` marks a printed zone. `4d7a84` is the first six characters of
 the content hash this working tree builds (`cat data/dst/game.schema.sha256`); the generator prints
 whatever the build it was handed says, and refuses to print when there is nothing to say.
 
@@ -438,8 +529,8 @@ whatever the build it was handed says, and refuses to print when there is nothin
 
 ```
 +--------------------------------------+
-| Revenant Guards                  (2) |   name, energy cost
-| Necromancer . Tier 3                 |
+| Revenant Guards                  (3) |   name, energy cost
+| Lich . level 3                       |   the package that teaches it
 |--------------------------------------|
 | Up to 3 allies                       |   targeting: origin, scope, max targets
 | Defense +2, permanent                |
@@ -447,15 +538,13 @@ whatever the build it was handed says, and refuses to print when there is nothin
 | ------------------------------------ |
 | Caster: Bleed 4 a round, 1 round     |
 |--------------------------------------|
-| Critical 33%                         |   the chance as authored; no threshold yet, see below
-| Unlock: +1 initiative                |
-| Requires: any of Lightning Bolt,     |
-|   Rejuvenate; Summon Minions         |
-| spell:revenant_guards:v1     938bef  |   versioned id, content hash prefix
+| Critical 33%                         |   the chance as authored; no threshold, see below
+|                                      |
+| spell:revenant_guards:v1     4d7a84  |   versioned id, content hash prefix
 +--------------------------------------+
 ```
 
-`revenant_guards` prints 33% today and 0.33 is on no candidate die's grid, so the threshold line is blank
+`revenant_guards` prints 33% today and 0.33 is not a whole number of twentieths, so the threshold is blank
 until the catalogue is snapped ([1.6](#16-dice)). On a d20 it becomes 35% and `d20: 14+`. This is exactly the
 case the generator exists for: the card is reprinted from the build, not corrected by hand.
 
@@ -464,17 +553,15 @@ case the generator exists for: the card is reprinted from the build, not correct
 ```
 +--------------------------------------+
 | Crushing Stomp                   (4) |
-| Warlord . Tier 3                     |
+| Dreadnought . level 3                |
 |--------------------------------------|
 | One enemy                            |
 | Damage 7                             |
 | Stun, 2 rounds                       |
 |--------------------------------------|
 | Critical 75%  d20: 6+                |
-| Unlock: +1 initiative                |
-| Requires: any of Pummel, Guard;      |
-|   Full Plate                         |
-| spell:crushing_stomp:v1      938bef  |
+|                                      |
+| spell:crushing_stomp:v1      4d7a84  |
 +--------------------------------------+
 ```
 
@@ -485,22 +572,60 @@ over.
 ```
 +--------------------------------------+
 | Wait                             (0) |
-| Creature . Tier 0                    |
+| Starting spell                       |
 |--------------------------------------|
 | Self                                 |
 | Energy +2                            |
 |--------------------------------------|
 | No critical roll                     |
-| Unlock: +1 initiative                |
-| Starting spell                       |
-| spell:wait:v1                938bef  |
+|                                      |
+| spell:wait:v1                4d7a84  |
 +--------------------------------------+
 ```
 
-The prerequisite line is generated from both gates the engine checks (`TalentUnlocks.cs:13-25,52-58`): the
-node's, then the Spell's own, joined by a semicolon, with `anyOf` written "any of". `Requires: any of Pummel,
-Guard; Full Plate` is exactly "be on the Warlord branch, and know Full Plate". The longest such line in the
-catalogue is 60 characters (`restorative_burst`), which is two lines at 6 pt in the foot.
+The head line is the whole of what the card says about acquiring the Spell: which package to buy, and how
+deep it sits. `Dreadnought . level 3` does not say what Dreadnought needs first or what it pays in initiative;
+the Dreadnought package card does, once, for both of the Spells it teaches. The longest head line
+at `4d7a841c` is `Plague Doctor . level 2` (23 characters), inside the 38 a line holds.
+
+### 2.6 The Speed card
+
+Twelve cards, a Quick and a Standard for each Creature ([1.5](#15-the-rest-of-the-pieces)): the maintainer's
+answer to [Part 6, question 14](#14-a-two-sided-speed-token-cannot-be-placed-face-down). Nothing on it comes
+from `data/`: its two faces are the two Speeds of the glossary, and its count is the rule set's team size.
+
+```
++----------------------------------------------------+
+| Quick                                              |   the Speed, in the largest type on any card
+|====================================================|
+| Acts before every Standard Creature.               |
+| No critical roll this Round.                       |   the reminder: CriticalChanceOf is 0 for Quick
+|                                                    |
+| Speed card                                 4d7a84  |   what it is, content hash prefix
++----------------------------------------------------+
+
++----------------------------------------------------+
+| Standard                                           |
+|====================================================|
+| Acts after every Quick Creature.                   |
+| Critical as printed on the Spell.                  |
+|                                                    |
+| Speed card                                 4d7a84  |
++----------------------------------------------------+
+```
+
+| Choice | The constraint it answers |
+| --- | --- |
+| Poker size, 63.5 x 88.9 mm, the Spell card's and the package card's size | One card size in the box: one 3 x 3 grid for the generator to cut ([5.3](#53-the-sheet)) and one sleeve for a Player to buy, the reason [4.1](#41-the-package-card) gives. And a face-down Speed card hides the choice only if its face does not show through, which is the face-down Spell card's problem exactly: whatever question 8 settles for the one serves the other. A mini card (41 x 63 mm, 16 to a sheet) would print on one sheet instead of two, and need a second sleeve size to be as opaque. |
+| The face printed landscape | The Speed slot holds the card landscape, 88.9 mm wide, because that costs a board the least height ([3.1](#31-the-creature-board)). The face reads the way it lies. |
+| The Speed's name in the largest type on any card | It is read across the table: every Player reads every Speed when the cards are turned, to count the Quick cards and set the divider ([3.5](#35-the-initiative-track)), and again at Resolution, where a Quick Creature does not roll. |
+| One back for all 12, the same on Quick and Standard | The back is the whole of the component: a choice of one of two is hidden only behind a back the two answers share. Printed, it reads `Speed`, so a face-down Speed card is not taken for a face-down Intent, and it tells nothing about the face. Printed single-sided, the blank back is the common back, and the card needs the Spell card's opaque-backed sleeve. Part 6, question 8. |
+| The reminder on the Quick card, and its mirror on the Standard card | `CriticalChanceOf` is 0 for a Quick Creature whatever its Spell prints (`ResolutionRules.cs:85`). The cost is paid at Resolution and chosen here, so it is printed where it is chosen, or Quick reads as free (translation.md, the `Quick` critical row). `No critical roll` is the Spell card's own words for a cast that does not touch the die ([2.5](#25-three-card-faces-written-out)). |
+| No Creature number | Any Quick card serves any Creature: the slot a card lies in says whose it is. A number would make twelve different cards and change nothing the rule reads. |
+| The content hash prefix | Nothing on the card comes from the content, but [5.5](#55-the-invariant) holds every card face to the hash, and one rule for every card is one the generator cannot get wrong. |
+
+Each line of the face is under the 38 characters a line holds at 8 pt: the longest is
+`Acts before every Standard Creature.`, 36.
 
 ---
 
@@ -512,12 +637,12 @@ layout choice below names the rule it enforces physically.
 ### 3.1 The creature board
 
 A5, 105 x 148 mm, two to an A4 sheet. Front is the living Creature; back is printed `Defeated` with no slots
-at all, so a dead Creature cannot be given Energy, a Speed token, an Intent or a Condition - which is the rule
+at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a Condition - which is the rule
 `creatures.Where(creature => creature.IsAlive)` enforces in five different places.
 
 ```
 +-----------------------------------------------+
-| [1]  Main                          Creature   |   the number that breaks initiative ties
+| [1]  Main                          Creature   |   the Creature's number: no tiebreak, see below
 |-----------------------------------------------|
 | Health   0 1 2 3 4 ............ 18 19 20      |   one rail, one marker
 | Energy   0 1 2 ................ 15 16         |   two rows, one marker, ends at 32
@@ -527,24 +652,33 @@ at all, so a dead Creature cannot be given Energy, a Speed token, an Intent or a
 |          debuffs 0 ................. 20 [-20] |
 |          Defense = buffs - debuffs, never < 0 |
 |-----------------------------------------------|
-| Base initiative   tens 0..5   units 0..9      |
+| Base initiative   tens 0..2   units 0..9      |
 |-----------------------------------------------|
 | Conditions   | new |   3   |   2   |   1   |  |   the duration dock
 |              |     |       |       |       |  |
 |-----------------------------------------------|
-| Speed [        ]   <- a Stun token sits here  |
+| Speed [ a card, 88.9 x 63.5 ] or a Stun token |
 | Targeted by  [1][2][3][4][5][6]               |
 +-----------------------------------------------+
 ```
 
 | Affordance | The rule it enforces, so nobody has to remember it |
 | --- | --- |
-| The number 1 to 6 in the corner | Ties on the timeline break by Player slot then Creature id (`TimelineBuilder.cs:27-28`). Ids are handed out in join order (`Match.cs:286-296`): 1 to 3 is Player 1, left to right. "First player's boards, left to right" is the whole tiebreak. |
-| The Health rail ending at 20 | A Heal is capped by the Health missing (`Creature.cs:139`). The marker cannot go past the end of the rail. |
+| The number 1 to 6 in the corner | It names the Creature: on its initiative marker, on its target markers and in the `Targeted by` row. Ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 Roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
+| The Health rail ending at 20 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
-| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:25`). The token physically fills the slot: there is nowhere to put a Speed token. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
+| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
+| A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a purchase moves off the mat lies on the buyer's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
 | The `Targeted by` row, one box per caster number | No duplicate targets (`TargetingRules.cs:68`): a caster has one marker per box, and a box holds one marker, so naming the same target twice is impossible. |
 | The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
+
+**The Speed slot is sized for a card now**, not a token (Part 6, question 14). A Speed card is poker size
+([2.6](#26-the-speed-card)), so the slot is a 90 x 65 mm rectangle, the card laid landscape with about a
+millimetre of play. Landscape costs the board the least height: 90 mm is inside the 95 mm of usable width
+[3.4](#34-initiative-two-small-rails-instead-of-one-long-one) names, where a portrait card would take 90 mm of
+the board's height instead of 65. On the 105 x 148 mm board drawn above, the slot takes 65 of the 148 mm, and the rails, the
+dock and the `Targeted by` row share the rest. Whether they fit there is part of question 15, which already
+asks what size the board is. The drawing is not to scale.
 
 ### 3.2 The condition dock, and the countdown
 
@@ -554,21 +688,21 @@ Four lanes: `new`, `3`, `2`, `1`. A Condition token is placed in `new` when it i
 2. every token in `new` moves into the lane matching the Duration printed on it.
 
 That is the whole countdown, and it is why the board has a `new` lane: it makes "**the first countdown after
-an application does not count**" (`Condition.cs:12,53-59`) a piece of geometry instead of a rule a player has
+an application does not count**" (`Condition.cs:12,88-100`) a piece of geometry instead of a rule a player has
 to recall on the Round they apply something. A refresh - which is only Stun - removes the old token and places
-the new one in `new`, which is exactly `Condition.Refresh` setting the flag again (`Condition.cs:50`).
+the new one in `new`, which is exactly `Condition.Refresh` setting the flag again (`Condition.cs:85`).
 
 Four lanes is derived: the longest Duration in the catalogue is 3 Rounds (`summon_minions`' Bleed,
 `momentum`'s Energy regeneration), plus the `new` lane. **VALUE**: a longer Duration authored in `data/` is a
 fifth lane and a reprint of six boards.
 
 Permanent Conditions never enter the dock. They move a rail and are discarded, because they never count down
-(`Condition.cs:34-36`) and never have to be undone.
+(`Condition.cs:42-44`) and never have to be undone.
 
 ### 3.3 Defense: two rails, because the floor is applied once
 
 `TotalDefense` is base plus the Defense buffs less the Defense debuffs, and the result floors at zero
-(`Creature.cs:58-60`, ADR 0035). The floor is applied **to the total**, not to the intermediate. So a single
+(`Creature.cs:95-97`, ADR 0035). The floor is applied **to the total**, not to the intermediate. So a single
 rail that stops at zero would be wrong: a Creature at 0 base carrying a -4 debuff and then a +3 buff has a
 total Defense of 0 in the engine, and a rail clamped at zero would show 3.
 
@@ -593,28 +727,49 @@ print(max(e['amount'] for p in glob.glob('data/Spells/**/*.json',recursive=True)
 
 ### 3.4 Initiative: two small rails instead of one long one
 
-Base initiative only ever grows, by the Spell initiative of every unlock (`Creature.cs:106`, ADR 0017). Its
-ceiling in a 16-Round Match:
+Base initiative only ever grows, by the `initiativeBonus` of every package bought, once a purchase
+(ADR 0056; glossary, Base initiative). No Spell adds anything (ADR 0059). Its ceiling in a 16-Round Match is
+the last line of the command in [1.1](#11-spell-cards-and-package-cards): **24**.
+
+A Player makes 2 picks at each of 8 opportunities: 16 purchases. A Creature buys at most one package an
+opportunity (ADR 0066), so **8 of them at most land on one Creature**. The 21 packages' bonuses sum to 47,
+but a Creature cannot own all 21 with 8 picks, and a level-3 package cannot be bought without the two below
+it. The 8 prerequisite-closed packages that pay the most pay 24, so **Base initiative tops out at 5 + 24 =
+29.** Current initiative adds the Initiative buffs on top. `death_squad` is +2 for a Round on up to 3 allies
+and it stacks, but only a Creature that owns Deathstalker can cast it. Deathstalker is among the 8 packages
+that pay 24, and the Player's other 8 purchases are enough for both allies to buy Prowler, Assassin and
+Deathstalker, 3 each. So three `death_squad`s can land on the Creature at 29, and **Current initiative tops out
+at 35**. While two packages could land on one Creature an opportunity (ADR 0056, before ADR 0066), the
+ceilings were 44 and 46; under one Spell a pick, twice every Round, 52 and 58.
 
 ```bash
 python3 -c "
 import json,glob
-S={json.load(open(p))['id'].split(':')[1]:json.load(open(p)) for p in glob.glob('data/Spells/**/*.json',recursive=True)}
-start={'basic_attack','heavy_strike','wait'}
-v=sorted((s['initiative'] for k,s in S.items() if k not in start),reverse=True)
-print(len(v),'unlockable, spell initiative sum',sum(v),'best 32 picks',sum(v[:32]))"
-# 33 unlockable, spell initiative sum 47, best 32 picks 47
+T=[json.load(open(p)) for p in glob.glob('data/Tiers/*.json')];T=[t for t in T if t.get('enabled',True)]
+ix={t['id']:i for i,t in enumerate(T)};n=len(T);need=[sum(1<<ix[q] for q in t['prerequisites']) for t in T]
+ds=[i for i,t in enumerate(T) if 'spell:death_squad:v1' in t['spells']][0];b={};bd={}
+for m in range(1<<n):
+  own=[i for i in range(n) if m>>i&1]
+  if any(need[i]&~m for i in own): continue
+  k=len(own);v=sum(T[i]['initiativeBonus'] for i in own);b[k]=max(b.get(k,0),v)
+  if m>>ds&1: bd[k]=max(bd.get(k,0),v)
+f=lambda d,k:max([v for j,v in d.items() if j<=k] or [-99])
+print(max(5+f(bd if own else b,8)+2*(own+a) for a in range(3) for own in (0,1) if 3*a<=16-8))"   # 35
 ```
 
-A Player makes 2 picks a Round for at most 16 Rounds: **32 unlocks**, all of them possible on one Creature.
-33 Spells are unlockable and their Spell initiative sums to 47; three of them are worth 0, so 32 picks still
-reach 47. **Base initiative tops out at 5 + 47 = 52.** Add the largest Initiative buff a Creature can carry -
-`death_squad` is +2 for a Round on up to 3 allies, it stacks, and all three of a Team can cast it in the same
-Round, so +6 - and **Current initiative tops out at 58**.
+The command assumes the 8 opportunities of a 16-Round Match: 8 purchases on the Creature, one an opportunity,
+and the Player's other 8 for its allies, where an ally's `death_squad` costs it the three packages from
+Prowler up. It reads the same prerequisite-closed sets as the Base ceiling, so it moves when a bonus does.
 
-A rail to 58 is 59 cells and 295 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 5
-and units 0 to 9, are 16 cells** and read as one two-digit number. The print constraint is the board's 95 mm
-of usable width; the rule is the ceiling of 58.
+A rail to 29 is 30 cells and 150 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 2
+and units 0 to 9, are 13 cells** and read as one two-digit number. The print constraint is the board's 95 mm
+of usable width; the rule is the ceiling of 29. A bonus is 0 to 5 at `4d7a841c`, so a purchase is one marker
+move on the units rail, sometimes carrying into the tens rail.
+
+The tens rail is a **VALUE** twice over. The bonuses are balance knobs now (ADR 0061), and
+`data/balance/knobs.json` lets a tuning pass move each one up to its declared `max`. At every package's `max`,
+the same command reads a ceiling of 5 + 40 = 45, which is a tens rail to 4: the rail this manifest printed
+before ADR 0066. Part 6, question 11.
 
 Current initiative is **not** on a rail. It is Base plus the dock's Initiative buff tokens less its Initiative
 debuff tokens, floored at zero, and it is read **once a Round**, when the timeline is built. That is the
@@ -624,22 +779,38 @@ them is permanent, so most boards have nothing to add.
 ### 3.5 The initiative track
 
 Six slots in a row, with a divider the Players move between the Quick slots and the Standard ones, and the
-tiebreak printed along the edge:
+ordering printed along the edge:
 
 ```
  |<-- Quick ------[ divider ]------ Standard -->|
  [ 1st ] [ 2nd ] [ 3rd ] [ 4th ] [ 5th ] [ 6th ]
  Quick before Standard. Initiative high to low.
- Ties: Player 1 first, then the lower creature number.
+ Tied across the sides: each rolls a d20, high first; a number both sides rolled, all on it roll again.
+ Your own tied Creatures: tie order chits, face down, turned together; you order them in your Places.
 ```
 
-The divider moves because a Round can have 0 to 6 Quick slots; it is set to the count of Quick tokens
-revealed. Placing is: reveal all six Speed tokens together, put the Quick Creatures' markers in order of
+The divider moves because a Round can have 0 to 6 Quick slots; it is set to the count of Quick cards
+turned. Placing is: turn every Speed card in play together, put the Quick Creatures' markers in order of
 Current initiative, then the Standard ones. Six markers, six lookups, a sort of at most
 six - the audit's numbers, unchanged.
 
+A tie is settled on the track in two steps (ADR 0063), and the components carry both:
+
+1. **The Roll-off.** Tied markers of both sides sit side by side over the Places they share. Each tied
+   Creature rolls a d20, in number order; the highest takes the first Place. The Creatures on a number both
+   sides rolled roll again among themselves, a side's own Creatures on it included; a number one side alone
+   rolled is not rolled again (`TimelineBuilder.cs:57-83`). The roll decides which Places each side holds,
+   and nothing else.
+2. **The Tie order.** A Player who holds two Places or more in one tie lays a tie order chit face down on
+   each of those Creatures' boards: `1st` takes the side's first Place in that tie, and so on. Both Players
+   turn their chits together and move the markers into the places the chits give. That is the same
+   face-down-then-turn the Speed choice uses, and it keeps the order hidden until both are in, as the engine
+   does. A tie one side holds alone skips step 1. A Round with no tie of two or more of one side's Creatures
+   skips step 2.
+
 The track is an **ordering** device and carries no numbers. The alternative, a value track a marker is placed
-on, needs 60 cells for the ceiling of 3.4 and would still need the tiebreak rule printed.
+on, needs 36 cells, 0 to the Current initiative ceiling of 35 in 3.4, and would still need the tie rules
+printed.
 
 ### 3.6 The round track
 
@@ -648,19 +819,30 @@ setup on the space equal to the `RuleSet`'s Round cap: when the Round marker rea
 total remaining Health (`WinCondition.cs:23-26`). The cap is a component rather than a memory, and moving it
 is how a shorter or longer Match is set up without a reprint.
 
+**The pick marks.** Evolution offers picks only at an opportunity: Round 1 and every second Round after
+(`RuleSet.IsEvolutionRound`, ADR 0056). A Round without one gives nobody a pick, and its Evolution ends as it
+opens. So every space that is an opportunity carries a printed pick mark, two small pick-token outlines: at
+the table's schedule, spaces 1, 3, 5, 7, 9, 11, 13 and 15, **8 marks**. The rule beside the count: the
+Rounds r from 1 to 16 with r >= `FirstEvolutionRound` and (r - `FirstEvolutionRound`) a multiple of
+`EvolutionInterval`. The Players put their pick tokens on their mats when the Round marker stands on a mark,
+and not otherwise. "Is it a pick Round?" is then a look at the track, not a parity sum. The marks are a
+**VALUE**: a schedule with another first Round or interval reprints this one sheet. The cap is a marker
+because a table changes it between Matches; whether the schedule should be one too is Part 6, question 9.
+
 The track also carries the Round's shape as a printed strip, because it is where a Player looks when they lose
-their place. In the engine's order (`RoundSubPhase.cs:8-17`):
+their place. In the engine's order (`RoundSubPhase.cs`, eleven sub-phases since ADR 0063):
 
 ```
  Start: energy -> energy regeneration -> regeneration -> bleed
- Planning: evolution (2 picks a player) -> speed (face down) -> timeline
+ Planning: evolution (marked Rounds: 2 picks a player, one a creature) -> speed (face down)
+           -> timeline, ties rolled off -> order your own ties (face down)
  Combat: intents (face down) -> reveal and target, all six -> resolve, all six
  End: conditions count down -> check the win condition
 ```
 
 The two orderings that change results and will be got wrong are on it and on the player aid: **healing before
 bleeding** (`UpkeepRules.cs:24-28`, ADR 0019), and **the critical is applied before Defense is subtracted**
-(`ResolutionRules.cs:73`).
+(`ResolutionRules.cs:91`).
 
 ### 3.7 The player area, and where a face-down intent sits
 
@@ -675,6 +857,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
 |  creature 1        |  creature 2        |  creature 3         |
 |  [ board ]         |  [ board ]         |  [ board ]          |
 |  [ intent ]        |  [ intent ]        |  [ intent ]         |
+|  [ packages ]      |  [ packages ]      |  [ packages ]       |
 +---------------------------------------------------------------+
 ```
 
@@ -684,20 +867,33 @@ An A4 landscape mat a Player, three columns, one a Creature:
   A Creature's known Spells are **public** in the engine (`CreatureSnapshot.KnownSpells` is on both teams'
   snapshots), so an open hand would be faithful - but then a card leaving an open hand for the intent slot
   tells the opponent exactly which Spell it is, and the hidden Intent is gone. So the hand is held, and the
-  public record moves to the **talent tree mat**: every unlock puts a pip on the mat, where anyone can read
-  what a Creature knows. Public information stays public; the face-down card stays face down.
-- **The pick tokens** sit on the mat's header. Two a Player a Round, returned at the end of Evolution.
+  public record moves to the **package cards**: every purchase puts a package card face up in that
+  Creature's column, where anyone can read what it owns (`CreatureSnapshot.AcquiredTiers`, beside
+  `KnownSpells` on the same snapshot) and so what it knows: the starting kit, plus every Spell printed on its
+  package cards. Public information stays public; the face-down card stays face down.
+- **The package cards** of a Creature lie in a stagger below its intent slot, each covering the one before
+  it but for its top band, which carries the name, the level and the bonus ([4.1](#41-the-package-card)). A
+  Creature's record reads as a list, and the newest card shows whole.
+- **The pick tokens** sit on the mat's header. Two a Player, put there only in a Round the Round track marks
+  as an opportunity. A purchase moves one onto the header of the buyer's board ([3.1](#31-the-creature-board)),
+  where it marks that Creature as done for the opportunity (ADR 0066). A pass takes the tokens still on the
+  mat off it, and the end of the Sub-phase takes every token off the mat and the boards.
 - **The target markers** are three per Creature, in that Creature's colour, carrying its number. Reveal and
   target walks the whole timeline before anything resolves, so all six casts' markers are on the table at
   once: 18 markers, and a Creature's `Targeted by` row shows who is pointing at it.
-- **Speed tokens** are placed face down on each board's Speed slot and turned together, which is what makes
-  the Speed choice the genuine simultaneous decision it is in the engine
-  (`PlayerBoardStateProjection.cs:37`).
+- **Speed cards**: a Player holds a Quick and a Standard card for each Creature, lays the chosen one face down
+  in that board's Speed slot and keeps the other in hand. Both Players turn theirs together, which is what
+  makes the Speed choice the genuine simultaneous decision it is in the engine
+  (`PlayerBoardStateProjection.cs:38`). The kept card needs no place on the mat: it stays in the concealed
+  hand, and it must, because a kept card seen is a played card known. So the player area holds nothing new
+  for question 14; what it gains is on the board, the card-sized Speed slot of
+  [3.1](#31-the-creature-board), which adds to question 15.
 
 ### 3.8 How a cast is declared and resolved, in components
 
 1. **Intent**: put a Spell card from the hand face down in the Creature's intent slot. Legal if the Creature
-   knows it - the pip is on the mat - and the Energy rail is at or above the printed cost.
+   knows it - a starting Spell, or one printed on a package card lying with that Creature - and the Energy
+   rail is at or above the printed cost.
 2. **Reveal**: at the Creature's slot on the initiative track, turn the card face up and place its target
    markers, one per target, in the `Targeted by` boxes of the targets' boards. Up to `maxTargets`, and fewer
    is allowed. Do this for all six slots before resolving any.
@@ -707,102 +903,155 @@ An A4 landscape mat a Player, three columns, one a Creature:
 
 ---
 
-## Part 4. The talent tree as an object
+## Part 4. The packages as an object
 
-Three classes, three sub-classes each, three Spells a sub-class, plus the three starting Spells: 3 + 6 + 27 =
-36. A Player makes two picks a Round, and the second pick sees the first (`Match.cs:142`), so the tree is the
-Match's arc and has to be readable without tracing prerequisites by hand.
+A pick buys a Tier: a named package of Spells with a level, the Tiers it requires, and one initiative bonus
+(ADR 0056). 21 are enabled at `4d7a841c`: 3 at level 1, 9 at level 2, 9 at level 3. Each level-2 package
+requires one level-1 package and each level-3 package requires one level-2 package, so the 21 form three
+families of seven, one opened by each level-1 package. **Prerequisites are the only rule**: the talent tree
+gates nothing, and multiclassing is free, so a Creature may own packages from all three families. A Creature
+buys at most one package an opportunity, so the two picks of an opportunity go to two Creatures
+([ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md)), and the top of a family arrives at
+Round 5 at the earliest.
 
-### 4.1 The layout
+What the table has to hold, for each Creature: which Tiers it owns, whether the next one's prerequisite is
+among them, and what it knows because of them. The package card holds all three, face up with the Creature,
+which is translation.md's verdict ("Tier cards, 21 kinds") and the rulebook's record (§5.3). A package mat
+with a pip per purchase does the same job on less paper; it is the alternative in Part 6, question 7.
 
-One mat a Player, A4 portrait, three horizontal class bands. Each band is the class gate, its two opener
-Spells, and its three sub-classes side by side; each sub-class is its gate, its free Spell, and the two Spells
-behind it.
+### 4.1 The package card
+
+One card a Tier a Creature, the same poker size and the same sheet grid as the Spell cards, so the generator
+has one card layout to cut and a player has one card size to sleeve. It prints what a pick is chosen on, and
+nothing a cast needs:
 
 ```
-+-------------------------------------------------------------------------+
-|  Start: Basic Attack [1][2][3]   Heavy Strike [1][2][3]   Wait [1][2][3] |
-|-------------------------------------------------------------------------|
-|  BRAWLER            needs Basic Attack + Heavy Strike + Wait             |
-|  Pummel [1][2][3]              Guard [1][2][3]                           |
-|  +--- MERCENARY ------+ +--- WARLORD --------+ +--- BERSERKER ---------+ |
-|  | needs Pummel or    | | needs Pummel or    | | needs Pummel or       | |
-|  | Guard              | | Guard              | | Guard                 | |
-|  | Protective Slam    | | Full Plate         | | Enraged Charge        | |
-|  |      [1][2][3]     | |      [1][2][3]     | |      [1][2][3]        | |
-|  |   |                | |   |                | |   |                   | |
-|  |   +-> Chain Slash  | |   +-> Restorative  | |   +-> Tornado         | |
-|  |   |     [1][2][3]  | |   |     Gush       | |   |     [1][2][3]     | |
-|  |   +-> Thundering   | |   |     [1][2][3]  | |   +-> Psycho Rush     | |
-|  |         Seal       | |   +-> Crushing     | |         [1][2][3]     | |
-|  |         [1][2][3]  | |         Stomp      | |                       | |
-|  +--------------------+ +--------------------+ +-----------------------+ |
-|-------------------------------------------------------------------------|
-|  SCOUNDREL          needs Basic Attack + Heavy Strike + Wait             |
-|  ... Leech, Assassin, Trickster                                          |
-|-------------------------------------------------------------------------|
-|  SORCERER           needs Basic Attack + Heavy Strike + Wait             |
-|  ... Wizard, Necromancer, Shaman                                         |
-+-------------------------------------------------------------------------+
++--------------------------------------+
+| Dreadnought                     [+3] |   name; the bonus, in a square
+| level 3 . +3 initiative              |   the band ends here
+|======================================|
+| Needs Ironbound                      |   every Tier it requires, or "Needs nothing"
+|--------------------------------------|
+| Restorative Gush                     |   every Spell it teaches, one a line
+| Crushing Stomp                       |
+|                                      |
+|                                      |
+| tier:dreadnought:v1          4d7a84  |   versioned id, content hash prefix
++--------------------------------------+
 ```
+
+Every line comes from `tiers[]` in the build: `name`, `level`, `initiativeBonus`, the `name` of every Tier in
+`prerequisites`, and the `name` of every Spell in `spells`. The Spell text is not repeated: the Spell cards
+carry it, and a package card that did would be a second place for a tuning pass to reprint.
 
 What each piece of the layout answers:
 
 | Choice | Why |
 | --- | --- |
-| Three pip boxes on every Spell, labelled with that Player's Creature numbers | One mat serves three Creatures, and the whole Team's progress is one glance. Six mats, one a Creature, would be three times the paper and would hide the comparison a Player actually makes: which of my three is deep in which branch. |
-| The gate is printed on the band and on the box, not on every Spell | Nine sub-class gates are nine identical lines ("needs Pummel or Guard"); printing them 27 times is noise. The **card** carries its own full gate for the cases where the mat is not in reach. |
-| An arrow from a sub-class's free Spell to the two behind it | `chain_slash` and `thundering_seal` require `protective_slam` (`prerequisites.allOf`). The arrow is the prerequisite, and it is why these two sit at tier 3 while `protective_slam` sits at tier 2 (ADR 0034: a Spell sits one deeper than the deepest Spell it requires). |
-| `allOf` drawn as `+`, `anyOf` drawn as `or` | The two gates in the tree read differently and mean differently: a class needs **all three** starting Spells, a sub-class needs **either** opener. |
-| A `2 picks a round` reminder beside the header, with "the second pick sees the first" | The picks are sequential, not simultaneous (`Match.cs:142`), so a Creature can open a sub-class and take one of its Spells in the same Round. It changes how fast the tree opens and is invisible otherwise. |
+| The top band, two lines: name, then `level N . +B initiative` | A Creature's cards lie in a stagger, each covering the last but for its band ([3.7](#37-the-player-area-and-where-a-face-down-intent-sits)). The band alone must say which Tier it is, how deep, and what it paid. |
+| The bonus twice, in a square at the top right and in words | The square is where the eye goes on a card, as the cost circle is on a Spell card; the words stop `+3` being read as a cost. It is the package's number and no Spell's (ADR 0059). `Shaman` prints `+0`, not a blank. |
+| A heavy rule under the band, and no cost circle | What tells a package card from a Spell card in a library pile, in greyscale. A package card never enters a hand. |
+| `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature. A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
+| No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-### 4.2 How an unlocked spell reaches the hand, and how the initiative gain is recorded
+The measurement, at `4d7a841c`:
 
-An unlock is **three actions in a fixed order**, printed on the mat beside the pick tokens:
+```bash
+python3 -c "
+import json,glob
+S={json.load(open(p))['id']:json.load(open(p))['name'] for p in glob.glob('data/Spells/**/*.json',recursive=True)}
+T={json.load(open(p))['id']:json.load(open(p)) for p in glob.glob('data/Tiers/*.json')}
+L=[]
+for t in T.values():
+  lines=[t['name'], f\"level {t['level']} . +{t['initiativeBonus']} initiative\", 'Needs '+(' and '.join(T[q]['name'] for q in t['prerequisites']) or 'nothing')]+[S[x] for x in t['spells']]
+  L.append((max(len(x) for x in lines), t['name'], len(lines)-2))
+print('widest line', max(L)); print('body lines', sorted(set(x[2] for x in L)))"
+# widest line (23, 'Warmonger', 3)
+# body lines [2, 3]
+```
 
-1. **Pip.** Put a pip in that Creature's box on the Spell's slot. This is the public record that the Creature
-   knows the Spell, and it is what the opponent reads instead of the concealed hand.
-2. **Card.** Take that Spell's card from the library and put it in the Creature's hand. The library is the 216
-   cards sorted by class and tier; six copies of each sit behind one divider.
-3. **Initiative.** Move that Creature's Base initiative rails up by the card's printed `Unlock: +N
-   initiative`. **This is the only place Base initiative ever moves** (`Creature.cs:106`, ADR 0017), which is
-   why the card prints it and the mat's reminder names it. Values in `data/` are 0, 1, 2 or 3, so it is one
-   marker move on the units rail, sometimes carrying into the tens rail.
+The widest line on any package card is 23 characters (`level 3 . +4 initiative`) against the 38 a line
+holds at 8 pt, and a body is 2 or 3 lines of the 4 the Spell card's body box holds. The package card is the
+easy card to print. The band is two lines at 8 pt, about 10 mm with its rule, so a stagger costs 10 mm a card.
 
-Two rules of the sub-phase that the components carry rather than the rulebook:
+### 4.2 How a purchase reaches the hand, and how the bonus is recorded
 
-- **A refused unlock raises nothing** (`Creature.cs:92-104`): a Spell already known already has its pip, and a
-  box that already holds a pip cannot take a second. The component refuses the mistake.
-- **A starting Spell grants no Spell initiative** (ADR 0017). The three starting slots on the mat are printed
-  with their pips already in place and no `Unlock` value, so a Player never adds initiative for them. It is an
-  asymmetry that will be asked about, and the rulebook owes it a sentence.
+A purchase moves one pick token from the mat onto the buyer's board and is **three actions in a fixed
+order**, the order of rulebook §5.3:
+
+1. **Package card.** Put a copy of the Tier's package card face up in that Creature's column, on the top of
+   its stagger. This is the public record that the Creature owns the Tier, and it is what the opponent reads
+   instead of the concealed hand.
+2. **Spell cards.** Take one copy of each Spell the package card names from the library into the hand. The
+   library is the 216 Spell cards filed by the first package in their head, six copies of each Spell
+   together. A Spell the Creature already knows is not taken again (ADR 0056: the grant is idempotent). At
+   `4d7a841c` no Spell is taught by two Tiers, so this never happens, but authored content may make it
+   happen, and [2.1](#21-what-is-printed-and-where-it-comes-from) says what that card's head prints.
+3. **Initiative.** Move that Creature's Base initiative rails up by the card's bonus. **This is the only
+   place Base initiative ever moves** (ADR 0056), which is why the package card prints it and no Spell card
+   does. Values at `4d7a841c` are 0 to 5, so it is one marker move on the units rail, sometimes carrying into
+   the tens rail.
+
+Rules of the sub-phase that the components carry rather than the rulebook:
+
+- **A Creature cannot buy a Tier it owns.** The card is already in its stagger; a second copy there is a
+  mistake anyone can see.
+- **A prerequisite is a card.** Every Tier a card `Needs` must already lie with the same Creature. The check
+  is a read down one stagger's bands.
+- **A pick token on a board is the one-a-Creature rule.** A Creature board holding a pick token has bought
+  this opportunity, and a second pick for it is refused (`Planning.CreatureAlreadyEvolved`, ADR 0066). The
+  purchase's card is on the table before the next pick is chosen, so the table is always the board the engine
+  validates against.
+- **A refused purchase changes nothing** (ADR 0056: no half-taught package, no bonus without the Tier). Step 1
+  is the step that can be refused, and it comes first, so a refusal happens before any Spell card or rail
+  moves. The pick token moves with the card, not before it.
+- **The starting kit grants no bonus.** No Tier teaches it, so it has no package card and no `+B`, and a
+  Player never adds initiative for it.
+
+A pick names a living Creature. The cards do not enforce that; the creature board does, since a `Defeated`
+board has no hand and no rails to receive a purchase ([3.1](#31-the-creature-board)).
 
 ---
 
 ## Part 5. The generator, specified
 
-Interface and behaviour only. **No code is written in this branch.** The generator is built where code is
-built, with its own pull request and the usual gate.
+Interface and behaviour only. **The generator is not implemented.** There is no `printshop/` directory, and
+nothing under `tools/` (the data builder alone) or `scripts/` (`iterate.sh`, `sweep-weight.py` and the
+`build-tiers.py` migration, ADR 0057) prints a sheet. It is built where code is built, with its own pull
+request and the usual gate.
+
+What exists, and is not a print: the table app draws the same card words on screen. `CatalogueProjection`
+(`src/DownfallArena.Application/Catalogue/`) turns the build into `CardFace` and `PackageCard` records,
+stamped with the content hash and the rule set, and `table/card.js` renders them. Its card face already
+follows [2.1](#21-what-is-printed-and-where-it-comes-from) on the two lines ADR 0056 and ADR 0059 removed, and
+differs on the head (Part 6, question 10).
 
 ### 5.1 Inputs
 
 | Input | What it is | Why it is this and not something else |
 | --- | --- | --- |
-| `data/dst/game.schema.json` | The consolidated, validated catalogue the data builder writes (ADR 0009) | It is the only place aliases are resolved, references are validated and `"enabled": false` items are pruned. Reading `data/Spells/**` would print cards for content a build does not have, and would have to reimplement the pruning rules of `data/README.md`. |
+| `data/dst/game.schema.json` | The consolidated, validated catalogue the data builder writes (ADR 0009): `spells`, `creatures`, `tiers`, `talentTrees` | It is the only place aliases are resolved, references are validated and `"enabled": false` items are pruned. Reading `data/Spells/**` or `data/Tiers/**` would print content a build does not have, and would have to reimplement the pruning rules of `data/README.md`. The generator reads `tiers[]` for the package cards and the Spell card heads, and does not read `talentTrees[]` at all: the tree gates nothing (ADR 0056). |
 | `data/dst/game.schema.sha256` | The content hash | The stamp every sheet carries, and the identity of the deck. |
-| A rule set document | Team size, energy a Round, picks a Round, Round cap, critical multiplier | **The content hash does not cover the `RuleSet`**, and half the counts in Part 1 come from it. A deck plus a set of boards is only valid for a content hash **and** a rule set, so both are stamped. Today the rule set lives in code (`RuleSet.Default`); the generator needs it as a file, which is a question in Part 6. |
-| A die | Which die the critical thresholds are printed for | Open. Until it is settled, the generator prints the chance as a percentage and omits the threshold line. |
+| A rule set file | Team size, energy a Round, picks an opportunity, the first opportunity Round, the interval, the Round cap, the critical multiplier: the seven fields of `docs/tabletop/playtest.rules.json` | **The content hash does not cover the `RuleSet`**, and half the counts in Part 1 come from it: the copies of both decks, the pick tokens, the pick marks. A deck plus a set of boards is only valid for a content hash **and** a rule set, so both are stamped. The table host already reads this file (`table --rules`, `RuleSetFile`), and the generator takes the same one. Where that file should live is still Part 6, question 6. |
+| The die | A d20 ([d20-criticals.md](d20-criticals.md), settled) | The threshold `d20: N+` is printed when the chance is a whole number of twentieths, and omitted when it is not, rather than rounded. The rule that every chance is a twentieth is settled and not built, so today some cards print a percentage alone. |
 
 Cards are **generated, never transcribed**. A tuning pass reprints the deck rather than invalidating it, which
 is the whole reason phase 3 specifies a generator instead of a table of card texts.
 
 ### 5.2 Outputs
 
-- **Card sheets**: the 36 faces, each repeated 2 x team size times, laid out 9 to a sheet.
-- **Component sheets**: 6 creature boards, 2 player mats, 2 talent tree mats, the initiative track, the round
-  track, and the token sheets.
+- **Card sheets**: every Spell face that some Creature could know - a starting Spell, or one an enabled Tier
+  teaches - repeated 2 x team size times, laid out 9 to a sheet. 36 faces and 216 cards at `4d7a841c`.
+- **Package card sheets**: every enabled Tier's face, repeated 2 x team size times, 9 to a sheet. 21 faces
+  and 126 cards, 14 sheets, at `4d7a841c`.
+- **Speed card sheets**: the Quick face and the Standard face of [2.6](#26-the-speed-card), each repeated 2 x
+  team size times, 9 to a sheet. 12 cards, 2 sheets. The rule set gives the count; the content gives nothing
+  but the hash.
+- **Component sheets**: 6 creature boards, 2 player mats, the initiative track, the round
+  track with its pick marks computed from the rule set's schedule, and the token sheets.
 - **A manifest page**: Part 1's table, generated, with the content hash, the rule set, and the date. It is the
-  page that tells a reader whether their box matches their game.
+  page that tells a reader whether their box matches their game. It lists any Spell that gets no copy because
+  no package teaches it, since that is a content defect a printer should see (ADR 0058 calls it unacquirable).
 - **A card back**, one design, optional to print.
 
 The format is **a static page that prints**: HTML and CSS with `@page` at the sheet size, printed to PDF by
@@ -814,11 +1063,11 @@ the browser. No PDF library, no build step, nothing installed - the same weight 
 | Constraint | Choice | Why |
 | --- | --- | --- |
 | Paper | A4 (210 x 297) and US Letter (216 x 279), the same layout on both | 3 x 63.5 = 190.5 mm wide and 3 x 88.9 = 266.7 mm tall, plus 3 mm bleed on the outer edge, is 196.5 x 272.7 mm. It fits inside both. One layout, two papers. |
-| Cards a sheet | 9 | The 3 x 3 grid above. 216 cards is **24 sheets**. |
+| Cards a sheet | 9 | The 3 x 3 grid above. 216 Spell cards is **24 sheets**; 126 package cards is **14**; 12 Speed cards is **2**, the second holding 3 and padded with blanks. |
 | Bleed | 3 mm on the outer edge only; cards abut inside the grid | Neighbours share a cut line, so no bleed is wasted between them and a single cut serves two cards. |
 | Cut marks | Hairline marks in the outer margin, at every grid line, never across a card | A mark that crosses the card is printed on the card. Marks in the margin survive a guillotine and a craft knife. |
 | Fold marks | None | Cards are cut, not folded. Boards are printed one to a face. |
-| Colour | Everything readable in greyscale; class colour is a strip **and** a printed class name | Home printers run out of one ink. A card that only says "Necromancer" in purple stops saying it. |
+| Colour | Everything readable in greyscale; a package family's colour is a strip **and** a printed package name | Home printers run out of one ink. A card that only says "Lich" in purple stops saying it. |
 
 ### 5.4 Where it lives
 
@@ -831,6 +1080,11 @@ directory and the built content, and `studio --export` already writes the same f
 page, so the printshop published to Pages prints from what CI built. The transport is **injected**, exactly as
 ADR 0024 requires of `backend.js`: the module takes its `fetch` as an argument, so a test drives it with a
 stub.
+
+A second source is possible now and was not when this was written: the table host serves the catalogue as
+`CardFace` and `PackageCard` records, already in the printed words and already stamped with the hash and the
+rule set. Reading those would put the screen and the print on one renderer of the words. Reading
+`game.schema.json` keeps the generator free of a running host. Part 6, question 12.
 
 ### 5.5 The invariant
 
@@ -851,11 +1105,14 @@ DOM, a fixture catalogue, a stub transport. What the tests hold:
 | Behaviour | Why it is worth a test |
 | --- | --- |
 | A catalogue of N Spells produces exactly N faces, and no face for a Spell the catalogue does not have | The deck is the catalogue, including what `"enabled": false` pruned. |
-| A face carries cost, targeting, every effect with its amount and Duration, every caster effect, the printed critical chance, the class, the tier and the prerequisites | This is Part 2 as an assertion. A missing Duration is a card that cannot be resolved. |
-| Tier follows ADR 0034: a Spell sits one deeper than the deepest Spell its prerequisites name | Node depth alone prints 27 Spells as tier 2, and the tree a Player climbs is 3 / 6 / 9 / 18. |
-| The prerequisite line names the node gate and the Spell gate, and renders `anyOf` as "any of" | An `allOf` printed as an `anyOf` is a card that lies about what unlocks it. |
-| The copy count is 2 x the rule set's team size | A rule set change reprints the deck; it must not need an edit. |
-| Rendering fails, loudly, when a body line exceeds the text area or a body exceeds 4 lines | The measurement in 2.3 holds for today's content. A tuning pass that lengthens a Duration or adds an effect must break the build rather than clip the card. |
+| A face carries cost, targeting, every effect with its amount and Duration, every caster effect, the printed critical chance and its d20 threshold when it has one, and the package that teaches it with its level | This is Part 2 as an assertion. A missing Duration is a card that cannot be resolved. |
+| **No face carries an initiative or a prerequisite**, and none carries the talent tree's class | ADR 0059 and ADR 0056. A card that prints a rule the engine stopped applying is a card a table plays. |
+| A package's level is its own `level`, and a starting Spell's is 0 | ADR 0058 superseded the tree depth of ADR 0034. A depth computed from the tree is a number the game does not consult. |
+| A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none) and every Spell it teaches, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses. |
+| The copy count is 2 x the rule set's team size for a Spell some Creature could know, and 0 for one it could not | A rule set change reprints the deck; it must not need an edit. |
+| The Speed cards are 2 x team size of each face, the Quick face carries `No critical roll this Round`, and both faces share one back | Part 6, question 14: a Speed card whose back differs by face, or a Quick card without its cost, is a choice that is not hidden or not a trade. |
+| The pick marks are exactly the Rounds from 1 to 16 that `IsEvolutionRound` answers yes for, with the rule set's first Round and interval | The schedule is the rule set's, answered in one place (ADR 0056); a mat that worked out its own parity is a second schedule. |
+| Rendering fails, loudly, when a body line exceeds the text area or a body exceeds 4 lines, on either kind of card | The measurements in 2.3 and 4.1 hold for today's content. A tuning pass that lengthens a Duration or adds an effect, or an author who puts a fourth Spell in a package, must break the build rather than clip the card. |
 | Every emitted sheet carries the hash, and a missing or mismatched hash produces no output at all | The invariant of 5.5, as a property over the whole output. |
 | 9 cards a sheet, cards abutting, marks only in the outer margin, and a short last sheet padded with blanks rather than a wrapped card | A card split across two sheets is 216 cards of waste. |
 
@@ -870,31 +1127,35 @@ dotnet run --project src/DownfallArena.Cli -- studio                    # serve 
 # open http://127.0.0.1:5099/printshop/ and print to PDF
 ```
 
-Phase 3 is done, per plan.md, when that produces a print-and-play PDF from a clean checkout and the deck it
-prints matches the hash of the content it was built from.
+None of this runs today: the host serves no `printshop/`, because there is none. Phase 3 is done, per
+plan.md, when that produces a print-and-play PDF from a clean checkout and the deck it prints matches the hash
+of the content it was built from.
 
 ---
 
 ## Part 6. Open questions
 
-Each one is a count or a choice this document cannot derive. None is answered here.
+Each one is a count or a choice this document cannot derive. None is answered here; questions 1 and 13 were
+answered elsewhere, question 14 by the maintainer, and each says so.
 
 ### 1. Which die
 
-Recommended: **d20**, for the reason in [1.6](#16-dice) - two candidate grids sit inside the 0.05 step
-`knobs.json` already declares on 20 Spells, d10 and d20, and the d20 is the finer of the two: it moves 10 of
-the 21 Spells rather than 13, its worst move is 0.02 rather than 0.05, and it can still express the 0.75
-`crushing_stomp` is on. Alternatives and their
-costs are the table in 1.6. Two things come with the answer, whichever it is: `revenant_guards` prints a
-chance and has **no critical chance knob**, and `lightning_bolt`'s knob band starts at 0.17, so its own grid
-contains no multiple of 0.05. Both are content changes with a journal entry and a new hash.
+**Answered: a d20** ([d20-criticals.md](d20-criticals.md), settled, not built), for the reason in
+[1.6](#16-dice) - two candidate grids sit inside the 0.05 step `knobs.json` already declares on 21 Spells,
+d10 and d20, and the d20 is the finer of the two: it moves 10 of the 21 Spells that roll where the d10 moves
+15, its worst move is 0.02 rather than 0.05, and it can still express the 0.75 `crushing_stomp` is on. ADR 0063 put a
+second use on the same die, the Roll-off. The question stays here for what is left with it: `revenant_guards`
+prints a chance and has **no critical chance knob**, and `lightning_bolt`'s knob band starts at 0.17, so its
+own grid contains no multiple of 0.05. Both are content changes with a journal entry and a new hash.
 
 ### 2. The deck's copy count
 
 - **216 cards** (this manifest). Any legal game is playable. 24 sheets, which is most of the print-and-play.
 - **Six copies of the three starting Spells and two of each of the other 33: 84 cards, 10 sheets.** A Match
-  uses at most 82 cards, so this is enough for almost every game - and a game where three Creatures learn the
-  same Spell runs out, which is a rule change by the back door and fork A forbids it.
+  uses at most 74 cards ([1.1](#11-spell-cards-and-package-cards)), so this is enough for almost every
+  game - and a game where three Creatures buy the same package runs out, which is a rule change by the back
+  door and fork A forbids it. How often that game happens is the measurement question 7 waits on for the
+  package cards: how often one Tier is owned by more than two Creatures.
 - **One card a Spell plus a hidden intent device** (a two-digit chit pair or a dial per Creature, reading a
   catalogue number 1 to 36). 36 cards, and the Intent stops being a card: every declaration becomes a lookup,
   and the thing that translates best in the whole game is the thing that gets worse.
@@ -922,50 +1183,164 @@ candidates 2 and 3, not here.
 
 ### 6. Where the rule set comes from
 
-`RuleSet.Default` is a static in `src/DownfallArena.Domain/Matches/RuleSet.cs`. The generator needs team size,
-picks a Round, energy a Round and the Round cap as **input**, and every sheet has to be stamped with them. Add
-a rule set document to `data/` and have the engine read it, write one out with `studio --export`, or pass the
-five numbers to the generator on the command line? The first makes the rule set content, which is a decision
-with consequences well beyond a print sheet.
+`RuleSet.Default` is a static in `src/DownfallArena.Domain/Matches/RuleSet.cs`. The table host now reads a
+rule set from a file (`table --rules`, `RuleSetFile`), and `docs/tabletop/playtest.rules.json` is one, with
+seven fields since ADR 0056 added the schedule. So the generator has a file to read, and [5.1](#51-inputs)
+takes it. What is still open is where the file belongs: in `docs/tabletop/` as a playtest setting, in `data/`
+where the engine would read it as content, or written out by `studio --export`. The second makes the rule set
+content, which is a decision with consequences well beyond a print sheet. `RuleSetFile`'s own comment points
+here.
 
-### 7. The talent mat: two or six
+### 7. How a table records who owns which package: cards, or a mat
 
-Two mats (one a Player, three pip boxes a Spell) is this manifest's choice: the whole Team's arc on one sheet.
-Six mats (one a Creature) is three times the paper, and it gives each Creature its own uncluttered tree. The
-answer is a playtest reading, not a derivation.
+Every choice below records the same thing publicly: the Tiers each Creature owns. It is what the prerequisite
+check reads, what tells a Player what an opposing Creature knows, and what stops a Creature buying a Tier
+twice.
+
+- **Package cards**, face up with their Creature (this manifest, [Part 4](#part-4-the-packages-as-an-object)):
+  126 cards, 14 sheets. The record sits with the Creature, and it is what translation.md's verdict and the
+  rulebook's §5.3 describe. The prerequisite check is a read down one stagger.
+- **Two package mats**, one a Player: a box per Tier in three columns by level, three pip boxes in each, one
+  pip a purchase. 2 sheets and 32 pips instead of 14 sheets: a Player makes at most 2 picks at each of 8
+  opportunities in 16 Rounds, so 16 pips a Player. The whole Team's progress and the families are one glance,
+  and the record is away from the boards. The rulebook would change its step 1 from "card" to "pip".
+- **Fewer package cards.** 126 is the rule's ceiling, and it is reachable. A Match lays out at most 32. How
+  often one Tier is owned by two, three or six Creatures in a real Match is the `tabletop-mathematician`'s
+  measurement (translation.md says so), and a smaller box is a question only that measurement can open, on the
+  same terms as question 2: a copy count that a legal game can exceed is a rule change by the back door.
+
+The first is this manifest's choice because it answers the verdict as written. The second is a playtest
+reading. The third waits on a measurement.
 
 ### 8. Card backs
 
-A single back design costs 24 more sheets and doubles the print, for a deck whose hands are concealed and
-whose Intents are played face down - so the backs must at least be uniform. Printing single-sided and sleeving
-the cards with an opaque backing card is the cheaper answer and needs sleeves. Which one the print-and-play
-assumes changes the sheet count from 35 to 59.
+A single back design costs 24 more sheets for the Spell cards, 14 for the package cards and 2 for the Speed
+cards, 40 in all, and nearly doubles the print, for a deck whose hands are concealed and whose Intents are
+played face down - so the Spell card backs must at least be uniform. The Speed card's back is not optional at
+all: it is what hides the choice ([2.6](#26-the-speed-card)), so it goes with the Spell cards on either
+answer. Package cards are never hidden, so they need a back only to be told apart from Spell cards in a pile;
+the heavy band of [4.1](#41-the-package-card) already does that. Printing single-sided and sleeving the Spell
+and Speed cards with an opaque backing card is the cheaper answer and needs sleeves. Which one the
+print-and-play assumes changes the sheet count from 49 to 75 (24 + 2 back sheets), or to 89 with package card
+backs too.
+
+### 9. The schedule: printed marks or placed markers
+
+The Round track prints 8 pick marks, on the Rounds the table's schedule makes opportunities
+([3.6](#36-the-round-track)). A schedule with another first Round or interval reprints the track, which is one
+sheet. The alternative is the Round cap's answer: pick markers placed at setup, as many as the schedule has
+opportunities in 16 Rounds (8 at interval 2, 16 at interval 1, so the box would carry 16). Which one depends on
+whether the schedule is a setting a table changes between Matches, like the cap, or a rule it plays, like the
+picks themselves. That is the maintainer's to say, and it is the same question as where the rule set file
+lives (question 6).
+
+### 10. The class on a Spell card
+
+The spec prints the package that teaches a Spell in the card's head, and not its `creatureClass`
+([2.1](#21-what-is-printed-and-where-it-comes-from)): the two sets of names disagree on 29 of the 33 taught
+Spells, and some collide, so `tornado` would print `Berserker` while the `Berserker` package does not teach
+it. The table app prints the class (`cardHead` in `table/card.js`, from `CardFace.CreatureClass`). The screen
+and the deck should say the same thing. Which is it? And does the class mean anything a player needs, now that
+the talent tree gates nothing? ADR 0058 leaves "what the tree is for" open, and this is one place that answer
+lands.
+
+### 11. The Base initiative rail and the bonus knobs
+
+The tens rail runs 0 to 2 because the most Base initiative one Creature can buy in 16 Rounds is 24, for a
+Base of 29 ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 8 packages, one an opportunity
+(ADR 0066). Each package's `initiativeBonus` is a balance knob now (ADR 0061), with a declared `max` in
+`data/balance/knobs.json`. At every `max` the ceiling is 5 + 40 = 45. Print the tens rail to 2 and reprint six
+boards when a tuning pass raises a bonus, or print it to 4 (15 cells, 75 mm, the rail printed before ADR 0066)
+so no pass inside the declared bounds reprints anything? It is question 3's shape, with a derived bound
+instead of a guessed one. ADR 0066 made the second answer cheaper: it was 18 cells to cover 76.
+
+### 12. Where the generator reads the card words from
+
+[5.1](#51-inputs) reads `game.schema.json`. The table host already renders the same content into card words
+(`CatalogueProjection`, `CardFace`, `PackageCard`), stamped with the hash and the rule set. Two renderers of
+the same words will drift; the head line of question 10 is a drift that has already happened. Should the
+generator read the host's catalogue, so the screen and the print cannot disagree, at the price of needing a
+running host to print?
+
+### 13. The hidden Tie order at a table
+
+**Answered in the rulebook.** ADR 0063 hides a Tie order until both Players have given theirs, like a Speed
+choice. This manifest answers it with 6 tie order chits, face down on the tied Creatures' boards
+([1.5](#15-the-rest-of-the-pieces), [3.5](#35-the-initiative-track)), which is translation.md's smallest
+answer, and the rulebook now says the same: its setup hands each Player the chits, and its §5.5 and §6.6 lay
+them face down and turn them together. What stays here is the maintainer's option: if a table need not hide
+the order, the chits leave the box and those sentences with them.
+
+### 14. A two-sided Speed token cannot be placed face down
+
+**Answered by the maintainer, 2026-09-23: one card per Speed, placed face down** ("une carte par vitesse
+posée face cachée"). Each Creature gets two Speed cards, a Quick card and a Standard card behind one common
+back: 12 in all, 6 per Player. The Player lays the one they choose face down in the Creature's Speed slot and
+keeps the other, and both Players turn theirs together. It is the Intent's own pattern, a card from a hand
+played face down. The Quick card carries the reminder that a Quick Creature rolls no critical that Round
+(`ResolutionRules.CriticalChanceOf`). This manifest now says so in [1.5](#15-the-rest-of-the-pieces),
+[2.6](#26-the-speed-card), [3.1](#31-the-creature-board), [3.5](#35-the-initiative-track) and
+[3.7](#37-the-player-area-and-where-a-face-down-intent-sits), and the rulebook's setup, §5.4 and §6.4 say the
+same.
+
+The question as it was found, while choosing the tie order chits: [1.5](#15-the-rest-of-the-pieces) specified
+one Speed token a Creature, Quick on one face and Standard on the other, "made face down". A token whose two
+faces are the two answers shows one of them whichever way it lies, so the choice is not hidden. The two
+answers offered were two faces behind one common back (two a Creature, one played and one kept), or the six
+tokens played under a cover. The maintainer chose the first, as cards.
+
+What stays here is layout, not rule. The Speed slot now holds a poker card, landscape, so it takes 65 mm of
+the creature board's height ([3.1](#31-the-creature-board)), which question 15 has to fit. And a 15 mm Stun
+token occupies a card-sized slot without filling it, so the slot prints the token's place rather than being too
+small for anything else. The count moved from 6 to 12 and the paper from 47 to 49 sheets.
+
+### 15. The player area does not hold what 3.7 puts on it
+
+Found while placing the package cards, and older than them. [3.1](#31-the-creature-board) calls the creature
+board "A5, 105 x 148 mm, two to an A4 sheet", but A5 is 148 x 210 mm, and 105 x 148 mm is A6, four to a sheet.
+Either way the A4 landscape player area of [3.7](#37-the-player-area-and-where-a-face-down-intent-sits),
+297 x 210 mm, cannot hold three boards side by side with an 88.9 mm intent slot below each: three A6 boards in
+portrait are 315 mm wide, and a board over an intent slot is 237 mm tall. The package stagger adds 10 mm a
+card below that. Which gives: the board's size (and the sheet count of 3 that follows from "two to a sheet"),
+an A3 player area, or a player area that is a printed guide for the table rather than a mat that holds the
+pieces? This is a layout question, not a rule, and the counts in Part 1 do not depend on it except the 3
+board sheets.
+
+Question 14's answer adds to it on the board and not on the mat. The Speed slot now holds a poker card
+landscape, 90 x 65 mm, so a board has 65 mm less height for its rails, its dock and its `Targeted by` row
+([3.1](#31-the-creature-board)): on the A6 board that is 44% of it, on an A5 board 31%. The card a Player keeps
+goes in the concealed hand, so the player area holds nothing new.
 
 ---
 
-## Part 7. Coverage: the 41 "needs a component" rows
+## Part 7. Coverage: the "needs a component" rows
 
-Every **needs a component** verdict in [translation.md](translation.md), and what answers it. 14 from Part 1,
-8 from Part 2, 19 from Part 3; 41 of 41.
+Every **needs a component** verdict in [translation.md](translation.md), and what answers it. The row names
+are translation.md's as it reads on this branch after its package re-audit: 17 from Part 1, 8 from Part 2, 19
+from Part 3; 44 of 44. The re-audit was written alongside this document, so if a row name has moved since,
+the component beside it has not.
 
-### The 14 sub-phase rows
+### The 17 sub-phase rows
 
 | translation.md row | Component |
 | --- | --- |
 | 1.1 Energy gain per Round | The Energy rail, [1.3](#13-stat-markers-and-the-rails-they-ride) and [1.7](#17-the-energy-track-what-ends-it) |
-| 1.3 Two picks a Round, per Player | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces) |
-| 1.3 Prerequisites, `allOf` and `anyOf` | The talent tree mat, [Part 4](#part-4-the-talent-tree-as-an-object), and the `Requires:` line on every card, [2.1](#21-what-is-printed-and-where-it-comes-from) |
-| 1.3 An unlock raises Base initiative | The two Base initiative rails and the card's `Unlock: +N initiative`, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-an-unlocked-spell-reaches-the-hand-and-how-the-initiative-gain-is-recorded) |
-| 1.4 One Speed choice per Creature | 6 two-sided Speed tokens and the Speed slot a Stun fills, [3.1](#31-the-creature-board) |
+| 1.1 Energy has no maximum | The Energy rail's end at 32 and the overflow chit, [1.7](#17-the-energy-track-what-ends-it) |
+| 1.3 An opportunity at Round 1 and every second Round after | The 8 pick marks on the Round track, [3.6](#36-the-round-track) |
+| 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces); a token that buys lies on the buyer's board until the Sub-phase ends, [3.1](#31-the-creature-board), which also carries the restate row "A Creature buys at most one Tier an opportunity" |
+| 1.3 A pick buys a whole Tier | 126 package cards, face up with the Creature that bought them, [1.1](#11-spell-cards-and-package-cards) and [Part 4](#part-4-the-packages-as-an-object). Each card's `Needs` line is the prerequisite check; no Spell card prints a gate. |
+| 1.3 A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | The two Base initiative rails and the package card's bonus, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded). No Spell card prints an initiative. |
+| 1.4 One Speed choice per living, unstunned Creature | 12 Speed cards, a Quick and a Standard a Creature behind one back, one laid face down and one kept, [1.5](#15-the-rest-of-the-pieces) and [2.6](#26-the-speed-card); the card-sized Speed slot a Stun token occupies, [3.1](#31-the-creature-board). Part 6, question 14, answered by the maintainer |
 | 1.5 The Combat timeline | The initiative track and 6 numbered markers, [3.5](#35-the-initiative-track) |
-| 1.5 Current initiative | The Base initiative rails read with the dock's Initiative tokens, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) |
-| 1.5 Ties by Player slot then Creature id | The number 1 to 6 printed on each board, [3.1](#31-the-creature-board) |
-| 1.7 Reveal in timeline order, bind targets at reveal | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
-| 1.8 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
-| 1.8 Total Defense | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.8 A lasting Effect attaches as a Condition | The 144 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
-| 1.8 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
-| 1.9 Every Condition counts one Round down | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.5 Current initiative is Base plus buffs less debuffs, floored at zero | The Base initiative rails read with the dock's Initiative tokens, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) |
+| 1.5 A tie between the sides is rolled off on a d20 | The two d20s, [1.6](#16-dice), and the tie rules printed on the initiative track, [3.5](#35-the-initiative-track). The number on each board, [3.1](#31-the-creature-board), only fixes the order tied Creatures roll in. |
+| 1.6 Tie orders are hidden until both are in | 6 tie order chits, face down on the tied Creatures' boards, [1.5](#15-the-rest-of-the-pieces) and [3.5](#35-the-initiative-track) |
+| 1.8 Reveal in timeline order, bind targets at reveal | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
+| 1.9 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
+| 1.9 Total Defense is base plus buffs less debuffs, floored at zero | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
+| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 150 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.9 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
+| 1.10 Every Condition counts one Round down and expires at zero | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 
 ### The 8 effect kinds
 
@@ -974,11 +1349,11 @@ Every **needs a component** verdict in [translation.md](translation.md), and wha
 | `Bleed` | 48 tokens: 18 at 1, 18 at 2, 6 at 3, 6 at 4 |
 | `Regeneration` | 6 tokens at 3 |
 | `EnergyRegeneration` | 6 tokens at 2 |
-| `Stun` | 6 tokens, one a Creature, because a Stun refreshes |
+| `Stun` | 12 tokens, two a Creature: a Stun refreshes, so a Creature carries one, and it needs a token in the Speed slot and one in the dock |
 | `DefenseBuff` | 30 timed tokens (6 at +1, 18 at +2, 6 at +3); a permanent buff moves the rail and needs none |
 | `DefenseDebuff` | 18 timed tokens at -2; a permanent debuff moves the rail |
 | `InitiativeBuff` | 18 tokens at +2 |
-| `InitiativeDebuff` | 6 tokens at -2 |
+| `InitiativeDebuff` | 12 tokens: 6 at -1, 6 at -2 |
 
 ### The 19 spells
 
@@ -995,7 +1370,7 @@ move a rail and place nothing.
 | `death_squad` | Up to 3 Initiative buffs +2 |
 | `poison_slash` | 1 Bleed 3 |
 | `protective_slam` | 1 Initiative debuff -2 (2 rounds) |
-| `ice_spear` | 1 Initiative debuff -2 (1 round) |
+| `ice_spear` | 1 Initiative debuff -1 (1 round) |
 | `mortal_wound` | 1 Bleed 4 |
 | `tranquilizer_dart` | 1 Stun |
 | `crushing_stomp` | 1 Stun |
@@ -1011,7 +1386,10 @@ move a rail and place nothing.
 
 ## What this document does not decide
 
-- The die. Recommended, not settled ([Part 6](#part-6-open-questions), question 1).
+- The die. It is a d20, settled in [d20-criticals.md](d20-criticals.md), not here
+  ([Part 6](#part-6-open-questions), question 1).
+- The evolution rules. A package, its prerequisites, its bonus and the schedule are ADR 0056 and the content
+  in `data/Tiers/`; this document counts what they need and changes none of them.
 - Any rule. Where a component could not be built without one - a cap on Energy, a bound on permanent Defense -
   the question went back to the audit's ADR candidates 2 and 3 and to the `boardgame-director`, not into a
   component that quietly does something else.

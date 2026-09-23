@@ -52,10 +52,8 @@ public static class PlayerOptionsProjection
             return Waiting(round);
         }
 
-        var creatures = snapshots
-            .Where(creature => creature.Owner == slot && creature.IsAlive)
-            .Select(creature => new EvolutionOption(creature.Id, TierEligibility.AvailableTiers(creature, resources)))
-            .Where(option => option.AvailableTiers.Count > 0)
+        var creatures = EvolutionRules.Offers(slot, snapshots, round, resources)
+            .Select(offer => new EvolutionOption(offer.Creature, offer.Tiers))
             .ToList();
 
         return new PlayerOptions

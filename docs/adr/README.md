@@ -61,7 +61,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0053](0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md) | Score the exploit term on how fast the best exploiter wins, not on whether it wins | Accepted |
 | [0054](0054-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
 | [0055](0055-a-searching-agent-may-be-built-on-a-policy.md) | A searching agent may be built on a policy, so the loop has an operator that improves one | Proposed |
-| [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted |
+| [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted, amended by [0066](0066-a-creature-buys-one-package-an-opportunity.md) |
 | [0057](0057-a-package-is-authored-not-derived.md) | Author the packages, and retire the script that derived them | Accepted |
 | [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
 | [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |
@@ -71,4 +71,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie between the sides on a d20, and let each side order its own | Accepted, amended by [0067](0067-the-lookahead-orders-its-own-ties.md) |
 | [0064](0064-read-a-package-monopoly-on-what-its-sample-proves.md) | Read a package's monopoly on what its sample proves, and not against an even split | Accepted |
 | [0065](0065-read-a-package-win-gap-on-what-its-sides-prove.md) | Read a package's win gap on what its sides prove | Accepted |
+| [0066](0066-a-creature-buys-one-package-an-opportunity.md) | A creature buys one package an opportunity | Accepted |
 | [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |

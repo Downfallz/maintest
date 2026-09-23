@@ -6,7 +6,7 @@ public static class RoundErrors
 {
     public static readonly DomainError EvolutionNotOpen = new("Round.EvolutionNotOpen", "Evolution choices are not accepted in the current sub-phase.");
 
-    public static readonly DomainError EvolutionAlreadySubmitted = new("Round.EvolutionAlreadySubmitted", "This evolution choice was already submitted.");
+    public static readonly DomainError EvolutionAlreadySubmitted = new("Round.EvolutionAlreadySubmitted", "This creature already has an evolution choice in this round.");
 
     public static readonly DomainError EvolutionAlreadyPassed = new("Round.EvolutionAlreadyPassed", "This player already passed their evolution picks for the round.");
 
