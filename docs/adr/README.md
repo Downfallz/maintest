@@ -77,3 +77,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
 | [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted |
 | [0071](0071-read-a-match-length-on-the-exploring-run.md) | Read a match's length on the exploring run, not on the greedy mirror | Accepted |
+| [0073](0073-a-bleed-is-priced-as-the-damage-defense-would-block.md) | A bleed is priced as the damage a defense would block | Accepted |
