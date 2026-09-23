@@ -17,6 +17,7 @@ from downfall_learning.artifacts import Evaluation
 from downfall_learning.knobs import Content, Knob, Knobs, Objective, Target, load_knobs
 from downfall_learning.search_weights import EngineCommand, EvaluationError
 from downfall_learning.tune_content import (
+    METRIC_DEFINITIONS,
     Candidate,
     ContentEngine,
     EngineContentEvaluator,
@@ -129,6 +130,14 @@ def test_scoring_a_catalogue_plays_it_once_and_keeps_the_numbers_behind_the_scor
     assert score.metrics == {"mirror": {"averageRounds": 32.0}}
     assert score.breakdown == {"mirror.averageRounds": pytest.approx((16 / 3) ** 2)}
     assert score.score == pytest.approx((16 / 3) ** 2)
+
+
+def test_a_score_says_which_objective_read_it(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+
+    written = score_content(FakeEvaluator(), knobs.objective, catalogue(tmp_path)).to_json()
+
+    assert written["objective"] == {"metrics": METRIC_DEFINITIONS, "targets": knobs.objective.fingerprint}
 
 
 def test_a_score_names_the_seeds_it_was_played_on(tmp_path: Path) -> None:
@@ -396,6 +405,7 @@ def test_the_proposal_is_written_as_the_content_tree_it_came_from(tmp_path: Path
 
     written = json.loads((tmp_path / "out" / "tune.json").read_text())
     assert written["best"]["moves"]
+    assert written["objective"] == {"metrics": METRIC_DEFINITIONS, "targets": knobs.objective.fingerprint}
     # The number the report's first line quotes, so a run directory read later says the same thing.
     assert written["played"] == result.played
     changed = {move["target"] for move in written["best"]["moves"]}

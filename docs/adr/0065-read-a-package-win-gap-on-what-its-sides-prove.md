@@ -64,3 +64,6 @@ where it read 0.511.
 - `learning/src/downfall_learning/tune_content.py`: `_win_spread` reads the Newcombe lower bound, with tests.
 - `data/balance/knobs.json`: the target's `why` and the `score` note.
 - `data/balance/README.md`, `docs/learning/training.md`, and the journal.
+- `score.json` and `tune.json` carry an `objective` stamp, the metric definitions (`adr-0065`) and a fingerprint
+  of the bands, as `docs/domain/tier-evolution-plan.md` §11 asks of a changed objective. The prose in the
+  `score` note is no longer the only record that two scores cannot be compared.

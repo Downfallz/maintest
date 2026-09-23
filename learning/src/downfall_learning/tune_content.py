@@ -135,9 +135,12 @@ class CatalogueScore:
     score: float
     breakdown: Mapping[str, float]
     metrics: Mapping[str, Mapping[str, float]]
+    #: Which objective read it (`objective_version`): a score is only comparable with one read the same way.
+    objective: Mapping[str, str] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, object]:
         return {
+            "objective": dict(self.objective),
             "seeds": self.seeds,
             "score": round(self.score, 6),
             "penalties": {name: round(value, 6) for name, value in self.breakdown.items()},
@@ -219,6 +222,8 @@ class TuneResult:
     #: Catalogues actually handed to the engine. Lower than the candidate count by the replays the search
     #: proposed and `MemoizingEvaluator` served from what it had already played.
     played: int = 0
+    #: Which objective scored every candidate (`objective_version`).
+    objective: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def improved(self) -> bool:
@@ -249,6 +254,7 @@ class TuneResult:
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         summary = {
+            "objective": dict(self.objective),
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "improved": self.improved,
@@ -460,6 +466,17 @@ def _tier_metrics(
             if value is not None:
                 measured[name] = max(measured.get(name, value), value)
     return measured
+
+
+#: How the metrics are computed, named after the last ADR that changed a reading. Bump it with any change to
+#: how a metric is read, so that a score read the old way is never compared with one read the new way as if
+#: they measured the same thing: ADR 0064 bounded `tierUsageShare` by its sample, ADR 0065 `tierWinSpread`.
+METRIC_DEFINITIONS = "adr-0065"
+
+
+def objective_version(objective: Objective) -> dict[str, str]:
+    """What an artifact carries to say which objective scored it: the metric definitions and the bands."""
+    return {"metrics": METRIC_DEFINITIONS, "targets": objective.fingerprint}
 
 
 # The z of a two-sided 95 % interval, for the package readings bounded by their own samples (ADR 0064, 0065).
@@ -820,6 +837,7 @@ def tune_content(
             documents=apply_moves(content.documents, best.moves),
             files={**content.files, **content.package_files},
             played=evaluator.plays,
+            objective=objective_version(objective),
         )
 
     def record() -> None:
@@ -1130,7 +1148,13 @@ def score_content(evaluator: ContentEvaluator, objective: Objective, content: Co
     search that made the proposal never played.
     """
     metrics = evaluator.evaluate(content.documents)
-    return CatalogueScore(objective.seeds, objective.score(metrics), objective.breakdown(metrics), metrics)
+    return CatalogueScore(
+        objective.seeds,
+        objective.score(metrics),
+        objective.breakdown(metrics),
+        metrics,
+        objective_version(objective),
+    )
 
 
 def _bound(value: float | None) -> str:

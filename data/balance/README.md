@@ -282,6 +282,11 @@ sweep, so 149 of a possible 235 were played and 16 rounds read the same as 24 wo
 the opening sweep does nearly all the work, and the rounds are not the binding constraint. And the whole pass
 now costs about **28 minutes** where it cost seventy.
 
+Every `tune.json` and every `score.json` carries an `objective` stamp: `metrics`, the last ADR that changed
+how a metric is read (`METRIC_DEFINITIONS`, `adr-0065` today), and `targets`, twelve hex digits of the seed
+file, the evaluations and every band. Two scores are comparable only when both agree, which is what the
+`score` note in `knobs.json` says in prose.
+
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is
 a diff. `--apply` does that copy. Nothing else is written to `data/`: the search works on a copy in

@@ -7,6 +7,7 @@ an evaluation already reports. Everything here reads the authored content in ``d
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
@@ -198,6 +199,24 @@ class Objective:
             if target.metric in measured:
                 scores[target.key] = target.penalty(measured[target.metric])
         return scores
+
+    @property
+    def fingerprint(self) -> str:
+        """Twelve hex digits of what the objective asks: its seed file, its evaluations and every band.
+
+        Two scores are comparable only when this and the metric definitions they were read with agree
+        (``tune_content.METRIC_DEFINITIONS``). The prose in ``knobs.json`` says when a change made them
+        incomparable; this is what an artifact carries so that a reader does not have to take it on trust.
+        """
+        asked = {
+            "seeds": self.seeds,
+            "evaluations": {name: dict(evaluation) for name, evaluation in sorted(self.evaluations.items())},
+            "targets": [
+                [target.on, target.metric, target.minimum, target.maximum, target.scale, target.weight]
+                for target in self.targets
+            ],
+        }
+        return hashlib.sha256(json.dumps(asked, sort_keys=True).encode("utf-8")).hexdigest()[:12]
 
     def score(self, metrics: Mapping[str, Mapping[str, float]]) -> float:
         """The total penalty. Zero is on target; lower is better."""
