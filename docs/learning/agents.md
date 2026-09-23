@@ -239,7 +239,12 @@ committed one — the weakened Crushing Stomp of the 2026-09-17 saturation entry
 what that measured rather than for a rung: `stun` 0.70 where `stun-first` carries 10.21 and `kill` 18.01
 above everything, a different route to the same result. On 200 seeds nothing had played it takes every match
 from Greedy on **both** catalogues, where `stun-first` takes 0.72 of them on the moved one, which is why a
-content move that blinds one set is not a content move that makes the game less exploitable. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+content move that blinds one set is not a content move that makes the game less exploitable. `search-19.json` is the first rung on the 30-health content (ADR 0068), searched from `stun-first` with
+it in the panel beside Greedy and `pressure-floor` (journal, 2026-09-23): on 200 seeds nothing had played it
+takes every match from all three, and from `search-4` and Random, while the lookahead's built-in reading
+holds it to 0.78. Its own mirror, like `stun-first`'s and `pressure-floor`'s, never ends before the round
+cap: those three are agents to play against, and their mirrors say something about how they read
+initiative rather than about the game (journal, 2026-09-23). Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
