@@ -18,6 +18,10 @@ public static class PlanningErrors
     /// </summary>
     public static readonly DomainError NoPicksLeft = new("Planning.NoPicksLeft", "The player has no evolution pick left in this round.");
 
+    /// <summary>
+    /// A creature buys one package an opportunity (ADR 0066). Checked before the package itself, so a second
+    /// pick on a creature is refused for this whatever the package, <see cref="TierAlreadyOwned"/> included.
+    /// </summary>
     public static readonly DomainError CreatureAlreadyEvolved = new("Planning.CreatureAlreadyEvolved", "The creature has already bought a package in this round; each pick goes to a different creature.");
 
     public static readonly DomainError SpellAlreadyKnown = new("Planning.SpellAlreadyKnown", "The creature already knows this spell.");

@@ -169,12 +169,33 @@ public sealed class MatchTests
         var knight = CreatureId.From(1);
 
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        var initiative = Table.CreatureNumber(match, 1).BaseInitiative;
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).Error.ShouldBe(PlanningErrors.CreatureAlreadyEvolved);
 
         Table.CreatureNumber(match, 1).OwnsTier(Arena.SlamPack).ShouldBeFalse();
         Table.CreatureNumber(match, 1).KnowsSpell(Arena.Slam).ShouldBeFalse();
+        Table.CreatureNumber(match, 1).BaseInitiative.ShouldBe(initiative, "a refused pick pays no bonus");
+        match.DomainEvents.OfType<EvolutionChoiceSubmitted>().Count().ShouldBe(1);
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(2), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         Table.CreatureNumber(match, 2).OwnsTier(Arena.GuardPack).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The limit is an opportunity's, not the match's: the creature that bought at round 1 buys again at
+    /// round 3, the next opportunity, and climbs the level the first purchase opened.
+    /// </summary>
+    [Fact]
+    public void A_creature_that_bought_at_one_opportunity_buys_again_at_the_next()
+    {
+        var match = Table.Started();
+        var knight = CreatureId.From(1);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        Table.PlayRound(match);
+        Table.PlayRound(match);
+
+        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(3);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.SlamPack).ShouldBeTrue();
     }
 
     [Fact]
