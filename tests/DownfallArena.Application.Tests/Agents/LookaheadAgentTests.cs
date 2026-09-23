@@ -102,6 +102,58 @@ public sealed class LookaheadAgentTests
         new LookaheadAgent(weights, TestContent.Resources, Rules).DecideIntent(board, new IntentOption(One, [TestContent.Slam, TestContent.Strike])).ShouldBe(TestContent.Slam);
     }
 
+    /// <summary>
+    /// One and Two tie with Four and hold the first and third places, Four the second. Four has six health, so
+    /// it takes both strikes, and it kills whichever ally it can: One, at three health. Seated as rolled, Two
+    /// strikes first, Four kills One, and One never strikes; seated the other way, One strikes before it dies
+    /// and Two finishes Four for the match. The one-step reading keeps the roll, since it has no view of who
+    /// acts first.
+    /// </summary>
+    [Fact]
+    public void The_ally_the_enemy_is_about_to_kill_takes_the_place_before_it()
+    {
+        var board = OneAboutToDie();
+        var options = new TieOrderOptions([[Two, One]]);
+
+        Agent.DecideTieOrder(board, options).ShouldBe([One, Two]);
+    }
+
+    [Fact]
+    public void The_minimax_agent_seats_its_ties_the_same_way()
+    {
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: true)
+            .DecideTieOrder(OneAboutToDie(), new TieOrderOptions([[Two, One]])).ShouldBe([One, Two]);
+    }
+
+    /// <summary>
+    /// Everybody at full health and Four at twenty: nobody dies this round whoever strikes first, the two
+    /// seatings end alike, and the tie goes to the order as rolled.
+    /// </summary>
+    [Fact]
+    public void A_seating_that_changes_nothing_keeps_the_order_as_rolled()
+    {
+        var board = OneAboutToDie() with
+        {
+            Allies = [Boards.Creature(1, PlayerSlot.Player1), Boards.Creature(2, PlayerSlot.Player1)],
+            Enemies = [Boards.Creature(4, PlayerSlot.Player2)],
+        };
+        var options = new TieOrderOptions([[Two, One]]);
+
+        Agent.DecideTieOrder(board, options).ShouldBe([Two, One]);
+    }
+
+    /// <summary>
+    /// A tie of twenty-one creatures has more seatings than a long holds; the count stops at the limit instead
+    /// of wrapping below it, so the roll is kept at once rather than enumerated.
+    /// </summary>
+    [Fact]
+    public void A_tie_with_more_seatings_than_the_limit_keeps_the_roll()
+    {
+        IReadOnlyList<CreatureId> tie = [.. Enumerable.Range(1, 21).Select(CreatureId.From)];
+
+        Agent.DecideTieOrder(OneAboutToDie(), new TieOrderOptions([tie])).ShouldBe(tie);
+    }
+
     [Fact]
     public void An_uncastable_spell_binds_no_target()
     {
@@ -235,6 +287,18 @@ public sealed class LookaheadAgentTests
         {
             RoundNumber = 1,
             Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
+        };
+    }
+
+    private static PlayerBoardState OneAboutToDie()
+    {
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { Health = Health.Of(3) };
+        var two = Boards.Creature(2, PlayerSlot.Player1);
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(6) };
+        return Boards.Board(PlayerSlot.Player1, [one, two], [four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(Two, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
         };
     }
 

@@ -68,7 +68,8 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0060](0060-spells-sold-together-must-differ-in-play.md) | Spells sold together must differ in play, and Throwing Star buys reach | Accepted |
 | [0061](0061-a-package-initiative-bonus-is-a-balance-knob.md) | A package's initiative bonus is a balance knob, and the only one a package has | Accepted |
 | [0062](0062-read-the-seat-on-the-exploring-run.md) | Read the seat advantage on the exploring run, not on the greedy mirror | Accepted |
-| [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie between the sides on a d20, and let each side order its own | Accepted |
+| [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie between the sides on a d20, and let each side order its own | Accepted, amended by [0067](0067-the-lookahead-orders-its-own-ties.md) |
 | [0064](0064-read-a-package-monopoly-on-what-its-sample-proves.md) | Read a package's monopoly on what its sample proves, and not against an even split | Accepted |
 | [0065](0065-read-a-package-win-gap-on-what-its-sides-prove.md) | Read a package's win gap on what its sides prove | Accepted |
 | [0066](0066-a-creature-buys-one-package-an-opportunity.md) | A creature buys one package an opportunity | Accepted |
+| [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |
