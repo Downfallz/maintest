@@ -1,4 +1,4 @@
-# 0069. Read a match's length on the exploring run, not on the greedy mirror
+# 0071. Read a match's length on the exploring run, not on the greedy mirror
 
 Date: 2026-09-23
 

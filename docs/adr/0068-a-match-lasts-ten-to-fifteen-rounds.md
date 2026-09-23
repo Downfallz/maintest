@@ -2,7 +2,7 @@
 
 Date: 2026-09-23
 
-Status: Accepted, amended by [0069](0069-read-a-match-length-on-the-exploring-run.md)
+Status: Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md)
 
 ## Context
 

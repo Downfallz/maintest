@@ -116,7 +116,8 @@ listed in [spells.md](spells.md).
    1. `IntentSelection`: each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
       valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature
       has an Intent.
-   2. `RevealAndTarget`: following the timeline, the next Intent is revealed and its owner binds targets. The
+   2. `RevealAndTarget`: following the timeline, each owner binds targets for the next Intent. Its Spell and
+      targets become public together when that action is confirmed (ADR 0070), never before. The
       targets must satisfy the Spell's targeting spec (origin, scope, count). An Intent whose Spell has no legal
       target any more is revealed with no targets and fizzles at resolution. Completes when the cursor reaches
       the end of the timeline.
