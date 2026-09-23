@@ -8,9 +8,9 @@ Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23). Phase 4 of [plan
 > ([ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md),
 > [ADR 0057](../adr/0057-a-package-is-authored-not-derived.md)). No Spell carries initiative of its own
 > ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), and the Talent tree decides
-> nothing at the table. Ties on the Combat timeline are rolled off on a d20 and then ordered by their owners
-> (ADR 0063). This book names the **package card** by what it must show; its size, its count and where it
-> sits are [components.md](components.md)'s to specify.
+> nothing at the table. A tie on the Combat timeline is settled by a Roll-off on a d20 and then by its owners'
+> Tie orders (ADR 0063). This book names the **package card** by what it must show; its size, its count and
+> where it sits are [components.md](components.md)'s to specify.
 
 This book teaches the game. [`docs/domain/game-rules.md`](../domain/game-rules.md) is the specification; this
 is its second reading. Where the two disagree, one of them is a bug — say which, and fix that one. Part 9
@@ -42,13 +42,15 @@ Two Players. Each commands a Team of Creatures. You win when the other Team is d
 Creatures at zero Health.
 
 A Match is a sequence of Rounds. In the Rounds the Rule set's schedule offers, you buy Tiers for your
-Creatures. In every Round you choose how fast each of your Creatures moves, then declare one hidden Intent per Creature. The Intents are revealed in order along
-the Combat timeline, targets are chosen as each one is revealed, and only then does anything resolve.
+Creatures. In every Round you choose how fast each of your Creatures moves, then declare one hidden Intent per
+Creature. The Intents are revealed in order along the Combat timeline, targets are chosen as each one is
+revealed, and only then does anything resolve.
 
 Three things make the game:
 
-- **You commit before you see.** Your Speed choices and your Intents are made face down, at the same time as
-  your opponent's. You choose targets later, when the card flips, knowing what has already been revealed.
+- **You commit before you see.** Your Speed choices, your Tie orders and your Intents are made face down, at
+  the same time as your opponent's. You choose targets later, when the card flips, knowing what has already
+  been revealed.
 - **You grow in packages.** Evolution buys a Tier: a named package of Spells, every one of them at once. The
   Tier also raises that Creature's Base initiative by its bonus, for the rest of the Match. Buying is how a
   Creature gets stronger, and it is also how it gets faster.
@@ -74,7 +76,7 @@ The five pieces this book names constantly, and where they are specified:
 | The Creature board | One per Creature: the Health, Energy, Defense and Base initiative rails, the Speed slot, the Condition dock, the `Targeted by` row | [components.md 3.1](components.md#31-the-creature-board) |
 | The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
 | The initiative track | Six ordered slots with a movable divider between the Quick band and the Standard band | [components.md 3.5](components.md#35-the-initiative-track) |
-| The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows | [components.md](components.md) |
+| The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows | [components.md 4.1](components.md#41-the-package-card) |
 | The `Targeted by` row | One box per caster number on every Creature board; a target marker sits in it from the reveal until the Resolution | [components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits) |
 
 Three components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
@@ -101,11 +103,12 @@ one of them in a sentence.
 | Interval between opportunities | How many Rounds apart the opportunities are: 1 is every Round, 2 every other Round | ______ | 2 |
 | Round cap | The space the Round cap marker occupies | ______ | the table plays 8 to 16; the Round track holds 16 |
 | Critical multiplier | What a critical cast multiplies by | ______ | 2 |
-| **The critical die** | **Which die a critical is rolled on** | **______** | **open — see [6.7](#67-the-critical-roll)** |
 
-> **OPEN: the die.** The die is not settled ([components.md, Part 6, question 1](components.md#part-6-open-questions)
-> recommends a d20). When it is settled, two things change and nothing else: this row, and the threshold line
-> printed on the Spell cards. The rule itself is written once, in [6.7](#67-the-critical-roll).
+The die is not on this table, because it is not a Rule set value and it does not move: it is a **d20**, for
+the critical roll ([6.7](#67-the-critical-roll)) and the Roll-off
+([6.6](#66-the-combat-timeline-and-its-tiebreaks)) alike. It is settled and not yet built
+([d20-criticals.md](d20-criticals.md)); what that leaves open at the table is said once, in
+[6.7](#67-the-critical-roll).
 
 Three numbers come from the Creature definition rather than the Rule set, and are printed on the Creature
 board: starting Health, starting Energy, starting Base initiative. The reference Creature definition
@@ -117,9 +120,11 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
 ### 3.2 The procedure
 
 1. **Seat the Players.** The Player on the left is Player 1 and takes Player slot 1. The seat breaks no tie:
-   ties on the Combat timeline are rolled off ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
-2. **Take the mats.** Each Player takes a player area mat, a player aid, and one Evolution pick token per
-   Evolution pick per opportunity.
+   a tie on the Combat timeline is settled by a Roll-off ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
+2. **Take the mats.** Each Player takes a player area mat, a player aid, one Evolution pick token per
+   Evolution pick per opportunity, and one tie order chit per Creature in a Team (`1st`, `2nd`, `3rd` at the
+   reference Team size). The pick tokens wait beside the mat until a Round with a pick mark
+   ([5.3](#53-evolution)).
 3. **Take the Creature boards.** Each Player takes Team size boards. Player 1's are numbered 1, 2, 3 from
    their left; Player 2's are numbered 4, 5, 6. These numbers never change and they are the order tied Creatures
    roll in on the Combat timeline.
@@ -132,12 +137,14 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
    the Creature definition's, and both Players know them.
 6. **Set the tracks.** Put the Round marker on space 1 of the Round track. Put the Round cap marker on the
    space equal to the setup table's Round cap. Leave the initiative track empty; its divider is placed every
-   Round. Say aloud which Rounds offer an Evolution opportunity ([5.3](#53-evolution)). Reference: Rounds 1,
-   3, 5, and every second Round after.
+   Round. The spaces printed with a pick mark are the Rounds that offer an Evolution opportunity
+   ([5.3](#53-evolution)). Check them against the setup table's schedule: the reference marks Rounds 1, 3, 5,
+   and every second Round after. A schedule the marks do not match needs its own Round track
+   ([components.md 3.6](components.md#36-the-round-track)).
 7. **Lay out the supply.** Sort the Condition tokens by face where both Players can reach them. Put the blank
-   tokens, the overflow chits, the die, the package cards and the Spell card library within reach. The library
-   is the rest of the Spell cards, sorted by the Tier that teaches them: this is where a bought Tier's Spells
-   come from.
+   tokens, the overflow chits, the two d20s, the package cards and the Spell card library within reach. The
+   library is the rest of the Spell cards, sorted by the Tier that teaches them: this is where a bought Tier's
+   Spells come from.
 
 The board is now photographable, and it is the same board in every Match: six Creature boards at full Health
 and zero Energy, eighteen cards in two concealed hands, no package card with any Creature, an empty initiative
@@ -166,10 +173,11 @@ START OF ROUND
   2  Ongoing effects ...... Energy regeneration, then Regeneration, then Bleed
 
 PLANNING
-  3  Evolution ............ each Player buys Tiers, up to their picks; only in a Round with an opportunity
+  3  Evolution ............ each Player buys Tiers, up to their picks; only on a Round with a pick mark
   4  Speed ................ Quick or Standard, face down, for every living, unstunned Creature
-  5  Turn order resolution  build the Combat timeline: Quick, then Standard; roll off ties between the sides
-     Tie order ............ each Player orders their own tied Creatures
+  5  Turn order resolution  build the Combat timeline: Quick, then Standard; a Roll-off for each tie
+                            between the sides
+     Tie order ............ each Player orders their own tied Creatures, face down
 
 COMBAT
   6  Intent selection ..... one hidden Intent per Creature on the timeline
@@ -185,11 +193,11 @@ Four things about this shape are worth holding in your head from the start.
 
 - **Steps 1, 2, 9 and 10 are automatic.** Nobody decides anything. Do them and move on. Steps 1, 2 and 9
   are the Upkeep: Energy gain, the ticks, and the Condition countdown. Step 5 is automatic too, except for a
-  Player who holds two places in one tie. Step 3 asks nothing in a Round that offers no opportunity.
+  Player who holds two Places in one tie. Step 3 asks nothing in a Round that offers no opportunity.
 - **Nothing changes between step 5 and step 8.** You choose all six target sets on a board that has not
   happened yet. The first Creature to die in a Round dies in step 8, after every target has been placed.
-- **Of the decisions, only Evolution is open.** A package card goes face up the moment it is bought. Speed and
-  Intent are face down and turned over together. A Tie order is made by both Players at the same time.
+- **Of the decisions, only Evolution is open.** A package card goes face up the moment it is bought. Speed,
+  Tie order and Intent are face down, and each is turned over by both Players together.
 - **A Round is walked twice.** Once to reveal and target, once to resolve. Same order both times.
 
 ---
@@ -236,15 +244,21 @@ otherwise have killed it. Doing it the other way round kills Creatures the rules
 
 ### 5.3 Evolution
 
-**Trigger.** Ongoing effects are done, in a Round that offers an Evolution opportunity.
+**Trigger.** Ongoing effects are done, in a Round that offers an Evolution opportunity: the Round marker
+stands on a pick mark.
 **Actor.** Both Players, openly, **one pick each in turn**: Player 1 takes a pick, then Player 2, then Player 1
 again, until both have used or given up their picks.
 **Result.** Each Player may buy Tiers, up to the setup table's Evolution picks per opportunity. One pick buys
 one Tier for one of that Player's **living** Creatures.
 
-**Which Rounds.** A Round offers an opportunity when it is the setup table's first evolution Round, or a whole
-number of intervals after it. In any other Round nobody has a pick, so nobody is asked and nobody passes: go
-straight to Speed. With the reference values, Rounds 1, 3, 5 and every odd Round after offer one.
+**Which Rounds.** A Round offers an opportunity when the Round marker stands on a space with a pick mark. The
+marks are the setup table's schedule printed on the track: the first evolution Round, and every whole number
+of intervals after it. In any other Round nobody has a pick, so nobody is asked and nobody passes: go
+straight to Speed. With the reference values, Rounds 1, 3, 5 and every odd Round after carry a mark.
+
+**Pick tokens.** When the Sub-phase opens on a pick mark, each Player puts all their pick tokens on their mat.
+A purchase spends one: take it off the mat. When the Sub-phase ends, every token still on a mat comes off, so
+each opportunity starts with a full set and no pick carries over to the next.
 
 **What a Tier is.** A Tier is a named package of Spells. Its package card shows its name, its level, the Tiers
 it requires, the Spells it teaches and its initiative bonus. A level 1 Tier requires nothing; every other Tier
@@ -273,7 +287,8 @@ Players information the engine never gives them, and the app would then play a d
 **Your picks within a Round are sequential, not simultaneous: your second pick sees your first.** So a
 Creature can buy a Tier and the Tier that requires it in the same Round.
 
-A Player who does not want their remaining picks declares an **Evolution pass** and returns their pick tokens.
+A Player who does not want their remaining picks declares an **Evolution pass** and takes their pick tokens
+off the mat.
 
 **The Sub-phase ends when neither Player has a pick they could use** — because they spent them, passed, or
 none of their living Creatures has a Tier available. A Player with nothing to buy does not have to pass; the
@@ -322,7 +337,7 @@ A dead Creature is not in the Round either, for the same reason and one step ear
 
 **Trigger.** Every living, unstunned Creature has a Speed choice.
 **Actor.** Both Players, together. The only decision here is step 5, and only for a Player who holds two
-places in one tie.
+Places in one tie.
 **Result.** Build the Combat timeline on the initiative track:
 
 1. Count the Quick tokens and set the divider so the Quick band holds that many slots.
@@ -330,12 +345,14 @@ places in one tie.
    its Initiative debuff Conditions, and never below zero.
 3. Place the Quick Creatures' markers in the Quick band, highest Current initiative first. Then the Standard
    Creatures' markers in the Standard band, the same way.
-4. Roll off every tie between the two sides: each tied Creature's owner rolls a d20 for it, the highest roll
-   takes the first place, and Creatures of different sides that rolled the same number roll again. A tie
-   held by one side alone is not rolled.
-5. **Order your own ties.** Where you hold two places or more in one tie, put your Creatures in those places
-   in the order you want. The other side's places do not move. Both Players do this at the same time, before
-   any Intent ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
+4. **The Roll-off.** For every tie between the two sides, each tied Creature's owner rolls a d20 for it, and
+   the highest roll takes the first Place. The Creatures on a number both sides rolled roll again among
+   themselves, your own included; a number only one side rolled is not rolled again. A tie held by one side
+   alone is not rolled at all.
+5. **Order your own ties.** Where you hold two Places or more in one tie, lay a tie order chit face down on
+   each of those Creatures' boards: `1st` takes your side's first Place in that tie, `2nd` the next, and so
+   on. The other side's Places do not move. When both Players are done, and before any Intent, turn the
+   chits over together and move the markers ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
 
 Quick always beats Standard. A Quick Creature with Current initiative 0 still acts before a Standard Creature
 with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
@@ -347,12 +364,13 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 > In Round 3, Creature 4 hit Creature 2 with **Protective Slam**: `Initiative -2, 2 rounds`. Creature 2's
 > Current initiative is 7 - 2 = 5. Every other Creature's is 7.
 > Creatures 1 and 4 chose Quick; the rest chose Standard. The divider goes after the second slot.
-> Quick band: Creature 1 and Creature 4 are tied at 7, so they roll off: 8 for Creature 1, 15 for Creature 4.
-> 4, then 1.
+> Quick band: Creature 1 and Creature 4 are tied at 7, so they hold a Roll-off: 8 for Creature 1, 15 for
+> Creature 4. 4, then 1.
 > Standard band: Creatures 3, 5 and 6 are tied at 7 and roll 11, 11 and 2. Creature 6 is last of the three;
-> Creatures 3 and 5 are on different sides and roll again, 4 and 17. The places go Player 2, Player 1, Player 2.
-> Player 2 holds two of them and wants Creature 6 to act first, so 6 takes the first place and 5 the third:
-> 6, then 3, then 5. Creature 2 at 5 is last and rolls nothing.
+> both sides rolled 11, so Creatures 3 and 5 roll again, 4 and 17. The Places go Player 2, Player 1, Player 2.
+> Player 2 holds two of them and wants Creature 6 to act first, so lays `1st` face down on Creature 6 and
+> `2nd` on Creature 5. Player 1 holds one Place in the tie and lays nothing. The chits turn: 6 takes Player
+> 2's first Place and 5 the third. 6, then 3, then 5. Creature 2 at 5 is last and rolls nothing.
 > The timeline is **4, 1, 6, 3, 5, 2**.
 
 ### 5.6 Intent selection
@@ -585,21 +603,27 @@ into the `new` lane. Only a Stun refreshes; see
 
 ### 6.6 The Combat timeline and its tiebreaks
 
-**Trigger.** Two Activation slots would sit in the same place.
+**Trigger.** Two Activation slots would sit in the same position on the timeline.
 **Actor.** Both Players.
 **Result.** Break the tie with the first of these that separates them.
 
 1. **Quick before Standard.** Always, whatever the numbers.
 2. **Higher Current initiative first.**
-3. **The roll-off, between the sides.** Every Creature still tied with a Creature of the other side rolls a
-   d20; the highest takes the first place. Creatures of different sides that rolled the same number roll
-   again. This decides which places each side holds, and nothing else.
-4. **Your own order, within your side.** Where you hold two places or more in the same tie, you choose which of
-   your Creatures takes which. A tie held by your side alone is yours to order without a roll.
+3. **The Roll-off, between the sides.** Every Creature still tied with a Creature of the other side rolls a
+   d20; the highest takes the first Place. The Creatures on a number both sides rolled roll again among
+   themselves, your own included. This decides which Places each side holds, and nothing else.
+4. **Your Tie order, within your side.** Where you hold two Places or more in the same tie, you choose which
+   of your Creatures takes which, face down with the tie order chits, turned by both Players together. A tie
+   held by your side alone is yours to order the same way, without a roll.
+
+> **Example.** Creatures 1, 4 and 5 tie in the Standard band and roll 11, 11 and 11. Both sides rolled 11,
+> so all three roll again: Creatures 4 and 5 both roll, not just one of them against Creature 1.
+> Had they rolled 6, 11 and 11, nobody would roll again: only Player 2 rolled 11, so Player 2 holds the first
+> two Places and orders Creatures 4 and 5 in them with the chits, and Creature 1 takes the third.
 
 The seat decides nothing ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). Under packages two
-sides buying the same package in the same round tie on every Creature, and a tie that always went to Player 1
-decided the whole match. The dice settle what is between the two Players; what is between your own Creatures
+sides buying the same package in the same Round tie on every Creature, and a tie that always went to Player 1
+decided the whole Match. The dice settle what is between the two Players; what is between your own Creatures
 is a decision, like the Speed you gave them. Roll in board order, lowest number first, so nobody argues about
 who rolls when; the order of rolling changes nothing. A Creature that ties with nobody does not roll.
 
@@ -609,12 +633,16 @@ does not reshuffle the Round it landed in.
 ### 6.7 The critical roll
 
 > **This is the only place in this book where the critical rule is written.** Everything else points here.
-> Filling in the die is one edit, in the setup table at [3.1](#31-the-setup-table).
 
 **Trigger.** A Combat action has not Fizzled, and its card prints a Critical chance above zero.
 **Actor.** The Player resolving the action.
-**Result.** Roll the die named in the setup table, **once for the whole cast**, and compare it to the
-threshold the card prints for that die. On a hit, the cast is critical.
+**Result.** Roll a d20, **once for the whole cast**, and compare it to the threshold the card prints:
+`d20: 11+` means 11 or more. On a hit, the cast is critical.
+
+> **Not yet built.** The d20 is settled ([d20-criticals.md](d20-criticals.md)), but the catalogue has not been
+> snapped to it: a card whose chance is not a whole number of twentieths prints the percentage and no
+> threshold ([components.md 2.1](components.md#21-what-is-printed-and-where-it-comes-from)). This book has no
+> faithful way to roll such a card on a d20, and does not invent one; the snap is the fix.
 
 **A Creature's own Critical chance is zero** (ADR 0042). The chance printed on the card is the chance
 rolled: you add nothing to it. A Spell printed at zero never rolls at all — fifteen of the thirty-six never
@@ -636,12 +664,12 @@ target's total Defense, then floor at zero. Doing it the other way round gives a
 the example in [5.8](#58-action-resolution).
 
 > **Example, a Heal.** Creature 2 casts **Restorative Gush** on Creature 3: `One ally`, `Heal 7`,
-> `Critical 50%`. Creature 3 is at 8 of 20 Health. The roll hits: 7 x 2 = 14, and Creature 3 goes to 20. Two
-> of the fourteen are wasted, because a Heal is capped by the Health missing.
+> `Critical 50%  d20: 11+`. Creature 3 is at 8 of 20 Health. The d20 shows 16, a hit: 7 x 2 = 14, and
+> Creature 3 goes to 20. Two of the fourteen are wasted, because a Heal is capped by the Health missing.
 > **Example, what is not multiplied.** Creature 5 casts **Hateful Sacrifice** on Creature 1: `Damage 10` and
-> `Caster: Damage 4`, `Critical 50%`. The roll hits. Creature 1 takes 10 x 2 = 20, less its total Defense.
-> Creature 5 takes exactly **4**, less its own total Defense — the `Caster:` line is never multiplied. At 4
-> Health or less and no Defense, Creature 5 kills itself with its own Spell.
+> `Caster: Damage 4`, `Critical 50%  d20: 11+`. The d20 shows 11, a hit. Creature 1 takes 10 x 2 = 20, less
+> its total Defense. Creature 5 takes exactly **4**, less its own total Defense — the `Caster:` line is never
+> multiplied. At 4 Health or less and no Defense, Creature 5 kills itself with its own Spell.
 > **Example, no roll.** Creature 4 casts **Throwing Star**: `Critical 0%`. Do not pick the die up.
 
 ### 6.8 Two more things every card assumes
@@ -777,11 +805,13 @@ did and `game-rules.md` did not say; the specification says it now.
 | [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 3: `ActionResolution`, the lasting-effect bullet; ADR 0041 |
 | [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 3 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
 
-Four presentation rules are the table's and are declared as such, per
+Five presentation rules are the table's and are declared as such, per
 [plan.md](plan.md)'s "one engine, one truth":
 
-- **A critical is a die roll** against a threshold printed on the card, where the engine rolls a probability
+- **A critical is a d20 roll** against a threshold printed on the card, where the engine rolls a probability
   (fork B). The chance is the same chance; the die is how a table reads it.
+- **The Evolution schedule is a row of pick marks on the Round track**, printed from the setup table's
+  schedule. The engine asks `RuleSet.IsEvolutionRound`; the marks are that answer, printed once.
 - **The Condition dock's two-step Cleanup** is the engine's countdown with its "first tick does not count"
   flag turned into geometry. Same timing, every Round.
 - **The Round cap is a marker on the Round track**, set from the Rule set at setup. The engine's cap is a

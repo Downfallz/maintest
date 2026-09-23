@@ -176,7 +176,7 @@ counts and the ends.
 
 | Rail | Markers | Where it ends, and why | Follows |
 | --- | --- | --- | --- |
-| Health | 6 | 0 to 20. `baseHealth` is 20 and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:139`), so nothing goes above it. | **VALUE** (`baseHealth`) |
+| Health | 6 | 0 to 20. `baseHealth` is 20 and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:271`), so nothing goes above it. | **VALUE** (`baseHealth`) |
 | Energy | 6 | 0 to 32. See [1.7](#17-the-energy-track-what-ends-it). | **VALUE** (`EnergyPerRound`) x **RULE** (16 Rounds) |
 | Defense buffs | 6 | 0 to 20. See [3.3](#33-defense-two-rails-because-the-floor-is-applied-once). | **VALUE** (the largest Damage, the critical multiplier) |
 | Defense debuffs | 6 | 0 to 20, the same reason mirrored. | **VALUE** |
@@ -243,10 +243,10 @@ supply that runs out is replaced by a blank token with the value written on it; 
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Speed token, Quick on one face, Standard on the other | **6** | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`). Two-sided because the choice is one of two and is made face down; a two-sided token cannot hide which, Part 6, question 15. The Quick face needs a reminder that it forfeits the Critical roll (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. | **VALUE** (team size) |
-| Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number names the Creature on the track; ids are handed out in join order (`Match.cs:286-296`), so 1 to 3 are Player 1's. It breaks no tie: a tie between the sides is a d20 roll-off, and tied Creatures roll in number order, which only fixes the order of the rolls (ADR 0063). | **VALUE** (team size) |
+| Speed token, Quick on one face, Standard on the other | **6** | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`). Two-sided because the choice is one of two and is made face down; a two-sided token cannot hide which, Part 6, question 14. The Quick face needs a reminder that it forfeits the Critical roll (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. | **VALUE** (team size) |
+| Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number names the Creature on the track; ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`), so 1 to 3 are Player 1's. It breaks no tie: a tie between the sides is a d20 Roll-off, and tied Creatures roll in number order, which only fixes the order of the rolls (ADR 0063). | **VALUE** (team size) |
 | Tie order chit, `1st`, `2nd`, `3rd`, one common back | **6** = 3 per Player | The Tie order is given by both Players at the same time and hidden until both are in (ADR 0063, "like a Speed choice"), so it needs something that commits face down. A Player lays one chit face down on each of their tied Creatures' boards, and both Players turn them together. A Player orders at most all of their own Creatures, `RuleSet.TeamSize` = 3; two separate ties are each read low number first, so 3 chits cover any Round. This is translation.md's smallest answer ("three ordinal chits a Player"). | **VALUE** (team size) x **RULE** (a hidden, simultaneous Tie order) |
-| Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track, spent one a purchase, and the rest returned when the Player passes. A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
+| Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track, spent one a purchase, and the rest taken off when the Player passes or the Sub-phase ends (rulebook §5.3). A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
 | Round marker | **1** | One position on the Round track. | **RULE** |
 | Round cap marker | **1** | Placed at setup on the space equal to the `RuleSet`'s Round cap, so the track's end is a component and not a memory. | **VALUE** |
 | Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
@@ -257,11 +257,11 @@ supply that runs out is replaced by a blank token with the value written on it; 
 
 ### 1.6 Dice
 
-One critical roll a cast (`ResolutionRules.cs:56`), at most 6 casts a Round, resolved one after the other in
-timeline order. The roll-off of a timeline tie uses the same die (ADR 0063): at most 6 tied Creatures, rolled
+One critical roll a cast (`ResolutionRules.cs:59`), at most 6 casts a Round, resolved one after the other in
+timeline order. The Roll-off of a timeline tie uses the same die (ADR 0063): at most 6 tied Creatures, rolled
 one after the other in number order, before any Intent. **One die is enough by the rule**, for both. Two are
-in the box so each Player rolls their own casts and their own Creatures in a roll-off, which is a convenience
-and not a rule. The roll-off adds no die and no component: its result is the places on the initiative track.
+in the box so each Player rolls their own casts and their own Creatures in a Roll-off, which is a convenience
+and not a rule. The Roll-off adds no die and no component: its result is the Places on the initiative track.
 
 Since the Creature's base chance is zero, only the Spells that print a chance roll at all:
 
@@ -332,8 +332,9 @@ Two findings the maintainer owns before the snap is authored, neither of them th
 
 ### 1.7 The energy track: what ends it
 
-Energy has no maximum in the engine (`Energy.cs:3`, `Creature.cs:147-160`), and the maintainer has settled that
-the engine does not change: **the component is what ends it** (translation.md, ADR candidate 2).
+Energy has no maximum in the engine (`Energy.cs:3`, `GainEnergy` at `Creature.cs:279-290`), and the maintainer
+has settled that the engine does not change: **the component is what ends it** (translation.md, ADR candidate
+2).
 
 **The track runs 0 to 32.** The rule beside the count: a living Creature gains `RuleSet.EnergyPerRound` = 2
 every Round (`UpkeepRules.cs:13-22`), and a Match is at most 16 Rounds, so **2 x 16 = 32 is the Energy a
@@ -612,10 +613,10 @@ at all, so a dead Creature cannot be given Energy, a Speed token, an Intent or a
 
 | Affordance | The rule it enforces, so nobody has to remember it |
 | --- | --- |
-| The number 1 to 6 in the corner | It names the Creature: on its initiative marker, on its target markers and in the `Targeted by` row. Ids are handed out in join order (`Match.cs:286-296`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
-| The Health rail ending at 20 | A Heal is capped by the Health missing (`Creature.cs:139`). The marker cannot go past the end of the rail. |
+| The number 1 to 6 in the corner | It names the Creature: on its initiative marker, on its target markers and in the `Targeted by` row. Ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 Roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
+| The Health rail ending at 20 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
-| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:25`). The token physically fills the slot: there is nowhere to put a Speed token. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
+| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The token physically fills the slot: there is nowhere to put a Speed token. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
 | The `Targeted by` row, one box per caster number | No duplicate targets (`TargetingRules.cs:68`): a caster has one marker per box, and a box holds one marker, so naming the same target twice is impossible. |
 | The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
 
@@ -627,21 +628,21 @@ Four lanes: `new`, `3`, `2`, `1`. A Condition token is placed in `new` when it i
 2. every token in `new` moves into the lane matching the Duration printed on it.
 
 That is the whole countdown, and it is why the board has a `new` lane: it makes "**the first countdown after
-an application does not count**" (`Condition.cs:12,53-59`) a piece of geometry instead of a rule a player has
+an application does not count**" (`Condition.cs:12,88-100`) a piece of geometry instead of a rule a player has
 to recall on the Round they apply something. A refresh - which is only Stun - removes the old token and places
-the new one in `new`, which is exactly `Condition.Refresh` setting the flag again (`Condition.cs:50`).
+the new one in `new`, which is exactly `Condition.Refresh` setting the flag again (`Condition.cs:85`).
 
 Four lanes is derived: the longest Duration in the catalogue is 3 Rounds (`summon_minions`' Bleed,
 `momentum`'s Energy regeneration), plus the `new` lane. **VALUE**: a longer Duration authored in `data/` is a
 fifth lane and a reprint of six boards.
 
 Permanent Conditions never enter the dock. They move a rail and are discarded, because they never count down
-(`Condition.cs:34-36`) and never have to be undone.
+(`Condition.cs:42-44`) and never have to be undone.
 
 ### 3.3 Defense: two rails, because the floor is applied once
 
 `TotalDefense` is base plus the Defense buffs less the Defense debuffs, and the result floors at zero
-(`Creature.cs:58-60`, ADR 0035). The floor is applied **to the total**, not to the intermediate. So a single
+(`Creature.cs:95-97`, ADR 0035). The floor is applied **to the total**, not to the intermediate. So a single
 rail that stops at zero would be wrong: a Creature at 0 base carrying a -4 debuff and then a +3 buff has a
 total Defense of 0 in the engine, and a rail clamped at zero would show 3.
 
@@ -673,10 +674,32 @@ the last line of the command in [1.1](#11-spell-cards-and-package-cards): **39**
 A Player makes 2 picks at each of 8 opportunities: **16 purchases**, all of them possible on one Creature.
 The 21 packages' bonuses sum to 47, but a Creature cannot own all 21 with 16 picks, and a level-3 package
 cannot be bought without the two below it. The 16 prerequisite-closed packages that pay the most pay 39, so
-**Base initiative tops out at 5 + 39 = 44.** Add the largest Initiative buff a Creature can carry -
-`death_squad` is +2 for a Round on up to 3 allies, it stacks, and all three of a Team can cast it in the same
-Round, so +6 - and **Current initiative tops out at 50**. Under one Spell a pick, twice every Round, the
-ceilings were 52 and 58.
+**Base initiative tops out at 5 + 39 = 44.** Current initiative adds the Initiative buffs on top.
+`death_squad` is +2 for a Round on up to 3 allies and it stacks, but only a Creature that owns Deathstalker
+can cast it, and a Creature at 44 has spent all 16 of its Player's purchases: its allies own nothing, so the
+only `death_squad` it can carry is its own, and Deathstalker is among the 16 packages that pay 39. So
+**Current initiative tops out at 46**. Sharing the purchases does worse: each ally that buys Prowler,
+Assassin and Deathstalker spends 3 purchases to add 2, and the best such split reads 43. Under one Spell a
+pick, twice every Round, the ceilings were 52 and 58.
+
+```bash
+python3 -c "
+import json,glob
+T=[json.load(open(p)) for p in glob.glob('data/Tiers/*.json')];T=[t for t in T if t.get('enabled',True)]
+ix={t['id']:i for i,t in enumerate(T)};n=len(T);need=[sum(1<<ix[q] for q in t['prerequisites']) for t in T]
+ds=[i for i,t in enumerate(T) if 'spell:death_squad:v1' in t['spells']][0];b={};bd={}
+for m in range(1<<n):
+  own=[i for i in range(n) if m>>i&1]
+  if any(need[i]&~m for i in own): continue
+  k=len(own);v=sum(T[i]['initiativeBonus'] for i in own);b[k]=max(b.get(k,0),v)
+  if m>>ds&1: bd[k]=max(bd.get(k,0),v)
+f=lambda d,k:max([v for j,v in d.items() if j<=k] or [-99])
+print(max(5+f(bd if own else b,16-3*a)+2*(own+a) for a in range(3) for own in (0,1)))"   # 46
+```
+
+The command assumes the 16 purchases of a 16-Round Match and that an ally's `death_squad` costs it the three
+packages from Prowler up; it reads the same prerequisite-closed sets as the Base ceiling, so it moves when a
+bonus does.
 
 A rail to 44 is 45 cells and 225 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 4
 and units 0 to 9, are 15 cells** and read as one two-digit number. The print constraint is the board's 95 mm
@@ -701,8 +724,8 @@ ordering printed along the edge:
  |<-- Quick ------[ divider ]------ Standard -->|
  [ 1st ] [ 2nd ] [ 3rd ] [ 4th ] [ 5th ] [ 6th ]
  Quick before Standard. Initiative high to low.
- Tied across the sides: each rolls a d20, high first; equal rolls across the sides roll again.
- Your own tied Creatures: you order them in your places.
+ Tied across the sides: each rolls a d20, high first; a number both sides rolled, all on it roll again.
+ Your own tied Creatures: tie order chits, face down, turned together; you order them in your Places.
 ```
 
 The divider moves because a Round can have 0 to 6 Quick slots; it is set to the count of Quick tokens
@@ -712,18 +735,21 @@ six - the audit's numbers, unchanged.
 
 A tie is settled on the track in two steps (ADR 0063), and the components carry both:
 
-1. **The roll-off.** Tied markers of both sides sit side by side over the places they share. Each tied
-   Creature rolls a d20, in number order; the highest takes the first place, and equal rolls across the sides
-   roll again. The roll decides which places each side holds, and nothing else.
-2. **The Tie order.** A Player who holds two places or more in one tie lays a tie order chit face down on
-   each of those Creatures' boards: `1st` takes the side's first place in that tie, and so on. Both Players
+1. **The Roll-off.** Tied markers of both sides sit side by side over the Places they share. Each tied
+   Creature rolls a d20, in number order; the highest takes the first Place. The Creatures on a number both
+   sides rolled roll again among themselves, a side's own Creatures on it included; a number one side alone
+   rolled is not rolled again (`TimelineBuilder.cs:57-83`). The roll decides which Places each side holds,
+   and nothing else.
+2. **The Tie order.** A Player who holds two Places or more in one tie lays a tie order chit face down on
+   each of those Creatures' boards: `1st` takes the side's first Place in that tie, and so on. Both Players
    turn their chits together and move the markers into the places the chits give. That is the same
    face-down-then-turn the Speed choice uses, and it keeps the order hidden until both are in, as the engine
    does. A tie one side holds alone skips step 1. A Round with no tie of two or more of one side's Creatures
    skips step 2.
 
 The track is an **ordering** device and carries no numbers. The alternative, a value track a marker is placed
-on, needs 51 cells for the ceiling of 3.4 and would still need the tie rules printed.
+on, needs 47 cells, 0 to the Current initiative ceiling of 46 in 3.4, and would still need the tie rules
+printed.
 
 ### 3.6 The round track
 
@@ -755,7 +781,7 @@ their place. In the engine's order (`RoundSubPhase.cs`, eleven sub-phases since 
 
 The two orderings that change results and will be got wrong are on it and on the player aid: **healing before
 bleeding** (`UpkeepRules.cs:24-28`, ADR 0019), and **the critical is applied before Defense is subtracted**
-(`ResolutionRules.cs:73`).
+(`ResolutionRules.cs:91`).
 
 ### 3.7 The player area, and where a face-down intent sits
 
@@ -788,13 +814,13 @@ An A4 landscape mat a Player, three columns, one a Creature:
   it but for its top band, which carries the name, the level and the bonus ([4.1](#41-the-package-card)). A
   Creature's record reads as a list, and the newest card shows whole.
 - **The pick tokens** sit on the mat's header. Two a Player, put there only in a Round the Round track marks
-  as an opportunity, one spent a purchase, the rest returned when the Player passes.
+  as an opportunity, one spent a purchase, the rest taken off when the Player passes or the Sub-phase ends.
 - **The target markers** are three per Creature, in that Creature's colour, carrying its number. Reveal and
   target walks the whole timeline before anything resolves, so all six casts' markers are on the table at
   once: 18 markers, and a Creature's `Targeted by` row shows who is pointing at it.
 - **Speed tokens** are placed face down on each board's Speed slot and turned together, which is what makes
   the Speed choice the genuine simultaneous decision it is in the engine
-  (`PlayerBoardStateProjection.cs:37`).
+  (`PlayerBoardStateProjection.cs:38`).
 
 ### 3.8 How a cast is declared and resolved, in components
 
@@ -815,9 +841,10 @@ An A4 landscape mat a Player, three columns, one a Creature:
 A pick buys a Tier: a named package of Spells with a level, the Tiers it requires, and one initiative bonus
 (ADR 0056). 21 are enabled at `4d7a841c`: 3 at level 1, 9 at level 2, 9 at level 3. Each level-2 package
 requires one level-1 package and each level-3 package requires one level-2 package, so the 21 form three
-lines of seven. **Prerequisites are the only rule**: the talent tree gates nothing, and multiclassing is
-free, so a Creature may own packages from all three lines. The two picks of an opportunity resolve in
-sequence, so a Creature can buy a package and the one above it in the same Round.
+families of seven, one opened by each level-1 package. **Prerequisites are the only rule**: the talent tree
+gates nothing, and multiclassing is free, so a Creature may own packages from all three families. The two
+picks of an opportunity resolve in sequence, so a Creature can buy a package and the one above it in the same
+Round.
 
 What the table has to hold, for each Creature: which Tiers it owns, whether the next one's prerequisite is
 among them, and what it knows because of them. The package card holds all three, face up with the Creature,
@@ -965,7 +992,7 @@ the browser. No PDF library, no build step, nothing installed - the same weight 
 | Bleed | 3 mm on the outer edge only; cards abut inside the grid | Neighbours share a cut line, so no bleed is wasted between them and a single cut serves two cards. |
 | Cut marks | Hairline marks in the outer margin, at every grid line, never across a card | A mark that crosses the card is printed on the card. Marks in the margin survive a guillotine and a craft knife. |
 | Fold marks | None | Cards are cut, not folded. Boards are printed one to a face. |
-| Colour | Everything readable in greyscale; a package line's colour is a strip **and** a printed package name | Home printers run out of one ink. A card that only says "Lich" in purple stops saying it. |
+| Colour | Everything readable in greyscale; a package family's colour is a strip **and** a printed package name | Home printers run out of one ink. A card that only says "Lich" in purple stops saying it. |
 
 ### 5.4 Where it lives
 
@@ -1032,8 +1059,8 @@ of the content it was built from.
 
 ## Part 6. Open questions
 
-Each one is a count or a choice this document cannot derive. None is answered here; question 1 was answered
-elsewhere, and says so.
+Each one is a count or a choice this document cannot derive. None is answered here; questions 1 and 13 were
+answered elsewhere, and each says so.
 
 ### 1. Which die
 
@@ -1041,7 +1068,7 @@ elsewhere, and says so.
 [1.6](#16-dice) - two candidate grids sit inside the 0.05 step `knobs.json` already declares on 21 Spells,
 d10 and d20, and the d20 is the finer of the two: it moves 10 of the 21 Spells that roll where the d10 moves
 15, its worst move is 0.02 rather than 0.05, and it can still express the 0.75 `crushing_stomp` is on. ADR 0063 put a
-second use on the same die, the roll-off. The question stays here for what is left with it: `revenant_guards`
+second use on the same die, the Roll-off. The question stays here for what is left with it: `revenant_guards`
 prints a chance and has **no critical chance knob**, and `lightning_bolt`'s knob band starts at 0.17, so its
 own grid contains no multiple of 0.05. Both are content changes with a journal entry and a new hash.
 
@@ -1158,14 +1185,14 @@ running host to print?
 
 ### 13. The hidden Tie order at a table
 
-ADR 0063 hides a Tie order until both Players have given theirs, like a Speed choice. This manifest answers
-it with 6 tie order chits, face down on the tied Creatures' boards ([1.5](#15-the-rest-of-the-pieces),
-[3.5](#35-the-initiative-track)), which is translation.md's smallest answer. The rulebook's own step (§5.5,
-"Both Players do this at the same time") does not yet say face down. That is a sentence for the
-`rulebook-writer`, not a component, but the two have to agree: if the maintainer rules that a table need not
-hide the order, the chits leave the box.
+**Answered in the rulebook.** ADR 0063 hides a Tie order until both Players have given theirs, like a Speed
+choice. This manifest answers it with 6 tie order chits, face down on the tied Creatures' boards
+([1.5](#15-the-rest-of-the-pieces), [3.5](#35-the-initiative-track)), which is translation.md's smallest
+answer, and the rulebook now says the same: its setup hands each Player the chits, and its §5.5 and §6.6 lay
+them face down and turn them together. What stays here is the maintainer's option: if a table need not hide
+the order, the chits leave the box and those sentences with them.
 
-### 15. A two-sided Speed token cannot be placed face down
+### 14. A two-sided Speed token cannot be placed face down
 
 Found while choosing the tie order chits, and older than them. [1.5](#15-the-rest-of-the-pieces) specifies one
 Speed token a Creature, Quick on one face and Standard on the other, "made face down". A token whose two faces
@@ -1175,7 +1202,7 @@ kept, or the six tokens played under a cover. The first is the Intent's own answ
 down). This moves a count from 6 to 12; it is not changed here because it is not part of the package update,
 and the maintainer should see it first.
 
-### 14. The player area does not hold what 3.7 puts on it
+### 15. The player area does not hold what 3.7 puts on it
 
 Found while placing the package cards, and older than them. [3.1](#31-the-creature-board) calls the creature
 board "A5, 105 x 148 mm, two to an A4 sheet", but A5 is 148 x 210 mm, and 105 x 148 mm is A6, four to a sheet.
@@ -1206,7 +1233,7 @@ the component beside it has not.
 | 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces) |
 | 1.3 A pick buys a whole Tier | 126 package cards, face up with the Creature that bought them, [1.1](#11-spell-cards-and-package-cards) and [Part 4](#part-4-the-packages-as-an-object). Each card's `Needs` line is the prerequisite check; no Spell card prints a gate. |
 | 1.3 A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | The two Base initiative rails and the package card's bonus, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded). No Spell card prints an initiative. |
-| 1.4 One Speed choice per living, unstunned Creature | 6 Speed tokens and the Speed slot a Stun fills, [3.1](#31-the-creature-board); Part 6, question 15 |
+| 1.4 One Speed choice per living, unstunned Creature | 6 Speed tokens and the Speed slot a Stun fills, [3.1](#31-the-creature-board); Part 6, question 14 |
 | 1.5 The Combat timeline | The initiative track and 6 numbered markers, [3.5](#35-the-initiative-track) |
 | 1.5 Current initiative is Base plus buffs less debuffs, floored at zero | The Base initiative rails read with the dock's Initiative tokens, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) |
 | 1.5 A tie between the sides is rolled off on a d20 | The two d20s, [1.6](#16-dice), and the tie rules printed on the initiative track, [3.5](#35-the-initiative-track). The number on each board, [3.1](#31-the-creature-board), only fixes the order tied Creatures roll in. |

@@ -104,9 +104,10 @@ listed in [spells.md](spells.md).
       that cost the choice decides nothing, since acting earlier is never worse.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
       then Standard slots by Initiative descending. A tie between the two sides is rolled off: every tied
-      Creature rolls a d20 and the highest acts first, and Creatures of different sides that roll the same
-      number roll again. That decides which places each side holds. A tie held by one side alone rolls nothing.
-      The seat breaks no tie (ADR 0063).
+      Creature rolls a d20 and the highest acts first, and when both sides rolled the same number, every
+      Creature on that number rolls again, a side's own included; a number only one side rolled stays. That
+      decides which places each side holds. A tie held by one side alone rolls nothing. The seat breaks no
+      tie (ADR 0063).
    4. `TieOrder`: each Player who holds two places or more in one tie orders their own Creatures among those
       places; the other side's places do not move. Completes when every such Player has; a Round where no
       side holds two places in a tie passes through it without asking anyone.

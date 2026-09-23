@@ -1,8 +1,9 @@
 # Player aid
 
 One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md), and it describes
-the same engine: Tiers bought on the Rule set's schedule (ADR 0056, ADR 0059) and ties rolled off on a d20
-(ADR 0063). The section number is beside each rule. Fill the setup table's values in before the first Match.
+the same engine: Tiers bought on the Rule set's schedule (ADR 0056, ADR 0059) and ties settled by a Roll-off
+on a d20 (ADR 0063). The section number is beside each rule. Fill the setup table's values in before the
+first Match.
 
 ---
 
@@ -12,9 +13,9 @@ the same engine: Tiers bought on the Rule set's schedule (ADR 0056, ADR 0059) an
 | --- | --- | --- | --- | --- |
 | 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy. | 5.1 |
 | 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. | 5.2 |
-| 3 | Planning | **Evolution** | **Only in a Round with an opportunity.** Players alternate, Player 1 first, each pick buying one Tier, openly. See below. | 5.3 |
+| 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Players alternate, Player 1 first, each pick buying one Tier, openly. See below. | 5.3 |
 | 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
-| 5 | Planning | **Turn order resolution**, then **Tie order** | Build the Combat timeline, roll off the ties between the sides, then order your own. | 5.5 |
+| 5 | Planning | **Turn order resolution**, then **Tie order** | Build the Combat timeline, hold a Roll-off for each tie between the sides, then order your own with the tie order chits, **face down**. Turn them over together. | 5.5 |
 | 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known and affordable. | 5.6 |
 | 7 | Combat | **Reveal and target** | Walk the timeline: flip, place target markers. **All six before any resolve. Nothing changes yet.** | 5.7 |
 | 8 | Combat | **Action resolution** | Walk the timeline again: resolve each cast fully, one at a time. | 5.8 |
@@ -25,8 +26,11 @@ the same engine: Tiers bought on the Rule set's schedule (ADR 0056, ADR 0059) an
 
 ## Buying a Tier (§5.3)
 
-**When.** The setup table's first evolution Round, then every interval after it (reference: every odd Round).
-Any other Round: skip step 3, nobody passes.
+**When.** A Round whose space on the Round track carries a pick mark (reference: every odd Round). Any other
+Round: skip step 3, nobody passes.
+
+**Pick tokens.** On a pick mark, put all your pick tokens on your mat. Each purchase spends one. When the step
+ends, any left come off the mat: picks never carry over.
 
 **What.** A Tier is available to a Creature when it is **alive**, does **not own** the Tier, and **owns every
 Tier it requires**. Nothing else decides it.
@@ -52,9 +56,12 @@ up the rest with an **Evolution pass**.
 
 1. **Quick before Standard.** Always, whatever the numbers.
 2. **Higher Current initiative first.**
-3. **Tied with the other side? Roll off.** Each tied Creature rolls a d20: the highest takes the first place.
-   Equal rolls across the sides roll again. The seat breaks no tie.
-4. **Tied with your own?** Put your Creatures in your side's places in the order you want, before Intents.
+3. **Tied with the other side? Roll-off.** Each tied Creature rolls a d20: the highest takes the first Place.
+   A number both sides rolled is rolled again by every Creature on it, **your own included**. A number only
+   one side rolled is not. The seat breaks no tie.
+4. **Tie order: two Places or more of your own in one tie?** Lay a tie order chit (`1st`, `2nd`, `3rd`)
+   **face down** on each of those Creatures. Both Players turn theirs together, before Intents, and move
+   their own markers among their side's Places.
 
 **Current initiative** = Base initiative + Initiative buffs - Initiative debuffs, never below 0. Read **once**,
 here. A debuff that lands in Combat does not reshuffle this Round.
@@ -78,7 +85,7 @@ the halves.
 
 ## What a critical does (§6.7)
 
-**Roll once per cast, on the die in the setup table, against the threshold on the card.** A Creature's own
+**Roll a d20 once per cast, against the threshold on the card (`d20: 11+`).** A Creature's own
 Critical chance is **zero**: the chance on the card is the chance rolled. A card printed at **0%** never rolls.
 
 | Multiplied | Not multiplied |
