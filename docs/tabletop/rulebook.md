@@ -1,16 +1,16 @@
 # Downfall Arena: the rulebook
 
-Status: **Draft** (2026-09-14). Phase 4 of [plan.md](plan.md).
+Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23). Phase 4 of [plan.md](plan.md).
 
-> **The evolution rules below describe the game before
-> [ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md).** A pick bought one Spell and every
-> unlock raised Base initiative by that Spell's own number; a pick buys a whole package now, twice at round 1
-> and every second round after, and the package pays one initiative bonus. The per-Spell number is gone
-> entirely ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), so any row here
-> that cites `Spell initiative` or `Creature.UnlockSpell` names something the engine no longer has. Re-auditing
-> the tabletop translation against the package model is phase 7 of
-> [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md) and has not been done. Everything
-> outside evolution — combat, the timeline, conditions, the win condition — is unaffected.
+> **What this book describes.** The engine as of
+> [ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md). Evolution is the package model: a pick buys
+> a whole Tier, the picks arrive on the Rule set's schedule, and the Tier pays one initiative bonus
+> ([ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md),
+> [ADR 0057](../adr/0057-a-package-is-authored-not-derived.md)). No Spell carries initiative of its own
+> ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), and the Talent tree decides
+> nothing at the table. Ties on the Combat timeline are rolled off on a d20 and then ordered by their owners
+> (ADR 0063). This book names the **package card** by what it must show; its size, its count and where it
+> sits are [components.md](components.md)'s to specify.
 
 This book teaches the game. [`docs/domain/game-rules.md`](../domain/game-rules.md) is the specification; this
 is its second reading. Where the two disagree, one of them is a bug — say which, and fix that one. Part 9
@@ -41,17 +41,17 @@ rule, it comes from [components.md](components.md) and is named there.
 Two Players. Each commands a Team of Creatures. You win when the other Team is defeated: every one of its
 Creatures at zero Health.
 
-A Match is a sequence of Rounds. In each Round you unlock Spells from a Talent tree, choose how fast each of
-your Creatures moves, then declare one hidden Intent per Creature. The Intents are revealed in order along
+A Match is a sequence of Rounds. In the Rounds the Rule set's schedule offers, you buy Tiers for your
+Creatures. In every Round you choose how fast each of your Creatures moves, then declare one hidden Intent per Creature. The Intents are revealed in order along
 the Combat timeline, targets are chosen as each one is revealed, and only then does anything resolve.
 
 Three things make the game:
 
 - **You commit before you see.** Your Speed choices and your Intents are made face down, at the same time as
   your opponent's. You choose targets later, when the card flips, knowing what has already been revealed.
-- **You spend a Round to get stronger.** Evolution unlocks Spells you did not have, and every unlock raises
-  that Creature's Base initiative for the rest of the Match. The Creature that acts first is the one that has
-  been climbing its Talent tree.
+- **You grow in packages.** Evolution buys a Tier: a named package of Spells, every one of them at once. The
+  Tier also raises that Creature's Base initiative by its bonus, for the rest of the Match. Buying is how a
+  Creature gets stronger, and it is also how it gets faster.
 - **Nothing is a reservation.** Energy is spent at Resolution, not when you declare. A Creature can be killed,
   stunned or drained between the reveal and the resolution, and its cast then does nothing at all.
 
@@ -74,7 +74,7 @@ The five pieces this book names constantly, and where they are specified:
 | The Creature board | One per Creature: the Health, Energy, Defense and Base initiative rails, the Speed slot, the Condition dock, the `Targeted by` row | [components.md 3.1](components.md#31-the-creature-board) |
 | The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
 | The initiative track | Six ordered slots with a movable divider between the Quick band and the Standard band | [components.md 3.5](components.md#35-the-initiative-track) |
-| The Talent tree mat | One per Player, all 36 Spells, three pip boxes each — the public record of what your Creatures know | [components.md Part 4](components.md#part-4-the-talent-tree-as-an-object) |
+| The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows | [components.md](components.md) |
 | The `Targeted by` row | One box per caster number on every Creature board; a target marker sits in it from the reveal until the Resolution | [components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits) |
 
 Three components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
@@ -96,7 +96,9 @@ one of them in a sentence.
 | --- | --- | --- | --- |
 | Team size | Creature boards a Player takes | ______ | 3 |
 | Energy per Round | Energy every living Creature gains at the start of a Round | ______ | 2 |
-| Evolution picks per Round | Unlocks a Player may make in one Round | ______ | 2 |
+| Evolution picks per opportunity | Tiers a Player may buy in a Round that offers an Evolution opportunity | ______ | 2 |
+| First evolution Round | The first Round that offers an Evolution opportunity | ______ | 1 |
+| Interval between opportunities | How many Rounds apart the opportunities are: 1 is every Round, 2 every other Round | ______ | 2 |
 | Round cap | The space the Round cap marker occupies | ______ | the table plays 8 to 16; the Round track holds 16 |
 | Critical multiplier | What a critical cast multiplies by | ______ | 2 |
 | **The critical die** | **Which die a critical is rolled on** | **______** | **open — see [6.7](#67-the-critical-roll)** |
@@ -116,8 +118,8 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
 
 1. **Seat the Players.** The Player on the left is Player 1 and takes Player slot 1. The seat breaks no tie:
    ties on the Combat timeline are rolled off ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
-2. **Take the mats.** Each Player takes a player area mat, a Talent tree mat, a player aid, and one Evolution
-   pick token per Evolution pick per Round.
+2. **Take the mats.** Each Player takes a player area mat, a player aid, and one Evolution pick token per
+   Evolution pick per opportunity.
 3. **Take the Creature boards.** Each Player takes Team size boards. Player 1's are numbered 1, 2, 3 from
    their left; Player 2's are numbered 4, 5, 6. These numbers never change and they are the order tied Creatures
    roll in on the Combat timeline.
@@ -125,19 +127,21 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
    Energy marker on its Energy, both Defense markers on 0, and the Base initiative markers on its Base
    initiative. Reference: Health 20, Energy 0, Defense 0 and 0, Base initiative 5.
 5. **Deal the starting Spells.** Every Creature takes one card of each Spell its Creature definition starts
-   with, into its Player's concealed hand. Put a pip in that Creature's box on each of those Spells on the
-   Talent tree mat. Reference: Basic Attack, Heavy Strike, Wait — three cards per Creature, nine per Player.
-   **A starting Spell raises no Base initiative**: the Creature definition's number already accounts for it.
+   with, into its Player's concealed hand. Reference: Basic Attack, Heavy Strike, Wait — three cards per
+   Creature, nine per Player. The starting Spells belong to no Tier, so no package card records them: they are
+   the Creature definition's, and both Players know them.
 6. **Set the tracks.** Put the Round marker on space 1 of the Round track. Put the Round cap marker on the
    space equal to the setup table's Round cap. Leave the initiative track empty; its divider is placed every
-   Round.
+   Round. Say aloud which Rounds offer an Evolution opportunity ([5.3](#53-evolution)). Reference: Rounds 1,
+   3, 5, and every second Round after.
 7. **Lay out the supply.** Sort the Condition tokens by face where both Players can reach them. Put the blank
-   tokens, the overflow chits, the die and the Spell card library within reach. The library is the rest of the
-   cards, sorted by class and Tier: this is where an unlocked Spell comes from.
+   tokens, the overflow chits, the die, the package cards and the Spell card library within reach. The library
+   is the rest of the Spell cards, sorted by the Tier that teaches them: this is where a bought Tier's Spells
+   come from.
 
 The board is now photographable, and it is the same board in every Match: six Creature boards at full Health
-and zero Energy, eighteen cards in two concealed hands, eighteen pips on two mats, an empty initiative track,
-and the Round marker on 1.
+and zero Energy, eighteen cards in two concealed hands, no package card with any Creature, an empty initiative
+track, and the Round marker on 1.
 
 ### 3.3 Check before you start
 
@@ -145,15 +149,16 @@ and the Round marker on 1.
   setup; everything that will separate them is a decision you have not made yet.
 - Every Energy rail is **face up and stays face up**. Your opponent must be able to check that an Intent you
   declare is affordable without seeing the card.
-- The Talent tree mats are **public**. Everything a Creature knows is public; only the card you have chosen
-  to play this Round is hidden.
+- The package cards are **public**. Everything a Creature knows is public — its starting Spells and the
+  Spells of every Tier it owns; only the card you have chosen to play this Round is hidden.
 
 ---
 
 ## Part 4. The shape of a Round
 
-A Round is four Phases and ten Sub-phases, always in this order, never backwards. This page is the whole
-game; Part 5 is the same ten steps with their details.
+A Round is four Phases and eleven Sub-phases, always in this order, never backwards. This page is the whole
+game; Part 5 is the same ten steps with their details. Step 5 holds two Sub-phases, Turn order resolution and
+Tie order, because the second only ever finishes what the first began.
 
 ```
 START OF ROUND
@@ -161,9 +166,10 @@ START OF ROUND
   2  Ongoing effects ...... Energy regeneration, then Regeneration, then Bleed
 
 PLANNING
-  3  Evolution ............ each Player unlocks Spells, up to their picks
+  3  Evolution ............ each Player buys Tiers, up to their picks; only in a Round with an opportunity
   4  Speed ................ Quick or Standard, face down, for every living, unstunned Creature
-  5  Turn order resolution  build the Combat timeline: Quick, then Standard
+  5  Turn order resolution  build the Combat timeline: Quick, then Standard; roll off ties between the sides
+     Tie order ............ each Player orders their own tied Creatures
 
 COMBAT
   6  Intent selection ..... one hidden Intent per Creature on the timeline
@@ -177,12 +183,13 @@ END OF ROUND
 
 Four things about this shape are worth holding in your head from the start.
 
-- **Steps 1, 2, 5, 9 and 10 are automatic.** Nobody decides anything. Do them and move on. Steps 1, 2 and 9
-  are the Upkeep: Energy gain, the ticks, and the Condition countdown.
+- **Steps 1, 2, 9 and 10 are automatic.** Nobody decides anything. Do them and move on. Steps 1, 2 and 9
+  are the Upkeep: Energy gain, the ticks, and the Condition countdown. Step 5 is automatic too, except for a
+  Player who holds two places in one tie. Step 3 asks nothing in a Round that offers no opportunity.
 - **Nothing changes between step 5 and step 8.** You choose all six target sets on a board that has not
   happened yet. The first Creature to die in a Round dies in step 8, after every target has been placed.
-- **The three hidden decisions are steps 3, 4 and 6 — and only two of them stay hidden.** Evolution is open:
-  a pip goes on a public mat. Speed and Intent are face down and turned over together.
+- **Of the decisions, only Evolution is open.** A package card goes face up the moment it is bought. Speed and
+  Intent are face down and turned over together. A Tie order is made by both Players at the same time.
 - **A Round is walked twice.** Once to reveal and target, once to resolve. Same order both times.
 
 ---
@@ -229,48 +236,64 @@ otherwise have killed it. Doing it the other way round kills Creatures the rules
 
 ### 5.3 Evolution
 
-**Trigger.** Ongoing effects are done.
+**Trigger.** Ongoing effects are done, in a Round that offers an Evolution opportunity.
 **Actor.** Both Players, openly, **one pick each in turn**: Player 1 takes a pick, then Player 2, then Player 1
 again, until both have used or given up their picks.
-**Result.** Each Player may unlock Spells from the Talent tree, up to the setup table's Evolution picks per
-Round. One pick unlocks one Spell for one of that Player's **living** Creatures.
+**Result.** Each Player may buy Tiers, up to the setup table's Evolution picks per opportunity. One pick buys
+one Tier for one of that Player's **living** Creatures.
+
+**Which Rounds.** A Round offers an opportunity when it is the setup table's first evolution Round, or a whole
+number of intervals after it. In any other Round nobody has a pick, so nobody is asked and nobody passes: go
+straight to Speed. With the reference values, Rounds 1, 3, 5 and every odd Round after offer one.
+
+**What a Tier is.** A Tier is a named package of Spells. Its package card shows its name, its level, the Tiers
+it requires, the Spells it teaches and its initiative bonus. A level 1 Tier requires nothing; every other Tier
+requires a Tier exactly one level below it.
+
+**Which Tier a Creature may buy.** A Tier is available to a Creature when the Creature does not own it and
+owns every Tier it requires. That is the only rule. Any Creature may buy any Tier that requires nothing,
+whatever it already owns, and two Creatures may each buy the same Tier.
+
+A purchase is three actions, in this order:
+
+1. **Package card.** Put a copy of the Tier's package card face up with that Creature. It is the public record
+   that the Creature owns the Tier and knows its Spells.
+2. **Cards.** Take one card of each Spell the Tier teaches from the library into your hand. If the Creature
+   already knows one of them, take no card for that one; the purchase is still legal.
+3. **Initiative.** Raise that Creature's Base initiative by the Tier's initiative bonus. **This is the only
+   thing that ever moves a Base initiative marker.** It happens once, at the purchase, and lasts for the rest
+   of the Match. No Spell carries initiative of its own, and casting one moves nothing.
 
 The turn order matters and is not a table convention: the engine alternates the same way
-(`MatchDriver.PlayAsync` asks Player 1, then Player 2, once per pass), and an unlock is public the moment it
+(`MatchDriver.PlayAsync` asks Player 1, then Player 2, once per pass), and a purchase is public the moment it
 happens. So the second Player chooses their first pick already knowing the first Player's, and the first
 Player learns of theirs only when choosing their second. Taking the picks simultaneously would hand both
 Players information the engine never gives them, and the app would then play a different game from the table.
 
-A Spell is unlockable for a Creature when **both** gates are open against the Spells that Creature knows right
-now: the gate on the Talent tree node the Spell sits in, and the Spell's own gate. A gate reads `all of` (know
-every one) or `any of` (know at least one). Both are printed on the mat and on the card.
-
-An unlock is three actions, in this order:
-
-1. **Pip.** Put a pip in that Creature's box on that Spell on the Talent tree mat.
-2. **Card.** Take that Spell's card from the library into that Player's hand.
-3. **Initiative.** Raise that Creature's Base initiative by the card's `Unlock: +N initiative`. **This is the
-   only thing that ever moves a Base initiative marker**, it happens once, at the unlock, and it lasts for the
-   rest of the Match. It is not paid again when the Spell is cast.
-
 **Your picks within a Round are sequential, not simultaneous: your second pick sees your first.** So a
-Creature can open a branch of the tree and take a Spell from it in the same Round.
+Creature can buy a Tier and the Tier that requires it in the same Round.
 
 A Player who does not want their remaining picks declares an **Evolution pass** and returns their pick tokens.
 
 **The Sub-phase ends when neither Player has a pick they could use** — because they spent them, passed, or
-none of their living Creatures has anything left to unlock. A Player with nothing to unlock does not have to
-pass; the Sub-phase simply ends.
+none of their living Creatures has a Tier available. A Player with nothing to buy does not have to pass; the
+Sub-phase simply ends.
 
-> **Example.** Round 1. Creature 1 knows Basic Attack, Heavy Strike and Wait, and its Base initiative marker
-> reads 5. Player 1 has 2 picks.
-> **First pick: Pummel.** The `Brawler` node asks for all of Basic Attack, Heavy Strike and Wait; Creature 1
-> knows all three. Pummel itself asks for nothing. Pip, card, and `Unlock: +0 initiative` — the marker does
-> not move.
-> **Second pick: Protective Slam.** The `Mercenary` node asks for any of Pummel or Guard. Creature 1 did not
-> meet that gate a minute ago; it does now, because of the first pick. Protective Slam asks for nothing
-> itself. Pip, card, and `Unlock: +1 initiative`: Base initiative goes to 6.
-> Creature 1 now holds five cards and will act ahead of any Creature still at 5.
+> **Example.** Round 1 offers an opportunity. Every Creature knows Basic Attack, Heavy Strike and Wait, owns no
+> Tier, and has a Base initiative of 5. Each Player has 2 picks.
+> **Player 1, first pick: Brute, for Creature 1.** Brute is level 1 and requires nothing. Its package card goes
+> face up with Creature 1, the Pummel and Guard cards go into Player 1's hand, and the bonus of +1 takes Base
+> initiative to 6.
+> **Player 2, first pick: Prowler, for Creature 4.** Level 1, requires nothing. Poison Slash and Throwing Star
+> go into Player 2's hand, and the bonus of +3 takes Base initiative to 8.
+> **Player 1, second pick: Marauder, for Creature 1.** Marauder is level 2 and requires Brute. A minute ago it
+> was not available to Creature 1; it is now, because of the first pick. Protective Slam goes into the hand, and
+> the bonus of +1 takes Base initiative to 7.
+> **Player 2, second pick: Brute, for Creature 5.** Creature 1 owning Brute does not stop Creature 5 buying it.
+> Base initiative 6.
+> Warmonger, the level 3 Tier that requires Marauder, is now available to Creature 1, but Player 1 has no pick
+> left. Round 2 offers no opportunity, so the next chance is Round 3. Until then, Creature 4 at 8 has the highest
+> Base initiative on the table.
 
 ### 5.4 Speed
 
@@ -317,16 +340,19 @@ places in one tie.
 Quick always beats Standard. A Quick Creature with Current initiative 0 still acts before a Standard Creature
 with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
 
-> **Example.** Creature 2 was hit by **Ice Spear** in the last Round and carries Initiative -2 for one Round.
-> Base initiatives: Creature 1 is 6, Creatures 2, 3, 5 and 6 are 5, Creature 4 is 6. Current initiatives are
-> the same except Creature 2, which reads 5 - 2 = 3.
+> **Example.** Round 4, which offers no Evolution opportunity. In Rounds 1 and 3 both Players spent their four
+> picks alike: Creature 1 owns Brute and Ironbound, Creature 4 owns Brute and Marauder, and Creatures 2, 3, 5
+> and 6 each own Occultist. Brute, Ironbound and Marauder are +1 each and Occultist is +2, so every Base
+> initiative reads 7. **Two sides that buy alike tie everywhere.**
+> In Round 3, Creature 4 hit Creature 2 with **Protective Slam**: `Initiative -2, 2 rounds`. Creature 2's
+> Current initiative is 7 - 2 = 5. Every other Creature's is 7.
 > Creatures 1 and 4 chose Quick; the rest chose Standard. The divider goes after the second slot.
-> Quick band: Creature 1 and Creature 4 are tied at 6, so they roll off: 8 for Creature 1, 15 for Creature 4.
+> Quick band: Creature 1 and Creature 4 are tied at 7, so they roll off: 8 for Creature 1, 15 for Creature 4.
 > 4, then 1.
-> Standard band: Creatures 3, 5 and 6 are tied at 5 and roll 11, 11 and 2. Creature 6 is last of the three;
+> Standard band: Creatures 3, 5 and 6 are tied at 7 and roll 11, 11 and 2. Creature 6 is last of the three;
 > Creatures 3 and 5 are on different sides and roll again, 4 and 17. The places go Player 2, Player 1, Player 2.
 > Player 2 holds two of them and wants Creature 6 to act first, so 6 takes the first place and 5 the third:
-> 6, then 3, then 5. Creature 2 at 3 is last and rolls nothing.
+> 6, then 3, then 5. Creature 2 at 5 is last and rolls nothing.
 > The timeline is **4, 1, 6, 3, 5, 2**.
 
 ### 5.6 Intent selection
@@ -335,8 +361,9 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 **Actor.** Each Player, for every one of their Creatures **on the timeline**, at the same time as the other
 Player.
 **Result.** Take one card from your hand and put it **face down** in that Creature's intent slot. An Intent is
-legal when that Creature knows the Spell — the pip is on the mat — and its Energy rail is at or above the
-Spell's printed cost. Every Creature on the timeline gets exactly one.
+legal when that Creature knows the Spell — it is a starting Spell, or one of the Creature's package cards
+teaches it — and its Energy rail is at or above the Spell's printed cost. Every Creature on the timeline gets
+exactly one.
 
 **Declaring is not reserving.** The Energy is not spent now. It is checked again and spent at Resolution, and
 by then it may be gone.
@@ -344,12 +371,12 @@ by then it may be gone.
 Your opponent can count the cost against your public Energy rail without seeing your card. That is why the
 Energy rails stay face up.
 
-> **Example.** Creature 1 has Energy 3 and knows Meteor (cost 3), Basic Attack (cost 1) and Crushing Stomp
-> (cost 4). It may declare Meteor. It may not declare Crushing Stomp: 3 is less than 4.
+> **Example.** Creature 1 has Energy 3 and knows, among others, Meteor (cost 3), Basic Attack (cost 1) and
+> Crushing Stomp (cost 4). It may declare Meteor. It may not declare Crushing Stomp: 3 is less than 4.
 > Player 2 can see the 3 on the rail, so they know Crushing Stomp is not under that card. They do not know
 > whether Meteor is.
-> Later this Round, Creature 5 resolves **Soul Devourer** on Creature 1 first: 5 damage and **Energy -2**.
-> Creature 1's rail drops to 1. When Creature 1's slot comes up, it cannot afford Meteor's 3 and the cast
+> Later this Round, Creature 5 resolves **Soul Devourer** on Creature 1 first: `Damage 6` and **`Energy -3`**.
+> Creature 1's rail drops to 0. When Creature 1's slot comes up, it cannot afford Meteor's 3 and the cast
 > Fizzles. See [6.1](#61-the-fizzle-and-every-cause-of-it).
 
 ### 5.7 Reveal and target
@@ -526,7 +553,9 @@ damage through a Defense buff, a Heal on a Creature at full Health — did nothi
 **Result.** That Creature gets no Speed choice, no Activation slot and no Intent.
 
 It still gains Energy at [5.1](#51-energy-gain). It still takes its Bleed ticks and its Regeneration ticks at
-[5.2](#52-ongoing-effects). It can still be targeted, healed and killed. It simply never acts.
+[5.2](#52-ongoing-effects). Its Player can still buy it a Tier at [5.3](#53-evolution), because Evolution comes
+before Speed and asks only that the Creature be alive. It can still be targeted, healed and killed. It simply
+never acts.
 
 A Stun that lands **during** Combat also fizzles that Creature's own action if its Activation slot has not
 resolved yet ([6.1](#61-the-fizzle-and-every-cause-of-it), cause 2). So a two-Round Stun can cost three
@@ -719,20 +748,25 @@ Every rule in this book is one of two things: a rule in
 category, and no rule here is new.
 
 The trace was re-run against the specification and `data/` on 2026-09-14, after ADR 0041 and ADR 0042 landed.
-Every row below now names the specification or a declared tabletop entry; none of them is owed to a rule the
-plan had only announced. **Phase 4's done-condition — every rule traces to `docs/domain/game-rules.md` or to a
-declared tabletop entry — is therefore checkable line by line, and it checks out.**
+The Evolution rows, the setup table's schedule and every worked example were re-run on 2026-09-23 against ADR
+0056, ADR 0057 and ADR 0059, `data/Tiers/`, `data/Spells/`, and the engine's `EvolutionRules`,
+`TierEligibility` and `Creature.BuyTier`. Every row below but one names the specification or a declared
+tabletop entry; none of them is owed to a rule the plan had only announced. **Phase 4's done-condition — every
+rule traces to `docs/domain/game-rules.md` or to a declared tabletop entry — is checkable line by line, and it
+checks out except for that one row**: a purchase being public the moment it happens is what the engine does,
+and `game-rules.md` does not say it. The fix belongs in `game-rules.md`, not here.
 
 | This book | The specification |
 | --- | --- |
 | [Part 1](#part-1-what-you-are-trying-to-do), the Win condition | "Match lifecycle", ADR 0011 |
-| [3.1](#31-the-setup-table), the setup table | "Planning rules (phase 5)": the `RuleSet` value object |
-| [4](#part-4-the-shape-of-a-round), the ten Sub-phases | "Round sequence (ADR 0010)" |
+| [3.1](#31-the-setup-table), the setup table, and its three schedule rows | "Planning rules (phase 5)": the `RuleSet` value object, ADR 0056 |
+| [4](#part-4-the-shape-of-a-round), the eleven Sub-phases in ten steps | "Round sequence (ADR 0010)", amended by ADR 0063 |
 | [5.1](#51-energy-gain) | "Start of round", 1: `EnergyGain` |
 | [5.2](#52-ongoing-effects), the three passes and their order | "Start of round", 2: `OngoingEffects`, ADR 0019, ADR 0020 |
-| [5.3](#53-evolution), gates, sequence, the initiative gain, the pass, the end of the Sub-phase | "Planning", 1: `Evolution`, ADR 0017 |
+| [5.3](#53-evolution), the schedule, availability, the purchase, the initiative bonus, sequence, the pass, the end of the Sub-phase | "Planning", 1: `Evolution`; "Planning rules (phase 5)"; ADR 0056, ADR 0057, ADR 0059 |
+| [5.3](#53-evolution), a purchase is public the moment it happens | Not stated in `game-rules.md`. The glossary implies it — a Creature carries the Tiers it has bought, and the Player board state shows both Teams as Snapshots — and the engine does it: the purchase applies at once (`Match.SubmitEvolutionChoice`) and both Players see `CreatureSnapshot.AcquiredTiers` |
 | [5.4](#54-speed), and the stunned Creature | "Planning", 2: `Speed` |
-| [5.5](#55-turn-order-resolution), and [6.6](#66-the-combat-timeline-and-its-tiebreaks) | "Planning", 3: `TurnOrderResolution`, ADR 0036 |
+| [5.5](#55-turn-order-resolution), and [6.6](#66-the-combat-timeline-and-its-tiebreaks) | "Planning", 3: `TurnOrderResolution`, and 4: `TieOrder`; ADR 0036, ADR 0063 |
 | [5.6](#56-intent-selection) | "Combat", 1: `IntentSelection` |
 | [5.7](#57-reveal-and-target), and [6.8](#68-two-more-things-every-card-assumes) | "Combat", 2: `RevealAndTarget` |
 | [5.8](#58-action-resolution), [6.1](#61-the-fizzle-and-every-cause-of-it), [6.2](#62-a-per-target-failure-drops-one-target-not-the-action) | "Combat", 3: `ActionResolution`, ADR 0035, ADR 0038 |

@@ -1,17 +1,8 @@
 # Player aid
 
-> **The evolution rules below describe the game before
-> [ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md).** A pick bought one Spell and every
-> unlock raised Base initiative by that Spell's own number; a pick buys a whole package now, twice at round 1
-> and every second round after, and the package pays one initiative bonus. The per-Spell number is gone
-> entirely ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), so any row here
-> that cites `Spell initiative` or `Creature.UnlockSpell` names something the engine no longer has. Re-auditing
-> the tabletop translation against the package model is phase 7 of
-> [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md) and has not been done. Everything
-> outside evolution — combat, the timeline, conditions, the win condition — is unaffected.
-
-One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md); the section number
-is beside it. Fill the setup table's values in before the first Match.
+One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md), and it describes
+the same engine: Tiers bought on the Rule set's schedule (ADR 0056, ADR 0059) and ties rolled off on a d20
+(ADR 0063). The section number is beside each rule. Fill the setup table's values in before the first Match.
 
 ---
 
@@ -21,14 +12,34 @@ is beside it. Fill the setup table's values in before the first Match.
 | --- | --- | --- | --- | --- |
 | 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy. | 5.1 |
 | 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. | 5.2 |
-| 3 | Planning | **Evolution** | Both Players unlock Spells, openly, up to their picks. Pip, card, `Unlock: +N initiative`. Your second pick sees your first. | 5.3 |
+| 3 | Planning | **Evolution** | **Only in a Round with an opportunity.** Players alternate, Player 1 first, each pick buying one Tier, openly. See below. | 5.3 |
 | 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
-| 5 | Planning | **Turn order resolution** | Build the Combat timeline. | 5.5 |
+| 5 | Planning | **Turn order resolution**, then **Tie order** | Build the Combat timeline, roll off the ties between the sides, then order your own. | 5.5 |
 | 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known and affordable. | 5.6 |
 | 7 | Combat | **Reveal and target** | Walk the timeline: flip, place target markers. **All six before any resolve. Nothing changes yet.** | 5.7 |
 | 8 | Combat | **Action resolution** | Walk the timeline again: resolve each cast fully, one at a time. | 5.8 |
 | 9 | End | **Cleanup** | Slide the dock left, then `new` into its lane. | 5.9 |
 | 10 | End | **Finalization** | Check the Win condition. Advance the Round marker or end the Match. | 5.10 |
+
+---
+
+## Buying a Tier (§5.3)
+
+**When.** The setup table's first evolution Round, then every interval after it (reference: every odd Round).
+Any other Round: skip step 3, nobody passes.
+
+**What.** A Tier is available to a Creature when it is **alive**, does **not own** the Tier, and **owns every
+Tier it requires**. Nothing else decides it.
+
+**How**, one pick:
+
+1. **Package card** face up with that Creature.
+2. **Spell cards**: one of each Spell the Tier teaches, into your hand. None for a Spell it already knows.
+3. **Base initiative** + the Tier's initiative bonus. Once, for the rest of the Match. The only thing that
+   moves it.
+
+Your second pick sees your first: a Creature can buy a Tier and a Tier that requires it in the same Round. Give
+up the rest with an **Evolution pass**.
 
 ---
 
