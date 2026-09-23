@@ -10,6 +10,10 @@ first.
   built-in weights, scored as the mean against greedy, stun-first and random on the benchmark seeds, under
   the d20 roll-off (ADR 0063) and stacked picks (before ADR 0066). The best candidate scored **0.7633** from
   0.5125 on the seeds it was searched on, which is the winner of 483 draws and not a fair number.
+- **Not a controlled rerun of search 8.** Its `why` says the two runs differ by the rule alone, and they do
+  not: between them Throwing Star became a 2-energy attack on two targets (#172, ADR 0060), so the content
+  moved as well as the tie rule. Read this as a new search on content `4d7a841c`, not as the effect of
+  ADR 0063; search 8's own numbers were never read into this journal either, so there is no pair to compare.
 - **What it found**, against the built-in weights: `kill` 5.0 to 7.864, `energy` 0.3 to -0.432, `bleed` 0.8
   to 1.471, `stun` 3.0 to 2.424, `initiative` 2.1 to 1.635, `damage` 1.0 to 0.648, `heal` 0.8 to 0.998,
   `pressure` 0 to 0.174, `defense` 0.65 to 0.705. Kills up, energy priced negative, stuns and tempo down.
