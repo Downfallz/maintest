@@ -1,7 +1,7 @@
 # Downfall Arena: the rulebook
 
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
-2026-09-23, starting Health 30 the same day). Phase 4 of [plan.md](plan.md).
+2026-09-23, starting Health 30 the same day, Stun immunity the same day). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -11,8 +11,10 @@ Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creatu
 > opportunity, so the picks go to different Creatures (ADR 0066). No Spell carries initiative of its own
 > ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)), and the Talent tree decides
 > nothing at the table. A tie on the Combat timeline is settled by a Roll-off on a d20 and then by its owners'
-> Tie orders (ADR 0063). This book names the **package card** by what it must show; its size, its count and
-> where it sits are [components.md](components.md)'s to specify.
+> Tie orders (ADR 0063). A Stun always ends, and the Creature it ends on is immune to Stun for the next Round
+> ([ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md)). This book names the
+> **package card** by what it must show; its size, its count and where it sits are
+> [components.md](components.md)'s to specify.
 
 This book teaches the game. [`docs/domain/game-rules.md`](../domain/game-rules.md) is the specification; this
 is its second reading. Where the two disagree, one of them is a bug — say which, and fix that one. Part 9
@@ -76,7 +78,7 @@ The five pieces this book names constantly, and where they are specified:
 | Piece | What it is for | Specified in |
 | --- | --- | --- |
 | The Creature board | One per Creature: the Health, Energy, Defense and Base initiative rails, the Speed slot, the Condition dock, the `Targeted by` row | [components.md 3.1](components.md#31-the-creature-board) |
-| The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
+| The Condition dock | Four lanes, `new` / `3` / `2` / `1`, holding one token per timed Condition, and an Immune token for the Round after a Stun ends | [components.md 3.2](components.md#32-the-condition-dock-and-the-countdown) |
 | The initiative track | Six ordered slots with a movable divider between the Quick band and the Standard band | [components.md 3.5](components.md#35-the-initiative-track) |
 | The package card | One per Tier, in copies: its name, its level, the Tiers it requires, the Spells it teaches and its initiative bonus. Face up with the Creature that bought it, it is the public record of what that Creature knows | [components.md 4.1](components.md#41-the-package-card) |
 | The `Targeted by` row | One box per caster number on every Creature board; a target marker sits in it from the reveal until the Resolution | [components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits) |
@@ -147,8 +149,8 @@ The Health was 20 until [ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-roun
    ([5.3](#53-evolution)). Check them against the setup table's schedule: the reference marks Rounds 1, 3, 5,
    and every second Round after. A schedule the marks do not match needs its own Round track
    ([components.md 3.6](components.md#36-the-round-track)).
-7. **Lay out the supply.** Sort the Condition tokens by face where both Players can reach them. Put the blank
-   tokens, the overflow chits, the two d20s, the package cards and the Spell card library within reach. The
+7. **Lay out the supply.** Sort the Condition tokens by face where both Players can reach them, with the
+   Immune tokens beside the Stun tokens. Put the blank tokens, the overflow chits, the two d20s, the package cards and the Spell card library within reach. The
    library is the rest of the Spell cards, sorted by the Tier that teaches them: this is where a bought Tier's
    Spells come from.
 
@@ -192,7 +194,8 @@ COMBAT
   8  Action resolution .... walk the timeline again: resolve each Combat action in turn
 
 END OF ROUND
-  9  Cleanup .............. every Condition counts one Round down
+  9  Cleanup .............. every Condition counts one Round down; a Stun that ends leaves its Creature
+                            immune to Stun for the next Round
  10  Finalization ......... check the Win condition; end the Match or start the next Round
 ```
 
@@ -473,7 +476,8 @@ Resolve one Combat action in this order, and do not reorder it:
 5. **Apply each effect line to each remaining target.** Damage is reduced by that target's total Defense and
    never goes below zero. A Heal is capped by the Health that target is missing. An Energy drain takes at most
    what the target has. A lasting Effect becomes a Condition; see [5.9](#59-cleanup) and
-   [Part 7](#part-7-reference-every-condition-and-the-end-of-a-match).
+   [Part 7](#part-7-reference-every-condition-and-the-end-of-a-match). A Stun on a target that is already
+   stunned, or immune to Stun, is ignored ([6.4](#64-a-stunned-creature-skips-the-round-entirely)).
 6. **Apply the `Caster:` line, if the card has one.** Once for the whole cast, however many targets it
    reached. A `Caster:` Damage is reduced by the **caster's own** total Defense. A `Caster:` line is never
    multiplied by a critical.
@@ -499,16 +503,24 @@ side by side so this is one subtraction, done when a Condition lands, not once p
 **Trigger.** The last Activation slot on the timeline has resolved.
 **Actor.** Both Players, together. Nothing is decided here.
 **Result.** Every Condition counts one Round down, and a Condition that reaches zero expires and is removed.
+A living Creature whose Stun expires here is immune to Stun until the next Cleanup.
 
 On the Condition dock, that is two moves in this order:
 
 1. Every token already in a numbered lane slides **one lane left**. A token leaving lane `1` is removed and
-   returned to the supply.
+   returned to the supply. **A Stun token leaving lane `1` of a living Creature is swapped, not just
+   removed**: put an Immune token in lane `1` in its place, and take the Stun token out of the Speed slot too.
 2. Every token in the `new` lane moves into the numbered lane matching the Duration printed on it.
 
 The `new` lane is the rule "**the first countdown after an application does not count**" made out of
 cardboard. A Condition applied this Round is active for the rest of this Round and then for the full number of
 Rounds printed on it.
+
+The Immune token is the rule "**a Creature whose Stun ends is immune to Stun for the next Round**" made out of
+cardboard. It did not slide this Cleanup, so the next Cleanup's first move takes it out of lane `1`, and the
+immunity ends there. Stun immunity is not a Condition: no Spell applies it, and nothing counts it down but that
+one move.
+See [6.4](#64-a-stunned-creature-skips-the-round-entirely).
 
 A permanent Condition never enters the dock and never counts down. It moved a rail when it landed, and the
 rail stays where it is.
@@ -520,9 +532,14 @@ rail stays where it is.
 > down.
 > Round 6: Creature 4 is stunned — no Speed choice, no Activation slot, no Intent. Cleanup of Round 6: lane
 > `2` to lane `1`.
-> Round 7: stunned again, the whole Round. Cleanup of Round 7: the token leaves lane `1` and is removed.
+> Round 7: stunned again, the whole Round. Cleanup of Round 7: the Stun token leaves lane `1`. Creature 4 is
+> alive, so an Immune token takes its place in lane `1`, and the Stun token comes out of the Speed slot.
 > Round 8: Creature 4 takes a Speed card again. **A two-Round Stun costs two whole Rounds**, and it also cost
 > Creature 4 its activation in Round 5 if its slot had not yet resolved.
+> Also in Round 8, Creature 2 casts **Tranquilizer Dart** on Creature 4: `Damage 2` and `Stun, 2 rounds`. The
+> Damage lands. The Stun is ignored, because Creature 4 is immune: no token goes anywhere, and if Creature 4's
+> slot comes later in the Round, its action does not Fizzle. Cleanup of Round 8: the Immune token leaves lane
+> `1` and is removed. From Round 9 a Stun lands on Creature 4 again.
 
 ### 5.10 Finalization
 
@@ -558,7 +575,7 @@ applies ends the action.
 | # | Cause | How it happens at a table |
 | --- | --- | --- |
 | 1 | **The actor is dead.** | An earlier Activation slot in this Round killed it. Ticks and Conditions cannot: they run at the start of the Round, before the timeline is built. |
-| 2 | **The actor is stunned.** | A **Crushing Stomp** or a **Tranquilizer Dart** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. |
+| 2 | **The actor is stunned.** | A **Crushing Stomp** or a **Tranquilizer Dart** resolved in an earlier slot of this Round. The stunned Creature keeps the slot it was given, and wastes it. A Creature immune to Stun cannot be stunned, so this never happens to it. |
 | 3 | **The actor no longer knows the Spell.** | Nothing in the game takes a Spell away, so this cannot happen. It is in the check because the check is on the Creature, not on the history. |
 | 4 | **The actor cannot afford the cost now.** | A **Soul Devourer** in an earlier slot drained its Energy below the cost. It is the only Spell in the catalogue that takes Energy. |
 | 5 | **No targets were bound.** | The Spell had no legal target when its card was flipped: every enemy dead, for an Enemy Spell. It was revealed with no markers and fizzles here. |
@@ -608,7 +625,29 @@ simply never acts.
 
 A Stun that lands **during** Combat also fizzles that Creature's own action if its Activation slot has not
 resolved yet ([6.1](#61-the-fizzle-and-every-cause-of-it), cause 2). So a two-Round Stun can cost three
-activations: this Round's, and the two following.
+activations: this Round's, and the two following. It cannot cost more, because of the two rules below.
+
+**Stun immunity.**
+**Trigger.** Cleanup ends the Stun of a living Creature.
+**Actor.** Both Players, together.
+**Result.** That Creature is **immune to Stun** until the Cleanup of the next Round. Its Stun token in lane `1`
+is swapped for an Immune token, and the Stun token comes out of its Speed slot ([5.9](#59-cleanup)).
+
+**A Stun that cannot land.**
+**Trigger.** A resolving cast's Stun line reaches a target that is stunned or immune to Stun.
+**Actor.** The Player resolving the action.
+**Result.** Ignore that Stun line for that target: place no token, and leave the Stun it carries as it is.
+Every other line of the cast still lands on it, and the cast is not a Fizzle.
+
+So every Stun ends, and after it the Creature has a Round no Stun can take: no Creature can be kept stunned.
+A stunned or immune Creature is still a legal target when you reveal and target, because the rule refuses the
+Stun line, not the Spell. It can still be damaged, healed and killed; an immune Creature that dies loses its
+Immune token with the rest of its dock ([7.1](#71-the-eight-conditions-and-their-timing)).
+
+> **Example.** In Round 6, Creature 4 is still under the Stun of 5.9's example. Creature 1 casts **Crushing
+> Stomp** on it again: cost 4, `Damage 7`, `Stun, 2 rounds`. Creature 4 takes the Damage. The Stun is ignored:
+> no token goes into the `new` lane, and the Stun token in lane `2` stays in lane `2`. Creature 4's Stun still
+> ends at the Cleanup of Round 7, as it would have. Creature 1 paid 4 Energy for the Damage alone.
 
 ### 6.5 The first countdown after an application does not count
 
@@ -620,9 +659,9 @@ Read every Duration as "**this many of the following Rounds**". A Bleed for 1 ro
 of the next Round. A Stun for 2 rounds takes the next two Rounds away. Nothing in the game applies a Condition
 outside Combat, so the `new` lane always empties into the printed number.
 
-A Condition that **refreshes** adds no token: its Duration restarts, so move the token it already has back
-into the `new` lane. Only a Stun refreshes; see
-[Part 7](#part-7-reference-every-condition-and-the-end-of-a-match).
+No Condition restarts its Duration. Every Condition but a Stun adds a token; a Stun on a Creature that is
+already stunned or immune to Stun adds nothing and moves nothing
+([6.4](#64-a-stunned-creature-skips-the-round-entirely)).
 
 > **Example.** Creature 3 casts **Summon Minions** in Round 5: `Bleed 2 a round, 3 rounds` on up to three
 > enemies, and `Caster: Damage 2`. Three Bleed tokens go into three `new` lanes.
@@ -721,16 +760,17 @@ A **Condition** is a lasting Effect attached to a Creature, with an amount and a
 counts down at Cleanup, and the first countdown after it is applied does not count
 ([6.5](#65-the-first-countdown-after-an-application-does-not-count)).
 
-**A Condition stacks. One application is one token** (ADR 0041). The only exception is a Stun, which
-**refreshes**: a second Stun adds no token and restarts the one already there, because a Stun's only payload
-is time and a Creature cannot lose the same Round twice.
+**A Condition stacks. One application is one token** (ADR 0041). The only exception is a Stun, which is
+**ignored** on a Creature already stunned or immune to Stun: it adds no token and restarts nothing (ADR 0072).
+A Stun's only payload is time, and a Creature cannot lose the same Round twice; the immunity makes sure it
+gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-round-entirely)).
 
 | Condition | What it does | When it does it | Second one on the same Creature | Where the token sits |
 | --- | --- | --- | --- | --- |
 | **Bleed** | Damage equal to its amount, **ignoring Defense** | Start of Round, third pass, after Regeneration | Stacks: both tick, add them | Condition dock |
 | **Regeneration** | Heals its amount, capped by the Health missing | Start of Round, second pass, **before** Bleed | Stacks | Condition dock |
 | **Energy regeneration** | Gives its amount of Energy | Start of Round, first pass | Stacks | Condition dock |
-| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles an action already revealed | Speed Sub-phase, and Action resolution | **Refreshes**: one token, Duration restarts | The Speed slot, and the dock |
+| **Stun** | No Speed choice, no Activation slot, no Intent; fizzles an action already revealed | Speed Sub-phase, and Action resolution | **Ignored**, and so is a Stun in the Round after one ends | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
 | **Defense buff** | Raises total Defense | Read whenever Damage is computed against this Creature | Stacks | The Defense buff rail; a timed one also gets a dock token |
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |
 | **Initiative buff** | Raises Current initiative | Read once, at Turn order resolution | Stacks | Condition dock |
@@ -744,6 +784,10 @@ Two sums, and both floor at zero **after** the subtraction, never before:
 A **permanent** Condition never counts down. Move the rail and put no token on the dock: there is nothing to
 undo and nothing to remember. Nothing in the game caps how high a permanent Defense buff can go, which is why
 the overflow chits exist.
+
+**Stun immunity is not a Condition.** No Spell applies it, a critical cannot touch it, and it has no Duration
+of its own: the Cleanup that ends a living Creature's Stun starts it, and the next Cleanup ends it
+([5.9](#59-cleanup)). Its token sits in lane `1` only because that is the lane the next Cleanup empties.
 
 A **dead** Creature takes no new Condition. Return the tokens on its dock to the supply when you turn its
 board over: nothing on a `Defeated` board is ever read again.
@@ -810,7 +854,8 @@ The trace was re-run against the specification and `data/` on 2026-09-14, after 
 The Evolution rows, the setup table's schedule and every worked example were re-run on 2026-09-23 against ADR
 0056, ADR 0057 and ADR 0059, `data/Tiers/`, `data/Spells/`, and the engine's `EvolutionRules`,
 `TierEligibility` and `Creature.BuyTier`, and again the same day against ADR 0066, which moved the §5.3 and
-§5.9 examples. Every row below names the specification or a declared tabletop
+§5.9 examples, and against ADR 0072, which retired the Stun's restart, added the Immune token to §5.9 and
+added the §6.4 example. Every row below names the specification or a declared tabletop
 entry; none of them is owed to a rule the plan had only announced. **Phase 4's done-condition — every rule
 traces to `docs/domain/game-rules.md` or to a declared tabletop entry — is checkable line by line, and it
 checks out.** The one row that did not, a purchase being public the moment it happens, was what the engine
@@ -835,7 +880,8 @@ did and `game-rules.md` did not say; the specification says it now.
 | [5.8](#58-action-resolution) step 6, the `Caster:` line, and its Damage against the **caster's own** total Defense | ADR 0031. `game-rules.md` states the once-per-cast and the never-multiplied halves but is silent on the Defense; ADR 0031's "the outcome goes through the same rules as any other" is where that comes from |
 | [5.9](#59-cleanup), [6.5](#65-the-first-countdown-after-an-application-does-not-count) | "End of round", 1: `Cleanup` |
 | [5.10](#510-finalization), [7.2](#72-the-end-of-a-match) | "End of round", 2: `Finalization`, ADR 0011 |
-| [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 3: `ActionResolution`, the lasting-effect bullet; ADR 0041 |
+| [7.1](#71-the-eight-conditions-and-their-timing), the stacking column, and [5.2](#52-ongoing-effects)'s "add them up" | "Combat", 3: `ActionResolution`, the lasting-effect bullet; ADR 0041, and ADR 0072 for the Stun |
+| [5.9](#59-cleanup)'s Immune token, [6.4](#64-a-stunned-creature-skips-the-round-entirely)'s Stun immunity and the Stun that cannot land, [6.5](#65-the-first-countdown-after-an-application-does-not-count)'s "no Condition restarts" | "Combat", 3: `ActionResolution`, the lasting-effect bullet ("ignored on a Creature already stunned or immune to stun ... The cast's other effects still land"), and "End of round", 1: `Cleanup`; ADR 0072. The engine: `Creature.CanBeStunned`, `Creature.TickConditions`, and `ResolutionRules.Lands`, which drops the Stun line and nothing else. The Immune token is the table's record of the glossary's **Stun immunity** |
 | [6.7](#67-the-critical-roll), "a Creature's own Critical chance is zero" | ADR 0042, and the `baseCriticalChance: 0` it set in `data/Creatures/main.v1.json`. The rule in "Combat", 3 still adds the Creature's chance to the Spell's; the Creature's is zero in the content this book teaches, so the card's chance is the whole chance |
 
 Five presentation rules are the table's and are declared as such, per

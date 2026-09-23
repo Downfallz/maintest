@@ -1,7 +1,10 @@
 # Translation audit
 
-Status: **Evidence** (2026-09-14; Part 1 and Part 4 re-audited 2026-09-23, and their Evolution rows re-read
-for ADR 0066 the same day). Phase 1 of [plan.md](plan.md).
+Status: **Evidence** (2026-09-14; Part 1 and Part 4 re-audited 2026-09-23, their Evolution rows re-read
+for ADR 0066 the same day, and every Stun row re-read for
+[ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md) the same day: a Stun on a Creature
+already stunned or immune to Stun is ignored, and a Stun that ends leaves a Round of Stun immunity). Phase 1
+of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -200,7 +203,7 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | Caster effects resolve once per cast, unmultiplied, never on a Fizzle | `ResolutionRules.cs:68` (ADR 0031) | 1 to 2 operations on the caster's own board | **restate** | Nothing. Seven Spells in `data/` carry one; the card face must show it as a separate line or it will be read as a target effect. |
 | Damage is capped by the Health left, and an Outcome that changed nothing is dropped | `CombatExecution.cs:53-71` | 1 comparison | **keep as is** | Nothing. |
 | A lasting Effect attaches as a Condition per its Stacking policy | `Creature.Apply` through `ConditionSet.Apply` (`Creatures/ConditionSet.cs:26-43`) | 1 token placed with an amount and a Duration | **needs a component** | Condition tokens, in eight kinds, with a Duration dial. Nothing is lost. |
-| `Refresh` restarts the existing Condition and keeps its amount | Only a Stun refreshes since ADR 0041: `ConditionSet.cs:36-40` matches by effect **type**, and `Condition.Refresh` restarts the *existing* Effect's Duration (`Creatures/Condition.cs:46-51`); pinned by `tests/DownfallArena.Domain.Tests/Matches/Creatures/ConditionTests.cs:82-98` | 1 dial reset on the Stun token already there, and no second token | **restate** | Nothing. "Conditions add up, a Stun restarts" is one sentence and it is the whole rule since ADR 0041. See ADR candidate 1. |
+| A Stun on a Creature already stunned or immune to Stun is ignored | `Creature.Apply` refuses a Stun when `!CanBeStunned`, which is stunned or immune (`Creatures/Creature.cs:342-357`), whatever the Stun's Stacking policy; `ResolutionRules.Lands` drops that Stun line before it becomes an Outcome, and the cast's other effects still land (`ResolutionRules.cs:64,97`); the Stun family's default is `Ignore` (`Resources/Effects/Stun.cs`, ADR 0072). ADR 0041's restart is retired | 1 look per Stun line at the target's Speed slot and lane `1`: a Stun token or an Immune token there means no token is placed. 0 arithmetic | **restate** | Nothing. "Conditions add up; a Stun never lands on a stunned or immune Creature" is one sentence and it is the whole rule since ADR 0072. The Stun is ignored, not the cast: it is not a Fizzle. See ADR candidate 1. |
 | `Stack` adds another Condition | `ConditionSet.cs:29`, the default of every lasting Effect but Stun (ADR 0041) | 1 more token per application | **needs a component** | Enough tokens; how many is unbounded today, and since ADR 0041 a second Bleed is a second token rather than a lost amount. See ADR candidate 3. |
 
 ### 1.10 `Cleanup` (End of round)
@@ -210,7 +213,8 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | Every Condition counts one Round down and expires at zero | `UpkeepRules.Cleanup` calls `Creature.TickConditions` (`UpkeepRules.cs:173-188`, `ConditionSet.cs:48-58`) | 1 dial turn per token on the board | **needs a component** | A Duration dial on the Condition token. Nothing is lost. |
 | The first countdown after an application does not count | A `_fresh` flag skips the first tick (`Condition.cs:12,53-59`) | 0, **if** the rule is restated: every Condition in `data/` is applied in Combat, after that Round's ticks, so `durationRounds: N` is exactly "N of the following Rounds" | **restate** | Nothing today. The mechanism is not the rule; see ADR candidate 5 for whether the engine should say it that way. |
 | A permanent Condition never counts down | `RemainingRounds` is null (`Condition.cs:34-36`, `Duration.cs:20-22`) | 0 | **keep as is** | Nothing, but it is what makes ADR candidate 3 unbounded. |
-| A refresh also resets the free tick | `Condition.Refresh` sets `_fresh = true` (`Condition.cs:50`) | 0 | **restate** | Nothing, once the rule reads "N of the following Rounds" from the refresh as well. |
+| A Creature whose Stun ends is immune to Stun for the next Round | `Creature.TickConditions` counts the immunity down first, then ticks the Conditions, and sets one Round of immunity when a Stun expires on a living Creature (`Creatures/Creature.cs:363`), so it runs through the next Round and ends at the next Cleanup; `Match` raises `StunImmunityGained` for those Creatures after `ConditionsExpired` (ADR 0072). A state of the Creature, not a Condition: no source, no Duration of its own | 1 token swap per Stun that ends (the dock's Stun token for an Immune token in lane `1`, and the Speed slot's Stun token off), and 1 removal at the next Cleanup, done by the dock's own slide. At most 6 a Cleanup, and with 2 Stun Spells in the catalogue usually 0 | **needs a component** | An Immune token, one a Creature: 6 ([components.md](components.md) §1.5). Nothing is lost. It is the one thing in the dock that is not a Condition, and the rulebook must say so, or a Player will look for a Spell that applied it. |
+| A refresh also resets the free tick | `Condition.Refresh` sets `_fresh = true` (`Condition.cs:50`). Reachable only by a content file that authors `stacking: refresh` on a kind other than Stun, and none does: since ADR 0072 no Condition in `data/` refreshes | 0. Unreachable with this content | **keep as is** | Nothing. The rulebook need not say it until the content makes it reachable; it said it while a Stun refreshed. |
 
 ### 1.11 `Finalization` (End of round)
 
@@ -230,9 +234,9 @@ ranges are computed from `data/Spells/**` with a Python pass over the 36 files, 
 kind whether the Effect sits in `effects` or in `casterEffects`. The counts are therefore Spells and not
 Effects: the 36 files author 57 Effects in all, and a Spell carrying two `DefenseBuff`s counts once. No file
 in `data/Spells/**` authors a `stacking` key, so every Condition uses its family default, and since ADR 0041
-that default is `Stack` for every lasting kind except `Stun`, which keeps `Refresh`
-(`src/DownfallArena.Infrastructure/Resources/GameSchemaMapper.cs:185-220` and the `Of` factories in
-`src/DownfallArena.Domain/Resources/Effects/*.cs`).
+that default is `Stack` for every lasting kind except `Stun`, which is `Ignore` since ADR 0072 (it kept
+`Refresh` under ADR 0041) (`src/DownfallArena.Infrastructure/Resources/GameSchemaMapper.cs:185-220` and the
+`Of` factories in `src/DownfallArena.Domain/Resources/Effects/*.cs`).
 
 ### Instant effects
 
@@ -250,7 +254,7 @@ that default is `Stack` for every lasting kind except `Stun`, which keeps `Refre
 | `Bleed` | 6 (4 on targets: `mortal_wound`, `poison_slash`, `summon_minions`, `toxic_waves`; 2 on the caster: `crazed_specter`, `revenant_guards`) | 1, 2, 3 or 4 a Round for 1, 2 or 3 Rounds | Damage at the start of each of the Creature's Rounds, ignoring Defense (`UpkeepRules.cs:62-70`); `Stack` (ADR 0041) | 1 token with an amount and a dial per application; 1 sum over the tokens and 1 subtraction a Round | **needs a component** | A Bleed token that shows both numbers, and enough of them: since ADR 0041 a second Bleed is a second token, so one Creature can carry several. |
 | `Regeneration` | 1 (`healing_screech`) | 3 a Round for 2 Rounds | Heals before the Bleeds (`UpkeepRules.cs:52-60`, ADR 0019); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | A Regeneration token. Nothing is lost. |
 | `EnergyRegeneration` | 1 (`momentum`) | 2 a Round for 3 Rounds | Gives Energy before the heals (`UpkeepRules.cs:42-50`, ADR 0020); `Stack` (ADR 0041) | 1 token per application, 1 addition a Round | **needs a component** | An Energy regeneration token. Nothing is lost. |
-| `Stun` | 2 (`crushing_stomp`, `tranquilizer_dart`) | 2 Rounds, both | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); `Refresh`, the one kind ADR 0041 left refreshing | 1 token; the creature board takes no Speed card for 2 Rounds | **needs a component** | A Stun token. Nothing is lost, but a 2-Round Stun removes a third of a Team for two full Rounds and the rulebook must say it plainly. |
+| `Stun` | 2 (`crushing_stomp`, `tranquilizer_dart`) | 2 Rounds, both | The Creature takes no Speed choice, no Activation slot and no Intent (`SpeedRules.cs:34`); ignored on a Creature already stunned or immune to Stun, and a Stun that ends leaves a Round of Stun immunity (ADR 0072, which retired the refresh ADR 0041 had left it) | 1 token; the creature board takes no Speed card for 2 Rounds; then 1 Immune token for 1 Round | **needs a component** | A Stun token, and an Immune token for the Round after. Nothing is lost, but a 2-Round Stun removes a third of a Team for two full Rounds and the rulebook must say it plainly. Since ADR 0072 it cannot remove it for longer: no Creature can be kept stunned. |
 | `DefenseBuff` | 4 (`full_plate`, `guard`, `revenant_guards`, `thundering_seal`) | amounts 1, 2, 3; Durations 1 Round, 2 Rounds, **permanent** | Added into total Defense (`Creature.cs:95-96`); `Stack`, so every application adds a token | 1 token and 1 addition on the Defense track per application | **needs a component** | A Defense track. All four carry a permanent Defense buff — three of them beside a timed one — and it stacks without a bound: ADR candidate 3. |
 | `DefenseDebuff` | 3 (2 on targets: `infectious_blast`, `noxious_cure`; 1 on the caster: `psycho_rush`) | amount 2; Durations 1 Round and **permanent** | Subtracted from total Defense, floored at zero (`Creature.cs:95-97`, ADR 0035); `Stack` | 1 token and 1 subtraction | **needs a component** | The same track. Bounded below by the floor, so it does not run away the way the buff does. |
 | `InitiativeBuff` | 1 (`death_squad`) | amount 2 for 1 Round | Added into Current initiative before the debuffs (`Creature.cs:111-113`, ADR 0036); `Stack` | 1 token and 1 marker move, read once when the timeline is built | **needs a component** | An Initiative track. Nothing is lost. |
@@ -371,6 +375,12 @@ each is framed as a change to the engine and its tests, never as a table-only ex
 > decomposed from the crit change that shipped beside it: the objective reads 85.76 against a baseline of
 > 85.68 on content `91da955c`, with `player1WinShare`, `averageRounds` and `fizzleRateA` identical to three
 > decimals. It is fixed because it was wrong, not because it bought anything.
+>
+> **`Stun`'s `Refresh` retired (2026-09-23) by
+> [ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md).** A Stun on a Creature already
+> stunned is ignored, and so is one in the Round of Stun immunity a Stun leaves when it ends. Under the
+> restart a team with two stunners could keep one enemy stunned as long as it could pay; now every Stun ends.
+> No kind refreshes by default any more, so the `Refresh` path below is reachable by no content in `data/`.
 
 **What the table showed.** Before ADR 0041, `ConditionSet.Apply` found an existing Condition by effect
 *type* only (`ConditionSet.cs:28`), and `Refresh` restarted the *existing* Effect's Duration and kept its
@@ -379,8 +389,9 @@ amount (`Condition.cs:46-51`). Six Spells in `data/` carry a Bleed and they shar
 Round, left it bleeding **1** a Round — and credited that 1 to `mortal_wound` (ADR 0027). A player at a table
 would have placed the new token and been wrong. Today they place it and are right: two Bleeds are two tokens,
 5 a Round while both run, and the rule that has to be taught instead is that the tokens are summed before the
-one subtraction. What is still pinned is the `Refresh` path itself, now reachable only through `Stun`
-(`ConditionTests.cs:82-98`).
+one subtraction. What is still pinned is the `Refresh` path itself (`ConditionTests.cs:82-98`, on a Bleed
+authored to refresh); it was reachable only through `Stun` until ADR 0072, and is reachable through nothing
+the content authors now.
 
 **The question.** When a `Refresh` Effect lands on a Creature that already carries one of its kind, which
 amount and which Duration survive?
@@ -481,8 +492,8 @@ problem.
 ### Candidate 5. "The first countdown after an application does not count"
 
 **What the table shows.** A `_fresh` flag skips the first tick (`Condition.cs:12,53-59`), and a refresh sets
-it again (`Condition.cs:50`). Nothing in `data/` applies a Condition anywhere but `ActionResolution`, which
-runs after that Round's `OngoingEffects`. So for every Condition the content can produce, the flag is exactly
+it again (`Condition.cs:50`), though since ADR 0072 no content refreshes. Nothing in `data/` applies a
+Condition anywhere but `ActionResolution`, which runs after that Round's `OngoingEffects`. So for every Condition the content can produce, the flag is exactly
 equivalent to "the Condition lasts N of the following Rounds". A 2-Round Stun costs its target two whole
 Rounds; a 1-Round Bleed ticks once. The table needs no flag, only the sentence.
 
@@ -571,25 +582,28 @@ playable, 11 needing a component or a second reading, 7 expensive, at `938bef5e`
 Spells sold, prerequisite and initiative bonus; no Tier needs a row of its own, because they differ only in
 numbers the card prints.
 
-**Verdicts.** 116 rows carry exactly one verdict each: 68 in Part 1, 12 in Part 2, 36 in Part 3. The totals,
-counted over the file rather than recalled: **needs a component** 44, **keep as is** 36, **restate** 36,
+**Verdicts.** 117 rows carry exactly one verdict each: 69 in Part 1, 12 in Part 2, 36 in Part 3. The totals,
+counted over the file rather than recalled: **needs a component** 45, **keep as is** 37, **restate** 35,
 **simplify (ADR)** 0. `cut from the tabletop rule set` is used zero times, as fork A requires. Before this
 re-audit they were 105 rows, 42, 33 and 30. In Part 1, Evolution went from 8 rows to 12, the timeline from 3
 to 6, `TieOrder` is 3 new rows, and `ActionResolution` gained the `Quick` critical row: 57 + 4 + 3 + 3 + 1 =
 68. Its **needs a component** rows went from 15 to 17: it lost 4 (picks a Round, the Talent tree's
 prerequisites, the Spell's unlock initiative, the printed tiebreak number) and gained 6 (the Round track, pick
 tokens an opportunity, Tier cards, the Tier's bonus on the initiative track, the Roll-off die, the face-down
-tie order). The two rows that once asked the engine to change still do not: ADR 0041 made the stacking one, and
-the maintainer settled the Energy one the other way. This audit asks the engine for nothing, except what
-Candidate 6 puts to the maintainer as a question.
+tie order). ADR 0072 moved Part 1 once more, to 69 rows: the Stun's restart row became "a Stun on a stunned or
+immune Creature is ignored" and stays **restate**; the refresh's free-tick row became unreachable and went from
+**restate** to **keep as is**; and "a Creature whose Stun ends is immune to Stun" is a new **needs a
+component** row, the 18th. The two rows that once asked the engine to change still do not: ADR 0041 made the
+stacking one, and the maintainer settled the Energy one the other way. This audit asks the engine for nothing,
+except what Candidate 6 puts to the maintainer as a question.
 
 | Verdict | Part 1 | Part 2 | Part 3 | Total |
 | --- | --- | --- | --- | --- |
-| keep as is | 22 | 3 | 11 | 36 |
-| restate | 29 | 1 | 6 | 36 |
-| needs a component | 17 | 8 | 19 | 44 |
+| keep as is | 23 | 3 | 11 | 37 |
+| restate | 28 | 1 | 6 | 35 |
+| needs a component | 18 | 8 | 19 | 45 |
 | simplify (ADR) | 0 | 0 | 0 | 0 |
 | cut from the tabletop rule set | 0 | 0 | 0 | 0 |
-| **Total** | **68** | **12** | **36** | **116** |
+| **Total** | **69** | **12** | **36** | **117** |
 
 **ADR candidates.** Six raised, four excluded with a reason.

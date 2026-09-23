@@ -74,6 +74,7 @@ public sealed class ObservationBuilder(FeatureSchema schema)
         features[offset + 3] = creature.IsStunned ? 1f : 0f;
         features[offset + 4] = creature.TotalDefense.Value;
         features[offset + 5] = creature.CurrentInitiative.Value;
+        features[offset + 6] = creature.IsStunImmune ? 1f : 0f;
 
         var conditions = offset + FeatureSchema.CreatureFeatures.Count;
         WriteConditions(creature, features, conditions);

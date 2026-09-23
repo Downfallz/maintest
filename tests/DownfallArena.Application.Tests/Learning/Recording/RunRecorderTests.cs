@@ -77,7 +77,7 @@ public sealed class RunRecorderTests
         manifest.Stamp.ShouldBe(Stamp);
         manifest.CreatedAt.ShouldBe(FixedTimeProvider.Default);
         manifest.SchemaId.ShouldBe(Schema.Id);
-        manifest.SchemaVersion.ShouldBe("features:v6");
+        manifest.SchemaVersion.ShouldBe("features:v7");
         manifest.FeatureNames.ShouldBe(Schema.FeatureNames);
         manifest.CandidateTermNames.ShouldBe(ScoreTerms.Names);
         manifest.Matches.ShouldBe(2);

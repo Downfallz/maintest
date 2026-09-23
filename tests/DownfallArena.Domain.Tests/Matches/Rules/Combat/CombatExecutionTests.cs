@@ -121,7 +121,7 @@ public sealed class CombatExecutionTests
     {
         var creatures = Arena.FourCreatures();
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Wraith]);
-        var stun = new ConditionOutcome(Arena.Wraith, Stun.For(1, StackingPolicy.Ignore));
+        var stun = new ConditionOutcome(Arena.Wraith, Stun.For(1));
         var resolution = CombatResolution.Resolved(action, [Arena.Wraith], [], false, Energy.Of(0), [stun]);
 
         CombatExecution.Apply(resolution, creatures).ShouldHaveSingleItem();

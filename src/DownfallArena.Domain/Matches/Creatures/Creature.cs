@@ -28,6 +28,15 @@ public sealed class Creature : Entity<CreatureId>
 
     private readonly ConditionSet _conditions;
 
+    /// <summary>
+    /// Rounds left of the immunity a stun leaves behind (ADR 0072). A state of the creature and not a condition:
+    /// no spell carries it, no source is charged for it, and the rules alone start and end it.
+    /// </summary>
+    private int _stunImmunity;
+
+    /// <summary>How long the immunity a stun leaves behind lasts: the one round after it ends (ADR 0072).</summary>
+    private const int StunImmunityDuration = 1;
+
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
         : base(id)
     {
@@ -59,6 +68,7 @@ public sealed class Creature : Entity<CreatureId>
         _knownSpellsView = new ReadOnlySet<SpellId>(_knownSpells);
         _acquiredTiersView = new ReadOnlySet<TierId>(_acquiredTiers);
         _conditions = new ConditionSet(snapshot.Conditions);
+        _stunImmunity = snapshot.StunImmunityRounds;
     }
 
     public PlayerSlot Owner { get; }
@@ -91,6 +101,9 @@ public sealed class Creature : Entity<CreatureId>
     public bool IsAlive => !IsDead;
 
     public bool IsStunned => IsAlive && _conditions.Has<Stun>();
+
+    /// <summary>Whether a stun would be ignored: the round after a stun ends (ADR 0072).</summary>
+    public bool IsStunImmune => IsAlive && _stunImmunity > 0;
 
     public Defense TotalDefense => BaseStats.Defense
         .Plus(_conditions.Sum<DefenseBuff>(buff => buff.Amount))
@@ -176,6 +189,14 @@ public sealed class Creature : Entity<CreatureId>
             || creature.IsStunned != snapshot.IsStunned)
         {
             throw new ArgumentException($"Creature {snapshot.Id}'s snapshot disagrees with the conditions it carries.", nameof(snapshot));
+        }
+
+        // The immunity starts only when a stun ends and lasts one round (ADR 0072): no match leaves a creature
+        // stunned and immune at once, immune while dead, or immune for longer than that.
+        if (snapshot.StunImmunityRounds is < 0 or > StunImmunityDuration
+            || (snapshot.StunImmunityRounds > 0 && (snapshot.IsStunned || snapshot.IsDead)))
+        {
+            throw new ArgumentException($"Creature {snapshot.Id}'s snapshot carries a stun immunity no match leaves behind.", nameof(snapshot));
         }
 
         return creature;
@@ -331,14 +352,41 @@ public sealed class Creature : Entity<CreatureId>
     internal Condition? Apply(LastingEffect effect, ConditionSource? source = null)
     {
         ArgumentNullException.ThrowIfNull(effect);
-        return IsDead ? null : _conditions.Apply(effect, source);
+        if (IsDead || (effect is Stun && !CanBeStunned))
+        {
+            return null;
+        }
+
+        return _conditions.Apply(effect, source);
     }
+
+    /// <summary>
+    /// A stun lands only on a creature that is neither stunned nor immune (ADR 0072): a second stun does not
+    /// restart the first, so every stun ends, and the round after it ends the creature acts.
+    /// </summary>
+    internal bool CanBeStunned => IsAlive && !IsStunned && !IsStunImmune;
 
     /// <summary>
     /// Counts one round down on every condition and returns the ones that expired. The rules decide when in the
     /// round this happens.
     /// </summary>
-    internal IReadOnlyList<Condition> TickConditions() => _conditions.Tick();
+    internal IReadOnlyList<Condition> TickConditions()
+    {
+        // The immunity counts down with the conditions, before a stun ending this cleanup can start a new one:
+        // a stun that ends here makes the creature immune through the next round, and not a round longer.
+        if (_stunImmunity > 0)
+        {
+            _stunImmunity--;
+        }
+
+        var expired = _conditions.Tick();
+        if (IsAlive && expired.Any(condition => condition.Effect is Stun))
+        {
+            _stunImmunity = StunImmunityDuration;
+        }
+
+        return expired;
+    }
 
     public CreatureSnapshot Snapshot() => new()
     {
@@ -355,6 +403,7 @@ public sealed class Creature : Entity<CreatureId>
         CurrentInitiative = CurrentInitiative,
         CriticalChance = CriticalChance,
         IsStunned = IsStunned,
+        StunImmunityRounds = IsAlive ? _stunImmunity : 0,
         KnownSpells = _knownSpells.ToHashSet(),
         AcquiredTiers = _acquiredTiers.ToHashSet(),
         Conditions = [.. _conditions.Active.Select(condition => condition.Snapshot())],

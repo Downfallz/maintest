@@ -174,6 +174,13 @@ public sealed class MatchPlayTests
 
         Table.CreatureNumber(match, 3).IsStunned.ShouldBeFalse();
         Table.CreatureNumber(match, 3).Health.ShouldBe(Health.Of(9));
+
+        // ADR 0072: the cleanup that ended both stuns left both creatures immune through the next round.
+        var immune = match.DomainEvents.OfType<StunImmunityGained>().ShouldHaveSingleItem();
+        immune.Creatures.ShouldBe([CreatureId.From(3), CreatureId.From(4)], ignoreOrder: true);
+        Table.CreatureNumber(match, 3).IsStunImmune.ShouldBeTrue();
+        Table.CreatureNumber(match, 4).IsStunImmune.ShouldBeTrue();
+        Table.CreatureNumber(match, 1).IsStunImmune.ShouldBeFalse();
     }
 
     [Fact]

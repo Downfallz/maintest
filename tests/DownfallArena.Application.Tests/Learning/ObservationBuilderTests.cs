@@ -24,7 +24,7 @@ public sealed class ObservationBuilderTests
 
         observation.ShouldBe(Builder.Build(board));
         observation.SchemaId.ShouldBe(Schema.Id);
-        observation.SchemaId.ShouldStartWith("features:v6+");
+        observation.SchemaId.ShouldStartWith("features:v7+");
         observation.Features.Count.ShouldBe(Schema.Length);
         Builder.Schema.ShouldBeSameAs(Schema);
     }
@@ -131,6 +131,7 @@ public sealed class ObservationBuilderTests
         features[Schema.IndexOf("own0_stunned")].ShouldBe(1f);
         features[Schema.IndexOf("own0_defense")].ShouldBe(3f);
         features[Schema.IndexOf("own0_initiative")].ShouldBe(4f);
+        features[Schema.IndexOf("own0_stun_immune")].ShouldBe(0f);
         features[Schema.IndexOf("own0_knows_spell:strike:v1")].ShouldBe(1f);
         features[Schema.IndexOf("own0_knows_spell:guard:v1")].ShouldBe(1f);
         features[Schema.IndexOf("own0_knows_spell:slam:v1")].ShouldBe(0f);
@@ -139,6 +140,18 @@ public sealed class ObservationBuilderTests
         features[Schema.IndexOf("own0_owns_tier:slam:v1")].ShouldBe(0f);
     }
 
+
+    /// <summary>ADR 0072: the round after a stun ends, a stun cast on the creature is ignored, and the observation says so.</summary>
+    [Fact]
+    public void A_creature_immune_to_stun_is_encoded_as_immune()
+    {
+        var creature = Boards.Creature(1, PlayerSlot.Player1) with { StunImmunityRounds = 1 };
+
+        var features = Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])).Features;
+
+        features[Schema.IndexOf("own0_stun_immune")].ShouldBe(1f);
+        features[Schema.IndexOf("own0_stunned")].ShouldBe(0f);
+    }
     [Fact]
     public void A_dead_creature_and_an_empty_slot_read_as_zero()
     {
@@ -249,7 +262,7 @@ public sealed class ObservationBuilderTests
         var exception = Should.Throw<InvalidOperationException>(() => Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])));
 
         exception.Message.ShouldContain("Unpublished");
-        exception.Message.ShouldContain("features:v6");
+        exception.Message.ShouldContain("features:v7");
     }
 
     [Fact]

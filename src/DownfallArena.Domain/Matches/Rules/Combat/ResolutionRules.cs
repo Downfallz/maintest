@@ -59,7 +59,10 @@ public static class ResolutionRules
         var isCritical = random.NextDouble() < CriticalChanceOf(actor, spell, speed);
         var multiplier = isCritical ? rules.CriticalMultiplier : 1.0;
         var outcomes = effectiveTargets
-            .SelectMany(target => spell.Effects.Select(effect => Outcome(effect, creatures.First(candidate => candidate.Id == target), multiplier, isCritical)))
+            .SelectMany(target => spell.Effects
+                .Select(effect => (Effect: effect, Target: creatures.First(candidate => candidate.Id == target)))
+                .Where(pair => Lands(pair.Effect, pair.Target))
+                .Select(pair => Outcome(pair.Effect, pair.Target, multiplier, isCritical)))
             .ToList();
 
         // What the cast does to whoever cast it (ADR 0031): once, however many targets it reached, and never
@@ -84,6 +87,14 @@ public static class ResolutionRules
 
         return speed == Speed.Quick ? 0 : actor.CriticalChance.Plus(spell.Stats.CriticalChance.Value).Value;
     }
+
+    /// <summary>
+    /// Whether an effect has anything to do to its target. A stun on a creature already stunned, or in the round
+    /// of immunity after one (ADR 0072), does nothing, so it is not an outcome: the cast's other effects still land,
+    /// and nothing downstream -- the execution, the log, the agents' reading of the cast -- sees a stun that
+    /// was never going to happen.
+    /// </summary>
+    private static bool Lands(Effect effect, CreatureSnapshot target) => effect is not Stun || target.CanBeStunned;
 
     private static EffectOutcome Outcome(Effect effect, CreatureSnapshot target, double multiplier, bool isCritical) =>
         effect switch
