@@ -149,8 +149,8 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             .OrderBy(spell => spell.Value, StringComparer.Ordinal)
             .Select(spell => (
                 Spell: spell,
-                Round: Value(board, creatures, creatures, 0, intentOption.Creature, DeclaredSpells(board, creatures, intentOption.Creature, spell), ahead => BestTargets(ahead, intentOption.Creature, spell)),
-                OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0))
+                Round: Value(board, creatures, creatures, 0, intentOption.Creature, DeclaredSpells(board, creatures, intentOption.Creature, spell), ahead => BestTargets(board, ahead, intentOption.Creature, spell)),
+                OneStep: _scorer.Best(actor, spell, creatures, speed: SpeedOf(board, actor.Id))?.Score ?? 0))
             .ToList();
         if (candidates.Count == 0)
         {
@@ -209,7 +209,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             var action = CombatAction.Bind(intent, targets);
             var value = (
                 Round: Value(board, ahead, beforeCombat, board.RevealedActions.Count, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
-                OneStep: _scorer.Expected(action, ahead));
+                OneStep: _scorer.Expected(action, ahead, speed: SpeedOf(board, options.Actor)));
             if (Better(value, bestValue))
             {
                 best = targets;
@@ -233,7 +233,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var declared = DeclaredSpells(board, creatures, actor, candidate);
-        Value(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(ahead, actor, candidate));
+        Value(board, creatures, creatures, 0, actor, declared, ahead => BestTargets(board, ahead, actor, candidate));
         return declared;
     }
 
@@ -319,7 +319,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         Dictionary<CreatureId, SpellId?> declared,
         Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
     {
-        var chance = CriticalChance(start, actor, candidate);
+        var chance = CriticalChance(board, start, actor, candidate);
         var plain = PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.NotCritical);
         return chance == 0 ? plain : RoundValue.Mix(chance, PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.Critical), plain);
     }
@@ -343,7 +343,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         for (var index = fromSlot; index < board.Timeline.Count; index++)
         {
             var creature = board.Timeline[index].Creature;
-            var action = creature == actor ? candidate(ahead) : Guess(ahead, creature, declared[creature]);
+            var action = creature == actor ? candidate(ahead) : Guess(board, ahead, creature, declared[creature]);
             if (action is null)
             {
                 stopped |= creature == actor && ahead.First(snapshot => snapshot.Id == creature) is { IsDead: true } or { IsStunned: true };
@@ -379,7 +379,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// casting it. Only the actor's own roll is weighted; every other creature's stays a miss, which keeps
     /// the cost at two rounds per candidate rather than two to the power of the slots left.
     /// </summary>
-    private double CriticalChance(IReadOnlyList<CreatureSnapshot> start, CreatureId actor, Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
+    private double CriticalChance(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> start, CreatureId actor, Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate)
     {
         var action = candidate(start);
         if (action is null)
@@ -387,8 +387,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             return 0;
         }
 
-        var snapshot = start.First(creature => creature.Id == actor);
-        return snapshot.CriticalChance.Plus(resources.GetSpell(action.Spell).Stats.CriticalChance.Value).Value;
+        return ResolutionRules.CriticalChanceOf(start.First(creature => creature.Id == actor), resources.GetSpell(action.Spell), SpeedOf(board, actor));
     }
 
     /// <summary>
@@ -431,10 +430,10 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// thing a creature does choose after the earlier slots have revealed, so those are read at the slot.
     /// </para>
     /// </summary>
-    private CombatAction? Guess(IReadOnlyList<CreatureSnapshot> ahead, CreatureId creature, SpellId? spell)
+    private CombatAction? Guess(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> ahead, CreatureId creature, SpellId? spell)
     {
         var snapshot = ahead.First(candidate => candidate.Id == creature);
-        return spell is null || snapshot.IsDead || snapshot.IsStunned ? null : BestTargets(ahead, creature, spell);
+        return spell is null || snapshot.IsDead || snapshot.IsStunned ? null : BestTargets(board, ahead, creature, spell);
     }
 
     /// <summary>
@@ -460,7 +459,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
             var snapshot = beforeCombat.First(other => other.Id == creature);
             spells[creature] = snapshot.Owner != board.Slot
-                ? GreedyIntent(snapshot, beforeCombat)
+                ? GreedyIntent(board, snapshot, beforeCombat)
                 : board.Intents.FirstOrDefault(intent => intent.Actor == creature)?.Spell ?? AllyIntent(withCandidate, snapshot);
         }
 
@@ -529,7 +528,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         foreach (var creature in board.Timeline.Select(slot => slot.Creature).Distinct())
         {
             var snapshot = creatures.First(other => other.Id == creature);
-            spells[creature] = snapshot.Owner == board.Slot ? AllyIntent(board, snapshot) : GreedyIntent(snapshot, creatures);
+            spells[creature] = snapshot.Owner == board.Slot ? AllyIntent(board, snapshot) : GreedyIntent(board, snapshot, creatures);
         }
 
         return spells;
@@ -549,7 +548,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             .OrderBy(spell => spell.Value, StringComparer.Ordinal)];
 
     /// <summary>The spell the scorer would declare for a creature on a board, as the greedy agent declares it.</summary>
-    private SpellId? GreedyIntent(CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> creatures)
+    private SpellId? GreedyIntent(PlayerBoardState board, CreatureSnapshot snapshot, IReadOnlyList<CreatureSnapshot> creatures)
     {
         SpellId? best = null;
         var bestScore = double.NegativeInfinity;
@@ -560,7 +559,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
                 continue;
             }
 
-            var score = _scorer.Best(snapshot, spell, creatures)?.Score;
+            var score = _scorer.Best(snapshot, spell, creatures, speed: SpeedOf(board, snapshot.Id))?.Score;
             if (score is { } found && found > bestScore)
             {
                 best = spell;
@@ -572,13 +571,25 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>The spell on its best targets by the one-step reading, or nothing when it has no legal target.</summary>
-    private CombatAction? BestTargets(IReadOnlyList<CreatureSnapshot> ahead, CreatureId actor, SpellId spell)
+    private CombatAction? BestTargets(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> ahead, CreatureId actor, SpellId spell)
     {
         var snapshot = ahead.First(candidate => candidate.Id == actor);
-        return _scorer.Best(snapshot, spell, ahead) is { } found
+        return _scorer.Best(snapshot, spell, ahead, speed: SpeedOf(board, actor)) is { } found
             ? CombatAction.Bind(new CombatIntent(actor, spell), found.Targets)
             : null;
     }
+
+    /// <summary>
+    /// What a creature chose in the Speed sub-phase, which decides whether its cast can crit at all (a Quick
+    /// cast never does). The timeline carries every creature's, the enemy's included, so every reading of a
+    /// cast -- the actor's own, and the guess of what another creature casts -- prices the roll it can
+    /// actually make. The board's own choices are the fallback for a board asked before the timeline is
+    /// built; Standard is the answer to one asked before the Speed sub-phase, not a creature that picked it.
+    /// </summary>
+    private static Speed SpeedOf(PlayerBoardState board, CreatureId creature) =>
+        board.Timeline.FirstOrDefault(slot => slot.Creature == creature)?.Speed
+        ?? board.SpeedChoices.FirstOrDefault(choice => choice.Creature == creature)?.Speed
+        ?? Speed.Standard;
 
     private static List<CreatureSnapshot> Creatures(PlayerBoardState board) => [.. board.Allies, .. board.Enemies];
 }

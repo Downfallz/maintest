@@ -144,6 +144,26 @@ public sealed class CatalogueProjectionTests
         View.Trees.ShouldContain(band => band.Depth == 1);
     }
 
+    [Fact]
+    public void Bands_carry_their_actual_parent_within_each_tree()
+    {
+        var bands = View.Trees;
+
+        foreach (var tree in TestContent.Resources.TalentTrees)
+        {
+            bands.Single(band => band.Tree == tree.Id && band.Code == tree.Root.Code).ParentCode.ShouldBeNull();
+            foreach (var node in tree.Nodes)
+            {
+                foreach (var child in node.Children)
+                {
+                    var band = bands.Single(candidate => candidate.Tree == tree.Id && candidate.Code == child.Code);
+                    band.ParentCode.ShouldBe(node.Code);
+                    band.Depth.ShouldBe(bands.Single(parent => parent.Tree == tree.Id && parent.Code == node.Code).Depth + 1);
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// What it takes to acquire a spell is on the package that sells it and nowhere else. The talent gate and
     /// the per-spell unlock bonus were both rules once; neither is one now (ADR 0056), and a card that still
@@ -282,6 +302,17 @@ public sealed class CatalogueProjectionTests
             targeting,
             [Damage.Of(1)],
             casterEffects);
+
+    [Fact]
+    public void Visual_cues_distinguish_target_damage_caster_healing_and_a_real_critical_chance()
+    {
+        var spell = Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy), critical: 0.25, casterEffects: [Heal.Of(2)]);
+        var card = Card(spell);
+
+        card.Cues.ShouldNotBeNull().ShouldBe([new CardCue("harm", "Damage"), new CardCue("recovery", "Caster: Healing"), new CardCue("critical", "Crit · Standard only")]);
+        card.CriticalNote.ShouldBe("Quick cannot crit. In Standard, crits multiply only direct damage and healing on targets.");
+        Card(Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy))).Cues.ShouldNotBeNull().ShouldNotContain(cue => cue.Tone == "critical");
+    }
 
     /// <summary>
     /// One spell, through the projection: what the route would answer for it and nothing else. The creature and
