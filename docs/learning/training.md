@@ -95,12 +95,13 @@ way. Six the tuner derives from `spellOutcomes`, because they need the catalogue
 `spellUsageShare`, `spellsNeverCast` and `spellsBarelyCast` over the whole catalogue, and three over a
 **package** — the spells one evolution pick buys together (ADR 0058). The tree depth these used to read
 described a choice nobody makes: prerequisites on the package are the only eligibility rule, so the tree
-gates nothing (ADR 0056). `tierUsageShare` asks whether the package's casts all go to one of its spells,
-`tierDamageSpread` whether they hit comparably hard per landed cast, and `tierWinSpread` whether they win
-comparably often. Each reports its worst package, and each skips what it cannot read: a package nobody cast,
-a package teaching one spell, a spell with no `Damage` effect, a spell too few sides declared for its own
-number to mean anything. Damaging is read from the content, so an attack whose hits are absorbed widens
-the spread rather than leaving it.
+gates nothing (ADR 0056). `tierUsageShare` asks whether the package's casts all go to one of its spells, read
+as the lower bound of the top share's 95 % Wilson interval so that a rarely bought package is not the worst
+by noise (ADR 0064), `tierDamageSpread` whether they hit comparably hard per landed cast, and
+`tierWinSpread` whether they win comparably often. Each reports its worst package, and each skips what it
+cannot read: a package nobody cast, a package teaching one spell, a spell with no `Damage` effect, a spell
+too few sides declared for its own number to mean anything. Damaging is read from the content, so an attack
+whose hits are absorbed widens the spread rather than leaving it.
 
 `docs/learning/explained.md` says what a band, a scale and a weight are in plain words, and how to point the
 objective at a match length or at your own agent.

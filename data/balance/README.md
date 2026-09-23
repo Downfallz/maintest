@@ -159,9 +159,17 @@ Most targets read a metric of the whole run. Three read a **package** instead �
 buys together ([ADR 0058](../../docs/adr/0058-a-tier-is-the-package-the-balance-objective-reads.md)) — and
 report the worst package: `tierUsageShare` (do its casts all go to one of them), `tierDamageSpread` (do its
 attacks hit comparably hard, per target of a landed cast) and `tierWinSpread` (do they win comparably often).
-They exist because the catalogue-wide reading hides a package that sold its pick short: on the shipped
-catalogue `spellUsageShare` reads 0.297 while `tierUsageShare` reads 0.928, because `tier:prowler:v1` splits
-1813 casts of `poison_slash` against 140 of `throwing_star`.
+They exist because the catalogue-wide reading hides a package that sold its pick short: on the catalogue of
+#171 `spellUsageShare` read 0.297 while `tierUsageShare` read 0.928, because `tier:prowler:v1` split 1813
+casts of `poison_slash` against 140 of `throwing_star`.
+
+`tierUsageShare` reads each package's top share as the lower bound of its 95 % Wilson interval, not raw, and
+its band is at most 0.8 rather than an even split
+([ADR 0064](../../docs/adr/0064-read-a-package-monopoly-on-what-its-sample-proves.md)). Raw, the worst of
+eleven packages is mostly noise: a catalogue whose every pair truly splits evenly reads 0.667 at the median,
+because a package bought a few times reads 12 of 16 as easily as 8 of 16. And every package that sells more
+than one spell sells two, so the old band of 0.5 was the floor of each. The bound reads a handful of casts as
+the little it proves; 0.8 is the other spell taking at least one cast in five.
 
 The spells of a package are a bundle and not alternatives — one pick buys all of them — so this is not the
 "is it a choice" the tree depth claimed to read. It is the narrower question: did the other spells in the

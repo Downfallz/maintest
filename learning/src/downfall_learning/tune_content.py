@@ -462,8 +462,17 @@ def _tier_metrics(
     return measured
 
 
+# The z of a two-sided 95 % interval: the Wilson bound below reads the share a package's sample supports.
+_USAGE_Z = 1.96
+
+
 def _usage_share(members: Sequence[Mapping[str, object]], teaches: int) -> float | None:
-    """The share of a package's landed casts its most-cast spell takes.
+    """How much of a package's landed casts its most-cast spell takes, as far as the package's sample shows.
+
+    The lower bound of the 95 % Wilson interval of that share, not the share itself (ADR 0064). Read raw, the
+    worst of eleven packages is mostly noise: a catalogue whose every pair splits evenly still reads 0.667 at
+    the median, because a package bought a few times reads 12 of 16 as easily as 8 of 16. The bound reads a
+    handful of casts as the little it proves, and a monopoly on hundreds as the monopoly it is.
 
     None when the package was never cast, and none when it *teaches* one spell: a lone spell takes all of its
     own package's casts by construction, so reading it would pin the metric at 1.0 whatever the content did.
@@ -476,7 +485,17 @@ def _usage_share(members: Sequence[Mapping[str, object]], teaches: int) -> float
     if teaches < 2:
         return None
     landed = [int(member.get("resolved", 0)) for member in members]
-    return max(landed) / sum(landed) if sum(landed) > 0 else None
+    total = sum(landed)
+    return _wilson_lower(max(landed), total) if total > 0 else None
+
+
+def _wilson_lower(successes: int, trials: int) -> float:
+    """The lower end of the Wilson score interval for ``successes`` out of ``trials``, at ``_USAGE_Z``."""
+    share = successes / trials
+    z2 = _USAGE_Z * _USAGE_Z
+    centre = share + z2 / (2 * trials)
+    margin = _USAGE_Z * math.sqrt(share * (1 - share) / trials + z2 / (4 * trials * trials))
+    return (centre - margin) / (1 + z2 / trials)
 
 
 def _damage_spread(
@@ -1048,7 +1067,7 @@ MEANINGS: Mapping[str, str] = {
     "spellUsageShare": "the share of every landed cast taken by the one spell cast most",
     "spellsNeverCast": "how many spells no side casts at all",
     "spellsBarelyCast": "how many spells take almost none of the casts of the tier they are offered in",
-    "tierUsageShare": "the share of one tier's casts taken by one of the spells in it",
+    "tierUsageShare": "the share of a package's casts one of its spells takes, as far as its sample shows",
     "tierDamageSpread": "how unevenly the spells offered at one depth hit, per landed cast",
     "tierWinSpread": "how unevenly the spells offered at one depth go on to win",
     "winRateA": "how much playing well still beats playing at random",
