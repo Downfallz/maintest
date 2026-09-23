@@ -204,6 +204,33 @@ public sealed class LookaheadAgentTests
         return (resources, board);
     }
 
+    /// <summary>
+    /// Four chose Quick, and a Quick cast never crits, so Gamble is two damage to it and Steady three: the
+    /// greedy agent playing Four casts Steady. Guessed at Standard, Gamble reads four and the lookahead
+    /// would be playing the round out against a spell Four is not going to cast.
+    /// </summary>
+    [Fact]
+    public void An_enemy_that_chose_quick_is_guessed_to_cast_what_it_can_roll()
+    {
+        var rester = CreatureDefinitionId.Parse("creature:rester:v1");
+        var gambler = CreatureDefinitionId.Parse("creature:gambler:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures, Definition(rester, Rest.Id), Definition(gambler, Steady.Id, Gamble.Id)],
+            [.. TestContent.Resources.Spells, Rest, Steady, Gamble],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]);
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { DefinitionId = rester, KnownSpells = new HashSet<SpellId> { Rest.Id } };
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { DefinitionId = gambler, KnownSpells = new HashSet<SpellId> { Steady.Id, Gamble.Id } };
+        var board = Boards.Board(PlayerSlot.Player1, [one], [four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [new ActivationSlot(PlayerSlot.Player2, Four, Speed.Quick, Initiative.Of(5)), Slot(One, PlayerSlot.Player1)],
+        };
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules).Replies(board, One, Rest.Id)[Four].ShouldBe(Steady.Id);
+    }
+
     [Fact]
     public void An_uncastable_spell_binds_no_target()
     {
@@ -340,13 +367,23 @@ public sealed class LookaheadAgentTests
         };
     }
 
-    private static CreatureDefinition Definition(CreatureDefinitionId id, SpellId starting) =>
-        CreatureDefinition.Create(id, id.Value, CreatureClass.Creature, new CreatureStats(Health.Of(20), Energy.Of(0), Defense.Of(0), Initiative.Of(5), CriticalChance.Of(0.05)), TestContent.Tree, [starting]);
+    private static CreatureDefinition Definition(CreatureDefinitionId id, params SpellId[] starting) =>
+        CreatureDefinition.Create(id, id.Value, CreatureClass.Creature, new CreatureStats(Health.Of(20), Energy.Of(0), Defense.Of(0), Initiative.Of(5), CriticalChance.Of(0.05)), TestContent.Tree, [.. starting]);
 
     /// <summary>A free drain an enemy can guess-cast on the actor before its slot.</summary>
     private static Spell Sap { get; } = Spell.Create(
         SpellId.Parse("spell:sap:v1"), "Sap", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
         TargetingSpec.SingleTarget(TargetOrigin.Enemy), [EnergyDrain.Of(2)]);
+
+    /// <summary>Three damage, no critical: what a creature that cannot crit takes.</summary>
+    private static Spell Steady { get; } = Spell.Create(
+        SpellId.Parse("spell:steady:v1"), "Steady", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(3)]);
+
+    /// <summary>Two damage that always crits for four, on a Standard cast; two on a Quick one, which never crits.</summary>
+    private static Spell Gamble { get; } = Spell.Create(
+        SpellId.Parse("spell:gamble:v1"), "Gamble", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.Of(1)),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [Damage.Of(2)]);
 
     /// <summary>A free spell that gives its caster energy: what still resolves when every paid spell would fizzle.</summary>
     private static Spell Rest { get; } = Spell.Create(
