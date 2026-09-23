@@ -292,6 +292,22 @@ def test_the_score_adds_up_every_target_the_run_measured() -> None:
     assert objective.missing(metrics) == []
 
 
+def band(maximum: float) -> Objective:
+    return Objective(
+        seeds="seeds.json",
+        evaluations={"variety": {"agentA": "explore:0.2"}},
+        targets=(Target(metric="tierUsageShare", on="variety", maximum=maximum, scale=0.05, weight=2),),
+    )
+
+
+# The tier evolution plan asks that a changed objective be versioned, not only described: two scores read
+# against different bands must say so themselves, or an old score.json and a new one compare silently.
+def test_the_objective_fingerprint_changes_with_a_band_and_only_with_what_the_objective_asks() -> None:
+    assert band(0.8).fingerprint == band(0.8).fingerprint
+    assert band(0.8).fingerprint != band(0.5).fingerprint
+    assert len(band(0.8).fingerprint) == 12
+
+
 def test_a_target_nobody_measured_is_named_rather_than_scored_as_zero() -> None:
     objective = Objective(
         seeds="seeds.json",

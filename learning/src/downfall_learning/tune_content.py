@@ -135,9 +135,12 @@ class CatalogueScore:
     score: float
     breakdown: Mapping[str, float]
     metrics: Mapping[str, Mapping[str, float]]
+    #: Which objective read it (`objective_version`): a score is only comparable with one read the same way.
+    objective: Mapping[str, str] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, object]:
         return {
+            "objective": dict(self.objective),
             "seeds": self.seeds,
             "score": round(self.score, 6),
             "penalties": {name: round(value, 6) for name, value in self.breakdown.items()},
@@ -219,6 +222,8 @@ class TuneResult:
     #: Catalogues actually handed to the engine. Lower than the candidate count by the replays the search
     #: proposed and `MemoizingEvaluator` served from what it had already played.
     played: int = 0
+    #: Which objective scored every candidate (`objective_version`).
+    objective: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def improved(self) -> bool:
@@ -249,6 +254,7 @@ class TuneResult:
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         summary = {
+            "objective": dict(self.objective),
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "improved": self.improved,
@@ -462,7 +468,18 @@ def _tier_metrics(
     return measured
 
 
-# The z of a two-sided 95 % interval: the Wilson bound below reads the share a package's sample supports.
+#: How the metrics are computed, named after the last ADR that changed a reading. Bump it with any change to
+#: how a metric is read, so that a score read the old way is never compared with one read the new way as if
+#: they measured the same thing: ADR 0064 bounded `tierUsageShare` by its sample, ADR 0065 `tierWinSpread`.
+METRIC_DEFINITIONS = "adr-0065"
+
+
+def objective_version(objective: Objective) -> dict[str, str]:
+    """What an artifact carries to say which objective scored it: the metric definitions and the bands."""
+    return {"metrics": METRIC_DEFINITIONS, "targets": objective.fingerprint}
+
+
+# The z of a two-sided 95 % interval, for the package readings bounded by their own samples (ADR 0064, 0065).
 _USAGE_Z = 1.96
 
 
@@ -491,11 +508,19 @@ def _usage_share(members: Sequence[Mapping[str, object]], teaches: int) -> float
 
 def _wilson_lower(successes: int, trials: int) -> float:
     """The lower end of the Wilson score interval for ``successes`` out of ``trials``, at ``_USAGE_Z``."""
+    return _wilson(successes, trials)[0]
+
+
+def _wilson(successes: float, trials: int) -> tuple[float, float]:
+    """The Wilson score interval for ``successes`` out of ``trials``, at ``_USAGE_Z``.
+
+    ``successes`` may carry a half: a win share counts a draw as one half of a win.
+    """
     share = successes / trials
     z2 = _USAGE_Z * _USAGE_Z
     centre = share + z2 / (2 * trials)
     margin = _USAGE_Z * math.sqrt(share * (1 - share) / trials + z2 / (4 * trials * trials))
-    return (centre - margin) / (1 + z2 / trials)
+    return (centre - margin) / (1 + z2 / trials), (centre + margin) / (1 + z2 / trials)
 
 
 def _damage_spread(
@@ -538,9 +563,30 @@ def _damage_spread(
 
 
 def _win_spread(members: Sequence[Mapping[str, object]]) -> float | None:
-    """The gap between the best and worst win share of a tier, over the spells enough sides declared."""
-    scores = [float(member["score"]) for member in members if int(member.get("sides", 0)) >= ENOUGH_SIDES]
-    return max(scores) - min(scores) if len(scores) > 1 else None
+    """The gap between two win shares of a package, as far as the sides that declared them show (ADR 0065).
+
+    Over the spells enough sides declared, the largest lower bound of the gap between two of their win
+    shares: the 95 % Newcombe interval of the difference, built from each share's Wilson interval, and zero
+    where that interval crosses zero. Read raw, a catalogue whose every pair truly wins alike read a worst gap
+    of 0.254 at the median, from samples of a few dozen sides, while ``tier:blightweaver:v1``'s 0.66 against
+    0.15 on 22 and 27 sides is a gap no sample of that size draws by chance, and still reads 0.238 bounded.
+    """
+    read = [
+        (float(member["score"]), int(member.get("sides", 0)))
+        for member in members
+        if int(member.get("sides", 0)) >= ENOUGH_SIDES
+    ]
+    if len(read) < 2:
+        return None
+    return max(_gap_lower(first, second) for first, second in combinations(read, 2))
+
+
+def _gap_lower(first: tuple[float, int], second: tuple[float, int]) -> float:
+    """The lower end of the Newcombe interval of ``|p1 - p2|`` from two (share, trials) readings, or 0."""
+    (high, high_n), (low, low_n) = sorted((first, second), reverse=True)
+    high_lower, _ = _wilson(high * high_n, high_n)
+    _, low_upper = _wilson(low * low_n, low_n)
+    return max(0.0, (high - low) - math.sqrt((high - high_lower) ** 2 + (low_upper - low) ** 2))
 
 
 @dataclass(frozen=True)
@@ -791,6 +837,7 @@ def tune_content(
             documents=apply_moves(content.documents, best.moves),
             files={**content.files, **content.package_files},
             played=evaluator.plays,
+            objective=objective_version(objective),
         )
 
     def record() -> None:
@@ -1101,7 +1148,13 @@ def score_content(evaluator: ContentEvaluator, objective: Objective, content: Co
     search that made the proposal never played.
     """
     metrics = evaluator.evaluate(content.documents)
-    return CatalogueScore(objective.seeds, objective.score(metrics), objective.breakdown(metrics), metrics)
+    return CatalogueScore(
+        objective.seeds,
+        objective.score(metrics),
+        objective.breakdown(metrics),
+        metrics,
+        objective_version(objective),
+    )
 
 
 def _bound(value: float | None) -> str:

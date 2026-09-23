@@ -98,7 +98,8 @@ described a choice nobody makes: prerequisites on the package are the only eligi
 gates nothing (ADR 0056). `tierUsageShare` asks whether the package's casts all go to one of its spells, read
 as the lower bound of the top share's 95 % Wilson interval so that a rarely bought package is not the worst
 by noise (ADR 0064), `tierDamageSpread` whether they hit comparably hard per landed cast, and
-`tierWinSpread` whether they win comparably often. Each reports its worst package, and each skips what it
+`tierWinSpread` whether they win comparably often, read as the lower bound of the gap's 95 % Newcombe interval
+for the same reason (ADR 0065). Each reports its worst package, and each skips what it
 cannot read: a package nobody cast, a package teaching one spell, a spell with no `Damage` effect, a spell
 too few sides declared for its own number to mean anything. Damaging is read from the content, so an attack
 whose hits are absorbed widens the spread rather than leaving it.
