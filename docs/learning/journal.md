@@ -24,7 +24,7 @@ first.
   | `occultist` | 232 / 135 | 0.522 / 0.556 | 0.034 | 0 |
 
 - **The objective**, one `score-content` run: **23.36 to 11.11**. `tierWinSpread` goes from 13.03 to 0.78. What is
-  left is two findings the samples prove: `tier:soulreaver:v1` sells a spell nobody casts (7.77) and
+  left is two findings the samples prove: `tier:soulreaver:v1` sells a spell that lands 19 of its 286 casts (7.77) and
   `tier:blightweaver:v1` sells `infectious_blast`, which wins 0.148 of the sides that declare it against
   `tranquilizer_dart`'s 0.659 (0.78). Both are content questions, which is what a tuning pass should now be
   reading.
