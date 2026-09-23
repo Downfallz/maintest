@@ -40,7 +40,9 @@ where it read 0.511.
   besides `blightweaver`: `prowler`, at 0.061 on 206 and 364 sides. Every other gap, from `warmonger`'s 0.292
   on 8 sides to `deathstalker`'s 0.236 on 9, is one its sample cannot tell from chance.
 - Good: the objective no longer charges a balanced catalogue for its sample sizes, so the tuner stops choosing
-  on noise here.
+  on noise here. On the shipped content the score goes from **23.36 to 11.11**, and `tierWinSpread` from 13.03
+  to 0.78, all of it `blightweaver`. The largest term left is `tierUsageShare` at 7.77, on `soulreaver`'s real
+  monopoly.
 - Bad: every score before this change is incomparable with every score after it, the fifth time the `score`
   note in `knobs.json` records that.
 - Bad: a real gap needs sides to show. A package the exploring run rarely buys can hide a wide gap until it is
