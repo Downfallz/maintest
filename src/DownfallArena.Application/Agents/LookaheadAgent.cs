@@ -3,8 +3,10 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules;
+using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.Agents;
 
@@ -143,22 +145,35 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
-        SpellId? best = null;
-        var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
-        foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        var candidates = intentOption.CastableSpells
+            .OrderBy(spell => spell.Value, StringComparer.Ordinal)
+            .Select(spell => (
+                Spell: spell,
+                Round: Value(board, creatures, creatures, 0, intentOption.Creature, DeclaredSpells(board, creatures, intentOption.Creature, spell), ahead => BestTargets(ahead, intentOption.Creature, spell)),
+                OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0))
+            .ToList();
+        if (candidates.Count == 0)
         {
-            var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
-            var value = (
-                Round: Value(board, creatures, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
-                OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0);
-            if (Better(value, bestValue))
-            {
-                best = spell;
-                bestValue = value;
-            }
+            throw new InvalidOperationException("The options offer no castable spell.");
         }
 
-        return best ?? throw new InvalidOperationException("The options offer no castable spell.");
+        // The rollout guesses every slot before the actor's. When that guess leaves the actor unable to cast any
+        // spell that costs energy at its own slot -- dead, stunned, or drained below the cost -- the round is
+        // ranking the guess and not the spell: only a free spell still resolves in it, and it wins by what it
+        // gives, in the one world where the guess is right. The choice matters in every other world, and the
+        // one-step reading is what can be said of those, as it is when the actor is guessed dead (journal,
+        // 2026-09-23: the lookahead cast Wait 248 times against greedy for exactly this). Minimax keeps its
+        // round: its reply is not a guess but the worst the enemy can do, and against that the free spell is the
+        // one that still resolves.
+        var paid = candidates.Where(candidate => resources.GetSpell(candidate.Spell).Stats.Cost.Value > 0).ToList();
+        if (!adversarial && paid.Count > 0 && paid.All(candidate => candidate.Round.ActorStopped))
+        {
+            return candidates.MaxBy(candidate => candidate.OneStep).Spell;
+        }
+
+        return candidates.Skip(1)
+            .Aggregate(candidates[0], (best, candidate) => Better((candidate.Round, candidate.OneStep), (best.Round, best.OneStep)) ? candidate : best)
+            .Spell;
     }
 
     /// <summary>
@@ -324,18 +339,21 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     {
         var ahead = start;
         var value = 0.0;
+        var stopped = false;
         for (var index = fromSlot; index < board.Timeline.Count; index++)
         {
             var creature = board.Timeline[index].Creature;
             var action = creature == actor ? candidate(ahead) : Guess(ahead, creature, declared[creature]);
             if (action is null)
             {
+                stopped |= creature == actor && ahead.First(snapshot => snapshot.Id == creature) is { IsDead: true } or { IsStunned: true };
                 continue;
             }
 
             // The timeline knows what each creature chose, and the actor's roll is the one that can crit, so the
             // rollout has to read the real speed here or it prices a critical a Quick actor cannot roll.
             var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical, board.Timeline[index].Speed);
+            stopped |= creature == actor && Stops(advanced.Resolution.FizzleReason);
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
             value += sign * _scorer.Score(advanced.Resolution, ahead);
             ahead = advanced.Board;
@@ -344,11 +362,15 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         var cleaned = Advance.Cleanup(ahead, resources);
         return Advance.Outcome(cleaned, resources, board.RoundNumber ?? 1, rules) switch
         {
-            null => new RoundValue(0, value),
-            { Winner: null } => new RoundValue(0, value),
-            { Winner: var winner } => new RoundValue(winner == board.Slot ? 1 : -1, value),
+            null => new RoundValue(0, value, stopped),
+            { Winner: null } => new RoundValue(0, value, stopped),
+            { Winner: var winner } => new RoundValue(winner == board.Slot ? 1 : -1, value, stopped),
         };
     }
+
+    /// <summary>Whether a fizzle says the actor could not act at all, rather than that its spell missed.</summary>
+    private static bool Stops(DomainError? fizzle) =>
+        fizzle == CombatErrors.ActorDead || fizzle == CombatErrors.ActorStunned || fizzle == CombatErrors.NotEnoughEnergy;
 
     /// <summary>
     /// The actor's chance of a critical on the candidate, read the way <see cref="ActionScorer.Expected"/>
@@ -376,13 +398,17 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// dominate it, and a win an agent could be paid to decline is not a win it reads. Between two rolls,
     /// the outcome mixes the way the score does, so a critical that wins on the spot three casts in four is
     /// worth three quarters of a win.
+    /// <para>
+    /// <c>ActorStopped</c> is not part of the order: it says the rollout had the actor unable to act at its own
+    /// slot, which <see cref="DecideIntent"/> reads before it trusts the order at all.
+    /// </para>
     /// </summary>
-    private readonly record struct RoundValue(double Outcome, double Score) : IComparable<RoundValue>
+    private readonly record struct RoundValue(double Outcome, double Score, bool ActorStopped = false) : IComparable<RoundValue>
     {
         public static RoundValue Lowest => new(double.NegativeInfinity, double.NegativeInfinity);
 
         public static RoundValue Mix(double chance, RoundValue critical, RoundValue plain) =>
-            new((chance * critical.Outcome) + ((1 - chance) * plain.Outcome), (chance * critical.Score) + ((1 - chance) * plain.Score));
+            new((chance * critical.Outcome) + ((1 - chance) * plain.Outcome), (chance * critical.Score) + ((1 - chance) * plain.Score), plain.ActorStopped);
 
         public int CompareTo(RoundValue other)
         {
