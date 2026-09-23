@@ -443,6 +443,31 @@ public sealed partial class TableApiTests : IDisposable
         await AnswerEach(table, PlayerOptionsKind.Intent, creature => $$"""{"kind":"Intent","creature":{{creature}},"spell":"spell:strike:v1"}""", until: PlayerOptionsKind.Target);
     }
 
+    [Fact]
+    public async Task The_targeting_payload_never_exposes_an_unconfirmed_opposing_spell_choice()
+    {
+        var table = await Seated();
+        await PlayUpToTargeting(table);
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+        using var document = JsonDocument.Parse(body);
+        var board = document.RootElement.GetProperty("board");
+        var own = board.GetProperty("allies").EnumerateArray().Select(creature => creature.GetProperty("id").GetInt32()).ToHashSet();
+        var confirmed = board.GetProperty("revealedActions").EnumerateArray().Select(action => action.GetProperty("actor").GetInt32()).ToHashSet();
+        board.GetProperty("enemies").EnumerateArray().Select(creature => creature.GetProperty("id").GetInt32()).Except(confirmed).ShouldNotBeEmpty();
+
+        // Audit every board collection, not just Intents: a second field must not bypass the seat boundary.
+        foreach (var collection in board.EnumerateObject().Where(property => property.Value.ValueKind == JsonValueKind.Array))
+        {
+            foreach (var entry in collection.Value.EnumerateArray())
+            {
+                if (entry.ValueKind == JsonValueKind.Object && entry.TryGetProperty("actor", out var actor) && entry.TryGetProperty("spell", out _))
+                {
+                    (own.Contains(actor.GetInt32()) || confirmed.Contains(actor.GetInt32())).ShouldBeTrue("an opposing spell choice needs confirmed targets before it can be public");
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Answers every question of one kind until the seat is asked the next one. It polls rather than counting
     /// creatures, because between two questions the seat is waiting for nothing at all: the driver is off

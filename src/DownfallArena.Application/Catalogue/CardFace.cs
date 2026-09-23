@@ -38,4 +38,6 @@ public sealed record CardFace(
     IReadOnlyList<string> CasterEffects,
     string Critical,
     int? CriticalThreshold,
-    string? Tree);
+    string? Tree,
+    IReadOnlyList<CardCue>? Cues = null,
+    string? CriticalNote = null);
