@@ -124,6 +124,9 @@ The crit column is the Critical chance bonus, what the spell adds to its caster'
 column: a spell buys none of its own, and the package that teaches it pays one bonus for the whole purchase
 (ADR 0056, ADR 0059). Durations are in rounds.
 
+A **†** marks a row that is no longer the prototype's spell because a decision changed what it is, rather than
+a tuning pass changing what it is worth. Its ADR says why.
+
 | Spell | Class | Type | Energy | Crit | Targets | Effects |
 | --- | --- | --- | --- | --- | --- | --- |
 | Wait | Creature | Defensive | 0 | — | Self | EnergyGain 1 |
@@ -141,7 +144,7 @@ column: a spell buys none of its own, and the package that teaches it pays one b
 | Tornado | Berserker | Offensive | 2 | 0.33 | up to 3 enemies | Damage 4 |
 | Psycho Rush | Berserker | Offensive | 3 | 0.33 | Enemy | Damage 9 |
 | Poison Slash | Scoundrel | Offensive | 2 | — | Enemy | Damage 2, Bleed 1/r for 1r |
-| Throwing Star | Scoundrel | Offensive | 1 | — | Enemy | Damage 2 |
+| Throwing Star † | Scoundrel | Offensive | 2 | — | up to 2 enemies | Damage 3 |
 | Parasite Jab | Leech | Offensive | 2 | 0.5 | Enemy | Damage 2 |
 | Hateful Sacrifice | Leech | Offensive | 3 | 0.5 | Enemy | Damage 10 |
 | Soul Devourer | Leech | Offensive | 3 | — | Enemy | Damage 3 |
@@ -189,8 +192,12 @@ hit. The name and the length say a lasting wound, so it is a bleed here.
 - Whether the 21 package bonuses are right. `scripts/build-tiers.py` seeded each one by summing the per-spell
   numbers it replaced, which is a migration baseline and not a balance argument (ADR 0057). Nothing has
   measured them since, and no knob addresses them yet (ADR 0059).
-- What `throwing_star` is for. Its whole purpose was the two points of Base initiative it bought on unlock;
-  `tier:prowler:v1` pays that once for both its spells now, and the package splits its casts 1813 to 140
-  toward `poison_slash`. What is left is `basic_attack` with a class on it.
+- ~~What `throwing_star` is for.~~ Settled: it buys **reach** (ADR 0060). A pick takes both halves of
+  `tier:prowler:v1` at once, so the two must differ in what a player does with them and not only in how much
+  they do — `poison_slash` concentrates, `throwing_star` spreads, and they are priced level so the decision is
+  the shape of the damage rather than its cost. What made the question urgent was the measurement: the package
+  split its casts 1813 to 140, because both spells carried the same damage per energy and the smaller one's
+  only edge, costing 1, is worth nothing in a game where 1.0 % of its owner's recorded states hold less than 2
+  energy.
 - The permanent stat buffs stack every time they are cast, unbounded, as they did in the prototype. That is
   probably not what anyone wants at a round cap of 30.

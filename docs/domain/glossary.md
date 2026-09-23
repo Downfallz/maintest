@@ -113,7 +113,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |
 | Content audit | What a built content set says about itself that reading one item cannot: content no Creature can reach, open or cast, Spells no match can tell apart, and a Spell stat every Spell gives the same value. Findings, not problems: the content is valid and the engine plays it. | decided |
 | Content finding | One thing a Content audit found, with a stable code namespaced by what it is about (`Spell.Unreachable`), the id it is about, and what it means for the author. | decided |
-| Spell reach | How far a Spell goes in a content set: the creatures that start with it, and the creatures that could ever come to know it through their Talent tree. | decided |
+| Spell reach | How far a Spell goes in a content set: the creatures that start with it, and the creatures that could ever come to know it by buying packages (ADR 0058). Not Reach. | decided |
+| Reach | How many targets one cast of a Spell can land on: its targeting scope and `maxTargets`. The sense ADR 0043 ("reach is not force") and ADR 0060 use; not Spell reach, which is who can ever acquire the Spell. | decided |
 | Run record | What the content studio writes beside a run's artifacts (`run.json`): its agents, seed, match count, Content hash and time, so a run can be found again and compared. | decided |
 | Viewer | The static HTML page that renders Match traces, batches, Evaluations, training runs, and comparisons. | decided |
 | Training run | The record of one training of a Policy on the Python side, one line per iteration (loss, evaluation win rate), with its Run stamp. | decided |
