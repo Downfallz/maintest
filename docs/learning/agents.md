@@ -112,7 +112,9 @@ the match's own rules on them, so the agent can put a move on the board and keep
   pay for any spell that costs energy: only a free spell still resolves, and it would win by what it gives in
   the one world the guess describes. When every paid candidate is stopped at the actor's slot -- dead,
   stunned or short of energy -- the one-step reading decides outright. Without it the lookahead cast Wait 248
-  times in 400 matches against Greedy, which casts it once.
+  times in 400 matches against Greedy, which casts it once. Minimax keeps its round there: its reply is the
+  worst the enemy can do, not a guess, and against a drain it cannot avoid the free spell is the one that
+  still resolves.
 - **The actor's critical roll** is weighted the way the scorer weights it: the round is played once on a
   forced critical and once on a miss, and the two are mixed by the actor's chance for that spell. Every
   other creature's roll is a miss, which keeps the cost at two rounds per candidate. On a miss alone, a spell

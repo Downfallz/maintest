@@ -162,23 +162,18 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         // ranking the guess and not the spell: only a free spell still resolves in it, and it wins by what it
         // gives, in the one world where the guess is right. The choice matters in every other world, and the
         // one-step reading is what can be said of those, as it is when the actor is guessed dead (journal,
-        // 2026-09-23: the lookahead cast Wait 248 times against greedy for exactly this).
+        // 2026-09-23: the lookahead cast Wait 248 times against greedy for exactly this). Minimax keeps its
+        // round: its reply is not a guess but the worst the enemy can do, and against that the free spell is the
+        // one that still resolves.
         var paid = candidates.Where(candidate => resources.GetSpell(candidate.Spell).Stats.Cost.Value > 0).ToList();
-        if (paid.Count > 0 && paid.All(candidate => candidate.Round.ActorStopped))
+        if (!adversarial && paid.Count > 0 && paid.All(candidate => candidate.Round.ActorStopped))
         {
-            return candidates.First(candidate => candidate.OneStep == candidates.Max(other => other.OneStep)).Spell;
+            return candidates.MaxBy(candidate => candidate.OneStep).Spell;
         }
 
-        var best = candidates[0];
-        foreach (var candidate in candidates.Skip(1))
-        {
-            if (Better((candidate.Round, candidate.OneStep), (best.Round, best.OneStep)))
-            {
-                best = candidate;
-            }
-        }
-
-        return best.Spell;
+        return candidates.Skip(1)
+            .Aggregate(candidates[0], (best, candidate) => Better((candidate.Round, candidate.OneStep), (best.Round, best.OneStep)) ? candidate : best)
+            .Spell;
     }
 
     /// <summary>

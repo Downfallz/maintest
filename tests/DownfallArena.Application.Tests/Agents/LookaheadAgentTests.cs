@@ -164,6 +164,28 @@ public sealed class LookaheadAgentTests
     [Fact]
     public void A_guess_that_drains_the_actor_does_not_lure_it_into_the_free_spell()
     {
+        var (resources, board) = FourAboutToSapOne();
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules).DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Slam])).ShouldBe(TestContent.Slam);
+    }
+
+    /// <summary>
+    /// The same board read by minimax: Sap is not a guess there but the worst Four can do, and against it Slam
+    /// certainly fizzles while Rest resolves, so the round decides and the one-step reading does not.
+    /// </summary>
+    [Fact]
+    public void Minimax_keeps_the_free_spell_against_a_drain_it_cannot_avoid()
+    {
+        var (resources, board) = FourAboutToSapOne();
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules, adversarial: true).DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Slam])).ShouldBe(Rest.Id);
+    }
+
+    /// <summary>
+    /// One (two energy, knows Rest, bought Slam) for Player1; Four (knows Sap) for Player2. Four acts first.
+    /// </summary>
+    private static (IGameResources Resources, PlayerBoardState Board) FourAboutToSapOne()
+    {
         var rester = CreatureDefinitionId.Parse("creature:rester:v1");
         var sapper = CreatureDefinitionId.Parse("creature:sapper:v1");
         var resources = GameResources.Create(
@@ -179,8 +201,7 @@ public sealed class LookaheadAgentTests
             RoundNumber = 1,
             Timeline = [Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
         };
-
-        new LookaheadAgent(ScoringWeights.Default, resources, Rules).DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Slam])).ShouldBe(TestContent.Slam);
+        return (resources, board);
     }
 
     [Fact]
