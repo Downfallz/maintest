@@ -67,7 +67,7 @@ public sealed class RoundTests
     }
 
     [Fact]
-    public void Evolution_choices_are_accepted_once_each_during_evolution_only()
+    public void Evolution_choices_are_accepted_once_a_creature_during_evolution_only()
     {
         var round = Round.First();
         var choice = new EvolutionChoice(Knight, GuardPack);
@@ -78,8 +78,8 @@ public sealed class RoundTests
 
         round.SubmitEvolutionChoice(PlayerSlot.Player1, choice).IsSuccess.ShouldBeTrue();
         round.SubmitEvolutionChoice(PlayerSlot.Player1, choice).Error.ShouldBe(RoundErrors.EvolutionAlreadySubmitted);
-        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Knight, SlamPack)).IsSuccess.ShouldBeTrue();
-        round.EvolutionChoicesOf(PlayerSlot.Player1).Count.ShouldBe(2);
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Knight, SlamPack)).Error.ShouldBe(RoundErrors.EvolutionAlreadySubmitted, "one choice a creature a round (ADR 0066)");
+        round.EvolutionChoicesOf(PlayerSlot.Player1).ShouldBe([choice]);
         round.EvolutionChoicesOf(PlayerSlot.Player2).ShouldBeEmpty();
     }
 

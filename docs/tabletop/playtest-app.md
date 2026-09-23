@@ -189,7 +189,7 @@ the same (`SpeedRules.cs:24-27`), and `SubmitAction` is documented "Only the own
 
 **What a client-side hide would allow.** Suppose the host sent one payload with both boards and the page hid
 the opponent's half. A player with the network tab open, or one who reads the DOM, learns two things before
-choosing: the opponent's six face-down intents, and their six Speed tokens. Those are the only two hidden
+choosing: the opponent's six face-down intents, and their six Speed cards. Those are the only two hidden
 decisions in the game (translation.md:110, translation.md:95; plan.md:76-78) and they are the ones the round is
 built around. Knowing the enemy's Speeds, you build the timeline before choosing yours. Knowing that enemy
 Creature 4 declared a Stun, you pick Quick and target it first, or you simply pick a different Intent.

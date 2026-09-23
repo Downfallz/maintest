@@ -21,10 +21,11 @@ listed in [spells.md](spells.md).
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
 - Planning rules (phase 5): a package is available to a creature when it does not own it and owns every
-  package it requires; an evolution choice must target an own, living creature and an available package,
-  within the picks the rule set's schedule gives that round, and the sub-phase completes when no player has an
-  effective pick left (capped by what their living creatures can buy) -- which is immediately, in a round the
-  schedule offers no opportunity. A speed choice must target an own, living, unstunned creature, and the
+  package it requires; an evolution choice must target an own, living creature that has not bought a package
+  this round and an available package, within the picks the rule set's schedule gives that round, and the
+  sub-phase completes when no player has an effective pick left (capped by how many of their living creatures
+  have not bought yet and can buy something, ADR 0066) -- which is immediately, in a round the schedule offers
+  no opportunity. A speed choice must target an own, living, unstunned creature, and the
   sub-phase completes when every such creature has one. The timeline orders Quick before Standard, initiative
   descending, and rolls off a tie between the two sides on a d20 for the places each side holds; each Player
   then orders their own Creatures among their places in the tie (ADR 0063). A tie order must name every
@@ -87,14 +88,16 @@ listed in [spells.md](spells.md).
       rather than asking anyone to pass. A Creature may buy a package it does not own and whose prerequisite
       packages it does own, whatever family they belong to: **prerequisites are the only rule, so
       multiclassing is free**. One pick buys the whole package -- every Spell in it at once, a Spell it
-      already knows granted without complaint -- and the two picks of an opportunity resolve **in sequence**,
-      so the second sees what the first bought and a Creature can climb two levels in one Round. A Player may
-      pass their remaining picks. **A purchase raises the Creature's Base initiative by the package's bonus,
+      already knows granted without complaint -- and **a Creature buys at most one package an opportunity**
+      (ADR 0066): the two picks go to two different Creatures, so no Creature climbs two levels in one Round,
+      and a Player down to one living Creature has one pick. A Player may pass their remaining picks. **A purchase raises the Creature's Base initiative by the package's bonus,
       once, for the rest of the Match**: evolving is also how a Creature gets faster, and the bonus belongs to
       the package rather than to any Spell in it. The Current initiative the timeline orders on is that base
       plus the Creature's active initiative buffs and less its active debuffs, floored at zero (ADR 0036), so
       a Condition can still push a Creature forward or pull it back. A refused purchase changes nothing: no
-      half-taught package, and no bonus without the Tier that paid for it.
+      half-taught package, and no bonus without the Tier that paid for it. **A purchase is public the moment
+      it is made**: it applies at once, and both Players see every Creature's Tiers, since the board shows
+      both Teams whole. What a Creature knows is never hidden.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
       such Creature has a choice. **The choice is a trade: a `Quick` Creature acts before every `Standard`
@@ -102,9 +105,10 @@ listed in [spells.md](spells.md).
       that cost the choice decides nothing, since acting earlier is never worse.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
       then Standard slots by Initiative descending. A tie between the two sides is rolled off: every tied
-      Creature rolls a d20 and the highest acts first, and Creatures of different sides that roll the same
-      number roll again. That decides which places each side holds. A tie held by one side alone rolls nothing.
-      The seat breaks no tie (ADR 0063).
+      Creature rolls a d20 and the highest acts first, and when both sides rolled the same number, every
+      Creature on that number rolls again, a side's own included; a number only one side rolled stays. That
+      decides which places each side holds. A tie held by one side alone rolls nothing. The seat breaks no
+      tie (ADR 0063).
    4. `TieOrder`: each Player who holds two places or more in one tie orders their own Creatures among those
       places; the other side's places do not move. Completes when every such Player has; a Round where no
       side holds two places in a tie passes through it without asking anyone.
