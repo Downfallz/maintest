@@ -94,7 +94,9 @@ listed in [spells.md](spells.md).
       the package rather than to any Spell in it. The Current initiative the timeline orders on is that base
       plus the Creature's active initiative buffs and less its active debuffs, floored at zero (ADR 0036), so
       a Condition can still push a Creature forward or pull it back. A refused purchase changes nothing: no
-      half-taught package, and no bonus without the Tier that paid for it.
+      half-taught package, and no bonus without the Tier that paid for it. **A purchase is public the moment
+      it is made**: it applies at once, and both Players see every Creature's Tiers, since the board shows
+      both Teams whole. What a Creature knows is never hidden.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
       such Creature has a choice. **The choice is a trade: a `Quick` Creature acts before every `Standard`
@@ -102,9 +104,10 @@ listed in [spells.md](spells.md).
       that cost the choice decides nothing, since acting earlier is never worse.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
       then Standard slots by Initiative descending. A tie between the two sides is rolled off: every tied
-      Creature rolls a d20 and the highest acts first, and Creatures of different sides that roll the same
-      number roll again. That decides which places each side holds. A tie held by one side alone rolls nothing.
-      The seat breaks no tie (ADR 0063).
+      Creature rolls a d20 and the highest acts first, and when both sides rolled the same number, every
+      Creature on that number rolls again, a side's own included; a number only one side rolled stays. That
+      decides which places each side holds. A tie held by one side alone rolls nothing. The seat breaks no
+      tie (ADR 0063).
    4. `TieOrder`: each Player who holds two places or more in one tie orders their own Creatures among those
       places; the other side's places do not move. Completes when every such Player has; a Round where no
       side holds two places in a tie passes through it without asking anyone.

@@ -15,7 +15,7 @@ buildable.
 A player rolls a die. The die the catalogue can afford is a d20 — that is measured, not assumed
 ([components.md](components.md) §1.6): over the 21 Spells that roll, a d20 moves the fewest of them, has the
 smallest worst move and the smallest mean error, and it is the only grid `data/balance/knobs.json` already
-declares, at a step of 0.05 on 20 Spells.
+declares, at a step of 0.05 on 21 Spells.
 
 But the reason to make it a **rule** rather than a one-off tuning pass is not the table. It is that the
 catalogue cannot stay on a grid it is not held to. Ten of the 36 Spells are off the twentieths today, and
