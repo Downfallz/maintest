@@ -73,7 +73,8 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0065](0065-read-a-package-win-gap-on-what-its-sides-prove.md) | Read a package's win gap on what its sides prove | Accepted |
 | [0066](0066-a-creature-buys-one-package-an-opportunity.md) | A creature buys one package an opportunity | Accepted |
 | [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |
-| [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted |
+| [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted, amended by [0071](0071-read-a-match-length-on-the-exploring-run.md) |
 | [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
 | [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted |
+| [0071](0071-read-a-match-length-on-the-exploring-run.md) | Read a match's length on the exploring run, not on the greedy mirror | Accepted |
 | [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) | A creature is immune to stun the round after one ends | Accepted |
