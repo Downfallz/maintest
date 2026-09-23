@@ -101,7 +101,7 @@ def catalogue(tmp_path: Path) -> Content:
 
 
 def move(content: Content, alias: str, path: str, after: float, steps: int = 1) -> Move:
-    knob = Knob(spell=alias, path=path, minimum=1, maximum=6, step=1)
+    knob = Knob(target=alias, path=path, minimum=1, maximum=6, step=1)
     before = float(content.spells[alias]["effects"][0]["amount"])
     return Move(knob=knob, steps=steps, before=before, after=after)
 
@@ -398,7 +398,7 @@ def test_the_proposal_is_written_as_the_content_tree_it_came_from(tmp_path: Path
     assert written["best"]["moves"]
     # The number the report's first line quotes, so a run directory read later says the same thing.
     assert written["played"] == result.played
-    changed = {move["spell"] for move in written["best"]["moves"]}
+    changed = {move["target"] for move in written["best"]["moves"]}
     for alias in changed:
         name = Path(content.files[alias]).name
         assert (tmp_path / "out" / "content" / "Spells" / "base" / name).exists()
@@ -450,7 +450,7 @@ def test_writing_a_proposal_leaves_no_spell_the_proposal_does_not_change(tmp_pat
     result.write(tmp_path / "out", tmp_path)
 
     assert not stale.exists()
-    changed = {move.knob.spell for move in result.best.moves}
+    changed = {move.knob.target for move in result.best.moves}
     for alias in changed:
         name = Path(content.files[alias]).name
         assert (tmp_path / "out" / "content" / "Spells" / "base" / name).exists()
@@ -469,7 +469,7 @@ def test_applying_a_proposal_writes_the_numbers_into_the_content(tmp_path: Path)
     assert written
     for path in written:
         alias = next(a for a, p in content.files.items() if p == path)
-        assert json.loads(path.read_text()) == result.spells[alias]
+        assert json.loads(path.read_text()) == result.documents[alias]
 
 
 def test_the_share_of_the_spell_leaned_on_and_the_spells_never_cast_come_from_the_outcomes() -> None:
@@ -544,7 +544,7 @@ def test_a_move_that_changes_no_metric_is_named_as_dead_content(tmp_path: Path) 
     )
 
     assert result.inert
-    assert all(move.knob.spell == "spell:jab" for candidate in result.inert for move in candidate.moves)
+    assert all(move.knob.target == "spell:jab" for candidate in result.inert for move in candidate.moves)
     assert "changed no measurement at all" in format_result(result, knobs.objective)
 
 
@@ -781,7 +781,7 @@ def test_a_knob_on_a_spell_the_build_lacks_is_never_drawn(tmp_path: Path) -> Non
         files={"spell:attack": content.files["spell:attack"]},
     )
 
-    assert [knob.spell for knob in playable(knobs, thin)] == ["spell:attack"]
+    assert [knob.target for knob in playable(knobs, thin)] == ["spell:attack"]
 
 
 def test_the_sweep_can_be_skipped(tmp_path: Path) -> None:
@@ -1045,7 +1045,7 @@ def _report(before: float, after: float) -> str:
         evaluations={"mirror": {}},
         targets=(Target(metric="spellUsageShare", on="mirror", maximum=0.25, scale=0.1, weight=1),),
     )
-    knob = Knob(spell="spell:pummel", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
+    knob = Knob(target="spell:pummel", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
     metrics = {"mirror": {"spellUsageShare": before}}, {"mirror": {"spellUsageShare": after}}
     initial = Candidate(
         iteration=0,
@@ -1061,7 +1061,7 @@ def _report(before: float, after: float) -> str:
         breakdown=objective.breakdown(metrics[1]),
         metrics=metrics[1],
     )
-    result = TuneResult(best=best, initial=initial, candidates=(best,), spells={}, files={})
+    result = TuneResult(best=best, initial=initial, candidates=(best,), documents={}, files={})
     return format_result(result, objective)
 
 
@@ -1118,7 +1118,7 @@ def test_two_targets_on_one_measurement_are_told_apart_by_the_run_they_came_from
         breakdown=objective.breakdown(metrics),
         metrics=metrics,
     )
-    result = TuneResult(best=candidate, initial=candidate, candidates=(candidate,), spells={}, files={})
+    result = TuneResult(best=candidate, initial=candidate, candidates=(candidate,), documents={}, files={})
 
     text = format_result(result, objective)
 
@@ -1452,3 +1452,62 @@ def test_a_package_of_two_whose_second_spell_was_never_cast_still_reports_its_mo
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
 
     assert metrics["tierUsageShare"] == pytest.approx(1.0)
+
+
+PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"], "initiativeBonus": 2}
+
+
+def with_package(tmp_path: Path) -> Content:
+    """The two-spell catalogue plus one package, each document read from its own file."""
+    base = catalogue(tmp_path)
+    return Content(
+        spells=base.spells,
+        files=base.files,
+        package_documents={"tier:open": json.loads(json.dumps(PACKAGE))},
+        package_files={"tier:open": tmp_path / "Tiers" / "open.v1.json"},
+    )
+
+
+def package_move(after: float) -> Move:
+    knob = Knob(target="tier:open", path="/initiativeBonus", minimum=0, maximum=4, step=1)
+    return Move(knob=knob, steps=int(after - 2), before=2, after=after)
+
+
+def test_a_package_move_lands_in_the_package_and_leaves_every_spell_alone(tmp_path: Path) -> None:
+    """The spell readings -- dominance, twins, a cast's value -- must never see a package as a spell."""
+    content = with_package(tmp_path)
+
+    moved = content.with_documents(apply_moves(content.documents, [package_move(3)]))
+
+    assert moved.package_documents["tier:open"]["initiativeBonus"] == 3
+    assert moved.spells == content.spells
+    assert "tier:open" not in moved.spells
+    assert content.package_documents["tier:open"]["initiativeBonus"] == 2, "the base is left alone"
+
+
+def test_a_winning_package_is_written_back_to_the_file_it_came_from(tmp_path: Path) -> None:
+    content = with_package(tmp_path)
+    content.file_of("tier:open").parent.mkdir(parents=True)
+    content.file_of("tier:open").write_text(json.dumps(PACKAGE), encoding="utf-8")
+    best = Candidate(iteration=1, moves=(package_move(4),), score=0.0, breakdown={}, metrics={})
+    result = TuneResult(
+        best=best,
+        initial=best,
+        candidates=(best,),
+        documents=apply_moves(content.documents, best.moves),
+        files={**content.files, **content.package_files},
+    )
+
+    written = result.apply()
+
+    assert written == [tmp_path / "Tiers" / "open.v1.json"]
+    assert json.loads(written[0].read_text())["initiativeBonus"] == 4
+
+
+def test_the_report_names_a_package_move_as_a_package(tmp_path: Path) -> None:
+    objective = Objective(seeds="seeds.json", evaluations={}, targets=())
+    initial = Candidate(iteration=0, moves=(), score=1.0, breakdown={}, metrics={})
+    best = Candidate(iteration=1, moves=(package_move(3),), score=0.5, breakdown={}, metrics={})
+    result = TuneResult(best=best, initial=initial, candidates=(best,), documents={}, files={})
+
+    assert "Open package — initiative bonus: 2 -> 3" in format_result(result, objective)

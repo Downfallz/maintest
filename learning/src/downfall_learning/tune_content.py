@@ -91,7 +91,7 @@ class Move:
 
     def to_json(self) -> dict[str, object]:
         return {
-            "spell": self.knob.spell,
+            "target": self.knob.target,
             "path": self.knob.path,
             "before": self.before,
             "after": self.after,
@@ -99,7 +99,7 @@ class Move:
         }
 
     def __str__(self) -> str:
-        return f"{self.knob.spell}{self.knob.path}: {self.before} -> {self.after}"
+        return f"{self.knob.target}{self.knob.path}: {self.before} -> {self.after}"
 
 
 @dataclass(frozen=True)
@@ -152,7 +152,7 @@ class ContentEvaluator(Protocol):
     put back a spell an earlier candidate moved, and it can only do that if it is handed all of them.
     """
 
-    def evaluate(self, spells: Mapping[str, dict]) -> Mapping[str, Mapping[str, float]]: ...
+    def evaluate(self, documents: Mapping[str, dict]) -> Mapping[str, Mapping[str, float]]: ...
 
 
 @dataclass(frozen=True)
@@ -213,7 +213,8 @@ class TuneResult:
     best: Candidate
     initial: Candidate
     candidates: tuple[Candidate, ...]
-    spells: Mapping[str, dict]
+    #: Every document the winning moves leave, spells and packages, by alias, and the files they came from.
+    documents: Mapping[str, dict]
     files: Mapping[str, Path]
     #: Catalogues actually handed to the engine. Lower than the candidate count by the replays the search
     #: proposed and `MemoizingEvaluator` served from what it had already played.
@@ -265,19 +266,19 @@ class TuneResult:
         # does not make, carried into data/ by the copy that applies it.
         content = directory / "content"
         shutil.rmtree(content, ignore_errors=True)
-        for alias in sorted({move.knob.spell for move in self.best.moves}):
+        for alias in sorted({move.knob.target for move in self.best.moves}):
             source = Path(self.files[alias]).resolve()
             target = content / source.relative_to(Path(data_directory).resolve())
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(self.spells[alias], indent=2) + "\n", encoding="utf-8")
+            target.write_text(json.dumps(self.documents[alias], indent=2) + "\n", encoding="utf-8")
         return directory
 
     def apply(self) -> list[Path]:
-        """Writes the winning numbers into the spell files they were read from. Returns what it touched."""
+        """Writes the winning numbers into the files they were read from. Returns what it touched."""
         written = []
-        for alias in sorted({move.knob.spell for move in self.best.moves}):
+        for alias in sorted({move.knob.target for move in self.best.moves}):
             path = Path(self.files[alias])
-            path.write_text(json.dumps(self.spells[alias], indent=2) + "\n", encoding="utf-8")
+            path.write_text(json.dumps(self.documents[alias], indent=2) + "\n", encoding="utf-8")
             written.append(path)
         return written
 
@@ -293,11 +294,11 @@ def _same(left: Mapping[str, Mapping[str, float]], right: Mapping[str, Mapping[s
     )
 
 
-def apply_moves(spells: Mapping[str, dict], moves: Sequence[Move]) -> dict[str, dict]:
-    """The catalogue with every move applied. The catalogue it was built from is left alone."""
-    changed = dict(spells)
+def apply_moves(documents: Mapping[str, dict], moves: Sequence[Move]) -> dict[str, dict]:
+    """The catalogue with every move applied, spells and packages alike; the one it came from is untouched."""
+    changed = dict(documents)
     for move in moves:
-        changed[move.knob.spell] = with_value(changed[move.knob.spell], move.knob.path, move.after)
+        changed[move.knob.target] = with_value(changed[move.knob.target], move.knob.path, move.after)
     return changed
 
 
@@ -306,7 +307,7 @@ def violations(base: Content, candidate: Mapping[str, dict], knobs: Knobs) -> li
 
     Cheap enough to run on every proposal, which is the point: a candidate refused here costs no engine time.
     """
-    after = base.with_spells(candidate)
+    after = base.with_documents(candidate)
     problems = []
     if knobs.enabled("noNewStrictDominance"):
         problems.extend(
@@ -556,8 +557,8 @@ class EngineContentEvaluator:
         shutil.rmtree(self._candidate / "dst", ignore_errors=True)
         self.calls = 0
 
-    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
-        self._write(spells)
+    def evaluate(self, documents: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        self._write(documents)
         self._build()
         schema = self._candidate / "dst" / "game.schema.json"
         return {
@@ -565,9 +566,9 @@ class EngineContentEvaluator:
             for name, evaluation in self._objective.evaluations.items()
         }
 
-    def _write(self, spells: Mapping[str, dict]) -> None:
-        for alias, document in spells.items():
-            source = Path(self._content.files[alias]).resolve()
+    def _write(self, documents: Mapping[str, dict]) -> None:
+        for alias, document in documents.items():
+            source = self._content.file_of(alias).resolve()
             target = self._candidate / source.relative_to(self._data)
             target.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
@@ -628,7 +629,7 @@ class EngineContentEvaluator:
 
 def playable(knobs: Knobs, base: Content) -> list[Knob]:
     """The knobs on spells the build actually carries. A knob on a spell that is turned off moves nothing."""
-    return [knob for knob in knobs if knob.spell in base.spells]
+    return [knob for knob in knobs if knob.target in base.documents]
 
 
 def _weights(all_knobs: Sequence[Knob], favour: Collection[str]) -> np.ndarray:
@@ -666,7 +667,7 @@ def propose(
             continue
         if len({move.knob.key for move in moves}) > search.options.max_changes:
             continue
-        if violations(search.content, apply_moves(search.content.spells, moves), search.knobs):
+        if violations(search.content, apply_moves(search.content.documents, moves), search.knobs):
             continue
         return moves
     return None
@@ -679,10 +680,10 @@ def _nudged(knob: Knob, current: Sequence[Move], base: Content, direction: int) 
     stops counting steps it cannot take: otherwise every one of them would read as a new candidate and
     cost an evaluation of a catalogue already played.
     """
-    if knob.spell not in base.spells:
+    if knob.target not in base.documents:
         return None
     taken = {move.knob.key: move.steps for move in current}
-    before = read_value(base.spells[knob.spell], knob.path)
+    before = read_value(base.documents[knob.target], knob.path)
     after = knob.moved(before, taken.get(knob.key, 0) + direction)
     moves = tuple(move for move in current if move.knob.key != knob.key)
     if after == before:
@@ -721,13 +722,13 @@ class MemoizingEvaluator:
         """Catalogues actually handed to the engine."""
         return len(self._seen)
 
-    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
-        key = json.dumps(spells, sort_keys=True)
+    def evaluate(self, documents: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        key = json.dumps(documents, sort_keys=True)
         cached = self._seen.get(key)
         if cached is not None:
             self.hits += 1
             return cached
-        measured = self._inner.evaluate(spells)
+        measured = self._inner.evaluate(documents)
         self._seen[key] = measured
         self._progress.step(f"{self.hits} replay(s) skipped" if self.hits else "")
         return measured
@@ -758,7 +759,7 @@ def tune_content(
     search = Search(knobs=knobs, content=content, options=options)
     climb = Climb(evaluator, objective, search, np.random.default_rng(options.seed))
 
-    first = _candidate(evaluator, objective, content.spells, moves=(), iteration=0)
+    first = _candidate(evaluator, objective, content.documents, moves=(), iteration=0)
     best = first
     history: list[Candidate] = []
     favour: set[str] = set()
@@ -768,8 +769,8 @@ def tune_content(
             best=best,
             initial=first,
             candidates=tuple(history),
-            spells=apply_moves(content.spells, best.moves),
-            files=content.files,
+            documents=apply_moves(content.documents, best.moves),
+            files={**content.files, **content.package_files},
             played=evaluator.plays,
         )
 
@@ -832,7 +833,7 @@ def _neighbours(
         moves = propose(climb.rng, climb.search, best.moves, favour)
         if moves is None:
             continue
-        spells = apply_moves(climb.search.content.spells, moves)
+        spells = apply_moves(climb.search.content.documents, moves)
         played.append(_candidate(climb.evaluator, climb.objective, spells, moves, iteration))
     return played
 
@@ -850,13 +851,13 @@ def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[
     for knob in playable(knobs, content):
         for direction in (1, -1):
             moves = _nudged(knob, (), content, direction)
-            if not moves or violations(content, apply_moves(content.spells, moves), knobs):
+            if not moves or violations(content, apply_moves(content.documents, moves), knobs):
                 continue
             key = tuple(sorted(_values(moves).items()))
             if key in played:
                 continue
             played.add(key)
-            spells = apply_moves(content.spells, moves)
+            spells = apply_moves(content.documents, moves)
             swept.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
     return swept
 
@@ -899,7 +900,7 @@ def _unimproved(swept: Sequence[Candidate], baseline: Candidate) -> list[str]:
     for candidate in swept:
         better = candidate.score < baseline.score
         for move in candidate.moves:
-            helped[move.knob.spell] = helped.get(move.knob.spell, False) or better
+            helped[move.knob.target] = helped.get(move.knob.target, False) or better
     return sorted(name for name, better in helped.items() if not better)
 
 
@@ -926,7 +927,7 @@ def _opened(pairing: Pairing, spells: Sequence[str]) -> list[Opened]:
     """Every legal pair of one spell's knobs, each stepped once in each direction."""
     by_spell: dict[str, list[Knob]] = {}
     for knob in playable(pairing.knobs, pairing.content):
-        by_spell.setdefault(knob.spell, []).append(knob)
+        by_spell.setdefault(knob.target, []).append(knob)
 
     opened: list[Opened] = []
     for spell in spells:
@@ -996,7 +997,7 @@ def _play(pairing: Pairing, pair: Sequence[Knob], direction: int, counts: Sequen
     key = tuple(sorted(_values(moves).items()))
     if key in pairing.played:
         return None
-    spells = apply_moves(pairing.content.spells, moves)
+    spells = apply_moves(pairing.content.documents, moves)
     if violations(pairing.content, spells, pairing.knobs):
         return None
     pairing.played.add(key)
@@ -1080,7 +1081,7 @@ def score_content(evaluator: ContentEvaluator, objective: Objective, content: Co
     evaluator was built with, which is how a proposal and the content it replaced are compared on seeds the
     search that made the proposal never played.
     """
-    metrics = evaluator.evaluate(content.spells)
+    metrics = evaluator.evaluate(content.documents)
     return CatalogueScore(objective.seeds, objective.score(metrics), objective.breakdown(metrics), metrics)
 
 
@@ -1168,7 +1169,7 @@ def format_result(result: TuneResult, objective: Objective) -> str:
 
     inert = result.inert
     if inert:
-        spells = sorted({move.knob.spell for candidate in inert for move in candidate.moves})
+        spells = sorted({move.knob.target for candidate in inert for move in candidate.moves})
         lines.extend(
             [
                 "",
@@ -1290,13 +1291,15 @@ def _band(target: Target) -> str:
 
 def _move_line(move: Move) -> str:
     """One move, named the way the content names it rather than the way the knobs file addresses it."""
-    return (
-        f"{_spell_name(move.knob.spell)} — {_field_name(move.knob.path)}: {move.before:g} -> {move.after:g}"
-    )
+    name, field = _document_name(move.knob.target), _field_name(move.knob.path)
+    return f"{name} — {field}: {move.before:g} -> {move.after:g}"
 
 
-def _spell_name(alias: str) -> str:
-    return alias.removeprefix("spell:").replace("_", " ").title()
+def _document_name(alias: str) -> str:
+    """``spell:throwing_star`` as "Throwing Star", ``tier:plague_doctor`` as "Plague Doctor package"."""
+    kind, _, name = alias.partition(":")
+    readable = name.replace("_", " ").title()
+    return f"{readable} package" if kind == "tier" else readable
 
 
 def _field_name(pointer: str) -> str:
