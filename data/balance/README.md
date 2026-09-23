@@ -169,7 +169,9 @@ its band is at most 0.8 rather than an even split
 eleven packages is mostly noise: a catalogue whose every pair truly splits evenly reads 0.667 at the median,
 because a package bought a few times reads 12 of 16 as easily as 8 of 16. And every package that sells more
 than one spell sells two, so the old band of 0.5 was the floor of each. The bound reads a handful of casts as
-the little it proves; 0.8 is the other spell taking at least one cast in five.
+the little it proves; 0.8 is the other spell taking at least one cast in five. `tierWinSpread` is bounded the
+same way ([ADR 0065](../../docs/adr/0065-read-a-package-win-gap-on-what-its-sides-prove.md)): the lower end of
+the 95 % Newcombe interval of the gap between two win shares, zero when the sides cannot tell it from chance.
 
 The spells of a package are a bundle and not alternatives — one pick buys all of them — so this is not the
 "is it a choice" the tree depth claimed to read. It is the narrower question: did the other spells in the
@@ -279,6 +281,11 @@ Two budget notes the last local pass earned. The climb converged after about ten
 sweep, so 149 of a possible 235 were played and 16 rounds read the same as 24 would have: on this catalogue
 the opening sweep does nearly all the work, and the rounds are not the binding constraint. And the whole pass
 now costs about **28 minutes** where it cost seventy.
+
+Every `tune.json` and every `score.json` carries an `objective` stamp: `metrics`, the last ADR that changed
+how a metric is read (`METRIC_DEFINITIONS`, `adr-0065` today), and `targets`, twelve hex digits of the seed
+file, the evaluations and every band. Two scores are comparable only when both agree, which is what the
+`score` note in `knobs.json` says in prose.
 
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is

@@ -17,6 +17,7 @@ from downfall_learning.artifacts import Evaluation
 from downfall_learning.knobs import Content, Knob, Knobs, Objective, Target, load_knobs
 from downfall_learning.search_weights import EngineCommand, EvaluationError
 from downfall_learning.tune_content import (
+    METRIC_DEFINITIONS,
     Candidate,
     ContentEngine,
     EngineContentEvaluator,
@@ -129,6 +130,14 @@ def test_scoring_a_catalogue_plays_it_once_and_keeps_the_numbers_behind_the_scor
     assert score.metrics == {"mirror": {"averageRounds": 32.0}}
     assert score.breakdown == {"mirror.averageRounds": pytest.approx((16 / 3) ** 2)}
     assert score.score == pytest.approx((16 / 3) ** 2)
+
+
+def test_a_score_says_which_objective_read_it(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+
+    written = score_content(FakeEvaluator(), knobs.objective, catalogue(tmp_path)).to_json()
+
+    assert written["objective"] == {"metrics": METRIC_DEFINITIONS, "targets": knobs.objective.fingerprint}
 
 
 def test_a_score_names_the_seeds_it_was_played_on(tmp_path: Path) -> None:
@@ -396,6 +405,7 @@ def test_the_proposal_is_written_as_the_content_tree_it_came_from(tmp_path: Path
 
     written = json.loads((tmp_path / "out" / "tune.json").read_text())
     assert written["best"]["moves"]
+    assert written["objective"] == {"metrics": METRIC_DEFINITIONS, "targets": knobs.objective.fingerprint}
     # The number the report's first line quotes, so a run directory read later says the same thing.
     assert written["played"] == result.played
     changed = {move["target"] for move in written["best"]["moves"]}
@@ -964,6 +974,33 @@ def test_a_sweep_that_found_fewer_targets_than_it_may_reach_is_not_read_as_weake
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", tier_with(sweep))
 
     assert metrics["tierDamageSpread"] == pytest.approx(1.0)
+
+
+# ADR 0065: the win spread is the lower bound of the gap, so two spells that win alike on a few dozen sides do
+# not read as a gap, and a gap no sample of that size draws by chance still does. The numbers are
+# tier:blightweaver:v1's on the exploring run: 0.659 on 22 sides against 0.148 on 27.
+def test_a_win_gap_the_sides_prove_is_read_at_its_lower_bound() -> None:
+    content, raw = one_tier(**{"spell:big": 22, "spell:small": 27})
+    raw["spellOutcomes"] = [
+        outcome("spell:big:v1", 22, 22, 22) | {"score": 0.659},
+        outcome("spell:small:v1", 27, 27, 27) | {"score": 0.148},
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierWinSpread"] == pytest.approx(0.238, abs=2e-3)
+
+
+def test_a_win_gap_the_sides_cannot_tell_from_chance_reads_zero() -> None:
+    content, raw = one_tier(**{"spell:big": 10, "spell:small": 26})
+    raw["spellOutcomes"] = [
+        outcome("spell:big:v1", 10, 10, 10) | {"score": 0.5},
+        outcome("spell:small:v1", 26, 26, 26) | {"score": 0.385},
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierWinSpread"] == 0.0
 
 
 def test_a_spell_too_few_sides_declared_is_left_out_of_the_win_spread() -> None:
