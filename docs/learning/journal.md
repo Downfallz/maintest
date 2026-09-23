@@ -28,8 +28,9 @@ first.
 
   The 243 points the seat was worth are gone. The largest remaining terms are `variety.tierUsageShare` (35.68)
   and `variety.tierWinSpread` (21.07). The second one grew: a package's win rate on the exploring run now
-  carries the dice as well as the package. `variety.player1WinShare` at 0.445 is 0.005 under its band, about
-  one standard deviation of a share on 400 matches.
+  carries the dice as well as the package. `variety.player1WinShare` at 0.445 is 0.005 under its band, a
+  seventh of a standard deviation: `variety` is self-play, its 400 matches are 200 observations, and one
+  standard deviation near one half is 0.035.
 - **What it means for ADR 0062.** The mirror's seat reading is back in its band, but by chance: the mirror
   plays one board, and a coin now decides it. Reading the seat on the exploring run is still the reading with
   signal, so ADR 0062 stands.
