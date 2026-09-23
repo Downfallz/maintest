@@ -275,7 +275,7 @@ carries and filters the events through `SeatVisibility`. The trace itself is nev
 | Component | Source | Phone rule it owes |
 | --- | --- | --- |
 | Initiative track | `PlayerBoardState.Timeline`, `ActivationSlot` | A horizontal strip, Quick band then Standard, scrolling sideways at 360 px |
-| Creature board | `CreatureSnapshot` (`CreatureSnapshot.cs:21-41`) | **Numbers, not rails**: `14/20` and a bar, never a 21-cell track |
+| Creature board | `CreatureSnapshot` (`CreatureSnapshot.cs:21-41`) | **Numbers, not rails**: `14/30` and a bar, never a 31-cell track |
 | Condition dock | `ConditionSnapshot(Effect, RemainingRounds, Source)`, carried at `CreatureSnapshot.cs:41` | Chips grouped by remaining Rounds; permanent in their own group |
 | Hand and face-down intent | `CreatureSnapshot.KnownSpells` for the hand, `IntentOption.CastableSpells` for what is enabled, `PlayerBoardState.Intents` for the seat's own backs (`PlayerBoardState.cs:40-41`) | The opponent's back is a count and carries no data at all |
 | Talent mat | The bands of stage 3, `KnownSpells` for the pips | **A tab**, not a panel: it is only touched during Evolution |

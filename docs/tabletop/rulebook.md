@@ -1,7 +1,7 @@
 # Downfall Arena: the rulebook
 
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
-2026-09-23). Phase 4 of [plan.md](plan.md).
+2026-09-23, starting Health 30 the same day). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -115,8 +115,9 @@ the critical roll ([6.7](#67-the-critical-roll)) and the Roll-off
 
 Three numbers come from the Creature definition rather than the Rule set, and are printed on the Creature
 board: starting Health, starting Energy, starting Base initiative. The reference Creature definition
-(`data/Creatures/main.v1.json`) is Health 20, Energy 0, Defense 0, Base initiative 5. Its own Critical
+(`data/Creatures/main.v1.json`) is Health 30, Energy 0, Defense 0, Base initiative 5. Its own Critical
 chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's chance off the card alone.
+The Health was 20 until [ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md).
 
 **Every worked example in this book uses the reference column and the reference Creature definition.**
 
@@ -135,7 +136,7 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
    roll in on the Combat timeline.
 4. **Set the rails.** On every Creature board, put the Health marker on the Creature definition's Health, the
    Energy marker on its Energy, both Defense markers on 0, and the Base initiative markers on its Base
-   initiative. Reference: Health 20, Energy 0, Defense 0 and 0, Base initiative 5.
+   initiative. Reference: Health 30, Energy 0, Defense 0 and 0, Base initiative 5.
 5. **Deal the starting Spells.** Every Creature takes one card of each Spell its Creature definition starts
    with, into its Player's concealed hand. Reference: Basic Attack, Heavy Strike, Wait — three cards per
    Creature, nine per Player. The starting Spells belong to no Tier, so no package card records them: they are
@@ -487,7 +488,7 @@ side by side so this is one subtraction, done when a Condition lands, not once p
 > Creature 2 is alive and unstunned, and its Energy rail reads 4. Creature 5 is alive. The action does not
 > Fizzle.
 > Roll for a critical. **It is a critical.** Multiply the damage by the critical multiplier, 2: 10 becomes 20.
-> **Then** subtract Defense: 20 - 3 = 17. Creature 5 goes from 20 Health to 3.
+> **Then** subtract Defense: 20 - 3 = 17. Creature 5 goes from 30 Health to 13.
 > Creature 2's Energy marker goes from 4 to 1.
 > Had the roll missed: 10 - 3 = **7** damage. Had you subtracted first and doubled after:
 > (10 - 3) x 2 = **14**, which is not a number in this game. Multiply first. Subtract second.
@@ -693,8 +694,8 @@ target's total Defense, then floor at zero. Doing it the other way round gives a
 the example in [5.8](#58-action-resolution).
 
 > **Example, a Heal.** Creature 2 casts **Restorative Gush** on Creature 3: `One ally`, `Heal 7`,
-> `Critical 50%  d20: 11+`. Creature 3 is at 8 of 20 Health. The d20 shows 16, a hit: 7 x 2 = 14, and
-> Creature 3 goes to 20. Two of the fourteen are wasted, because a Heal is capped by the Health missing.
+> `Critical 50%  d20: 11+`. Creature 3 is at 18 of 30 Health. The d20 shows 16, a hit: 7 x 2 = 14, and
+> Creature 3 goes to 30. Two of the fourteen are wasted, because a Heal is capped by the Health missing.
 > **Example, what is not multiplied.** Creature 5 casts **Hateful Sacrifice** on Creature 1: `Damage 10` and
 > `Caster: Damage 4`, `Critical 50%  d20: 11+`. The d20 shows 11, a hit. Creature 1 takes 10 x 2 = 20, less
 > its total Defense. Creature 5 takes exactly **4**, less its own total Defense — the `Caster:` line is never

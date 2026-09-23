@@ -238,8 +238,8 @@ The target is a 360 to 400 pixel wide screen held in one hand.
 
 - **One column.** Nothing side by side. The enemy team, the initiative strip, your team, your hand, in that
   order, scrolling.
-- **Numbers, not rails.** A 21-cell Health rail is a cardboard affordance for a marker. On a screen the same
-  information is `14/20` and a bar, and it fits.
+- **Numbers, not rails.** A 31-cell Health rail is a cardboard affordance for a marker. On a screen the same
+  information is `14/30` and a bar, and it fits.
 - **The talent mat is a tab**, not a panel. It is the one component that is A4 portrait
   (components.md:702) and it is only touched during Evolution.
 - **The decision sheet is pinned to the bottom** and sized in `dvh`, so the browser chrome does not eat it.

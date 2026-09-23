@@ -5,9 +5,11 @@ for ADR 0066 the same day). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
-- **Part 1, Part 4 and Part 5 are read at content `4d7a841c`** — the hash
+- **Part 1, Part 4 and Part 5 are read at content `4ab506fa`** — the hash
   `dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst` writes today — with the engine of
-  this branch. That engine includes
+  this branch. They were re-audited at `4d7a841c`, which differs only in a Creature's base Health, 20 there
+  and 30 here ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)); no count in them reads it.
+  That engine includes
   [ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md) (a pick buys a whole Tier; two picks at
   Round 1 and every second Round after; one initiative bonus a purchase),
   [ADR 0057](../adr/0057-a-package-is-authored-not-derived.md) (the 21 Tiers are authored in `data/Tiers`),
@@ -32,7 +34,7 @@ for ADR 0066 the same day). Phase 1 of [plan.md](plan.md).
   run 8, and are left there on purpose: re-reading them is a re-measurement of card text that
   [components.md](components.md) §2.3 owns, and it should be done once, with it. The rules they describe have
   not changed; the catalogue has. Tune run 9 and #172 moved ten Spells since, and on this document's own
-  counting rule the differences at `4d7a841c` are these. Part 2: `EnergyDrain` is 3, not 2 (`soul_devourer`,
+  counting rule the differences at `4ab506fa` are these. Part 2: `EnergyDrain` is 3, not 2 (`soul_devourer`,
   whose damage is 6); `InitiativeDebuff` is 1 for 1 Round (`ice_spear`) and 2 for 2 Rounds
   (`protective_slam`), so "every `InitiativeDebuff` is exactly 2" no longer holds; `mortal_wound`'s Bleed 4
   lasts 1 Round; `pummel` deals 2. Part 3: `throwing_star` is Multi, up to 2 enemies, at cost 2, so it costs
@@ -73,7 +75,7 @@ value off another component. Whether a count is too high is a playtest reading, 
 `RuleSet.Default` (`src/DownfallArena.Domain/Matches/RuleSet.cs:30`): 3 Creatures a Team, 2 Energy a Round,
 2 Evolution picks an opportunity, the first opportunity at Round 1 and one every second Round after, a
 30-Round cap, a critical multiplier of 2.0. One Creature definition, `data/Creatures/main.v1.json`: Health
-20, Energy 0, Defense 0, Base initiative 5, Critical chance 0 (ADR 0042), knowing `basic_attack`,
+30, Energy 0, Defense 0, Base initiative 5, Critical chance 0 (ADR 0042), knowing `basic_attack`,
 `heavy_strike` and `wait`. 21 Tiers in `data/Tiers` (ADR 0057): 3 at level 1 that require nothing and sell 2
 Spells each, 9 at level 2 that sell 1 each, 9 at level 3 that sell 2 each, every one of levels 2 and 3
 requiring exactly one Tier a level below. That is three families of seven: each level-1 Tier opens one, with
@@ -561,7 +563,7 @@ section, in the enum's order (`RoundSubPhase.cs:8-18`): `EnergyGain`, `OngoingEf
 
 **Spells.** All 36 files under `data/Spells/**` appear, each as exactly one row in Part 3: 18 trivially
 playable, 11 needing a component or a second reading, 7 expensive, at `938bef5e`. 18 + 11 + 7 = 36; at
-`4d7a841c` it would be 17 + 12 + 7, `throwing_star` moving (see the top of this document). By Tier level:
+`4ab506fa` it would be 17 + 12 + 7, `throwing_star` moving (see the top of this document). By Tier level:
 3 at 0 (the starting kit), 6 at 1, 9 at 2, 18 at 3, which is what the 21 Tiers sell: 3 x 2, 9 x 1 and 9 x 2.
 
 **Tiers.** All 21 files under `data/Tiers` are read by the Evolution rows of 1.3, which count them by level,

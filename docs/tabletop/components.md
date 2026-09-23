@@ -1,7 +1,8 @@
 # Components and print-and-play
 
 Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
-question 14, 2026-09-23, and to one package a Creature an opportunity the same day). Phase 3 of
+question 14, 2026-09-23, to one package a Creature an opportunity the same day, and to 30 Health the same
+day again). Phase 3 of
 [plan.md](plan.md). It answers the **needs a component** rows of [translation.md](translation.md) and specifies
 a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -18,8 +19,11 @@ What is current, exactly:
 - **A timeline tie is rolled off on a d20** between the sides, and each Player orders their own tied Creatures
   ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). The Creature number breaks no tie. It
   names the Creature, and it fixes the order tied Creatures roll in.
-- **Every count is read at content `4d7a841c`** and the schedule in `docs/tabletop/playtest.rules.json`.
-  Re-run the commands when the hash moves.
+- **Every count is read at content `4ab506fa`** and the schedule in `docs/tabletop/playtest.rules.json`.
+  Re-run the commands when the hash moves. `4ab506fa` is `4d7a841c` with a Creature's base Health at 30
+  rather than 20 ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)). What that moved is the
+  Health rail ([1.3](#13-stat-markers-and-the-rails-they-ride), [3.1](#31-the-creature-board)) and the reach
+  of the Bleed supply ([1.4](#14-condition-tokens)); no piece count moved.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -72,7 +76,7 @@ The board this manifest is built on, and the commands that read it:
 ```bash
 grep -n 'Default {' src/DownfallArena.Domain/Matches/RuleSet.cs   # new(3, 2, 2, 30, 2.0, 1, 2)
 cat docs/tabletop/playtest.rules.json                             # the table's rule set: the same, with a 12-Round cap
-cat data/Creatures/main.v1.json                                   # Health 20, Energy 0, Defense 0, Base initiative 5
+cat data/Creatures/main.v1.json                                   # Health 30, Energy 0, Defense 0, Base initiative 5
 find data/Spells -name '*.json' | wc -l                           # 36
 ls data/Tiers/*.json | wc -l                                      # 21, none disabled
 ```
@@ -134,7 +138,7 @@ paper from 47 to **49** sheets.
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Spell card | **216** = 36 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell a Tier teaches: a package's prerequisites are the only rule, so multiclassing is free (ADR 0056), and both Players play the same Creature definition. Six copies is the ceiling. A Spell that is neither in the starting kit nor taught by an enabled Tier can never be known, and gets **no** copy; at `4d7a841c` there is none, so all 36 are printed. | 36 is a **VALUE** (content: 3 starting, 33 taught); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per Creature that could know it is a **RULE** |
+| Spell card | **216** = 36 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell a Tier teaches: a package's prerequisites are the only rule, so multiclassing is free (ADR 0056), and both Players play the same Creature definition. Six copies is the ceiling. A Spell that is neither in the starting kit nor taught by an enabled Tier can never be known, and gets **no** copy; at `4ab506fa` there is none, so all 36 are printed. | 36 is a **VALUE** (content: 3 starting, 33 taught); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per Creature that could know it is a **RULE** |
 | Package card | **126** = 21 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a level-3 Tier costs a Creature 3 purchases at 3 opportunities, 9 for a whole Team, inside the 16 a Player makes in 16 Rounds. So all six Creatures can own the same Tier in one Match. 126 is exactly 14 sheets. | 21 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
 
 What a Match actually consumes is smaller, and it is the number the open question in Part 6 is about. The
@@ -188,7 +192,7 @@ counts and the ends.
 
 | Rail | Markers | Where it ends, and why | Follows |
 | --- | --- | --- | --- |
-| Health | 6 | 0 to 20. `baseHealth` is 20 and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:271`), so nothing goes above it. | **VALUE** (`baseHealth`) |
+| Health | 6 | 0 to 30, in two rows. `baseHealth` is 30 (ADR 0068; it was 20) and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:271`), so nothing goes above it. One row of 31 cells is 155 mm, past the 95 mm a board row holds ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)), so it runs 0 to 15 and 16 to 30, like the Energy rail. | **VALUE** (`baseHealth`) |
 | Energy | 6 | 0 to 32. See [1.7](#17-the-energy-track-what-ends-it). | **VALUE** (`EnergyPerRound`) x **RULE** (16 Rounds) |
 | Defense buffs | 6 | 0 to 20. See [3.3](#33-defense-two-rails-because-the-floor-is-applied-once). | **VALUE** (the largest Damage, the critical multiplier) |
 | Defense debuffs | 6 | 0 to 20, the same reason mirrored. | **VALUE** |
@@ -245,11 +249,15 @@ at `4d7a841c` (`ice_spear` was -2 when this table was first read), and it is the
 144 to 150.
 
 **The supply is one Round at the maximum rate, and Durations run to 3.** A Bleed from `summon_minions` lives 3
-Rounds, so the rule's own ceiling is three times the table above for that face: 54 Bleed-2 tokens. It is
-unreachable at this Health scale - 9 Bleeds of 2 on one Creature is 18 damage a Round against 20 Health, and
-Bleed ignores Defense - but the engine has no cap, so the rulebook carries the standard supply escape: **a
-supply that runs out is replaced by a blank token with the value written on it; the game has no maximum.**
-20 blanks are in the box for that. Part 6, question 5.
+Rounds, so the rule's own ceiling is three times the table above for that face: 54 Bleed-2 tokens. To reach
+it, all six Creatures cast `summon_minions` on all three enemies three Rounds running, and each Creature ends
+up carrying 9 Bleeds of 2. By the third cast each has taken 6 + 12 in ticks and 6 from its own `Caster:`
+lines: 24, and Bleed ignores Defense. At 20 Health, with nothing healed, that killed every Creature before
+the third cast, so the ceiling was unreachable. **At 30 Health it is reachable**, but only if both Players
+play that line together, and then every Creature dies to the next Round's 18 in ticks. The engine has no
+cap either way, so the rulebook carries the standard supply escape: **a supply that runs out is replaced by a
+blank token with the value written on it; the game has no maximum.** 20 blanks are in the box for that, which
+is 16 short of that ceiling. Part 6, question 5.
 
 ### 1.5 The rest of the pieces
 
@@ -286,7 +294,7 @@ print(sorted(v.items()))"
 #  (0.617, 1), (0.75, 1), (0.767, 1), (0.8, 1)]
 ```
 
-**21 of 36 Spells roll. 15 never touch a die.** Thirteen distinct chances are printed at content `4d7a841c`,
+**21 of 36 Spells roll. 15 never touch a die.** Thirteen distinct chances are printed at content `4ab506fa`,
 and the die's grid has to carry them. The table below is a reading, not a constant — the maintainer is tuning,
 so re-run the command rather than trusting the cells. What each candidate costs, snapping each of the 21 to
 the nearest face:
@@ -390,7 +398,7 @@ Everything needed to resolve a cast without the rulebook. Each line names the fi
 | --- | --- | --- | --- |
 | Head | Name | `name` | |
 | Head | Energy cost, as a numeral in a filled circle | `energyCost` | An Intent is only legal if the Creature can afford it (`IntentRules.cs:50-69`), checked against a public Energy rail |
-| Head | Every package that teaches it, with its level: `Lich . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `4d7a841c` every head names one |
+| Head | Every package that teaches it, with its level: `Lich . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `4ab506fa` every head names one |
 | Body | Targeting, one line | `targeting.origin`, `scope`, `maxTargets` | Origin, scope and count are one sentence: `Self`, `One enemy`, `One ally`, `Up to 2 enemies`, `Up to 3 allies` |
 | Body | One line per effect, with its amount and Duration | `effects[]` | |
 | Body | One line per caster effect, prefixed `Caster:` and set below a rule | `casterEffects[]` | ADR 0031: once per cast, never multiplied, none of them on a Fizzle. Seven Spells carry one, and it must not read as a target effect |
@@ -407,7 +415,7 @@ kept printing them would teach two rules the game does not have. The table app's
 (`CardFace`, `table/card.js`).
 
 The head used to print the Spell's `creatureClass`. It does not: the class names are the talent tree's, the
-package names are the Tiers', and at `4d7a841c` they disagree on 29 of the 33 taught Spells. Some collide:
+package names are the Tiers', and at `4ab506fa` they disagree on 29 of the 33 taught Spells. Some collide:
 `tornado` is authored under the class `Berserker`, and the `Berserker` package does not teach it (`Ravager`
 does). A Spell card that says `Berserker` and a package card that says `Berserker` must mean the same
 package. The table app still prints the class; Part 6, question 10.
@@ -586,7 +594,7 @@ over.
 The head line is the whole of what the card says about acquiring the Spell: which package to buy, and how
 deep it sits. `Dreadnought . level 3` does not say what Dreadnought needs first or what it pays in initiative;
 the Dreadnought package card does, once, for both of the Spells it teaches. The longest head line
-at `4d7a841c` is `Plague Doctor . level 2` (23 characters), inside the 38 a line holds.
+at `4ab506fa` is `Plague Doctor . level 2` (23 characters), inside the 38 a line holds.
 
 ### 2.6 The Speed card
 
@@ -644,7 +652,8 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 +-----------------------------------------------+
 | [1]  Main                          Creature   |   the Creature's number: no tiebreak, see below
 |-----------------------------------------------|
-| Health   0 1 2 3 4 ............ 18 19 20      |   one rail, one marker
+| Health   0 1 2 ................ 14 15         |   two rows, one marker, ends at 30
+|          16 17 ................ 29 30         |
 | Energy   0 1 2 ................ 15 16         |   two rows, one marker, ends at 32
 |          17 18 ................ 31 32   [+32] |   the overflow chit's place
 |-----------------------------------------------|
@@ -665,7 +674,7 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 | Affordance | The rule it enforces, so nobody has to remember it |
 | --- | --- |
 | The number 1 to 6 in the corner | It names the Creature: on its initiative marker, on its target markers and in the `Targeted by` row. Ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 Roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
-| The Health rail ending at 20 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
+| The Health rail ending at 30 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
 | The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
 | A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a purchase moves off the mat lies on the buyer's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
@@ -763,7 +772,7 @@ Prowler up. It reads the same prerequisite-closed sets as the Base ceiling, so i
 
 A rail to 29 is 30 cells and 150 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 2
 and units 0 to 9, are 13 cells** and read as one two-digit number. The print constraint is the board's 95 mm
-of usable width; the rule is the ceiling of 29. A bonus is 0 to 5 at `4d7a841c`, so a purchase is one marker
+of usable width; the rule is the ceiling of 29. A bonus is 0 to 5 at `4ab506fa`, so a purchase is one marker
 move on the units rail, sometimes carrying into the tens rail.
 
 The tens rail is a **VALUE** twice over. The bonuses are balance knobs now (ADR 0061), and
@@ -906,7 +915,7 @@ An A4 landscape mat a Player, three columns, one a Creature:
 ## Part 4. The packages as an object
 
 A pick buys a Tier: a named package of Spells with a level, the Tiers it requires, and one initiative bonus
-(ADR 0056). 21 are enabled at `4d7a841c`: 3 at level 1, 9 at level 2, 9 at level 3. Each level-2 package
+(ADR 0056). 21 are enabled at `4ab506fa`: 3 at level 1, 9 at level 2, 9 at level 3. Each level-2 package
 requires one level-1 package and each level-3 package requires one level-2 package, so the 21 form three
 families of seven, one opened by each level-1 package. **Prerequisites are the only rule**: the talent tree
 gates nothing, and multiclassing is free, so a Creature may own packages from all three families. A Creature
@@ -954,7 +963,7 @@ What each piece of the layout answers:
 | `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature. A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-The measurement, at `4d7a841c`:
+The measurement, at `4ab506fa`:
 
 ```bash
 python3 -c "
@@ -985,11 +994,11 @@ order**, the order of rulebook §5.3:
 2. **Spell cards.** Take one copy of each Spell the package card names from the library into the hand. The
    library is the 216 Spell cards filed by the first package in their head, six copies of each Spell
    together. A Spell the Creature already knows is not taken again (ADR 0056: the grant is idempotent). At
-   `4d7a841c` no Spell is taught by two Tiers, so this never happens, but authored content may make it
+   `4ab506fa` no Spell is taught by two Tiers, so this never happens, but authored content may make it
    happen, and [2.1](#21-what-is-printed-and-where-it-comes-from) says what that card's head prints.
 3. **Initiative.** Move that Creature's Base initiative rails up by the card's bonus. **This is the only
    place Base initiative ever moves** (ADR 0056), which is why the package card prints it and no Spell card
-   does. Values at `4d7a841c` are 0 to 5, so it is one marker move on the units rail, sometimes carrying into
+   does. Values at `4ab506fa` are 0 to 5, so it is one marker move on the units rail, sometimes carrying into
    the tens rail.
 
 Rules of the sub-phase that the components carry rather than the rulebook:
@@ -1041,9 +1050,9 @@ is the whole reason phase 3 specifies a generator instead of a table of card tex
 ### 5.2 Outputs
 
 - **Card sheets**: every Spell face that some Creature could know - a starting Spell, or one an enabled Tier
-  teaches - repeated 2 x team size times, laid out 9 to a sheet. 36 faces and 216 cards at `4d7a841c`.
+  teaches - repeated 2 x team size times, laid out 9 to a sheet. 36 faces and 216 cards at `4ab506fa`.
 - **Package card sheets**: every enabled Tier's face, repeated 2 x team size times, 9 to a sheet. 21 faces
-  and 126 cards, 14 sheets, at `4d7a841c`.
+  and 126 cards, 14 sheets, at `4ab506fa`.
 - **Speed card sheets**: the Quick face and the Standard face of [2.6](#26-the-speed-card), each repeated 2 x
   team size times, 9 to a sheet. 12 cards, 2 sheets. The rule set gives the count; the content gives nothing
   but the hash.
@@ -1160,11 +1169,14 @@ own grid contains no multiple of 0.05. Both are content changes with a journal e
   catalogue number 1 to 36). 36 cards, and the Intent stops being a card: every declaration becomes a lookup,
   and the thing that translates best in the whole game is the thing that gets worse.
 
-### 3. Health is 20 and moving
+### 3. Health is 30 and moving
 
-The Health rail is printed 0 to 20 from `baseHealth`. A balancing pass that moves it reprints six boards.
-Print the rail to 20 now, or print it to 30 with the space past 20 shaded, so a rebalance inside that range is
-a setup note rather than a reprint? The second costs 30 mm of board width it has nothing else to do with.
+The Health rail is printed 0 to 30 from `baseHealth`, in two rows. The move this question warned of has
+happened once: ADR 0068 took `baseHealth` from 20 to 30. Nothing was printed yet, so it cost an edit and not
+six boards; the shaded rail to 30 this question offered would have absorbed it. ADR 0068 measured 20 to 40
+and chose 30 as the lowest value inside its band, so a later move up is possible. Print the rail to 30 now,
+or to 40 with the space past 30 shaded? Two rows to 40 are 21 cells, 105 mm, past the 95 mm a row holds, so
+the second costs a third row of board height, which question 15 is already short of.
 
 ### 4. The energy overflow chit
 
@@ -1175,11 +1187,12 @@ should the box carry the theoretical rate (14 a Round, so 7 chits a Creature) an
 ### 5. The condition supply, and what a supply that runs out means
 
 The supplies in [1.4](#14-condition-tokens) are **one Round at the maximum rate**. The rule's own ceiling is up
-to three times that for the Durations over one Round - 54 Bleed-2 tokens - which the Health scale makes
-unreachable but the rules do not forbid. Three answers: print one Round's worth and carry the blank-token
-escape (this manifest); print the rule's ceiling - each face's supply times its own longest Duration, which
-is 216 condition tokens - and one more sheet; or bound the rule, which is an engine change and belongs to ADR
-candidates 2 and 3, not here.
+to three times that for the Durations over one Round - 54 Bleed-2 tokens - which 20 Health made
+unreachable and 30 does not ([1.4](#14-condition-tokens)), though only if both Players play for it. The
+20 blanks cover 20 of the 36 tokens past that supply. Three answers: print one Round's worth and carry the
+blank-token escape (this manifest); print the rule's ceiling - each face's supply times its own longest
+Duration, which is 216 condition tokens - and one more sheet; or bound the rule, which is an engine change and
+belongs to ADR candidates 2 and 3, not here.
 
 ### 6. Where the rule set comes from
 
@@ -1310,6 +1323,12 @@ Question 14's answer adds to it on the board and not on the mat. The Speed slot 
 landscape, 90 x 65 mm, so a board has 65 mm less height for its rails, its dock and its `Targeted by` row
 ([3.1](#31-the-creature-board)): on the A6 board that is 44% of it, on an A5 board 31%. The card a Player keeps
 goes in the concealed hand, so the player area holds nothing new.
+
+ADR 0068 adds to it on the board too. The Health rail runs 0 to 30 in two rows
+([1.3](#13-stat-markers-and-the-rails-they-ride)), so the board gives one more row to its rails. The rail at 20
+did not fit either: one row of 21 cells is 105 mm at the 5 mm a cell of
+[3.4](#34-initiative-two-small-rails-instead-of-one-long-one), past the 95 mm a row holds, and the drawing in
+[3.1](#31-the-creature-board) did not say so. The player area and the counts in Part 1 are unchanged.
 
 ---
 
