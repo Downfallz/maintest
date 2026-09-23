@@ -39,9 +39,14 @@ reported; only the target moves.
 - Bad: every score before this is incomparable with every score after it, the third time the `score` note in
   `knobs.json` records it. The readings in earlier ADRs and journal entries keep their meaning for the runs
   they describe.
-- Bad: the exploring run is noisier. On 400 matches one standard deviation of a share near one half is about
-  0.025, half the band's half-width. It read 0.44 to 0.495 on the five catalogues — inside the band on four,
-  0.01 below it on the fifth for a penalty of 0.12.
+- Bad: the exploring run is noisier, and less of it is independent than its match count says. `variety` is
+  self-play, so its second batch replays the first with the same seeds (`EvaluationRunner`): 400 matches are
+  200 observations, and one standard deviation of a share near one half is about 0.035, seven tenths of the
+  band's half-width. A catalogue with no seat advantage at all reads outside the band about one time in six,
+  and the penalty it pays there is small, 0.12 at 0.01 outside. That is noise the tuner can select on, and
+  the band stays at 0.05 anyway: at the weight of 3 it moves a score by tenths of a point where the terms
+  that matter move it by tens, and widening it would hide a real advantage of the same size. It read 0.44 to
+  0.495 on the five catalogues — inside the band on four, 0.01 below it on the fifth.
 - Neutral, and open: the rule underneath is untouched. Under packages initiative moves in lumps and ties
   between two sides are common, and a tie always goes to Player 1. On divergent play the seat reads 0.44 to 0.50
   on `variety` and 0.49 to 0.50 on `skill`, so it does not decide matches the way it decides the mirror. Whether
