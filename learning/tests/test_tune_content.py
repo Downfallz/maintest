@@ -868,7 +868,7 @@ def test_a_tier_one_spell_monopolises_is_named_even_when_it_is_small_overall() -
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
 
     assert metrics["spellUsageShare"] == pytest.approx(0.9)
-    assert metrics["tierUsageShare"] == pytest.approx(1.0)
+    assert metrics["tierUsageShare"] == pytest.approx(0.963, abs=1e-3), "100 of 100, read as its sample shows"
 
 
 def test_damage_per_cast_is_compared_only_inside_a_tier_and_only_between_damaging_spells() -> None:
@@ -1451,7 +1451,25 @@ def test_a_package_of_two_whose_second_spell_was_never_cast_still_reports_its_mo
 
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
 
-    assert metrics["tierUsageShare"] == pytest.approx(1.0)
+    assert metrics["tierUsageShare"] == pytest.approx(0.992, abs=1e-3)
+
+
+# ADR 0064: the reading is the lower Wilson bound of the share, so a package bought a few times is not the
+# worst package by noise. 12 of 16 is the raw 0.75 a balanced pair reads one time in five; its bound is 0.505.
+def test_a_package_read_on_a_handful_of_casts_is_read_as_the_little_it_proves() -> None:
+    content, raw = one_tier(**{"spell:big": 12, "spell:small": 4})
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierUsageShare"] == pytest.approx(0.505, abs=1e-3)
+
+
+def test_the_same_split_on_many_casts_is_read_close_to_the_split_itself() -> None:
+    content, raw = one_tier(**{"spell:big": 1200, "spell:small": 400})
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierUsageShare"] == pytest.approx(0.728, abs=1e-3)
 
 
 PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"], "initiativeBonus": 2}

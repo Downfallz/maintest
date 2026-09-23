@@ -89,6 +89,38 @@ public sealed class TimelineBuilderTests
         timeline.Slots.Select(slot => slot.Creature).ShouldBe([Arena.Wraith, Arena.Ghoul, Arena.Archer, Arena.Knight]);
     }
 
+    /// <summary>
+    /// The dice travel with the order they made, every roll a creature made in the order it made them, so a
+    /// table can show why the order is what it is. Listed in timeline order; a creature that did not roll is
+    /// not listed.
+    /// </summary>
+    [Fact]
+    public void The_timeline_carries_every_roll_that_decided_it()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+
+        var timeline = TimelineBuilder.Build(creatures, AllQuick(), new ScriptedRolls(10, 10, 4, 10, 2, 18, 11));
+
+        timeline.RollOffs.Select(rollOff => rollOff.Creature).ShouldBe([Arena.Archer, Arena.Wraith, Arena.Knight, Arena.Ghoul]);
+        timeline.RollOffs.Single(rollOff => rollOff.Creature == Arena.Knight).Rolls.ShouldBe([10, 2]);
+        timeline.RollOffs.Single(rollOff => rollOff.Creature == Arena.Ghoul).Rolls.ShouldBe([4]);
+    }
+
+    [Fact]
+    public void A_timeline_with_no_tie_between_the_sides_carries_no_roll()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+
+        var timeline = TimelineBuilder.Build(creatures,
+        [
+            new SpeedChoice(Arena.Knight, Speed.Quick),
+            new SpeedChoice(Arena.Archer, Speed.Quick),
+            new SpeedChoice(Arena.Ghoul, Speed.Standard),
+        ], new ScriptedRolls());
+
+        timeline.RollOffs.ShouldBeEmpty();
+    }
+
     [Fact]
     public void Creatures_that_roll_the_same_number_roll_again_among_themselves()
     {

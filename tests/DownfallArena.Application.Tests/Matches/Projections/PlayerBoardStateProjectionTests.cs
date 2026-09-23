@@ -61,6 +61,22 @@ public sealed class PlayerBoardStateProjectionTests
         player2.Timeline.ShouldBe(player1.Timeline);
     }
 
+    /// <summary>The dice behind the order are public, like the order: both seats see the same rolls (ADR 0063).</summary>
+    [Fact]
+    public void The_rolls_behind_the_timeline_are_public()
+    {
+        var match = new MatchStore().Started();
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+
+        var player1 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+        var player2 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player2);
+
+        player1.RollOffs.Select(rollOff => rollOff.Creature).ShouldBe(player1.Timeline.Select(slot => slot.Creature));
+        player1.RollOffs.Select(rollOff => rollOff.Rolls.Single()).ShouldBe([20, 19, 18, 17], "the fixture's dice count down, so the first to roll takes the first place");
+        player2.RollOffs.ShouldBe(player1.RollOffs);
+    }
+
     [Fact]
     public void Revealed_actions_and_cursors_are_public()
     {

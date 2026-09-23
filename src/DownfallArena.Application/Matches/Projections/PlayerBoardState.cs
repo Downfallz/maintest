@@ -48,6 +48,9 @@ public sealed record PlayerBoardState
 
     public IReadOnlyList<ActivationSlot> Timeline { get; init; } = [];
 
+    /// <summary>The d20 rolls behind the timeline's ties, public like the timeline (ADR 0063).</summary>
+    public IReadOnlyList<RollOff> RollOffs { get; init; } = [];
+
     /// <summary>The actions revealed so far this round, in timeline order; public to both players.</summary>
     public IReadOnlyList<CombatAction> RevealedActions { get; init; } = [];
 
