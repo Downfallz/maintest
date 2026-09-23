@@ -428,8 +428,9 @@ project as a module (`python -m downfall_learning.cli`), the way
 so its console scripts are not on the path there.
 
 `report.json` holds the run's stamp and, per evaluation, the agents, the matches, and the metrics: `winRateA`
-with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when the
-agents are identical), `drawRate`, `averageRounds`, `roundCapShare`, `spellEntropyA`/`B`, `fizzleRateA`/`B`.
+with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when both
+sides play equally well *and* their play diverges -- not on two identical deterministic agents, which buy the
+same packages, tie on every initiative and hand every tie to player 1, ADR 0062), `drawRate`, `averageRounds`, `roundCapShare`, `spellEntropyA`/`B`, `fizzleRateA`/`B`.
 These are the balance signals the roadmap asks the loop to show every time. `report --against <run>` adds the
 deltas for every evaluation both runs hold and lists the stamp axes that differ (content, engine, rules,
 schema); agents and seeds are expected to differ between evaluations and are not axes of a report.

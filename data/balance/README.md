@@ -34,7 +34,7 @@ The decision behind all of this is [ADR 0021](../../docs/adr/0021-tune-the-catal
 
 ## Why it exists
 
-The loop already measures everything a balance pass needs: player 1's share of a mirrored run, average
+The loop already measures everything a balance pass needs: player 1's share of an evenly matched run, average
 rounds, the share ending at the round cap, spell usage and its entropy, the fizzle rate
 (`docs/learning/training.md`). What it has no way to know is that Psycho Rush is meant to be the Berserker's
 all-in and Wait is meant to stay worse than acting. Without that, an optimizer that only chases the metrics
@@ -112,8 +112,10 @@ score = sum over targets of  weight * (distance outside the band / scale) ** 2
 
 Zero is on target and lower is better. A metric no evaluation measured is listed as missing rather than
 counted as zero. Four evaluations are played on the benchmark seeds. `mirror` (greedy against greedy) reads
-who wins, how long a match lasts and how often it runs out of rounds, with skill held equal. `variety`
-(`explore:0.2` against itself) reads whether the content offers a choice. `skill` (greedy against random)
+how long a match lasts and how often it runs out of rounds, with skill held equal. `variety`
+(`explore:0.2` against itself) reads whether the content offers a choice, and since ADR 0062 who wins it:
+under packages the greedy mirror ties every initiative and gives the tie to the seat, so Player 1 took 400 of
+400 there whatever the content, and the seat question is only answerable where the two sides diverge. `skill` (greedy against random)
 checks that the content still rewards playing well. `exploit` (a panel of searched weights files against
 greedy) reads how far a player who only wants to win gets against the way the game is meant to be played —
 scored on **how fast** the best of the panel closes it out, since 2026-09-17, because whether it wins at all
