@@ -108,7 +108,11 @@ the match's own rules on them, so the agent can put a move on the board and keep
   decides whenever the round cannot: when the guessed slots have the actor dead or stunned before its own,
   every candidate leaves the same round, and the choice still matters in every world where the guess is
   wrong. Without it the tie went to the first spell in id order, and the weakest spell in the catalogue was
-  cast three times as often as Greedy casts it.
+  cast three times as often as Greedy casts it. The same holds when the guess leaves the actor too drained to
+  pay for any spell that costs energy: only a free spell still resolves, and it would win by what it gives in
+  the one world the guess describes. When every paid candidate is stopped at the actor's slot -- dead,
+  stunned or short of energy -- the one-step reading decides outright. Without it the lookahead cast Wait 248
+  times in 400 matches against Greedy, which casts it once.
 - **The actor's critical roll** is weighted the way the scorer weights it: the round is played once on a
   forced critical and once on a miss, and the two are mixed by the actor's chance for that spell. Every
   other creature's roll is a miss, which keeps the cost at two rounds per candidate. On a miss alone, a spell
