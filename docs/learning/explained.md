@@ -253,17 +253,17 @@ is not a choice.
 ### Reading one target
 
 ```json
-{ "metric": "averageRounds", "on": "mirror", "min": 8, "max": 16, "scale": 3, "weight": 2 }
+{ "metric": "averageRounds", "on": "mirror", "min": 10, "max": 15, "scale": 3, "weight": 2 }
 ```
 
 - **metric** — the number being watched. Here, how many rounds a match lasts on average.
 - **on** — which match-up it is read from. `mirror` is the bot against itself, which is how you look at the
   content with skill held equal.
-- **min / max — the band.** Anywhere between 8 and 16 rounds is fine. Inside the band, this target costs
-  nothing at all: there is no prize for being in the middle.
+- **min / max — the band.** Anywhere between 10 and 15 rounds is fine (ADR 0068). Inside the band, this
+  target costs nothing at all: there is no prize for being in the middle.
 - **scale** — how much being outside the band hurts. It is the amount of "outside" that counts as one unit
-  of pain. Here one unit is 3 rounds, so a match averaging 11 rounds is fine, 19 rounds is one unit out,
-  22 rounds is two.
+  of pain. Here one unit is 3 rounds, so a match averaging 12 rounds is fine, 18 rounds is one unit out,
+  21 rounds is two.
 - **weight** — how much this target matters against the others. Two targets, same distance outside, the one
   with twice the weight complains twice as loud.
 

@@ -4,7 +4,7 @@ using DownfallArena.Domain.Matches;
 namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
-/// The rule set a table plays is an input, never a silent default: the board game is balanced for 8 to 16
+/// The rule set a table plays is an input, never a silent default: the board game is balanced for 10 to 15
 /// rounds and the engine's default caps at thirty, so a table that quietly took one would be a playtest of a
 /// different game (docs/tabletop/playtest-app.md, decision 2).
 /// </summary>

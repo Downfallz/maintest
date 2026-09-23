@@ -76,7 +76,7 @@ internal sealed record CliOptions
     public bool Player2Named { get; init; }
 
     /// <summary>
-    /// The rule set a table plays, as a path. The board game is balanced for 8 to 16 rounds and the engine's
+    /// The rule set a table plays, as a path. The board game is balanced for 10 to 15 rounds and the engine's
     /// default is thirty, so a playtest that quietly took the default would be a playtest of another game.
     /// </summary>
     public string? Rules { get; init; }

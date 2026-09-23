@@ -7,7 +7,7 @@ namespace DownfallArena.Cli.Table;
 /// The rule set a table plays, read from a file.
 /// </summary>
 /// <remarks>
-/// The tabletop rule set is not the simulator's: the board game is balanced for 8 to 16 rounds, and a playtest
+/// The tabletop rule set is not the simulator's: the board game is balanced for 10 to 15 rounds, and a playtest
 /// run on the engine's thirty-round default is a playtest of a different game (<c>docs/tabletop/plan.md</c>).
 /// Where that file should come from is an open question — the content hash does not cover the rule set, so a
 /// session is only reproducible against a hash *and* a rule set (<c>docs/tabletop/components.md</c>, question
