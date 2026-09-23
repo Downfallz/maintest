@@ -131,18 +131,20 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         // Resolved before the round records the pick: an unknown id would throw, and half a mutation is worse
-        // than a refusal. Unreachable while ValidateChoice only passes spells the talent tree names.
-        var spell = _resources.GetSpell(choice.Spell);
+        // than a refusal. Unreachable while ValidateChoice only passes packages the catalogue holds.
+        var tier = _resources.GetTier(choice.Tier);
         var accepted = round.SubmitEvolutionChoice(slot, choice);
         if (accepted.IsFailure)
         {
             return accepted;
         }
 
-        var unlocked = CreatureOf(choice.Creature).UnlockSpell(spell);
-        if (unlocked.IsFailure)
+        // The whole package or none of it: BuyTier checks everything before it changes anything, so a refusal
+        // here would mean the validation and the entity disagree, which is a bug rather than a rule.
+        var bought = CreatureOf(choice.Creature).BuyTier(tier);
+        if (bought.IsFailure)
         {
-            throw new InvalidOperationException($"Creature {choice.Creature} refused a validated unlock: {unlocked.Error.Message}");
+            throw new InvalidOperationException($"Creature {choice.Creature} refused a validated purchase: {bought.Error.Message}");
         }
 
         RaiseDomainEvent(new EvolutionChoiceSubmitted(Id, round.Id, slot, choice));
@@ -195,6 +197,37 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         RaiseDomainEvent(new SpeedChoiceSubmitted(Id, round.Id, slot, choice));
+        Drive();
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Orders the player's own tied creatures among the places their side won in the roll-off (ADR 0063).
+    /// </summary>
+    public Result SubmitTieOrder(PlayerSlot slot, IReadOnlyList<CreatureId> order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        var open = RequireSubPhase(RoundSubPhase.TieOrder, RoundErrors.TieOrderNotOpen);
+        if (open.IsFailure)
+        {
+            return open;
+        }
+
+        var round = ActiveRound;
+        var validated = TieOrderRules.ValidateOrder(slot, order, round.Timeline);
+        if (validated.IsFailure)
+        {
+            return validated;
+        }
+
+        var accepted = round.SubmitTieOrder(slot, order);
+        if (accepted.IsFailure)
+        {
+            return accepted;
+        }
+
+        RaiseDomainEvent(new TieOrderSubmitted(Id, round.Id, slot, [.. order]));
         Drive();
         return Result.Success();
     }
@@ -272,7 +305,11 @@ public sealed class Match : AggregateRoot<MatchId>
 
         var round = ActiveRound;
         var action = round.NextActionToResolve();
-        var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, RuleSet, _random);
+        // Every creature on the timeline chose a speed in planning, so the lookup cannot miss: an action is
+        // only ever resolved for a slot the timeline holds, and a slot is only built from a speed choice.
+        var speed = round.SpeedChoiceOf(action.Actor)?.Speed
+            ?? throw new InvalidOperationException($"Actor {action.Actor} is resolving an action without a speed choice.");
+        var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, RuleSet, _random, speed);
         var applied = CombatExecution.Apply(resolution, Creatures);
         round.MarkActionResolved();
         RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied));
@@ -349,6 +386,7 @@ public sealed class Match : AggregateRoot<MatchId>
             RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
+            RoundSubPhase.TieOrder => TieOrderRules.Evaluate(round).CanAdvance && Automatic(() => ApplyTieOrders(round)),
             RoundSubPhase.IntentSelection => AdvanceIf(IntentRules.Evaluate(round).CanAdvance),
             RoundSubPhase.RevealAndTarget => AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
             RoundSubPhase.ActionResolution => AdvanceIf(round.IsCombatResolved),
@@ -386,9 +424,21 @@ public sealed class Match : AggregateRoot<MatchId>
     private void BuildTimeline()
     {
         var round = ActiveRound;
-        var timeline = TimelineBuilder.Build(Snapshots(), round.SpeedChoices);
+        var timeline = TimelineBuilder.Build(Snapshots(), round.SpeedChoices, _random);
         round.SetTimeline(timeline);
         RaiseDomainEvent(new TimelineBuilt(Id, round.Id, timeline));
+    }
+
+    private void ApplyTieOrders(Round round)
+    {
+        if (round.TieOrders.Count == 0)
+        {
+            return;
+        }
+
+        var timeline = TieOrderRules.Apply(round.Timeline, round.TieOrders);
+        round.ReorderTimeline(timeline);
+        RaiseDomainEvent(new TiesOrdered(Id, round.Id, timeline));
     }
 
     private bool FinalizeRound()

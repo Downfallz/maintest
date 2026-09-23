@@ -31,7 +31,7 @@ public sealed class SeatVisibilityTests
             .Where(type => type is { IsAbstract: false, IsInterface: false } && typeof(IMatchEvent).IsAssignableFrom(type))
             .ToList();
 
-        events.Count.ShouldBe(15, "the domain has gained or lost an event; classify it in SeatVisibility");
+        events.Count.ShouldBe(17, "the domain has gained or lost an event; classify it in SeatVisibility");
         SeatVisibility.Classified.ShouldBe(events, ignoreOrder: true);
     }
 
@@ -56,13 +56,26 @@ public sealed class SeatVisibilityTests
     }
 
     /// <summary>
+    /// A tie order is hidden while the other player may still be ordering theirs (ADR 0063). The timeline it
+    /// produces is public, and walked with the other public events below.
+    /// </summary>
+    [Fact]
+    public void A_tie_order_is_seen_by_the_seat_that_gave_it_and_by_nobody_else()
+    {
+        var order = new TieOrderSubmitted(Match, Round, PlayerSlot.Player1, [Creature]);
+
+        SeatVisibility.CanSee(order, PlayerSlot.Player1).ShouldBeTrue();
+        SeatVisibility.CanSee(order, PlayerSlot.Player2).ShouldBeFalse();
+    }
+
+    /// <summary>
     /// An unlock is public although the board projection filters it: both teams' snapshots are served whole
     /// and a snapshot carries `KnownSpells`, so the opponent can already see it. A pass is that same absence.
     /// </summary>
     [Fact]
     public void An_unlock_and_a_pass_are_public_because_the_board_already_shows_them()
     {
-        var unlock = new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, SpellId.Parse("spell:guard:v1")));
+        var unlock = new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1")));
         var passed = new EvolutionPassed(Match, Round, PlayerSlot.Player1);
 
         SeatVisibility.CanSee(unlock, PlayerSlot.Player2).ShouldBeTrue();
@@ -70,7 +83,7 @@ public sealed class SeatVisibilityTests
     }
 
     /// <summary>
-    /// The thirteen that are public, as instances rather than as type names: the arm has to be walked, not
+    /// The fourteen that are public, as instances rather than as type names: the arm has to be walked, not
     /// just listed, or a test could pass over a table that denies everything.
     /// </summary>
     private static IReadOnlyList<IMatchEvent> Public =>
@@ -79,6 +92,7 @@ public sealed class SeatVisibilityTests
         new RoundEnded(Match, Round),
         new SubPhaseEntered(Match, Round, RoundSubPhase.Evolution),
         new TimelineBuilt(Match, Round, CombatTimeline.Of([new ActivationSlot(PlayerSlot.Player1, Creature, Speed.Quick, Initiative.Of(5))])),
+        new TiesOrdered(Match, Round, CombatTimeline.Of([new ActivationSlot(PlayerSlot.Player1, Creature, Speed.Quick, Initiative.Of(5))])),
         new ActionRevealed(Match, Round, Action),
         new CombatActionResolved(Match, Round, CombatResolution.Fizzle(Action, CombatErrors.AllTargetsInvalid), []),
         new ConditionsExpired(Match, Round, new Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>>()),
@@ -86,7 +100,7 @@ public sealed class SeatVisibilityTests
         new MatchStarted(Match, PlayerId.New(), PlayerId.New(), "content"),
         new MatchEnded(Match, Round, new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination)),
         new PlayerJoined(Match, PlayerSlot.Player1, PlayerId.New()),
-        new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, SpellId.Parse("spell:guard:v1"))),
+        new EvolutionChoiceSubmitted(Match, Round, PlayerSlot.Player1, new EvolutionChoice(Creature, TierId.Parse("tier:guard:v1"))),
         new EvolutionPassed(Match, Round, PlayerSlot.Player1),
     ];
 
@@ -100,10 +114,10 @@ public sealed class SeatVisibilityTests
     {
         SeatVisibility.CanSee(happened, PlayerSlot.Player1).ShouldBeTrue();
         SeatVisibility.CanSee(happened, PlayerSlot.Player2).ShouldBeTrue();
-        Hidden().ShouldNotContain(happened.GetType(), $"{happened.GetType().Name} is public, so it is not one of the two hidden decisions");
+        Hidden().ShouldNotContain(happened.GetType(), $"{happened.GetType().Name} is public, so it is not one of the hidden decisions");
     }
 
-    /// <summary>Every event is either public or one of the two hidden ones; there is no third case.</summary>
+    /// <summary>Every event is either public or one of the hidden ones; there is no third case.</summary>
     [Fact]
     public void The_public_events_and_the_hidden_ones_are_every_event_there_is()
     {
@@ -127,7 +141,7 @@ public sealed class SeatVisibilityTests
     }
 
     /// <summary>The two that are not public, named here so the list above cannot quietly grow.</summary>
-    private static IReadOnlyList<Type> Hidden() => [typeof(IntentSubmitted), typeof(SpeedChoiceSubmitted)];
+    private static IReadOnlyList<Type> Hidden() => [typeof(IntentSubmitted), typeof(SpeedChoiceSubmitted), typeof(TieOrderSubmitted)];
 
     private static CombatAction Action => CombatAction.Bind(new CombatIntent(Creature, SpellId.Parse("spell:strike:v1")), [CreatureId.From(3)]);
 

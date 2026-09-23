@@ -177,6 +177,8 @@ public sealed class TableSessionTests : IDisposable
 
         public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => Count(() => inner.DecideSpeed(board, creature));
 
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => Count(() => inner.DecideTieOrder(board, options));
+
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => Count(() => inner.DecideIntent(board, intentOption));
 
         public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) => Count(() => inner.DecideTargets(board, options));
@@ -195,6 +197,8 @@ public sealed class TableSessionTests : IDisposable
         public EvolutionDecision DecideEvolution(PlayerBoardState board, EvolutionOptions options) => throw new InvalidOperationException("asked");
 
         public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => throw new InvalidOperationException("asked");
+
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => throw new InvalidOperationException("asked");
 
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption) => throw new InvalidOperationException("asked");
 

@@ -10,7 +10,7 @@ public sealed class ContentStoreTests
     private const string Guard = """
         {
           "id": "spell:guard:v1", "name": "Guard", "spellType": "Defensive", "creatureClass": "Brawler",
-          "initiative": 2, "energyCost": 1, "criticalChance": 0,
+          "energyCost": 1, "criticalChance": 0,
           "targeting": { "origin": "Self", "scope": "SingleTarget" },
           "effects": [ { "kind": "DefenseBuff", "amount": 2, "permanent": true, "stacking": "Ignore" } ]
         }
@@ -266,26 +266,94 @@ public sealed class ContentStoreTests
     }
 
     [Theory]
-    [InlineData(ContentKind.Creature, "Creatures/other.v1.json")]
-    [InlineData(ContentKind.TalentTree, "TalentTrees/other.v1.json")]
-    public void Every_kind_is_written_into_its_own_folder(ContentKind kind, string path)
+    [InlineData(ContentKind.Creature, "Creatures/other.v1.json", """
+        {
+          "id": "creature:other:v1", "name": "Other", "creatureClass": "Creature",
+          "baseHealth": 10, "baseEnergy": 0, "baseDefense": 0, "baseInitiative": 3, "baseCriticalChance": 0,
+          "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
+        }
+        """)]
+    [InlineData(ContentKind.TalentTree, "TalentTrees/other.v1.json", """
+        { "id": "talent-tree:other:v1", "name": "Other", "root": { "code": "Other", "name": "Other" } }
+        """)]
+    [InlineData(ContentKind.Tier, "Tiers/other.v1.json", """
+        { "id": "tier:other:v1", "name": "Other", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 1 }
+        """)]
+    public void Every_kind_is_written_into_its_own_folder(ContentKind kind, string path, string document)
     {
         using var content = new ContentDirectory().WithValidContent();
-        var document = kind == ContentKind.Creature
-            ? """
-                {
-                  "id": "creature:other:v1", "name": "Other", "creatureClass": "Creature",
-                  "baseHealth": 10, "baseEnergy": 0, "baseDefense": 0, "baseInitiative": 3, "baseCriticalChance": 0,
-                  "talentTreeId": "talent-tree:base", "startingSpellIds": ["spell:strike"]
-                }
-                """
-            : """
-                { "id": "talent-tree:other:v1", "name": "Other", "root": { "code": "Other", "name": "Other" } }
-                """;
 
         new ContentStore(content.Path).Save(kind, path, document).ShouldBe(path);
 
         File.Exists(Path.Combine(content.Path, path.Replace('/', Path.DirectorySeparatorChar))).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// A package is authored content like any other, listed by what the file says about itself (ADR 0057). It is
+    /// read from its own folder, so a catalogue written before packages existed reads as one with none rather
+    /// than as one that failed.
+    /// </summary>
+    [Fact]
+    public void A_package_is_listed_as_its_own_kind_and_a_catalogue_without_one_reads_as_having_none()
+    {
+        using var bare = new ContentDirectory().WithValidContent();
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Tiers/brute.v1.json", """
+                { "id": "tier:brute:v1", "name": "Brute", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiativeBonus": 2 }
+                """);
+
+        new ContentStore(bare.Path).Read().Tiers.ShouldBeEmpty();
+
+        var package = new ContentStore(content.Path).Read().Tiers.ShouldHaveSingleItem();
+        package.Kind.ShouldBe(ContentKind.Tier);
+        package.Id.ShouldBe("tier:brute:v1");
+        package.Name.ShouldBe("Brute");
+        package.Enabled.ShouldBeTrue();
+        package.Problem.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// The same strict reader the data builder uses, so a misspelled field is refused where it is written
+    /// rather than at the next build. <c>initiativeBonus</c> is the one a hand-edit is likeliest to reach for as
+    /// <c>initiative</c>, which is what the spell it replaced was called.
+    /// </summary>
+    [Fact]
+    public void A_package_with_a_field_the_schema_does_not_know_is_refused_at_the_save()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+
+        Should.Throw<InvalidGameContentException>(() => new ContentStore(content.Path).Save(
+            ContentKind.Tier,
+            "Tiers/typo.v1.json",
+            """{ "id": "tier:typo:v1", "name": "Typo", "level": 1, "prerequisites": [], "spells": ["spell:guard"], "initiative": 1 }"""))
+            .Message.ShouldContain("initiative");
+
+        File.Exists(Path.Combine(content.Path, "Tiers", "typo.v1.json")).ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// The mirror of the case above, and the one this catalogue was actually written with: every spell carried
+    /// an <c>initiative</c> until the package took that bonus over (ADR 0059). A file that still carries it is
+    /// content written for rules that no longer exist, so it is refused rather than quietly ignored — a
+    /// silently dropped field is a number an author believes they are tuning.
+    /// </summary>
+    [Fact]
+    public void A_spell_still_carrying_the_acquisition_initiative_is_refused_at_the_save()
+    {
+        using var content = new ContentDirectory().WithValidContent();
+
+        Should.Throw<InvalidGameContentException>(() => new ContentStore(content.Path).Save(
+            ContentKind.Spell,
+            "Spells/old.v1.json",
+            """
+            { "id": "spell:old:v1", "name": "Old", "spellType": "Offensive", "creatureClass": "Creature",
+              "initiative": 1, "energyCost": 0, "criticalChance": 0,
+              "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+              "effects": [{ "kind": "Damage", "amount": 1 }] }
+            """))
+            .Message.ShouldContain("initiative");
+
+        File.Exists(Path.Combine(content.Path, "Spells", "old.v1.json")).ShouldBeFalse();
     }
 
     [Fact]

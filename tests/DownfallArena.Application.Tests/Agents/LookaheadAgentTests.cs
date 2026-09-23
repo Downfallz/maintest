@@ -8,6 +8,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -51,7 +52,7 @@ public sealed class LookaheadAgentTests
         var weights = ScoringWeights.Default with { Stun = 0 };
         var board = FourAboutToKillTwo() with
         {
-            Allies = [FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2), KnownSpells = new HashSet<SpellId> { TestContent.Slam, TestContent.Strike } }, FourAboutToKillTwo().Allies[1]],
+            Allies = [(FourAboutToKillTwo().Allies[0] with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack), FourAboutToKillTwo().Allies[1]],
             Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
         };
         var option = new IntentOption(One, [TestContent.Slam, TestContent.Strike]);
@@ -68,7 +69,7 @@ public sealed class LookaheadAgentTests
     [Fact]
     public void Targets_are_bound_on_the_board_the_revealed_actions_leave()
     {
-        var four = Boards.Creature(4, PlayerSlot.Player2) with { Energy = Energy.Of(1), KnownSpells = new HashSet<SpellId> { TestContent.Strike, TestContent.Guard } };
+        var four = (Boards.Creature(4, PlayerSlot.Player2) with { Energy = Energy.Of(1) }).Bought(TestContent.GuardPack);
         // Four first on the board, so a reading that cannot tell the two apart takes it by order.
         var board = Boards.Board(PlayerSlot.Player1, [Boards.Creature(1, PlayerSlot.Player1)], [four, Boards.Creature(3, PlayerSlot.Player2)]) with
         {
@@ -92,7 +93,7 @@ public sealed class LookaheadAgentTests
     public void A_round_that_wins_the_match_outranks_any_score_whatever_the_weights()
     {
         var weights = ScoringWeights.Default with { Damage = 0.001, Kill = 0, Energy = 1000 };
-        var one = Boards.Creature(1, PlayerSlot.Player1) with { Energy = Energy.Of(2), KnownSpells = new HashSet<SpellId> { TestContent.Slam, TestContent.Strike } };
+        var one = (Boards.Creature(1, PlayerSlot.Player1) with { Energy = Energy.Of(2) }).Bought(TestContent.SlamPack);
         var board = Boards.Board(PlayerSlot.Player1, [one], [Boards.Creature(3, PlayerSlot.Player2) with { Health = Health.Of(2) }, Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(2) }]) with
         {
             RoundNumber = 1,
@@ -100,6 +101,107 @@ public sealed class LookaheadAgentTests
         };
 
         new LookaheadAgent(weights, TestContent.Resources, Rules).DecideIntent(board, new IntentOption(One, [TestContent.Slam, TestContent.Strike])).ShouldBe(TestContent.Slam);
+    }
+
+    /// <summary>
+    /// One and Two tie with Four and hold the first and third places, Four the second. Four has six health, so
+    /// it takes both strikes, and it kills whichever ally it can: One, at three health. Seated as rolled, Two
+    /// strikes first, Four kills One, and One never strikes; seated the other way, One strikes before it dies
+    /// and Two finishes Four for the match. The one-step reading keeps the roll, since it has no view of who
+    /// acts first.
+    /// </summary>
+    [Fact]
+    public void The_ally_the_enemy_is_about_to_kill_takes_the_place_before_it()
+    {
+        var board = OneAboutToDie();
+        var options = new TieOrderOptions([[Two, One]]);
+
+        Agent.DecideTieOrder(board, options).ShouldBe([One, Two]);
+    }
+
+    [Fact]
+    public void The_minimax_agent_seats_its_ties_the_same_way()
+    {
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: true)
+            .DecideTieOrder(OneAboutToDie(), new TieOrderOptions([[Two, One]])).ShouldBe([One, Two]);
+    }
+
+    /// <summary>
+    /// Everybody at full health and Four at twenty: nobody dies this round whoever strikes first, the two
+    /// seatings end alike, and the tie goes to the order as rolled.
+    /// </summary>
+    [Fact]
+    public void A_seating_that_changes_nothing_keeps_the_order_as_rolled()
+    {
+        var board = OneAboutToDie() with
+        {
+            Allies = [Boards.Creature(1, PlayerSlot.Player1), Boards.Creature(2, PlayerSlot.Player1)],
+            Enemies = [Boards.Creature(4, PlayerSlot.Player2)],
+        };
+        var options = new TieOrderOptions([[Two, One]]);
+
+        Agent.DecideTieOrder(board, options).ShouldBe([Two, One]);
+    }
+
+    /// <summary>
+    /// A tie of twenty-one creatures has more seatings than a long holds; the count stops at the limit instead
+    /// of wrapping below it, so the roll is kept at once rather than enumerated.
+    /// </summary>
+    [Fact]
+    public void A_tie_with_more_seatings_than_the_limit_keeps_the_roll()
+    {
+        IReadOnlyList<CreatureId> tie = [.. Enumerable.Range(1, 21).Select(CreatureId.From)];
+
+        Agent.DecideTieOrder(OneAboutToDie(), new TieOrderOptions([tie])).ShouldBe(tie);
+    }
+
+    /// <summary>
+    /// Four acts first and is guessed to Sap One, draining the two energy Slam costs, so in the round played out
+    /// Slam fizzles and only Rest, which is free, still resolves. That is a reading of the guess, not of the
+    /// spells: in every world where Four does something else Slam is the cast, and the round says nothing about
+    /// those. The one-step reading decides, as it does when the actor is guessed dead.
+    /// </summary>
+    [Fact]
+    public void A_guess_that_drains_the_actor_does_not_lure_it_into_the_free_spell()
+    {
+        var (resources, board) = FourAboutToSapOne();
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules).DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Slam])).ShouldBe(TestContent.Slam);
+    }
+
+    /// <summary>
+    /// The same board read by minimax: Sap is not a guess there but the worst Four can do, and against it Slam
+    /// certainly fizzles while Rest resolves, so the round decides and the one-step reading does not.
+    /// </summary>
+    [Fact]
+    public void Minimax_keeps_the_free_spell_against_a_drain_it_cannot_avoid()
+    {
+        var (resources, board) = FourAboutToSapOne();
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules, adversarial: true).DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Slam])).ShouldBe(Rest.Id);
+    }
+
+    /// <summary>
+    /// One (two energy, knows Rest, bought Slam) for Player1; Four (knows Sap) for Player2. Four acts first.
+    /// </summary>
+    private static (IGameResources Resources, PlayerBoardState Board) FourAboutToSapOne()
+    {
+        var rester = CreatureDefinitionId.Parse("creature:rester:v1");
+        var sapper = CreatureDefinitionId.Parse("creature:sapper:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures, Definition(rester, Rest.Id), Definition(sapper, Sap.Id)],
+            [.. TestContent.Resources.Spells, Sap, Rest],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]);
+        var one = (Boards.Creature(1, PlayerSlot.Player1) with { DefinitionId = rester, Energy = Energy.Of(2), KnownSpells = new HashSet<SpellId> { Rest.Id } }).Bought(TestContent.SlamPack);
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { DefinitionId = sapper, KnownSpells = new HashSet<SpellId> { Sap.Id } };
+        var board = Boards.Board(PlayerSlot.Player1, [one], [four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
+        };
+        return (resources, board);
     }
 
     [Fact]
@@ -113,7 +215,7 @@ public sealed class LookaheadAgentTests
     {
         var heuristic = new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules);
         var board = FourAboutToKillTwo();
-        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard]), new EvolutionOption(Two, [TestContent.Guard])]);
+        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack]), new EvolutionOption(Two, [TestContent.GuardPack])]);
 
         Agent.DecideEvolution(board, evolution).Choice.ShouldBe(heuristic.DecideEvolution(board, evolution).Choice);
         Agent.DecideSpeed(board, One).ShouldBe(heuristic.DecideSpeed(board, One));
@@ -175,7 +277,7 @@ public sealed class LookaheadAgentTests
         var inner = Substitute.For<IPlayerAgent>();
         var agent = new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: false, inner);
         var board = FourAboutToKillTwo();
-        var options = new EvolutionOptions(1, [new EvolutionOption(One, [TestContent.Guard])]);
+        var options = new EvolutionOptions(1, [new EvolutionOption(One, [TestContent.GuardPack])]);
 
         agent.DecideEvolution(board, options);
         agent.DecideSpeed(board, One);
@@ -235,6 +337,31 @@ public sealed class LookaheadAgentTests
         {
             RoundNumber = 1,
             Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
+        };
+    }
+
+    private static CreatureDefinition Definition(CreatureDefinitionId id, SpellId starting) =>
+        CreatureDefinition.Create(id, id.Value, CreatureClass.Creature, new CreatureStats(Health.Of(20), Energy.Of(0), Defense.Of(0), Initiative.Of(5), CriticalChance.Of(0.05)), TestContent.Tree, [starting]);
+
+    /// <summary>A free drain an enemy can guess-cast on the actor before its slot.</summary>
+    private static Spell Sap { get; } = Spell.Create(
+        SpellId.Parse("spell:sap:v1"), "Sap", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [EnergyDrain.Of(2)]);
+
+    /// <summary>A free spell that gives its caster energy: what still resolves when every paid spell would fizzle.</summary>
+    private static Spell Rest { get; } = Spell.Create(
+        SpellId.Parse("spell:rest:v1"), "Rest", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Self), [EnergyGain.Of(2)]);
+
+    private static PlayerBoardState OneAboutToDie()
+    {
+        var one = Boards.Creature(1, PlayerSlot.Player1) with { Health = Health.Of(3) };
+        var two = Boards.Creature(2, PlayerSlot.Player1);
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { Health = Health.Of(6) };
+        return Boards.Board(PlayerSlot.Player1, [one, two], [four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(Two, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
         };
     }
 

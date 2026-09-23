@@ -30,12 +30,13 @@ public sealed class PlayerBoardStateProjectionTests
     public void Each_player_sees_their_own_choices_and_intents_and_the_public_timeline()
     {
         var match = new MatchStore().Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Guard));
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack));
         MatchStore.PassEvolution(match);
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(1), Speed.Quick));
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(2), Speed.Standard));
         match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(3), Speed.Standard));
         match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(4), Speed.Standard));
+        MatchStore.KeepTieOrder(match);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), TestContent.Strike));
 
         var player1 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
@@ -46,7 +47,7 @@ public sealed class PlayerBoardStateProjectionTests
         player1.SubPhase.ShouldBe(RoundSubPhase.IntentSelection);
         player1.Allies.Select(creature => creature.Id).ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
         player1.Enemies.Select(creature => creature.Id).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
-        player1.EvolutionChoices.ShouldBe([new EvolutionChoice(CreatureId.From(1), TestContent.Guard)]);
+        player1.EvolutionChoices.ShouldBe([new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)]);
         player1.HasPassedEvolution.ShouldBeTrue();
         player1.SpeedChoices.Select(choice => choice.Creature).ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
         player1.Intents.ShouldBe([new CombatIntent(CreatureId.From(1), TestContent.Strike)]);
@@ -58,6 +59,22 @@ public sealed class PlayerBoardStateProjectionTests
         player2.SpeedChoices.Select(choice => choice.Creature).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
         player2.Intents.ShouldBeEmpty();
         player2.Timeline.ShouldBe(player1.Timeline);
+    }
+
+    /// <summary>The dice behind the order are public, like the order: both seats see the same rolls (ADR 0063).</summary>
+    [Fact]
+    public void The_rolls_behind_the_timeline_are_public()
+    {
+        var match = new MatchStore().Started();
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+
+        var player1 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+        var player2 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player2);
+
+        player1.RollOffs.Select(rollOff => rollOff.Creature).ShouldBe(player1.Timeline.Select(slot => slot.Creature));
+        player1.RollOffs.Select(rollOff => rollOff.Rolls.Single()).ShouldBe([20, 19, 18, 17], "the fixture's dice count down, so the first to roll takes the first place");
+        player2.RollOffs.ShouldBe(player1.RollOffs);
     }
 
     [Fact]

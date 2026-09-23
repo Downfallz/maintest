@@ -243,7 +243,7 @@ public sealed partial class TableApiTests : IDisposable
     {
         var table = await Seated();
         var same = Api(table, Rules);
-        var other = Api(table, RuleSet.Create(Rules.TeamSize, Rules.EnergyPerRound, Rules.EvolutionPicksPerRound, Rules.RoundCap + 6, Rules.CriticalMultiplier));
+        var other = Api(table, RuleSet.Create(Rules.TeamSize, Rules.EnergyPerRound, Rules.EvolutionPicksPerOpportunity, Rules.RoundCap + 6, Rules.CriticalMultiplier));
 
         var first = Tag(await same.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
         var second = Tag(await other.HandleAsync("GET", "/api/catalogue", string.Empty, table.Token));
@@ -488,6 +488,9 @@ public sealed partial class TableApiTests : IDisposable
                 case { Kind: var waiting, Creature: { } creature } when waiting == kind:
                     await Post(table, body(creature.Value));
                     break;
+                case { Kind: PlayerOptionsKind.TieOrder }:
+                    await KeepTieOrder(table);
+                    break;
                 default:
                     await Task.Delay(20, TestContext.Current.CancellationToken);
                     break;
@@ -495,6 +498,18 @@ public sealed partial class TableApiTests : IDisposable
         }
 
         throw new InvalidOperationException($"The seat never reached {until}; it is waiting for {table.Person.Waiting?.Kind.ToString() ?? "nothing"}.");
+    }
+
+    /// <summary>
+    /// Keeps the order the roll-off left (ADR 0063), read off the options the seat is served, as a page that
+    /// changes nothing would post it.
+    /// </summary>
+    private static async Task KeepTieOrder((TableApi Api, TableSession Session, HumanSeat Person, string Token) table)
+    {
+        using var payload = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
+        var groups = payload.RootElement.GetProperty("options").GetProperty("tieOrder").GetProperty("ties");
+        var order = groups.EnumerateArray().SelectMany(group => group.EnumerateArray()).Select(creature => creature.GetInt32());
+        await Post(table, $$"""{"kind":"TieOrder","order":[{{string.Join(",", order)}}]}""");
     }
 
     /// <summary>

@@ -1,0 +1,13 @@
+{
+  "id": "tier:soulreaver:v1",
+  "name": "Soulreaver",
+  "level": 3,
+  "prerequisites": [
+    "tier:parasite:v1"
+  ],
+  "spells": [
+    "spell:hateful_sacrifice:v1",
+    "spell:soul_devourer:v1"
+  ],
+  "initiativeBonus": 5
+}

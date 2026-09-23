@@ -29,6 +29,7 @@ public static class PlayerDecisionCheck
         {
             PlayerOptionsKind.Evolution => Evolution(Section(options.Evolution), decision),
             PlayerOptionsKind.Speed => SpeedChoice(Section(options.Speed), decision),
+            PlayerOptionsKind.TieOrder => TieOrder(Section(options.TieOrder), decision),
             PlayerOptionsKind.Intent => Intent(Section(options.Intent), decision),
             PlayerOptionsKind.Target => Targets(Section(options.Target), decision),
             _ => Result.Failure(DecisionErrors.NotPending),
@@ -48,9 +49,9 @@ public static class PlayerDecisionCheck
             return Result.Failure(DecisionErrors.CreatureNotOffered);
         }
 
-        return offered.UnlockableSpells.Contains(decision.Spell)
+        return decision.Tier is { } tier && offered.AvailableTiers.Contains(tier)
             ? Result.Success()
-            : Result.Failure(DecisionErrors.SpellNotOffered);
+            : Result.Failure(DecisionErrors.TierNotOffered);
     }
 
     private static Result SpeedChoice(SpeedOptions options, PlayerDecision decision)
@@ -66,6 +67,14 @@ public static class PlayerDecisionCheck
         return decision.Creature is { } creature && options.Missing.Contains(creature)
             ? Result.Success()
             : Result.Failure(DecisionErrors.CreatureNotOffered);
+    }
+
+    private static Result TieOrder(TieOrderOptions options, PlayerDecision decision)
+    {
+        var offered = options.AsRolled;
+        return decision.Order.Count == offered.Count && decision.Order.ToHashSet().SetEquals(offered)
+            ? Result.Success()
+            : Result.Failure(DecisionErrors.TieOrderNotOffered);
     }
 
     private static Result Intent(IntentOptions options, PlayerDecision decision)

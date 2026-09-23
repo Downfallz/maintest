@@ -42,12 +42,12 @@ Read as the source of truth, in this order: `docs/domain/game-rules.md`, `docs/d
 | Piece | Today | Physical shape it suggests |
 | --- | --- | --- |
 | Match, two players, team of 3 | `RuleSet.Default`: 3 creatures, 30-round cap | Two player areas of three creature boards |
-| Creature | Health 20, Energy 0, Defense 0, Initiative 5, Crit 0.05 | A creature board with four tracks and a hand of spell cards |
+| Creature | Health 30 (ADR 0068), Energy 0, Defense 0, Initiative 5, Crit 0.05 | A creature board with four tracks and a hand of spell cards |
 | Spell catalogue | 36 spells in `data/Spells`, 3 base + 33 class | ~36 cards, generated from the built content |
 | Talent tree | `data/TalentTrees`, `allOf`/`anyOf` prerequisites, 3 tiers under 3 classes | A tech-tree mat per class, or prerequisites printed on the card |
 | Evolution | 2 unlocks per player per round, raises base initiative (ADR 0017) | Draw the unlocked card into the creature's hand, move its initiative marker |
 | Speed | Quick or Standard per creature | A two-sided speed token per creature |
-| Combat timeline | Quick then Standard, initiative descending, ties by slot then id | An initiative track with six creature markers |
+| Combat timeline | Quick then Standard, initiative descending, ties rolled off on a d20 (ADR 0063) | An initiative track with six creature markers |
 | Intent | Hidden, one per creature, revealed in timeline order | A card played face down, flipped when its slot comes up |
 | Reveal and target | Targets chosen at reveal, after seeing what came before | Target markers placed when the card flips |
 | Effects | 4 instant, 8 lasting kinds, durations, stacking policy | Condition tokens with a value and a duration |
@@ -107,16 +107,16 @@ Done when every sub-phase of ADR 0010, every effect kind of ADR 0012 and its ext
 
 ### Phase 2. The tabletop rule set — **the maintainer's, not this plan's** (2026-09-14)
 
-Dropped as a measurement exercise. The maintainer balances the game directly, to **8 to 16 Rounds for a
-15 to 30 minute match**, and owns the `RuleSet` values that get it there. The maximum Energy a Creature can
-bank, which this phase was going to measure to size a track, is not worth the pass: the component answers it
-(see `components.md`).
+Dropped as a measurement exercise. The maintainer balances the game directly, to **10 to 15 Rounds for a
+15 to 30 minute match** (ADR 0068; the plan said 8 to 16), and owns the `RuleSet` values that get it there.
+The maximum Energy a Creature can bank, which this phase was going to measure to size a track, is not worth
+the pass: the component answers it (see `components.md`).
 
 What the rest of the plan therefore takes as given, and what it must not hard-code:
 
-- **A match is 8 to 16 Rounds.** Every component sized per Round — the Round track, the token supplies a
-  Round consumes — is built for 16 and says so.
-- **The numbers on a Creature are still moving.** Health 20, Energy 2 a Round, 3 Creatures a side, the
+- **A match is 10 to 15 Rounds** (ADR 0068; the plan said 8 to 16). Every component sized per Round — the
+  Round track, the token supplies a Round consumes — is built for the table's Round cap, 20, and says so.
+- **The numbers on a Creature are still moving.** Health 30, Energy 2 a Round, 3 Creatures a side, the
   critical multiplier: these are `RuleSet` and content values a balancing pass moves. Components state which
   of their counts follow a value and which follow a rule, so a rebalanced game reprints rather than redesigns.
 - **The Creature's base Critical chance is zero** (ADR 0042): a Spell's printed chance is the chance rolled,

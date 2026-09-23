@@ -3,7 +3,6 @@
   "name": "Hateful Sacrifice",
   "spellType": "Offensive",
   "creatureClass": "Leech",
-  "initiative": 3,
   "energyCost": 3,
   "criticalChance": 0.5,
   "targeting": {

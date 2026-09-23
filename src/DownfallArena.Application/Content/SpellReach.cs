@@ -15,8 +15,6 @@ public sealed record SpellReach
 
     public required int Cost { get; init; }
 
-    public required int SpellInitiative { get; init; }
-
     /// <summary>Direct damage to one target.</summary>
     public required int Damage { get; init; }
 
@@ -49,7 +47,7 @@ public sealed record SpellReach
     /// <summary>Creature definitions that know it from the first round.</summary>
     public required int StartingFor { get; init; }
 
-    /// <summary>Creature definitions that can ever know it: starting spells and everything the talents unlock.</summary>
+    /// <summary>Creature definitions that can ever know it: starting spells, and everything a climb of the package prerequisites teaches.</summary>
     public required int ReachableBy { get; init; }
 
     /// <summary>

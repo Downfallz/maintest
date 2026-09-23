@@ -3,7 +3,6 @@
   "name": "Soul Devourer",
   "spellType": "Offensive",
   "creatureClass": "Leech",
-  "initiative": 2,
   "energyCost": 2,
   "criticalChance": 0,
   "targeting": {

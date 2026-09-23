@@ -3,7 +3,6 @@
   "name": "Psycho Rush",
   "spellType": "Offensive",
   "creatureClass": "Berserker",
-  "initiative": 1,
   "energyCost": 3,
   "criticalChance": 0.5,
   "targeting": {

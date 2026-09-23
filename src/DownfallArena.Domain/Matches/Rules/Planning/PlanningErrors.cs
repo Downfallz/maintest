@@ -12,9 +12,27 @@ public static class PlanningErrors
 
     public static readonly DomainError CreatureStunned = new("Planning.CreatureStunned", "A stunned creature skips this round and cannot be planned for.");
 
-    public static readonly DomainError NoPicksLeft = new("Planning.NoPicksLeft", "The player has used every evolution pick of this round.");
+    /// <summary>
+    /// Also the answer in a round the schedule gives no opportunity: the player has no pick there either, and
+    /// a separate code would have clients deciding for themselves which rounds those are (ADR 0056).
+    /// </summary>
+    public static readonly DomainError NoPicksLeft = new("Planning.NoPicksLeft", "The player has no evolution pick left in this round.");
+
+    /// <summary>
+    /// A creature buys one package an opportunity (ADR 0066). Checked before the package itself, so a second
+    /// pick on a creature is refused for this whatever the package, <see cref="TierAlreadyOwned"/> included.
+    /// </summary>
+    public static readonly DomainError CreatureAlreadyEvolved = new("Planning.CreatureAlreadyEvolved", "The creature has already bought a package in this round; each pick goes to a different creature.");
 
     public static readonly DomainError SpellAlreadyKnown = new("Planning.SpellAlreadyKnown", "The creature already knows this spell.");
 
-    public static readonly DomainError SpellNotUnlockable = new("Planning.SpellNotUnlockable", "The creature does not meet the prerequisites of this spell.");
+    public static readonly DomainError UnknownTier = new("Planning.UnknownTier", "No package with this id is in the catalogue.");
+
+    public static readonly DomainError TierAlreadyOwned = new("Planning.TierAlreadyOwned", "The creature already owns this package.");
+
+    public static readonly DomainError TierNotAvailable = new("Planning.TierNotAvailable", "The creature does not own every package this one requires.");
+
+    public static readonly DomainError NoTieToOrder = new("Planning.NoTieToOrder", "None of the player's creatures ties with another of theirs on this timeline.");
+
+    public static readonly DomainError TieOrderMismatch = new("Planning.TieOrderMismatch", "A tie order must list every tied creature of the player exactly once, and nothing else.");
 }

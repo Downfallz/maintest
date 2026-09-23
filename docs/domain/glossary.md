@@ -10,7 +10,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Match | A complete game between two Players, played as a sequence of Rounds until the Win condition is met. The aggregate root of the Matches context. | decided |
 | Player | A participant in a Match. Controls one Team. Occupies a Player slot (`Player1`, `Player2`). | decided |
 | Team | The set of Creatures a Player commands during a Match. Defeated when all its Creatures are dead. | decided |
-| Rule set | The tunable parameters of a Match: team size, evolution picks per round, energy gain per round, round cap, damage and crit formulas. | decided |
+| Rule set | The tunable parameters of a Match: team size, evolution picks per opportunity, the first evolution Round and the interval between opportunities, energy gain per round, round cap, damage and crit formulas. It answers the schedule for everything that needs it, so no client works out which Rounds offer a pick (ADR 0056). | decided |
 | Win condition | The match ends when a Team is defeated at the end of a round, or when the round cap is reached (ADR 0011). | decided |
 | Match outcome | How a Match ended: the winning Player slot, or a draw, and the reason (`Elimination`, `RoundCap`). | decided |
 | Match state | Where a Match is in its life: `WaitingForPlayers`, `InProgress`, `Ended`. | decided |
@@ -21,16 +21,15 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 
 | Term | Definition | Status |
 | --- | --- | --- |
-| Creature | A combat unit on a Team, instantiated from a Creature definition, with Health, Energy, Defense, Initiative, Critical chance, known Spells, and active Conditions. It carries a Base initiative that unlocks raise and a Current initiative that debuffs lower. | decided |
+| Creature | A combat unit on a Team, instantiated from a Creature definition, with Health, Energy, Defense, Initiative, Critical chance, known Spells, the Tiers it has bought, and active Conditions. It carries a Base initiative that purchases raise and a Current initiative that debuffs lower. | decided |
 | Creature definition | Static content describing a kind of Creature (base stats, starting Spells, Talent tree). Loaded from Game resources, never created during play. | decided |
 | Stat | A non-negative value object on a Creature: Health, Energy, Defense, Initiative. Critical chance is a probability in [0, 1]. | decided |
 | Creature stats | The stat block of a Creature: Health, Energy, Defense, Initiative, Critical chance. A Creature definition carries the base block. | decided |
-| Spell stats | The numbers of a Spell: Spell initiative, energy cost, Critical chance bonus. | decided |
+| Spell stats | The numbers of a Spell: energy cost, Critical chance bonus. | decided |
 | Critical chance bonus | What a Spell adds to its caster's own Critical chance before the roll, clamped into [0, 1]. A Spell at zero does not mean a cast that never crits: it means the Spell moves nothing. One roll decides the cast and multiplies what it puts on a target's health now -- Damage and a direct Heal (ADR 0033) -- never a lasting Effect, a Caster effect, or energy. | decided |
-| Spell initiative | What a Spell adds to a Creature's Base initiative, for the rest of the Match, when that Creature unlocks it (ADR 0017). It is paid once at the unlock, not at each cast, and a Spell the Creature already knows or starts with adds nothing. | decided |
-| Base initiative | A Creature's own Initiative before any Condition: its Creature definition's, raised by the Spell initiative of everything it has unlocked this Match. It only ever grows. | decided |
+| Base initiative | A Creature's own Initiative before any Condition: its Creature definition's, raised by the bonus of every Tier it has bought this Match. It only ever grows. | decided |
 | Current initiative | The Base initiative plus the Creature's active initiative buffs and less its debuffs, floored at zero. This is what the Combat timeline orders on. | decided |
-| Spell | An action a Creature can perform in Combat: type, class, Spell initiative, energy cost, Critical chance bonus, targeting spec, and effects. The catalogue is [spells.md](spells.md). | decided |
+| Spell | An action a Creature can perform in Combat: type, class, energy cost, Critical chance bonus, targeting spec, and effects. The catalogue is [spells.md](spells.md). | decided |
 | Effect | One consequence of a Spell on a target, from a closed taxonomy (ADR 0012, extended by ADR 0019, ADR 0020, ADR 0035 and ADR 0036): instant `Damage`, `Heal`, `EnergyGain`, `EnergyDrain`; lasting `Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`, `DefenseDebuff`, `InitiativeBuff`, `InitiativeDebuff` with a Duration and a Stacking policy. | decided |
 | Caster effect | An Effect a Spell resolves against whoever cast it rather than against its targets, from the same closed taxonomy (ADR 0031). Once per cast however many targets were reached, never multiplied by the Critical roll, and none of them when the cast fizzles. A Spell still needs at least one ordinary Effect: a Caster effect is a half of a Spell, never a whole one. | decided |
 | Regeneration | A lasting Effect that heals its Creature at the start of each of its Rounds, the healing counterpart of Bleed (ADR 0019). Regenerations heal before Bleeds deal their damage. | decided |
@@ -45,7 +44,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Data builder | The tool that consolidates the authored content under `data/` into one validated `game.schema.json` with a Content hash (ADR 0009). | decided |
 | Content studio | The local page that browses, edits, versions and disables the authored content, and plays a match or an evaluation on it (ADR 0015). | decided |
 | Enabled | The authoring-only switch on an authored item: `"enabled": false` keeps it out of the build, and references to a disabled Spell are pruned (ADR 0015). | decided |
-| Talent tree | The tree of Spells a Creature can unlock, with `allOf`/`anyOf` prerequisites per node. | decided |
+| Talent tree | The authored tree that groups a Creature definition's Spells into families, with `allOf`/`anyOf` prerequisites per node. It no longer decides what Evolution may buy: Tier prerequisites do (ADR 0056), and the content tools still read the tree. | decided |
 | Game resources | The static, versioned catalogue of Creature definitions, Spells, and Talent trees. | decided |
 | Content hash | The SHA-256 of the consolidated Game resources; stamped on every match and simulation result as the resources version (ADR 0009). | decided |
 | Versioned id | A content identifier in the form `kind:name:vN` (`spell:pummel:v1`). Aliases without a version resolve to the latest at build time. | decided |
@@ -59,20 +58,24 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Sub-phase | A step inside a Phase with its own expected player actions and completion rule. | decided |
 | Progression gate | A pure domain service that says whether the current Sub-phase is complete and, if not, what is missing (which Creatures, how many picks). Shared by the engine, the UI, and bots. | decided |
 | Phase driver | The loop inside the Match that runs each automatic step or asks the Progression gate, advances the Sub-phase, and raises an event, until the Round waits on a Player or the Match ends. | decided |
-| Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built. | decided |
-| Evolution | A Planning decision where a Player unlocks a Spell for a Creature from its Talent tree, within the picks allowed by the Rule set. The unlock also raises the Creature's Initiative by the Spell initiative (ADR 0017). | decided |
+| Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built and any Tie order given. | decided |
+| Evolution | A Planning decision where a Player buys a Tier for a Creature, within the picks the Rule set's schedule gives that Round. The purchase teaches every Spell of the package at once and raises the Creature's Base initiative by the package's bonus, once (ADR 0056). A Creature buys at most one Tier an opportunity, so the picks go to different Creatures (ADR 0066). | decided |
+| Evolution opportunity | A Round in which the Rule set's schedule gives each Player Evolution picks: two, at Round 1 and every second Round after it (ADR 0056), each for a different Creature (ADR 0066). Any other Round gives none. | decided |
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
 | Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
-| Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by Player slot then Creature id. | decided |
+| Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by a Roll-off between the sides and a Tie order within one. | decided |
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
+| Roll-off | How a tie between the two sides on the Combat timeline, in one band with the same Current initiative, decides which places each side holds: every tied Creature rolls a d20, the highest takes the first Place, and when both sides rolled the same number, every Creature on it rolls again, a side's own included. A tie held by one side alone rolls nothing (ADR 0063). | decided |
+| Place | An Activation slot a side holds in a tie once the Roll-off is done: it keeps its side, and which of that side's tied Creatures fills it is the Tie order's (ADR 0063). | decided |
+| Tie order | A Planning decision in which a Player orders their own tied Creatures among the Places their side holds in a tie, after the Roll-off and before any Intent (ADR 0063). | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |
 | Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
 | Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. It carries one share per Condition source, adding up to exactly what the Creature took. | decided |
 | Regeneration tick | The health a Creature regains from its regeneration Conditions at the start of a Round, applied before the Bleed ticks. | decided |
 | Energy regeneration tick | The Energy a Creature gains from its energy regeneration Conditions at the start of a Round, on top of the Round's own Energy gain. It is given before the Bleed ticks, so a Creature its Bleed kills that Round still gained it. | decided |
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
-| Reveal and target | The owner binds targets for the next Intent on the timeline; its Spell and targets become public together on confirmation, producing a Combat action (ADR 0057). | decided |
+| Reveal and target | The owner binds targets for the next Intent on the timeline; its Spell and targets become public together on confirmation, producing a Combat action (ADR 0070). | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
 | Combat step | The result of resolving one Combat action through the Match: the Resolution, and whether it completed the Round or the Match. | decided |
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |
@@ -114,7 +117,8 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Benchmark digest | The committed outcomes of the Benchmark seeds played by the deterministic baseline agents, per Content hash; CI verifies it. | decided |
 | Content audit | What a built content set says about itself that reading one item cannot: content no Creature can reach, open or cast, Spells no match can tell apart, and a Spell stat every Spell gives the same value. Findings, not problems: the content is valid and the engine plays it. | decided |
 | Content finding | One thing a Content audit found, with a stable code namespaced by what it is about (`Spell.Unreachable`), the id it is about, and what it means for the author. | decided |
-| Spell reach | How far a Spell goes in a content set: the creatures that start with it, and the creatures that could ever come to know it through their Talent tree. | decided |
+| Spell reach | How far a Spell goes in a content set: the creatures that start with it, and the creatures that could ever come to know it by buying packages (ADR 0058). Not Reach. | decided |
+| Reach | How many targets one cast of a Spell can land on: its targeting scope and `maxTargets`. The sense ADR 0043 ("reach is not force") and ADR 0060 use; not Spell reach, which is who can ever acquire the Spell. | decided |
 | Run record | What the content studio writes beside a run's artifacts (`run.json`): its agents, seed, match count, Content hash and time, so a run can be found again and compared. | decided |
 | Viewer | The static HTML page that renders Match traces, batches, Evaluations, training runs, and comparisons. | decided |
 | Training run | The record of one training of a Policy on the Python side, one line per iteration (loss, evaluation win rate), with its Run stamp. | decided |
@@ -122,9 +126,9 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Weight search | Tuning the Scoring weights of the Heuristic agent by evaluating candidate weights files with the engine on the Benchmark seeds (cross-entropy method). | decided |
 | Balance knob | One number of one Spell a balance pass may move, with its bounds and its step, declared in `data/balance/knobs.json` as a JSON pointer into the Spell's own document. What is not declared is the Spell's identity and does not move (ADR 0021). | decided |
 | Balance objective | What balanced means for a content set, written beside the Balance knobs: bands over the Iteration report's metrics, each with a scale and a weight. A candidate scores the sum of its squared, scaled distances outside them; zero is on target. | decided |
-| Tier | How deep a Spell sits: 0 for a starting Spell or a root node of the Talent tree, one more per node below. The Spells of one Tier are offered together, so they are the set a balance pass compares against each other. | decided |
+| Tier | A named package of Spells one evolution pick buys, with a level (1 opens a family, 3 closes one), the Tiers it requires, and one initiative bonus. Prerequisites decide which Tiers a Creature may buy, and a Tier must require one exactly a level below it (ADR 0056); a Creature buys at most one an Evolution opportunity (ADR 0066). | decided |
 | Content tuning | Searching the Balance knobs for a catalogue closer to the Balance objective, every candidate built by the data builder and played by the engine on the Benchmark seeds. The content's counterpart of Weight search (ADR 0021). | decided |
-| Strict dominance | A Spell at least as good as another on every axis a match reads — targeting, cost, Spell initiative, critical chance, effects — and better on one, where the two are offered at the same depth of the Talent tree or the better one is shallower. A deeper Spell outclassing a shallower one is progression, not dominance: the picks and prerequisites are what paid for it. | decided |
+| Strict dominance | A Spell at least as good as another on every axis a match reads — targeting, cost, critical chance, effects — and better on one, where the two are sold by Tiers of the same level or the better one is sold lower. A Spell from a deeper Tier outclassing a shallower one is progression, not dominance: the picks and prerequisites are what paid for it. | decided |
 | Behaviour cloning | Training a Policy to reproduce the actions of a recorded Dataset: a classifier from Observation to action key. | decided |
 | Value regression | Training a Policy to predict the Return of an Episode from an Observation and an action; the agent takes the option with the highest predicted Return. | decided |
 | Baseline | The part of a Return that the Observation alone explains: one model fitted on every Step of a Dataset, without splitting by action, and carried in the Policy file (ADR 0016). | decided |

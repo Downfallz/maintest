@@ -38,7 +38,6 @@ public sealed class CatalogueProjectionTests
 
         slam.Name.ShouldBe("Slam");
         slam.Cost.ShouldBe(2);
-        slam.Initiative.ShouldBe(1);
         slam.Targeting.ShouldBe("Up to 2 enemies");
         slam.Effects.ShouldBe(["Damage 2", "Stun, 1 round"]);
     }
@@ -137,22 +136,6 @@ public sealed class CatalogueProjectionTests
         View.Trees.ShouldContain(band => band.Spells.Contains(TestContent.Guard));
     }
 
-    /// <summary>
-    /// The tier is how far into the tree a spell sits, and inside one node that is what its own prerequisites
-    /// say: the test content offers Strike, then Guard behind it, then Slam behind Guard, all from one node.
-    /// A tier copied from the node would have read the same for all three, which on the real content prints
-    /// "Warlord · Warlord" and says nothing at all.
-    /// </summary>
-    [Fact]
-    public void The_tier_of_a_spell_counts_the_ones_it_is_unlocked_behind()
-    {
-        var view = View;
-
-        Tier(view, TestContent.Strike).ShouldBe(1);
-        Tier(view, TestContent.Guard).ShouldBe(2);
-        Tier(view, TestContent.Slam).ShouldBe(3);
-    }
-
     /// <summary>A band knows its own depth, which is the row the talent mat draws it on.</summary>
     [Fact]
     public void A_band_carries_the_depth_of_its_node()
@@ -181,73 +164,32 @@ public sealed class CatalogueProjectionTests
         }
     }
 
-    /// <summary>The gate is on the card, so a pick can be checked without the talent mat.</summary>
-    [Fact]
-    public void A_card_names_the_spells_that_gate_it_by_name_rather_than_by_id()
-    {
-        var slam = View.Cards.Single(card => card.Id == TestContent.Slam);
-
-        slam.Requires.ShouldNotBeNull();
-        slam.Requires.ShouldContain("Guard");
-        slam.Requires.ShouldNotContain("spell:");
-    }
-
     /// <summary>
-    /// The one thing a gate has to say is which combination is legal. Crushing Stomp on the real content wants
-    /// Full Plate <em>and</em> one of two others; flattening the two groups into one list would name all three
-    /// and leave a player guessing which they need (<c>TalentPrerequisites.AreSatisfiedBy</c>).
+    /// What it takes to acquire a spell is on the package that sells it and nowhere else. The talent gate and
+    /// the per-spell unlock bonus were both rules once; neither is one now (ADR 0056), and a card that still
+    /// carried them would hand a table requirements nobody has to meet and an initiative gain nobody is paid.
+    /// The gate lives on in the authored content, which is what the packages are derived from -- so the test
+    /// that matters is that the projection does not republish it as a rule.
     /// </summary>
     [Fact]
-    public void A_gate_of_two_groups_keeps_them_apart()
+    public void A_card_carries_no_acquisition_rule_because_the_package_that_teaches_it_does()
     {
-        var gated = SpellId.Parse("spell:gated:v1");
-        var tree = TalentTree.Create(
-            TestContent.Tree,
-            "Base",
-            new TalentNode(
-                "base",
-                "Base",
-                TalentPrerequisites.None,
-                [
-                    new TalentSpell(TestContent.Strike, TalentPrerequisites.None),
-                    new TalentSpell(TestContent.Guard, TalentPrerequisites.None),
-                    new TalentSpell(gated, TalentPrerequisites.Of([TestContent.Strike], [TestContent.Guard, TestContent.Slam])),
-                ],
-                []));
+        var gate = TestContent.Resources.GetTalentTree(TestContent.Tree).Nodes
+            .Single(node => node.Spells.Any(offered => offered.Id == TestContent.Slam))
+            .Prerequisites;
+        var slam = View.Cards.Single(card => card.Id == TestContent.Slam);
+        var package = View.Packages.Single(card => card.Id == TestContent.SlamPack);
 
-        var requires = Cards(tree, [Named(TestContent.Strike, "Strike"), Named(TestContent.Guard, "Guard"), Named(TestContent.Slam, "Slam"), Named(gated, "Gated")])
-            .Single(card => card.Id == gated)
-            .Requires;
+        gate.ReferencedSpells.ShouldContain(TestContent.Guard);
+        var face = typeof(CardFace).GetProperties().Select(property => property.Name).ToList();
+        face.ShouldNotContain("Requires");
+        face.ShouldNotContain("Tier");
+        face.ShouldNotContain("Initiative");
 
-        requires.ShouldBe("Strike; one of Guard or Slam");
+        package.Prerequisites.ShouldBe([TestContent.GuardPack]);
+        package.InitiativeBonus.ShouldBe(1);
+        slam.Tree.ShouldNotBeNullOrWhiteSpace();
     }
-
-    [Fact]
-    public void A_gate_of_several_spells_reads_as_a_sentence()
-    {
-        var gated = SpellId.Parse("spell:gated:v1");
-        var tree = TalentTree.Create(
-            TestContent.Tree,
-            "Base",
-            new TalentNode(
-                "base",
-                "Base",
-                TalentPrerequisites.None,
-                [
-                    new TalentSpell(TestContent.Strike, TalentPrerequisites.None),
-                    new TalentSpell(TestContent.Guard, TalentPrerequisites.None),
-                    new TalentSpell(gated, TalentPrerequisites.Of([TestContent.Strike, TestContent.Guard], [])),
-                ],
-                []));
-
-        var requires = Cards(tree, [Named(TestContent.Strike, "Strike"), Named(TestContent.Guard, "Guard"), Named(gated, "Gated")])
-            .Single(card => card.Id == gated)
-            .Requires;
-
-        requires.ShouldBe("Guard and Strike");
-    }
-
-    private static int Tier(CatalogueView view, SpellId spell) => view.Cards.Single(card => card.Id == spell).Tier;
 
     private static Domain.Resources.Spell Named(SpellId id, string name) =>
         Domain.Resources.Spell.Create(
@@ -255,7 +197,7 @@ public sealed class CatalogueProjectionTests
             name,
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.None),
+            new SpellStats(Energy.Of(0), CriticalChance.None),
             TargetingSpec.SingleTarget(TargetOrigin.Enemy),
             [Damage.Of(1)]);
 
@@ -356,7 +298,7 @@ public sealed class CatalogueProjectionTests
             "Probe",
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(1), Energy.Of(0), CriticalChance.Of(critical)),
+            new SpellStats(Energy.Of(0), CriticalChance.Of(critical)),
             targeting,
             [Damage.Of(1)],
             casterEffects);

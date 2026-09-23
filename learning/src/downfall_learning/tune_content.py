@@ -19,7 +19,6 @@ import shutil
 import subprocess
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
-from functools import partial
 from itertools import combinations
 from pathlib import Path
 from typing import Any, Protocol
@@ -92,7 +91,7 @@ class Move:
 
     def to_json(self) -> dict[str, object]:
         return {
-            "spell": self.knob.spell,
+            "target": self.knob.target,
             "path": self.knob.path,
             "before": self.before,
             "after": self.after,
@@ -100,7 +99,7 @@ class Move:
         }
 
     def __str__(self) -> str:
-        return f"{self.knob.spell}{self.knob.path}: {self.before} -> {self.after}"
+        return f"{self.knob.target}{self.knob.path}: {self.before} -> {self.after}"
 
 
 @dataclass(frozen=True)
@@ -136,9 +135,12 @@ class CatalogueScore:
     score: float
     breakdown: Mapping[str, float]
     metrics: Mapping[str, Mapping[str, float]]
+    #: Which objective read it (`objective_version`): a score is only comparable with one read the same way.
+    objective: Mapping[str, str] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, object]:
         return {
+            "objective": dict(self.objective),
             "seeds": self.seeds,
             "score": round(self.score, 6),
             "penalties": {name: round(value, 6) for name, value in self.breakdown.items()},
@@ -153,7 +155,7 @@ class ContentEvaluator(Protocol):
     put back a spell an earlier candidate moved, and it can only do that if it is handed all of them.
     """
 
-    def evaluate(self, spells: Mapping[str, dict]) -> Mapping[str, Mapping[str, float]]: ...
+    def evaluate(self, documents: Mapping[str, dict]) -> Mapping[str, Mapping[str, float]]: ...
 
 
 @dataclass(frozen=True)
@@ -214,11 +216,14 @@ class TuneResult:
     best: Candidate
     initial: Candidate
     candidates: tuple[Candidate, ...]
-    spells: Mapping[str, dict]
+    #: Every document the winning moves leave, spells and packages, by alias, and the files they came from.
+    documents: Mapping[str, dict]
     files: Mapping[str, Path]
     #: Catalogues actually handed to the engine. Lower than the candidate count by the replays the search
     #: proposed and `MemoizingEvaluator` served from what it had already played.
     played: int = 0
+    #: Which objective scored every candidate (`objective_version`).
+    objective: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def improved(self) -> bool:
@@ -249,6 +254,7 @@ class TuneResult:
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         summary = {
+            "objective": dict(self.objective),
             "initial": self.initial.to_json(),
             "best": self.best.to_json(),
             "improved": self.improved,
@@ -266,19 +272,19 @@ class TuneResult:
         # does not make, carried into data/ by the copy that applies it.
         content = directory / "content"
         shutil.rmtree(content, ignore_errors=True)
-        for alias in sorted({move.knob.spell for move in self.best.moves}):
+        for alias in sorted({move.knob.target for move in self.best.moves}):
             source = Path(self.files[alias]).resolve()
             target = content / source.relative_to(Path(data_directory).resolve())
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(self.spells[alias], indent=2) + "\n", encoding="utf-8")
+            target.write_text(json.dumps(self.documents[alias], indent=2) + "\n", encoding="utf-8")
         return directory
 
     def apply(self) -> list[Path]:
-        """Writes the winning numbers into the spell files they were read from. Returns what it touched."""
+        """Writes the winning numbers into the files they were read from. Returns what it touched."""
         written = []
-        for alias in sorted({move.knob.spell for move in self.best.moves}):
+        for alias in sorted({move.knob.target for move in self.best.moves}):
             path = Path(self.files[alias])
-            path.write_text(json.dumps(self.spells[alias], indent=2) + "\n", encoding="utf-8")
+            path.write_text(json.dumps(self.documents[alias], indent=2) + "\n", encoding="utf-8")
             written.append(path)
         return written
 
@@ -294,11 +300,11 @@ def _same(left: Mapping[str, Mapping[str, float]], right: Mapping[str, Mapping[s
     )
 
 
-def apply_moves(spells: Mapping[str, dict], moves: Sequence[Move]) -> dict[str, dict]:
-    """The catalogue with every move applied. The catalogue it was built from is left alone."""
-    changed = dict(spells)
+def apply_moves(documents: Mapping[str, dict], moves: Sequence[Move]) -> dict[str, dict]:
+    """The catalogue with every move applied, spells and packages alike; the one it came from is untouched."""
+    changed = dict(documents)
     for move in moves:
-        changed[move.knob.spell] = with_value(changed[move.knob.spell], move.knob.path, move.after)
+        changed[move.knob.target] = with_value(changed[move.knob.target], move.knob.path, move.after)
     return changed
 
 
@@ -307,7 +313,7 @@ def violations(base: Content, candidate: Mapping[str, dict], knobs: Knobs) -> li
 
     Cheap enough to run on every proposal, which is the point: a candidate refused here costs no engine time.
     """
-    after = base.with_spells(candidate)
+    after = base.with_documents(candidate)
     problems = []
     if knobs.enabled("noNewStrictDominance"):
         problems.extend(
@@ -353,7 +359,7 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
     total = sum(landed.values())
     measured["spellUsageShare"] = max(landed.values()) / total if total else 1.0
     measured["spellsNeverCast"] = float(sum(1 for spell in by_alias if landed.get(spell, 0) == 0))
-    barely = _barely_cast(landed, by_alias, content.tiers)
+    barely = _barely_cast(landed, by_alias, content.packages)
     if barely is not None:
         measured["spellsBarelyCast"] = barely
     # Which spells are compared as attacks, read from the content and never from what a run happened to
@@ -366,7 +372,7 @@ def metrics_of(evaluation: Evaluation, name: str, content: Content) -> dict[str,
         for identifier, alias in by_alias.items()
         if damage_is_the_point(content.spells[alias], weights)
     }
-    measured.update(_tier_metrics(outcomes, by_alias, content.tiers, damaging))
+    measured.update(_tier_metrics(outcomes, by_alias, content.packages, damaging))
     return measured
 
 
@@ -375,9 +381,9 @@ BARELY_CAST_SHARE = 0.01
 
 
 def _barely_cast(
-    landed: Mapping[str, int], by_alias: Mapping[str, str], tiers: Mapping[str, int]
+    landed: Mapping[str, int], by_alias: Mapping[str, str], packages: Mapping[str, tuple[str, ...]]
 ) -> float | None:
-    """How many spells are cast, but take less than :data:`BARELY_CAST_SHARE` of their own tier's casts.
+    """How many spells are cast, but take less than :data:`BARELY_CAST_SHARE` of their own package's casts.
 
     ``spellsNeverCast`` counts exact zeros, and this is the hole that leaves. On the nine-spell core content
     ``pummel`` took 6 of 5283 landed casts of a mirrored run: dead in every sense that decides a game, and
@@ -388,26 +394,32 @@ def _barely_cast(
     targets carry the same band and the same weight, so counting it here as well would charge a dead spell
     twice and quietly double what the objective asks of that one case.
 
-    The share is read against the tier and not the catalogue because a tier is the set a player chooses
-    between at one moment: a spell can be rare overall and still be the right pick where it is offered. A
-    tier nobody cast at all cannot produce a share, so it is skipped -- and a run whose content carries no
-    tiers at all reads as ``None`` rather than as zero, which the objective reports as missing instead of
-    counting as a metric on target. The tiers have gone missing once already (:meth:`Content.with_spells`).
+    The share is read against the package and not the catalogue because the package is what one pick buys
+    (ADR 0058): a spell can be rare overall and still be worth the pick that brought it, and a package
+    carrying one spell nobody casts sold that pick short. A package nobody cast at all cannot produce a
+    share, so it is skipped -- and a run whose content carries no packages reads as ``None`` rather than as
+    zero, which the objective reports as missing instead of counting as a metric on target. The grouping has
+    gone missing once already (:meth:`Content.with_spells`).
+
+    A spell several packages teach is read against each of them and counted once if any is too thin: every
+    package that sells it is a package that sold a pick short.
     """
-    per_tier: dict[int, int] = {}
+    per_package: dict[str, int] = {}
     for identifier, alias in by_alias.items():
-        tier = tiers.get(alias)
-        if tier is not None:
-            per_tier[tier] = per_tier.get(tier, 0) + landed.get(identifier, 0)
-    if not any(cast > 0 for cast in per_tier.values()):
+        for package in packages.get(alias, ()):
+            per_package[package] = per_package.get(package, 0) + landed.get(identifier, 0)
+    if not any(cast > 0 for cast in per_package.values()):
         return None
 
     barely = 0
     for identifier, alias in by_alias.items():
-        tier = tiers.get(alias)
-        cast = per_tier.get(tier, 0) if tier is not None else 0
         casts = landed.get(identifier, 0)
-        if cast > 0 and 0 < casts / cast < BARELY_CAST_SHARE:
+        shares = [
+            casts / per_package[package]
+            for package in packages.get(alias, ())
+            if per_package.get(package, 0) > 0
+        ]
+        if any(0 < share < BARELY_CAST_SHARE for share in shares):
             barely += 1
     return float(barely)
 
@@ -415,39 +427,100 @@ def _barely_cast(
 def _tier_metrics(
     outcomes: Sequence[Mapping[str, object]],
     by_alias: Mapping[str, str],
-    tiers: Mapping[str, int],
+    packages: Mapping[str, tuple[str, ...]],
     damaging: Collection[str],
 ) -> dict[str, float]:
-    """The three readings of "are the spells of one tier a choice", each on its worst tier.
+    """The three readings of "do the spells of one package all earn their pick", each on its worst package.
 
-    A tier nobody cast is not read here: that is what ``spellsNeverCast`` is for. Each reading drops a tier
-    it cannot speak about rather than guessing a number, and a reading no tier could produce is left out
-    entirely, which the objective reports as missing rather than counting as zero.
+    The spells of a package are not alternatives -- one pick buys all of them at once (ADR 0058) -- so this
+    is not the "is it a choice" the tree depth claimed to read. It is the narrower and truer question: a
+    package whose casts all go to one of its spells sold the others for nothing.
+
+    A package nobody cast is not read here: that is what ``spellsNeverCast`` is for. Each reading drops a
+    package it cannot speak about rather than guessing a number, and a reading no package could produce is
+    left out entirely, which the objective reports as missing rather than counting as zero.
+
+    How many spells a package *teaches* is counted from the catalogue and never from the outcome rows: a
+    package of two whose second spell was never declared has one row, and reading that as a package of one
+    would drop the very reading this metric exists for -- a package whose casts all go to one of its spells.
     """
-    grouped: dict[int, list[Mapping[str, object]]] = {}
+    grouped: dict[str, list[Mapping[str, object]]] = {}
     for outcome in outcomes:
         alias = by_alias.get(str(outcome["spell"]))
-        tier = tiers.get(alias) if alias else None
-        if tier is not None:
-            grouped.setdefault(tier, []).append(outcome)
+        for package in packages.get(alias, ()) if alias else ():
+            grouped.setdefault(package, []).append(outcome)
 
-    readings = {
-        "tierUsageShare": _usage_share,
-        "tierDamageSpread": partial(_damage_spread, damaging=damaging),
-        "tierWinSpread": _win_spread,
-    }
-    measured = {}
-    for name, read in readings.items():
-        worst = [value for value in (read(members) for members in grouped.values()) if value is not None]
-        if worst:
-            measured[name] = max(worst)
+    taught: dict[str, int] = {}
+    for named in packages.values():
+        for package in named:
+            taught[package] = taught.get(package, 0) + 1
+
+    measured: dict[str, float] = {}
+    for package, members in grouped.items():
+        readings = (
+            ("tierUsageShare", _usage_share(members, taught.get(package, len(members)))),
+            ("tierDamageSpread", _damage_spread(members, damaging)),
+            ("tierWinSpread", _win_spread(members)),
+        )
+        for name, value in readings:
+            if value is not None:
+                measured[name] = max(measured.get(name, value), value)
     return measured
 
 
-def _usage_share(members: Sequence[Mapping[str, object]]) -> float | None:
-    """The share of a tier's landed casts its most-cast spell takes. None when the tier was never cast."""
+#: How the metrics are computed, named after the last ADR that changed a reading. Bump it with any change to
+#: how a metric is read, so that a score read the old way is never compared with one read the new way as if
+#: they measured the same thing: ADR 0064 bounded `tierUsageShare` by its sample, ADR 0065 `tierWinSpread`.
+METRIC_DEFINITIONS = "adr-0065"
+
+
+def objective_version(objective: Objective) -> dict[str, str]:
+    """What an artifact carries to say which objective scored it: the metric definitions and the bands."""
+    return {"metrics": METRIC_DEFINITIONS, "targets": objective.fingerprint}
+
+
+# The z of a two-sided 95 % interval, for the package readings bounded by their own samples (ADR 0064, 0065).
+_USAGE_Z = 1.96
+
+
+def _usage_share(members: Sequence[Mapping[str, object]], teaches: int) -> float | None:
+    """How much of a package's landed casts its most-cast spell takes, as far as the package's sample shows.
+
+    The lower bound of the 95 % Wilson interval of that share, not the share itself (ADR 0064). Read raw, the
+    worst of eleven packages is mostly noise: a catalogue whose every pair splits evenly still reads 0.667 at
+    the median, because a package bought a few times reads 12 of 16 as easily as 8 of 16. The bound reads a
+    handful of casts as the little it proves, and a monopoly on hundreds as the monopoly it is.
+
+    None when the package was never cast, and none when it *teaches* one spell: a lone spell takes all of its
+    own package's casts by construction, so reading it would pin the metric at 1.0 whatever the content did.
+    Nine of the twenty-one shipped packages teach one spell. The two readings beside this one already drop a
+    group they cannot speak about; this one has to as well, for the same reason (ADR 0058).
+
+    ``teaches`` is the authored count and not ``len(members)``. A package of two whose second spell nobody
+    declared has one row here, and skipping it as a singleton would hide the monopoly this reading is for.
+    """
+    if teaches < 2:
+        return None
     landed = [int(member.get("resolved", 0)) for member in members]
-    return max(landed) / sum(landed) if sum(landed) > 0 else None
+    total = sum(landed)
+    return _wilson_lower(max(landed), total) if total > 0 else None
+
+
+def _wilson_lower(successes: int, trials: int) -> float:
+    """The lower end of the Wilson score interval for ``successes`` out of ``trials``, at ``_USAGE_Z``."""
+    return _wilson(successes, trials)[0]
+
+
+def _wilson(successes: float, trials: int) -> tuple[float, float]:
+    """The Wilson score interval for ``successes`` out of ``trials``, at ``_USAGE_Z``.
+
+    ``successes`` may carry a half: a win share counts a draw as one half of a win.
+    """
+    share = successes / trials
+    z2 = _USAGE_Z * _USAGE_Z
+    centre = share + z2 / (2 * trials)
+    margin = _USAGE_Z * math.sqrt(share * (1 - share) / trials + z2 / (4 * trials * trials))
+    return (centre - margin) / (1 + z2 / trials), (centre + margin) / (1 + z2 / trials)
 
 
 def _damage_spread(
@@ -490,9 +563,30 @@ def _damage_spread(
 
 
 def _win_spread(members: Sequence[Mapping[str, object]]) -> float | None:
-    """The gap between the best and worst win share of a tier, over the spells enough sides declared."""
-    scores = [float(member["score"]) for member in members if int(member.get("sides", 0)) >= ENOUGH_SIDES]
-    return max(scores) - min(scores) if len(scores) > 1 else None
+    """The gap between two win shares of a package, as far as the sides that declared them show (ADR 0065).
+
+    Over the spells enough sides declared, the largest lower bound of the gap between two of their win
+    shares: the 95 % Newcombe interval of the difference, built from each share's Wilson interval, and zero
+    where that interval crosses zero. Read raw, a catalogue whose every pair truly wins alike read a worst gap
+    of 0.254 at the median, from samples of a few dozen sides, while ``tier:blightweaver:v1``'s 0.66 against
+    0.15 on 22 and 27 sides is a gap no sample of that size draws by chance, and still reads 0.238 bounded.
+    """
+    read = [
+        (float(member["score"]), int(member.get("sides", 0)))
+        for member in members
+        if int(member.get("sides", 0)) >= ENOUGH_SIDES
+    ]
+    if len(read) < 2:
+        return None
+    return max(_gap_lower(first, second) for first, second in combinations(read, 2))
+
+
+def _gap_lower(first: tuple[float, int], second: tuple[float, int]) -> float:
+    """The lower end of the Newcombe interval of ``|p1 - p2|`` from two (share, trials) readings, or 0."""
+    (high, high_n), (low, low_n) = sorted((first, second), reverse=True)
+    high_lower, _ = _wilson(high * high_n, high_n)
+    _, low_upper = _wilson(low * low_n, low_n)
+    return max(0.0, (high - low) - math.sqrt((high - high_lower) ** 2 + (low_upper - low) ** 2))
 
 
 @dataclass(frozen=True)
@@ -528,8 +622,8 @@ class EngineContentEvaluator:
         shutil.rmtree(self._candidate / "dst", ignore_errors=True)
         self.calls = 0
 
-    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
-        self._write(spells)
+    def evaluate(self, documents: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        self._write(documents)
         self._build()
         schema = self._candidate / "dst" / "game.schema.json"
         return {
@@ -537,9 +631,9 @@ class EngineContentEvaluator:
             for name, evaluation in self._objective.evaluations.items()
         }
 
-    def _write(self, spells: Mapping[str, dict]) -> None:
-        for alias, document in spells.items():
-            source = Path(self._content.files[alias]).resolve()
+    def _write(self, documents: Mapping[str, dict]) -> None:
+        for alias, document in documents.items():
+            source = self._content.file_of(alias).resolve()
             target = self._candidate / source.relative_to(self._data)
             target.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
@@ -600,7 +694,7 @@ class EngineContentEvaluator:
 
 def playable(knobs: Knobs, base: Content) -> list[Knob]:
     """The knobs on spells the build actually carries. A knob on a spell that is turned off moves nothing."""
-    return [knob for knob in knobs if knob.spell in base.spells]
+    return [knob for knob in knobs if knob.target in base.documents]
 
 
 def _weights(all_knobs: Sequence[Knob], favour: Collection[str]) -> np.ndarray:
@@ -638,7 +732,7 @@ def propose(
             continue
         if len({move.knob.key for move in moves}) > search.options.max_changes:
             continue
-        if violations(search.content, apply_moves(search.content.spells, moves), search.knobs):
+        if violations(search.content, apply_moves(search.content.documents, moves), search.knobs):
             continue
         return moves
     return None
@@ -651,10 +745,10 @@ def _nudged(knob: Knob, current: Sequence[Move], base: Content, direction: int) 
     stops counting steps it cannot take: otherwise every one of them would read as a new candidate and
     cost an evaluation of a catalogue already played.
     """
-    if knob.spell not in base.spells:
+    if knob.target not in base.documents:
         return None
     taken = {move.knob.key: move.steps for move in current}
-    before = read_value(base.spells[knob.spell], knob.path)
+    before = read_value(base.documents[knob.target], knob.path)
     after = knob.moved(before, taken.get(knob.key, 0) + direction)
     moves = tuple(move for move in current if move.knob.key != knob.key)
     if after == before:
@@ -693,13 +787,13 @@ class MemoizingEvaluator:
         """Catalogues actually handed to the engine."""
         return len(self._seen)
 
-    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
-        key = json.dumps(spells, sort_keys=True)
+    def evaluate(self, documents: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        key = json.dumps(documents, sort_keys=True)
         cached = self._seen.get(key)
         if cached is not None:
             self.hits += 1
             return cached
-        measured = self._inner.evaluate(spells)
+        measured = self._inner.evaluate(documents)
         self._seen[key] = measured
         self._progress.step(f"{self.hits} replay(s) skipped" if self.hits else "")
         return measured
@@ -730,7 +824,7 @@ def tune_content(
     search = Search(knobs=knobs, content=content, options=options)
     climb = Climb(evaluator, objective, search, np.random.default_rng(options.seed))
 
-    first = _candidate(evaluator, objective, content.spells, moves=(), iteration=0)
+    first = _candidate(evaluator, objective, content.documents, moves=(), iteration=0)
     best = first
     history: list[Candidate] = []
     favour: set[str] = set()
@@ -740,9 +834,10 @@ def tune_content(
             best=best,
             initial=first,
             candidates=tuple(history),
-            spells=apply_moves(content.spells, best.moves),
-            files=content.files,
+            documents=apply_moves(content.documents, best.moves),
+            files={**content.files, **content.package_files},
             played=evaluator.plays,
+            objective=objective_version(objective),
         )
 
     def record() -> None:
@@ -804,7 +899,7 @@ def _neighbours(
         moves = propose(climb.rng, climb.search, best.moves, favour)
         if moves is None:
             continue
-        spells = apply_moves(climb.search.content.spells, moves)
+        spells = apply_moves(climb.search.content.documents, moves)
         played.append(_candidate(climb.evaluator, climb.objective, spells, moves, iteration))
     return played
 
@@ -822,13 +917,13 @@ def _sweep(evaluator: ContentEvaluator, knobs: Knobs, content: Content) -> list[
     for knob in playable(knobs, content):
         for direction in (1, -1):
             moves = _nudged(knob, (), content, direction)
-            if not moves or violations(content, apply_moves(content.spells, moves), knobs):
+            if not moves or violations(content, apply_moves(content.documents, moves), knobs):
                 continue
             key = tuple(sorted(_values(moves).items()))
             if key in played:
                 continue
             played.add(key)
-            spells = apply_moves(content.spells, moves)
+            spells = apply_moves(content.documents, moves)
             swept.append(_candidate(evaluator, knobs.objective, spells, moves, iteration=0))
     return swept
 
@@ -871,7 +966,7 @@ def _unimproved(swept: Sequence[Candidate], baseline: Candidate) -> list[str]:
     for candidate in swept:
         better = candidate.score < baseline.score
         for move in candidate.moves:
-            helped[move.knob.spell] = helped.get(move.knob.spell, False) or better
+            helped[move.knob.target] = helped.get(move.knob.target, False) or better
     return sorted(name for name, better in helped.items() if not better)
 
 
@@ -898,7 +993,7 @@ def _opened(pairing: Pairing, spells: Sequence[str]) -> list[Opened]:
     """Every legal pair of one spell's knobs, each stepped once in each direction."""
     by_spell: dict[str, list[Knob]] = {}
     for knob in playable(pairing.knobs, pairing.content):
-        by_spell.setdefault(knob.spell, []).append(knob)
+        by_spell.setdefault(knob.target, []).append(knob)
 
     opened: list[Opened] = []
     for spell in spells:
@@ -968,7 +1063,7 @@ def _play(pairing: Pairing, pair: Sequence[Knob], direction: int, counts: Sequen
     key = tuple(sorted(_values(moves).items()))
     if key in pairing.played:
         return None
-    spells = apply_moves(pairing.content.spells, moves)
+    spells = apply_moves(pairing.content.documents, moves)
     if violations(pairing.content, spells, pairing.knobs):
         return None
     pairing.played.add(key)
@@ -1019,7 +1114,7 @@ MEANINGS: Mapping[str, str] = {
     "spellUsageShare": "the share of every landed cast taken by the one spell cast most",
     "spellsNeverCast": "how many spells no side casts at all",
     "spellsBarelyCast": "how many spells take almost none of the casts of the tier they are offered in",
-    "tierUsageShare": "the share of one tier's casts taken by one of the spells in it",
+    "tierUsageShare": "the share of a package's casts one of its spells takes, as far as its sample shows",
     "tierDamageSpread": "how unevenly the spells offered at one depth hit, per landed cast",
     "tierWinSpread": "how unevenly the spells offered at one depth go on to win",
     "winRateA": "how much playing well still beats playing at random",
@@ -1052,8 +1147,14 @@ def score_content(evaluator: ContentEvaluator, objective: Objective, content: Co
     evaluator was built with, which is how a proposal and the content it replaced are compared on seeds the
     search that made the proposal never played.
     """
-    metrics = evaluator.evaluate(content.spells)
-    return CatalogueScore(objective.seeds, objective.score(metrics), objective.breakdown(metrics), metrics)
+    metrics = evaluator.evaluate(content.documents)
+    return CatalogueScore(
+        objective.seeds,
+        objective.score(metrics),
+        objective.breakdown(metrics),
+        metrics,
+        objective_version(objective),
+    )
 
 
 def _bound(value: float | None) -> str:
@@ -1140,7 +1241,7 @@ def format_result(result: TuneResult, objective: Objective) -> str:
 
     inert = result.inert
     if inert:
-        spells = sorted({move.knob.spell for candidate in inert for move in candidate.moves})
+        spells = sorted({move.knob.target for candidate in inert for move in candidate.moves})
         lines.extend(
             [
                 "",
@@ -1262,13 +1363,15 @@ def _band(target: Target) -> str:
 
 def _move_line(move: Move) -> str:
     """One move, named the way the content names it rather than the way the knobs file addresses it."""
-    return (
-        f"{_spell_name(move.knob.spell)} — {_field_name(move.knob.path)}: {move.before:g} -> {move.after:g}"
-    )
+    name, field = _document_name(move.knob.target), _field_name(move.knob.path)
+    return f"{name} — {field}: {move.before:g} -> {move.after:g}"
 
 
-def _spell_name(alias: str) -> str:
-    return alias.removeprefix("spell:").replace("_", " ").title()
+def _document_name(alias: str) -> str:
+    """``spell:throwing_star`` as "Throwing Star", ``tier:plague_doctor`` as "Plague Doctor package"."""
+    kind, _, name = alias.partition(":")
+    readable = name.replace("_", " ").title()
+    return f"{readable} package" if kind == "tier" else readable
 
 
 def _field_name(pointer: str) -> str:

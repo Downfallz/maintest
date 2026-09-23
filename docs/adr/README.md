@@ -22,7 +22,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0014](0014-exploration-in-recorded-datasets.md) | Record datasets with an exploring agent instead of reaching for reinforcement learning | Accepted |
 | [0015](0015-content-studio.md) | A local content studio: browse, edit, version and try the game content | Accepted |
 | [0016](0016-value-learning-on-an-advantage-baseline.md) | Learn action values against a state baseline instead of the raw match return | Accepted |
-| [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Accepted |
+| [0017](0017-spell-initiative-on-unlock.md) | Unlocking a spell raises the creature's initiative | Superseded by [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) |
 | [0018](0018-price-initiative-in-the-agent-weights.md) | Price initiative in the heuristic agents' weights | Accepted |
 | [0019](0019-regeneration-the-healing-counterpart-of-bleed.md) | Regeneration, the healing counterpart of Bleed | Accepted |
 | [0020](0020-energy-regeneration-and-the-price-of-energy.md) | Energy regeneration, and the price of energy | Accepted |
@@ -39,7 +39,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0031](0031-an-effect-that-lands-on-the-caster.md) | An effect that lands on the caster | Accepted |
 | [0032](0032-measure-the-initiative-weight.md) | Measure the initiative weight, and move it from 0.5 to 2.1 | Accepted |
 | [0033](0033-a-critical-cast-multiplies-a-direct-heal.md) | A critical cast multiplies a direct heal | Accepted |
-| [0034](0034-a-tier-is-a-depth-a-player-climbs.md) | A tier is a depth a player climbs, not a node in the file | Accepted |
+| [0034](0034-a-tier-is-a-depth-a-player-climbs.md) | A tier is a depth a player climbs, not a node in the file | Superseded by [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) |
 | [0035](0035-lowering-defense-and-taking-energy.md) | Lowering defense and taking energy | Accepted |
 | [0036](0036-raising-initiative-the-mirror-that-was-left-out.md) | Raising initiative, the mirror that was left out | Accepted |
 | [0037](0037-measure-the-energy-weight-and-move-it-from-0-2-to-0-3.md) | Measure the energy weight, and move it from 0.2 to 0.3 | Accepted |
@@ -61,5 +61,18 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0053](0053-score-the-exploit-term-on-the-clock-not-on-the-win-rate.md) | Score the exploit term on how fast the best exploiter wins, not on whether it wins | Accepted |
 | [0054](0054-a-playtest-app-on-the-same-engine.md) | A playtest app: the tabletop rule set on a screen, through the same engine | Accepted |
 | [0055](0055-a-searching-agent-may-be-built-on-a-policy.md) | A searching agent may be built on a policy, so the loop has an operator that improves one | Proposed |
-| [0056](0056-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0057](0057-reveal-spells-with-confirmed-targets.md) |
-| [0057](0057-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted |
+| [0056](0056-a-pick-buys-a-package-every-other-round.md) | A pick buys a package, and two of them arrive every other round | Accepted, amended by [0066](0066-a-creature-buys-one-package-an-opportunity.md) |
+| [0057](0057-a-package-is-authored-not-derived.md) | Author the packages, and retire the script that derived them | Accepted |
+| [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
+| [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |
+| [0060](0060-spells-sold-together-must-differ-in-play.md) | Spells sold together must differ in play, and Throwing Star buys reach | Accepted |
+| [0061](0061-a-package-initiative-bonus-is-a-balance-knob.md) | A package's initiative bonus is a balance knob, and the only one a package has | Accepted |
+| [0062](0062-read-the-seat-on-the-exploring-run.md) | Read the seat advantage on the exploring run, not on the greedy mirror | Accepted |
+| [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie between the sides on a d20, and let each side order its own | Accepted, amended by [0067](0067-the-lookahead-orders-its-own-ties.md) |
+| [0064](0064-read-a-package-monopoly-on-what-its-sample-proves.md) | Read a package's monopoly on what its sample proves, and not against an even split | Accepted |
+| [0065](0065-read-a-package-win-gap-on-what-its-sides-prove.md) | Read a package's win gap on what its sides prove | Accepted |
+| [0066](0066-a-creature-buys-one-package-an-opportunity.md) | A creature buys one package an opportunity | Accepted |
+| [0067](0067-the-lookahead-orders-its-own-ties.md) | The lookahead orders its own ties | Accepted |
+| [0068](0068-a-match-lasts-ten-to-fifteen-rounds.md) | A match lasts ten to fifteen rounds | Accepted |
+| [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
+| [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted |

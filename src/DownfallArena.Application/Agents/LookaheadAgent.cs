@@ -3,8 +3,10 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules;
+using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.Agents;
 
@@ -37,7 +39,8 @@ namespace DownfallArena.Application.Agents;
 /// </para>
 /// <para>
 /// Evolution and speed are the heuristic agent's: neither is a combat move, and the round they plan has no
-/// timeline yet to play out.
+/// timeline yet to play out. The tie order is this agent's own: it comes once the timeline is built, so the
+/// round each order leads to can be played out like any other move.
 /// </para>
 /// </summary>
 public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resources, RuleSet rules, bool adversarial = false, IPlayerAgent? inner = null) : IPlayerAgent
@@ -64,6 +67,73 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => _oneStep.DecideSpeed(board, creature);
 
     /// <summary>
+    /// The seating of its own tied creatures whose round ends best (ADR 0063): each way of putting them in
+    /// the places the roll-off gave this side, the round played out from the first slot on it. No intent is
+    /// declared yet, on either side, so every creature plays what this agent would guess for it, guessed once
+    /// on the board as rolled: an ally what the agent it is built on would declare, each on its own rather than
+    /// reading the others, and an enemy what the scorer would, the enemy's own tie kept as rolled. The minimax
+    /// agent reads it the same way, since a worst reply is only defined against one actor's move and here every
+    /// ally moves. Ties go to the order as rolled.
+    /// <para>
+    /// The seatings are the product of each tie's permutations, team size factorial at most: six on the
+    /// default rules. Past <see cref="MostSeatings"/> the roll is kept rather than let a large team make one
+    /// decision cost thousands of rounds.
+    /// </para>
+    /// </summary>
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var best = options.AsRolled;
+        if (Seatings(options.Ties) > MostSeatings)
+        {
+            return best;
+        }
+
+        var creatures = Creatures(board);
+        var guesses = Guesses(board, creatures);
+        var bestValue = RoundValue.Lowest;
+        foreach (var order in Orders(options.Ties))
+        {
+            var seated = board with { Timeline = Seat(board.Timeline, order) };
+            var value = PlayOut(seated, creatures, 0, null, new Dictionary<CreatureId, SpellId?>(guesses), _ => null, ForcedRandom.NotCritical);
+            if (value.CompareTo(bestValue) > 0)
+            {
+                best = order;
+                bestValue = value;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>The most seatings a tie order plays out: a team of four, all tied.</summary>
+    private const int MostSeatings = 24;
+
+    /// <summary>
+    /// How many seatings the ties have, counted only as far as <see cref="MostSeatings"/>: past it the count
+    /// stops at one more, so a tie of twenty-one creatures cannot overflow the product back under the limit.
+    /// </summary>
+    private static int Seatings(IReadOnlyList<IReadOnlyList<CreatureId>> ties)
+    {
+        var seatings = 1;
+        foreach (var tie in ties)
+        {
+            for (var factor = 2; factor <= tie.Count; factor++)
+            {
+                seatings *= factor;
+                if (seatings > MostSeatings)
+                {
+                    return MostSeatings + 1;
+                }
+            }
+        }
+
+        return seatings;
+    }
+
+    /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
     /// the actor casting that spell on the best targets the board offers when its slot comes. Ties go to the
     /// first spell in ordinal id order.
@@ -75,22 +145,35 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
-        SpellId? best = null;
-        var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
-        foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
+        var candidates = intentOption.CastableSpells
+            .OrderBy(spell => spell.Value, StringComparer.Ordinal)
+            .Select(spell => (
+                Spell: spell,
+                Round: Value(board, creatures, creatures, 0, intentOption.Creature, DeclaredSpells(board, creatures, intentOption.Creature, spell), ahead => BestTargets(ahead, intentOption.Creature, spell)),
+                OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0))
+            .ToList();
+        if (candidates.Count == 0)
         {
-            var declared = DeclaredSpells(board, creatures, intentOption.Creature, spell);
-            var value = (
-                Round: Value(board, creatures, creatures, 0, intentOption.Creature, declared, ahead => BestTargets(ahead, intentOption.Creature, spell)),
-                OneStep: _scorer.Best(actor, spell, creatures)?.Score ?? 0);
-            if (Better(value, bestValue))
-            {
-                best = spell;
-                bestValue = value;
-            }
+            throw new InvalidOperationException("The options offer no castable spell.");
         }
 
-        return best ?? throw new InvalidOperationException("The options offer no castable spell.");
+        // The rollout guesses every slot before the actor's. When that guess leaves the actor unable to cast any
+        // spell that costs energy at its own slot -- dead, stunned, or drained below the cost -- the round is
+        // ranking the guess and not the spell: only a free spell still resolves in it, and it wins by what it
+        // gives, in the one world where the guess is right. The choice matters in every other world, and the
+        // one-step reading is what can be said of those, as it is when the actor is guessed dead (journal,
+        // 2026-09-23: the lookahead cast Wait 248 times against greedy for exactly this). Minimax keeps its
+        // round: its reply is not a guess but the worst the enemy can do, and against that the free spell is the
+        // one that still resolves.
+        var paid = candidates.Where(candidate => resources.GetSpell(candidate.Spell).Stats.Cost.Value > 0).ToList();
+        if (!adversarial && paid.Count > 0 && paid.All(candidate => candidate.Round.ActorStopped))
+        {
+            return candidates.MaxBy(candidate => candidate.OneStep).Spell;
+        }
+
+        return candidates.Skip(1)
+            .Aggregate(candidates[0], (best, candidate) => Better((candidate.Round, candidate.OneStep), (best.Round, best.OneStep)) ? candidate : best)
+            .Spell;
     }
 
     /// <summary>
@@ -114,7 +197,8 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         IReadOnlyList<CreatureSnapshot> ahead = beforeCombat;
         foreach (var revealed in board.RevealedActions)
         {
-            ahead = Advance.Action(revealed, ahead, resources, rules, ForcedRandom.NotCritical).Board;
+            // Already revealed and replayed plain: the roll is forced, so the speed changes nothing here.
+            ahead = Advance.Action(revealed, ahead, resources, rules, ForcedRandom.NotCritical, Speed.Standard).Board;
         }
 
         var intent = new CombatIntent(options.Actor, options.Spell);
@@ -240,27 +324,36 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         return chance == 0 ? plain : RoundValue.Mix(chance, PlayOut(board, start, fromSlot, actor, declared, candidate, ForcedRandom.Critical), plain);
     }
 
+    /// <summary>
+    /// The round from a slot with the actor on its candidate and its roll, or, with no actor, every creature on
+    /// what can be read or guessed of it and every roll plain.
+    /// </summary>
     private RoundValue PlayOut(
         PlayerBoardState board,
         IReadOnlyList<CreatureSnapshot> start,
         int fromSlot,
-        CreatureId actor,
+        CreatureId? actor,
         Dictionary<CreatureId, SpellId?> declared,
         Func<IReadOnlyList<CreatureSnapshot>, CombatAction?> candidate,
         ForcedRandom roll)
     {
         var ahead = start;
         var value = 0.0;
+        var stopped = false;
         for (var index = fromSlot; index < board.Timeline.Count; index++)
         {
             var creature = board.Timeline[index].Creature;
             var action = creature == actor ? candidate(ahead) : Guess(ahead, creature, declared[creature]);
             if (action is null)
             {
+                stopped |= creature == actor && ahead.First(snapshot => snapshot.Id == creature) is { IsDead: true } or { IsStunned: true };
                 continue;
             }
 
-            var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical);
+            // The timeline knows what each creature chose, and the actor's roll is the one that can crit, so the
+            // rollout has to read the real speed here or it prices a critical a Quick actor cannot roll.
+            var advanced = Advance.Action(action, ahead, resources, rules, creature == actor ? roll : ForcedRandom.NotCritical, board.Timeline[index].Speed);
+            stopped |= creature == actor && Stops(advanced.Resolution.FizzleReason);
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
             value += sign * _scorer.Score(advanced.Resolution, ahead);
             ahead = advanced.Board;
@@ -269,11 +362,15 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         var cleaned = Advance.Cleanup(ahead, resources);
         return Advance.Outcome(cleaned, resources, board.RoundNumber ?? 1, rules) switch
         {
-            null => new RoundValue(0, value),
-            { Winner: null } => new RoundValue(0, value),
-            { Winner: var winner } => new RoundValue(winner == board.Slot ? 1 : -1, value),
+            null => new RoundValue(0, value, stopped),
+            { Winner: null } => new RoundValue(0, value, stopped),
+            { Winner: var winner } => new RoundValue(winner == board.Slot ? 1 : -1, value, stopped),
         };
     }
+
+    /// <summary>Whether a fizzle says the actor could not act at all, rather than that its spell missed.</summary>
+    private static bool Stops(DomainError? fizzle) =>
+        fizzle == CombatErrors.ActorDead || fizzle == CombatErrors.ActorStunned || fizzle == CombatErrors.NotEnoughEnergy;
 
     /// <summary>
     /// The actor's chance of a critical on the candidate, read the way <see cref="ActionScorer.Expected"/>
@@ -301,13 +398,17 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// dominate it, and a win an agent could be paid to decline is not a win it reads. Between two rolls,
     /// the outcome mixes the way the score does, so a critical that wins on the spot three casts in four is
     /// worth three quarters of a win.
+    /// <para>
+    /// <c>ActorStopped</c> is not part of the order: it says the rollout had the actor unable to act at its own
+    /// slot, which <see cref="DecideIntent"/> reads before it trusts the order at all.
+    /// </para>
     /// </summary>
-    private readonly record struct RoundValue(double Outcome, double Score) : IComparable<RoundValue>
+    private readonly record struct RoundValue(double Outcome, double Score, bool ActorStopped = false) : IComparable<RoundValue>
     {
         public static RoundValue Lowest => new(double.NegativeInfinity, double.NegativeInfinity);
 
         public static RoundValue Mix(double chance, RoundValue critical, RoundValue plain) =>
-            new((chance * critical.Outcome) + ((1 - chance) * plain.Outcome), (chance * critical.Score) + ((1 - chance) * plain.Score));
+            new((chance * critical.Outcome) + ((1 - chance) * plain.Outcome), (chance * critical.Score) + ((1 - chance) * plain.Score), plain.ActorStopped);
 
         public int CompareTo(RoundValue other)
         {
@@ -361,6 +462,74 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             spells[creature] = snapshot.Owner != board.Slot
                 ? GreedyIntent(snapshot, beforeCombat)
                 : board.Intents.FirstOrDefault(intent => intent.Actor == creature)?.Spell ?? AllyIntent(withCandidate, snapshot);
+        }
+
+        return spells;
+    }
+
+    /// <summary>
+    /// Every tie's orders, one tie after the other, the order as rolled first: the product of each tie's
+    /// permutations, flattened in timeline order the way a submitted tie order is.
+    /// </summary>
+    private static IEnumerable<IReadOnlyList<CreatureId>> Orders(IReadOnlyList<IReadOnlyList<CreatureId>> ties)
+    {
+        IEnumerable<IReadOnlyList<CreatureId>> orders = [[]];
+        foreach (var tie in ties)
+        {
+            var captured = orders;
+            orders = captured.SelectMany(before => Permutations(tie).Select(after => (IReadOnlyList<CreatureId>)[.. before, .. after]));
+        }
+
+        return orders;
+    }
+
+    /// <summary>A list's permutations, the list itself first.</summary>
+    private static IEnumerable<IReadOnlyList<CreatureId>> Permutations(IReadOnlyList<CreatureId> tie)
+    {
+        if (tie.Count <= 1)
+        {
+            yield return tie;
+            yield break;
+        }
+
+        for (var first = 0; first < tie.Count; first++)
+        {
+            var rest = tie.Where((_, index) => index != first).ToList();
+            foreach (var tail in Permutations(rest))
+            {
+                yield return [tie[first], .. tail];
+            }
+        }
+    }
+
+    /// <summary>
+    /// The timeline with an order's creatures in the places they hold, in that order. The places are theirs,
+    /// in timeline order, and the slots move whole: two slots in one tie differ only in whose they are.
+    /// </summary>
+    private static List<ActivationSlot> Seat(IReadOnlyList<ActivationSlot> timeline, IReadOnlyList<CreatureId> order)
+    {
+        var slots = timeline.Where(slot => order.Contains(slot.Creature)).ToDictionary(slot => slot.Creature);
+        var seated = timeline.ToList();
+        var next = 0;
+        for (var index = 0; index < seated.Count; index++)
+        {
+            if (slots.ContainsKey(seated[index].Creature))
+            {
+                seated[index] = slots[order[next++]];
+            }
+        }
+
+        return seated;
+    }
+
+    /// <summary>What every creature on the timeline is taken to declare before anyone has: an ally what the agent this one is built on would, an enemy what the scorer would.</summary>
+    private Dictionary<CreatureId, SpellId?> Guesses(PlayerBoardState board, IReadOnlyList<CreatureSnapshot> creatures)
+    {
+        var spells = new Dictionary<CreatureId, SpellId?>();
+        foreach (var creature in board.Timeline.Select(slot => slot.Creature).Distinct())
+        {
+            var snapshot = creatures.First(other => other.Id == creature);
+            spells[creature] = snapshot.Owner == board.Slot ? AllyIntent(board, snapshot) : GreedyIntent(snapshot, creatures);
         }
 
         return spells;

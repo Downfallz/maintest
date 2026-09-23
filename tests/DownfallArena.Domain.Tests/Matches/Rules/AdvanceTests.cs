@@ -28,9 +28,12 @@ public sealed class AdvanceTests
     public void A_board_advanced_through_every_step_of_a_match_lands_where_the_match_does()
     {
         var match = Table.Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.Guard)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.Slam)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Three, Arena.Guard)).IsSuccess.ShouldBeTrue();
+        // The script needs Slam in round 1, and a creature buys one package a round (ADR 0066): it comes into
+        // the match already owning Slam's prerequisite, and the match's one pick for it buys Slam.
+        Table.CreatureNumber(match, 1).BuyTier(Arena.Resources.GetTier(Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Three, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         PlayCombat(match, new()
         {
@@ -90,7 +93,7 @@ public sealed class AdvanceTests
         var before = match.Snapshots();
         var action = match.CurrentRound.ShouldNotBeNull().NextActionToResolve();
 
-        var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
+        var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
         var step = match.ResolveNextAction().Value;
 
         step.MatchCompleted.ShouldBeTrue();
@@ -128,7 +131,7 @@ public sealed class AdvanceTests
         Table.HitFirstLivingEnemy(match);
         var before = match.Snapshots();
 
-        var advanced = Advance.Action(match.CurrentRound.ShouldNotBeNull().NextActionToResolve(), before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
+        var advanced = Advance.Action(match.CurrentRound.ShouldNotBeNull().NextActionToResolve(), before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
 
         advanced.AppliedOutcomes.ShouldNotBeEmpty();
         ShouldMatch(match.Snapshots(), before);
@@ -141,7 +144,7 @@ public sealed class AdvanceTests
         var board = Arena.Snapshots(Arena.FourCreatures());
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Slam), [Arena.Ghoul]);
 
-        var advanced = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99));
+        var advanced = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99), Speed.Standard);
 
         advanced.Resolution.Fizzled.ShouldBeTrue();
         advanced.Resolution.FizzleReason.ShouldBe(CombatErrors.SpellNotKnown);
@@ -155,8 +158,8 @@ public sealed class AdvanceTests
         var board = Arena.Snapshots(Arena.FourCreatures());
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Strike), [Arena.Ghoul]);
 
-        var plain = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99));
-        var critical = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.0));
+        var plain = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.99), Speed.Standard);
+        var critical = Advance.Action(action, board, Arena.Resources, Table.TwoOnTwo(), new FixedRandom(0.0), Speed.Standard);
 
         plain.Board.Single(creature => creature.Id == Arena.Ghoul).Health.ShouldBe(Health.Of(17));
         critical.Resolution.IsCritical.ShouldBeTrue();
@@ -236,7 +239,7 @@ public sealed class AdvanceTests
             var before = match.Snapshots();
             var round = match.CurrentRound.Number;
             var action = match.CurrentRound.NextActionToResolve();
-            var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99));
+            var advanced = Advance.Action(action, before, Arena.Resources, match.RuleSet, new FixedRandom(0.99), Speed.Standard);
 
             var step = match.ResolveNextAction().Value;
 

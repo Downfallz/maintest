@@ -3,7 +3,6 @@
   "name": "Healing Screech",
   "spellType": "Defensive",
   "creatureClass": "Shaman",
-  "initiative": 0,
   "energyCost": 2,
   "criticalChance": 0.55,
   "targeting": {

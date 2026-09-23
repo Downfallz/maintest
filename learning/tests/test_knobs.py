@@ -36,6 +36,9 @@ from downfall_learning.knobs import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DAMAGE_POINTER = "/effects/0/amount"
 
+# The `initiative` is deliberately still here. Until ADR 0059 it was a spell's acquisition bonus and every
+# reading below compared it; now nothing does, and a file left over from before must not be read as content.
+# `test_an_initiative_a_stale_file_carries_decides_nothing` is what holds that.
 ATTACK = {
     "id": "spell:attack:v1",
     "initiative": 1,
@@ -116,14 +119,14 @@ def test_a_whole_number_is_written_as_a_whole_number() -> None:
 
 
 def test_a_knob_moves_from_the_value_the_content_carries_not_from_a_grid() -> None:
-    critical = Knob(spell="spell:attack", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
+    critical = Knob(target="spell:attack", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
 
     assert critical.moved(0.667, 1) == 0.717
     assert critical.moved(0.667, -1) == 0.617
 
 
 def test_a_knob_never_leaves_its_bounds() -> None:
-    damage = Knob(spell="spell:attack", path="/effects/0/amount", minimum=1, maximum=5, step=1)
+    damage = Knob(target="spell:attack", path="/effects/0/amount", minimum=1, maximum=5, step=1)
 
     assert damage.moved(5, 3) == 5
     assert damage.moved(1, -3) == 1
@@ -210,11 +213,19 @@ def test_reaching_more_enemies_for_the_same_price_is_strictly_better() -> None:
     assert dominates(sweep, ATTACK)
 
 
-def test_a_slower_unlock_is_not_strictly_better_however_hard_it_hits() -> None:
-    """Spell initiative is a real reward, so giving it up is a price like any other."""
-    later = spell(initiative=0, effects=[{"kind": "Damage", "amount": 9}])
+def test_an_initiative_a_stale_file_carries_decides_nothing() -> None:
+    """It was a reward a spell gave up, so the comparison priced it. A package pays it now (ADR 0059).
 
-    assert not dominates(later, ATTACK)
+    Both halves of the rule, on one pair: a spell that gives the field up is judged on what is left, and two
+    spells that differ only by it are the same spell. A file written before the change still parses, so the
+    field can still arrive -- it just decides nothing when it does.
+    """
+    harder = spell(initiative=0, effects=[{"kind": "Damage", "amount": 9}])
+
+    assert dominates(harder, ATTACK)
+    assert twins(content(**{"spell:attack": ATTACK, "spell:twin": spell(initiative=3)})) == [
+        frozenset({"spell:attack", "spell:twin"})
+    ]
 
 
 def test_only_the_pairs_a_candidate_adds_count_against_it() -> None:
@@ -242,7 +253,7 @@ def test_two_spells_a_match_cannot_tell_apart_are_reported(tmp_path: Path) -> No
 
     assert reports == [
         "spell:attack and spell:twin are one spell under two names: the same cost, "
-        "Spell initiative, critical chance, targeting and effects."
+        "critical chance, targeting and effects."
     ]
 
 
@@ -279,6 +290,22 @@ def test_the_score_adds_up_every_target_the_run_measured() -> None:
 
     assert objective.score(metrics) == pytest.approx(3.0 + 2.0)
     assert objective.missing(metrics) == []
+
+
+def band(maximum: float) -> Objective:
+    return Objective(
+        seeds="seeds.json",
+        evaluations={"variety": {"agentA": "explore:0.2"}},
+        targets=(Target(metric="tierUsageShare", on="variety", maximum=maximum, scale=0.05, weight=2),),
+    )
+
+
+# The tier evolution plan asks that a changed objective be versioned, not only described: two scores read
+# against different bands must say so themselves, or an old score.json and a new one compare silently.
+def test_the_objective_fingerprint_changes_with_a_band_and_only_with_what_the_objective_asks() -> None:
+    assert band(0.8).fingerprint == band(0.8).fingerprint
+    assert band(0.8).fingerprint != band(0.5).fingerprint
+    assert len(band(0.8).fingerprint) == 12
 
 
 def test_a_target_nobody_measured_is_named_rather_than_scored_as_zero() -> None:
@@ -697,76 +724,216 @@ def test_a_spell_sits_below_what_it_requires_even_in_the_same_node() -> None:
     assert spells.tiers["spell:crazed_specter"] == 3
 
 
-def test_a_prerequisite_raises_a_spell_the_node_depth_would_leave_shallow(tmp_path: Path) -> None:
-    """The reading, without the repository: two spells in one node, one behind the other."""
-    _write_tree(
+def test_a_spell_sits_at_the_level_of_the_package_that_teaches_it(tmp_path: Path) -> None:
+    """The reading, without the repository: a pick buys a package, and its level is what the climb cost."""
+    _write_packages(
         tmp_path,
+        ["spell:opener", "spell:behind"],
         [
-            {"id": "spell:opener:v1"},
-            {"id": "spell:behind:v1", "prerequisites": {"allOf": ["spell:opener"]}},
+            {"id": "tier:open:v1", "level": 1, "spells": ["spell:opener"]},
+            {"id": "tier:deep:v1", "level": 2, "prerequisites": ["tier:open:v1"], "spells": ["spell:behind"]},
         ],
     )
 
-    tiers = load_content(tmp_path).tiers
+    content = load_content(tmp_path)
 
-    assert tiers["spell:opener"] == 0
-    assert tiers["spell:behind"] == 1
+    assert content.tiers["spell:opener"] == 1
+    assert content.tiers["spell:behind"] == 2
+    assert content.packages["spell:opener"] == ("tier:open:v1",)
+    assert content.packages["spell:behind"] == ("tier:deep:v1",)
 
 
-def test_an_anyof_spell_sits_one_past_its_shallowest_alternative(tmp_path: Path) -> None:
-    """`TalentPrerequisites.AreSatisfiedBy` unlocks on *one* of `anyOf`, so the cheap path is what gates it.
-
-    Read together with `allOf` the deepest alternative won, and every spell behind a cheap alternative read
-    several tiers too deep -- which `tierUsageShare`, `tierDamageSpread` and `tierWinSpread` are all computed
-    over. Every `anyOf` pair in the repository sits at one depth today, so only a tree like this one shows it.
-    """
-    _write_tree(
+def test_a_starting_spell_sits_at_level_zero_and_belongs_to_no_package(tmp_path: Path) -> None:
+    """It is had before anything is chosen, so no pick paid for it and no package sells it."""
+    _write_packages(
         tmp_path,
+        ["spell:kit", "spell:bought"],
+        [{"id": "tier:open:v1", "level": 1, "spells": ["spell:bought"]}],
+        starting=["spell:kit"],
+    )
+
+    content = load_content(tmp_path)
+
+    assert content.tiers["spell:kit"] == 0
+    assert content.packages.get("spell:kit") is None
+    assert content.tiers["spell:bought"] == 1
+
+
+def test_a_spell_two_packages_teach_takes_the_cheaper_level_and_is_grouped_under_both(tmp_path: Path) -> None:
+    """Its level is how soon a creature can have it; both packages sell it, so both are read on it."""
+    _write_packages(
+        tmp_path,
+        ["spell:shared"],
         [
-            {"id": "spell:opener:v1"},
-            {"id": "spell:mid:v1", "prerequisites": {"allOf": ["spell:opener"]}},
-            {"id": "spell:deep:v1", "prerequisites": {"allOf": ["spell:mid"]}},
-            {"id": "spell:gated:v1", "prerequisites": {"anyOf": ["spell:opener", "spell:deep"]}},
+            {"id": "tier:cheap:v1", "level": 1, "spells": ["spell:shared"]},
+            {"id": "tier:dear:v1", "level": 3, "spells": ["spell:shared"]},
         ],
     )
 
-    tiers = load_content(tmp_path).tiers
+    content = load_content(tmp_path)
 
-    assert tiers["spell:deep"] == 2
-    assert tiers["spell:gated"] == 1, "one past the opener it can take, not one past the deep alternative"
+    assert content.tiers["spell:shared"] == 1
+    assert content.packages["spell:shared"] == ("tier:cheap:v1", "tier:dear:v1")
 
 
-def test_an_allof_spell_still_sits_one_past_its_deepest_requirement(tmp_path: Path) -> None:
-    """The other half of the rule: `allOf` must all be known, so the dearest of them is the floor."""
-    _write_tree(
+def test_a_disabled_package_teaches_nothing(tmp_path: Path) -> None:
+    """It left the build (ADR 0015), so nothing it named is acquired and nothing is grouped under it."""
+    _write_packages(
         tmp_path,
+        ["spell:orphan"],
+        [{"id": "tier:off:v1", "level": 1, "spells": ["spell:orphan"], "enabled": False}],
+    )
+
+    content = load_content(tmp_path)
+
+    assert content.packages.get("spell:orphan") is None
+    assert content.tiers.get("spell:orphan") is None
+
+
+def test_the_repository_levels_come_from_the_packages(tmp_path: Path) -> None:
+    """The shipped catalogue, read through the files a pick actually buys."""
+    content = load_content(REPO_ROOT / "data")
+
+    assert content.packages["spell:lightning_bolt"] == ("tier:occultist:v1",)
+    assert content.packages["spell:pummel"] == ("tier:brute:v1",)
+    assert content.tiers["spell:lightning_bolt"] == content.tiers["spell:pummel"] == 1
+    assert content.packages.get("spell:heavy_strike") is None, "a starting spell no package sells"
+
+
+def test_an_enabled_package_is_read_under_its_unversioned_alias(tmp_path: Path) -> None:
+    """A knobs entry names a package the way it names a spell, so a version cut does not orphan the entry."""
+    _write_packages(
+        tmp_path,
+        ["spell:opener"],
         [
-            {"id": "spell:opener:v1"},
-            {"id": "spell:mid:v1", "prerequisites": {"allOf": ["spell:opener"]}},
-            {"id": "spell:deep:v1", "prerequisites": {"allOf": ["spell:mid"]}},
-            {"id": "spell:gated:v1", "prerequisites": {"allOf": ["spell:opener", "spell:deep"]}},
+            {"id": "tier:open:v1", "level": 1, "spells": ["spell:opener"], "initiativeBonus": 2},
+            {"id": "tier:off:v1", "level": 1, "spells": ["spell:opener"], "enabled": False},
         ],
     )
 
-    tiers = load_content(tmp_path).tiers
+    content = load_content(tmp_path)
 
-    assert tiers["spell:gated"] == 3, "it needs both, so the deep one sets the floor"
+    assert set(content.package_documents) == {"tier:open"}
+    assert content.package_documents["tier:open"]["initiativeBonus"] == 2
+    assert content.file_of("tier:open") == tmp_path / "Tiers" / "open.json"
 
 
-def test_a_chain_of_prerequisites_settles_at_its_own_length(tmp_path: Path) -> None:
-    """Three deep in one node, declared in the order that makes a single pass insufficient."""
-    _write_tree(
-        tmp_path,
-        [
-            {"id": "spell:third:v1", "prerequisites": {"allOf": ["spell:second"]}},
-            {"id": "spell:second:v1", "prerequisites": {"allOf": ["spell:first"]}},
-            {"id": "spell:first:v1"},
-        ],
+def test_an_alias_decides_which_version_of_a_package_a_knob_moves(tmp_path: Path) -> None:
+    """What the studio writes when it cuts a package's next version: the older file is superseded."""
+    _write_packages(tmp_path, ["spell:opener"], [OPEN_PACKAGE])
+    (tmp_path / "Tiers" / "open.v2.json").write_text(
+        json.dumps({"id": "tier:open:v2", "level": 1, "spells": ["spell:opener"], "initiativeBonus": 4}),
+        encoding="utf-8",
+    )
+    aliases = json.loads((tmp_path / "aliases.json").read_text()) | {"tier:open": "tier:open:v2"}
+    (tmp_path / "aliases.json").write_text(json.dumps(aliases), encoding="utf-8")
+
+    content = load_content(tmp_path)
+
+    assert content.package_documents["tier:open"]["id"] == "tier:open:v2"
+    assert content.ambiguous_packages == ()
+
+
+def test_two_enabled_versions_and_no_alias_are_reported_rather_than_picked(tmp_path: Path) -> None:
+    _write_packages(tmp_path, ["spell:opener"], [OPEN_PACKAGE])
+    (tmp_path / "Tiers" / "open.v2.json").write_text(
+        json.dumps({"id": "tier:open:v2", "level": 1, "spells": ["spell:opener"]}), encoding="utf-8"
     )
 
-    tiers = load_content(tmp_path).tiers
+    content = load_content(tmp_path)
 
-    assert [tiers["spell:first"], tiers["spell:second"], tiers["spell:third"]] == [0, 1, 2]
+    problems = validate(load_knobs(write_knobs(tmp_path, knobs_json())), content)
+
+    assert "tier:open" not in content.package_documents
+    assert any("tier:open: 2 enabled versions" in problem and "no alias" in problem for problem in problems)
+
+
+def test_an_enabled_package_with_no_entry_is_a_number_nobody_decided_the_intent_of(tmp_path: Path) -> None:
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json()))
+
+    problems = validate(knobs, packaged(initiativeBonus=2))
+
+    assert "tier:open: an enabled package with no entry in the knobs file." in problems
+
+
+def test_a_package_knob_on_anything_but_its_initiative_bonus_is_refused(tmp_path: Path) -> None:
+    """Its level, prerequisites and spells are the progression: moving them would be redesigning it."""
+    entry = package_entry(knobs=[{"path": "/level", "min": 1, "max": 3, "step": 1}])
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": entry})))
+
+    problems = validate(knobs, packaged(initiativeBonus=2))
+
+    assert any("tier:open/level" in problem and "identity" in problem for problem in problems)
+
+
+def test_a_package_bonus_outside_its_own_bounds_is_reported(tmp_path: Path) -> None:
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
+
+    problems = validate(knobs, packaged(initiativeBonus=9))
+
+    assert "tier:open/initiativeBonus: the content carries 9.0, outside [0.0, 4.0]." in problems
+
+
+def test_a_package_knob_is_one_of_the_knobs_a_search_can_move(tmp_path: Path) -> None:
+    knobs = load_knobs(write_knobs(tmp_path, knobs_json(packages={"tier:open": package_entry()})))
+
+    assert "tier:open/initiativeBonus" in {knob.key for knob in knobs}
+    assert validate(knobs, packaged(initiativeBonus=2)) == []
+
+
+def test_the_repository_knobs_cover_every_package_the_repository_sells() -> None:
+    content = load_content(REPO_ROOT / "data")
+    knobs = load_knobs(REPO_ROOT / "data" / "balance" / "knobs.json")
+
+    assert set(knobs.packages) == set(content.package_documents)
+    assert len(content.package_documents) == 21
+
+
+OPEN_PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:opener"]}
+
+
+def package_entry(**overrides: object) -> dict:
+    return {
+        "name": "Open",
+        "intent": "The opener.",
+        "knobs": [{"path": "/initiativeBonus", "min": 0, "max": 4, "step": 1}],
+    } | overrides
+
+
+def packaged(**document: object) -> Content:
+    """The one-spell test catalogue with one package selling that spell."""
+    base = content(**{"spell:attack": ATTACK})
+    package = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"]} | document
+    return Content(
+        spells=base.spells,
+        files=base.files,
+        package_documents={"tier:open": package},
+        package_files={"tier:open": Path("Tiers/open.v1.json")},
+    )
+
+
+def _write_packages(
+    root: Path, spells: list[str], packages: list[dict], starting: list[str] | None = None
+) -> None:
+    """A data directory of spells, the packages that teach them, and one creature to hold a starting kit."""
+    (root / "Spells").mkdir(parents=True)
+    (root / "Tiers").mkdir(parents=True)
+    (root / "Creatures").mkdir(parents=True)
+    aliases = {}
+    for alias in spells:
+        identifier = f"{alias}:v1"
+        aliases[alias] = identifier
+        (root / "Spells" / f"{alias.split(':')[1]}.json").write_text(
+            json.dumps({**spell(id=identifier), "enabled": True}), encoding="utf-8"
+        )
+    (root / "aliases.json").write_text(json.dumps(aliases), encoding="utf-8")
+    for package in packages:
+        (root / "Tiers" / f"{str(package['id']).split(':')[1]}.json").write_text(
+            json.dumps(package), encoding="utf-8"
+        )
+    (root / "Creatures" / "one.json").write_text(
+        json.dumps({"id": "creature:one:v1", "startingSpellIds": starting or []}), encoding="utf-8"
+    )
 
 
 def _write_tree(root: Path, entries: list[dict]) -> None:
@@ -1057,7 +1224,7 @@ def boxed(alias: str, tier: int, document: dict, *knobs: dict) -> tuple[Content,
         intent="Something.",
         keep=(),
         note=None,
-        knobs=tuple(Knob(spell=alias, **knob) for knob in knobs),
+        knobs=tuple(Knob(target=alias, **knob) for knob in knobs),
     )
     knobs_file = Knobs(
         version="knobs:v1",

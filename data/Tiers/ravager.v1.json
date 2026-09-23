@@ -1,0 +1,13 @@
+{
+  "id": "tier:ravager:v1",
+  "name": "Ravager",
+  "level": 3,
+  "prerequisites": [
+    "tier:berserker:v1"
+  ],
+  "spells": [
+    "spell:tornado:v1",
+    "spell:psycho_rush:v1"
+  ],
+  "initiativeBonus": 2
+}

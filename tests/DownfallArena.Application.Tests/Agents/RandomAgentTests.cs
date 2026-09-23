@@ -13,15 +13,15 @@ public sealed class RandomAgentTests
     private static readonly PlayerBoardState Board = PlayerBoardStateProjection.Build(new MatchStore().Started(), PlayerSlot.Player1);
 
     [Fact]
-    public void Evolution_picks_one_offered_creature_and_one_of_its_spells_or_passes_when_nothing_is_offered()
+    public void Evolution_picks_one_offered_creature_and_one_of_its_packages_or_passes_when_nothing_is_offered()
     {
         var agent = new RandomAgent(new ScriptedRandom(0, 0, 1, 1, 1, 0));
-        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.Guard]), new EvolutionOption(CreatureId.From(2), [TestContent.Guard, TestContent.Slam])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(CreatureId.From(1), [TestContent.GuardPack]), new EvolutionOption(CreatureId.From(2), [TestContent.GuardPack, TestContent.SlamPack])]);
 
         for (var attempt = 0; attempt < 20; attempt++)
         {
             var choice = agent.DecideEvolution(Board, options).Choice.ShouldNotBeNull();
-            options.Creatures.Single(option => option.Creature == choice.Creature).UnlockableSpells.ShouldContain(choice.Spell);
+            options.Creatures.Single(option => option.Creature == choice.Creature).AvailableTiers.ShouldContain(choice.Tier);
         }
 
         agent.DecideEvolution(Board, new EvolutionOptions(1, [])).IsPass.ShouldBeTrue();
@@ -35,6 +35,20 @@ public sealed class RandomAgentTests
         var speeds = Enumerable.Range(0, 20).Select(_ => agent.DecideSpeed(Board, CreatureId.From(1))).ToHashSet();
 
         speeds.ShouldBe([Speed.Quick, Speed.Standard], ignoreOrder: true);
+    }
+
+    /// <summary>Every order a random agent gives keeps each creature inside its own tie, and both orders of a pair occur.</summary>
+    [Fact]
+    public void A_tie_order_shuffles_each_tie_on_its_own()
+    {
+        var agent = new RandomAgent(new TestRandom(3));
+        var options = new TieOrderOptions([[CreatureId.From(1), CreatureId.From(2)], [CreatureId.From(5), CreatureId.From(6)]]);
+
+        var orders = Enumerable.Range(0, 40).Select(_ => agent.DecideTieOrder(Board, options)).ToList();
+
+        orders.ShouldAllBe(order => order.Take(2).ToHashSet().SetEquals(new[] { CreatureId.From(1), CreatureId.From(2) })
+            && order.Skip(2).ToHashSet().SetEquals(new[] { CreatureId.From(5), CreatureId.From(6) }));
+        orders.Select(order => order[0]).Distinct().Count().ShouldBe(2);
     }
 
     [Fact]

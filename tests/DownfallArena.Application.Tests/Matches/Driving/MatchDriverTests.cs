@@ -56,6 +56,23 @@ public sealed class MatchDriverTests
         match.Creatures.ShouldAllBe(creature => creature.KnownSpells.Count == 1);
     }
 
+    /// <summary>Every creature goes Standard and ties, so each seat is asked its tie order and the match takes it.</summary>
+    [Fact]
+    public async Task A_tie_order_is_asked_of_the_agent_and_submitted()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1), new TestRandom(1));
+        var agent = Scripted(TestContent.Strike);
+        agent.DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>()).Returns(call => [.. call.Arg<TieOrderOptions>().AsRolled.Reverse()]);
+
+        await Driver(store).PlayAsync(match.Id, agent, agent, TestContext.Current.CancellationToken);
+
+        agent.Received(2).DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>());
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.TieOrderOf(PlayerSlot.Player1).ShouldNotBeNull().Count.ShouldBe(2);
+        round.TieOrderOf(PlayerSlot.Player2).ShouldNotBeNull().Count.ShouldBe(2);
+    }
+
     [Fact]
     public async Task An_intent_left_without_a_legal_target_is_revealed_empty_and_the_match_still_ends()
     {
@@ -82,7 +99,7 @@ public sealed class MatchDriverTests
         var match = store.Started();
         var cheater = Substitute.For<IPlayerAgent>();
         cheater.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>())
-            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.Slam)));
+            .Returns(EvolutionDecision.Unlock(new EvolutionChoice(CreatureId.From(1), TestContent.SlamPack)));
 
         await Should.ThrowAsync<InvalidOperationException>(() => Driver(store).PlayAsync(match.Id, cheater, cheater, TestContext.Current.CancellationToken));
     }
@@ -101,7 +118,7 @@ public sealed class MatchDriverTests
     }
 
     /// <summary>
-    /// An agent that passes, chooses Standard, declares the given spell, and hits the first legal target that no
+    /// An agent that passes, chooses Standard, keeps the order the roll-off left, declares the given spell, and hits the first legal target that no
     /// revealed action of the round targets yet (or the first one when every candidate is taken).
     /// </summary>
     private static IPlayerAgent Scripted(SpellId spell)
@@ -109,6 +126,7 @@ public sealed class MatchDriverTests
         var agent = Substitute.For<IPlayerAgent>();
         agent.DecideEvolution(Arg.Any<PlayerBoardState>(), Arg.Any<EvolutionOptions>()).Returns(EvolutionDecision.Pass);
         agent.DecideSpeed(Arg.Any<PlayerBoardState>(), Arg.Any<CreatureId>()).Returns(Speed.Standard);
+        agent.DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>()).Returns(call => call.Arg<TieOrderOptions>().AsRolled);
         agent.DecideIntent(Arg.Any<PlayerBoardState>(), Arg.Any<IntentOption>()).Returns(spell);
         agent.DecideTargets(Arg.Any<PlayerBoardState>(), Arg.Any<TargetOptions>()).Returns(call => FreshTarget(call.Arg<PlayerBoardState>(), call.Arg<TargetOptions>()));
         return agent;
@@ -128,6 +146,7 @@ public sealed class MatchDriverTests
                 new SubmitEvolutionChoiceHandler(store.Workflow),
                 new PassEvolutionHandler(store.Workflow),
                 new SubmitSpeedChoiceHandler(store.Workflow),
+                new SubmitTieOrderHandler(store.Workflow),
                 new SubmitIntentHandler(store.Workflow),
                 new SubmitActionHandler(store.Workflow),
                 new ResolveNextActionHandler(store.Workflow)),

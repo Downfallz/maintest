@@ -6,13 +6,17 @@ public static class RoundErrors
 {
     public static readonly DomainError EvolutionNotOpen = new("Round.EvolutionNotOpen", "Evolution choices are not accepted in the current sub-phase.");
 
-    public static readonly DomainError EvolutionAlreadySubmitted = new("Round.EvolutionAlreadySubmitted", "This evolution choice was already submitted.");
+    public static readonly DomainError EvolutionAlreadySubmitted = new("Round.EvolutionAlreadySubmitted", "This creature already has an evolution choice in this round.");
 
     public static readonly DomainError EvolutionAlreadyPassed = new("Round.EvolutionAlreadyPassed", "This player already passed their evolution picks for the round.");
 
     public static readonly DomainError SpeedNotOpen = new("Round.SpeedNotOpen", "Speed choices are not accepted in the current sub-phase.");
 
     public static readonly DomainError SpeedAlreadyChosen = new("Round.SpeedAlreadyChosen", "A speed was already chosen for this creature.");
+
+    public static readonly DomainError TieOrderNotOpen = new("Round.TieOrderNotOpen", "Tie orders are not accepted in the current sub-phase.");
+
+    public static readonly DomainError TieOrderAlreadySubmitted = new("Round.TieOrderAlreadySubmitted", "This player already ordered their tied creatures for the round.");
 
     public static readonly DomainError IntentsNotOpen = new("Round.IntentsNotOpen", "Combat intents are not accepted in the current sub-phase.");
 

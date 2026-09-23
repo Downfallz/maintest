@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bands, cursorOf, side, withCursor } from './timeline.js';
+import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
 
 const timeline = [
   { owner: 'Player1', creature: 2, speed: 'Quick', initiative: 6 },
@@ -74,4 +74,15 @@ test('a strip pointing at nothing lights no slot', () => {
   const slots = withCursor([{ creature: 1 }, { creature: 2 }], cursorOf({ subPhase: 'Cleanup' }));
 
   assert.deepEqual(slots.map(slot => slot.isNow), [false, false]);
+});
+
+// ADR 0063: the dice are public, and a slot shows the rolls behind its place -- every roll, since a creature the
+// other side matched rolled again -- and nothing when it did not roll.
+test('a slot reads the rolls behind its place, and nothing when it did not roll', () => {
+  const rollOffs = [{ creature: 2, rolls: [17] }, { creature: 4, rolls: [11, 4] }];
+
+  assert.equal(rollText(rollOffs, 2), 'd20 17');
+  assert.equal(rollText(rollOffs, 4), 'd20 11 → 4');
+  assert.equal(rollText(rollOffs, 1), '');
+  assert.equal(rollText(undefined, 1), '');
 });

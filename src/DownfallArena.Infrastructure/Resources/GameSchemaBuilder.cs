@@ -16,6 +16,8 @@ public static class GameSchemaBuilder
     public const string CreaturesFolder = "Creatures";
     public const string SpellsFolder = "Spells";
     public const string TalentTreesFolder = "TalentTrees";
+
+    public const string TiersFolder = "Tiers";
     public const string AliasesFile = "aliases.json";
 
     public static GameSchema Build(string dataDirectory) => Build(dataDirectory, notes: null);
@@ -37,6 +39,7 @@ public static class GameSchemaBuilder
         var creatures = LoadAll<CreatureDefinitionDto>(Path.Combine(dataDirectory, CreaturesFolder), problems);
         var spells = LoadAll<SpellDto>(Path.Combine(dataDirectory, SpellsFolder), problems);
         var trees = LoadAll<TalentTreeDto>(Path.Combine(dataDirectory, TalentTreesFolder), problems);
+        var tiers = LoadAll<TierDto>(Path.Combine(dataDirectory, TiersFolder), problems, optional: true);
         ThrowIfAny(problems);
 
         var resolver = new AliasResolver(aliases);
@@ -45,6 +48,7 @@ public static class GameSchemaBuilder
             Creatures = [.. creatures.Select(creature => Canonical(creature, resolver, problems)).OrderBy(creature => creature.Id, StringComparer.Ordinal)],
             Spells = [.. spells.Select(spell => Canonical(spell, resolver, problems)).OrderBy(spell => spell.Id, StringComparer.Ordinal)],
             TalentTrees = [.. trees.Select(tree => Canonical(tree, resolver, problems)).OrderBy(tree => tree.Id, StringComparer.Ordinal)],
+            Tiers = [.. tiers.Select(tier => Canonical(tier, resolver, problems)).OrderBy(tier => tier.Id, StringComparer.Ordinal)],
             Aliases = new SortedDictionary<string, string>(aliases, StringComparer.Ordinal),
         };
         ThrowIfAny(problems);
@@ -52,6 +56,7 @@ public static class GameSchemaBuilder
         schema = DisabledContent.Remove(schema, notes, problems);
         ThrowIfAny(problems);
 
+        schema = Versioned(schema);
         schema = schema with { ContentHash = ComputeHash(schema) };
         GameSchemaMapper.ToGameResources(schema);
         return schema;
@@ -78,8 +83,18 @@ public static class GameSchemaBuilder
             throw new FileNotFoundException($"Game schema '{schemaPath}' does not exist. Run the data builder first.", schemaPath);
         }
 
-        var schema = JsonSerializer.Deserialize<GameSchema>(File.ReadAllText(schemaPath), GameSchemaJson.ReadOptions)
+        var text = File.ReadAllText(schemaPath);
+
+        // The declared version is read before the document is deserialized, and deliberately: a document from a
+        // newer builder is one carrying members this reader does not know, and the strict reader
+        // (UnmappedMemberHandling.Disallow) would throw about the member rather than about the version -- the
+        // one case the version check exists for. A loose read of one number cannot fail that way.
+        VerifyKnownVersion(DeclaredVersion(text, schemaPath), schemaPath);
+
+        var schema = JsonSerializer.Deserialize<GameSchema>(text, GameSchemaJson.ReadOptions)
             ?? throw new InvalidGameContentException($"'{schemaPath}' does not contain a game schema.");
+
+        VerifyVersionCarriesWhatItSays(schema, schemaPath);
 
         var expected = ComputeHash(schema);
         if (!string.Equals(expected, schema.ContentHash, StringComparison.Ordinal))
@@ -95,6 +110,83 @@ public static class GameSchemaBuilder
         ArgumentNullException.ThrowIfNull(schema);
         var canonical = JsonSerializer.Serialize(schema with { ContentHash = string.Empty }, GameSchemaJson.HashOptions);
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+
+    /// <summary>
+    /// The document's version and its <c>tiers</c> member decided together, because they are one fact: the
+    /// version is the lowest one that can read the document. A catalogue with no packages is emitted exactly as
+    /// it was before packages existed -- member absent, version 1, same content hash -- and one that has them
+    /// says version 2, because a reader written before the member refuses it as an unknown field.
+    /// </summary>
+    private static GameSchema Versioned(GameSchema schema) =>
+        schema.Tiers is { Count: > 0 }
+            ? schema with { SchemaVersion = GameSchema.VersionWithTiers }
+            : schema with { SchemaVersion = GameSchema.VersionWithoutTiers, Tiers = null };
+
+    /// <summary>
+    /// The version the document declares, read on its own. A document with no <c>schemaVersion</c> is the
+    /// first version, which is what the record's own default says.
+    /// </summary>
+    private static int DeclaredVersion(string text, string schemaPath)
+    {
+        using var document = JsonDocument.Parse(text, GameSchemaJson.DocumentOptions);
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidGameContentException($"'{schemaPath}' does not contain a game schema.");
+        }
+
+        if (!document.RootElement.TryGetProperty("schemaVersion", out var version))
+        {
+            return GameSchema.VersionWithoutTiers;
+        }
+
+        return version.ValueKind == JsonValueKind.Number && version.TryGetInt32(out var number)
+            ? number
+            : throw new InvalidGameContentException($"'{schemaPath}' declares a schema version that is not a whole number.");
+    }
+
+    /// <summary>
+    /// Read before anything else, because a version this engine does not know explains both an unknown member
+    /// and a hash mismatch that would otherwise read as corrupted content.
+    /// </summary>
+    private static void VerifyKnownVersion(int declared, string schemaPath)
+    {
+        if (declared is GameSchema.VersionWithoutTiers or GameSchema.VersionWithTiers)
+        {
+            return;
+        }
+
+        // Which side it is on is the whole use of the sentence: an older document is rebuilt from `data/`, a
+        // newer one needs a newer engine. Neither is a corrupt file, which is what both would otherwise read as.
+        var age = declared <= GameSchema.LastVersionWithASpellInitiative
+            ? "It was written by an older builder, before a spell stopped carrying its own initiative (ADR 0059); rebuild it from 'data/'."
+            : "It was written by a newer builder.";
+
+        throw new InvalidGameContentException(
+            $"'{schemaPath}' declares schema version {declared}; this engine reads "
+            + $"{GameSchema.VersionWithoutTiers} and {GameSchema.VersionWithTiers}. {age}");
+    }
+
+    /// <summary>
+    /// The pairing, verified both ways so that one content hash has one document: a version that does not
+    /// match what the document carries would hash differently for the same catalogue.
+    /// </summary>
+    private static void VerifyVersionCarriesWhatItSays(GameSchema schema, string schemaPath)
+    {
+        var carriesTiers = schema.Tiers is { Count: > 0 };
+        if (carriesTiers && schema.SchemaVersion == GameSchema.VersionWithoutTiers)
+        {
+            throw new InvalidGameContentException(
+                $"'{schemaPath}' declares schema version {GameSchema.VersionWithoutTiers} but carries evolution packages; "
+                + $"a catalogue that uses them is version {GameSchema.VersionWithTiers}. Rebuild it with the data builder.");
+        }
+
+        if (!carriesTiers && schema.SchemaVersion == GameSchema.VersionWithTiers)
+        {
+            throw new InvalidGameContentException(
+                $"'{schemaPath}' declares schema version {GameSchema.VersionWithTiers} but carries no evolution packages; "
+                + $"a catalogue without them is version {GameSchema.VersionWithoutTiers}. Rebuild it with the data builder.");
+        }
     }
 
     private static CreatureDefinitionDto Canonical(CreatureDefinitionDto creature, AliasResolver resolver, List<string> problems)
@@ -119,6 +211,17 @@ public static class GameSchemaBuilder
             Id = resolver.Resolve<SpellId>(spell.Id, $"spell '{spell.Id}'", problems) ?? spell.Id,
             CasterEffects = spell.CasterEffects is { Count: > 0 } ? spell.CasterEffects : null,
         };
+
+    private static TierDto Canonical(TierDto tier, AliasResolver resolver, List<string> problems)
+    {
+        var context = $"tier '{tier.Id}'";
+        return tier with
+        {
+            Id = resolver.Resolve<TierId>(tier.Id, context, problems) ?? tier.Id,
+            Prerequisites = [.. tier.Prerequisites.Select(id => resolver.Resolve<TierId>(id, context, problems) ?? id)],
+            Spells = [.. tier.Spells.Select(id => resolver.Resolve<SpellId>(id, context, problems) ?? id)],
+        };
+    }
 
     private static TalentTreeDto Canonical(TalentTreeDto tree, AliasResolver resolver, List<string> problems)
     {
@@ -173,13 +276,29 @@ public static class GameSchemaBuilder
         }
     }
 
-    private static List<T> LoadAll<T>(string directory, List<string> problems)
+    /// <summary>
+    /// Every JSON file under a content folder. A missing folder is a problem unless <paramref name="optional"/>
+    /// says otherwise, which only <c>Tiers</c> is while the migration runs: a catalogue authored before tiers
+    /// existed has no such folder and is still a catalogue.
+    /// <para>
+    /// The option goes when a pick is spent on a package rather than on a spell. A catalogue with no packages
+    /// has no legal evolution choice at that point, so it stops being playable content and the folder stops
+    /// being optional. The marker is mechanical rather than a note to remember: such a catalogue is schema
+    /// version 1, so "a version-1 document cannot start a match" is the check to add, in the domain, and the
+    /// day it exists this argument has nothing left to allow.
+    /// </para>
+    /// </summary>
+    private static List<T> LoadAll<T>(string directory, List<string> problems, bool optional = false)
         where T : class
     {
         var items = new List<T>();
         if (!Directory.Exists(directory))
         {
-            problems.Add($"Content folder '{Path.GetFileName(directory)}' is missing.");
+            if (!optional)
+            {
+                problems.Add($"Content folder '{Path.GetFileName(directory)}' is missing.");
+            }
+
             return items;
         }
 

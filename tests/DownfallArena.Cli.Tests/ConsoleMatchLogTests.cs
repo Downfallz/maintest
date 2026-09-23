@@ -1,6 +1,9 @@
+using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Events;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Rounds;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Cli.Tests;
 
@@ -49,6 +52,17 @@ public sealed class ConsoleMatchLogTests
         var printed = await LogAsync(Ongoing(bleeds: [], regenerations: [], energyRegenerations: [new EnergyRegenerationTick(One, 2)]));
 
         printed.ShouldContain("creature 1 gains 2 energy");
+    }
+
+    [Fact]
+    public async Task The_timeline_a_tie_order_produced_is_narrated()
+    {
+        var timeline = CombatTimeline.Of([new ActivationSlot(PlayerSlot.Player1, Two, Speed.Standard, Initiative.Of(5)), new ActivationSlot(PlayerSlot.Player1, One, Speed.Standard, Initiative.Of(5))]);
+        var writer = new StringWriter();
+
+        await new ConsoleMatchLog(writer).HandleAsync(new TiesOrdered(MatchId.New(), RoundId.First, timeline), TestContext.Current.CancellationToken);
+
+        writer.ToString().ShouldContain("Ties ordered: 2 (Standard), 1 (Standard)");
     }
 
     private static OngoingEffectsApplied Ongoing(

@@ -5,8 +5,9 @@ import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } 
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, statPairs, targetedBy, turnOrder, liveChoice } from './board.js';
 import { handRows } from './hand.js';
 import { accumulate, feedLine, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
-import { bands, cursorOf, side, withCursor } from './timeline.js';
-import { classColour, talentClasses, talentForest, talentPalette } from './mat.js';
+import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
+import { classColour, talentClasses, packageForest, talentPalette } from './mat.js';
+import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
@@ -52,7 +53,7 @@ function start(seats) {
     acknowledged: null, announced: null, announcing: null,
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
-    cards: new Map(), catalogue: null, tab: 'board', feeds: new Map(),
+    cards: new Map(), packages: new Map(), catalogue: null, tab: 'board', feeds: new Map(),
   };
   load(state);
   setupTalentWindow(state);
@@ -159,6 +160,7 @@ async function load(state) {
     return; // The seat poll reports connection failures; a later poll retries the catalogue.
   }
   state.cards = new Map((state.catalogue?.cards ?? []).map(card => [card.id, card]));
+  state.packages = new Map((state.catalogue?.packages ?? []).map(face => [face.id, face]));
   element('rules').textContent = ruleLine(state.catalogue);
   renderShape(state.catalogue?.round);
   redraw(state);
@@ -189,7 +191,11 @@ function renderShape(round) {
 function ruleLine(catalogue) {
   const rules = catalogue?.rules;
   if (!rules) return '';
-  return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerRound} picks · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
+  // The first round is printed beside the interval, not folded into it: rounds 1, 3, 5 and rounds 2, 4, 6 are
+  // the same interval and a different game, and this line exists to tell two games apart at a glance.
+  const every = rules.evolutionInterval === 1 ? 'every round' : `every ${rules.evolutionInterval} rounds`;
+  const cadence = `${every} from round ${rules.firstEvolutionRound}`;
+  return `${rules.teamSize} creatures · ${rules.energyPerRound} energy · ${rules.evolutionPicksPerOpportunity} picks ${cadence} · ${rules.roundCap} rounds · x${rules.criticalMultiplier} crit · ${String(catalogue.contentHash ?? '').slice(0, 6)}`;
 }
 
 // Only one poll can be in flight. An old response must never replace a newer decision.
@@ -338,8 +344,9 @@ function render(state, views) {
     state.error = '';
     state.evolving = null;
     state.inspectCreature = null;
+    state.ordered = [];
     element('decision').scrollTop = 0;
-    if (['Speed', 'Intent', 'Target'].includes(view.waitingFor)) showTab(state, 'board');
+    if (['Speed', 'TieOrder', 'Intent', 'Target'].includes(view.waitingFor)) showTab(state, 'board');
   }
 
   // Until the player being asked says they are the one holding the device, the board stays behind the pass
@@ -360,7 +367,7 @@ function render(state, views) {
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -403,8 +410,9 @@ function render(state, views) {
   renderNotes(view);
   element('shortcut-context').textContent = view.waitingFor === 'Speed'
     ? '1 Quick · 2 Standard' : view.waitingFor === 'Evolution'
-      ? '← → Choose creature · ↓ Browse spells · Enter to choose'
-      : '1–9 Select card / target · Enter to confirm';
+      ? '← → Choose creature · ↓ Browse packages · Enter to buy'
+      : view.waitingFor === 'TieOrder' ? '← → Browse tied creatures · Enter to order · Confirm when ready'
+        : '1–9 Select card / target · Enter to confirm';
   restorePosition(saved);
   if (!state.playback) guideDecision(state, current);
   else if (state.guidedPlayback !== `${state.playback.seat}/${state.playback.round}`) {
@@ -420,7 +428,7 @@ function guideDecision(state, current) {
   state.guidedAsking = state.asked;
   const kind = current.view.waitingFor;
   const desktop = globalThis.innerWidth >= 1100;
-  const anchor = desktop && ['Speed', 'Intent', 'Target'].includes(kind) ? element('board')
+  const anchor = desktop && ['Speed', 'TieOrder', 'Intent', 'Target'].includes(kind) ? element('board')
     : ['Speed', 'Intent'].includes(kind) ? element('planning') : kind === 'Target' ? element('decision') : null;
   if (!anchor) return;
   const rect = anchor.getBoundingClientRect();
@@ -476,6 +484,13 @@ function renderTimeline(board) {
       initiative.textContent = `Initiative ${slot.initiative}`;
       one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${band.speed}, initiative ${slot.initiative}${slot.isNow ? ', acting now' : ''}`);
       one.append(order, creature, initiative);
+      const rolled = rollText(board.rollOffs, slot.creature);
+      if (rolled) {
+        const dice = document.createElement('span');
+        dice.className = 'roll';
+        dice.textContent = rolled;
+        one.append(dice);
+      }
       slots.append(one);
     }
 
@@ -784,8 +799,7 @@ function openTalents(state) {
   element('talent-grip').focus({ preventScroll: true });
 }
 
-// The reference is grouped by class and server-computed tier. Prerequisites stay on each full card;
-// tier columns indicate progression, never an invented prerequisite connection.
+// The atlas follows authored package prerequisites and uses only server offers for purchases.
 function renderMat(state, current) {
   const view = current.view;
   const allies = view.board.allies ?? [];
@@ -806,7 +820,7 @@ function renderMat(state, current) {
   heading.append(context);
   const help = document.createElement('p');
   help.className = 'muted';
-  help.textContent = 'Base → families → specializations. Select a class to inspect its spells. Branch lines show class ancestry; Requires on each card gives the exact unlock conditions.';
+  help.textContent = 'Tier 1 → Tier 2 → Tier 3. Select a package to inspect all its spells. Lines show required packages; one pick buys the whole package.';
   const picker = document.createElement('div');
   picker.className = 'creature-picker';
   picker.setAttribute('aria-label', 'Inspect talent progress');
@@ -822,36 +836,36 @@ function renderMat(state, current) {
     picker.append(choice);
   }
   const filter = document.createElement('select');
-  filter.setAttribute('aria-label', 'Filter by class');
+  filter.setAttribute('aria-label', 'Inspect a package');
   filter.dataset.focus = 'talent-class';
-  for (const name of ['', ...classes.map(group => group.name)]) {
+  for (const name of ['', ...classes.map(group => group.id)]) {
     const option = document.createElement('option');
     option.value = name;
-    option.textContent = name || 'All classes';
+    option.textContent = classes.find(group => group.id === name)?.name || 'All packages';
     filter.append(option);
   }
-  filter.value = classes.some(group => group.name === state.inspectClass) ? state.inspectClass : '';
+  filter.value = classes.some(group => group.id === state.inspectClass) ? state.inspectClass : '';
   filter.addEventListener('change', () => { state.inspectClass = filter.value; redraw(state); });
   toolbar.append(heading, help, picker, filter);
   if (evolution) toolbar.append(evolutionBudget(state, view));
-  const forest = talentForest(state.catalogue);
+  const forest = packageForest(state.catalogue);
   const graph = document.createElement('div');
   graph.className = 'tree-map';
   graph.dataset.scroll = 'talent-map';
-  graph.setAttribute('aria-label', 'Class hierarchy');
+  graph.setAttribute('aria-label', 'Package prerequisites');
   const roots = document.createElement('ul');
   roots.className = 'tree-roots';
   roots.append(...forest.map(node => treeNode(state, node, classes, creature)));
   graph.append(roots);
   // The overview is compact; full spell faces appear for the selected class only.
-  const selected = classes.find(group => group.name === filter.value);
+  const selected = classes.find(group => group.id === filter.value);
   const detail = document.createElement('div');
   detail.className = 'talent-inspector';
   if (selected) detail.append(talentLane(state, selected, current, creature));
   else {
     const prompt = document.createElement('p');
     prompt.className = 'atlas-prompt';
-    prompt.textContent = 'Select a class above to see its spells, tiers and next unlocks.';
+    prompt.textContent = 'Select a package above to see its spells, initiative bonus and prerequisites.';
     detail.append(prompt);
   }
   if (classes.length === 0) help.textContent = 'The talent catalogue is not available yet.';
@@ -861,47 +875,49 @@ function renderMat(state, current) {
 function talentLane(state, group, current, creature) {
   const lane = document.createElement('section');
   lane.className = 'talent-lane';
-  lane.style.setProperty('--class-color', classColour(group.name, state.palette));
+  lane.style.setProperty('--class-color', classColour(group.id, state.palette));
   const title = document.createElement('h2');
   title.className = 'talent-class';
-  title.textContent = group.name;
-  const columns = document.createElement('div');
-  columns.className = 'talent-tiers';
-  columns.dataset.scroll = `talent-${group.name}`;
-  for (const tier of group.tiers) {
-    const column = document.createElement('div');
-    column.className = 'talent-tier';
-    column.style.setProperty('--tier-columns', Math.min(2, tier.spells.length));
-    const heading = document.createElement('h3');
-    heading.textContent = tier.tier ? `Tier ${tier.tier}` : 'Unranked';
-    column.append(heading);
-    for (const spell of tier.spells) {
-      const face = document.createElement('article');
-      face.className = `card talent-card ${spell.status}`;
-      const status = document.createElement('span');
-      status.className = 'talent-status';
-      status.textContent = spell.status === 'known' ? '✓ Known' : spell.status === 'available' ? '+ Unlock now' : '○ Not learned';
-      const parts = cardParts(state, spell.spell, '');
-      if (parts) face.append(status, ...parts);
-      else { face.textContent = spell.spell; face.append(status); }
-      if (spell.status === 'available') {
-        const unlock = button(`Unlock for creature ${creature.id}`, () => {
-          if (!canInteract(state, current, 'Evolution')) return;
-          const offer = current.view.options.evolution?.creatures?.find(one => one.creature === creature.id);
-          if (offer?.unlockableSpells?.includes(spell.spell)) {
-            return submit(state, current, { kind: 'Evolution', creature: creature.id, spell: spell.spell });
-          }
-        });
-        unlock.disabled = state.sending;
-        unlock.className = 'atlas-unlock';
-        face.append(unlock);
-      }
-      column.append(face);
-    }
-    columns.append(column);
+  title.textContent = `${group.name} · Tier ${group.level}`;
+  const summary = document.createElement('p');
+  summary.className = 'package-summary';
+  const requires = (group.prerequisites ?? []).map(id => state.packages.get(id)?.name ?? id).join(' + ');
+  summary.textContent = `↟ ${group.initiativeBonus >= 0 ? '+' : ''}${group.initiativeBonus} initiative on purchase · Requires: ${requires || 'No prerequisite package'}`;
+  const status = document.createElement('p');
+  status.className = 'talent-status';
+  status.textContent = group.status === 'known' ? '✓ Package acquired' : group.status === 'available' ? '+ Available now · 1 team pick'
+    : 'Not available this opportunity · check prerequisites and creature eligibility';
+  lane.append(title, summary, status);
+  if (group.status === 'available') {
+    const buy = button(`Buy ${group.name} for creature ${creature.id}`, () => buyPackage(state, current, creature.id, group.id));
+    buy.disabled = state.sending;
+    buy.className = 'atlas-unlock';
+    buy.dataset.focus = `atlas-buy-${creature.id}-${group.id}`;
+    lane.append(buy);
   }
-  lane.append(title, columns);
+  const column = document.createElement('div');
+  column.className = 'talent-tier';
+  column.style.setProperty('--tier-columns', Math.min(2, group.spells.length));
+  for (const spell of group.tiers[0].spells) {
+    const face = document.createElement('article');
+    face.className = `card talent-card ${spell.status}`;
+    const known = document.createElement('span');
+    known.className = 'talent-status';
+    known.textContent = spell.status === 'known' ? '✓ Spell known' : 'Included in this package';
+    face.append(known);
+    const parts = cardParts(state, spell.spell, '');
+    if (parts) face.append(...parts);
+    else { const label = document.createElement('p'); label.textContent = spell.spell; face.append(label); }
+    column.append(face);
+  }
+  lane.append(column);
   return lane;
+}
+
+function buyPackage(state, current, creature, tier) {
+  if (!canInteract(state, current, 'Evolution')) return;
+  const offer = current.view.options.evolution?.creatures?.find(one => one.creature === creature);
+  if (offer?.availableTiers?.includes(tier)) return submit(state, current, { kind: 'Evolution', creature, tier });
 }
 
 // What has happened, as this seat may be told it. The kinds are the engine's own words, off the wire, and a
@@ -1124,9 +1140,10 @@ function renderDecision(state, current) {
 
 function titleOf(state, view) {
   switch (view.waitingFor) {
-    case 'Evolution': return `Creature ${state.evolving ?? view.options.evolution?.creatures?.[0]?.creature ?? '—'} · unlock a spell`;
+    case 'Evolution': return `Creature ${state.evolving ?? view.options.evolution?.creatures?.[0]?.creature ?? '—'} · buy a package`;
     case 'Speed': return `Creature ${view.waitingCreature} · choose speed`;
     case 'Intent': return `Creature ${view.waitingCreature} · choose spell`;
+    case 'TieOrder': return 'Tied: which of your creatures acts first?';
     case 'Target': {
       const spell = view.options.target?.spell;
       return `Creature ${view.waitingCreature} · ${cardTitle(state.cards.get(spell)) || spell || 'Choose targets'}`;
@@ -1137,7 +1154,7 @@ function titleOf(state, view) {
 
 function decisionPhase(view) {
   if (view.over) return 'Match complete';
-  const phases = { Evolution: 'Evolution', Speed: 'Choose speed', Intent: 'Choose spell', Target: 'Targeting' };
+  const phases = { Evolution: 'Evolution', Speed: 'Choose speed', TieOrder: 'Order tied creatures', Intent: 'Choose spell', Target: 'Targeting' };
   return phases[view.waitingFor] ?? (view.board.subPhase === 'ActionResolution' ? 'Resolution' : 'Waiting');
 }
 
@@ -1150,7 +1167,7 @@ function activeTurn(board) {
 function evolutionBudgetText(state, view) {
   const remaining = view.options.evolution?.remainingPicks ?? 0;
   const used = (view.board.evolutionChoices ?? []).length;
-  const total = state.catalogue?.rules?.evolutionPicksPerRound ?? used + remaining;
+  const total = used + remaining;
   return `${remaining} / ${total} team picks remaining`;
 }
 
@@ -1182,7 +1199,7 @@ function evolutionBudget(state, view) {
   }
   const note = document.createElement('span');
   note.className = 'pick-note';
-  note.textContent = 'Shared across your creatures · resets next round';
+  note.textContent = 'Shared team picks · at most one package per creature this opportunity';
   box.append(title, picks, note);
   return box;
 }
@@ -1190,8 +1207,9 @@ function evolutionBudget(state, view) {
 function renderPhaseGuide(state, view, seat) {
   const phases = [
     ['Upkeep', [], 'Round upkeep is automatic.'],
-    ['Evolve', ['Evolution'], 'Spend your shared team picks to unlock spells, or pass.'],
+    ['Evolve', ['Evolution'], 'Buy whole packages with shared team picks. At most one per creature this opportunity, or pass.'],
     ['Speed', ['Speed', 'TurnOrderResolution'], 'Pick a speed for each eligible creature. All speeds reveal together when everyone is done.'],
+    ['Tie order', ['TieOrder'], 'The d20 settled places between teams. Order your own tied creatures; both orders reveal together.'],
     ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.'],
     ['Targeting', ['RevealAndTarget'], 'Choose targets in turn order. Each confirmed spell and its targets reveal together.'],
     ['Resolve', ['ActionResolution', 'Cleanup', 'Finalization'], 'All targets are locked. Actions resolve in turn order, then the next round begins.'],
@@ -1209,7 +1227,7 @@ function renderPhaseGuide(state, view, seat) {
     return step;
   }));
   element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
-    : phases[current]?.[2] ?? 'Waiting for the next phase.';
+    : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${view.board.nextEvolutionRound > view.board.roundNumber ? ` Next evolution: round ${view.board.nextEvolutionRound}.` : ''}`;
   const upkeep = roundUpkeep(view.roundEvents ?? view.feed, view.board.roundNumber);
   renderUpkeep(state, view, upkeep, seat);
   const key = `${view.board.roundNumber}/${view.over ? 'over' : current}`;
@@ -1369,6 +1387,8 @@ function buttonsFor(state, current) {
         choice.dataset.focus = `speed-${speed}`;
         return choice;
       });
+    case 'TieOrder':
+      return tieOrderButtons(state, current);
     case 'Intent':
       return intentButtons(state, current);
     case 'Target':
@@ -1379,7 +1399,7 @@ function buttonsFor(state, current) {
 }
 
 
-// Only one creature's unlocks occupy the sheet at a time; every server-offered creature stays reachable.
+// Only one creature's packages occupy the sheet at a time; every server-offered creature stays reachable.
 function evolutionButtons(state, current) {
   const creatures = current.view.options.evolution?.creatures ?? [];
   const selected = creatures.find(one => one.creature === state.evolving) ?? creatures[0];
@@ -1399,21 +1419,115 @@ function evolutionButtons(state, current) {
   }
   const cards = document.createElement('div');
   cards.className = 'choice-cards';
-  for (const spell of selected?.unlockableSpells ?? []) {
-    const choice = card(state, spell, '', () => submit(state, current, { kind: 'Evolution', creature: selected.creature, spell }));
-    choice.dataset.focus = `evolve-spell-${selected.creature}-${spell}`;
+  for (const tier of selected?.availableTiers ?? []) {
+    const choice = packageCard(state, tier, () => buyPackage(state, current, selected.creature, tier));
+    choice.dataset.focus = `evolve-package-${selected.creature}-${tier}`;
     cards.append(choice);
   }
   const hint = document.createElement('p');
   hint.className = 'choice-help';
-  hint.textContent = cards.children.length ? 'Choose a creature, then tap a spell to unlock it.' : 'No spells to unlock for this creature. Choose another creature or pass.';
+  hint.textContent = cards.children.length ? 'Choose a creature, then tap a package to buy it whole.' : 'No package left for this creature. Choose another creature or pass.';
   const pass = button('Pass this pick', () => submit(state, current, { kind: 'Evolution', pass: true }));
   pass.className = 'secondary';
-  const explore = button('Explore classes & tiers →', () => openTalents(state));
+  const explore = button('Explore packages & tiers →', () => openTalents(state));
   explore.className = 'secondary';
   explore.dataset.focus = 'evolution-explorer';
   pass.dataset.focus = 'evolution-pass';
   return [picker, hint, cards, explore, pass];
+}
+
+// One package as a tappable card. A pick buys the whole thing, so the card names the whole thing: what it is,
+// how deep it sits, the initiative it is worth for the rest of the match, and every spell it teaches. A player
+// choosing between packages on the spell names alone would be choosing on a third of what they are buying.
+function packageCard(state, tier, onClick) {
+  const face = state.packages.get(tier);
+  if (!face) {
+    return button(tier, onClick);
+  }
+
+  const choice = document.createElement('button');
+  choice.type = 'button';
+  choice.className = 'card package-card';
+  choice.style.setProperty('--class-color', classColour(tier, state.palette));
+  choice.dataset.focus = `package-${tier}`;
+  choice.addEventListener('click', onClick);
+
+  const head = document.createElement('div');
+  head.className = 'card-head';
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  title.textContent = face.name;
+  const meta = document.createElement('span');
+  meta.className = 'card-meta';
+  meta.textContent = [`tier ${face.level}`, face.initiativeBonus > 0 ? `+${face.initiativeBonus} initiative` : 'no initiative'].join(' · ');
+  title.append(meta);
+  head.append(title);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  body.textContent = face.spells.map(spell => cardTitle(state.cards.get(spell)) || spell).join(' · ');
+
+  const requires = document.createElement('p');
+  requires.className = 'package-requires';
+  requires.textContent = `Requires: ${(face.prerequisites ?? []).map(id => state.packages.get(id)?.name ?? id).join(' + ') || 'No prerequisite package'}`;
+  choice.append(head, body, requires);
+  return choice;
+}
+
+// The seat's own tied creatures, ordered one tap at a time (ties.js, ADR 0063). The roll-off already gave
+// each side its places; the first tap in a tie takes that tie's first place, and the last creature takes the
+// last place untapped. Nothing is sent until every tie is settled and the order is confirmed, and the order as
+// rolled can be kept in one tap: a tie nobody wants to reorder should cost nothing.
+function tieOrderButtons(state, current) {
+  const groups = current.view.options.tieOrder?.ties ?? [];
+  const tapped = state.ordered ?? [];
+  const send = order => () => {
+    if (canInteract(state, current, 'TieOrder')) return submit(state, current, { kind: 'TieOrder', order });
+  };
+
+  const help = document.createElement('p');
+  help.className = 'choice-help';
+  help.textContent = 'The dice gave your side its places. Tap your creatures in the order they act.';
+
+  const ties = untapped(groups, tapped).map((left, index) => {
+    const row = document.createElement('div');
+    row.className = 'creature-picker';
+    row.setAttribute('aria-label', `Tie ${index + 1}`);
+    const settled = orderOf([groups[index]], tapped);
+    const status = document.createElement('p');
+    status.className = 'muted';
+    const names = settled.map(creature => `creature ${creature}`).join(' → ');
+    status.textContent = `Order: ${names}`;
+    row.append(status);
+    if (left.length > 1) {
+      for (const creature of left) {
+        const choice = button(`Creature ${creature}`, () => {
+          if (!canInteract(state, current, 'TieOrder')) return;
+          state.ordered = tap(groups, tapped, creature);
+          redraw(state);
+        });
+        choice.dataset.focus = `tie-${creature}`;
+        row.append(choice);
+      }
+    }
+    return row;
+  });
+
+  const confirm = button('Confirm this order', send(orderOf(groups, tapped)));
+  confirm.disabled = !isSettled(groups, tapped);
+  confirm.dataset.focus = 'tie-confirm';
+  const keep = button('Keep the order the dice gave', send(orderOf(groups, [])));
+  keep.className = 'secondary';
+  keep.dataset.focus = 'tie-keep';
+  const again = button('Start again', () => {
+    if (!canInteract(state, current, 'TieOrder')) return;
+    state.ordered = [];
+    redraw(state);
+  });
+  again.className = 'secondary';
+  again.dataset.focus = 'tie-reset';
+  again.disabled = tapped.length === 0;
+  return [help, ...ties, confirm, keep, again];
 }
 
 // An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
@@ -1658,6 +1772,7 @@ async function submit(state, current, decision) {
 
     state.picked = [];
     state.chosen = null;
+    state.ordered = [];
     state.error = '';
   } catch {
     state.error = 'Could not reach the host. Check your connection before trying again.';
@@ -1674,29 +1789,27 @@ async function submit(state, current, decision) {
 function treeNode(state, node, classes, creature) {
   const branch = document.createElement('li');
   branch.style.setProperty('--class-color', state.palette?.get(node.key) ?? '#c9c2a8');
-  const spells = new Set(node.spells ?? []);
-  const group = classes.find(one => one.tiers.some(tier => tier.spells.some(spell => spells.has(spell.spell))));
-  const known = (creature?.knownSpells ?? []).filter(spell => spells.has(spell)).length;
-  const offered = classes.flatMap(one => one.tiers.flatMap(tier => tier.spells))
-    .filter(spell => spells.has(spell.spell) && spell.status === 'available').length;
+  const group = classes.find(one => one.id === node.id);
+  const known = group?.status === 'known';
+  const offered = group?.status === 'available';
   const pick = button('', () => {
     if (!group) return;
-    state.inspectClass = group.name;
+    state.inspectClass = group.id;
     redraw(state);
   });
-  pick.className = `tree-node${group?.name === state.inspectClass ? ' selected' : ''}${offered ? ' unlockable' : ''}`;
+  pick.className = `tree-node${group?.id === state.inspectClass ? ' selected' : ''}${offered ? ' unlockable' : ''}`;
   pick.dataset.focus = `tree-${node.key}`;
-  pick.setAttribute('aria-pressed', String(group?.name === state.inspectClass));
+  pick.setAttribute('aria-pressed', String(group?.id === state.inspectClass));
   pick.disabled = !group;
   const title = document.createElement('strong');
   title.className = 'tree-title';
   title.textContent = node.name;
   const progress = document.createElement('span');
   progress.className = 'tree-progress';
-  progress.textContent = `${known}/${spells.size} known`;
+  progress.textContent = `Tier ${node.level} · ${node.initiativeBonus >= 0 ? "+" : ""}${node.initiativeBonus} initiative`;
   const status = document.createElement('span');
   status.className = 'tree-offer';
-  status.textContent = offered ? `+ ${offered} unlock${offered === 1 ? '' : 's'}` : known === spells.size && spells.size ? 'Complete' : 'Explore spells';
+  status.textContent = known ? '✓ Acquired' : offered ? '+ Buy now · 1 pick' : 'Inspect package';
   pick.append(title, progress, status);
   branch.append(pick);
   if (node.children.length) {
@@ -1829,6 +1942,10 @@ function keyboardDecision(state, event) {
     if (view.waitingFor === 'Speed' && number < 2) {
       return submit(state, current, { kind: 'Speed', creature: view.waitingCreature, speed: number === 0 ? 'Quick' : 'Standard' });
     }
+    if (view.waitingFor === 'TieOrder') {
+      const offered = untapped(view.options.tieOrder?.ties, state.ordered).filter(group => group.length > 1).flat();
+      if (offered[number] !== undefined) { state.ordered = tap(view.options.tieOrder.ties, state.ordered, offered[number]); redraw(state); }
+    }
     if (view.waitingFor === 'Intent') {
       const spell = view.options.intent?.creatures?.find(one => one.creature === view.waitingCreature)?.castableSpells?.[number];
       if (spell) { state.chosen = spell; redraw(state); }
@@ -1843,6 +1960,7 @@ function keyboardDecision(state, event) {
   // A focused control already handles Enter; the global shortcut must not add a second activation.
   if (key !== 'enter' || target?.closest?.('button, summary, [role="button"]')) return;
   event.preventDefault();
+  if (view.waitingFor === 'TieOrder' && isSettled(view.options.tieOrder?.ties, state.ordered)) return submit(state, current, { kind: 'TieOrder', order: orderOf(view.options.tieOrder.ties, state.ordered) });
   if (view.waitingFor === 'Intent') return declareChosen(state, current);
   if (view.waitingFor === 'Target') return castTargets(state, current);
 }
@@ -1923,9 +2041,9 @@ function navigateChoices(state, current, event) {
   const atlas = state.tab === 'mat';
   const evolving = view.waitingFor === 'Evolution';
   if (atlas || evolving) {
-    const picker = nodes(atlas ? 'talent-creature-' : 'evolve-').filter(node => !node.dataset.focus.startsWith('evolve-spell-'));
-    const cards = nodes(atlas ? 'tree-' : 'evolve-spell-');
-    const explore = atlas ? null : nodes('evolution-explorer')[0];
+    const picker = nodes(atlas ? 'talent-creature-' : 'evolve-').filter(node => !node.dataset.focus.startsWith('evolve-package-'));
+    const cards = nodes(atlas ? 'tree-' : 'evolve-package-');
+    const explore = atlas ? nodes('atlas-buy-')[0] : nodes('evolution-explorer')[0];
     const pass = atlas ? null : nodes('evolution-pass')[0];
     if (active === explore || active === pass) {
       if (event.key === 'ArrowUp') focus(active === pass ? explore : cards.at(-1) ?? picker[0]);
@@ -1952,7 +2070,7 @@ function navigateChoices(state, current, event) {
     else focus(next ?? active);
     return;
   }
-  const prefix = { Speed: 'speed-', Intent: 'card-', Target: 'target-' }[view.waitingFor];
+  const prefix = { Speed: 'speed-', TieOrder: 'tie-', Intent: 'card-', Target: 'target-' }[view.waitingFor];
   if (!prefix) return;
   const controls = nodes(prefix);
   if (!controls.length) return;

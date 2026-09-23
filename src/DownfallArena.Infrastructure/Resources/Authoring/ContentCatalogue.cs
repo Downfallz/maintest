@@ -20,6 +20,13 @@ public sealed class ContentCatalogue
 
     public IReadOnlyList<ContentDocument> TalentTrees { get; init; } = [];
 
+    /// <summary>
+    /// The packages a pick buys (ADR 0056), authored like everything above rather than derived from the tree
+    /// (ADR 0057). Empty for a content directory written before packages existed, which is a version-1
+    /// catalogue and still a catalogue.
+    /// </summary>
+    public IReadOnlyList<ContentDocument> Tiers { get; init; } = [];
+
     public IReadOnlyDictionary<string, string> Aliases { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
     /// <summary>

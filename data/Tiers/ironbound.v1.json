@@ -1,0 +1,12 @@
+{
+  "id": "tier:ironbound:v1",
+  "name": "Ironbound",
+  "level": 2,
+  "prerequisites": [
+    "tier:brute:v1"
+  ],
+  "spells": [
+    "spell:full_plate:v1"
+  ],
+  "initiativeBonus": 1
+}

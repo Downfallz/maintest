@@ -17,6 +17,7 @@ from downfall_learning.artifacts import Evaluation
 from downfall_learning.knobs import Content, Knob, Knobs, Objective, Target, load_knobs
 from downfall_learning.search_weights import EngineCommand, EvaluationError
 from downfall_learning.tune_content import (
+    METRIC_DEFINITIONS,
     Candidate,
     ContentEngine,
     EngineContentEvaluator,
@@ -63,7 +64,7 @@ def knobs_document(**overrides: object) -> dict:
             "seeds": "benchmarks/benchmark-seeds.json",
             "evaluations": {"mirror": {"p1": "greedy", "p2": "greedy"}},
             "targets": [
-                {"metric": "averageRounds", "on": "mirror", "min": 8, "max": 16, "scale": 3, "weight": 1}
+                {"metric": "averageRounds", "on": "mirror", "min": 10, "max": 15, "scale": 3, "weight": 1}
             ],
         },
         "constraints": {"noNewStrictDominance": {"enabled": True}},
@@ -101,7 +102,7 @@ def catalogue(tmp_path: Path) -> Content:
 
 
 def move(content: Content, alias: str, path: str, after: float, steps: int = 1) -> Move:
-    knob = Knob(spell=alias, path=path, minimum=1, maximum=6, step=1)
+    knob = Knob(target=alias, path=path, minimum=1, maximum=6, step=1)
     before = float(content.spells[alias]["effects"][0]["amount"])
     return Move(knob=knob, steps=steps, before=before, after=after)
 
@@ -124,11 +125,19 @@ def test_scoring_a_catalogue_plays_it_once_and_keeps_the_numbers_behind_the_scor
 
     score = score_content(evaluator, knobs.objective, catalogue(tmp_path))
 
-    # 40 - 2 * (3 + 1) = 32 rounds, 16 over the top of the 8..16 band, scaled by 3: (16 / 3) ** 2.
+    # 40 - 2 * (3 + 1) = 32 rounds, 17 over the top of the 10..15 band, scaled by 3: (17 / 3) ** 2.
     assert evaluator.calls == 1
     assert score.metrics == {"mirror": {"averageRounds": 32.0}}
-    assert score.breakdown == {"mirror.averageRounds": pytest.approx((16 / 3) ** 2)}
-    assert score.score == pytest.approx((16 / 3) ** 2)
+    assert score.breakdown == {"mirror.averageRounds": pytest.approx((17 / 3) ** 2)}
+    assert score.score == pytest.approx((17 / 3) ** 2)
+
+
+def test_a_score_says_which_objective_read_it(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+
+    written = score_content(FakeEvaluator(), knobs.objective, catalogue(tmp_path)).to_json()
+
+    assert written["objective"] == {"metrics": METRIC_DEFINITIONS, "targets": knobs.objective.fingerprint}
 
 
 def test_a_score_names_the_seeds_it_was_played_on(tmp_path: Path) -> None:
@@ -150,7 +159,7 @@ def test_a_score_reads_as_what_is_outside_its_range(tmp_path: Path) -> None:
     text = format_score(score_content(FakeEvaluator(), knobs.objective, catalogue(tmp_path)), knobs.objective)
 
     assert "where 0 is every measurement inside its range" in text
-    assert "mirror.averageRounds: reads 32.000, should be 8 to 16" in text
+    assert "mirror.averageRounds: reads 32.000, should be 10 to 15" in text
 
 
 def test_a_catalogue_inside_every_band_scores_zero_and_lists_nothing(tmp_path: Path) -> None:
@@ -225,7 +234,7 @@ def test_score_content_plays_the_content_on_the_seed_file_it_is_given(
     written = json.loads((tmp_path / "out" / "score.json").read_text(encoding="utf-8"))
     assert written["seeds"] == str(unseen.resolve())
     assert written["metrics"]["mirror"]["averageRounds"] == pytest.approx(32.0)
-    assert written["score"] == pytest.approx((16 / 3) ** 2)
+    assert written["score"] == pytest.approx((17 / 3) ** 2)
     assert "Scored on" in capsys.readouterr().out
 
 
@@ -396,9 +405,10 @@ def test_the_proposal_is_written_as_the_content_tree_it_came_from(tmp_path: Path
 
     written = json.loads((tmp_path / "out" / "tune.json").read_text())
     assert written["best"]["moves"]
+    assert written["objective"] == {"metrics": METRIC_DEFINITIONS, "targets": knobs.objective.fingerprint}
     # The number the report's first line quotes, so a run directory read later says the same thing.
     assert written["played"] == result.played
-    changed = {move["spell"] for move in written["best"]["moves"]}
+    changed = {move["target"] for move in written["best"]["moves"]}
     for alias in changed:
         name = Path(content.files[alias]).name
         assert (tmp_path / "out" / "content" / "Spells" / "base" / name).exists()
@@ -450,7 +460,7 @@ def test_writing_a_proposal_leaves_no_spell_the_proposal_does_not_change(tmp_pat
     result.write(tmp_path / "out", tmp_path)
 
     assert not stale.exists()
-    changed = {move.knob.spell for move in result.best.moves}
+    changed = {move.knob.target for move in result.best.moves}
     for alias in changed:
         name = Path(content.files[alias]).name
         assert (tmp_path / "out" / "content" / "Spells" / "base" / name).exists()
@@ -469,7 +479,7 @@ def test_applying_a_proposal_writes_the_numbers_into_the_content(tmp_path: Path)
     assert written
     for path in written:
         alias = next(a for a, p in content.files.items() if p == path)
-        assert json.loads(path.read_text()) == result.spells[alias]
+        assert json.loads(path.read_text()) == result.documents[alias]
 
 
 def test_the_share_of_the_spell_leaned_on_and_the_spells_never_cast_come_from_the_outcomes() -> None:
@@ -544,7 +554,7 @@ def test_a_move_that_changes_no_metric_is_named_as_dead_content(tmp_path: Path) 
     )
 
     assert result.inert
-    assert all(move.knob.spell == "spell:jab" for candidate in result.inert for move in candidate.moves)
+    assert all(move.knob.target == "spell:jab" for candidate in result.inert for move in candidate.moves)
     assert "changed no measurement at all" in format_result(result, knobs.objective)
 
 
@@ -781,7 +791,7 @@ def test_a_knob_on_a_spell_the_build_lacks_is_never_drawn(tmp_path: Path) -> Non
         files={"spell:attack": content.files["spell:attack"]},
     )
 
-    assert [knob.spell for knob in playable(knobs, thin)] == ["spell:attack"]
+    assert [knob.target for knob in playable(knobs, thin)] == ["spell:attack"]
 
 
 def test_the_sweep_can_be_skipped(tmp_path: Path) -> None:
@@ -848,6 +858,11 @@ def two_tiers() -> Content:
         spells=spells,
         files=dict.fromkeys(spells, Path("x.json")),
         tiers={"spell:starter": 0, "spell:filler": 0, "spell:unlocked": 1},
+        packages={
+            "spell:starter": ("tier:opener:v1",),
+            "spell:filler": ("tier:opener:v1",),
+            "spell:unlocked": ("tier:deep:v1",),
+        },
     )
 
 
@@ -863,7 +878,7 @@ def test_a_tier_one_spell_monopolises_is_named_even_when_it_is_small_overall() -
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
 
     assert metrics["spellUsageShare"] == pytest.approx(0.9)
-    assert metrics["tierUsageShare"] == pytest.approx(1.0)
+    assert metrics["tierUsageShare"] == pytest.approx(0.963, abs=1e-3), "100 of 100, read as its sample shows"
 
 
 def test_damage_per_cast_is_compared_only_inside_a_tier_and_only_between_damaging_spells() -> None:
@@ -887,6 +902,7 @@ def tier_with(extra: dict) -> Content:
         spells=spells,
         files=dict.fromkeys(spells, Path("x.json")),
         tiers=dict(base.tiers) | {"spell:extra": 1},
+        packages=dict(base.packages) | {"spell:extra": ("tier:deep:v1",)},
     )
 
 
@@ -960,6 +976,33 @@ def test_a_sweep_that_found_fewer_targets_than_it_may_reach_is_not_read_as_weake
     assert metrics["tierDamageSpread"] == pytest.approx(1.0)
 
 
+# ADR 0065: the win spread is the lower bound of the gap, so two spells that win alike on a few dozen sides do
+# not read as a gap, and a gap no sample of that size draws by chance still does. The numbers are
+# tier:blightweaver:v1's on the exploring run: 0.659 on 22 sides against 0.148 on 27.
+def test_a_win_gap_the_sides_prove_is_read_at_its_lower_bound() -> None:
+    content, raw = one_tier(**{"spell:big": 22, "spell:small": 27})
+    raw["spellOutcomes"] = [
+        outcome("spell:big:v1", 22, 22, 22) | {"score": 0.659},
+        outcome("spell:small:v1", 27, 27, 27) | {"score": 0.148},
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierWinSpread"] == pytest.approx(0.238, abs=2e-3)
+
+
+def test_a_win_gap_the_sides_cannot_tell_from_chance_reads_zero() -> None:
+    content, raw = one_tier(**{"spell:big": 10, "spell:small": 26})
+    raw["spellOutcomes"] = [
+        outcome("spell:big:v1", 10, 10, 10) | {"score": 0.5},
+        outcome("spell:small:v1", 26, 26, 26) | {"score": 0.385},
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierWinSpread"] == 0.0
+
+
 def test_a_spell_too_few_sides_declared_is_left_out_of_the_win_spread() -> None:
     """Its win share on a handful of sides is noise, and the engine leaves it out of its table too."""
     raw = evaluation_json(0.5, 0.5)
@@ -972,13 +1015,19 @@ def test_a_spell_too_few_sides_declared_is_left_out_of_the_win_spread() -> None:
     assert "tierWinSpread" not in metrics
 
 
-def test_a_tier_nobody_cast_is_left_to_the_never_cast_count() -> None:
+def test_a_package_nobody_cast_is_left_to_the_never_cast_count() -> None:
+    """And a package with one spell to read is dropped rather than reported as a share of 1.0.
+
+    `tier:deep:v1` teaches one spell, so its share is 1.0 whatever the content does -- a reading about the
+    shape of the package and not about the numbers in it (ADR 0058). `spellsNeverCast` is what names the two
+    spells nobody cast, and it does.
+    """
     raw = evaluation_json(0.5, 0.5)
     raw["spellOutcomes"] = [outcome("spell:unlocked:v1", 100, 100, 100)]
 
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", two_tiers())
 
-    assert metrics["tierUsageShare"] == pytest.approx(1.0)
+    assert "tierUsageShare" not in metrics
     assert metrics["spellsNeverCast"] == 2
 
 
@@ -1033,7 +1082,7 @@ def _report(before: float, after: float) -> str:
         evaluations={"mirror": {}},
         targets=(Target(metric="spellUsageShare", on="mirror", maximum=0.25, scale=0.1, weight=1),),
     )
-    knob = Knob(spell="spell:pummel", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
+    knob = Knob(target="spell:pummel", path="/criticalChance", minimum=0.4, maximum=0.8, step=0.05)
     metrics = {"mirror": {"spellUsageShare": before}}, {"mirror": {"spellUsageShare": after}}
     initial = Candidate(
         iteration=0,
@@ -1049,7 +1098,7 @@ def _report(before: float, after: float) -> str:
         breakdown=objective.breakdown(metrics[1]),
         metrics=metrics[1],
     )
-    result = TuneResult(best=best, initial=initial, candidates=(best,), spells={}, files={})
+    result = TuneResult(best=best, initial=initial, candidates=(best,), documents={}, files={})
     return format_result(result, objective)
 
 
@@ -1106,7 +1155,7 @@ def test_two_targets_on_one_measurement_are_told_apart_by_the_run_they_came_from
         breakdown=objective.breakdown(metrics),
         metrics=metrics,
     )
-    result = TuneResult(best=candidate, initial=candidate, candidates=(candidate,), spells={}, files={})
+    result = TuneResult(best=candidate, initial=candidate, candidates=(candidate,), documents={}, files={})
 
     text = format_result(result, objective)
 
@@ -1115,12 +1164,13 @@ def test_two_targets_on_one_measurement_are_told_apart_by_the_run_they_came_from
 
 
 def one_tier(**resolved: int) -> tuple[Content, dict]:
-    """Spells at one depth, with the casts each landed, as `metrics_of` reads the pair."""
+    """Spells one package teaches, with the casts each landed, as `metrics_of` reads the pair."""
     spells = {alias: json.loads(json.dumps(ATTACK)) | {"id": f"{alias}:v1"} for alias in resolved}
     content = Content(
         spells=spells,
         files=dict.fromkeys(spells, Path("x.json")),
         tiers=dict.fromkeys(spells, 1),
+        packages=dict.fromkeys(spells, ("tier:one:v1",)),
     )
     raw = evaluation_json(0.5, 0.5)
     raw["spellOutcomes"] = [
@@ -1145,18 +1195,18 @@ def test_a_spell_holding_its_own_in_its_tier_is_not_counted() -> None:
     assert metrics_of(Evaluation.from_json(raw), "mirror", content)["spellsBarelyCast"] == 0
 
 
-def test_the_share_is_read_against_the_tier_and_not_the_catalogue() -> None:
-    """A tier is the set a player chooses between: rare overall can still be the right pick where offered."""
+def test_the_share_is_read_against_the_package_and_not_the_catalogue() -> None:
+    """A package is what one pick buys: rare overall can still be worth the pick that brought it."""
     content, raw = one_tier(**{"spell:big": 1000, "spell:small": 5})
-    content.tiers["spell:big"] = 0
+    content.packages["spell:big"] = ("tier:elsewhere:v1",)
 
     assert metrics_of(Evaluation.from_json(raw), "mirror", content)["spellsBarelyCast"] == 0
 
 
-def test_a_spell_in_a_tier_nobody_cast_is_not_counted_as_barely_cast() -> None:
-    """Skipped rather than counted, the same way the tier readings skip a tier they cannot speak about."""
+def test_a_spell_in_a_package_nobody_cast_is_not_counted_as_barely_cast() -> None:
+    """Skipped rather than counted, the same way the readings skip a package they cannot speak about."""
     content, raw = one_tier(**{"spell:cast": 10, "spell:quiet": 0})
-    content.tiers["spell:quiet"] = 2
+    content.packages["spell:quiet"] = ("tier:silent:v1",)
 
     metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
 
@@ -1425,3 +1475,94 @@ def test_one_agent_on_agent_a_still_plays_once(tmp_path: Path) -> None:
 
     assert metrics["exploit"]["winRateA"] == pytest.approx(0.30)
     assert evaluator.calls == 1
+
+
+# How many spells a package teaches is counted from the catalogue, never from the outcome rows. A package of
+# two whose second spell nobody ever declared has one row, and reading that as a package of one would skip it
+# as a singleton -- dropping the exact reading this metric exists for.
+def test_a_package_of_two_whose_second_spell_was_never_cast_still_reports_its_monopoly() -> None:
+    content = one_tier(**{"spell:big": 500})[0]
+    content.packages["spell:silent"] = ("tier:one:v1",)
+    raw = evaluation_json(0.5, 0.5)
+    raw["spellOutcomes"] = [outcome("spell:big:v1", 500, 500, 500)]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierUsageShare"] == pytest.approx(0.992, abs=1e-3)
+
+
+# ADR 0064: the reading is the lower Wilson bound of the share, so a package bought a few times is not the
+# worst package by noise. 12 of 16 is the raw 0.75 a balanced pair reads one time in five; its bound is 0.505.
+def test_a_package_read_on_a_handful_of_casts_is_read_as_the_little_it_proves() -> None:
+    content, raw = one_tier(**{"spell:big": 12, "spell:small": 4})
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierUsageShare"] == pytest.approx(0.505, abs=1e-3)
+
+
+def test_the_same_split_on_many_casts_is_read_close_to_the_split_itself() -> None:
+    content, raw = one_tier(**{"spell:big": 1200, "spell:small": 400})
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierUsageShare"] == pytest.approx(0.728, abs=1e-3)
+
+
+PACKAGE = {"id": "tier:open:v1", "level": 1, "spells": ["spell:attack:v1"], "initiativeBonus": 2}
+
+
+def with_package(tmp_path: Path) -> Content:
+    """The two-spell catalogue plus one package, each document read from its own file."""
+    base = catalogue(tmp_path)
+    return Content(
+        spells=base.spells,
+        files=base.files,
+        package_documents={"tier:open": json.loads(json.dumps(PACKAGE))},
+        package_files={"tier:open": tmp_path / "Tiers" / "open.v1.json"},
+    )
+
+
+def package_move(after: float) -> Move:
+    knob = Knob(target="tier:open", path="/initiativeBonus", minimum=0, maximum=4, step=1)
+    return Move(knob=knob, steps=int(after - 2), before=2, after=after)
+
+
+def test_a_package_move_lands_in_the_package_and_leaves_every_spell_alone(tmp_path: Path) -> None:
+    """The spell readings -- dominance, twins, a cast's value -- must never see a package as a spell."""
+    content = with_package(tmp_path)
+
+    moved = content.with_documents(apply_moves(content.documents, [package_move(3)]))
+
+    assert moved.package_documents["tier:open"]["initiativeBonus"] == 3
+    assert moved.spells == content.spells
+    assert "tier:open" not in moved.spells
+    assert content.package_documents["tier:open"]["initiativeBonus"] == 2, "the base is left alone"
+
+
+def test_a_winning_package_is_written_back_to_the_file_it_came_from(tmp_path: Path) -> None:
+    content = with_package(tmp_path)
+    content.file_of("tier:open").parent.mkdir(parents=True)
+    content.file_of("tier:open").write_text(json.dumps(PACKAGE), encoding="utf-8")
+    best = Candidate(iteration=1, moves=(package_move(4),), score=0.0, breakdown={}, metrics={})
+    result = TuneResult(
+        best=best,
+        initial=best,
+        candidates=(best,),
+        documents=apply_moves(content.documents, best.moves),
+        files={**content.files, **content.package_files},
+    )
+
+    written = result.apply()
+
+    assert written == [tmp_path / "Tiers" / "open.v1.json"]
+    assert json.loads(written[0].read_text())["initiativeBonus"] == 4
+
+
+def test_the_report_names_a_package_move_as_a_package(tmp_path: Path) -> None:
+    objective = Objective(seeds="seeds.json", evaluations={}, targets=())
+    initial = Candidate(iteration=0, moves=(), score=1.0, breakdown={}, metrics={})
+    best = Candidate(iteration=1, moves=(package_move(3),), score=0.5, breakdown={}, metrics={})
+    result = TuneResult(best=best, initial=initial, candidates=(best,), documents={}, files={})
+
+    assert "Open package — initiative bonus: 2 -> 3" in format_result(result, objective)

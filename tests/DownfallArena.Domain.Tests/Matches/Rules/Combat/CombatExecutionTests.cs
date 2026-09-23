@@ -163,12 +163,12 @@ public sealed class CombatExecutionTests
     {
         var creatures = Arena.FourCreatures();
         var knight = Arena.Find(creatures, Arena.Knight);
-        knight.UnlockSpell(Arena.SpellOf(Arena.Guard));
-        knight.UnlockSpell(Arena.SpellOf(Arena.Slam));
+        knight.Learn(Arena.Guard);
+        knight.Learn(Arena.Slam);
         knight.GainEnergy(2);
         var action = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Slam), [Arena.Ghoul, Arena.Wraith]);
 
-        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(creatures), Arena.Resources, RuleSet.Default, new FixedRandom(0.99));
+        var resolution = ResolutionRules.Resolve(action, Arena.Snapshots(creatures), Arena.Resources, RuleSet.Default, new FixedRandom(0.99), Speed.Standard);
         CombatExecution.Apply(resolution, creatures);
 
         knight.Energy.ShouldBe(Energy.Of(0));

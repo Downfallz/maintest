@@ -26,6 +26,7 @@ public sealed class Round : Entity<RoundId>
     private readonly HashSet<PlayerSlot> _evolutionPasses = [];
     private readonly Dictionary<CreatureId, SpeedChoice> _speedChoices = [];
     private readonly Dictionary<CreatureId, CombatAction> _actions = [];
+    private readonly Dictionary<PlayerSlot, IReadOnlyList<CreatureId>> _tieOrders = [];
 
     private Round(RoundId id)
         : base(id)
@@ -84,8 +85,10 @@ public sealed class Round : Entity<RoundId>
             return Result.Failure(RoundErrors.EvolutionNotOpen);
         }
 
+        // One choice a creature a round (ADR 0066). The rules refuse it first, with a code that says why; this
+        // keeps the history the rule reads from ever holding two.
         var choices = _evolutionChoices[slot];
-        if (choices.Contains(choice))
+        if (choices.Any(existing => existing.Creature == choice.Creature))
         {
             return Result.Failure(RoundErrors.EvolutionAlreadySubmitted);
         }
@@ -138,6 +141,49 @@ public sealed class Round : Entity<RoundId>
         Timeline = timeline;
         RevealCursor = TurnCursor.Start;
         ResolveCursor = TurnCursor.Start;
+    }
+
+    /// <summary>
+    /// The tie orders submitted this round, by player (ADR 0063). Internal: it holds both seats' hidden orders
+    /// at once, and only the match applies them; a seat reads its own with <see cref="TieOrderOf"/>.
+    /// </summary>
+    internal IReadOnlyDictionary<PlayerSlot, IReadOnlyList<CreatureId>> TieOrders => _tieOrders;
+
+    public IReadOnlyList<CreatureId>? TieOrderOf(PlayerSlot slot) => _tieOrders.GetValueOrDefault(slot);
+
+    internal Result SubmitTieOrder(PlayerSlot slot, IReadOnlyList<CreatureId> order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        if (SubPhase != RoundSubPhase.TieOrder)
+        {
+            return Result.Failure(RoundErrors.TieOrderNotOpen);
+        }
+
+        return _tieOrders.TryAdd(slot, [.. order])
+            ? Result.Success()
+            : Result.Failure(RoundErrors.TieOrderAlreadySubmitted);
+    }
+
+    /// <summary>
+    /// Installs the timeline the tie orders produced. The same slots, and every place keeps its side, its speed
+    /// and its initiative: a tie order moves a player's creatures between their own places in one tie and
+    /// nothing else (ADR 0063). Cursors stay at the start, since nothing has been revealed yet.
+    /// </summary>
+    internal void ReorderTimeline(CombatTimeline timeline)
+    {
+        ArgumentNullException.ThrowIfNull(timeline);
+        RequireSubPhase(RoundSubPhase.TieOrder, "reorder the timeline");
+
+        var samePlaces = timeline.Count == Timeline.Count
+            && timeline.Slots.All(Timeline.Slots.Contains)
+            && timeline.Slots.Zip(Timeline.Slots).All(pair => pair.First.Owner == pair.Second.Owner && pair.First.TiesWith(pair.Second));
+        if (!samePlaces)
+        {
+            throw new InvalidOperationException($"Round {Number}: a tie order moves a player's creatures between their own places in a tie, and nothing else.");
+        }
+
+        Timeline = timeline;
     }
 
     /// <summary>

@@ -1,10 +1,9 @@
 {
-  "why": "The rung above stun-first, and the first one asked for by a commit rather than by a form. ci-138 says the clone arm has one lever left: a clone lands on its teacher exactly and tightly, so a better clone needs a better teacher (journal, 2026-09-17). stun-first is that teacher today, and this searches from it with it in the panel, the way pressure-floor was searched from mixture-mean with it in the panel. The opponent list is greedy, stun-first and random: a candidate scores the mean over the three and one that falls below the start against any of them ranks below every one that did not, so it cannot win by learning one opponent (journal, 2026-09-16). The check opponent is search-4, which is off that line entirely -- a set that beats the three it was searched against and falls against a fourth learned those three rather than the game. What would make this worth a rung: a set that beats stun-first on seeds it never saw, since stun-first already takes every match from Greedy and from Random and there is no room left on those two.",
-  "initial": "learning/weights/stun-first.json",
-  "opponent": "greedy,heuristic:learning/weights/stun-first.json,random",
-  "check_opponent": "heuristic:learning/weights/search-4.json",
-  "kind": "heuristic",
-  "iterations": 10,
-  "population": 16,
+  "why": "The lookahead's own rung under ADR 0066, the first since it lost its standing. Under stacked picks it beat greedy 0.755; once a creature buys one package an opportunity it scores 0.383, and #184 traced the gap to both of its readings, the intent and the target, not to a bug: a Wait lure it fell into cost nothing measurable once fixed. Its rollout reads a round through the built-in weights, which were set for the one-step reading and never searched for this one under the new rule, so this search fits the weights to the reading that plays them: every candidate plays as `lookahead:<weights>`, starting from the built-in set. The panel is greedy, search-4 and random, a candidate ranking last if it falls below the start against any: greedy because it is the opponent the lookahead now loses to, search-4 because search 10 showed a panel without it can be learned rather than the game, random as the floor. The check, off that line, is stun-first. The budget is 6 rounds of 12, smaller than the heuristic rungs', because a lookahead evaluation costs about four and a half times a heuristic one and the workflow stops at three hours. What would make it a rung: a set that, played as the lookahead, beats greedy on seeds it never saw, where the built-in weights read 0.383, and holds the check. The tell to read first: against greedy, how many mirrored pairs the dice decide (174 of 200 for search 10's heuristic set); if nearly all, the greedy column is a coin and the search ranks on the other two.",
+  "opponent": "greedy,heuristic:learning/weights/search-4.json,random",
+  "check_opponent": "heuristic:learning/weights/stun-first.json",
+  "kind": "lookahead",
+  "iterations": 6,
+  "population": 12,
   "seed": 0
 }

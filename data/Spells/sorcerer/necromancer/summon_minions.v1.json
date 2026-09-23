@@ -3,7 +3,6 @@
   "name": "Summon Minions",
   "spellType": "Offensive",
   "creatureClass": "Necromancer",
-  "initiative": 1,
   "energyCost": 3,
   "criticalChance": 0,
   "targeting": {

@@ -59,8 +59,8 @@ a stored token is what separates a page that can save from one that can only rea
 
 The page is written for a phone first. It opens on the **overview**: every creature with its numbers, what it
 starts with, and its talent tree drawn as a tree, where each node is a tap into the tree editor and each spell a
-chip that opens the spell. A bar along the bottom of the screen holds **Browse**, the list of creatures, spells
-and trees as a sheet that closes on a pick, and the panels below, each a sheet of its own — the last of them
+chip that opens the spell. A bar along the bottom of the screen holds **Browse**, the list of creatures, spells,
+trees and packages as a sheet that closes on a pick, and the panels below, each a sheet of its own — the last of them
 only on the published page, where whether this page can save is a thing worth saying. An editor's
 four actions sit in their own bar just above it, so saving never needs a scroll; the list rows carry the
 numbers a reader scans for (a spell's class, type, cost and what it does), and every number field opens the
@@ -71,8 +71,9 @@ it, and the actions next to the title.
 | --- | --- |
 | Overview | What the page opens on: each creature's stats, starting spells and talent tree, then the trees no creature is on. Everything on it is one tap into its editor. |
 | Creatures | Base stats, class, talent tree (one click away), starting spells (each one click away). |
-| Spells | Type, class, spell initiative (what unlocking it adds to a creature's base initiative, ADR 0017), energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. Plus **Used by**: every creature and talent node that names the spell, and the aliases pointing at it. |
-| Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. |
+| Spells | Type, class, energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. No spell initiative: a spell buys none of its own, the package that teaches it pays one bonus (ADR 0056). Plus **Used by**: every package that teaches it, every creature and talent node that names it, and the aliases pointing at it. |
+| Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. It gates nothing a pick buys — under free multiclassing it is where a class is authored, not what a creature has to climb. |
+| Packages | What one evolution pick buys (ADR 0056): id, name, level, the spells taught and the one initiative bonus, plus the packages that have to be owned first — the only eligibility rule there is. Authored here rather than derived from the tree (ADR 0057). The sheet says what the builder will refuse while it can still be fixed: a package teaching nothing, a level that skips the one below it, a prerequisite that does not sit above what it opens. Plus **Used by**: what is bought behind it, and the creatures already starting with a spell it teaches. |
 | Runs | Every run this studio has played, newest first, with its agents, seed, match count and content hash. Open one, or tick two and compare them. |
 | Audit | What no creature can reach, open or cast; what no match can tell apart; what no spell varies; and whether this content has a benchmark digest. Every spell's cost against what it does. |
 | Balance | What a tuning pass may change and what it is aiming at (`data/balance/knobs.json`): the objective's targets with their bands and the reason each band is where it is, the constraints and the starting kit, and how much of the catalogue the file covers. |
@@ -220,8 +221,8 @@ score — it does not check and does not pretend to. `check-knobs` in CI stays t
 writes. Nothing parses the file on the way: a DTO here would be a second definition of a shape only
 `check-knobs` and `balance.js` know, free to drift from both.
 
-Carrying them cannot move the content hash. The data builder reads `Creatures`, `Spells`, `TalentTrees` and
-`aliases.json` and nothing else, which is exactly why the knobs may be keyed by alias and retuned without
+Carrying them cannot move the content hash. The data builder reads `Creatures`, `Spells`, `TalentTrees`,
+`Tiers` and `aliases.json` and nothing else, which is exactly why the knobs may be keyed by alias and retuned without
 invalidating a benchmark digest — a test holds that open.
 
 A directory with no knobs file reads as no knobs, and all three views show one honest line saying so rather

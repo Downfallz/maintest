@@ -25,10 +25,17 @@ public sealed class PolicyAgent(PolicyFile policy, ObservationBuilder observatio
 
         var slots = Slots(board);
         var candidates = options.Creatures
-            .SelectMany(creature => creature.UnlockableSpells.Select(spell => new EvolutionChoice(creature.Creature, spell)))
+            .SelectMany(creature => creature.AvailableTiers.Select(tier => new EvolutionChoice(creature.Creature, tier)))
             .Select(choice => (Decision: EvolutionDecision.Unlock(choice), Action: actions.Evolve(slots, choice)))
             .Append((Decision: EvolutionDecision.Pass, Action: ActionEncoder.Pass()));
         return Best(board, candidates, policy.ReadsCandidateTerms ? terms.Evolution(board, options) : null);
+    }
+
+    /// <summary>The order the roll-off left: no policy file has seen this decision, so none scores it.</summary>
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return options.AsRolled;
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)

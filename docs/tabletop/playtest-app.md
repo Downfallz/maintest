@@ -17,7 +17,7 @@ section, ready to be numbered and moved into `docs/adr/` by whoever lands the co
 What this document takes as given, from [plan.md](plan.md) and [components.md](components.md):
 
 - A **faithful port** (plan.md:188-199). The app plays the engine's rules through the engine.
-- A Match is **8 to 16 Rounds** and 15 to 30 minutes (plan.md:108-125). Wall-clock is the target the app is
+- A Match is **10 to 15 Rounds** and 15 to 30 minutes (plan.md:108-125). Wall-clock is the target the app is
   built to measure; the engine measures rounds and cannot measure minutes.
 - The components of phase 3 are the screen layout. The initiative track, the creature board, the condition
   dock, the player area and the talent mat are specified in components.md:491-764, and the app renders those
@@ -59,6 +59,7 @@ accepted" (`PlayerOptions.cs:5-8`).
 | --- | --- | --- | --- |
 | `Evolution` | `PlayerOptionsKind.Evolution` | `EvolutionOptions(RemainingPicks, Creatures)` (`EvolutionOptions.cs:7`), each `EvolutionOption(Creature, UnlockableSpells)` (`EvolutionOption.cs:5`) | `EvolutionRules.Evaluate(...).RemainingPicksOf(slot)` (`PlayerOptionsProjection.cs:48`) |
 | `Speed` | `Speed` | `SpeedOptions(Missing)` (`SpeedOptions.cs:8`) | `SpeedRules.Evaluate(...).MissingOf(slot)` (`PlayerOptionsProjection.cs:70`) |
+| `TieOrder` | `TieOrder` | `TieOrderOptions(Ties)` (`TieOrderOptions.cs`), the seat's creatures in each tie it holds two places in, as rolled | `TieOrderRules.Evaluate(round).Waiting` (ADR 0063) |
 | `IntentSelection` | `Intent` | `IntentOptions(Creatures)` (`IntentOptions.cs:6`), each `IntentOption(Creature, CastableSpells)` (`IntentOption.cs:5`) | `IntentRules.Evaluate(round).Missing` (`PlayerOptionsProjection.cs:79`) |
 | `RevealAndTarget` | `Target` | `TargetOptions(Actor, Spell, LegalTargets)` (`TargetOptions.cs:10`), with `MinTargets`, `MaxTargets`, `Candidates`, `IsCastable` (`LegalTargets.cs:8-10`) | `round.NextSlotToReveal` and `TargetingRules.LegalTargets` (`PlayerOptionsProjection.cs:89-107`) |
 | `ActionResolution` | `Resolution` | none | "A combat action waits for resolution; any host may drive it" (`PlayerOptionsKind.cs:20-21`) |
@@ -188,7 +189,7 @@ the same (`SpeedRules.cs:24-27`), and `SubmitAction` is documented "Only the own
 
 **What a client-side hide would allow.** Suppose the host sent one payload with both boards and the page hid
 the opponent's half. A player with the network tab open, or one who reads the DOM, learns two things before
-choosing: the opponent's six face-down intents, and their six Speed tokens. Those are the only two hidden
+choosing: the opponent's six face-down intents, and their six Speed cards. Those are the only two hidden
 decisions in the game (translation.md:110, translation.md:95; plan.md:76-78) and they are the ones the round is
 built around. Knowing the enemy's Speeds, you build the timeline before choosing yours. Knowing that enemy
 Creature 4 declared a Stun, you pick Quick and target it first, or you simply pick a different Intent.
@@ -214,7 +215,7 @@ The objects of components.md, one for one, so a player who has seen the cardboar
 | Face-down intent | A card back on each Creature that has declared. The seat's own back is tappable and reads its own card; the opponent's back carries no data at all | `PlayerBoardState.Intents` is the seat's own (`PlayerBoardState.cs:40-41`); the opponent's is a count, never a card |
 | Target markers and the `Targeted by` row (components.md:649-679) | Tapping a legal target marks it; each Creature row shows which casters point at it | `TargetOptions.LegalTargets` and `PlayerBoardState.RevealedActions` |
 | Talent mat (components.md:694-764) | A separate tab: three class bands, every Spell with a pip box per Creature, the gates printed on the band | The card projection of 1.3 for the tree, `KnownSpells` for the pips, `EvolutionOption.UnlockableSpells` for what is tappable now |
-| Round track (components.md:628-647) | `Round 7 of 16` in the header, with the Round's shape as a collapsible strip | `PlayerBoardState.RoundNumber`, `Phase`, `SubPhase`; the cap from the session stamp |
+| Round track (components.md:628-647) | `Round 7 of 20` in the header, with the Round's shape as a collapsible strip | `PlayerBoardState.RoundNumber`, `Phase`, `SubPhase`; the cap from the session stamp |
 
 The player aid's two load-bearing orderings — healing before bleeding, and the critical applied before Defense
 is subtracted (components.md:645-647) — are on the round strip, because they are the two a player gets wrong.
@@ -222,8 +223,8 @@ is subtracted (components.md:645-647) — are on the round strip, because they a
 ### 3.2 The decision
 
 One screen at a time, driven by `PlayerOptionsKind`, and never more than the one section that is filled. The
-decision lives in the planning panel with the active hand, above the board it is about. Evolution lists the unlockable
-Spells with a `pass` at the end, exactly as `ConsoleAgent` does (`ConsoleAgent.cs:15-24`). Speed is two
+decision lives in the planning panel with the active hand, above the board it is about. Evolution lists the available
+packages with a `pass` at the end, exactly as `ConsoleAgent` does (`ConsoleAgent.cs:15-24`). Speed is two
 buttons. Intent is the hand, filtered by the server. Target is a tap on a legal Creature, with `done` enabled
 once `MinTargets` is met and disabled past `MaxTargets` — the same walk `ConsoleAgent.cs:41-67` does at the
 console, with the same numbers from the same `LegalTargets`.
@@ -239,8 +240,8 @@ in the desktop workspace section that follows.
 
 - **One column.** Nothing side by side. The enemy team, the initiative strip, your team, your hand, in that
   order, scrolling.
-- **Numbers, not rails.** A 21-cell Health rail is a cardboard affordance for a marker. On a screen the same
-  information is `14/20` and a bar, and it fits.
+- **Numbers, not rails.** A 31-cell Health rail is a cardboard affordance for a marker. On a screen the same
+  information is `14/30` and a bar, and it fits.
 - **The talent mat is a tab**, not a panel. It is the one component that is A4 portrait
   (components.md:702) and it is only touched during Evolution.
 - **The decision sheet is pinned to the bottom** and sized in `dvh`, so the browser chrome does not eat it.
@@ -256,7 +257,7 @@ in the desktop workspace section that follows.
 ### Desktop workspace and responsive fallback (2026-09-18)
 
 The table keeps a compact planning desk beside the battlefield on desktop and an ordinary page flow on phones. Evolution
-groups unlocks by creature. Speed opens the acting creature’s spellbook as a reference, and a new Speed or
+groups available packages by creature. Speed opens the acting creature’s spellbook as a reference, and a new Speed or
 Intent question brings the controls and that hand into view together when needed. Cards and legal targets support keyboard activation and a second tap on
 an existing selection confirms it; the explicit confirmation buttons remain. Selected targets have separate
 removal buttons so a multi-target set can still be corrected.
@@ -265,20 +266,21 @@ Desktop uses normal page scrolling: the battlefield stays visible beside the mai
 spellbook, cards wrap without height clipping, and the active hand appears first. Neither board nor hand has
 a nested scrolling pane. Smaller screens retain links between board and decision.
 Talents opens a movable, resizable, maximizable non-modal atlas; a phone gets a full-screen
-panel. The atlas draws base, families and specializations as connected rows using explicit `ParentCode`
-values added to `TalentBand`. Node ancestry is separate from the exact spell prerequisites on each card.
+panel. The atlas draws the package prerequisite graph as connected rows for tiers 1–3. Package names,
+prerequisite ids, contained spells and initiative bonuses come from the catalogue; spell cards carry no
+acquisition gates. The original `TalentBand.ParentCode` links still supply the family palette.
 The first-level authored families receive cool, leaf and ember palettes, inherited by their specializations
-and shared across all card surfaces. Selecting a class shows its spells and current host-offered unlocks;
+and shared across all card surfaces. Selecting a package shows all its spells and whether the host currently offers it;
 a legal Evolution pick can be submitted directly from this inspector. The sticky toolbar keeps the inspected
 creature, Evolution pick number and remaining picks visible while reading spells. Down from the last spell
 row reaches the explorer button; Enter opens it.
 
 Keyboard shortcuts select numbered options, confirm with Enter, toggle the atlas with T, and close or clear
-with Escape. Arrows switch Evolution creatures, enter their offered spells, and navigate the visible spell
+with Escape. Arrows switch Evolution creatures, enter their offered packages, and navigate the visible spell
 or target rows without committing; focused controls retain their normal Enter behavior. They ignore text entry, repeat events and modifier chords and use the same asking and submission
 guards as pointer input. Battlefield cards keep the creature's timeline position; enemy cards also retain
 public speed, revealed spell, targets and resolution state. Each spell becomes public together with its
-confirmed targets in timeline order (ADR 0057). Unconfirmed enemy choices stay hidden throughout targeting;
+confirmed targets in timeline order (ADR 0070). Unconfirmed enemy choices stay hidden throughout targeting;
 local selection reveals nothing. The previous round's
 public action is labelled separately at the next round, using the retained public resolution feed.
 
@@ -289,9 +291,11 @@ The round recap now opens on demand from a compact floating button, without movi
 persistent top phase guide keeps the round limit, current task and acting turn position visible. Creature-number headings,
 labelled initiative slots, coloured stats/speeds and an ordered colour gradient make the board readable
 without decoding pairs of numbers. The atlas displays spells side by side and keeps the shared team-pick
-budget visible; picks are per player per round in the engine, not per creature. `CardCue` metadata supplies
+budget visible; picks are shared per evolution opportunity and capped by eligible creatures, with at most
+one package bought per creature (ADR 0066). The guide shows the host-projected next evolution round.
+TieOrder has its own phase label and keyboard controls, and timeline slots show the d20 roll-off. `CardCue` metadata supplies
 short semantic badges for spell faces, with a critical reminder from the host. The maintainer confirmed that
-Quick cannot crit and Standard can; the badge and reminder anticipate engine enforcement in a separate PR.
+Quick cannot crit and Standard can; main now enforces this rule in the engine.
 These presentation changes do not alter combat resolution or the team's evolution allowance.
 
 ---
@@ -409,7 +413,9 @@ with `TimeProvider`. Same JSON conventions as every other artifact (`artifacts.m
 | `text` | For a `Lookup`, a `Misplay` or a `Comment`: what the player typed or picked. |
 
 Alignment with `steps.jsonl` is by order: the *n*-th `Decision` note of a seat is the *n*-th step of that seat,
-because both are appended in the order the seat decided. No new identifier is introduced on `StepRecord`.
+because both are appended in the order the seat decided. No new identifier is introduced on `StepRecord`. A tie
+order (ADR 0063) is the one decision that writes neither: no step is recorded for it, so no note is either, and
+how long a player took over one is not measured yet.
 
 Three buttons in the client produce the last three kinds: **"I had to look this up"** (with the Round's step
 as the default subject), **"that was a misplay"**, and a free comment box on the end screen. They are one tap,
@@ -446,7 +452,7 @@ What the app does about it:
    answer: a printed deck and an app that disagree about the Round cap is a playtest of neither.
 
 **And when the content changes while a session is open.** It will, often: the maintainer is tuning toward
-8 to 16 Rounds. Nothing happens to the open session. `IGameResources` is resolved once, as a singleton, from
+10 to 15 Rounds. Nothing happens to the open session. `IGameResources` is resolved once, as a singleton, from
 the built schema (`InfrastructureServiceCollectionExtensions.cs:38-46`), the `Match` keeps the hash it was
 created with (`Match.cs:38,46`), and that hash is on every board the client fetches
 (`PlayerBoardState.cs:20`). The host **must not reload**: a Match whose rules changed mid-Round is a playtest

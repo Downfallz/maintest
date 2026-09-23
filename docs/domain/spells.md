@@ -38,7 +38,7 @@ method per spell (`legacy/README.md`). Its spell model is not ours:
 | `EffectType.Temporary` + `Stats.Initiative` | speed the targets up | `InitiativeBuff` with `durationRounds` (ADR 0036) |
 | `EffectType.Temporary` + `Stats.Initiative`, negative | slow the targets down | `InitiativeDebuff` |
 | `SpellType`, `CharacterClass`, `EnergyCost`, `CriticalChance` | — | the same fields, `null` read as 0 (a Critical chance bonus of 0 moves nothing) |
-| `Initiative` | summed over a character's unlocked spells to *be* its initiative | Spell initiative: what the Creature's base gains, once, on unlocking it (ADR 0017) |
+| `Initiative` | summed over a character's unlocked spells to *be* its initiative | nothing: a pick buys a package and the package pays one bonus (ADR 0056), so the per-spell number is gone (ADR 0059) |
 | `NbTargets` | 1, or 2 and 3 for the sweeps | `targeting.scope` and `maxTargets` |
 | `Level` | depth in the talent tree | nothing: the tree in `data/TalentTrees` already says it |
 
@@ -120,48 +120,51 @@ That reads as a typo in the prototype; it is `Offensive` here.
 
 ## The spells
 
-The crit column is the Critical chance bonus, what the spell adds to its caster's own. The initiative column
-is the Spell initiative, what a Creature gains once when it unlocks the spell — not a per-cast speed.
-Durations are in rounds.
+The crit column is the Critical chance bonus, what the spell adds to its caster's own. There is no initiative
+column: a spell buys none of its own, and the package that teaches it pays one bonus for the whole purchase
+(ADR 0056, ADR 0059). Durations are in rounds.
 
-| Spell | Class | Type | Initiative | Energy | Crit | Targets | Effects |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Wait | Creature | Defensive | 1 | 0 | — | Self | EnergyGain 1 |
-| Basic Attack | Creature | Offensive | 1 | 1 | — | Enemy | Damage 1 |
-| Heavy Strike | Creature | Offensive | 1 | 2 | — | Enemy | Damage 3 |
-| Pummel | Brawler | Offensive | 1 | 1 | 0.667 | Enemy | Damage 2 |
-| Guard | Brawler | Defensive | 1 | 1 | — | Ally | DefenseBuff 1 (permanent), DefenseBuff 1 (2r) |
-| Protective Slam | Mercenary | Offensive | 1 | 2 | 0.333 | Enemy | Damage 3 |
-| Chain Slash | Mercenary | Offensive | 2 | 3 | 0.5 | up to 2 enemies | Damage 5 |
-| Thundering Seal | Mercenary | Defensive | 2 | 2 | — | Ally | DefenseBuff 2 (permanent), DefenseBuff 2 (1r) |
-| Full Plate | Warlord | Passive | 1 | 0 | — | Self | DefenseBuff 1 (permanent) |
-| Restorative Gush | Warlord | Defensive | 2 | 2 | 0.17 | Ally | Heal 6 |
-| Crushing Stomp | Warlord | Offensive | 1 | 4 | 0.667 | Enemy | Damage 6, Stun 1r |
-| Enraged Charge | Berserker | Offensive | 1 | 3 | — | Enemy | Damage 4, Damage 3 |
-| Tornado | Berserker | Offensive | 1 | 2 | 0.33 | up to 3 enemies | Damage 4 |
-| Psycho Rush | Berserker | Offensive | 1 | 3 | 0.33 | Enemy | Damage 9 |
-| Poison Slash | Scoundrel | Offensive | 1 | 2 | — | Enemy | Damage 2, Bleed 1/r for 1r |
-| Throwing Star | Scoundrel | Offensive | 2 | 1 | — | Enemy | Damage 2 |
-| Parasite Jab | Leech | Offensive | 1 | 2 | 0.5 | Enemy | Damage 2 |
-| Hateful Sacrifice | Leech | Offensive | 3 | 3 | 0.5 | Enemy | Damage 10 |
-| Soul Devourer | Leech | Offensive | 2 | 3 | — | Enemy | Damage 3 |
-| Momentum | Assassin | Defensive | 3 | 0 | — | Self | EnergyGain 1 |
-| Death Squad | Assassin | Defensive | 3 | 2 | — | up to 3 allies | EnergyGain 1 |
-| Mortal Wound | Assassin | Offensive | 2 | 3 | 0.5 | Enemy | Damage 4, Bleed 4/r for 2r |
-| Noxious Cure | Trickster | Defensive | 1 | 2 | 0.33 | up to 3 allies | Heal 3 |
-| Tranquilizer Dart | Trickster | Offensive | 2 | 3 | — | Enemy | Damage 3, Stun 1r |
-| Infectious Blast | Trickster | Offensive | 2 | 1 | — | up to 3 enemies | InitiativeDebuff 2 (2r) |
-| Lightning Bolt | Sorcerer | Offensive | 1 | 2 | 0.667 | Enemy | Damage 3 |
-| Rejuvenate | Sorcerer | Defensive | 1 | 1 | 0.17 | Ally | Heal 3 |
-| Meteor | Wizard | Offensive | 1 | 3 | 0.5 | up to 3 enemies | Damage 4 |
-| Engulfing Flames | Wizard | Offensive | 1 | 3 | 0.33 | Enemy | Damage 9 |
-| Ice Spear | Wizard | Offensive | 2 | 2 | 0.5 | Enemy | Damage 4, InitiativeDebuff 2 (1r) |
-| Summon Minions | Necromancer | Defensive | 1 | 2 | — | Self | EnergyGain 3 |
-| Revenant Guards | Necromancer | Defensive | 1 | 2 | 0.33 | up to 3 allies | DefenseBuff 2 (permanent), DefenseBuff 2 (1r) |
-| Crazed Specter | Necromancer | Offensive | 1 | 3 | 0.33 | up to 3 enemies | Damage 6 |
-| Healing Screech | Shaman | Defensive | 1 | 2 | 0.5 | Ally | Heal 2, Regeneration 2/r for 1r |
-| Toxic Waves | Shaman | Offensive | 2 | 3 | 0.33 | up to 3 enemies | Damage 3, Bleed 2/r for 1r |
-| Restorative Burst | Shaman | Defensive | 2 | 2 | — | Ally | Heal 3, EnergyGain 2 |
+A **†** marks a row that is no longer the prototype's spell because a decision changed what it is, rather than
+a tuning pass changing what it is worth. Its ADR says why.
+
+| Spell | Class | Type | Energy | Crit | Targets | Effects |
+| --- | --- | --- | --- | --- | --- | --- |
+| Wait | Creature | Defensive | 0 | — | Self | EnergyGain 1 |
+| Basic Attack | Creature | Offensive | 1 | — | Enemy | Damage 1 |
+| Heavy Strike | Creature | Offensive | 2 | — | Enemy | Damage 3 |
+| Pummel | Brawler | Offensive | 1 | 0.667 | Enemy | Damage 2 |
+| Guard | Brawler | Defensive | 1 | — | Ally | DefenseBuff 1 (permanent), DefenseBuff 1 (2r) |
+| Protective Slam | Mercenary | Offensive | 2 | 0.333 | Enemy | Damage 3 |
+| Chain Slash | Mercenary | Offensive | 3 | 0.5 | up to 2 enemies | Damage 5 |
+| Thundering Seal | Mercenary | Defensive | 2 | — | Ally | DefenseBuff 2 (permanent), DefenseBuff 2 (1r) |
+| Full Plate | Warlord | Passive | 0 | — | Self | DefenseBuff 1 (permanent) |
+| Restorative Gush | Warlord | Defensive | 2 | 0.17 | Ally | Heal 6 |
+| Crushing Stomp | Warlord | Offensive | 4 | 0.667 | Enemy | Damage 6, Stun 1r |
+| Enraged Charge | Berserker | Offensive | 3 | — | Enemy | Damage 4, Damage 3 |
+| Tornado | Berserker | Offensive | 2 | 0.33 | up to 3 enemies | Damage 4 |
+| Psycho Rush | Berserker | Offensive | 3 | 0.33 | Enemy | Damage 9 |
+| Poison Slash | Scoundrel | Offensive | 2 | — | Enemy | Damage 2, Bleed 1/r for 1r |
+| Throwing Star † | Scoundrel | Offensive | 2 | — | up to 2 enemies | Damage 3 |
+| Parasite Jab | Leech | Offensive | 2 | 0.5 | Enemy | Damage 2 |
+| Hateful Sacrifice | Leech | Offensive | 3 | 0.5 | Enemy | Damage 10 |
+| Soul Devourer | Leech | Offensive | 3 | — | Enemy | Damage 3 |
+| Momentum | Assassin | Defensive | 0 | — | Self | EnergyGain 1 |
+| Death Squad | Assassin | Defensive | 2 | — | up to 3 allies | EnergyGain 1 |
+| Mortal Wound | Assassin | Offensive | 3 | 0.5 | Enemy | Damage 4, Bleed 4/r for 2r |
+| Noxious Cure | Trickster | Defensive | 2 | 0.33 | up to 3 allies | Heal 3 |
+| Tranquilizer Dart | Trickster | Offensive | 3 | — | Enemy | Damage 3, Stun 1r |
+| Infectious Blast | Trickster | Offensive | 1 | — | up to 3 enemies | InitiativeDebuff 2 (2r) |
+| Lightning Bolt | Sorcerer | Offensive | 2 | 0.667 | Enemy | Damage 3 |
+| Rejuvenate | Sorcerer | Defensive | 1 | 0.17 | Ally | Heal 3 |
+| Meteor | Wizard | Offensive | 3 | 0.5 | up to 3 enemies | Damage 4 |
+| Engulfing Flames | Wizard | Offensive | 3 | 0.33 | Enemy | Damage 9 |
+| Ice Spear | Wizard | Offensive | 2 | 0.5 | Enemy | Damage 4, InitiativeDebuff 2 (1r) |
+| Summon Minions | Necromancer | Defensive | 2 | — | Self | EnergyGain 3 |
+| Revenant Guards | Necromancer | Defensive | 2 | 0.33 | up to 3 allies | DefenseBuff 2 (permanent), DefenseBuff 2 (1r) |
+| Crazed Specter | Necromancer | Offensive | 3 | 0.33 | up to 3 enemies | Damage 6 |
+| Healing Screech | Shaman | Defensive | 2 | 0.5 | Ally | Heal 2, Regeneration 2/r for 1r |
+| Toxic Waves | Shaman | Offensive | 3 | 0.33 | up to 3 enemies | Damage 3, Bleed 2/r for 1r |
+| Restorative Burst | Shaman | Defensive | 2 | — | Ally | Heal 3, EnergyGain 2 |
 
 Mortal Wound is the one number that is a reading rather than a copy: legacy wrote its second half as a
 `Direct` damage of 4 carrying a `Length` of 2, which that engine ignored, resolving it as a second instant
@@ -178,15 +181,23 @@ hit. The name and the length say a lasting wound, so it is a bleed here.
 - Passive spells: `SpellType.Passive` exists and does nothing. A passive is an always-on modifier the
   creature never spends an activation on.
 - Minions as a second resource, or the Necromancer keeps paying in energy.
-- Whether a starting Spell should also give its Spell initiative. It does not today: the Creature definition's
-  `baseInitiative` is authored knowing the starting kit, so counting it twice would be double payment
-  (ADR 0017). The cost is that two Creatures knowing the same Spells can differ in Initiative depending on how
-  they got them.
-- ~~What a point of Initiative is worth.~~ Settled: the heuristic agents price an unlock as its combat value
-  plus `w.initiative` times the Spell initiative, and that weight was swept alone and moved from 0.5 to 2.1
-  (ADR 0032). It is worth about four times what ADR 0018 guessed.
-- Whether the numbers are right for their new job. They were the prototype's per-cast speeds and are now
-  one-off unlock rewards, so nothing about them was chosen for this: 1 to 3 across the catalogue, and a
-  Creature that unlocks everything on one line gains 6 or 7 on a base of 5.
+- ~~Whether a starting Spell should also give its Spell initiative.~~ Moot: no Spell gives one (ADR 0059).
+  Two Creatures that know the same Spells can still differ in Initiative, but now by the packages they bought
+  rather than by which Spells they happened to start with.
+- ~~What a point of Initiative is worth.~~ Settled: the heuristic agents price a purchase as its combat value
+  plus `w.initiative` times the package's bonus, and that weight was swept alone and moved from 0.5 to 2.1
+  (ADR 0032). It is worth about four times what ADR 0018 guessed. What is *not* settled is whether 2.1 still
+  holds now that the bonus arrives as one lump of 1 to 5 rather than spell by spell: it was measured against
+  the old shape, and re-measuring it is what #170 asks for.
+- Whether the 21 package bonuses are right. `scripts/build-tiers.py` seeded each one by summing the per-spell
+  numbers it replaced, which is a migration baseline and not a balance argument (ADR 0057). Nothing has
+  measured them since, and no knob addresses them yet (ADR 0059).
+- ~~What `throwing_star` is for.~~ Settled: it buys **reach** (ADR 0060). A pick takes both halves of
+  `tier:prowler:v1` at once, so the two must differ in what a player does with them and not only in how much
+  they do — `poison_slash` concentrates, `throwing_star` spreads, and they are priced level so the decision is
+  the shape of the damage rather than its cost. What made the question urgent was the measurement: the package
+  split its casts 1813 to 140, because both spells carried the same damage per energy and the smaller one's
+  only edge, costing 1, is worth nothing in a game where 1.0 % of its owner's recorded states hold less than 2
+  energy.
 - The permanent stat buffs stack every time they are cast, unbounded, as they did in the prototype. That is
   probably not what anyone wants at a round cap of 30.

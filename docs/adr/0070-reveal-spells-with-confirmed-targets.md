@@ -1,12 +1,12 @@
-# 0057. Reveal spells together with confirmed targets
+# 0070. Reveal spells together with confirmed targets
 
 Date: 2026-09-19
 Status: Accepted
-Supersedes: [0056](0056-reveal-all-spells-before-targeting.md)
+Supersedes: [0069](0069-reveal-all-spells-before-targeting.md)
 
 ## Context
 
-ADR 0056 exposed every declared spell before the first target decision. The maintainer clarified that a
+ADR 0069 exposed every declared spell before the first target decision. The maintainer clarified that a
 creature reveals its chosen spell to the opponent when it confirms targets, not when declaration ends.
 The first creature must not know unrevealed enemy choices; the fifth may read the four confirmed actions.
 
@@ -33,4 +33,4 @@ Resolution remains a later sub-phase after every creature has confirmed targets.
 ## Follow-up
 
 Restore the projection and face-down count, update the rules, and test the complete seat payload as well as
-the first and fifth target decisions. ADR 0056 remains as the historical decision this correction supersedes.
+the first and fifth target decisions. ADR 0069 remains as the historical decision this correction supersedes.

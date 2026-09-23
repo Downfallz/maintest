@@ -19,15 +19,37 @@ internal static class TestContent
     public static readonly SpellId Strike = SpellId.Parse("spell:strike:v1");
     public static readonly SpellId Guard = SpellId.Parse("spell:guard:v1");
     public static readonly SpellId Slam = SpellId.Parse("spell:slam:v1");
+
+    /// <summary>
+    /// The plain damage spell a package may teach, and the reason it exists: a package may not teach a spell
+    /// every creature starts with, and Strike is the starting kit (ADR 0056). Jab carries Strike's numbers
+    /// exactly so the scoring tests read the same as they did, which means the content audit calls the two
+    /// indistinguishable -- correctly, and <c>ContentAuditTests</c> names that one finding rather than hiding
+    /// it. The tree teaches Jab so it is reachable, since the audit reads the tree.
+    /// </summary>
+    public static readonly SpellId Jab = SpellId.Parse("spell:jab:v1");
     public static readonly TalentTreeId Tree = TalentTreeId.Parse("talent-tree:base:v1");
+
+    /// <summary>
+    /// The packages (ADR 0056). Guard and Strike open, Slam sits behind Guard, and Both teaches two spells so
+    /// that a package worth more than one cast can be priced.
+    /// </summary>
+    public static readonly TierId GuardPack = TierId.Parse("tier:guard:v1");
+
+    public static readonly TierId SlamPack = TierId.Parse("tier:slam:v1");
+
+    public static readonly TierId JabPack = TierId.Parse("tier:jab:v1");
+
+    public static readonly TierId BothPack = TierId.Parse("tier:both:v1");
 
     public static GameResources Resources { get; } = Build(guardInitiative: 1);
 
     /// <summary>
-    /// The same content with Guard at a Spell initiative of 6 against everything else's 1, enough that the
-    /// initiative it buys outweighs Strike's damage under the built-in weights. Every spell in
-    /// <see cref="Resources"/> shares one initiative, which is what the flat-stat audit finding needs; a test
-    /// about the initiative an unlock buys (ADR 0018) needs two that differ, and one catalogue cannot be both.
+    /// The same content with the Guard package worth 6 initiative against everything else's 1, enough that
+    /// the initiative it buys outweighs Strike's damage under the built-in weights. Every package in
+    /// <see cref="Resources"/> is worth the same, which is what the flat-stat audit finding needs; a test
+    /// about the initiative a purchase buys (ADR 0018) needs two that differ, and one catalogue cannot be
+    /// both.
     /// </summary>
     public static GameResources GuardIsFaster { get; } = Build(guardInitiative: 6);
 
@@ -50,10 +72,11 @@ internal static class TestContent
                 [Strike, Rend]),
         ],
         [
-            MakeSpell(Strike, "Strike", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, initiative: 1, Damage.Of(3)),
-            MakeSpell(Guard, "Guard", TargetingSpec.SingleTarget(TargetOrigin.Self), cost: 1, initiative: guardInitiative, DefenseBuff.Of(2, Duration.OfRounds(1))),
-            MakeSpell(Slam, "Slam", TargetingSpec.Multi(TargetOrigin.Enemy, 2), cost: 2, initiative: 1, Damage.Of(2), Stun.For(1)),
-            MakeSpell(Rend, "Rend", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, initiative: 1, Damage.Of(1), Bleed.Of(19, rounds: 1)),
+            MakeSpell(Strike, "Strike", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(3)),
+            MakeSpell(Guard, "Guard", TargetingSpec.SingleTarget(TargetOrigin.Self), cost: 1, DefenseBuff.Of(2, Duration.OfRounds(1))),
+            MakeSpell(Slam, "Slam", TargetingSpec.Multi(TargetOrigin.Enemy, 2), cost: 2, Damage.Of(2), Stun.For(1)),
+            MakeSpell(Rend, "Rend", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(1), Bleed.Of(19, rounds: 1)),
+            MakeSpell(Jab, "Jab", TargetingSpec.SingleTarget(TargetOrigin.Enemy), cost: 0, Damage.Of(3)),
         ],
         [
             TalentTree.Create(
@@ -63,17 +86,23 @@ internal static class TestContent
                     "root",
                     "Root",
                     TalentPrerequisites.None,
-                    [new TalentSpell(Strike, TalentPrerequisites.None), new TalentSpell(Guard, TalentPrerequisites.Of([Strike], []))],
+                    [new TalentSpell(Strike, TalentPrerequisites.None), new TalentSpell(Jab, TalentPrerequisites.None), new TalentSpell(Guard, TalentPrerequisites.Of([Strike], []))],
                     [new TalentNode("brawler", "Brawler", TalentPrerequisites.Of([Guard], []), [new TalentSpell(Slam, TalentPrerequisites.None)], [])])),
+        ],
+        [
+            Tier.Create(GuardPack, "Guard", 1, [], [Guard], Initiative.Of(guardInitiative)),
+            Tier.Create(SlamPack, "Slam", 2, [GuardPack], [Slam], Initiative.Of(1)),
+            Tier.Create(JabPack, "Jab", 1, [], [Jab], Initiative.Of(1)),
+            Tier.Create(BothPack, "Both", 1, [], [Jab, Slam], Initiative.Of(1)),
         ]);
 
-    private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, int initiative, params Effect[] effects) =>
+    private static Spell MakeSpell(SpellId id, string name, TargetingSpec targeting, int cost, params Effect[] effects) =>
         Spell.Create(
             id,
             name,
             SpellType.Offensive,
             CreatureClass.Creature,
-            new SpellStats(Initiative.Of(initiative), Energy.Of(cost), CriticalChance.None),
+            new SpellStats(Energy.Of(cost), CriticalChance.None),
             targeting,
             effects);
 }

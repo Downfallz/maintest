@@ -21,6 +21,14 @@ public sealed class HeuristicAgentTests
     private static readonly CreatureId Four = CreatureId.From(4);
 
     [Fact]
+    public void A_tie_order_keeps_the_order_the_roll_off_left()
+    {
+        var options = new TieOrderOptions([[Two, One]]);
+
+        Agent.DecideTieOrder(Board(enemyHealth: 20), options).ShouldBe([Two, One]);
+    }
+
+    [Fact]
     public void The_intent_is_the_spell_with_the_best_expected_outcome()
     {
         var board = Board(enemyHealth: 20);
@@ -127,9 +135,9 @@ public sealed class HeuristicAgentTests
     {
         var board = Board(enemyHealth: 20);
 
-        Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard])])).Choice.ShouldBe(new EvolutionChoice(One, TestContent.Guard));
-        Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard]), new EvolutionOption(Two, [TestContent.Slam])])).Choice
-            .ShouldBe(new EvolutionChoice(Two, TestContent.Slam), "a two-target stun is worth more than a defense buff");
+        Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack])])).Choice.ShouldBe(new EvolutionChoice(One, TestContent.GuardPack));
+        Agent.DecideEvolution(board, new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack]), new EvolutionOption(Two, [TestContent.SlamPack])])).Choice
+            .ShouldBe(new EvolutionChoice(Two, TestContent.SlamPack), "a two-target stun is worth more than a defense buff");
         Agent.DecideEvolution(board, new EvolutionOptions(2, [])).IsPass.ShouldBeTrue();
     }
 
@@ -142,13 +150,13 @@ public sealed class HeuristicAgentTests
     public void An_evolution_pick_can_be_taken_for_the_initiative_it_buys_rather_than_the_damage()
     {
         var board = Board(enemyHealth: 20, actorSpells: []);
-        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Strike, TestContent.Guard])]);
+        var options = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.JabPack, TestContent.GuardPack])]);
 
         new HeuristicAgent(ScoringWeights.Default, TestContent.GuardIsFaster, Rules)
-            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.Guard));
+            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.GuardPack));
 
         new HeuristicAgent(ScoringWeights.Default with { Initiative = 0 }, TestContent.GuardIsFaster, Rules)
-            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.Strike));
+            .DecideEvolution(board, options).Choice.ShouldBe(new EvolutionChoice(One, TestContent.JabPack));
     }
 
     [Fact]
@@ -158,7 +166,7 @@ public sealed class HeuristicAgentTests
         var board = Board(enemyHealth: 20, enemy1Health: 3);
         var option = new IntentOption(Two, [TestContent.Rend, TestContent.Strike]);
         var targets = new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Three, Four]));
-        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.Guard])]);
+        var evolution = new EvolutionOptions(2, [new EvolutionOption(One, [TestContent.GuardPack])]);
 
         greedy.DecideIntent(board, option).ShouldBe(Agent.DecideIntent(board, option));
         greedy.DecideTargets(board, targets).ShouldBe(Agent.DecideTargets(board, targets));

@@ -66,31 +66,38 @@ test('a spell the catalogue has no card for carries no gate rather than an undef
   assert.deepEqual(matBands(catalogue, [], new Map())[0].spells.map(spell => spell.requires), ['']);
 });
 
-// Arbitrary classes and non-contiguous tiers ensure the page reads the host rather than a fixed tree.
-test('class lanes use card tiers, deduplicate placements and preserve prerequisite text on the card', async () => {
+test('package progress uses acquired tiers and legal offers, independently of known spells', async () => {
   const { talentClasses } = await import('./mat.js');
-  const cards = new Map([
-    ['a', { creatureClass: 'North', tier: 3, requires: 'one of B or C' }],
-    ['b', { creatureClass: 'South', tier: 1 }],
-    ['c', { creatureClass: 'North', tier: 1 }],
-  ]);
-  const catalogue = { trees: [{ name: 'Node', depth: 9, spells: ['a', 'b', 'c', 'a'] }] };
-  const lanes = talentClasses(catalogue, cards, { id: 1, knownSpells: ['c'] }, { creatures: [{ creature: 1, unlockableSpells: ['a'] }] });
-  assert.deepEqual(lanes, [
-    { name: 'North', tiers: [{ tier: 1, spells: [{ spell: 'c', status: 'known' }] }, { tier: 3, spells: [{ spell: 'a', status: 'available' }] }] },
-    { name: 'South', tiers: [{ tier: 1, spells: [{ spell: 'b', status: 'future' }] }] },
-  ]);
-  assert.equal(cards.get('a').requires, 'one of B or C');
+  const catalogue = { packages: [
+    { id: 'first', name: 'North', level: 1, spells: ['a', 'b'], prerequisites: [], initiativeBonus: 3 },
+    { id: 'second', name: 'South', level: 2, spells: ['c'], prerequisites: ['first'], initiativeBonus: 1 },
+  ] };
+  const creature = { id: 1, knownSpells: ['a', 'b'], acquiredTiers: [] };
+  let groups = talentClasses(catalogue, new Map(), creature, { creatures: [{ creature: 1, availableTiers: ['first'] }] });
+  assert.equal(groups[0].status, 'available');
+  assert.ok(groups[0].tiers[0].spells.every(spell => spell.status === 'known'));
+  assert.equal(groups[1].status, 'future');
+  creature.acquiredTiers = ['first'];
+  groups = talentClasses(catalogue, new Map(), creature, { creatures: [{ creature: 2, availableTiers: ['second'] }] });
+  assert.equal(groups[0].status, 'known');
+  assert.equal(groups[1].status, 'future');
+  assert.equal(talentClasses(catalogue, null, creature, null)[1].status, 'future');
+  assert.deepEqual(talentClasses(null, null, null, null), []);
 });
 
-test('another creature and an absent evolution offer cannot make a talent available', async () => {
-  const { talentClasses } = await import('./mat.js');
-  const catalogue = { trees: [{ name: 'Node', spells: ['a'] }] };
-  const cards = new Map([['a', { creatureClass: 'North', tier: 2 }]]);
-  for (const evolution of [null, { creatures: [{ creature: 2, unlockableSpells: ['a'] }] }]) {
-    assert.equal(talentClasses(catalogue, cards, { id: 1 }, evolution)[0].tiers[0].spells[0].status, 'future');
-  }
-  assert.deepEqual(talentClasses(null, null, null, null), []);
+test('package hierarchy uses actual prerequisite ids and remains safe for orphaned or invalid edges', async () => {
+  const { packageForest } = await import('./mat.js');
+  const packages = [
+    { id: 'leaf', level: 3, prerequisites: ['branch'] },
+    { id: 'root', level: 1, prerequisites: [] },
+    { id: 'branch', level: 2, prerequisites: ['root'] },
+    { id: 'orphan', level: 2, prerequisites: ['missing'] },
+    { id: 'invalid', level: 1, prerequisites: ['invalid'] },
+  ];
+  const roots = packageForest({ packages });
+  assert.deepEqual(roots.map(pack => pack.id), ['root', 'orphan', 'invalid']);
+  assert.equal(roots[0].children[0].children[0].id, 'leaf');
+  assert.deepEqual(packageForest(null), []);
 });
 
 test('class accents depend on the class name and stay stable across card locations', async () => {

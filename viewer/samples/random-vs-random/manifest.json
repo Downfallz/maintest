@@ -1,22 +1,24 @@
 {
   "stamp": {
     "engineVersion": "abc123def456",
-    "contentHash": "a898506fe1dd81a93bba355af0c058ecb9185e2aa43933981ea3116ddbd4b980",
+    "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
     "ruleSet": {
       "teamSize": 2,
       "energyPerRound": 2,
-      "evolutionPicksPerRound": 2,
+      "evolutionPicksPerOpportunity": 2,
       "roundCap": 5,
-      "criticalMultiplier": 2
+      "criticalMultiplier": 2,
+      "firstEvolutionRound": 1,
+      "evolutionInterval": 2
     },
-    "featureSchema": "features:v5\u002Bbbbcf9f22b4e",
+    "featureSchema": "features:v6\u002Bc741bdb3a97e",
     "player1Agent": "Random",
     "player2Agent": "Random",
     "baseSeed": 1
   },
-  "createdAt": "2026-09-17T00:48:18.0792236+00:00",
-  "schemaId": "features:v5\u002Bbbbcf9f22b4e",
-  "schemaVersion": "features:v5",
+  "createdAt": "2026-09-22T03:28:22.1589772+00:00",
+  "schemaId": "features:v6\u002Bc741bdb3a97e",
+  "schemaVersion": "features:v6",
   "featureNames": [
     "round_fraction",
     "phase",
@@ -47,8 +49,7 @@
     "own0_InitiativeDebuff_remaining",
     "own0_knows_spell:guard:v1",
     "own0_knows_spell:strike:v1",
-    "own0_node_talent-tree:base:v1/Base",
-    "own0_node_talent-tree:base:v1/Brawler",
+    "own0_owns_tier:guard:v1",
     "own1_alive",
     "own1_health_fraction",
     "own1_energy",
@@ -73,8 +74,7 @@
     "own1_InitiativeDebuff_remaining",
     "own1_knows_spell:guard:v1",
     "own1_knows_spell:strike:v1",
-    "own1_node_talent-tree:base:v1/Base",
-    "own1_node_talent-tree:base:v1/Brawler",
+    "own1_owns_tier:guard:v1",
     "enemy0_alive",
     "enemy0_health_fraction",
     "enemy0_energy",
@@ -99,8 +99,7 @@
     "enemy0_InitiativeDebuff_remaining",
     "enemy0_knows_spell:guard:v1",
     "enemy0_knows_spell:strike:v1",
-    "enemy0_node_talent-tree:base:v1/Base",
-    "enemy0_node_talent-tree:base:v1/Brawler",
+    "enemy0_owns_tier:guard:v1",
     "enemy1_alive",
     "enemy1_health_fraction",
     "enemy1_energy",
@@ -125,8 +124,7 @@
     "enemy1_InitiativeDebuff_remaining",
     "enemy1_knows_spell:guard:v1",
     "enemy1_knows_spell:strike:v1",
-    "enemy1_node_talent-tree:base:v1/Base",
-    "enemy1_node_talent-tree:base:v1/Brawler"
+    "enemy1_owns_tier:guard:v1"
   ],
   "candidateTermNames": [
     "damage",

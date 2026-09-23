@@ -14,18 +14,24 @@ listed in [spells.md](spells.md).
   a dead creature ignores damage, healing, energy, spells, and conditions. Conditions follow the stacking policy
   of their effect and count down when the rules tick them; stun, total defense, and current initiative are
   derived from the active conditions. A team is defeated when none of its creatures is alive.
-- Round (phase 4): a forward-only walk through the ten sub-phases of ADR 0010. The round stores evolution
-  choices per player, one speed choice per creature, one intent per creature (kept per player until revealed),
-  and the targeted actions bound in timeline order; a reveal cursor and a resolve cursor track combat. Wrong
+- Round (phase 4): a forward-only walk through the sub-phases of ADR 0010, eleven since `TieOrder` (ADR 0063).
+  The round stores evolution choices per player, one speed choice per creature, at most one tie order per
+  player, one intent per creature (kept per player until revealed), and the targeted actions bound in
+  timeline order; a reveal cursor and a resolve cursor track combat. Wrong
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
-- Planning rules (phase 5): a spell is unlockable when its talent node's prerequisites and its own are met by
-  the creature's known spells; an evolution choice must target an own, living creature, an unlockable spell,
-  within the rule set's picks per round, and the sub-phase completes when no player has an effective pick left
-  (capped by what their living creatures can unlock). A speed choice must target an own, living, unstunned
-  creature, and the sub-phase completes when every such creature has one. The timeline orders Quick before
-  Standard, initiative descending, then player slot, then creature id. The `RuleSet` value object carries team
-  size, energy per round, evolution picks per round, the round cap, and the critical multiplier.
+- Planning rules (phase 5): a package is available to a creature when it does not own it and owns every
+  package it requires; an evolution choice must target an own, living creature that has not bought a package
+  this round and an available package, within the picks the rule set's schedule gives that round, and the
+  sub-phase completes when no player has an effective pick left (capped by how many of their living creatures
+  have not bought yet and can buy something, ADR 0066) -- which is immediately, in a round the schedule offers
+  no opportunity. A speed choice must target an own, living, unstunned creature, and the
+  sub-phase completes when every such creature has one. The timeline orders Quick before Standard, initiative
+  descending, and rolls off a tie between the two sides on a d20 for the places each side holds; each Player
+  then orders their own Creatures among their places in the tie (ADR 0063). A tie order must name every
+  Creature of the Player's ties once, and only those. The `RuleSet` value object carries team size, energy per
+  round, evolution picks per opportunity, the first evolution round and the interval between opportunities,
+  the round cap, and the critical multiplier (ADR 0056).
 
 - Combat rules (phase 6): an intent is valid for an own, living, unstunned creature that knows the spell and can
   afford it; the sub-phase completes when every creature on the timeline has one. Binding targets checks the
@@ -76,26 +82,42 @@ listed in [spells.md](spells.md).
       first, so a Creature its own Bleed kills that Round still gained it; nothing about Health depends on
       that position (ADR 0020).
 2. **Planning**
-   1. `Evolution`: each Player may unlock Spells from the Talent tree, up to the Rule set's picks per round
-      (two in the prototypes) and only for living Creatures. Prerequisites (`allOf`, `anyOf`) must be met. A
-      Player may pass their remaining picks. The sub-phase completes when both Players have no pick left,
-      nothing left to unlock, or passed. **An unlock raises the Creature's Base initiative by the unlocked
-      Spell's Spell initiative, for the rest of the Match** (ADR 0017): evolving is also how a Creature gets
-      faster, and it is paid once, at the unlock, not at each cast. The Current initiative the timeline orders
-      on is that base plus the Creature's active initiative buffs and less its active debuffs, floored at zero
-      (ADR 0036), so a Condition can still push a Creature forward or pull it back. A refused unlock raises
-      nothing.
+   1. `Evolution`: each Player may buy **Tiers** -- named packages of Spells -- for living Creatures, up to
+      the picks the Rule set's schedule gives that Round: two, at Round 1 and every second Round after it
+      (ADR 0056). A Round the schedule skips gives nobody a pick, and the sub-phase completes as it opens
+      rather than asking anyone to pass. A Creature may buy a package it does not own and whose prerequisite
+      packages it does own, whatever family they belong to: **prerequisites are the only rule, so
+      multiclassing is free**. One pick buys the whole package -- every Spell in it at once, a Spell it
+      already knows granted without complaint -- and **a Creature buys at most one package an opportunity**
+      (ADR 0066): the two picks go to two different Creatures, so no Creature climbs two levels in one Round,
+      and a Player down to one living Creature has one pick. A Player may pass their remaining picks. **A purchase raises the Creature's Base initiative by the package's bonus,
+      once, for the rest of the Match**: evolving is also how a Creature gets faster, and the bonus belongs to
+      the package rather than to any Spell in it. The Current initiative the timeline orders on is that base
+      plus the Creature's active initiative buffs and less its active debuffs, floored at zero (ADR 0036), so
+      a Condition can still push a Creature forward or pull it back. A refused purchase changes nothing: no
+      half-taught package, and no bonus without the Tier that paid for it. **A purchase is public the moment
+      it is made**: it applies at once, and both Players see every Creature's Tiers, since the board shows
+      both Teams whole. What a Creature knows is never hidden.
    2. `Speed`: each Player chooses `Quick` or `Standard` for every living, non-stunned Creature. A stunned
       Creature skips the Round entirely: no speed, no slot on the timeline, no intent. Completes when every
-      such Creature has a choice.
+      such Creature has a choice. **The choice is a trade: a `Quick` Creature acts before every `Standard`
+      one and cannot roll a critical that Round, whatever its own and its Spell's chances add up to.** Without
+      that cost the choice decides nothing, since acting earlier is never worse.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
-      then Standard slots by Initiative descending; ties by Player slot, then Creature id.
+      then Standard slots by Initiative descending. A tie between the two sides is rolled off: every tied
+      Creature rolls a d20 and the highest acts first, and when both sides rolled the same number, every
+      Creature on that number rolls again, a side's own included; a number only one side rolled stays. That
+      decides which places each side holds. A tie held by one side alone rolls nothing. The seat breaks no
+      tie (ADR 0063).
+   4. `TieOrder`: each Player who holds two places or more in one tie orders their own Creatures among those
+      places; the other side's places do not move. Completes when every such Player has; a Round where no
+      side holds two places in a tie passes through it without asking anyone.
 3. **Combat**
    1. `IntentSelection`: each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
       valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature
       has an Intent.
    2. `RevealAndTarget`: following the timeline, each owner binds targets for the next Intent. Its Spell and
-      targets become public together when that action is confirmed (ADR 0057), never before. The
+      targets become public together when that action is confirmed (ADR 0070), never before. The
       targets must satisfy the Spell's targeting spec (origin, scope, count). An Intent whose Spell has no legal
       target any more is revealed with no targets and fizzles at resolution. Completes when the cursor reaches
       the end of the timeline.
@@ -105,7 +127,8 @@ listed in [spells.md](spells.md).
         failure drops that target, and the action fizzles when no target remains;
       - a fizzled action costs nothing;
       - the energy cost is spent;
-      - a critical roll (creature chance plus Spell chance) multiplies a target's damage and direct heal by
+      - a critical roll (creature chance plus Spell chance, and zero for a `Quick` Creature) multiplies a
+        target's damage and direct heal by
         the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
       - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy given,
         or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs

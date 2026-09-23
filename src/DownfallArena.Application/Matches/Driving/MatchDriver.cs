@@ -68,6 +68,9 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
                 }
 
                 return true;
+            case PlayerOptionsKind.TieOrder:
+                Accept(await commands.SubmitTieOrder.HandleAsync(new SubmitTieOrder(matchId, slot, agent.DecideTieOrder(board, Section(options.TieOrder))), cancellationToken));
+                return true;
             case PlayerOptionsKind.Intent:
                 // Re-read the board for each creature, because the previous one's intent is on it. A player
                 // declares in sequence and knows what they have already declared; the projection has carried
@@ -101,7 +104,7 @@ public sealed class MatchDriver(MatchCommandHandlers commands, MatchQueryHandler
         var decision = agent.DecideEvolution(board, options);
         if (decision.Choice is { } choice)
         {
-            Accept(await commands.SubmitEvolutionChoice.HandleAsync(new SubmitEvolutionChoice(matchId, slot, choice.Creature, choice.Spell), cancellationToken));
+            Accept(await commands.SubmitEvolutionChoice.HandleAsync(new SubmitEvolutionChoice(matchId, slot, choice.Creature, choice.Tier), cancellationToken));
         }
         else
         {

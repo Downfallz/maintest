@@ -3,13 +3,12 @@
   "name": "Throwing Star",
   "spellType": "Offensive",
   "creatureClass": "Scoundrel",
-  "initiative": 3,
-  "energyCost": 1,
+  "energyCost": 2,
   "criticalChance": 0,
   "targeting": {
     "origin": "Enemy",
-    "scope": "SingleTarget",
-    "maxTargets": 1
+    "scope": "Multi",
+    "maxTargets": 2
   },
   "effects": [
     {

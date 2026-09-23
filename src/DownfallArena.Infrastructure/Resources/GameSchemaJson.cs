@@ -25,6 +25,16 @@ public static class GameSchemaJson
     };
 
     /// <summary>
+    /// What a loose read of the document allows, matching <see cref="ReadOptions"/> where it can: the version
+    /// is read from the same bytes the strict reader will read, so the two must not disagree about what parses.
+    /// </summary>
+    public static JsonDocumentOptions DocumentOptions { get; } = new()
+    {
+        CommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
+    /// <summary>
     /// Canonical, compact form used to compute the content hash.
     /// </summary>
     public static JsonSerializerOptions HashOptions { get; } = new(JsonSerializerDefaults.Web)

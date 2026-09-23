@@ -4,6 +4,593 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-23. A creature has 30 health and a match is held to 10-15 rounds, and the objective reads 8.35 on content `4ab506fa`
+
+- **What changed.** The game is designed for matches of ten to fifteen rounds, and under ADR 0066 the greedy
+  mirror lasted 7.8. Base health goes from 20 to 30 and the objective's bands follow the design: the mirror is
+  held to 10-15 rounds (from 8-16) and the best exploiter to at least 10 (from 8) (ADR 0068). Nothing else in
+  the content moves; its hash goes from `4d7a841c` to `4ab506fa`, and the digest is written for it.
+- **The sweep the value was chosen from**, content `4d7a841c` with only `baseHealth` changed, benchmark seeds,
+  ADR 0065's objective and ADR 0066's rule:
+
+  | base health | mirror rounds | exploring rounds | exploiter rounds | never cast | objective (8-16 band) |
+  | --- | --- | --- | --- | --- | --- |
+  | 20 | 7.79 | 7.17 | 9.60 | 4 | 5.30 |
+  | 25 | 8.95 | 9.34 | 8.63 | 1 | 4.03 |
+  | 30 | 10.05 | 10.03 | 14.61 | 2 | 8.35 |
+  | 35 | 12.07 | 11.86 | 19.48 | 1 | 6.64 |
+  | 40 | 14.03 | 13.44 | 17.69 | 0 | 9.52 |
+
+  Length grows about a round for every 2.5 health, and at 40 the first matches reach the round cap (1 %). The
+  objective moved for other reasons: `tierUsageShare` grows with length (1.89 at 20, 5.81 at 30), because the
+  packages a long match reaches sell spells one of which is cast far more than the other.
+- **The objective on the new content**, under the new bands: **8.35**, the four terms left all content findings
+  a tuning pass reads -- `tierUsageShare` 0.885 (5.81), `tierDamageSpread` 2.568 (1.29), `spellUsageShare`
+  0.343 (0.87), `tierWinSpread` 0.212 (0.38). `mirror.averageRounds` reads 10.05, inside its band by 0.05: a
+  move that shortens matches is penalised at once.
+- **What it invalidates.** The content hash moved, so every score, weight set and tuning run before this is on
+  other content. The tuning pass that was running on `4d7a841c` was stopped and restarts on this one.
+
+## 2026-09-23. Search 14 fits the lookahead's own weights: it beats greedy 0.83 on unseen seeds where the built-in set lost, and gives up the check
+
+- **What ran.** The report-only search of `learning/experiments/search.json` (run 14 of "Search the agent
+  weights"): kind `lookahead`, so every candidate plays as `lookahead:<weights>`, starting from the built-in
+  set; panel `greedy`, `heuristic:learning/weights/search-4.json` and `random`, a candidate ranking last if it
+  falls below the start against any; check `stun-first`; 6 rounds of 12, seed 0, content `4d7a841c` (health
+  20, ADR 0066), the benchmark seeds. The fitness went from **0.6575 to 0.9208**.
+- **What it found**, against the built-in weights:
+
+  | weight | built-in | found |
+  | --- | --- | --- |
+  | damage | 1.0 | 0.908 |
+  | kill | 5.0 | 5.889 |
+  | heal | 0.8 | 0.840 |
+  | stun | 3.0 | **7.951** |
+  | bleed | 0.8 | 1.138 |
+  | defense | 0.65 | 0.648 |
+  | energy | 0.3 | **-0.085** |
+  | initiative | 2.1 | 1.841 |
+  | pressure | 0.0 | 0.174 |
+
+  A stun is worth more than a kill now, and banked Energy nothing.
+- **The hold-out.** The found set as `lookahead:<weights>` and the bare `lookahead`, each against the same
+  opponents, on 200 seeds from 995317 that neither the search nor any rung saw, 400 mirrored matches, on `main`
+  at `1ba8c33`, the content the search ran on:
+
+  | opponent | found | built-in | the found set's pairs | rounds |
+  | --- | --- | --- | --- | --- |
+  | greedy | **0.8275** | 0.3900 | 134 won both seats, 3 lost both, 63 same seat | 6.21 |
+  | search-4 | **0.8900** | 0.6225 | 156 won both, 44 same seat | 6.37 |
+  | random | 1.0000 | 1.0000 | 200 won both | 5.24 |
+  | stun-first (check) | **0.8350** | 0.9900 | 167 won both, 33 lost both | 8.68 |
+
+- **The tell first.** Against greedy, 63 of 200 pairs go to the same seat both times, where search 10's heuristic
+  set had 174: the dice decide a third of the pairs, not nearly all, and 134 are won from both seats. The greedy
+  column is a real result, not a coin, and so is search-4's.
+- **What it means.** The lookahead's deficit under ADR 0066 (#184) was mostly its weights: fitted to the reading
+  that plays them, the same agent that lost to greedy 0.39 beats it 0.83 on unseen seeds, and beats the best
+  heuristic set 0.89. It paid for that against stun-first: 0.99 to 0.835, with 33 pairs lost from both seats
+  where the built-in set lost none. A set that raises the stun weight to 7.95 plays into the one opponent that
+  lives on stuns.
+- **Verdict.** Not a clean rung: it clears the panel and fails the check it was asked to hold, and the content
+  has since moved (health 30, ADR 0068, #186), so these weights were fitted to a game that is about to change.
+  Not adopted, and no weights file is committed; the table above is the record. The next lookahead rung runs on
+  the 30-health content with stun-first in the panel rather than as the check, so the search cannot trade it
+  away, and a new check.
+
+## 2026-09-23. Why the lookahead lost to greedy under ADR 0066: a Wait lure, fixed, and a deficit that is not a bug
+
+- **The question.** Under stacked picks the lookahead beat greedy 0.755; once a creature buys one package an
+  opportunity (ADR 0066) it scores **0.383** on the benchmark seeds, while going from 0.315 to 0.993 against
+  stun-first. Content `4d7a841c`, `main` at `1ba8c33`.
+- **Where the points go.** Of the 200 mirrored pairs against greedy, 95 are won by the same seat both times
+  (a pair shares its seed and so its d20 rolls: the dice decide), 76 by greedy both times and 29 by the
+  lookahead both times. The signal is 76 to 29. Swapping one decision at a time back to greedy's reading:
+
+  | lookahead playing | against greedy |
+  | --- | --- |
+  | its own intents and targets | 0.383 |
+  | its own intents, greedy's targets | 0.375 |
+  | greedy's intents, its own targets | 0.270 |
+  | greedy's intents and targets | 0.500 (the control: that is greedy) |
+
+  Both of its readings are worse than greedy's under the new rule, and neither alone explains the gap.
+- **A lure, found and fixed.** The lookahead cast Wait 248 times; greedy casts it once. Every one of those came
+  from a decision where the rollout guessed an enemy would drain the actor below the cost of every spell it
+  could afford (Parasite Jab, which greedy casts 1167 times), so each paid spell fizzled at the actor's slot
+  with `NotEnoughEnergy` and Wait, being free, won by the 0.6 its two energy is worth. The lookahead already
+  refuses to let a guessed death or stun decide a spell -- the one-step reading does -- and a guessed drain is
+  the same case, so it is now handled the same way. Wait falls from 248 casts to 1. The score does not move:
+  0.3825 before and after, the paired difference 0.0000 anywhere from -0.0155 to +0.0155, and exactly zero
+  against stun-first (0.9925), random (1.0000) and search-4 (0.5900). When the drain is real, a paid spell
+  fizzles anyway, so the lure cost a turn only in the worlds where the guess was wrong.
+- **What was tried and moved nothing.** The `pressure` weight at 0.5, 1 and 2 (0.383 to 0.388; 4 reads 0.347).
+  Ranking targets on the round's outcome and the one-step score, without the round's score (0.383). Passing
+  the actor's real Speed to the scorer's one-step readings, which read every creature at Standard (0.383).
+  In the target decisions where the two agents disagree and the actor can act, greedy hits the weaker target
+  200 times in 276: greedy focuses by the accident of its tie order and the lookahead spreads, and not one of
+  these levers turned that into points.
+- **What it licenses.** The lookahead's rollout reads a round through weights searched for the one-step
+  reading, and under ADR 0066 those weights price a longer game it was not measured on. A search of kind
+  `lookahead`, its weights fitted to its own reading, is the next thing to run; the Speed readings are a
+  correctness follow-up with no measured effect here.
+
+## 2026-09-23. Search 10, the first package rung under ADR 0066: it beats greedy and stun-first on unseen seeds, and learns the panel rather than the game
+
+- **The run.** `Search the agent weights` run 12 (#181), the committed experiment: the same content
+  (`4d7a841c`), panel (greedy, stun-first, random), check (search-4), start (the built-in weights), budget and
+  seed as search 9, on `main` with ADR 0066, so the two runs differ by the rule alone. The best candidate
+  scored **0.8533** from 0.7717 on the seeds it was searched on, the winner of 483 draws.
+- **What it found**, against the built-in weights: `initiative` 2.1 to 1.486, `energy` 0.3 to -0.165,
+  `damage` 1.0 to 0.727, `stun` 3.0 to 3.189, `pressure` 0 to 0.139, `heal` 0.8 to 0.671, `bleed` 0.8 to
+  0.852, `defense` 0.65 to 0.691, `kill` 5.0 to 4.966. Tempo and damage down, stuns up, a little pressure: a
+  different set from search 9's, which raised `kill` to 7.9 under stacked picks.
+- **The hold-out**, replayed here on the 200 held-out seeds (995317 onward, mirrored) with the weights as the
+  log prints them, on `main` (`1ba8c33`):
+
+  | opponent | found set | greedy (the start) | pairs, found set |
+  | --- | --- | --- | --- |
+  | greedy | **0.5500** | 0.5000 | 174 same seat, 23 won twice, 3 lost twice |
+  | stun-first | **1.0000** | 0.8025 | 200 won twice |
+  | random | 1.0000 | 1.0000 | 200 won twice |
+  | search-4 (the check) | **0.6325** | **0.8075** | 147 same seat, 53 won twice |
+
+- **What it says.** Against greedy the dice still decide most pairs, 174 of 200, but the rest go 23 to 3: under
+  ADR 0066 the greedy column carries a signal, where under search 9 it was a constant. It beats the old
+  champion outright. And against search-4, the opponent it never played, it scores 0.6325 where the built-in
+  weights score 0.8075: it gave up 17.5 points against an agent off its line to win its panel. By the
+  workflow's own reading that is a set that learned `greedy,stun-first,random`, not the game, so it is not a
+  rung and is not added to `learning/weights/`. The next rung puts search-4 in the panel.
+
+## 2026-09-23. The lookahead orders its own ties, and on the benchmark seeds it changes nothing: every seating ends the round alike
+
+- **What changed.** The lookahead and minimax agents used to keep a tie in the order the roll-off left it
+  (ADR 0063). They now play every seating of their own tied creatures out from the first slot, with no intent
+  declared on either side, and keep the seating whose round ends best, the order as rolled on a tie
+  ([agents.md](agents.md#the-round-played-out)). Greedy, heuristic and policy agents still keep the roll. The
+  content and the engine do not move, and neither does the digest, which is the greedy mirror.
+- **The measurement.** Lookahead against three opponents on the benchmark seeds, the same 400 mirrored matches,
+  on content `4d7a841c`, `main` against this change, read seed by seed with `paired`:
+
+  | opponent | before | after | paired difference | tie orders asked | moved from the roll |
+  | --- | --- | --- | --- | --- | --- |
+  | greedy | 0.7550 | 0.7550 | +0.0000 | 800 | 0 |
+  | random | 0.9988 | 0.9988 | +0.0000 | 1609 | 4 |
+  | stun-first | 0.3150 | 0.3150 | +0.0000 | 1611 | 0 |
+
+  Measured before ADR 0066, with stacked picks. Played again on `main` once ADR 0066 was in (one package a
+  creature an opportunity, longer matches), the same three read **0.3825, 1.0000 and 0.9925** before and after,
+  the paired difference exactly zero each time: the rule change moved the lookahead's standing a long way,
+  from beating greedy to losing to it and from losing to stun-first to beating it, and the tie order still
+  moved nothing.
+
+  The minimax agent against greedy, under stacked picks: 800 asked, none moved. The scores and the paired differences replay with
+  `evaluate --p1 lookahead --p2 <opponent> --seeds benchmarks/benchmark-seeds.json` on each build and
+  `paired`; the two right-hand columns were counted with a temporary trace that is not in the change.
+- **Why nothing moves.** Every tie against greedy falls in round 1 or 2, while the two teams, the same roster,
+  still mirror each other: both seatings are worth exactly 0, since each side deals the other the same damage
+  whichever creature of a tie acts first. Against the other two opponents the seatings are worth
+  something, but the same for both. A tie order only matters when one creature of it kills, stuns or buffs
+  before the other acts, and ties are rare by the time a creature is low enough to be killed in one slot: the
+  purchases have spread the initiatives by then. The 4 seatings that did move were in rounds 5 and 6 of
+  matches the lookahead was already winning, and changed no result.
+- **What this licenses.** The tie order a player now gives is a real decision at the table: a human can see
+  what the rollout sees, and the rule costs the engine nothing. For the agents it is worth nothing on this
+  catalogue, so it cannot explain any gap between two of them, and the weight search in #181, whose heuristic
+  keeps the roll, loses nothing by it. It would start to matter with content that ties late, or a roster whose
+  first rounds can kill.
+
+## 2026-09-23. Search 9, the first package rung under the d20: it beats stun-first on unseen seeds, and against greedy the dice decide every pair
+
+- **The run.** `Search the agent weights` run 9 (#181), the committed experiment: 10 rounds of 16 from the
+  built-in weights, scored as the mean against greedy, stun-first and random on the benchmark seeds, under
+  the d20 roll-off (ADR 0063) and stacked picks (before ADR 0066). The best candidate scored **0.7633** from
+  0.5125 on the seeds it was searched on, which is the winner of 483 draws and not a fair number.
+- **Not a controlled rerun of search 8.** Its `why` says the two runs differ by the rule alone, and they do
+  not: between them Throwing Star became a 2-energy attack on two targets (#172, ADR 0060), so the content
+  moved as well as the tie rule. Read this as a new search on content `4d7a841c`, not as the effect of
+  ADR 0063; search 8's own numbers were never read into this journal either, so there is no pair to compare.
+- **What it found**, against the built-in weights: `kill` 5.0 to 7.864, `energy` 0.3 to -0.432, `bleed` 0.8
+  to 1.471, `stun` 3.0 to 2.424, `initiative` 2.1 to 1.635, `damage` 1.0 to 0.648, `heal` 0.8 to 0.998,
+  `pressure` 0 to 0.174, `defense` 0.65 to 0.705. Kills up, energy priced negative, stuns and tempo down.
+- **The hold-out**, replayed here on the 200 seeds the workflow holds out (995317 onward, mirrored), with the
+  weights as the log prints them to three decimals, on `main` (`292e4f5`):
+
+  | opponent | found set | greedy |
+  | --- | --- | --- |
+  | stun-first | **0.7675** | 0.0125 |
+  | random | 1.0000 | 0.9962 |
+  | search-4 (the check) | 1.0000 | 1.0000 |
+  | greedy | 0.5000 | 0.5000 |
+
+  It beats the old champion on seeds it never saw, where the built-in weights lose to it 79 matches in 80:
+  that is a rung. Against random and search-4 both sit at the ceiling and say nothing.
+- **Against greedy there is no signal, and the reason is the d20.** In all 200 pairs the same seat wins
+  both mirrored matches. The two matches of a pair share a seed, so they share every roll, the roll-offs
+  included, and between two agents this close the dice decide the match and not the agent. Mirroring
+  cancels a seat; it cannot cancel dice both orders see alike. The greedy column of the search's own mean
+  is therefore a constant 0.5 for every candidate that plays like greedy, and the search was ranked by the
+  other two columns.
+- **What it licenses, and what not.** This was measured under stacked picks. ADR 0066 (one package a
+  creature an opportunity) changes the game the weights are priced for, so the set is not added to
+  `learning/weights/` from here: the rung is asked again once that rule is on `main`, and adopting a set
+  stays a dispatch with `apply`.
+## 2026-09-23. A creature buys one package an opportunity, the mirror stops being one match, and the objective goes from 11.11 to 5.30
+
+- **What changed.** The two picks of an opportunity resolved in sequence (ADR 0056), so both could go to one
+  creature. They cannot now: a creature buys at most one package an opportunity, and a player down to one
+  living creature has one pick (ADR 0066). The schedule, the packages and their bonuses do not move, and
+  neither does the content. The engine does, and the digest for content `4d7a841c` is regenerated.
+- **How the picks were used.** Over 40 greedy mirrors, both picks of an opportunity went to one creature in
+  120 of 240 opportunities before the rule, and in none of 340 after it. Greedy never buys above level 1, in
+  either version: the stacking was two level-1 packages on one creature, a wider creature rather than a taller
+  one. Random agents stack rarely and climb more; they buy 3.55 level-3 packages a match where they bought
+  4.99 (300 matches, seed 1), and the first one still lands between rounds 5 and 11.
+- **The mirror.** Greedy against greedy on the benchmark seeds: every match lasted 6 rounds and ended 38
+  health to 0, one match played 400 times with a d20 deciding the winner. Now the 400 matches last 6 to 13
+  rounds, 7.8 on average, and end at many different health totals. Player 1 wins 224 (56 %), from 190.
+- **The objective**, content `4d7a841c`, its own knobs and weights, the benchmark seeds, ADR 0065's
+  objective:
+
+  | term | before | after |
+  | --- | --- | --- |
+  | score | 11.11 | **5.30** |
+  | `variety.tierUsageShare` | 0.899 (7.77) | 0.849 (1.89) |
+  | `variety.tierDamageSpread` | 2.528 (1.12) | 2.587 (1.38) |
+  | `variety.spellsNeverCast` | 2 (0) | 4 (1.00) |
+  | `variety.spellUsageShare` | 0.298 (0.23) | 0.336 (0.74) |
+  | `mirror.fizzleRateA` | 0.179 (0.33) | 0.174 (0.24) |
+  | `variety.tierWinSpread` | 0.238 (0.78) | 0.170 (0.04) |
+  | `mirror.averageRounds` | 6.00 (0.89) | 7.80 (0.01) |
+  | `exploit.winRateA` | 0.958 | 0.258 |
+
+  The monopoly term that was most of the score drops to a quarter of itself. Two more spells go uncast on
+  the exploring run, which is the price ADR 0066 names: the deepest packages arrive later. `exploit.winRateA`
+  collapses from 0.958 to 0.258 without a penalty moving. The exploit panel's weights were searched under
+  stacked picks, and whatever they found in it is gone.
+- **What it means.** Every weight set, every tuning run and the benchmark digest were taken under stacked
+  picks, and none of them carries over. The tuning pass that was running when this landed, and the weight
+  search in #181, both measure the previous rule. Each needs to be run again on this one before any result
+  from it is read.
+## 2026-09-23. `tierWinSpread` is bounded by its sides too, and the objective goes from 23.36 to 11.11: what is left is two real findings
+
+- **What changed.** `tierWinSpread` reads the lower bound of the 95 % Newcombe interval of the gap between two
+  win shares of a package, zero where the sides cannot tell it from chance, instead of the raw gap
+  (ADR 0065). The band, the content and the engine do not move.
+- **Why.** Eight packages are read, most on a few dozen sides. Drawn 2000 times at those side counts with each
+  pair truly winning alike, the worst raw gap reads 0.254 at the median and 0.399 at the 90th percentile,
+  against a band of 0.15: 1 to 6 points of chance in every candidate's score. The bound reads 0.000 and 0.061.
+- **The packages**, exploring run of content `4d7a841c`, benchmark seeds:
+
+  | package | sides | win shares | raw gap | bound |
+  | --- | --- | --- | --- | --- |
+  | `blightweaver` | 22 / 27 | 0.659 / 0.148 | 0.511 | **0.238** |
+  | `warmonger` | 8 / 24 | 0.375 / 0.667 | 0.292 | 0 |
+  | `deathstalker` | 37 / 9 | 0.514 / 0.278 | 0.236 | 0 |
+  | `soulreaver` | 19 / 136 | 0.895 / 0.695 | 0.200 | 0 |
+  | `prowler` | 206 / 364 | 0.663 / 0.518 | 0.145 | 0.061 |
+  | `occultist` | 232 / 135 | 0.522 / 0.556 | 0.034 | 0 |
+
+- **The objective**, one `score-content` run: **23.36 to 11.11**. `tierWinSpread` goes from 13.03 to 0.78. What is
+  left is two findings the samples prove: `tier:soulreaver:v1` sells a spell that lands 19 of its 286 casts (7.77) and
+  `tier:blightweaver:v1` sells `infectious_blast`, which wins 0.148 of the sides that declare it against
+  `tranquilizer_dart`'s 0.659 (0.78). Both are content questions, which is what a tuning pass should now be
+  reading.
+
+## 2026-09-23. `tierUsageShare` was reading noise against its own floor, and the objective goes from 53.18 to 23.36 with the content unchanged
+
+- **What changed.** `tierUsageShare` reads the lower bound of each package's top-share 95 % Wilson interval
+  instead of the raw share, against a band of 0.8 at scale 0.05 instead of 0.5 at 0.1 (ADR 0064). The content
+  and the engine do not move.
+- **Why.** Every package that teaches more than one spell teaches two, so 0.5 is the floor of each package,
+  and the band asked the eleven packages that were cast to split perfectly at once. It was also the worst of
+  eleven raw shares, several of them read on 15 or 16 casts. Drawn 2000 times at the observed sample sizes,
+  with every pair truly splitting 50/50, the worst raw share reads 0.667 at the median and 0.750 at the 90th
+  percentile, a floor of 5.6 points no move could remove. The Wilson bound reads 0.497 at the median.
+- **The packages**, on the exploring run of content `4d7a841c`, benchmark seeds, landed casts of the
+  most-cast spell:
+
+  | package | casts | raw | bound |
+  | --- | --- | --- | --- |
+  | `soulreaver` | 267 / 286 | 0.934 | **0.899** |
+  | `deathstalker` | 109 / 118 | 0.924 | 0.861 |
+  | `prowler` | 1760 / 2057 | 0.856 | 0.840 |
+  | `warmonger` | 53 / 61 | 0.869 | 0.762 |
+  | `harbinger` | 12 / 16 | 0.750 | 0.505 |
+  | `occultist` | 417 / 622 | 0.670 | 0.633 |
+  | `brute` | 62 / 110 | 0.564 | 0.470 |
+
+- **The objective**, from one `score-content` run read both ways: **53.18 to 23.36**. `tierUsageShare` goes
+  from 37.60 to 7.77, all of it `soulreaver`, a real monopoly on 286 casts. `tierWinSpread` is now the largest
+  term at 13.03. It is also the worst of eleven small samples, and its noise floor is the next thing to
+  measure before any tuning pass trusts it.
+
+## 2026-09-23. A tie between the sides is rolled on a d20, each side orders its own, and the greedy mirror goes from 400 Player 1 wins to 190
+
+- **What changed.** The Combat timeline no longer breaks a tie by Player slot, then Creature id (ADR 0063). A
+  tie between the two sides is rolled off on a d20, which decides the places each side holds, and a player who
+  holds two places in one tie orders their own creatures among them in a new sub-phase, `TieOrder`, before any
+  Intent. A tie held by one side alone rolls nothing. The rolls draw on the match's random source, the one the
+  critical rolls use, so every match with a tie between the sides plays differently from here on. Greedy,
+  lookahead, minimax and policy agents keep the order the rolls left; random agents shuffle it. The content
+  does not move. The engine does, and the digest for content `4d7a841c` is regenerated.
+- **The mirror.** Greedy against greedy on the benchmark seeds: Player 1 won **400 of 400** before, and wins
+  **190** now (210 to Player 2). It is still one match played 400 times: every entry ends by Elimination in 6
+  rounds, 38 health to 0. What changed is who wins it. The dice decide now, where the seat decided before.
+- **The objective**, on content `4d7a841c` with its own knobs and weights, the objective as it stood before
+  ADR 0062, the benchmark seeds, before and after the rule:
+
+  | reading | seat | d20 and own order |
+  | --- | --- | --- |
+  | score | 288.31 | **53.18** |
+  | `mirror.player1WinShare` | 1.000 | 0.475 |
+  | `variety.player1WinShare` | 0.495 | 0.480 |
+  | `variety.tierWinSpread` | 0.379 | 0.511 |
+  | `variety.tierUsageShare` | 0.921 | 0.934 |
+  | `variety.averageRounds` | 7.82 | 7.42 |
+  | `skill.player1WinShare` | 0.502 | 0.502 |
+  | `exploit.winRateA` | 0.968 | 0.958 |
+
+  The 243 points the seat was worth are gone. The largest remaining terms are `variety.tierUsageShare` (37.60)
+  and `variety.tierWinSpread` (13.03). The second one grew: a package's win rate on the exploring run now
+  carries the dice as well as the package. A first version of the rule rolled every tie, a side's own
+  included; on content `6df8dc30` it read 58.63 against the seat's 285.77, the same move.
+- **What it means for ADR 0062.** The mirror's seat reading is back in its band, but by chance: the mirror
+  plays one board, and a coin now decides it. Reading the seat on the exploring run is still the reading with
+  signal, so ADR 0062 stands. What no agent does yet is choose its own order well: they keep the rolls' order,
+  and whether choosing better is worth anything is a measurement of its own.
+
+## 2026-09-23. The seat question moves to the exploring run, and the objective falls from 285.77 to 42.77 without the content moving
+
+- **What changed.** `player1WinShare` is read on `variety` instead of `mirror` (ADR 0062). Same band, scale and
+  weight; nothing in the content moved and no match was replayed for the table below — the objective is a pure
+  function of the metrics, so the runs already recorded this week were re-scored under both.
+
+- **Why the mirror stopped answering.** Under packages two identical greedy agents buy the same package in the
+  same round, every initiative ties, and the timeline gives every tie to Player 1. The mirror read **1.000 on
+  four catalogues in five** and was 243 of the objective's 285.77 points. Before packages it had signal: 0.500,
+  0.510, 0.490 in ADRs 0032, 0037 and 0042.
+
+  | content | mirror P1 | variety P1 | old objective | new objective |
+  | --- | --- | --- | --- | --- |
+  | shipped (`6df8dc30`) | 1.000 | 0.480 | 285.77 | **42.77** |
+  | `tier:prowler` +3 → +5 | 0.735 | 0.440 | 101.76 | **60.81** |
+  | Throwing Star 2e ×2 dmg 3 (#172) | 1.000 | 0.495 | 288.31 | 45.31 |
+  | Throwing Star 2e ×2 dmg 2 | 1.000 | 0.480 | 314.61 | 71.61 |
+  | Throwing Star 3e ×2 dmg 3 | 1.000 | 0.480 | 307.44 | 64.44 |
+
+  The old objective recomputed from those metrics reproduces every recorded score to the hundredth, which is
+  the check that the re-scoring is the objective and not an approximation of it.
+
+- **The ranking that flips.** The prowler move was the old objective's best candidate by 184 points and is
+  the new one's worse by 18: all its gain was the seat term, and every variety term it moved got worse. That
+  is the trap ADR 0061 warned against, closed from the objective's side.
+
+- **Not answered.** Whether a tie *should* go to the seat is a rule for the game and the table. On divergent
+  play it barely matters — `variety` 0.44 to 0.495, `skill` 0.49 to 0.50 — which is why the measurement could
+  move without the rule doing so.
+
+## 2026-09-23. A package's initiative bonus is live, and the objective it would be tuned against is one degenerate term
+
+- **What changed.** The 21 package initiative bonuses became balance knobs (ADR 0061), the follow-up ADR 0059
+  named. No content moved: the objective reads **285.77** on the branch and on `main`, to the hundredth, so the
+  refactor that lets the tuner move a package — `Knob.spell` to `Knob.target`, candidates as documents rather
+  than spells — changed no reading.
+
+- **The knob is live.** One move inside its bounds, `tier:prowler` from 3 to 5, on the benchmark seeds with
+  everything else fixed: **54 of 71** objective metrics move. The same experiment on the spell initiative moved
+  no match (2026-09-22). One sample, one knob, one direction — enough to say *live*, not to say *better*.
+
+- **What the objective did with it is the finding.** 285.77 to **101.76**, and the whole gain is one term:
+
+  | penalty | as shipped | prowler +5 |
+  | --- | --- | --- |
+  | `mirror.player1WinShare` | **243.00** | 41.07 |
+  | `variety.tierUsageShare` | 36.69 | 50.00 |
+  | `variety.tierWinSpread` | 3.93 | 7.35 |
+  | `variety.spellUsageShare` | 0.22 | 1.66 |
+
+  Every variety term got worse, and the exploit agent went from 2 spells never cast to 28. The term that fell
+  reads the seat advantage between two identical greedy agents, which is degenerate under packages — equal
+  initiative is broken by the seat, so Player 1 takes 400 of 400 (2026-09-22). It is **243 of the 285.77
+  points** the objective scores today, which means it already weighs on every tuning run, spell knobs included,
+  and initiative is the one lever that reaches it directly.
+
+- **So: no tuning pass with these knobs until that reading is fixed.** A search given them would buy seat
+  asymmetry and call it balance. The knobs ship for authors and for measurement; `data/balance/README.md` says so
+  where a person reads before running `tune-content`.
+
+## 2026-09-23. Throwing Star buys reach, and the Prowler's split flips from 7 % to 85 % instead of balancing
+
+- **What changed.** `throwing_star` becomes `Multi`, up to two enemies, 2 energy for 3 damage, level with its
+  packagemate `poison_slash` (ADR 0060). Content `6df8dc30` → `4d7a841c`. Its knobs entry gains
+  `criticalChance` (0 to 0.3), still at 0 in the content.
+- **The reading.** `score-content` on the benchmark seeds, one engine build, `main` scored with its own knobs
+  and weights. Throwing Star's share of the Prowler's landed casts, and the objective as it stood before
+  ADR 0062 moved `player1WinShare`:
+
+  | Throwing Star | variety | skill | mirror | exploit | objective | `tierUsageShare` |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | `main` (1e, ×1, 3) | 7.2 % | 9.1 % | 0.0 % | 0.0 % | 285.77 | 0.928 |
+  | **shipped** (2e, ×2, 3) | **84.7 %** | 72.0 % | 80.0 % | 92.0 % | 288.31 | 0.921 |
+  | 2e, ×2, 2 | 10.3 % | 11.1 % | 0.0 % | 10.0 % | 314.61 | 1.000 |
+  | 3e, ×2, 3 | 13.6 % | 4.8 % | 0.0 % | 0.0 % | 307.44 | 1.000 |
+
+  Re-scored under ADR 0062 the same four read 42.77, 45.31, 71.61 and 64.44.
+- **What it means.** The pair now differs in kind and neither half is a trap: on `skill` a side casting the
+  smaller spell won 0.339 against `poison_slash`'s 0.727 before, 0.735 against 0.729 after. The calibration
+  does not balance the split, it moves the concentration to the other spell, and the integer neighbours move
+  it back. Against a deterministic greedy a pair's usage is a step in its numbers; `criticalChance` is the
+  continuous lever to walk it, and the maintainer tunes it in a later pass.
+- **The digest.** All 400 greedy-mirror entries are identical to `6df8dc30`'s: that mirror ties every
+  initiative under packages and the seat decides it, so what the Prowler casts does not reach the outcome.
+  The digest is regenerated for the new hash only.
+
+## 2026-09-22. Spell initiative is gone, and the 400 benchmark matches are identical entry for entry
+
+- **What changed.** `SpellStats` loses `SpellInitiative`, the 36 spell files lose `initiative`, and every
+  reading built on it goes with them: the content audit's flat-stat finding and its indistinguishable
+  signature, `SpellReach`'s column, and the Python scorer's `dominates` and `_signature` (ADR 0059,
+  superseding ADR 0017). The bonus moved to the package at ADR 0056 and nothing removed the per-spell stat,
+  so the catalogue carried 36 authored numbers no rule read.
+
+- **Content hash `d367db1c` to `6df8dc30`, and the consolidated schema 2 to 4.** A new digest, and it is
+  worth saying exactly what changed in it: **nothing**. The 200 entries are byte-identical to the previous
+  digest's; only `contentHash` and `engineVersion` differ. The same holds for a `greedy` against `random`
+  evaluation on the benchmark seeds — every winner, round count and remaining health the same, in both
+  directions.
+
+- **The schema version had to move, and nearly did not.** Dropping a member from the consolidated document is
+  the same compatibility break as adding one, in the same place: the hash is taken over the document, so an
+  engine that still knows `initiative` deserializes it back as 0, writes it into the canonical form, and
+  reports a hash that does not match — *corruption*, for a catalogue that is sound. The mirror is as bad: this
+  engine reading an old version-2 document accepted the version, then threw a `JsonException` naming the
+  member, which is the exact sentence the version check sits ahead of to replace. Versions are 3 (no packages)
+  and 4 (with them); 1 and 2 are refused with "written by an older builder ... rebuild it from `data/`".
+  Caught by Codex on #171, with two tests that failed before the fix.
+
+- **Measured before the removal, not after.** Moving every spell's initiative to a different value (0 becomes
+  3, everything else becomes 0) and replaying the same 400 matches changed no outcome either. That is the
+  evidence the stat was inert in play; the digest above is the evidence the removal took nothing else with
+  it.
+
+- **What it was not inert for.** `check-knobs` compared it in `noNewStrictDominance` and
+  `noIndistinguishableSpells`, so a tuning candidate could be refused for an initiative it gave up — a
+  rejection over a number no match reads. 33 of the 155 knobs addressed it. The nine `check-knobs` findings
+  are byte-identical before and after on 122 knobs, which says the ceilings never read it (`_value_ceiling`
+  skipped it by name) and the constraints were the only place it could bite.
+
+- **Two entries in `knobs.json` were describing spells by what they no longer do.** `momentum`'s intent
+  claimed it made its owner "permanently faster either way" on a Spell initiative of three, the highest in
+  the catalogue; what is left is the energy trade. `throwing_star` is the worse one: its whole stated purpose
+  was the two points of Base initiative it bought on unlock, and its `note` used that to argue the
+  `check-knobs` finding against it was an artifact. It is not an artifact any more. `tier:prowler:v1` pays
+  that bonus once for both its spells, the package splits its casts 1813 to 140 toward `poison_slash`
+  (2026-09-22, above), and what the spell's own bounds can reach is `basic_attack` with a class on it.
+  **Deliberately left open**: giving it an identity is a content decision.
+
+- **Not done here.** The 33 knobs are removed, not moved. Giving the tuner the packages' `initiativeBonus`
+  instead needs a new knob kind in `knobs.json`, the loader, the tuner and the studio's Balance view, and its
+  own measurement — whether tuning package initiative moves the objective at all. Removing an inert knob
+  needs no evidence; adding a live one does.
+
+## 2026-09-22. The balance objective reads a package instead of a tree depth, and `tierUsageShare` goes from 0.680 to 0.928 without the content moving
+
+- **What changed.** The four grouped readings — `tierUsageShare`, `tierDamageSpread`, `tierWinSpread` and
+  `spellsBarelyCast` — group spells by the package that teaches them instead of by a depth computed over the
+  talent tree, and the strictly-better rule compares package levels instead of depths (ADR 0058, superseding
+  ADR 0034). The tree gates nothing a pick buys, so the depth described a choice nobody makes.
+
+- **The content did not move, and the content hash did not either.** Same 36 spells, same
+  `d367db1c`, benchmark digest verified unchanged. Everything below is the same matches read against a
+  different partition.
+
+  | reading | tree depth | package |
+  | --- | --- | --- |
+  | `tierUsageShare` | 0.680 | **0.928** |
+  | `tierWinSpread` | 0.572 | 0.348 |
+  | `tierDamageSpread` | 2.850 | 2.422 |
+  | `spellsBarelyCast` | 4 | 0 |
+  | everything else in `variety` | unchanged | unchanged |
+
+  The objective's total went 272.6 to 299.1. **Runs from before this are not comparable to runs after it**,
+  which is the cost ADR 0058 accepts: the arithmetic is the same and the partition is not.
+
+- **What the new grouping found.** `tier:prowler:v1` sells `poison_slash` and `throwing_star`, and the casts
+  split **1813 against 140** — one pick buys two spells and 93 % of what it buys is one of them. The tree
+  grouping pooled `throwing_star` with every other spell at that depth and read 0.680. This is a real defect
+  of the catalogue that the old reading hid, and it is the first thing a tuning pass should be pointed at.
+
+- **A metric I pinned at its worst before catching it.** Grouping by package first read `tierUsageShare` at
+  exactly **1.000**, which looked like a catastrophic finding and was an artefact: nine of the twenty-one
+  packages teach one spell, and a lone spell takes every cast of its own package whatever the content does.
+  The two readings beside it already dropped a group they could not speak about; this one did not. It does
+  now, and 0.928 is what the content actually says. Worth recording because the failure mode was a metric
+  that could never leave its worst value — the same shape as the exploit term ADR 0053 had to rescue.
+
+- **`check-knobs` is byte-identical before and after**, nine findings either way. The levels the packages
+  carry match the depths the tree gave, because `scripts/build-tiers.py` derived them from that tree. The
+  two readings part company the first time a package is authored away from it, which ADR 0057 now allows.
+
+- **The audit stops understating the catalogue.** It reached spells through a creature's own talent-tree
+  gates; under free multiclassing every family is within reach, so that reading was wrong in the direction
+  that hides content. It now climbs package prerequisites from nothing, `TalentNode.Unreachable` is gone —
+  a gate that decides nothing cannot strand a spell — and `TalentUnlocks` went with it.
+
+
+## 2026-09-22. A pick buys a package now, and the greedy mirror went from 70.5 % to **100 %**: the seat decides every one of the 400 benchmark matches, while random against random is 49.5 %
+
+- **What changed.** Evolution buys a tier package instead of a spell, two picks at round 1 and every second
+  round after it, the two resolving in sequence (ADR 0056). Prerequisites are the only eligibility rule, so
+  multiclassing is free and the talent tree gates nothing a pick buys. The feature schema moves to
+  `features:v6`: the creature block's talent-node bits are replaced by one bit per package owned, and an
+  evolution action carries a tier index instead of a spell index. Content hash is unchanged at `d367db1c` —
+  this is an engine change, so the digest for that hash was retaken.
+
+- **The number that matters, and it is not a good one.** Greedy against greedy on the 200 benchmark seeds,
+  played mirrored: **Player 1 wins 400 of 400**. Before this change the same mirror read 70.5 % for Player 1
+  (#160) and nobody had explained that either. Mean match length fell from 6.79 rounds to 6.0.
+
+  | mirror | Player 1 | rounds | draws |
+  | --- | --- | --- | --- |
+  | greedy vs greedy, before | 70.5 % | 6.79 | 0 |
+  | greedy vs greedy, after | **100 %** | 6.00 | 0 |
+  | random vs random, after | 49.5 % | 16.0 | 4 |
+
+- **The machinery is not what is broken.** Random against random on the same seeds reads 49.5 % / 49.5 % with
+  4 draws, so neither the seat wiring nor the mirrored pass carries a bias. What the greedy mirror measures is
+  two *identical deterministic* agents on a symmetric board: every tie in the timeline goes to Player 1
+  (`ThenBy(Owner)`), and with both sides buying the same packages in the same order the board stays symmetric
+  until a tie breaks it. The packages make that worse than one-spell-at-a-time progression did, because both
+  sides now take the same large initiative jumps at the same moment instead of drifting apart a point at a
+  time.
+
+- **What the benchmark is still for, and what it is not for.** It remains the engine-change detector: 400
+  entries of seed, winner, reason, rounds and remaining health, reproducible and deterministic. It is now
+  useless as a yardstick between agents, because a mirror the seat decides cannot rank two players. That is
+  the yardstick the tuning and the agents have to be rebuilt against, which is where this migration was always
+  going to land (stage 6 of the plan). **Nothing here is evidence about the content**: the spell values did not
+  move.
+
+- **Everything trained before this is refused, not adjusted.** `models/` policies carry `features:v5` and the
+  loader rejects a version it does not know rather than reinterpreting a spell index as a tier index. The
+  agent weights under `learning/weights/` were fitted against one spell per pick, twice a round; they still
+  load, and they no longer mean what they were measured to mean. `ActionScorer` prices a package at the best
+  of its spells plus the package's bonus, which is a placeholder pricing until they are refitted.
+
+- **Match length moved in the direction the audit predicted.** Stage 0 read the cadence as a counterfactual and
+  said the figures were a floor, because weaker creatures for longer should make matches run longer (stage 0
+  inventory, §3.3). Random play went from a shorter game to 16.0 rounds with 7 % reaching the cap; greedy play
+  went the other way, to 6.0, because a greedy side that wins the tie now closes faster.
+
+## 2026-09-22. The content hash moved twice for a game that did not change: the evolution packages, then the schema version they made necessary, with all 400 benchmark entries byte-identical both times
+
+- **What moved.** Content `7e199df4` → `4f453e87` when `data/Tiers/` arrived (21 packages the data builder
+  now validates, nothing plays yet), then `4f453e87` → `d367db1c` when the consolidated document became
+  version 2. Baseline agents `greedy` versus `greedy`, so the digest is deterministic: every one of the 400
+  entries is byte-identical to the previous digest's, on both moves. Only `contentHash` and `engineVersion`
+  differ. The digest for `4f453e87` is deleted rather than kept: that document existed for three commits on a
+  branch and never on `main`, and a digest no content hashes to is dead weight in a directory whose rule is
+  one digest per content hash.
+
+- **Why the version had to move, which the first attempt got wrong.** The consolidated document *is* its own
+  hash — `ComputeHash` serialises the whole record — so an always-present `tiers` member reaches the canonical
+  form of every catalogue ever built, including those built before the member existed.
+  `runs/tune-4/work/data/dst/game.schema.json` carries hash `7dc96614…` and hashed to `f5066a7d…` under the
+  new record: `Load` rejected a file nobody had touched, with a message that reads as corrupted content. The
+  first attempt kept `schemaVersion` at 1 and argued that a catalogue with no packages is the catalogue that
+  exists today. It is not, once its hash changes. So: no member at all when there are no packages (ADR 0031
+  drops an empty caster-effect list and ADR 0015's switch clears itself for the same reason), version 2 only
+  when the document carries them, and the pairing verified in both directions on load so that one content hash
+  means one document. Three historical run documents load again; a document from a newer builder is now
+  refused as a version rather than as a bad hash.
+
+- **And a validation that was not the rule it claimed.** Prerequisites had to sit *above* what they open,
+  which a level-3 package requiring only a level-1 package satisfies — two picks for a package priced at
+  three, with the pacing of section 3.3 costed on nine purchases for three creatures. An advanced package now
+  needs a prerequisite at exactly the level below it, which the 21 authored packages already satisfy, so no
+  content moved for it.
+
 ## 2026-09-18. The paired data was in every evaluation file all along: the inner agent of a search is worth 0.3588 against Greedy, and search costs `stun-first` 0.1700 while giving `ci-69` 0.1100
 
 - **This entry was written twice before it was right, and the second version was wrong for a reason worth

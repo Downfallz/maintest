@@ -3,7 +3,6 @@
   "name": "Thundering Seal",
   "spellType": "Defensive",
   "creatureClass": "Mercenary",
-  "initiative": 2,
   "energyCost": 2,
   "criticalChance": 0,
   "targeting": {

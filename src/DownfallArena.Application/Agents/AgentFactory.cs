@@ -154,6 +154,6 @@ public sealed class AgentFactory(IGameResources resources, IScoringWeightsSource
             throw new InvalidDataException($"Policy '{spec.Path}' names its features in another order than feature schema '{schema.Id}'.");
         }
 
-        return new PolicyAgent(policy, new ObservationBuilder(schema, resources), new ActionEncoder(schema), new CandidateTerms(resources, rules));
+        return new PolicyAgent(policy, new ObservationBuilder(schema), new ActionEncoder(schema), new CandidateTerms(resources, rules));
     }
 }

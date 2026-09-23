@@ -34,10 +34,30 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 - **The candidate terms are not features** (ADR 0051). A step's `candidateTerms` are one vector per
   candidate action, the scorer's terms of that action, and belong to the candidate rather than to the board;
   the observation stays the board alone. They travel beside the observation as a second channel named by
-  the manifest's `candidateTermNames`, so `features:v5` and every dataset and model that carries it are
+  the manifest's `candidateTermNames`, so `features:v5` and every dataset and model that carried it were
   untouched, and a run recorded before them still loads without a version bump.
 
 ## Versions
+
+### features:v6 (published, ADR 0056)
+
+`features:v5` with the talent-node block replaced by a **package block**. A pick buys a tier now, so what a
+creature owns is recorded rather than guessed: the node bits were 1 when a creature knew every spell of a
+node, which is a reading of its spells, and a creature can know every spell of a package it never bought. A
+creature block stays `C = 6 + 2 x 8 + S + T` where `T` is the number of packages in the content:
+
+| Offset in block | Name | Value |
+| --- | --- | --- |
+| +6 to +21 | the eight condition pairs | as in v5 |
+| +22 to +22+S-1 | `knows_<spell id>` | as in v5 |
+| +22+S to +22+S+T-1 | `owns_<tier id>` | 1 when the creature bought that package; packages sorted ordinally by id |
+
+An evolution action's code also changes meaning: its `spellIndex` field carries the **tier** index of the
+package bought. Nothing tells a spell index from a tier index by shape, which is why the version moves and why
+a policy trained under v5 is refused rather than read (`PolicyFile.Validated`).
+
+Everything else — the global block, the board slot rule, the naming, the fingerprint — is v1 unchanged. No run
+recorded under v5 is comparable to one under v6.
 
 ### features:v5 (published, ADR 0036)
 
@@ -146,7 +166,7 @@ Global block, indexes 0 to 4:
 | --- | --- | --- |
 | 0 | `round_fraction` | round number over round cap; 0 before the first round |
 | 1 | `phase` | `RoundPhase` ordinal over 3: StartOfRound 0, Planning 1/3, Combat 2/3, EndOfRound 1 |
-| 2 | `sub_phase` | `RoundSubPhase` ordinal over 9: EnergyGain 0, ..., Finalization 1 |
+| 2 | `sub_phase` | the ten steps of ADR 0010 in order, over 9: EnergyGain 0, ..., Finalization 1. `TieOrder` (ADR 0063) reads as `TurnOrderResolution`, 4/9: the values are a table, not the enum's ordinal, so the step inserted later moved none of them |
 | 3 | `reveal_progress` | reveal cursor over timeline length; 0 while the timeline is empty |
 | 4 | `revealed_enemy_actions` | actions revealed this round whose actor is an enemy, over `T` |
 

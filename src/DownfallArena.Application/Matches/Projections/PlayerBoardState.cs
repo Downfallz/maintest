@@ -34,6 +34,12 @@ public sealed record PlayerBoardState
 
     public bool HasPassedEvolution { get; init; }
 
+    /// <summary>
+    /// The next round that offers an evolution opportunity, this one included. Served rather than worked out
+    /// by the client, which would be a second copy of the schedule (ADR 0056).
+    /// </summary>
+    public int? NextEvolutionRound { get; init; }
+
     /// <summary>The player's own speed choices this round.</summary>
     public IReadOnlyList<SpeedChoice> SpeedChoices { get; init; } = [];
 
@@ -41,6 +47,9 @@ public sealed record PlayerBoardState
     public IReadOnlyList<CombatIntent> Intents { get; init; } = [];
 
     public IReadOnlyList<ActivationSlot> Timeline { get; init; } = [];
+
+    /// <summary>The d20 rolls behind the timeline's ties, public like the timeline (ADR 0063).</summary>
+    public IReadOnlyList<RollOff> RollOffs { get; init; } = [];
 
     /// <summary>The actions revealed so far this round, in timeline order; public to both players.</summary>
     public IReadOnlyList<CombatAction> RevealedActions { get; init; } = [];

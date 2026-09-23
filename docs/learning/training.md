@@ -93,16 +93,16 @@ The score is `sum(weight * (excess / scale) ** 2)` over the objective's targets,
 of them are `report.json` metrics under their own names, so a tuning run and a normal run are read the same
 way. Six the tuner derives from `spellOutcomes`, because they need the catalogue as well as the evaluation:
 `spellUsageShare`, `spellsNeverCast` and `spellsBarelyCast` over the whole catalogue, and three over a
-**tier** — the spells
-offered at one depth of the talent tree, which is the set a player chooses between. Depth is what a spell
-requires as well as where it is written (ADR 0034): a class node holds its opener and both spells behind it,
-so reading the node alone would call all three one tier. Reading the prerequisites gives the shape a player
-climbs, 3 / 6 / 9 / 18 on today's content. `tierUsageShare` asks
-whether one of them owns the tier, `tierDamageSpread` whether they hit comparably hard per landed cast, and
-`tierWinSpread` whether they win comparably often. Each reports its worst tier, and each skips what it
-cannot read: a tier nobody cast, a spell with no `Damage` effect, a spell too few sides declared for its
-own number to mean anything. Damaging is read from the content, so an attack whose hits are absorbed widens
-the spread rather than leaving it.
+**package** — the spells one evolution pick buys together (ADR 0058). The tree depth these used to read
+described a choice nobody makes: prerequisites on the package are the only eligibility rule, so the tree
+gates nothing (ADR 0056). `tierUsageShare` asks whether the package's casts all go to one of its spells, read
+as the lower bound of the top share's 95 % Wilson interval so that a rarely bought package is not the worst
+by noise (ADR 0064), `tierDamageSpread` whether they hit comparably hard per landed cast, and
+`tierWinSpread` whether they win comparably often, read as the lower bound of the gap's 95 % Newcombe interval
+for the same reason (ADR 0065). Each reports its worst package, and each skips what it
+cannot read: a package nobody cast, a package teaching one spell, a spell with no `Damage` effect, a spell
+too few sides declared for its own number to mean anything. Damaging is read from the content, so an attack
+whose hits are absorbed widens the spread rather than leaving it.
 
 `docs/learning/explained.md` says what a band, a scale and a weight are in plain words, and how to point the
 objective at a match length or at your own agent.
@@ -430,8 +430,9 @@ project as a module (`python -m downfall_learning.cli`), the way
 so its console scripts are not on the path there.
 
 `report.json` holds the run's stamp and, per evaluation, the agents, the matches, and the metrics: `winRateA`
-with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when the
-agents are identical), `drawRate`, `averageRounds`, `roundCapShare`, `spellEntropyA`/`B`, `fizzleRateA`/`B`.
+with its interval, `scoreA`, `player1WinShare` (the share of matches player 1 won, near one half when both
+sides play equally well *and* their play diverges -- not on two identical deterministic agents, which buy the
+same packages, tie on every initiative and hand every tie to player 1, ADR 0062), `drawRate`, `averageRounds`, `roundCapShare`, `spellEntropyA`/`B`, `fizzleRateA`/`B`.
 These are the balance signals the roadmap asks the loop to show every time. `report --against <run>` adds the
 deltas for every evaluation both runs hold and lists the stamp axes that differ (content, engine, rules,
 schema); agents and seeds are expected to differ between evaluations and are not axes of a report.

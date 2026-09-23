@@ -7,7 +7,7 @@
       "mirror": {
         "p1": "greedy",
         "p2": "greedy",
-        "reads": "Both sides play the content equally well, so everything left is the content."
+        "reads": "Both sides play the content equally well, so everything left is the content: how long a match lasts, how often it is drawn or capped, how often a declaration fizzles. Not who wins it -- two identical deterministic agents on a symmetric board buy the same packages in the same rounds, tie on every initiative and hand the tie to the seat, so the seat question is read on variety instead (ADR 0062)."
       },
       "skill": {
         "p1": "greedy",
@@ -31,16 +31,16 @@
         "reads": "How far a player who only wants to win gets against the way the game is meant to be played. Greedy is the taste this catalogue is balanced for; agent A is a searched set that shares none of it and beats Greedy anyway. Content where the two are far apart is content that punishes playing it the intended way. Agent A is a panel and the reading is its best exploiter (ADR 0052): one agent only ever reads what that agent happens to punish, and the same one-spell move was worth 0.013 to one of these sets and 0.235 to another (journal, 2026-09-17), so the term named a pair rather than a catalogue. Every set is played and the highest win rate decides the evaluation. A set goes stale when the content moves — a tuning pass changes what there is to exploit — so the newest search joins the panel rather than replacing it, and an older set stays because a moved catalogue sometimes blinds the newer ones and not it. kill-first is the one set searched on a catalogue other than this one, the weakened Crushing Stomp of that same entry, and it takes every match on both: a set fitted to a moved catalogue finds another route rather than losing the old one, which is why this term is a constant this file cannot spend content on (journal, 2026-09-17). So what is scored here is no longer whether the best exploiter wins but how fast it does (ADR 0053), and a tie at the top of the panel goes to the fastest win rather than to the first name in the list."
       }
     },
-    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one. ADR 0029 did it again, and harder: seven targets moved off the mirrored run onto the exploring one without their bands changing, which took the core content from 69.39 to 52.00 without a single number in the content moving. Compare scores only across runs judged by the same set read from the same runs.",
+    "score": "Sum over the targets of weight * (distance outside the band / scale) ** 2. Zero is on target, lower is better. Metric names are report.json's, so a target and a report row are the same number; spellUsageShare, spellsNeverCast and spellsBarelyCast are the ones the tuner adds, because they need the catalogue and not only the evaluation. A candidate that breaks a constraint is not scored at all. Adding spellsBarelyCast made every score before it incomparable with every score after it: a run reading 40.45 under the old set is not a better run than one reading 41 under this one. ADR 0029 did it again, and harder: seven targets moved off the mirrored run onto the exploring one without their bands changing, which took the core content from 69.39 to 52.00 without a single number in the content moving. ADR 0062 did it a third time: player1WinShare moved from the mirror to the exploring run, which took the shipped content from 285.77 to 42.77 with the content unchanged. ADR 0064 did it a fourth time: tierUsageShare reads the lower Wilson bound of a package's top share against a band of 0.8, not the raw share against the even split every package's floor sits at. ADR 0065 did it a fifth: tierWinSpread reads the lower Newcombe bound of a package's win gap, not the raw gap. ADR 0068 did it a sixth: the mirror's rounds band moved from 8-16 to 10-15 and the exploit floor from 8 to 10, the length the game is designed for. Compare scores only across runs judged by the same set read from the same runs.",
     "targets": [
       {
         "metric": "player1WinShare",
-        "on": "mirror",
+        "on": "variety",
         "min": 0.45,
         "max": 0.55,
         "scale": 0.05,
         "weight": 3,
-        "why": "Identical agents, so anything away from one half is the content favouring a slot. 64.0% at the last measured run, down from 81.5% when spell initiative got priced."
+        "why": "Equal skill on both sides, so anything away from one half is the content favouring a slot. Read on the exploring run since ADR 0062, for the reason ADR 0029 moved seven targets there: on the greedy mirror under packages both sides buy the same package in the same round, every initiative ties, and the seat breaks the tie -- Player 1 took 400 of 400 on four catalogues in five, so the reading measured the tie-break rule and not the content, and was 243 of an objective of 285.77. On the exploring run the two sides diverge and the question has an answer: 0.44 to 0.495 on the same five catalogues."
       },
       {
         "metric": "drawRate",
@@ -53,11 +53,11 @@
       {
         "metric": "averageRounds",
         "on": "mirror",
-        "min": 8,
-        "max": 16,
+        "min": 10,
+        "max": 15,
         "scale": 3,
         "weight": 2,
-        "why": "Long enough that a bad round can be traded back, short enough that the cap of 30 stays out of reach. 5.8 at the last measured run: the catalogue currently kills faster than it lets anyone react."
+        "why": "The length the game is designed for: ten to fifteen rounds (ADR 0068). Long enough that a bad round can be traded back and the deepest packages, which arrive at round 5 at the earliest since ADR 0066, get played; short enough that the cap of 30 stays out of reach. 7.8 at 20 base health under ADR 0066, 10.05 at the 30 it ships with now."
       },
       {
         "metric": "roundCapShare",
@@ -89,7 +89,7 @@
         "max": 0.25,
         "scale": 0.1,
         "weight": 1,
-        "why": "The largest share of landed casts any one spell takes across the whole catalogue. Since tierUsageShare reads the same thing per tier and catches what this one hides — a tier fully monopolised by a spell that is small in the total — this stays as the coarse guard and carries half the weight. 0.855 on the core content. Read on the exploring run (ADR 0029), where it reads 0.410 against 0.478 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
+        "why": "The largest share of landed casts any one spell takes across the whole catalogue. Since tierUsageShare reads the same thing inside each package and catches what this one hides — a package whose casts all go to one of its spells, small in the total — this stays as the coarse guard and carries half the weight. 0.855 on the core content. Read on the exploring run (ADR 0029), where it reads 0.410 against 0.478 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "spellsNeverCast",
@@ -105,15 +105,15 @@
         "max": 2,
         "scale": 2,
         "weight": 1,
-        "why": "Spells taking under 1% of the landed casts of the tier they are offered in. The hole spellsNeverCast leaves: pummel took 6 of 5283 landed casts of a mirrored run, which is dead in every sense that decides a game and is not a zero, so a buff that moved it from 4 casts to 6 read as no change at all. Read against the tier rather than the catalogue because a tier is the set a player chooses between at one moment. Counts strictly the spells spellsNeverCast does not: a zero is a zero in either reading, and with the same band and weight on both, counting it twice would quietly double what the objective asks of that one case. A run whose content carries no tiers reports this as missing rather than as zero. Read on the exploring run (ADR 0029), where it reads 0 against 1 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
+        "why": "Spells taking under 1% of the landed casts of the package that teaches them. The hole spellsNeverCast leaves: pummel took 6 of 5283 landed casts of a mirrored run, which is dead in every sense that decides a game and is not a zero, so a buff that moved it from 4 casts to 6 read as no change at all. Read against the package rather than the catalogue because the package is what one pick buys (ADR 0058): a spell can be rare overall and still be worth the pick that brought it, and a package carrying one spell nobody casts sold that pick short. A spell several packages teach is read against each and counted once. Counts strictly the spells spellsNeverCast does not: a zero is a zero in either reading, and with the same band and weight on both, counting it twice would quietly double what the objective asks of that one case. A run whose content carries no packages reports this as missing rather than as zero. Read on the exploring run (ADR 0029), where it reads 0 against 1 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "tierUsageShare",
         "on": "variety",
-        "max": 0.5,
-        "scale": 0.1,
+        "max": 0.8,
+        "scale": 0.05,
         "weight": 2,
-        "why": "The largest share of landed casts any one spell takes among the spells of its own tier, worst tier. A tier is the set a player chooses between at one moment, so this is the balance they actually feel. Uniform is 1/n: 0.33 for the three starting spells, 0.17 for the six of tier 1. It reads 1.000 on the core content — heavy_strike takes every landed cast of tier 0 — where the catalogue-wide share reads 0.855 and hides it. Read on the exploring run (ADR 0029), where it reads 0.568 against 0.742 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
+        "why": "Whether every spell of a package earns part of the pick that bought it (ADR 0058): the share of a package's landed casts its most-cast spell takes, worst package, read as the lower bound of its 95 % Wilson interval (ADR 0064). A package teaching one spell is skipped: it takes all of its own casts whatever the content does. The band is not an even split. Every package that teaches more than one spell teaches two, so 0.5 was the floor of each and the band demanded a perfect split from all eleven at once; a catalogue whose every pair truly splits evenly read 0.667 raw at the median, from sampling alone, and paid 5.6 points no move could remove. Spells sold together must differ in play (ADR 0060), and a heal beside an attack is not cast half the time. What the band refuses is the spell that came along for nothing: 0.8 is the other spell taking at least one cast in five, as far as the sample shows. On the shipped catalogue `tier:soulreaver:v1` reads 0.899 (267 of 286), `tier:deathstalker:v1` 0.861 and `tier:prowler:v1` 0.840. Read on the exploring run (ADR 0029): a greedy argmax monopolises a pair on any numbers."
       },
       {
         "metric": "tierDamageSpread",
@@ -121,7 +121,7 @@
         "max": 2.0,
         "scale": 0.5,
         "weight": 1,
-        "why": "How many times harder the best attack of a tier hits one target than the worst, worst tier. Which spells count is read from the content — is Damage at least a third of what the cast puts on a board, priced with the agents' own weights — never from what its casts landed, so lowering an attack until its hits are all absorbed widens this reading instead of dropping the spell out of it. A spell that is not an attack is not compared: a heal and a control spell with a rider of damage share no unit with one (ADR 0043). Damage is read per target actually hit, which the engine counts, and never per cast: that charged a sweep for its reach rather than for its force. The ratio is floored at half a point and capped at 5. Both readings were cruder until ADR 0043 and between them held this at its cap of 5.000 for every candidate a search could build — 36 of an objective of 42.67, flat, which let tune run 8 nerf `soul_devourer` in exactly this dimension for free. Read on the exploring run (ADR 0029)."
+        "why": "How many times harder the best attack of a package hits one target than the worst, worst package (ADR 0058). Which spells count is read from the content — is Damage at least a third of what the cast puts on a board, priced with the agents' own weights — never from what its casts landed, so lowering an attack until its hits are all absorbed widens this reading instead of dropping the spell out of it. A spell that is not an attack is not compared: a heal and a control spell with a rider of damage share no unit with one (ADR 0043). Damage is read per target actually hit, which the engine counts, and never per cast: that charged a sweep for its reach rather than for its force. The ratio is floored at half a point and capped at 5. Both readings were cruder until ADR 0043 and between them held this at its cap of 5.000 for every candidate a search could build — 36 of an objective of 42.67, flat, which let tune run 8 nerf `soul_devourer` in exactly this dimension for free. Read on the exploring run (ADR 0029)."
       },
       {
         "metric": "tierWinSpread",
@@ -129,7 +129,7 @@
         "max": 0.15,
         "scale": 0.1,
         "weight": 1,
-        "why": "The gap between the best and the worst win share among the spells of a tier, worst tier, counting only spells enough sides declared. Two spells offered together should not be worth wildly different results. 0.262 on the core content. Read on the exploring run (ADR 0029), where it reads 0.148 against 0.322 on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
+        "why": "The gap between two win shares among the spells of one package, worst package, counting only spells enough sides declared, read as the lower bound of the 95 % Newcombe interval of the difference (ADR 0065). Two spells bought by the same pick should not be worth wildly different results. Read raw it was mostly the size of the samples: a catalogue whose every pair truly wins alike read a worst gap of 0.254 at the median and 0.399 at the 90th percentile on the sides the exploring run gives each package, so the tuner was scoring 1 to 6 points of chance. The bound reads 0 for a gap its sides cannot tell from chance, and a gap they prove close to itself: `tier:blightweaver:v1` wins 0.659 of 22 sides with `tranquilizer_dart` and 0.148 of 27 with `infectious_blast`, 0.511 raw and 0.238 bounded. Read on the exploring run (ADR 0029), where it read 0.148 against 0.322 raw on a mirrored greedy run: the difference was the argmax passing spells over, not the content failing to offer them."
       },
       {
         "metric": "winRateA",
@@ -150,22 +150,22 @@
       {
         "metric": "averageRounds",
         "on": "exploit",
-        "min": 8,
+        "min": 10,
         "scale": 2,
         "weight": 2,
-        "why": "How fast the best exploiter closes it out, which is what the win rate stopped being able to say (ADR 0053). Eight rounds is the floor the mirror is already held to, so this reads: the catalogue should not let a player who only wants to win end it faster than a fair game is expected to last. It reads 5.785 on 7e199df4 for 2.45 of a 12.87 objective, and 7.553 for 0.10 with Crushing Stomp at the weakest of its own bounds, where the win rate reads 1.000 and 162.00 on both, to the decimal. So this is the axis a content move actually travels, and both readings are this panel's, scored the way a tuning pass scores a candidate rather than by fitting a fresh agent to each catalogue. The scale is two rounds, about what one spell's worth of pressure moves it. A clock can be gamed by making every match longer, and what stands against that is the mirror's own 8-to-16 band and the variety spreads; if a pass starts buying rounds rather than balance, this target needs an upper band too."
+        "why": "How fast the best exploiter closes it out, which is what the win rate stopped being able to say (ADR 0053). Ten rounds is the floor the mirror is held to (ADR 0068; it was eight), so this reads: the catalogue should not let a player who only wants to win end it faster than a fair game is expected to last. It reads 5.785 on 7e199df4 for 2.45 of a 12.87 objective, and 7.553 for 0.10 with Crushing Stomp at the weakest of its own bounds, where the win rate reads 1.000 and 162.00 on both, to the decimal. So this is the axis a content move actually travels, and both readings are this panel's, scored the way a tuning pass scores a candidate rather than by fitting a fresh agent to each catalogue. The scale is two rounds, about what one spell's worth of pressure moves it. A clock can be gamed by making every match longer, and what stands against that is the mirror's own 10-to-15 band and the variety spreads; if a pass starts buying rounds rather than balance, this target needs an upper band too."
       }
     ]
   },
   "constraints": {
     "noNewStrictDominance": {
       "enabled": true,
-      "what": "A candidate may not add a pair where one spell is strictly better than another: same targeting origin, at least as many targets, cost no higher, Spell initiative no lower, critical chance no lower, every effect at least as large, and strictly better on one of them.",
+      "what": "A candidate may not add a pair where one spell is strictly better than another: same targeting origin, at least as many targets, cost no higher, critical chance no lower, every effect at least as large, and strictly better on one of them.",
       "why": "A spell three nodes down the tree outclassing a starting spell is what progression means, so the pairs the catalogue already has are not defects to remove. Adding one is: it takes a decision out of a hand that had it. Journal entry ci-9 spent a whole learning investigation discovering the starting kit was shaped that way."
     },
     "noIndistinguishableSpells": {
       "enabled": true,
-      "what": "No two spells may carry the same cost, Spell initiative, critical chance, targeting and effects. The same signature the engine's Spell.Indistinguishable audit compares.",
+      "what": "No two spells may carry the same cost, critical chance, targeting and effects. The same signature the engine's Spell.Indistinguishable audit compares.",
       "why": "The engine plays both, but no result can attribute anything to either, so tuning one moves nothing the other does not."
     },
     "startingKitOffersAChoice": {
@@ -188,7 +188,6 @@
         "Free to cast",
         "Never worth more than an attack the creature can already afford"
       ],
-      "note": "Spell initiative is not a knob here: a starting spell does not grant it (ADR 0017), and this is one of the three the creature already knows.",
       "knobs": [
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 }
       ]
@@ -201,7 +200,6 @@
         "The cheapest damaging spell a creature knows on round one",
         "No critical chance: it is the predictable one"
       ],
-      "note": "Spell initiative is not a knob here: a starting spell does not grant it (ADR 0017).",
       "knobs": [
         { "path": "/energyCost", "min": 0, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
@@ -215,7 +213,6 @@
         "Strictly dearer and stronger than Basic Attack, never both cheaper and better",
         "The reason a first round has a choice in it"
       ],
-      "note": "Spell initiative is not a knob here: a starting spell does not grant it (ADR 0017).",
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 }
@@ -233,8 +230,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
       ]
     },
     "spell:guard": {
@@ -249,8 +245,7 @@
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:protective_slam": {
@@ -268,8 +263,7 @@
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
     "spell:chain_slash": {
@@ -284,8 +278,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 6, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:thundering_seal": {
@@ -301,8 +294,7 @@
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:full_plate": {
@@ -317,8 +309,7 @@
       "note": "Its price is the whole design and the reason its lower bound is one rather than zero. The spell is `SpellType.Passive` in a model where nothing implements a passive, so it is castable, repeatable and permanent; at zero it was unbounded and read 0.65 against the bolt's 6.47, which is how it went 400 matches without a single cast while being the most dangerous spell in the catalogue. Raising the permanent horizon would not have found that -- every reading prices one cast, and one point of defense is one point at any horizon. When a passive becomes a real always-on modifier, this entry is the first to revisit. It is also the Warlord's opener, so `restorative_gush` and `crushing_stomp` are only ever as reachable as it is. At 2 permanent it was declared by 5 sides of 400 on the mirrored run and both children were cast zero times -- a branch nobody walked, whose numbers could not be measured because nobody arrived to use them. At 3 it is declared by 34 and the two behind it are cast 26 and 55. Raising it was the only way to learn anything about the two spells this pass was about.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:restorative_gush": {
@@ -333,8 +324,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:crushing_stomp": {
@@ -350,8 +340,7 @@
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
       ]
     },
     "spell:enraged_charge": {
@@ -367,8 +356,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 5, "max": 8, "step": 1 },
-        { "path": "/criticalChance", "min": 0.5, "max": 0.8, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.5, "max": 0.8, "step": 0.05 }
       ]
     },
     "spell:tornado": {
@@ -384,8 +372,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
     "spell:psycho_rush": {
@@ -401,8 +388,7 @@
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
     "spell:poison_slash": {
@@ -418,23 +404,23 @@
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:throwing_star": {
       "name": "Throwing Star",
       "class": "Scoundrel",
-      "intent": "One energy for a small hit, and two points of Base initiative when it is unlocked: the Scoundrel buys speed by learning to throw. Its Spell initiative is worth more to the class than its damage.",
+      "intent": "The Prowler's second verb. Its packagemate `poison_slash` concentrates -- one target, hit now and bleeding after -- and this one spreads: the same activation, the same price, across two enemies. A thrown weapon reaching more than one thing it is thrown at is the one shape an opener can carry that the class does not already have, and it is what makes the pick a decision every round rather than a decision once. It used to be the tempo half of the package instead, on two points of Base initiative bought at unlock; the package pays that now and pays it whole (ADR 0059), which left the spell as a smaller copy of its sibling.",
       "keep": [
-        "One energy: it is the cheap attack the class is priced around",
-        "Unlocking it is a tempo decision, not a damage one"
+        "Reach is the point: the day it hits one target it is `heavy_strike` with a class on it",
+        "Never more targets than `meteor`, which is what a Wizard climbs two levels for",
+        "Priced level with `poison_slash`: the choice is the shape of the damage, never what it costs"
       ],
-      "note": "`check-knobs` reports this spell as outclassed and will keep reporting it, and the finding is an artifact rather than a bound to move. Its whole box tops out at 3.00 a round against `lightning_bolt`'s 6.47, because `cast_value` prices a cast and this spell's point is bought once and kept: two points of Base initiative for the rest of the match, at 2.1 a point in the agents' own weights. `data/README.md` names this entry as the case that reading misses. What the play says, on content `eca50723`: **1486 landed casts, 71.3 % of everything cast at tier 1**, 353 sides declaring it against the bolt's 129, and a win share of 0.510 against 0.539. It is the most-cast spell in the catalogue while the report says no move inside its bounds makes it a choice. Widening the box would not answer the finding, it would make the tier's most-cast spell stronger for a number that is wrong about it.",
+      "note": "The pair it belongs to was the worst reading in the catalogue. On content `d367db1c` the package split its casts **1813 to 140** -- 93 % to `poison_slash` -- because the two spells did the same thing and one did more of it: identical damage per energy at 3.0, and `poison_slash` taking 6 off a target per activation against 3. Costing 1 was the only edge this spell had, and it is worth nothing here: of **123,592** recorded states where a creature knew it, **1.0 %** sat below 2 energy and 77 % sat at 6 or more. The activation is the scarce thing, not the energy. So the cost went level with its sibling and the reach became the difference, which is a difference the board decides and not the price list. What it must not become is the catalogue's cheap sweep: `meteor` is 3 energy for three targets at level 2, and this is 2 for two at level 1 -- dearer per target, shorter reach, and that ordering is the reason a Wizard still climbs. If a tuning pass ever makes this the better sweep, the finding is about `meteor`. Measured on the benchmark seeds, the split did not balance, it flipped: this spell went from **7 % to 85 %** of the pair's landed casts on `variety`, and one point less damage or one energy more each sends it back to about 10 %. Against a deterministic greedy a pair's usage is a step in its numbers, and the step sits between two integers, so `criticalChance` is here as the continuous lever to walk it with. Tuning it is still to do.",
       "knobs": [
-        { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
+        { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
+        { "path": "/criticalChance", "min": 0, "max": 0.3, "step": 0.05 }
       ]
     },
     "spell:parasite_jab": {
@@ -451,8 +437,7 @@
         { "path": "/energyCost", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 5, "step": 1 },
-        { "path": "/criticalChance", "min": 0.4, "max": 0.7, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.4, "max": 0.7, "step": 0.05 }
       ]
     },
     "spell:hateful_sacrifice": {
@@ -468,8 +453,7 @@
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 7, "max": 11, "step": 1 },
         { "path": "/casterEffects/0/amount", "min": 2, "max": 6, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:soul_devourer": {
@@ -486,24 +470,21 @@
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 3, "max": 7, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/casterEffects/0/amount", "min": 2, "max": 7, "step": 1 }
       ]
     },
     "spell:momentum": {
       "name": "Momentum",
       "class": "Assassin",
-      "intent": "Wait's opposite trade, and the spell whose name finally says what it does: Wait hands over energy now, Momentum builds it, a point at the start of each of the next few rounds. The Assassin spends the same activation and comes out ahead if the match lasts, behind if it does not -- and permanently faster either way, because its Spell initiative of three is the highest in the catalogue.",
+      "intent": "Wait's opposite trade, and the spell whose name finally says what it does: Wait hands over energy now, Momentum builds it, a point at the start of each of the next few rounds. The Assassin spends the same activation and comes out ahead if the match lasts, behind if it does not. It no longer buys speed on the side: the three points of Base initiative it used to grant on unlock belonged to the spell, and a pick buys a package now (ADR 0059). What is left is the energy trade, whole.",
       "keep": [
         "Free, like Wait, and it is the same activation: the trade is when the energy arrives, not what it costs",
-        "It builds rather than hands over: the day it gives energy on the spot it is Wait again",
-        "Its Spell initiative is half of what it is for"
+        "It builds rather than hands over: the day it gives energy on the spot it is Wait again"
       ],
       "note": "The first spell to use `EnergyRegeneration`, which ADR 0020 added and deliberately left unused, naming Momentum as one of the two candidates. Do not read its bounds as a route to making it castable: at 0.3 a point of energy the top of this box is 2.40 an activation against an attack's 6-and-up, so `check-knobs` reports it -- against `healing_screech`'s 7.20 today, `full_plate` when this note was written -- and will keep reporting it. That finding is right, and one of the two ways out it named has now been tried: ADR 0037 swept the price of energy and moved it 0.2 to 0.3, which took this ceiling from 1.60 to 2.40 and did not clear the bar. The remaining way out is the rival's bounds. Widening this spell until it clears 7.20 on its own would mean handing out 24 points of energy a cast, down from 36 at the old price.",
       "knobs": [
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 },
-        { "path": "/initiative", "min": 2, "max": 4, "step": 1 }
+        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 }
       ]
     },
     "spell:death_squad": {
@@ -518,8 +499,7 @@
       "note": "It was **cast 0 times in 400 matches** and its own bounds reached 1.20 a round against a tier-3 band of 8 to 14, so `check-knobs` reported it as a spell no move could make a choice -- correctly, because the numbers were never what was wrong with it. Legacy gave the team +10 initiative and +100% critical for a round; neither was expressible, so it was substituted into the tempo it was meant to *buy*, one energy an ally, and energy was 0.2 a point at the time (0.3 since ADR 0037, which would have read 0.90 -- the same dead spell). As the haste it always was it reads **12.60**. The critical half is still out and is a different shape, not a mirror (ADR 0036). Measured, it goes **0 declarations to 182**, of which 162 land, and applies 288 hastes. But greedy takes it to a **0.333 win share over 36 sides** while the exploring agent reads **0.463 over 54** -- the signature of a spell the scorer overvalues rather than a bad spell, the same shape `infectious_blast` showed from the other side. `mortal_wound` drops 104 declarations to 69 beside it, so the class is being crowded out of its own win condition by its support spell. At an amount of 1 it reads 6.30, below the band, and only 12 sides pick it up -- too few to read, which is why 2 ships. What this really names is the initiative weight: ADR 0032 swept 2.1 on content whose only initiative effect was a *debuff on one enemy*, and this entry asked whether the same price holds for a *buff on three allies*. ADR 0037 re-swept it over eleven points on content that carries this spell, and 2.1 won again -- so the price survives the buff, though it is a narrow minimum rather than a flat step and the question is answered rather than closed. There is no duration knob, because the first keep above says one round and a knob that can spend it is not a bound on the spell, it is a way out of its own identity. The amount stops at 3, whose corner reads **18.90** -- above the band on purpose, so the tuner has somewhere to go, and not a target: initiative is the dearest weight *per point* at 2.1 -- kill at 5.0 and stun at 3.0 are larger numbers, but neither multiplies an authored amount -- which makes this the easiest spell in the catalogue to over-tune.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/initiative", "min": 2, "max": 4, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:mortal_wound": {
@@ -535,8 +515,7 @@
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:noxious_cure": {
@@ -554,8 +533,7 @@
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 5, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },
     "spell:tranquilizer_dart": {
@@ -570,8 +548,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
-        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 }
       ]
     },
     "spell:infectious_blast": {
@@ -586,8 +563,7 @@
       "note": "It carried the substitution ADR 0035 removed, and it carried it at the wrong price: rendered as tempo it read **25.20 a round**, the largest number in the catalogue, and `revenant_guards` and `death_squad` were both reported as having no bounds that could make them a choice beside it. As the defense debuff it always was it reads 11.70, inside the tier-3 band. The `revenant_guards` finding went away without either spell moving; `death_squad` is still reported, now against `revenant_guards` at 15.60, which is its own bounds and not this spell's. The duration knob went with the substitution -- the debuff is permanent, and a permanent duration is not a number the tuner can turn.",
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
-        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:lightning_bolt": {
@@ -601,8 +577,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
-        { "path": "/criticalChance", "min": 0.17, "max": 0.8, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.17, "max": 0.8, "step": 0.05 }
       ]
     },
     "spell:rejuvenate": {
@@ -617,8 +592,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0, "max": 0.5, "step": 0.05 }
       ]
     },
     "spell:meteor": {
@@ -634,8 +608,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:engulfing_flames": {
@@ -651,8 +624,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 3, "max": 5, "step": 1 },
         { "path": "/effects/0/amount", "min": 6, "max": 10, "step": 1 },
-        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
     "spell:ice_spear": {
@@ -668,8 +640,7 @@
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 5, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 2, "step": 1 },
-        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/criticalChance", "min": 0.3, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:summon_minions": {
@@ -686,8 +657,7 @@
         { "path": "/energyCost", "min": 2, "max": 4, "step": 1 },
         { "path": "/effects/0/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 },
-        { "path": "/casterEffects/0/amount", "min": 1, "max": 5, "step": 1 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 5, "step": 1 }
       ]
     },
     "spell:revenant_guards": {
@@ -705,8 +675,7 @@
         { "path": "/effects/0/amount", "min": 1, "max": 2, "step": 1 },
         { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 }
       ]
     },
     "spell:crazed_specter": {
@@ -723,8 +692,7 @@
         { "path": "/energyCost", "min": 3, "max": 6, "step": 1 },
         { "path": "/effects/0/amount", "min": 4, "max": 7, "step": 1 },
         { "path": "/casterEffects/0/amountPerRound", "min": 2, "max": 5, "step": 1 },
-        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
       ]
     },
     "spell:healing_screech": {
@@ -742,8 +710,7 @@
         { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 3, "step": 1 },
-        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 },
-        { "path": "/initiative", "min": 0, "max": 2, "step": 1 }
+        { "path": "/criticalChance", "min": 0, "max": 0.6, "step": 0.05 }
       ]
     },
     "spell:restorative_burst": {
@@ -759,8 +726,7 @@
       "knobs": [
         { "path": "/energyCost", "min": 2, "max": 3, "step": 1 },
         { "path": "/effects/0/amount", "min": 2, "max": 4, "step": 1 },
-        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/effects/1/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:toxic_waves": {
@@ -777,8 +743,330 @@
         { "path": "/effects/0/amount", "min": 1, "max": 4, "step": 1 },
         { "path": "/effects/1/amountPerRound", "min": 1, "max": 3, "step": 1 },
         { "path": "/effects/1/durationRounds", "min": 1, "max": 2, "step": 1 },
-        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 },
-        { "path": "/initiative", "min": 1, "max": 3, "step": 1 }
+        { "path": "/criticalChance", "min": 0.2, "max": 0.5, "step": 0.05 }
+      ]
+    }
+  },
+  "packages": {
+    "tier:brute": {
+      "name": "Brute",
+      "intent": "The Brawler's opener: a cheap swing and a point of armour, bought together. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:occultist": {
+      "name": "Occultist",
+      "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        }
+      ]
+    },
+    "tier:prowler": {
+      "name": "Prowler",
+      "intent": "The Scoundrel's opener, and the fastest of the three: the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:assassin": {
+      "name": "Assassin",
+      "intent": "The Assassin's opener: Momentum, the energy that arrives later rather than now. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:berserker": {
+      "name": "Berserker",
+      "intent": "The Berserker's opener: Enraged Charge, two hits in one activation. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:elementalist": {
+      "name": "Elementalist",
+      "intent": "The Wizard's opener: Meteor, the first spell that reaches three enemies. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:ironbound": {
+      "name": "Ironbound",
+      "intent": "The Warlord's opener: Full Plate, armour as a line's identity. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:marauder": {
+      "name": "Marauder",
+      "intent": "The Mercenary's opener: Protective Slam, protection said to an enemy as a stagger. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:necromancer": {
+      "name": "Necromancer",
+      "intent": "The Necromancer's opener: Summon Minions, paid for in the summoner's own health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:parasite": {
+      "name": "Parasite",
+      "intent": "The Leech's opener: Parasite Jab, the start of the line that feeds on its targets. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:plague_doctor": {
+      "name": "Plague Doctor",
+      "intent": "The Trickster's opener: Noxious Cure, a heal that costs the team it heals. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 1 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 3,
+          "step": 1
+        }
+      ]
+    },
+    "tier:shaman": {
+      "name": "Shaman",
+      "intent": "The Shaman's opener: Healing Screech, the team heal of the Sorcerer family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 0 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 2,
+          "step": 1
+        }
+      ],
+      "note": "Worth nothing on purchase: its one spell carried no per-spell bonus, so the seeded sum is 0. A package that buys no tempo at all may be right for a healer and may be an accident of the migration; the bounds let a tuning pass find out rather than assume either."
+    },
+    "tier:blightweaver": {
+      "name": "Blightweaver",
+      "intent": "The Trickster's close: the cheap stun and the armour shred. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 2,
+          "max": 6,
+          "step": 1
+        }
+      ]
+    },
+    "tier:deathstalker": {
+      "name": "Deathstalker",
+      "intent": "The Assassin's close: the team haste and the finishing wound. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 3,
+          "max": 7,
+          "step": 1
+        }
+      ]
+    },
+    "tier:dreadnought": {
+      "name": "Dreadnought",
+      "intent": "The Warlord's close: a large self-repair and the full-price stun. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:harbinger": {
+      "name": "Harbinger",
+      "intent": "The Wizard's close: the burning nuke and the slowing spear. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:lich": {
+      "name": "Lich",
+      "intent": "The Necromancer's close: the armoured dead and the specter that costs health. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        }
+      ]
+    },
+    "tier:ravager": {
+      "name": "Ravager",
+      "intent": "The Berserker's close: the sweep and the single enormous hit. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 0,
+          "max": 4,
+          "step": 1
+        }
+      ]
+    },
+    "tier:soulreaver": {
+      "name": "Soulreaver",
+      "intent": "The Leech's close: the sacrifice and the devourer that drains. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 5 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
+        "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 3,
+          "max": 7,
+          "step": 1
+        }
+      ]
+    },
+    "tier:spiritcaller": {
+      "name": "Spiritcaller",
+      "intent": "The Shaman's close: the poisoned wave and the restorative burst. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 1,
+          "max": 5,
+          "step": 1
+        }
+      ]
+    },
+    "tier:warmonger": {
+      "name": "Warmonger",
+      "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "keep": [
+        "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
+      ],
+      "knobs": [
+        {
+          "path": "/initiativeBonus",
+          "min": 2,
+          "max": 6,
+          "step": 1
+        }
       ]
     }
   }

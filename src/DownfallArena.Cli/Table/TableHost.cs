@@ -145,7 +145,7 @@ internal static class TableHost
             ? "  Recording nothing: no session directory, no notes, no trace (--no-record)."
             : $"  Recording session {run.SessionId} into '{run.Directory}'");
 
-        // The rule set is named before anything is played. The board game is balanced for 8 to 16 rounds and
+        // The rule set is named before anything is played. The board game is balanced for 10 to 15 rounds and
         // the engine's default caps at thirty, so a table that took one silently would be testing another
         // game (ADR 0054).
         Console.WriteLine($"  {RuleSetFile.Describe(rules, options.Rules)}");

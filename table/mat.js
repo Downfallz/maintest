@@ -42,30 +42,27 @@ export function classColour(name, palette) {
   return `hsl(${hash % 360} 48% 68%)`;
 }
 
-// The host supplies tiers and prerequisite wording. Group them for reading, without inferring edges
-// from prose or treating a tier as an unlock rule. Only Evolution options can say "available now".
+// Package ownership and legal offers come from the host. Knowing every contained spell does not mean
+// owning its package, and prerequisite satisfaction alone cannot override the one-purchase cap.
 export function talentClasses(catalogue, cards, creature, evolution) {
   const known = new Set(creature?.knownSpells ?? []);
-  const offered = new Set(evolution?.creatures?.find(one => one.creature === creature?.id)?.unlockableSpells ?? []);
-  const classes = new Map();
-  const seen = new Set();
-  for (const band of catalogue?.trees ?? []) {
-    for (const spell of band.spells ?? []) {
-      if (seen.has(spell)) continue;
-      seen.add(spell);
-      const face = cards?.get(spell);
-      const name = face?.creatureClass || band.name || 'Unclassified';
-      if (!classes.has(name)) classes.set(name, new Map());
-      const tier = Number.isInteger(face?.tier) && face.tier > 0 ? face.tier : 0;
-      const tiers = classes.get(name);
-      if (!tiers.has(tier)) tiers.set(tier, []);
-      tiers.get(tier).push({ spell, status: known.has(spell) ? 'known' : offered.has(spell) ? 'available' : 'future' });
-    }
-  }
-  return [...classes].map(([name, tiers]) => ({
-    name,
-    tiers: [...tiers].sort(([a], [b]) => a - b).map(([tier, spells]) => ({ tier, spells })),
+  const owned = new Set(creature?.acquiredTiers ?? []);
+  const offered = new Set(evolution?.creatures?.find(one => one.creature === creature?.id)?.availableTiers ?? []);
+  return (catalogue?.packages ?? []).map(pack => ({
+    ...pack,
+    status: owned.has(pack.id) ? 'known' : offered.has(pack.id) ? 'available' : 'future',
+    tiers: [{ tier: pack.level, spells: (pack.spells ?? []).map(spell => ({ spell, status: known.has(spell) ? 'known' : 'future' })) }],
   }));
+}
+
+// Every edge is an authored package prerequisite. Multiple parents are drawn under each parent; levels
+// must increase, so malformed content cannot make the reference recurse forever.
+export function packageForest(catalogue) {
+  const packs = catalogue?.packages ?? [];
+  const build = pack => ({ ...pack, key: pack.id, depth: pack.level,
+    children: packs.filter(child => child.level > pack.level && child.prerequisites?.includes(pack.id)).map(build),
+  });
+  return packs.filter(pack => !pack.prerequisites?.some(id => packs.some(parent => parent.id === id && parent.level < pack.level))).map(build);
 }
 
 // Parent codes are scoped to their tree; depth alone is not enough to recover ancestry after reordering.
@@ -102,6 +99,10 @@ export function talentPalette(catalogue, cards) {
   for (const root of talentForest(catalogue)) {
     paint({ ...root, children: [] }, ['#c9c2a8']);
     root.children.forEach((branch, index) => paint(branch, ranges[index % ranges.length]));
+  }
+  for (const pack of catalogue?.packages ?? []) {
+    const name = cards?.get(pack.spells?.[0])?.creatureClass;
+    palette.set(pack.id, classColour(name ?? pack.name, palette));
   }
   return palette;
 }

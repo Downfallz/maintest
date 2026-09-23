@@ -5,6 +5,6 @@ using DownfallArena.SharedKernel.Primitives;
 namespace DownfallArena.Domain.Matches.Events;
 
 /// <summary>
-/// A player unlocked a spell for one of their creatures.
+/// A player bought a package for one of their creatures: every spell in it, and its initiative bonus.
 /// </summary>
 public sealed record EvolutionChoiceSubmitted(MatchId MatchId, RoundId RoundId, PlayerSlot Slot, EvolutionChoice Choice) : IMatchEvent;

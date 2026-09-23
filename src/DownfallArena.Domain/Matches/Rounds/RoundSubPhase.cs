@@ -10,6 +10,7 @@ public enum RoundSubPhase
     Evolution,
     Speed,
     TurnOrderResolution,
+    TieOrder,
     IntentSelection,
     RevealAndTarget,
     ActionResolution,

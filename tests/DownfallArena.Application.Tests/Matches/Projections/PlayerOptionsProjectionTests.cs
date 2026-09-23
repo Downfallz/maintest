@@ -39,7 +39,7 @@ public sealed class PlayerOptionsProjectionTests
     }
 
     [Fact]
-    public void Evolution_lists_the_creatures_that_can_unlock_something_and_the_picks_left()
+    public void Evolution_lists_the_creatures_that_can_buy_something_and_the_picks_left()
     {
         var match = new MatchStore().Started();
 
@@ -48,12 +48,21 @@ public sealed class PlayerOptionsProjectionTests
         fresh.SubPhase.ShouldBe(RoundSubPhase.Evolution);
         var evolution = fresh.Evolution.ShouldNotBeNull();
         evolution.RemainingPicks.ShouldBe(2);
-        evolution.Creatures.ShouldBe([new EvolutionOption(CreatureId.From(1), [TestContent.Guard]), new EvolutionOption(CreatureId.From(2), [TestContent.Guard])]);
+        evolution.Creatures.ShouldBe(
+        [
+            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack]),
+            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack]),
+        ],
+        "every level-1 package is open to every creature: prerequisites are the only gate, so multiclassing is free (ADR 0056)");
 
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Guard)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)).IsSuccess.ShouldBeTrue();
         var afterOne = Options(match, PlayerSlot.Player1).Evolution.ShouldNotBeNull();
         afterOne.RemainingPicks.ShouldBe(1);
-        afterOne.Creatures.ShouldBe([new EvolutionOption(CreatureId.From(1), [TestContent.Slam]), new EvolutionOption(CreatureId.From(2), [TestContent.Guard])]);
+        afterOne.Creatures.ShouldBe(
+        [
+            new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack]),
+        ],
+        "the creature that bought Guard buys nothing more this round, Slam included; the other is where it was (ADR 0066)");
 
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
@@ -82,8 +91,8 @@ public sealed class PlayerOptionsProjectionTests
     public void Intent_lists_the_timeline_creatures_without_an_intent_and_their_affordable_spells()
     {
         var match = new MatchStore().Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Guard)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.Slam)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         MatchStore.ChooseStandard(match);
 
@@ -92,11 +101,11 @@ public sealed class PlayerOptionsProjectionTests
         player1.Kind.ShouldBe(PlayerOptionsKind.Intent);
         player1.Intent.ShouldNotBeNull().Creatures.ShouldBe(
         [
-            new IntentOption(CreatureId.From(1), [TestContent.Guard, TestContent.Slam, TestContent.Strike]),
+            new IntentOption(CreatureId.From(1), [TestContent.Guard, TestContent.Strike]),
             new IntentOption(CreatureId.From(2), [TestContent.Strike]),
         ]);
 
-        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), TestContent.Slam)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), TestContent.Guard)).IsSuccess.ShouldBeTrue();
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(2), TestContent.Strike)).IsSuccess.ShouldBeTrue();
         Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
         Options(match, PlayerSlot.Player2).Intent.ShouldNotBeNull().Creatures.Select(option => option.Creature).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
@@ -126,5 +135,29 @@ public sealed class PlayerOptionsProjectionTests
 
         Should.Throw<ArgumentNullException>(() => PlayerOptionsProjection.Build(null!, PlayerSlot.Player1, TestContent.Resources));
         Should.Throw<ArgumentNullException>(() => PlayerOptionsProjection.Build(match, PlayerSlot.Player1, null!));
+    }
+
+    /// <summary>
+    /// ADR 0063: every creature ties, the fixture's rolls give Player 1 the first two places, and each seat is
+    /// offered its own tie to order; a seat that has given its order waits for the other.
+    /// </summary>
+    [Fact]
+    public void A_tie_order_is_offered_to_each_seat_that_holds_two_places_until_it_gives_one()
+    {
+        var match = new MatchStore().Started();
+        MatchStore.PassEvolution(match);
+        foreach (var creature in match.Creatures)
+        {
+            match.SubmitSpeedChoice(creature.Owner, new SpeedChoice(creature.Id, Speed.Standard)).IsSuccess.ShouldBeTrue();
+        }
+
+        var player1 = Options(match, PlayerSlot.Player1);
+        player1.Kind.ShouldBe(PlayerOptionsKind.TieOrder);
+        player1.TieOrder.ShouldNotBeNull().Ties.ShouldHaveSingleItem().ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
+
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(2), CreatureId.From(1)]).IsSuccess.ShouldBeTrue();
+
+        Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
+        Options(match, PlayerSlot.Player2).TieOrder.ShouldNotBeNull().AsRolled.ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
     }
 }

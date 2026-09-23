@@ -16,6 +16,8 @@ public sealed record PlayerOptions
 
     public SpeedOptions? Speed { get; init; }
 
+    public TieOrderOptions? TieOrder { get; init; }
+
     public IntentOptions? Intent { get; init; }
 
     public TargetOptions? Target { get; init; }

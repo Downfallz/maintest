@@ -34,7 +34,7 @@ The decision behind all of this is [ADR 0021](../../docs/adr/0021-tune-the-catal
 
 ## Why it exists
 
-The loop already measures everything a balance pass needs: player 1's share of a mirrored run, average
+The loop already measures everything a balance pass needs: player 1's share of an evenly matched run, average
 rounds, the share ending at the round cap, spell usage and its entropy, the fizzle rate
 (`docs/learning/training.md`). What it has no way to know is that Psycho Rush is meant to be the Berserker's
 all-in and Wait is meant to stay worse than acting. Without that, an optimizer that only chases the metrics
@@ -46,14 +46,20 @@ Spells are keyed by their **unversioned alias** (`spell:pummel`), never by the v
 in the studio repoints the alias, and the entry follows the spell instead of going stale on the version it
 replaced.
 
+Packages are keyed the same way (`tier:prowler`), in their own `packages` section (ADR 0061). The alias map
+decides which version an entry means when it names one, which is what the studio writes when it cuts a
+package's next version; without an alias the id with its `:vN` cut off names it. Two enabled versions of one
+package and no alias is reported by `check-knobs` rather than guessed at.
+
 ## A knob
 
 ```json
 { "path": "/criticalChance", "min": 0.4, "max": 0.8, "step": 0.05 }
 ```
 
-- `path` is a JSON pointer into the spell's own document: `/energyCost`, `/initiative`,
-  `/effects/0/amount`, `/effects/1/durationRounds`.
+- `path` is a JSON pointer into the spell's own document: `/energyCost`, `/criticalChance`,
+  `/effects/0/amount`, `/effects/1/durationRounds`. Not `/initiative`: a spell carries none since ADR 0059,
+  and `check-knobs` refuses a knob that addresses a field the spell does not have.
 - A move is `step` added to **the value the content carries today**, not to a grid, so a critical chance
   authored at 0.667 can reach 0.717 and 0.617 and stays reachable from itself. Results are rounded to three
   decimals and clamped to `[min, max]`.
@@ -78,6 +84,23 @@ energy debuffs, and the minions did not survive the port (`docs/domain/spells.md
 as waiting on a rule, and the point of saying so here is that a search must not "fix" them by making the
 half that exists strong enough to compensate.
 
+## What a package entry carries
+
+The same fields as a spell's, without a class, and **one knob at most**: `/initiativeBonus`, what a purchase
+adds to the buyer's Base initiative for the rest of the match (ADR 0056). A package's level, prerequisites and
+spells are the progression itself, and `check-knobs` refuses a knob on any of them.
+
+Every enabled package needs an entry with an intent, as every enabled spell does; the studio seeds one when it
+creates a package and prunes it when it deletes one. The 21 bonuses are the sums `scripts/build-tiers.py`
+seeded from the per-spell numbers it replaced (ADR 0057), which is what each entry's intent says.
+
+**Do not run a tuning pass with these knobs yet.** They are live — moving `tier:prowler` from 3 to 5 moves 54
+of the 71 objective metrics — and that is the problem: the same move takes the objective from 285.77 to
+101.76, all of it from `mirror.player1WinShare` (243.00 to 41.07) while every variety term gets worse. That
+term reads the seat advantage between two identical greedy agents, a mirror that is degenerate under packages:
+equal initiative is broken by the seat, so Player 1 takes 400 of 400. Initiative is exactly the lever that
+reaches it, so a search would buy seat asymmetry rather than balance (ADR 0061). The mirror reading is next.
+
 ## The objective
 
 `objective` is the score. Every target names a metric, the evaluation it is read from, a band, a `scale`
@@ -89,8 +112,10 @@ score = sum over targets of  weight * (distance outside the band / scale) ** 2
 
 Zero is on target and lower is better. A metric no evaluation measured is listed as missing rather than
 counted as zero. Four evaluations are played on the benchmark seeds. `mirror` (greedy against greedy) reads
-who wins, how long a match lasts and how often it runs out of rounds, with skill held equal. `variety`
-(`explore:0.2` against itself) reads whether the content offers a choice. `skill` (greedy against random)
+how long a match lasts and how often it runs out of rounds, with skill held equal. `variety`
+(`explore:0.2` against itself) reads whether the content offers a choice, and since ADR 0062 who wins it:
+under packages the greedy mirror ties every initiative and gives the tie to the seat, so Player 1 took 400 of
+400 there whatever the content, and the seat question is only answerable where the two sides diverge. `skill` (greedy against random)
 checks that the content still rewards playing well. `exploit` (a panel of searched weights files against
 greedy) reads how far a player who only wants to win gets against the way the game is meant to be played —
 scored on **how fast** the best of the panel closes it out, since 2026-09-17, because whether it wins at all
@@ -130,17 +155,32 @@ agent A is read as a panel: agent B is the opponent it is measured against, and 
 there. It also refuses an empty panel, and a knobs file whose evaluation names a weights or policy file that
 is not there, because otherwise the engine fails one candidate at a time, once a search has already started.
 
-Most targets read a metric of the whole run. Three read a **tier** instead — the spells offered at one depth
-of the talent tree, which is the set a player is choosing between at that moment — and report the worst
-tier: `tierUsageShare` (does one spell own its tier), `tierDamageSpread` (do its attacks hit comparably
-hard, per target of a landed cast) and `tierWinSpread` (do they win comparably often). They exist because the
-catalogue-wide reading hides a monopolised tier: on the nine-spell core content `spellUsageShare` reads
-0.855 while `tierUsageShare` reads 1.000, because `heavy_strike` takes every landed cast of tier 0 and the
-starting kit is not a choice at all.
+Most targets read a metric of the whole run. Three read a **package** instead — the spells one evolution pick
+buys together ([ADR 0058](../../docs/adr/0058-a-tier-is-the-package-the-balance-objective-reads.md)) — and
+report the worst package: `tierUsageShare` (do its casts all go to one of them), `tierDamageSpread` (do its
+attacks hit comparably hard, per target of a landed cast) and `tierWinSpread` (do they win comparably often).
+They exist because the catalogue-wide reading hides a package that sold its pick short: on the catalogue of
+#171 `spellUsageShare` read 0.297 while `tierUsageShare` read 0.928, because `tier:prowler:v1` split 1813
+casts of `poison_slash` against 140 of `throwing_star`.
 
-Each skips what it cannot read rather than guessing: a tier nobody cast (that is `spellsNeverCast`), a spell
-that is not an attack (a heal and an attack share no unit), and a spell too few sides declared for its own
-number to be anything but noise. Whether a spell is an attack is read from the content, never from what its
+`tierUsageShare` reads each package's top share as the lower bound of its 95 % Wilson interval, not raw, and
+its band is at most 0.8 rather than an even split
+([ADR 0064](../../docs/adr/0064-read-a-package-monopoly-on-what-its-sample-proves.md)). Raw, the worst of
+eleven packages is mostly noise: a catalogue whose every pair truly splits evenly reads 0.667 at the median,
+because a package bought a few times reads 12 of 16 as easily as 8 of 16. And every package that sells more
+than one spell sells two, so the old band of 0.5 was the floor of each. The bound reads a handful of casts as
+the little it proves; 0.8 is the other spell taking at least one cast in five. `tierWinSpread` is bounded the
+same way ([ADR 0065](../../docs/adr/0065-read-a-package-win-gap-on-what-its-sides-prove.md)): the lower end of
+the 95 % Newcombe interval of the gap between two win shares, zero when the sides cannot tell it from chance.
+
+The spells of a package are a bundle and not alternatives — one pick buys all of them — so this is not the
+"is it a choice" the tree depth claimed to read. It is the narrower question: did the other spells in the
+package come along for nothing.
+
+Each skips what it cannot read rather than guessing: a package nobody cast (that is `spellsNeverCast`), a
+package teaching one spell (a lone spell takes all of its own casts whatever the content does, and nine of
+the twenty-one shipped packages teach one), a spell that is not an attack (a heal and an attack share no
+unit), and a spell too few sides declared for its own number to be anything but noise. Whether a spell is an attack is read from the content, never from what its
 casts landed: otherwise lowering an attack until its hits are all absorbed would drop it out of the
 comparison and *improve* the reading, paying the search to break spells.
 
@@ -175,7 +215,7 @@ Hard rules. A candidate that breaks one is not scored at all.
 | Constraint | What it refuses |
 | --- | --- |
 | `noNewStrictDominance` | A new pair where one spell is better than another on every axis and worse on none, **at the same depth in the talent tree or shallower**. A deeper spell outclassing a shallower one is what the tree is for and is not a pair. |
-| `noIndistinguishableSpells` | Two spells with the same cost, Spell initiative, critical chance, targeting and effects. Effects are compared whole and as a multiset, the way the engine's `Spell.Indistinguishable` audit compares them; the engine reads the built schema and stays the authority. |
+| `noIndistinguishableSpells` | Two spells with the same cost, critical chance, targeting and effects. Effects are compared whole and as a multiset, the way the engine's `Spell.Indistinguishable` audit compares them; the engine reads the built schema and stays the authority. |
 | `startingKitOffersAChoice` | Any of the three spells every creature starts with being strictly better than another. |
 
 Dominance reads the talent tree. A spell is only compared against another at its own depth or deeper:
@@ -242,6 +282,11 @@ sweep, so 149 of a possible 235 were played and 16 rounds read the same as 24 wo
 the opening sweep does nearly all the work, and the rounds are not the binding constraint. And the whole pass
 now costs about **28 minutes** where it cost seventy.
 
+Every `tune.json` and every `score.json` carries an `objective` stamp: `metrics`, the last ADR that changed
+how a metric is read (`METRIC_DEFINITIONS`, `adr-0065` today), and `targets`, twelve hex digits of the seed
+file, the evaluations and every band. Two scores are comparable only when both agree, which is what the
+`score` note in `knobs.json` says in prose.
+
 The run writes `tune.json` (every candidate, its moves, its penalties and its metrics) and `content/`, the
 changed spell files under the same tree they came from, so applying a proposal is a copy and reading one is
 a diff. `--apply` does that copy. Nothing else is written to `data/`: the search works on a copy in
@@ -256,8 +301,10 @@ answer to a finished search from the best a killed one had reached — the run s
 
 **Run more than one seed.** A hill climb keeps only what improves, so which knobs it happens to draw first
 decides what it finds. On this catalogue, `--seed 1` at the full budget draws 32 candidates and improves
-nothing, while `--seed 11` finds a move in its first two: Ice Spear's Spell initiative from 2 to 1, and the
-score from 33.7 to 29.6. Neither run is wrong; the space is mostly flat and the good moves are sparse.
+nothing, while `--seed 11` found a move in its first two: Ice Spear's Spell initiative from 2 to 1, and the
+score from 33.7 to 29.6. Neither run was wrong; the space is mostly flat and the good moves are sparse. That
+particular move is no longer available — no spell carries an initiative since ADR 0059 — and the shape of the
+lesson is what survives, not the example.
 
 What to expect here today: 26 of the 36 spells are never cast in a mirrored run, so a third of the
 candidates change no metric at all and the report names them. Two thirds of the score is that dead content
@@ -297,12 +344,13 @@ The reading is coarse on purpose — no board, no defense, no cap at a target's 
 behind a defensive effect (so a `DefenseBuff` is priced as `defense x amount x rounds`, a stand-in and not
 what the scorer does with one, and a `DefenseDebuff` is the same stand-in the other way, blind in the same
 way to the damage the shred lets through), no kill term, which is the largest weight in the game and a threshold so it
-rewards a reliable hit over a bigger average one, and neither the energy cost nor the Spell initiative that
-`ActionScorer` prices when it picks an unlock.
+rewards a reliable hit over a bigger average one, and not the energy cost that `ActionScorer` prices when it
+picks a package.
 
-That last one is why `throwing_star` is reported: its entry
-says its Spell initiative is worth more to the class than its damage, and none of that is in the number the
-report prints. It is read off the agents'
+`throwing_star` used to be the case this reading missed, and is no longer: its entry said its Spell
+initiative was worth more to the class than its damage, and none of that was in the number the report
+printed. The bonus belongs to its package now (ADR 0059), so the ceiling is the whole truth about the spell
+and the finding against it is a finding. The kill and threat terms are read off the agents'
 own weights (`learning/weights/greedy.json`, which mirrors `ScoringWeights.Default`) rather than restated.
 
 An attack is only compared with another attack, and a spell that deals no damage only with another that

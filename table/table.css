@@ -80,7 +80,7 @@ summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
 .strip { display: flex; gap: 20px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
 .strip:empty::before { content: 'The order appears after speed selection.'; font-size: 12px; color: var(--muted); }
 .band { flex: none; display: flex; gap: 9px; align-items: center; }.band-name { color: var(--muted); font-size: 11px; }.slots { display: flex; gap: 6px; }
-.slot { flex: none; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line); font-size: 12px; }.slot.ally { color: var(--ally); }.slot.enemy { color: var(--enemy); }.slot.now { color: #251f13; border-color: var(--gold); background: var(--gold); }
+.slot { flex: none; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line); font-size: 12px; }.slot.ally { color: var(--ally); }.slot.enemy { color: var(--enemy); }.slot.now { color: #251f13; border-color: var(--gold); background: var(--gold); }.slot .roll { display: block; margin-top: 2px; font-size: 10px; opacity: .75; }
 .hand { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 13px 0 25px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .hand-section { border-top: 1px solid var(--line); padding-top: 20px; }.hand-section > .section-heading { align-items: baseline; }
 .hand-cards { display: grid; gap: 12px; }.hand-row { min-width: 0; }.hand-row summary { padding: 13px 0; border-top: 1px solid var(--line); margin-bottom: 0; }.hand-row[open] summary { margin-bottom: 8px; }.hand-who { color: var(--muted); font-size: 11px; margin-bottom: 9px; }.hand-row.active .hand-who { color: var(--gold); font-weight: 650; }
@@ -640,3 +640,19 @@ body:has(#table) { padding-bottom: 24px; }
 .replay-caster .creature-name::after { content: ' · acting'; color: var(--gold); font-size: 10px; }
 .replay-target:not(.replay-caster) .creature-name::after { content: ' · target'; color: #8ad4de; font-size: 10px; }
 @media (min-width: 1100px) { #playback { grid-column: 2; grid-row: 3; align-self: start; } }
+
+/* Package progression has three independent roots and seven leaves per family. Keep every path in view
+   at laptop widths; narrow screens can pan the graph without widening the page. */
+.tree-roots > li::before, .tree-roots > li::after { display: none; }
+.tree-map li { min-width: 86px; padding-left: 3px; padding-right: 3px; }
+.tree-node { min-height: 86px; padding: 9px 5px; }
+.tree-title { font-size: 14px; }
+.tree-progress, .tree-offer { font-size: 9px; }
+.package-summary { margin: 8px 0; color: var(--muted); line-height: 1.5; }
+.talent-lane > .atlas-unlock { margin: 10px 0; }
+.talent-lane > .talent-tier { margin-top: 12px; }
+.package-card { border-top: 3px solid var(--class-color); }
+.package-requires { margin-top: 8px; color: #546151; font-size: 10px; }
+#decision[data-kind="TieOrder"] { display: block; }
+#decision[data-kind="TieOrder"] .creature-picker { flex-wrap: wrap; }
+#decision[data-kind="TieOrder"] .creature-picker > p { flex: 1 0 100%; }

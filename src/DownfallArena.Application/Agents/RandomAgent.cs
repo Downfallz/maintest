@@ -21,11 +21,13 @@ public sealed class RandomAgent(IRandomSource random) : IPlayerAgent
         }
 
         var creature = Pick(options.Creatures);
-        return EvolutionDecision.Unlock(new EvolutionChoice(creature.Creature, Pick(creature.UnlockableSpells)));
+        return EvolutionDecision.Unlock(new EvolutionChoice(creature.Creature, Pick(creature.AvailableTiers)));
     }
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
         random.NextInt32(0, 2) == 0 ? Speed.Quick : Speed.Standard;
+
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => TieShuffle.Of(options, random);
 
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {

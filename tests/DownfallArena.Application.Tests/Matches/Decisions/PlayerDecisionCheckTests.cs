@@ -41,12 +41,12 @@ public sealed class PlayerDecisionCheckTests
         var options = new PlayerOptions
         {
             Kind = PlayerOptionsKind.Evolution,
-            Evolution = new EvolutionOptions(2, [new EvolutionOption(Mine, [TestContent.Guard])]),
+            Evolution = new EvolutionOptions(2, [new EvolutionOption(Mine, [TestContent.GuardPack])]),
         };
 
-        PlayerDecisionCheck.Validate(options, PlayerDecision.Unlock(Mine, TestContent.Guard)).IsSuccess.ShouldBeTrue();
-        PlayerDecisionCheck.Validate(options, PlayerDecision.Unlock(Theirs, TestContent.Guard)).Error.ShouldBe(DecisionErrors.CreatureNotOffered);
-        PlayerDecisionCheck.Validate(options, PlayerDecision.Unlock(Mine, TestContent.Slam)).Error.ShouldBe(DecisionErrors.SpellNotOffered);
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Buy(Mine, TestContent.GuardPack)).IsSuccess.ShouldBeTrue();
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Buy(Theirs, TestContent.GuardPack)).Error.ShouldBe(DecisionErrors.CreatureNotOffered);
+        PlayerDecisionCheck.Validate(options, PlayerDecision.Buy(Mine, TestContent.SlamPack)).Error.ShouldBe(DecisionErrors.TierNotOffered);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class PlayerDecisionCheckTests
 
         var evolution = PlayerOptionsProjection.Build(match, PlayerSlot.Player1, TestContent.Resources);
         var offered = evolution.Evolution.ShouldNotBeNull().Creatures[0];
-        PlayerDecisionCheck.Validate(evolution, PlayerDecision.Unlock(offered.Creature, offered.UnlockableSpells[0])).IsSuccess.ShouldBeTrue();
+        PlayerDecisionCheck.Validate(evolution, PlayerDecision.Buy(offered.Creature, offered.AvailableTiers[0])).IsSuccess.ShouldBeTrue();
         PlayerDecisionCheck.Validate(evolution, PlayerDecision.Pass).IsSuccess.ShouldBeTrue();
         MatchStore.PassEvolution(match);
 
@@ -167,4 +167,22 @@ public sealed class PlayerDecisionCheckTests
         Kind = PlayerOptionsKind.Target,
         Target = new TargetOptions(Mine, TestContent.Strike, legal),
     };
+
+    [Fact]
+    public void A_tie_order_is_accepted_only_when_it_names_every_offered_creature_once()
+    {
+        var pending = new PlayerOptions { Kind = PlayerOptionsKind.TieOrder, TieOrder = new TieOrderOptions([[Mine, CreatureId.From(2)]]) };
+
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([CreatureId.From(2), Mine])).IsSuccess.ShouldBeTrue();
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([Mine])).Error.ShouldBe(DecisionErrors.TieOrderNotOffered);
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([Mine, Mine])).Error.ShouldBe(DecisionErrors.TieOrderNotOffered);
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([Mine, Theirs])).Error.ShouldBe(DecisionErrors.TieOrderNotOffered);
+    }
+
+    [Fact]
+    public void Two_tie_orders_naming_the_same_creatures_in_another_sequence_are_different_decisions()
+    {
+        PlayerDecision.OrderTies([Mine, Theirs]).ShouldNotBe(PlayerDecision.OrderTies([Theirs, Mine]));
+        PlayerDecision.OrderTies([Mine, Theirs]).ShouldBe(PlayerDecision.OrderTies([Mine, Theirs]));
+    }
 }

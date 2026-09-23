@@ -1,0 +1,12 @@
+{
+  "id": "tier:plague_doctor:v1",
+  "name": "Plague Doctor",
+  "level": 2,
+  "prerequisites": [
+    "tier:prowler:v1"
+  ],
+  "spells": [
+    "spell:noxious_cure:v1"
+  ],
+  "initiativeBonus": 1
+}

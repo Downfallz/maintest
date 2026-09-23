@@ -52,7 +52,7 @@ public sealed class CommandHandlerTests
         var store = new MatchStore();
         var match = store.Started();
 
-        (await new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(new SubmitEvolutionChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.Guard), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await new SubmitEvolutionChoiceHandler(store.Workflow).HandleAsync(new SubmitEvolutionChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), TestContent.GuardPack), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player1), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await new PassEvolutionHandler(store.Workflow).HandleAsync(new PassEvolution(match.Id, PlayerSlot.Player2), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
         (await new SubmitSpeedChoiceHandler(store.Workflow).HandleAsync(new SubmitSpeedChoice(match.Id, PlayerSlot.Player1, CreatureId.From(1), Speed.Quick), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
@@ -61,6 +61,24 @@ public sealed class CommandHandlerTests
         var round = match.CurrentRound.ShouldNotBeNull();
         round.SubPhase.ShouldBe(RoundSubPhase.Speed);
         round.SpeedChoiceOf(CreatureId.From(1)).ShouldBe(new SpeedChoice(CreatureId.From(1), Speed.Quick));
+    }
+
+    [Fact]
+    public async Task A_tie_order_reaches_the_aggregate()
+    {
+        var store = new MatchStore();
+        var match = store.Started();
+        MatchStore.PassEvolution(match);
+        foreach (var creature in match.Creatures)
+        {
+            match.SubmitSpeedChoice(creature.Owner, new SpeedChoice(creature.Id, Speed.Standard)).IsSuccess.ShouldBeTrue();
+        }
+
+        var handler = new SubmitTieOrderHandler(store.Workflow);
+        (await handler.HandleAsync(new SubmitTieOrder(match.Id, PlayerSlot.Player1, [CreatureId.From(2), CreatureId.From(1)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+
+        match.CurrentRound.ShouldNotBeNull().TieOrderOf(PlayerSlot.Player1).ShouldBe([CreatureId.From(2), CreatureId.From(1)]);
+        await Should.ThrowAsync<ArgumentNullException>(() => handler.HandleAsync(null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]

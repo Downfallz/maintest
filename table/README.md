@@ -43,10 +43,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   stacked flow and horizontal hand; jump links remain available below desktop width.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
-- Evolution presents one creature's unlocks at a time. Choose its numbered button, then the spell to unlock.
-  The visible budget is shared by the team, not per creature. Both the atlas and decision panel show the
-  host-configured allowance, remaining picks and spent picks with their creatures; switching creature never
-  resets it. The current default is two team picks per round.
+- Evolution presents one creature's available packages at a time. Each pick buys all of a package's spells
+  and its initiative bonus. The team shares two picks on rounds 1, 3, 5, etc. by default, capped by eligible
+  living creatures, with at most one package per creature per opportunity (ADR 0066). Both the atlas and
+  decision panel show effective remaining and spent picks; switching creature never resets them. The host
+  supplies the next evolution round, displayed in the phase guide between opportunities.
 - Speed opens the acting creature's spellbook as a readable reference. Each new Speed or Intent question
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
@@ -58,16 +59,17 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The Talent atlas opens over the battlefield as a non-modal window: drag its title, resize its corner,
   maximize, reset or close it. Arrow keys on the title move it as well. Phones use a full-screen panel.
   Its sticky toolbar keeps the creature, round, Evolution pick number and remaining picks visible.
-  Down from the last row of spell choices reaches the explorer; Enter opens it and Up returns to spells.
-- The atlas draws the actual class hierarchy in three rows for the current catalogue: base, families and
-  specializations. Parent links come explicitly from the catalogue projection. Select a class for its full
-  spell cards, tiers and exact prerequisites. Branch lines show class ancestry, not individual spell gates.
-  Same-tier spells share a compact row on desktop, with no giant full-width cards stacked one by one.
+  Down from the last package or spell choice reaches the explorer; Enter opens it and Up returns to the choices.
+- The atlas draws the package prerequisite graph in three rows (tiers 1–3). Names and edges come from
+  catalogue packages, not the retired per-spell gates. Select a package to read its prerequisites by name,
+  initiative bonus and all its spell faces side by side. Ownership comes from `acquiredTiers`, independently
+  of known spells; only the host's `availableTiers` can enable a purchase.
 - The authored first-level families use coherent cool, leaf and ember palettes, with shades inherited by
   specializations. These accents follow every card into the spellbook and unlock picker.
-- Inspect each creature's known and currently offered spells. Legal Evolution unlocks can be taken directly
-  from the atlas; availability still comes exclusively from the pending host options. New Speed, Intent and
-  Target questions close the atlas to expose the battlefield.
+- Buy legal packages directly from the atlas. A creature that bought this opportunity remains inspectable
+  but cannot buy again. New Speed, TieOrder, Intent and Target questions close the atlas to expose the board.
+- The initiative strip retains d20 rolls and rerolls. TieOrder has its own phase reminder and guarded
+  keyboard/pointer controls to order your creatures within your side's assigned places before declarations.
 - Every battlefield creature receives a circular turn number once the host has built the timeline. The
   number follows the full server order, including ties; the active reveal/resolution slot is highlighted.
   Order numbers run from turquoise to violet; Quick tags are gold and Standard tags blue. Energy, defense
@@ -76,11 +78,10 @@ not recorded matches. Card text and creature names in the actual app come from t
 - Spell faces use restrained paper tints with labelled effect and critical badges derived by the catalogue
   projection. The client does not infer effect categories from spell names or parse effect text. The critical
   badge and reminder state the maintainer-confirmed rule: Quick cannot crit; Standard can, multiplying only
-  direct damage/healing on targets. Enforcement in the engine is being delivered in a separate PR; this UI
-  anticipates that change and does not alter combat resolution.
-- The energy cost has an icon and a visible label. Compact stat rows distinguish initiative gained on unlock
-  from critical chance, with its Standard-only reminder and host-provided d20 threshold. Targeting has its own
-  visual marker; authored effects and prerequisites retain their exact text.
+  direct damage/healing on targets. This rule is now enforced by the engine on main; the UI does not alter combat resolution.
+- The energy cost has an icon and a visible label. Spell stats show critical chance, its Standard-only
+  reminder and host-provided d20 threshold. Initiative and acquisition requirements appear once per package,
+  never as obsolete spell stats. Targeting and effect cues retain their visual markers.
 - Phase changes show a non-blocking announcement below the top bar for 15 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
@@ -96,7 +97,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   missing events are never reconstructed from board deltas or guessed from conditions.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.
-- Each spell becomes public together with its confirmed targets, in timeline order (ADR 0057).
+- Each spell becomes public together with its confirmed targets, in timeline order (ADR 0070).
   The first creature sees no unrevealed enemy choices; the fifth can read the first four confirmed actions.
   Local target selections remain private until confirmation. Confirmed spells, targets and resolution status
   update on the battlefield. At the next round, the previous public action is explicitly
@@ -129,7 +130,7 @@ a decision has been sent.
 | ← / → | Switch Evolution creatures, or focus the next speed, spell or legal target |
 | ↓ from an Evolution creature | Focus its first offered spell |
 | ↑ / ↓ within choices | Move to the closest choice in the preceding / following visual row; ↑ from the first Evolution row returns to the creature picker |
-| Enter on a spell / target | First selects, then confirms the existing selection; Evolution unlocks use their normal single activation |
+| Enter on a spell / target | First selects, then confirms the existing selection; Evolution packages use their normal single activation |
 | Arrow keys on the atlas title | Move the desktop window |
 
 Shortcuts ignore text fields, selectors, contenteditable areas, modifier chords, key repeats, in-flight

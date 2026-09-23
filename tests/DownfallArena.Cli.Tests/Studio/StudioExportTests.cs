@@ -45,6 +45,12 @@ public sealed class StudioExportTests : IDisposable
         File.Exists(Path.Combine(_output, StudioExport.WeightsFile)).ShouldBeTrue();
     }
 
+    /// <summary>
+    /// Every property, not a chosen few. The published catalogue is rebuilt field by field rather than copied,
+    /// so the way it goes wrong is a field nobody carried over — and a test that names three properties says
+    /// nothing about the fourth. <c>directory</c> is the one deliberate difference, and the test below is what
+    /// holds it.
+    /// </summary>
     [Fact]
     public async Task The_published_catalogue_says_what_the_route_says()
     {
@@ -53,9 +59,14 @@ public sealed class StudioExportTests : IDisposable
         var published = Read(StudioExport.CatalogueFile);
         var route = JsonSerializer.SerializeToElement(_api.Catalogue(), StudioJson.FileOptions);
 
-        published.GetProperty("spells").GetArrayLength().ShouldBe(route.GetProperty("spells").GetArrayLength());
-        published.GetProperty("contentHash").GetString().ShouldBe(route.GetProperty("contentHash").GetString());
-        published.GetProperty("aliases").EnumerateObject().Count().ShouldBe(route.GetProperty("aliases").EnumerateObject().Count());
+        published.EnumerateObject().Select(property => property.Name)
+            .ShouldBe(route.EnumerateObject().Select(property => property.Name));
+        foreach (var property in route.EnumerateObject().Where(property => property.Name != "directory"))
+        {
+            published.GetProperty(property.Name).GetRawText().ShouldBe(property.Value.GetRawText(), property.Name);
+        }
+
+        published.GetProperty("tiers").GetArrayLength().ShouldBeGreaterThan(0, "a fixture with no package could not catch a dropped one");
     }
 
     /// <summary>

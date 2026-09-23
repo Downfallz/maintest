@@ -1,6 +1,6 @@
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches.Creatures;
-using DownfallArena.Domain.Resources;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources.Effects;
 
 namespace DownfallArena.Application.Learning;
@@ -9,7 +9,7 @@ namespace DownfallArena.Application.Learning;
 /// Builds the observation of a player's board under a feature schema. Pure and deterministic: the same board
 /// gives the same vector, and the two players' vectors mirror each other.
 /// </summary>
-public sealed class ObservationBuilder(FeatureSchema schema, IGameResources resources)
+public sealed class ObservationBuilder(FeatureSchema schema)
 {
     /// <summary>The "remaining rounds" value of a permanent condition.</summary>
     public const float PermanentCondition = -1f;
@@ -40,10 +40,31 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
     {
         features[0] = board.RoundNumber is { } round ? (float)round / schema.RoundCap : 0f;
         features[1] = board.Phase is { } phase ? (float)phase / 3f : 0f;
-        features[2] = board.SubPhase is { } subPhase ? (float)subPhase / 9f : 0f;
+        features[2] = board.SubPhase is { } subPhase ? SubPhaseValue(subPhase) : 0f;
         features[3] = board.Timeline.Count == 0 ? 0f : (float)board.RevealCursor / board.Timeline.Count;
         features[4] = (float)board.RevealedActions.Count(action => !slots.IsOwn(slots.SlotOf(action.Actor))) / schema.TeamSize;
     }
+
+    /// <summary>
+    /// The sub-phase as features:v6 has always encoded it, the ordinal of ADR 0010's ten steps over 9. Spelled
+    /// out rather than cast, because ADR 0063 inserted <see cref="RoundSubPhase.TieOrder"/> into the enum and a
+    /// cast would have moved every later value under the same schema id. TieOrder reads as the turn-order step it
+    /// belongs to; no decision is recorded there, so no dataset carries it.
+    /// </summary>
+    private static float SubPhaseValue(RoundSubPhase subPhase) => subPhase switch
+    {
+        RoundSubPhase.EnergyGain => 0f,
+        RoundSubPhase.OngoingEffects => 1f / 9f,
+        RoundSubPhase.Evolution => 2f / 9f,
+        RoundSubPhase.Speed => 3f / 9f,
+        RoundSubPhase.TurnOrderResolution or RoundSubPhase.TieOrder => 4f / 9f,
+        RoundSubPhase.IntentSelection => 5f / 9f,
+        RoundSubPhase.RevealAndTarget => 6f / 9f,
+        RoundSubPhase.ActionResolution => 7f / 9f,
+        RoundSubPhase.Cleanup => 8f / 9f,
+        RoundSubPhase.Finalization => 1f,
+        _ => throw new ArgumentOutOfRangeException(nameof(subPhase), subPhase, "A sub-phase features:v6 has no value for."),
+    };
 
     private void WriteCreature(CreatureSnapshot creature, float[] features, int offset)
     {
@@ -58,7 +79,7 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
         WriteConditions(creature, features, conditions);
         var spells = conditions + (2 * FeatureSchema.ConditionKinds.Count);
         WriteSpells(creature, features, spells);
-        WriteNodes(creature, features, spells + schema.Spells.Count);
+        WriteTiers(creature, features, spells + schema.Spells.Count);
     }
 
     private static void WriteConditions(CreatureSnapshot creature, float[] features, int offset)
@@ -80,15 +101,14 @@ public sealed class ObservationBuilder(FeatureSchema schema, IGameResources reso
         }
     }
 
-    /// <summary>A node counts as unlocked once every spell it offers is known.</summary>
-    private void WriteNodes(CreatureSnapshot creature, float[] features, int offset)
+    /// <summary>
+    /// One bit per package the creature bought. Read off the purchase rather than guessed from the spells: a
+    /// creature can know every spell of a package it never bought, and the prerequisite rules are about the
+    /// purchase (ADR 0056).
+    /// </summary>
+    private void WriteTiers(CreatureSnapshot creature, float[] features, int offset)
     {
-        var tree = resources.GetTalentTree(creature.TalentTree);
-        var unlocked = tree.Nodes
-            .Where(node => node.Spells.Count > 0 && node.Spells.All(spell => creature.KnowsSpell(spell.Id)))
-            .Select(node => schema.TalentNodeIndex(FeatureSchema.NodeKey(tree.Id, node.Code)))
-            .Where(index => index >= 0);
-        foreach (var index in unlocked)
+        foreach (var index in creature.AcquiredTiers.Select(schema.TierIndex).Where(index => index >= 0))
         {
             features[offset + index] = 1f;
         }

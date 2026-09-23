@@ -7,8 +7,9 @@ an evaluation already reports. Everything here reads the authored content in ``d
 
 from __future__ import annotations
 
+import hashlib
 import json
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
@@ -18,7 +19,7 @@ KNOBS_FILE = Path("data/balance/knobs.json")
 ALIASES_FILE = "aliases.json"
 SPELLS_FOLDER = "Spells"
 CREATURES_FOLDER = "Creatures"
-TALENT_TREES_FOLDER = "TalentTrees"
+TIERS_FOLDER = "Tiers"
 JSON_FILES = "*.json"
 SUPPORTED_VERSIONS = frozenset({"knobs:v1"})
 
@@ -55,6 +56,13 @@ CRITICAL_CHANCE = "/criticalChance"
 #: The pointer that names a spell's energy cost.
 ENERGY_COST = "/energyCost"
 
+#: The one number a package carries that a tuning pass may move: what a purchase adds to Base initiative
+#: (ADR 0056). A package's level, prerequisites and spells are its identity and are never knobs.
+INITIATIVE_BONUS = "/initiativeBonus"
+
+#: How a package alias reads, and so how a document is told apart from a spell without a second field.
+PACKAGE_PREFIX = "tier:"
+
 #: The agents' own prices. `ScoringWeights.Default` is the source and this file mirrors it (AGENTS.md), so
 #: the reading below is read from there rather than restated here and cannot drift from what the bots score
 #: with.
@@ -83,9 +91,12 @@ class KnobsError(ValueError):
 
 @dataclass(frozen=True)
 class Knob:
-    """One number of one spell, and how far it may travel."""
+    """One number of one spell or one package, and how far it may travel.
 
-    spell: str
+    ``target`` is the unversioned alias of the document it moves: ``spell:pummel`` or ``tier:prowler``.
+    """
+
+    target: str
     path: str
     minimum: float
     maximum: float
@@ -93,8 +104,9 @@ class Knob:
 
     @property
     def key(self) -> str:
-        """``spell:pummel/criticalChance``: unique across the catalogue, stable across versions."""
-        return f"{self.spell}{self.path}"
+        """``spell:pummel/criticalChance`` or ``tier:prowler/initiativeBonus``: unique, and stable across
+        versions."""
+        return f"{self.target}{self.path}"
 
     def clamp(self, value: float) -> float:
         return round(min(self.maximum, max(self.minimum, value)), PRECISION)
@@ -115,6 +127,23 @@ class SpellKnobs:
     alias: str
     name: str
     creature_class: str
+    intent: str
+    keep: tuple[str, ...]
+    note: str | None
+    knobs: tuple[Knob, ...]
+
+
+@dataclass(frozen=True)
+class PackageKnobs:
+    """The knobs of one package, with the intent its number serves.
+
+    A package has one number worth tuning, its initiative bonus (ADR 0059 moved it here from the spells), so
+    this is a spell entry without a class: which spells it teaches, at what level and behind what is the
+    package's identity, and a tuning pass that moved any of it would be redesigning the progression.
+    """
+
+    alias: str
+    name: str
     intent: str
     keep: tuple[str, ...]
     note: str | None
@@ -171,6 +200,24 @@ class Objective:
                 scores[target.key] = target.penalty(measured[target.metric])
         return scores
 
+    @property
+    def fingerprint(self) -> str:
+        """Twelve hex digits of what the objective asks: its seed file, its evaluations and every band.
+
+        Two scores are comparable only when this and the metric definitions they were read with agree
+        (``tune_content.METRIC_DEFINITIONS``). The prose in ``knobs.json`` says when a change made them
+        incomparable; this is what an artifact carries so that a reader does not have to take it on trust.
+        """
+        asked = {
+            "seeds": self.seeds,
+            "evaluations": {name: dict(evaluation) for name, evaluation in sorted(self.evaluations.items())},
+            "targets": [
+                [target.on, target.metric, target.minimum, target.maximum, target.scale, target.weight]
+                for target in self.targets
+            ],
+        }
+        return hashlib.sha256(json.dumps(asked, sort_keys=True).encode("utf-8")).hexdigest()[:12]
+
     def score(self, metrics: Mapping[str, Mapping[str, float]]) -> float:
         """The total penalty. Zero is on target; lower is better."""
         return sum(self.breakdown(metrics).values())
@@ -188,13 +235,14 @@ class Knobs:
     objective: Objective
     constraints: Mapping[str, Mapping[str, object]]
     spells: Mapping[str, SpellKnobs]
+    packages: Mapping[str, PackageKnobs] = field(default_factory=dict)
 
     def __iter__(self) -> Iterator[Knob]:
-        for spell in self.spells.values():
-            yield from spell.knobs
+        for entry in (*self.spells.values(), *self.packages.values()):
+            yield from entry.knobs
 
     def __len__(self) -> int:
-        return sum(len(spell.knobs) for spell in self.spells.values())
+        return sum(len(entry.knobs) for entry in (*self.spells.values(), *self.packages.values()))
 
     def enabled(self, constraint: str) -> bool:
         return bool(self.constraints.get(constraint, {}).get("enabled", False))
@@ -212,30 +260,85 @@ class Content:
     spells: Mapping[str, dict]
     files: Mapping[str, Path]
     disabled: frozenset[str] = frozenset()
+
+    #: The level of the cheapest package teaching each spell, and 0 for one in a starting kit (ADR 0058).
+    #: What climbing to the spell cost, which is what makes outclassing a reward rather than a mistake.
     tiers: Mapping[str, int] = field(default_factory=dict)
+
+    #: The packages teaching each spell, by id. The set the balance metrics group by: the spells of a package
+    #: arrive together for one pick, so "is one of them taking every cast" is a question about one authored
+    #: file. A spell no package teaches has no entry, and a starting-kit spell is one of those.
+    packages: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+
+    #: The enabled packages themselves, by unversioned alias (``tier:prowler``), and the files they came from.
+    #: Kept apart from ``spells`` on purpose: dominance, twins and a cast's value are questions about spells,
+    #: and a package document read as one would answer them with nonsense. The tuner moves both kinds through
+    #: :attr:`documents`, which is the one place they meet.
+    package_documents: Mapping[str, dict] = field(default_factory=dict)
+    package_files: Mapping[str, Path] = field(default_factory=dict)
+
+    #: Packages the content cannot key unambiguously: two enabled versions of one package and no alias saying
+    #: which is meant. Reported by :func:`validate` rather than guessed at.
+    ambiguous_packages: tuple[str, ...] = ()
+
+    #: Packages on disk with ``"enabled": false``: out of the build, so nothing tunes them, and their entry is
+    #: still the right place for what they were for -- the same reading ``disabled`` gives a spell.
+    disabled_packages: frozenset[str] = frozenset()
 
     def __len__(self) -> int:
         return len(self.spells)
+
+    @property
+    def documents(self) -> dict[str, dict]:
+        """Every document a knob may move, spells and packages, by alias. Aliases never collide: the kind
+        is the prefix."""
+        return {**self.spells, **self.package_documents}
+
+    def file_of(self, alias: str) -> Path:
+        """The file a spell or a package was read from."""
+        return Path(self.files[alias] if alias in self.files else self.package_files[alias])
 
     def knows(self, alias: str) -> bool:
         """Whether an alias names a spell that is on disk, built or not."""
         return alias in self.spells or alias in self.disabled
 
-    def with_spells(self, spells: Mapping[str, dict]) -> Content:
-        """The same catalogue with other numbers in it: same files, same disabled set, same tiers.
+    def with_spells(
+        self, spells: Mapping[str, dict], package_documents: Mapping[str, dict] | None = None
+    ) -> Content:
+        """The same catalogue with other numbers in it: same files, same disabled set, same packages.
 
         Everything a candidate is judged by other than the numbers comes from here, so rebuilding a Content
         by hand is how a rule quietly stops seeing what it needs — the tiers went missing that way once.
+        ``package_documents`` replaces the packages' own numbers when given, and keeps them when not.
         """
-        return Content(spells=dict(spells), files=self.files, disabled=self.disabled, tiers=self.tiers)
+        return Content(
+            spells=dict(spells),
+            files=self.files,
+            disabled=self.disabled,
+            tiers=self.tiers,
+            packages=self.packages,
+            package_documents=self.package_documents
+            if package_documents is None
+            else dict(package_documents),
+            package_files=self.package_files,
+            ambiguous_packages=self.ambiguous_packages,
+            disabled_packages=self.disabled_packages,
+        )
+
+    def with_documents(self, documents: Mapping[str, dict]) -> Content:
+        """The same catalogue with other numbers in it, spells and packages alike, each in its own place."""
+        packaged = {alias: doc for alias, doc in documents.items() if alias.startswith(PACKAGE_PREFIX)}
+        spells = {alias: doc for alias, doc in documents.items() if alias not in packaged}
+        return self.with_spells(spells, package_documents={**self.package_documents, **packaged})
 
     def progression(self, better: str, worse: str) -> bool:
-        """Whether ``better`` outclassing ``worse`` is what a talent tree is for.
+        """Whether ``better`` outclassing ``worse`` is what climbing a family is for.
 
-        True when ``better`` sits deeper than ``worse``: reaching it cost picks and prerequisites, so being
-        better is the reward. Two spells at the same depth are offered at once and one outclassing the other
-        is a decision that is not one; a shallower spell outclassing a deeper one is worse still, since the
-        pick buys a downgrade. An unknown depth is not read as progression.
+        True when ``better`` sits at a higher package level than ``worse``: reaching it cost picks and the
+        packages below it, so being better is the reward (ADR 0058). Two spells at one level are bought for
+        the same price and one outclassing the other is a decision that is not one; a spell at a lower level
+        outclassing a higher one is worse still, since the pick buys a downgrade. An unknown level is not
+        read as progression.
         """
         here, there = self.tiers.get(better), self.tiers.get(worse)
         return here is not None and there is not None and here > there
@@ -253,6 +356,7 @@ def load_knobs(path: Path = KNOBS_FILE) -> Knobs:
         objective=_objective(document.get("objective", {})),
         constraints=document.get("constraints", {}),
         spells={alias: _spell_knobs(alias, body) for alias, body in document.get("spells", {}).items()},
+        packages={alias: _package_knobs(alias, body) for alias, body in document.get("packages", {}).items()},
     )
 
 
@@ -281,141 +385,140 @@ def load_content(data_directory: Path) -> Content:
         elif identifier in turned_off:
             off.add(alias)
     by_id = {str(document["id"]): alias for alias, document in spells.items()}
+    teachers, levels = _packages(data_directory, by_id)
+    package_documents, package_files, ambiguous, turned_off_packages = _package_documents(
+        data_directory, aliases
+    )
     return Content(
         spells=spells,
         files=paths,
         disabled=frozenset(off),
-        tiers=_tiers(data_directory, by_id),
+        tiers=levels,
+        packages=teachers,
+        package_documents=package_documents,
+        package_files=package_files,
+        ambiguous_packages=ambiguous,
+        disabled_packages=turned_off_packages,
     )
 
 
-def _tiers(data_directory: Path, by_id: Mapping[str, str]) -> dict[str, int]:
-    """How deep each spell sits: what it requires as well as where it is written (ADR 0034).
+def _package_documents(
+    data_directory: Path, aliases: Mapping[str, str]
+) -> tuple[dict[str, dict], dict[str, Path], tuple[str, ...], frozenset[str]]:
+    """Every enabled package, keyed by the unversioned alias a knobs entry names it by.
 
-    A node's depth is where a spell is *offered*; a prerequisite is how deep it is *reachable*. A class node
-    holds its opener and both spells that require it, so reading the node alone puts all three at one depth
-    and calls a set a player never chooses between a tier.
-
-    A spell taught in two places takes the shallowest, which is how soon a creature can actually have it. The
-    prerequisite raise applies after that: a prerequisite is a floor, not a choice.
+    An alias in ``aliases.json`` decides it, the way it does for a spell, and it is what the studio writes
+    when it cuts a package's next version. Without one a package is named by its id with the version taken
+    off, which is only an answer when one enabled version carries that name: two of them and no alias is a
+    catalogue that has not said which one it means, and that is reported rather than picked.
     """
-    offers: dict[str, list[_Offer]] = {}
+    by_id = {identifier: alias for alias, identifier in aliases.items() if alias.startswith(PACKAGE_PREFIX)}
+    claimed: dict[str, list[tuple[str, dict, Path]]] = {}
+    off: set[str] = set()
+    for file in sorted((data_directory / TIERS_FOLDER).rglob(JSON_FILES)):
+        package = _read_json(file)
+        identifier = str(package.get("id", file.stem))
+        alias = by_id.get(identifier, _unversioned(identifier))
+        if identifier not in by_id and alias in aliases:
+            continue  # superseded: the alias names another version, and the entry follows the alias
+        if package.get("enabled", True):
+            claimed.setdefault(alias, []).append((identifier, package, file))
+        else:
+            off.add(alias)
 
-    def alias_of(reference: str) -> str | None:
-        return reference if reference in by_id.values() else by_id.get(reference)
-
-    def resolve(references: Sequence[str]) -> list[str]:
-        return [found for found in map(alias_of, references) if found is not None]
-
-    def note(reference: str, depth: int, prerequisites: _Prerequisites | None = None) -> None:
-        alias = alias_of(reference)
-        if alias is None:
-            return
-        asked = prerequisites or _Prerequisites([], [])
-        offers.setdefault(alias, []).append(_Offer(depth, resolve(asked.all_of), resolve(asked.any_of)))
-
-    _note_starting_spells(data_directory, note)
-    _note_tree_nodes(data_directory, note)
-    return _settle(offers)
-
-
-def _note_starting_spells(data_directory: Path, note: _Note) -> None:
-    """Everything a creature spawns with sits at depth zero: it is had before anything is chosen."""
-    for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
-        creature = _read_json(file)
-        if creature.get("enabled", True):
-            for reference in creature.get("startingSpellIds", []):
-                note(str(reference), 0)
+    documents = {alias: found[0][1] for alias, found in claimed.items() if len(found) == 1}
+    files = {alias: found[0][2] for alias, found in claimed.items() if len(found) == 1}
+    ambiguous = tuple(
+        f"{alias}: {len(found)} enabled versions ({', '.join(sorted(item[0] for item in found))}) and no "
+        "alias saying which one a knob moves."
+        for alias, found in sorted(claimed.items())
+        if len(found) > 1
+    )
+    return documents, files, ambiguous, frozenset(off - set(documents))
 
 
-def _note_tree_nodes(data_directory: Path, note: _Note) -> None:
-    """Every enabled tree, walked from its root. A tree with no root teaches nothing and is skipped."""
-    for file in sorted((data_directory / TALENT_TREES_FOLDER).rglob(JSON_FILES)):
-        tree = _read_json(file)
-        if tree.get("enabled", True) and isinstance(tree.get("root"), Mapping):
-            _walk(tree["root"], 0, note)
-
-
-@dataclass(frozen=True)
-class _Prerequisites:
-    """What a talent-tree entry asks for, with the two lists kept apart because they are read differently."""
-
-    all_of: list[str]
-    any_of: list[str]
-
-
-@dataclass(frozen=True)
-class _Offer:
-    """One place a spell is taught: how deep that node sits, and what it asks for *there*."""
-
-    depth: int
-    all_of: list[str]
-    any_of: list[str]
-
-
-def _settle(offers: Mapping[str, Sequence[_Offer]]) -> dict[str, int]:
-    """How deep each spell is first reachable, raising it until nothing moves.
-
-    A spell is as shallow as its shallowest offer, and one offer is no shallower than the node holding it or
-    than one past everything that offer gates it behind. The two prerequisite lists are read differently,
-    which is `TalentPrerequisites.AreSatisfiedBy`: `allOf` must all be known, so the **deepest** of them sets
-    the floor; `anyOf` needs one, so the **shallowest** does. Flattening them together over-deepens every
-    spell behind a cheap alternative -- today every `anyOf` pair in the content sits at one depth, so nothing
-    moves, and the rule is written for the content that does not.
-
-    A pass at a time rather than a recursion, so a prerequisite chain of any length settles and a cycle --
-    which a talent tree should never carry and this must not hang on -- stops at the number of spells.
-    """
-    depths = {alias: min(offer.depth for offer in taught) for alias, taught in offers.items()}
-    for _ in range(len(depths)):
-        moved = False
-        for alias, taught in offers.items():
-            reachable = min(_offer_depth(offer, depths) for offer in taught)
-            if depths[alias] < reachable:
-                depths[alias] = reachable
-                moved = True
-        if not moved:
-            break
-    return depths
-
-
-def _offer_depth(offer: _Offer, depths: Mapping[str, int]) -> int:
-    """How deep one offer makes its spell reachable: its node, or one past what it gates the spell behind."""
-    floors = [offer.depth]
-    known_all = [depths[found] for found in offer.all_of if found in depths]
-    known_any = [depths[found] for found in offer.any_of if found in depths]
-    if known_all:
-        floors.append(max(known_all) + 1)
-    if known_any:
-        floors.append(min(known_any) + 1)
-    return max(floors)
-
-
-#: What `_walk` hands back for each spell: its id, the depth of the node offering it, and what it requires.
-_Note = Callable[[str, int, "_Prerequisites | None"], None]
-
-
-def _required_by(spell: Mapping[str, object]) -> _Prerequisites:
-    """The spells a talent-tree entry names as prerequisites, with `allOf` and `anyOf` kept apart."""
-    prerequisites = spell.get("prerequisites")
-    if not isinstance(prerequisites, Mapping):
-        return _Prerequisites([], [])
-    return _Prerequisites(_names(prerequisites.get("allOf")), _names(prerequisites.get("anyOf")))
+def _unversioned(identifier: str) -> str:
+    """``tier:prowler:v1`` to ``tier:prowler``: an id with its version taken off, and nothing else."""
+    head, _, tail = identifier.rpartition(":")
+    return head if head and tail.startswith("v") and tail[1:].isdigit() else identifier
 
 
 def _names(listed: object) -> list[str]:
+    """A list-of-strings field as one, whatever the file actually holds."""
     return [str(entry) for entry in listed if isinstance(entry, str)] if isinstance(listed, list) else []
 
 
-def _walk(node: Mapping[str, object], depth: int, note: _Note) -> None:
-    spells = node.get("spells", [])
-    for spell in spells if isinstance(spells, list) else []:
-        if isinstance(spell, Mapping) and "id" in spell:
-            note(str(spell["id"]), depth, _required_by(spell))
-    children = node.get("children", [])
-    for child in children if isinstance(children, list) else []:
-        if isinstance(child, Mapping):
-            _walk(child, depth + 1, note)
+def _packages(
+    data_directory: Path, by_id: Mapping[str, str]
+) -> tuple[dict[str, tuple[str, ...]], dict[str, int]]:
+    """Which packages teach each spell, and the level of the cheapest one (ADR 0058).
+
+    A pick buys a package, so the package is the set the objective reads and its level is what climbing to it
+    cost. This replaces the depth computed over the talent tree (ADR 0034): the tree gates nothing a pick
+    buys, so a depth in it described a choice nobody makes.
+
+    A spell in a creature's starting kit is had before anything is chosen, so it sits at level 0 and belongs
+    to no package -- the same thing the old depth 0 meant. A spell taught by several packages is grouped
+    under each of them, because each package sells it and each package's own balance is a question; its level
+    is the shallowest, which is how soon a creature can actually have it.
+    """
+    resolve = _resolver(by_id)
+    levels = _starting_levels(data_directory, resolve)
+    teachers: dict[str, list[str]] = {}
+    for identifier, level, taught in _authored_packages(data_directory, resolve):
+        for alias in taught:
+            teachers.setdefault(alias, []).append(identifier)
+            # A package whose level is not a number still sells its spells, so it still groups them; it just
+            # says nothing about how soon they are had. The data builder is what refuses the file.
+            if isinstance(level, int):
+                levels[alias] = min(levels.get(alias, level), level)
+
+    return {alias: tuple(sorted(named)) for alias, named in teachers.items()}, levels
+
+
+def _resolver(by_id: Mapping[str, str]) -> Callable[[str], str | None]:
+    """A reference to the alias it names, or ``None``. A reference that is already an alias passes through."""
+    aliases = set(by_id.values())
+
+    def resolve(reference: str) -> str | None:
+        return reference if reference in aliases else by_id.get(reference)
+
+    return resolve
+
+
+def _starting_levels(data_directory: Path, resolve: Callable[[str], str | None]) -> dict[str, int]:
+    """Every spell a creature spawns with, at level 0.
+
+    It is had before anything is chosen, so no pick paid for it and no package sells it.
+    """
+    levels: dict[str, int] = {}
+    for file in sorted((data_directory / CREATURES_FOLDER).rglob(JSON_FILES)):
+        creature = _read_json(file)
+        if creature.get("enabled", True):
+            levels.update(dict.fromkeys(_aliases(creature.get("startingSpellIds"), resolve), 0))
+    return levels
+
+
+def _authored_packages(
+    data_directory: Path, resolve: Callable[[str], str | None]
+) -> Iterator[tuple[str, object, list[str]]]:
+    """Each enabled package: its id, its level as authored, and the aliases it teaches.
+
+    A disabled package is not in the build (ADR 0015), so it teaches nothing and nothing is grouped under it.
+    """
+    for file in sorted((data_directory / TIERS_FOLDER).rglob(JSON_FILES)):
+        package = _read_json(file)
+        if package.get("enabled", True):
+            yield (
+                str(package.get("id", file.stem)),
+                package.get("level"),
+                _aliases(package.get("spells"), resolve),
+            )
+
+
+def _aliases(listed: object, resolve: Callable[[str], str | None]) -> list[str]:
+    """The aliases a list of references names, dropping every reference nothing resolves."""
+    return [alias for alias in map(resolve, _names(listed)) if alias is not None]
 
 
 def read_value(document: Mapping[str, object], pointer: str) -> float:
@@ -471,8 +574,37 @@ def validate(knobs: Knobs, content: Content, root: Path | None = None) -> list[s
             problems.append(f"{alias}: no intent, so nothing says what its numbers are for.")
         problems.extend(_knob_problems(spell, document))
 
+    problems.extend(_package_problems(knobs, content))
     problems.extend(_objective_problems(knobs, root))
     problems.extend(_constraint_problems(knobs, content))
+    return problems
+
+
+def _package_problems(knobs: Knobs, content: Content) -> list[str]:
+    """What makes the packages section and the packages on disk disagree.
+
+    The same three questions a spell entry answers -- is every enabled package covered, does every entry name
+    one, does every pointer address a number inside its bounds -- plus one only a package can raise: a knob on
+    anything but the initiative bonus is refused, because the rest of a package is the progression itself.
+    """
+    problems = list(content.ambiguous_packages)
+    for alias in sorted(set(content.package_documents) - set(knobs.packages)):
+        problems.append(f"{alias}: an enabled package with no entry in the knobs file.")
+    for alias in sorted(set(knobs.packages) - set(content.package_documents) - content.disabled_packages):
+        problems.append(f"{alias}: a knobs entry for a package no file resolves to.")
+    for alias, package in sorted(knobs.packages.items()):
+        document = content.package_documents.get(alias)
+        if document is None:
+            continue
+        if not package.intent.strip():
+            problems.append(f"{alias}: no intent, so nothing says what its number is for.")
+        problems.extend(
+            f"{knob.key}: a package's {knob.path.lstrip('/')} is its identity, not a knob; only "
+            f"'{INITIATIVE_BONUS}' may move."
+            for knob in package.knobs
+            if knob.path != INITIATIVE_BONUS
+        )
+        problems.extend(_knob_problems(package, document))
     return problems
 
 
@@ -485,8 +617,8 @@ def _inert_critical(knob: Knob, document: Mapping[str, object]) -> bool:
     return knob.path == CRITICAL_CHANCE and not (CRITTABLE & set(_effects(document)))
 
 
-def _knob_problems(spell: SpellKnobs, document: Mapping[str, object]) -> list[str]:
-    """Everything wrong with one spell's knobs, read against the spell the content carries."""
+def _knob_problems(spell: SpellKnobs | PackageKnobs, document: Mapping[str, object]) -> list[str]:
+    """Everything wrong with one entry's knobs, read against the document the content carries."""
     problems: list[str] = []
     seen: set[str] = set()
     for knob in spell.knobs:
@@ -717,8 +849,7 @@ def indistinguishable(content: Content) -> list[str]:
 
 
 def twins(content: Content) -> list[frozenset[str]]:
-    """Pairs of spells nothing in a match distinguishes: same cost, Spell initiative, critical chance,
-    targeting and effects.
+    """Pairs of spells nothing in a match distinguishes: same cost, critical chance, targeting and effects.
 
     The effects are compared whole and as a multiset, the way the engine's ``ContentAudit`` compares them:
     two damage effects of three are not one of six, and a stacking policy is part of the effect. The engine
@@ -740,7 +871,6 @@ def _signature(document: Mapping[str, object]) -> str:
     return json.dumps(
         [
             document.get("energyCost", 0),
-            document.get("initiative", 0),
             document.get("criticalChance", 0) or 0,
             document.get("targeting", {}),
             _multiset(document.get("effects", [])),
@@ -765,16 +895,16 @@ def _multiset(effects: object) -> list[str]:
 def _twin_report(pair: frozenset[str]) -> str:
     first, second = sorted(pair)
     return (
-        f"{first} and {second} are one spell under two names: the same cost, Spell initiative, "
-        "critical chance, targeting and effects."
+        f"{first} and {second} are one spell under two names: the same cost, critical chance, "
+        "targeting and effects."
     )
 
 
 def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool:
     """Whether ``better`` is at least as good as ``worse`` everywhere and better somewhere.
 
-    Same targeting origin and at least as many targets, cost no higher, Spell initiative no lower, every
-    effect of ``worse`` matched by one at least as large, and an extra effect that carries something.
+    Same targeting origin and at least as many targets, cost no higher, every effect of ``worse`` matched
+    by one at least as large, and an extra effect that carries something.
 
     Critical chance is compared only between two spells that both carry something the multiplier reaches --
     a `Damage` or a direct `Heal` (ADR 0033). On a spell that carries neither it is a number no match reads,
@@ -810,7 +940,6 @@ def dominates(better: Mapping[str, object], worse: Mapping[str, object]) -> bool
     comparisons += [
         (int(left.get("maxTargets", 1)), int(right.get("maxTargets", 1))),
         (-int(better.get("energyCost", 0)), -int(worse.get("energyCost", 0))),
-        (int(better.get("initiative", 0)), int(worse.get("initiative", 0))),
     ]
     if CRITTABLE & ours.keys() and CRITTABLE & theirs.keys():
         comparisons.append(
@@ -953,10 +1082,8 @@ def cast_value(document: Mapping[str, object], weights: Mapping[str, float]) -> 
       the shred lets through (ADR 0035);
     - no kill term -- the largest weight in the game, and a threshold, so it rewards a reliable hit over a
       bigger average one in a way nothing here can see;
-    - no energy cost and no Spell initiative, both of which `ActionScorer` prices when it picks an unlock,
-      so a spell whose intent rests on being cheap or on coming up early reads low here. `throwing_star` is
-      the one in this catalogue: its entry says its Spell initiative is worth more to the class than its
-      damage, and none of that is in this number;
+    - no energy cost, which `ActionScorer` prices when it picks a package, so a spell whose intent rests on
+      being cheap reads low here;
     - the caster's own critical chance, which belongs to a creature and not to a spell.
 
     What it is good for is one question: roughly how much is this spell worth next to the one offered beside
@@ -1010,9 +1137,8 @@ def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: M
 
     Every term of :func:`cast_value` is a weight that the weights file keeps at or above zero times a
     magnitude the content keeps at or above zero, so the top of the box is every knob that reaches a term set
-    to its maximum. A Spell initiative knob moves no term here and is left where it is. A cost knob moves no
-    term either, but it moves how often the cast comes up, so the ceiling is read at the *cheapest* price the
-    bounds reach -- the corner that is best for the spell, on both counts.
+    to its maximum. A cost knob moves no term here, but it moves how often the cast comes up, so the ceiling
+    is read at the *cheapest* price the bounds reach -- the corner that is best for the spell.
 
     One kind of knob is turned the other way: a harmful effect on the caster (ADR 0031) is subtracted, so the
     best corner for the spell is its **minimum**. Sending it to the maximum would understate the ceiling, and
@@ -1235,7 +1361,27 @@ def _spell_knobs(alias: str, body: Mapping[str, object]) -> SpellKnobs:
         note=None if body.get("note") is None else str(body.get("note")),
         knobs=tuple(
             Knob(
-                spell=alias,
+                target=alias,
+                path=str(knob["path"]),
+                minimum=float(knob["min"]),
+                maximum=float(knob["max"]),
+                step=float(knob["step"]),
+            )
+            for knob in body.get("knobs", [])
+        ),
+    )
+
+
+def _package_knobs(alias: str, body: Mapping[str, object]) -> PackageKnobs:
+    return PackageKnobs(
+        alias=alias,
+        name=str(body.get("name", alias)),
+        intent=str(body.get("intent", "")),
+        keep=tuple(str(item) for item in body.get("keep", [])),
+        note=None if body.get("note") is None else str(body.get("note")),
+        knobs=tuple(
+            Knob(
+                target=alias,
                 path=str(knob["path"]),
                 minimum=float(knob["min"]),
                 maximum=float(knob["max"]),
@@ -1256,7 +1402,7 @@ def _child(node: object, token: str, pointer: str) -> object:
         return node[token]
     if isinstance(node, list) and token.isdigit() and int(token) < len(node):
         return node[int(token)]
-    raise KnobsError(f"'{pointer}' addresses nothing in this spell.")
+    raise KnobsError(f"'{pointer}' addresses nothing in this document.")
 
 
 def _tokens(pointer: str) -> list[str]:

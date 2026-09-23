@@ -1,0 +1,12 @@
+{
+  "id": "tier:marauder:v1",
+  "name": "Marauder",
+  "level": 2,
+  "prerequisites": [
+    "tier:brute:v1"
+  ],
+  "spells": [
+    "spell:protective_slam:v1"
+  ],
+  "initiativeBonus": 1
+}

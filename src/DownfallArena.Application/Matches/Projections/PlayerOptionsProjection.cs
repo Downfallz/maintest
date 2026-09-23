@@ -34,6 +34,7 @@ public static class PlayerOptionsProjection
         {
             RoundSubPhase.Evolution => Evolution(match, round, slot, snapshots, resources),
             RoundSubPhase.Speed => Speed(round, slot, snapshots),
+            RoundSubPhase.TieOrder => TieOrder(round, slot),
             RoundSubPhase.IntentSelection => Intent(round, slot, snapshots, resources),
             RoundSubPhase.RevealAndTarget => Target(round, slot, snapshots, resources),
             RoundSubPhase.ActionResolution => new PlayerOptions { Kind = PlayerOptionsKind.Resolution, SubPhase = round.SubPhase },
@@ -51,10 +52,8 @@ public static class PlayerOptionsProjection
             return Waiting(round);
         }
 
-        var creatures = snapshots
-            .Where(creature => creature.Owner == slot && creature.IsAlive)
-            .Select(creature => new EvolutionOption(creature.Id, TalentUnlocks.UnlockableSpells(creature, resources.GetTalentTree(creature.TalentTree))))
-            .Where(option => option.UnlockableSpells.Count > 0)
+        var creatures = EvolutionRules.Offers(slot, snapshots, round, resources)
+            .Select(offer => new EvolutionOption(offer.Creature, offer.Tiers))
             .ToList();
 
         return new PlayerOptions
@@ -72,6 +71,11 @@ public static class PlayerOptionsProjection
             ? Waiting(round)
             : new PlayerOptions { Kind = PlayerOptionsKind.Speed, SubPhase = round.SubPhase, Speed = new SpeedOptions(missing) };
     }
+
+    private static PlayerOptions TieOrder(Round round, PlayerSlot slot) =>
+        TieOrderRules.Evaluate(round).Waiting.Contains(slot)
+            ? new PlayerOptions { Kind = PlayerOptionsKind.TieOrder, SubPhase = round.SubPhase, TieOrder = new TieOrderOptions(TieOrderRules.TiesOf(round.Timeline, slot)) }
+            : Waiting(round);
 
     private static PlayerOptions Intent(Round round, PlayerSlot slot, IReadOnlyList<CreatureSnapshot> snapshots, IGameResources resources)
     {

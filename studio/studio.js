@@ -9,7 +9,8 @@
 
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
-import { STALE_POINTER, aliasOfSpell, constraintsOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
+import { STALE_POINTER, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
+import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
 let backend = backendForThisPage();
@@ -20,6 +21,9 @@ const TABS = {
   creatures: { kind: 'Creature', label: 'creature', folder: 'Creatures' },
   spells: { kind: 'Spell', label: 'spell', folder: 'Spells' },
   talentTrees: { kind: 'TalentTree', label: 'talent tree', folder: 'TalentTrees' },
+  // Authored here, not derived from the tree: a pick buys a package, and the file the engine loads is the file
+  // edited (ADR 0056, ADR 0057). The key is what the catalogue calls the list, which is what documentsOf reads.
+  tiers: { kind: 'Tier', label: 'package', folder: 'Tiers' },
 };
 
 const SPELL_TYPES = ['Offensive', 'Defensive', 'Passive'];
@@ -51,13 +55,17 @@ const EFFECTS = {
   InitiativeDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
 };
 
+// The tabs whose items each carry an entry in data/balance/knobs.json: a spell, and since ADR 0061 a package.
+// check-knobs fails on an enabled one with no entry and on an entry naming nothing, so creating or deleting one
+// of these changes the knobs file in the same commit (ADR 0025).
+const KNOBBED_TABS = new Set(['spells', 'tiers']);
+
 const TEMPLATES = {
   spells: () => ({
     id: 'spell:new_spell:v1',
     name: 'New spell',
     spellType: 'Offensive',
     creatureClass: 'Creature',
-    initiative: 1,
     energyCost: 0,
     criticalChance: 0,
     targeting: { origin: 'Enemy', scope: 'SingleTarget', maxTargets: 1 },
@@ -79,6 +87,16 @@ const TEMPLATES = {
     id: 'talent-tree:new_tree:v1',
     name: 'New talent tree',
     root: emptyNode('Root', 'Root'),
+  }),
+  // A package with no spell is refused by the domain -- a pick has to buy something -- so a new one starts at
+  // level 1 with no prerequisite, which is the only shape that is legal before anything is filled in.
+  tiers: () => ({
+    id: 'tier:new_package:v1',
+    name: 'New package',
+    level: 1,
+    prerequisites: [],
+    spells: [],
+    initiativeBonus: 0,
   }),
 };
 
@@ -148,6 +166,19 @@ function findDocument(path) {
 /** Alphabetical, by the reader's collation rather than by UTF-16 code unit. */
 function byName(values) {
   return values.toSorted((left, right) => left.localeCompare(right));
+}
+
+/**
+ * Every way an author may name a package: its versioned id, and the aliases pointing at it. The builder
+ * resolves a prerequisite through the alias map exactly as it resolves a spell, so an alias is a legal
+ * prerequisite -- and it is the one that follows an opener when a new version of it is cut. Offering only the
+ * versioned ids would leave every package behind that opener pinned to the version it was authored against.
+ */
+function tierReferences() {
+  const aliases = state.catalogue?.aliases || {};
+  const versioned = documentsOf('tiers').map(tier => tier.id);
+  const named = Object.keys(aliases).filter(alias => versioned.includes(aliases[alias]));
+  return [...new Set([...byName(named), ...byName(versioned)])];
 }
 
 /** Every way an author may name a spell: its versioned id, and the aliases pointing at it. */
@@ -352,6 +383,16 @@ function glance(item) {
     ];
   }
 
+  if (item.kind === 'Tier') {
+    const taught = asArray(doc.spells).length;
+    const bonus = typeof doc.initiativeBonus === 'number' ? `+${doc.initiativeBonus} initiative` : null;
+    const opens = asArray(doc.prerequisites).length;
+    return [
+      element('span', { className: 'figure', textContent: `${taught} ${taught === 1 ? 'spell' : 'spells'}` }),
+      element('span', { className: 'meta', textContent: [`level ${doc.level ?? '?'}`, bonus, opens ? `behind ${opens}` : 'opener'].filter(Boolean).join(' · ') }),
+    ];
+  }
+
   return [element('span', { className: 'meta mono', textContent: item.path })];
 }
 
@@ -546,24 +587,38 @@ function spellLink(reference) {
   return chip;
 }
 
+function tierLink(reference) {
+  const tier = tierNamed(reference, documentsOf('tiers'), resolveReference);
+  const label = tier ? `${tier.name || tier.id}` : `${reference} (unknown)`;
+  const chip = element('button', {
+    type: 'button',
+    className: `chip link${tier && !tier.enabled ? ' off' : ''}`,
+    textContent: label,
+    title: reference,
+  });
+  chip.addEventListener('click', () => { if (tier) select(tier.path); });
+  return chip;
+}
+
 /** An editable list of spell references: a picker per row, plus one to add. */
-function spellList(target, key) {
+function spellList(target, key, { onChange = null } = {}) {
   const container = element('div');
   const redraw = () => {
     const rows = (target[key] || []).map((reference, index) => {
       const holder = { value: reference };
       const select = picker(holder, 'value', spellReferences());
-      select.addEventListener('change', () => { target[key][index] = holder.value; markDirty(); redraw(); });
+      select.addEventListener('change', () => { target[key][index] = holder.value; markDirty(); onChange?.(); redraw(); });
       return element('div', { className: 'row' }, [
         element('span', { className: 'grow' }, [select]),
         spellLink(reference),
-        miniButton('Remove', () => { target[key].splice(index, 1); markDirty(); redraw(); }, 'mini remove'),
+        miniButton('Remove', () => { target[key].splice(index, 1); markDirty(); onChange?.(); redraw(); }, 'mini remove'),
       ]);
     });
     rows.push(element('div', { className: 'row' }, [
       miniButton('Add spell', () => {
         target[key] = [...(target[key] || []), spellReferences()[0] || ''];
         markDirty();
+        onChange?.();
         redraw();
       }),
     ]));
@@ -601,6 +656,7 @@ function renderDetail() {
   if (state.tab === 'spells') parts.push(spellEditor(), usedBy(item));
   if (state.tab === 'creatures') parts.push(creatureEditor());
   if (state.tab === 'talentTrees') parts.push(treeEditor());
+  if (state.tab === 'tiers') parts.push(tierEditor(), usedByTier(item));
 
   view.replaceChildren(...parts);
 }
@@ -788,7 +844,11 @@ function spellEditor() {
     ['Name', textBox(draft, 'name')],
     ['Type', picker(draft, 'spellType', SPELL_TYPES)],
     ['Class', picker(draft, 'creatureClass', CREATURE_CLASSES)],
-    ['Spell initiative', numberBox(draft, 'initiative', { min: 0 })],
+    // No spell initiative row, and no longer any field behind one: the package that teaches a spell pays the
+    // bonus, once, and that number is edited on the package (ADR 0056, ADR 0059). A document that still
+    // carries `initiative` is content written for rules that are gone, and the store refuses it at the save
+    // rather than dropping it quietly -- a silently ignored field is a number an author believes they are
+    // editing.
     ['Energy cost', numberBox(draft, 'energyCost', { min: 0 })],
     ['Critical chance bonus', critField(draft)],
     ['Target origin', picker(draft.targeting, 'origin', TARGET_ORIGINS)],
@@ -978,6 +1038,77 @@ function creatureEditor() {
   return element('div', {}, [card, spells]);
 }
 
+// ---------- the package a pick buys ----------
+
+/** The prerequisite rows: the packages that have to be owned before this one can be bought. */
+function tierList(target, key) {
+  const container = element('div');
+  const redraw = () => {
+    const rows = (target[key] || []).map((reference, index) => {
+      const holder = { value: reference };
+      const select = picker(holder, 'value', tierReferences());
+      select.addEventListener('change', () => { target[key][index] = holder.value; markDirty(); refreshTierWarnings(); redraw(); });
+      return element('div', { className: 'row' }, [
+        element('span', { className: 'grow' }, [select]),
+        tierLink(reference),
+        miniButton('Remove', () => { target[key].splice(index, 1); markDirty(); refreshTierWarnings(); redraw(); }, 'mini remove'),
+      ]);
+    });
+    rows.push(element('div', { className: 'row' }, [
+      // Never this package. Only a package the studio created or versioned has an alias, so a new one's alias
+      // sorts ahead of every versioned id and would otherwise be the reference a first prerequisite starts at
+      // -- seeding the one requirement no package may have.
+      miniButton('Add prerequisite', () => {
+        const self = resolveReference(state.draft?.id);
+        target[key] = [...(target[key] || []), tierReferences().find(reference => resolveReference(reference) !== self) || ''];
+        markDirty();
+        refreshTierWarnings();
+        redraw();
+      }),
+    ]));
+    container.replaceChildren(...rows);
+  };
+
+  redraw();
+  return container;
+}
+
+function tierEditor() {
+  const draft = state.draft;
+  const card = element('div', { className: 'card' }, [
+    element('h3', { textContent: 'Package' }),
+    fields([
+      ['Id', textBox(draft, 'id', { dirty: () => { markDirty(); refreshTierWarnings(); } })],
+      ['Name', textBox(draft, 'name')],
+      ['Level', numberBox(draft, 'level', { min: 1, onChange: refreshTierWarnings })],
+      ['Initiative bonus', numberBox(draft, 'initiativeBonus', { min: 0 })],
+    ]),
+    element('p', { className: 'muted', textContent: 'Bought whole: every spell at once, the bonus once, one pick spent. The bonus is raised on the buyer for the rest of the match.' }),
+  ]);
+
+  const spells = element('div', { className: 'card' }, [
+    element('h3', { textContent: 'Spells it teaches' }),
+    spellList(draft, 'spells', { onChange: refreshTierWarnings }),
+  ]);
+
+  const prerequisites = element('div', { className: 'card' }, [
+    element('h3', { textContent: 'Owned before this can be bought' }),
+    element('p', { className: 'muted', textContent: 'The only eligibility rule. The talent tree gates nothing a pick buys, so multiclassing is free.' }),
+    tierList(draft, 'prerequisites'),
+  ]);
+
+  return element('div', {}, [card, spells, prerequisites, element('div', { id: 'tier-warnings' }, tierWarningRows(draft))]);
+}
+
+function tierWarningRows(draft) {
+  return tierWarnings(draft, documentsOf('tiers'), resolveReference).map(text => element('div', { className: 'banner', textContent: text }));
+}
+
+function refreshTierWarnings() {
+  const holder = $('tier-warnings');
+  if (holder) holder.replaceChildren(...tierWarningRows(state.draft));
+}
+
 // ---------- the talent tree ----------
 
 function treeEditor() {
@@ -1148,6 +1279,12 @@ function usedBy(item) {
     }
   }
 
+  // Before the tree, because this is the one that decides whether a creature can ever have the spell: a pick
+  // buys a package, and a spell no package teaches is one nobody acquires (ADR 0056).
+  for (const tier of tiersTeaching(item.id, documentsOf('tiers'), resolveReference)) {
+    references.push({ label: `${tier.name || tier.id} teaches it`, path: tier.path });
+  }
+
   for (const tree of documentsOf('talentTrees')) {
     walkNodes(tree.document.root, node => {
       const mentioned = [
@@ -1180,6 +1317,30 @@ function usedBy(item) {
     const link = miniButton(reference.label, () => select(reference.path), 'link');
     return element('li', {}, [link]);
   })));
+  return card;
+}
+
+/**
+ * What a package is on the end of: the packages it opens, and the creatures that start with a spell it
+ * teaches. The second is the one worth a line — a package may not teach a spell every creature already starts
+ * with, because the pick would buy nothing, and that refusal arrives from the builder with no file named.
+ */
+function usedByTier(item) {
+  const opens = tiersBehind(item.id, documentsOf('tiers'), resolveReference)
+    .map(tier => ({ label: `${tier.name || tier.id} is bought behind it`, path: tier.path }));
+
+  const starters = startersOverlapping(item.document, documentsOf('creatures'), resolveReference)
+    .map(creature => ({ label: `${creature.name || creature.id} already starts with one of its spells`, path: creature.path }));
+
+  const card = element('div', { className: 'card' }, [element('h3', { textContent: 'Used by' })]);
+  const references = [...opens, ...starters];
+  if (!references.length) {
+    card.append(element('p', { className: 'muted', textContent: 'Nothing is bought behind this package yet.' }));
+    return card;
+  }
+
+  card.append(element('ul', { className: 'uses' }, references.map(reference =>
+    element('li', {}, [miniButton(reference.label, () => select(reference.path), 'link')]))));
   return card;
 }
 
@@ -2054,9 +2215,10 @@ async function remove(item) {
   // Every alias pointing at this spell, not the one it is reached by: the map below drops them all, so
   // pruning a single entry would leave the others naming a spell nothing resolves to -- which is the second
   // door ADR 0025 exists to close, and `survey` already reasons about two aliases on one spell.
-  const aliases = state.tab === 'spells'
-    ? Object.keys(state.catalogue.aliases || {}).filter(name => state.catalogue.aliases[name] === item.id)
-    : [];
+  // A package is usually reached by no alias at all, so its entry is keyed by its id without the version,
+  // which `entryAliasesOf` works out the way `load_content` does -- including an older version on disk that
+  // will take the same key back once this one is gone, whose entry must stay.
+  const aliases = entryAliasesOf(item.id, state.catalogue.aliases, documentsOf(state.tab));
   const entries = balance ? aliases.filter(name => entryFor(balance, name)) : [];
   // A constraint names its spells by hand. Deleting one of them does not fail the knobs file the way an
   // orphaned entry does -- it leaves the constraint checking nothing, quietly, which is worse (ADR 0025), so
@@ -2070,9 +2232,9 @@ async function remove(item) {
   const pruned = entries.length ? `\n\n${going}` : '';
   // The same door as creating a spell here: the page cannot prune an entry out of a file it never read, so it
   // says which one will be left naming nothing rather than letting a pipeline find it.
-  const orphaned = state.tab === 'spells' && !balance
-    ? '\n\nThis page has not read data/balance/knobs.json, so any entry for this spell stays behind and will'
-      + ' name a spell nothing resolves to. check-knobs fails on that.'
+  const orphaned = KNOBBED_TABS.has(state.tab) && !balance
+    ? `\n\nThis page has not read data/balance/knobs.json, so any entry for this ${TABS[state.tab].label} stays`
+      + ' behind and will name something nothing resolves to. check-knobs fails on that.'
     : '';
   if (!window.confirm(`Delete ${item.path}?${guarded}${pruned}${orphaned}\n\nThe file goes away; git still has it.`)) return;
 
@@ -2121,7 +2283,8 @@ async function create() {
   };
   const owed = [];
 
-  // A new enabled spell with no entry fails check-knobs, so the entry is seeded in the same change (ADR 0025).
+  // A new enabled spell or package with no entry fails check-knobs, so the entry is seeded in the same change
+  // (ADR 0025, ADR 0061).
   // Only the intent is asked for: the name and the class are in the document, and an intent cannot be taken
   // from either -- that is the argument of ADR 0021, and a search that chases the metrics alone will happily
   // make every spell the same spell.
@@ -2129,13 +2292,13 @@ async function create() {
   // A host that publishes no knobs cannot be handed a file it never read, so this spell goes out without an
   // entry -- and the author hears it now rather than from a red pipeline, because it is theirs to write by
   // hand and nothing on this page will ask again.
-  if (state.tab === 'spells' && !answer.ok) {
+  if (KNOBBED_TABS.has(state.tab) && !answer.ok) {
     owed.push(`${id} goes out with no entry in data/balance/knobs.json, which check-knobs fails on for enabled`
       + ' content. This page could not seed one: it never read the file. Write it by hand, or open the studio'
       + ' where the knobs are published.');
   }
 
-  if (state.tab === 'spells' && answer.ok) {
+  if (KNOBBED_TABS.has(state.tab) && answer.ok) {
     const intent = window.prompt(`What is ${content.name} for? A sentence or two: the decision it exists to pose.`
       + ' A tuning pass may move its numbers; it may not move this.', '');
     if (intent === null) return;

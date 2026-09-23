@@ -12,6 +12,7 @@ import * as feed from './feed.js';
 import * as timeline from './timeline.js';
 import * as mat from './mat.js';
 import * as notes from './notes.js';
+import * as ties from './ties.js';
 
 // A small DOM double exercises the shipped page without adding a browser dependency to the Node gate.
 class Element {
@@ -62,16 +63,20 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties,
     document, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
   const script = readFileSync(new URL('./table.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
   vm.runInContext(script, context);
   const cards = new Map([['one', { id: 'one', name: 'First card', cost: 2 }], ['two', { id: 'two', name: 'Second card', cost: 3 }]]);
+  const packages = new Map([
+    ['tier:one:v1', { id: 'tier:one:v1', name: 'First package', level: 1, prerequisites: [], spells: ['one'], initiativeBonus: 1 }],
+    ['tier:two:v1', { id: 'tier:two:v1', name: 'Second package', level: 2, prerequisites: ['tier:one:v1'], spells: ['two'], initiativeBonus: 0 }],
+  ]);
   const state = { views: [], rendered: null, revision: 0, polling: false, error: '', evolving: null, seats: [], holder: 'player1', shown: null,
-    acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards,
-    catalogue: { cards: [...cards.values()], rules: { roundCap: 16 } }, tab: 'board', feeds: new Map(),
+    acknowledged: null, announced: null, asked: null, sending: false, picked: [], chosen: null, cards, packages,
+    catalogue: { cards: [...cards.values()], packages: [...packages.values()], rules: { roundCap: 16 } }, tab: 'board', feeds: new Map(),
   };
   const view = { waitingFor: 'Intent', waitingCreature: 1, waitingAsked: 1, options: { intent: { creatures: [{ creature: 1, castableSpells: ['one', 'two'] }] } },
     board: { roundNumber: 1, subPhase: 'IntentSelection', allies: [{ id: 1, name: 'First', health: 20, maxHealth: 20, energy: 4, knownSpells: ['one', 'two'] }], enemies: [{ id: 2, health: 10, maxHealth: 20 }], intents: [], timeline: [] }, feed: [],
@@ -120,14 +125,27 @@ test('legal targets are keyboard operable and still obey the host maximum', () =
   assert.equal(p.state.picked.length, 1);
 });
 
-test('evolution keeps every creature accessible without mixing their unlock buttons', () => {
+test('evolution keeps every creature accessible without mixing their package buttons', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
-  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, unlockableSpells: ['one'] }, { creature: 3, unlockableSpells: ['two'] }] } }; p.draw();
-  assert.match(p.nodes.choices.textContent, /First card/);
-  assert.doesNotMatch(p.nodes.choices.textContent, /Second card/);
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:two:v1'] }] } }; p.draw();
+  assert.match(p.nodes.choices.textContent, /First package/);
+  assert.doesNotMatch(p.nodes.choices.textContent, /Second package/);
   p.nodes.choices.children[0].children[1].events.click();
-  assert.match(p.nodes.choices.textContent, /Second card/);
-  assert.doesNotMatch(p.nodes.choices.textContent, /First card/);
+  assert.match(p.nodes.choices.textContent, /Second package/);
+  assert.equal(p.nodes.choices.querySelectorAll('[data-focus]').filter(node => node.dataset.focus.startsWith('evolve-package-')).length, 1);
+});
+
+// A package is bought whole and the card has to say so: its level, the initiative it is worth for the rest of
+// the match, and every spell it teaches. A card that showed only the name would hide two thirds of the choice.
+test('a package card names its level, its initiative and every spell it teaches', () => {
+  const p = page(); p.view.waitingFor = 'Evolution';
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1', 'tier:two:v1'] }] } }; p.draw();
+  const text = p.nodes.choices.textContent;
+  assert.match(text, /First package/);
+  assert.match(text, /tier 1/);
+  assert.match(text, /\+1 initiative/);
+  assert.match(text, /First card/);
+  assert.match(text, /no initiative/);
 });
 
 test('a seat change hides the table until the next player acknowledges it', () => {
@@ -345,39 +363,38 @@ test('a detached card from an earlier asking cannot select or declare on the nex
 });
 
 function talentFixture(p) {
-  p.state.cards.get('one').creatureClass = 'North'; p.state.cards.get('one').tier = 1;
-  p.state.cards.get('two').creatureClass = 'South'; p.state.cards.get('two').tier = 3;
-  p.state.cards.get('two').requires = 'First card';
+  p.state.cards.get('one').creatureClass = 'North';
+  p.state.cards.get('two').creatureClass = 'South';
   p.state.catalogue.trees = [{ name: 'Branch', spells: ['one', 'two'] }];
   p.view.board.allies[0].knownSpells = ['one'];
-  p.view.board.allies.push({ id: 3, knownSpells: ['two'] });
+  p.view.board.allies.push({ id: 3, knownSpells: ['two'], acquiredTiers: ['tier:two:v1'] });
 }
 
 test('the talent reference follows the inspected creature and the class filter immediately', () => {
-  const p = page(); talentFixture(p); p.state.inspectClass = 'South'; p.draw();
+  const p = page(); talentFixture(p); p.state.inspectClass = 'tier:two:v1'; p.draw();
   const toolbar = p.nodes.mat.children[0];
   const south = p.nodes.mat.children[2];
-  assert.match(south.textContent, /SouthTier 3○ Not learned/);
-  assert.match(south.textContent, /Requires: First card/);
+  assert.match(south.textContent, /Second package · Tier 2/);
+  assert.match(south.textContent, /Requires: First package/);
   toolbar.children[2].children[1].events.click();
-  assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Package acquired/);
   const filter = p.nodes.mat.children[0].children[3];
-  filter.value = 'North'; filter.events.change();
-  assert.match(p.nodes.mat.children[2].textContent, /North/);
-  const again = p.nodes.mat.children[0].children[3]; again.value = 'South'; again.events.change();
+  filter.value = 'tier:one:v1'; filter.events.change();
+  assert.match(p.nodes.mat.children[2].textContent, /First package/);
+  const again = p.nodes.mat.children[0].children[3]; again.value = 'tier:two:v1'; again.events.change();
   assert.equal(p.nodes.mat.children.length, 3);
-  assert.match(p.nodes.mat.children[2].textContent, /South/);
-  assert.doesNotMatch(p.nodes.mat.children[2].textContent, /North/);
+  assert.match(p.nodes.mat.children[2].textContent, /Second package/);
+  assert.doesNotMatch(p.nodes.mat.children[2].textContent, /First card/);
 });
 
 test('the talent inspector uses the selected evolution creature and offers only its legal unlocks', () => {
   const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution';
-  p.view.options = { evolution: { creatures: [{ creature: 1, unlockableSpells: ['two'] }, { creature: 3, unlockableSpells: [] }] } };
-  p.state.inspectClass = 'South'; p.draw(); assert.match(p.nodes.mat.children[2].textContent, /Unlock now/);
+  p.view.options = { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:two:v1'] }, { creature: 3, availableTiers: [] }] } };
+  p.state.inspectClass = 'tier:two:v1'; p.draw(); assert.match(p.nodes.mat.children[2].textContent, /Available now/);
   assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 1);
   p.nodes.choices.children[0].children[1].events.click();
-  assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
-  assert.doesNotMatch(p.nodes.mat.textContent, /Unlock now/);
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Package acquired/);
+  assert.doesNotMatch(p.nodes.mat.textContent, /Available now/);
   assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 0);
 });
 
@@ -409,11 +426,11 @@ test('battlefield turn badges appear only after the timeline exists and follow i
 
 test('the initial talent preview follows the first offered evolution creature even if an earlier ally is absent from options', () => {
   const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution'; p.view.waitingCreature = null;
-  p.view.options = { evolution: { creatures: [{ creature: 3, unlockableSpells: ['one'] }] } }; p.draw();
-  const filter = p.nodes.mat.children[0].children[3]; filter.value = 'North'; filter.events.change();
-  assert.match(p.nodes.mat.children[2].textContent, /Unlock now/);
-  p.state.inspectClass = 'South'; p.draw();
-  assert.match(p.nodes.mat.children[2].textContent, /✓ Known/);
+  p.view.options = { evolution: { creatures: [{ creature: 3, availableTiers: ['tier:one:v1'] }] } }; p.draw();
+  const filter = p.nodes.mat.children[0].children[3]; filter.value = 'tier:one:v1'; filter.events.change();
+  assert.match(p.nodes.mat.children[2].textContent, /Available now/);
+  p.state.inspectClass = 'tier:two:v1'; p.draw();
+  assert.match(p.nodes.mat.children[2].textContent, /✓ Package acquired/);
 });
 
 const keyEvent = (key, extra = {}) => ({ key, preventDefault() {}, ...extra });
@@ -488,11 +505,11 @@ test('enemy cards show public speed and the revealed spell while keeping the new
 
 test('an atlas unlock uses the guarded current asking and rejects a stale inspector control', async () => {
   const p = page(); talentFixture(p); const sent = []; p.view.waitingFor = 'Evolution';
-  p.view.options = { evolution: { creatures: [{ creature: 1, unlockableSpells: ['two'] }] } };
+  p.view.options = { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:two:v1'] }] } };
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
-  p.state.inspectClass = 'South'; p.draw();
+  p.state.inspectClass = 'tier:two:v1'; p.draw();
   const unlock = p.nodes.mat.children[2].querySelectorAll('button')[0];
-  await unlock.events.click(); assert.equal(sent.length, 1); assert.equal(sent[0].creature, 1); assert.equal(sent[0].spell, 'two');
+  await unlock.events.click(); assert.equal(sent.length, 1); assert.equal(sent[0].creature, 1); assert.equal(sent[0].tier, 'tier:two:v1'); assert.equal(sent[0].spell, undefined);
   p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
   await unlock.events.click(); assert.equal(sent.length, 1);
 });
@@ -517,8 +534,8 @@ test('targeting exposes only confirmed spells and targets while later choices st
 
 test('down reaches the evolution explorer after spell choices and up returns to a spell', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
-  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, unlockableSpells: ['one'] }] } }; p.draw();
-  const spell = p.nodes.choices.querySelectorAll('[data-focus]').find(node => node.dataset.focus.startsWith('evolve-spell-'));
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } }; p.draw();
+  const spell = p.nodes.choices.querySelectorAll('[data-focus]').find(node => node.dataset.focus.startsWith('evolve-package-'));
   spell.focus(); p.context.keyboardDecision(p.state, keyEvent('ArrowDown'));
   assert.equal(p.document.activeElement.dataset.focus, 'evolution-explorer');
   const explorer = p.document.activeElement;
@@ -538,20 +555,20 @@ test('down from the last intent row reaches its explorer without declaring a car
 
 test('the atlas identifies the inspected creature and the second evolution pick from the new board', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
-  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, unlockableSpells: ['two'] }] } }; p.draw();
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:two:v1'] }] } }; p.draw();
   assert.match(p.nodes.mat.children[0].textContent, /Creature 1 · talentsRound 1 · Evolution/);
-  p.view.board.evolutionChoices = [{ creature: 1, spell: 'one' }];
+  p.view.board.evolutionChoices = [{ creature: 1, tier: 'tier:one:v1' }];
   p.view.options.evolution.remainingPicks = 1; p.view.waitingAsked++; p.draw();
   assert.match(p.nodes.mat.children[0].textContent, /1 \/ 2 team picks remaining/);
   assert.match(p.nodes['evolution-budget'].textContent, /1 \/ 2 team picks remaining/);
   assert.match(p.nodes['evolution-budget'].textContent, /✓ Pick 1 · Creature 1/);
-  assert.match(p.nodes.mat.children[0].textContent, /Shared across your creatures/);
+  assert.match(p.nodes.mat.children[0].textContent, /Shared team picks/);
 });
 
 test('the evolution budget follows the configured team allowance and does not reset when switching creatures', () => {
-  const p = page(); p.view.waitingFor = 'Evolution'; p.state.catalogue.rules.evolutionPicksPerRound = 4;
-  p.view.board.evolutionChoices = [{ creature: 1, spell: 'one' }];
-  p.view.options = { evolution: { remainingPicks: 3, creatures: [{ creature: 1, unlockableSpells: ['two'] }, { creature: 2, unlockableSpells: ['one'] }] } }; p.draw();
+  const p = page(); p.view.waitingFor = 'Evolution'; p.state.catalogue.rules.evolutionPicksPerOpportunity = 4;
+  p.view.board.evolutionChoices = [{ creature: 1, tier: 'tier:one:v1' }];
+  p.view.options = { evolution: { remainingPicks: 3, creatures: [{ creature: 1, availableTiers: ['tier:two:v1'] }, { creature: 2, availableTiers: ['tier:one:v1'] }] } }; p.draw();
   assert.match(p.nodes['evolution-budget'].textContent, /3 \/ 4 team picks remaining/);
   p.nodes.choices.children[0].children[1].click();
   assert.match(p.nodes.asking.textContent, /Creature 2/);
@@ -565,7 +582,7 @@ test('the persistent phase guide distinguishes simultaneous speeds from sequenti
   assert.equal(p.nodes['phase-steps'].children[2].attributes['aria-current'], 'step');
   p.view.board.subPhase = 'RevealAndTarget'; p.draw();
   assert.match(p.nodes['phase-reminder'].textContent, /confirmed spell and its targets reveal together/);
-  assert.equal(p.nodes['phase-steps'].children[4].attributes['aria-current'], 'step');
+  assert.equal(p.nodes['phase-steps'].children[5].attributes['aria-current'], 'step');
   p.view.board.phase = 'StartOfRound'; p.draw();
   assert.equal(p.nodes['phase-steps'].children[0].attributes['aria-current'], 'step');
 });
@@ -603,11 +620,11 @@ test('the acting creature appears first in the planning spellbook with its conte
 
 test('arrows switch the evolution creature and move into its offered spells without submitting', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
-  p.view.options = { evolution: { creatures: [{ creature: 1, unlockableSpells: ['one'] }, { creature: 3, unlockableSpells: ['two'] }] } }; p.draw();
+  p.view.options = { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:two:v1'] }] } }; p.draw();
   p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));
   assert.equal(p.state.evolving, 3); assert.equal(p.document.activeElement.dataset.focus, 'evolve-3');
   p.context.keyboardDecision(p.state, keyEvent('ArrowDown'));
-  assert.equal(p.document.activeElement.dataset.focus, 'evolve-spell-3-two'); assert.equal(p.state.sending, false);
+  assert.equal(p.document.activeElement.dataset.focus, 'evolve-package-3-tier:two:v1'); assert.equal(p.state.sending, false);
   p.context.keyboardDecision(p.state, keyEvent('ArrowUp'));
   assert.equal(p.document.activeElement.dataset.focus, 'evolve-3');
 });
@@ -698,11 +715,11 @@ test('reduced motion keeps the phase announcement without animating it', () => {
   assert.equal(p.nodes['phase-notice'].hidden, false);
 });
 
-test('spell stats label the cast cost and distinguish unlock initiative from critical chance', () => {
+test('spell stats label cast cost and crit without reviving retired spell initiative', () => {
   const p = page(); p.state.cards.set('one', { name: 'Probe', cost: 0, initiative: 2, critical: '35%', criticalThreshold: 14 });
   const parts = p.context.cardParts(p.state, 'one');
   assert.match(parts[0].textContent, /ϟ 0Energy/);
-  assert.match(parts[2].textContent, /Initiative\+2On unlock/);
+  assert.doesNotMatch(parts[2].textContent, /Initiative|On unlock/);
   assert.match(parts[2].textContent, /Crit chance35%Standard only · d20 14\+/);
   p.state.cards.set('one', { name: 'Unknown stats' });
   const missing = p.context.cardParts(p.state, 'one');
@@ -842,4 +859,80 @@ test('end-of-match replay uses results controls and hotseat fences keep the revi
   p.state.holder = 'player2'; p.draw();
   assert.equal(p.state.playback, null);
   assert.equal(p.nodes.playback.hidden, true);
+});
+
+// The rule line is how a deck and a screen are checked to be the same game (ADR 0054), so a value that changes
+// play has to reach it. Two schedules with the same interval and a different first round are two games.
+test('the rule line separates schedules that share an interval but not their first opportunity', () => {
+  const p = page();
+  const rules = { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, roundCap: 30, criticalMultiplier: 2 };
+
+  const odd = p.context.ruleLine({ contentHash: 'abcdef012345', rules: { ...rules, firstEvolutionRound: 1, evolutionInterval: 2 } });
+  const even = p.context.ruleLine({ contentHash: 'abcdef012345', rules: { ...rules, firstEvolutionRound: 2, evolutionInterval: 2 } });
+  const each = p.context.ruleLine({ contentHash: 'abcdef012345', rules: { ...rules, firstEvolutionRound: 3, evolutionInterval: 1 } });
+
+  assert.match(odd, /2 picks every 2 rounds from round 1/);
+  assert.match(even, /2 picks every 2 rounds from round 2/);
+  assert.match(each, /2 picks every round from round 3/);
+  assert.notEqual(odd, even);
+});
+
+test('a purchased creature leaves the offer list and the atlas cannot buy again during this opportunity', async () => {
+  const p = page(); talentFixture(p); const sent = [];
+  p.view.waitingFor = 'Evolution'; p.view.waitingCreature = null;
+  p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:one:v1'] }] } };
+  p.state.inspectClass = 'tier:one:v1';
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  const old = p.nodes.mat.children[2].querySelectorAll('button')[0];
+  p.view.board.allies[0].acquiredTiers = ['tier:one:v1'];
+  p.view.board.evolutionChoices = [{ creature: 1, tier: 'tier:one:v1' }];
+  p.view.options.evolution = { remainingPicks: 1, creatures: [{ creature: 3, availableTiers: ['tier:one:v1'] }] };
+  p.view.waitingAsked++; p.draw();
+  assert.match(p.nodes.asking.textContent, /Creature 3/);
+  assert.match(p.nodes['evolution-budget'].textContent, /1 \/ 2 team picks remaining/);
+  p.state.inspectCreature = 1; p.state.inspectClass = 'tier:two:v1'; p.draw();
+  assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 0);
+  await old.click(); assert.equal(sent.length, 0);
+});
+
+test('a capped opportunity and the next evolution round use the host projections', () => {
+  const p = page(); p.view.waitingFor = 'Evolution'; p.state.catalogue.rules.evolutionPicksPerOpportunity = 2;
+  p.view.options = { evolution: { remainingPicks: 1, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }] } }; p.draw();
+  assert.match(p.nodes['evolution-budget'].textContent, /1 \/ 1 team picks remaining/);
+  p.view.waitingFor = 'Speed'; p.view.board.subPhase = 'Speed'; p.view.board.roundNumber = 2;
+  p.view.board.nextEvolutionRound = 3; p.draw();
+  assert.match(p.nodes['phase-reminder'].textContent, /Next evolution: round 3/);
+});
+
+test('tie order shows rolls, supports arrow focus and number choices, then submits the order exactly once', async () => {
+  const p = page(); const sent = []; p.view.waitingFor = 'TieOrder'; p.view.waitingCreature = null;
+  p.view.board.subPhase = 'TieOrder';
+  p.view.board.timeline = [{ creature: 1, owner: 'player1', initiative: 8, speed: 'Quick' }, { creature: 2, owner: 'player2', initiative: 8, speed: 'Quick' }, { creature: 3, owner: 'player1', initiative: 8, speed: 'Quick' }];
+  p.view.board.rollOffs = [{ creature: 1, rolls: [12, 19] }];
+  p.view.options = { tieOrder: { ties: [[1, 3]] } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  assert.match(p.nodes.timeline.textContent, /d20 12 → 19/);
+  assert.equal(p.nodes['phase-current'].textContent, 'Tie order');
+  assert.equal(p.nodes['decision-phase'].textContent, 'Order tied creatures');
+  p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));
+  assert.equal(p.document.activeElement.dataset.focus, 'tie-1');
+  await p.context.keyboardDecision(p.state, keyEvent('2'));
+  assert.equal(sent.length, 0); assert.deepEqual([...p.state.ordered], [3]);
+  assert.match(p.nodes.choices.textContent, /creature 3 → creature 1/);
+  await p.context.keyboardDecision(p.state, keyEvent('Enter'));
+  assert.equal(sent.length, 1); assert.deepEqual([...sent[0].order], [3, 1]);
+  assert.equal(sent[0].kind, 'TieOrder');
+});
+
+test('a stale or handed-over tie control cannot submit or change a later question', async () => {
+  const p = page(); const sent = []; p.view.waitingFor = 'TieOrder'; p.view.options = { tieOrder: { ties: [[1, 3]] } };
+  p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
+  const controls = p.nodes.choices.querySelectorAll('[data-focus]');
+  p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
+  await controls.find(node => node.dataset.focus === 'tie-keep').click();
+  controls.find(node => node.dataset.focus === 'tie-3').click();
+  assert.equal(sent.length, 0); assert.deepEqual([...p.state.ordered], []);
+  p.state.holder = null; p.draw();
+  await p.context.keyboardDecision(p.state, keyEvent('1'));
+  assert.deepEqual([...p.state.ordered], []);
 });
