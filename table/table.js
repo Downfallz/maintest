@@ -949,7 +949,7 @@ function packageCard(state, tier, onClick) {
 // last place untapped. Nothing is sent until every tie is settled and the order is confirmed, and the order as
 // rolled can be kept in one tap: a tie nobody wants to reorder should cost nothing.
 function tieOrderButtons(state, current) {
-  const groups = current.view.options.tieOrder?.groups ?? [];
+  const groups = current.view.options.tieOrder?.ties ?? [];
   const tapped = state.ordered ?? [];
   const send = order => () => submit(state, current, { kind: 'TieOrder', order });
 

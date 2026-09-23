@@ -16,19 +16,19 @@ public static class TieOrderRules
     /// timeline holds them now. Tied slots sit next to each other, since the timeline is sorted on speed and
     /// initiative before a tie is rolled.
     /// </summary>
-    public static IReadOnlyList<IReadOnlyList<CreatureId>> GroupsOf(CombatTimeline timeline, PlayerSlot slot)
+    public static IReadOnlyList<IReadOnlyList<CreatureId>> TiesOf(CombatTimeline timeline, PlayerSlot slot)
     {
         ArgumentNullException.ThrowIfNull(timeline);
 
         return
         [
-            .. Ties(timeline)
+            .. Ties(timeline.Slots)
                 .Select(tie => (IReadOnlyList<CreatureId>)[.. tie.Where(entry => entry.Owner == slot).Select(entry => entry.Creature)])
                 .Where(mine => mine.Count > 1),
         ];
     }
 
-    public static bool Owes(CombatTimeline timeline, PlayerSlot slot) => GroupsOf(timeline, slot).Count > 0;
+    public static bool HasTieOrderToGive(CombatTimeline timeline, PlayerSlot slot) => TiesOf(timeline, slot).Count > 0;
 
     /// <summary>An order names every creature of the player's ties once, and nothing else.</summary>
     public static Result ValidateOrder(PlayerSlot slot, IReadOnlyList<CreatureId> order, CombatTimeline timeline)
@@ -36,7 +36,7 @@ public static class TieOrderRules
         ArgumentNullException.ThrowIfNull(order);
         ArgumentNullException.ThrowIfNull(timeline);
 
-        var owed = GroupsOf(timeline, slot).SelectMany(group => group).ToHashSet();
+        var owed = TiesOf(timeline, slot).SelectMany(tie => tie).ToHashSet();
         if (owed.Count == 0)
         {
             return Result.Failure(PlanningErrors.NoTieToOrder);
@@ -47,20 +47,16 @@ public static class TieOrderRules
             : Result.Failure(PlanningErrors.TieOrderMismatch);
     }
 
-    /// <summary>The sub-phase completes when every player who owes an order has submitted one.</summary>
-    public static bool CanAdvance(Round round)
+    /// <summary>
+    /// The progression gate: the sub-phase completes when every player with a tie order to give has given it.
+    /// </summary>
+    public static TieOrderGateResult Evaluate(Round round)
     {
         ArgumentNullException.ThrowIfNull(round);
 
-        return Waiting(round).Count == 0;
-    }
-
-    /// <summary>The players who owe an order and have not submitted it.</summary>
-    public static IReadOnlyList<PlayerSlot> Waiting(Round round)
-    {
-        ArgumentNullException.ThrowIfNull(round);
-
-        return [.. new[] { PlayerSlot.Player1, PlayerSlot.Player2 }.Where(slot => Owes(round.Timeline, slot) && round.TieOrderOf(slot) is null)];
+        IReadOnlyList<PlayerSlot> waiting =
+            [.. new[] { PlayerSlot.Player1, PlayerSlot.Player2 }.Where(slot => HasTieOrderToGive(round.Timeline, slot) && round.TieOrderOf(slot) is null)];
+        return new TieOrderGateResult(waiting.Count == 0, waiting);
     }
 
     /// <summary>
@@ -73,7 +69,7 @@ public static class TieOrderRules
         ArgumentNullException.ThrowIfNull(orders);
 
         var ordered = new List<ActivationSlot>(timeline.Count);
-        foreach (var tie in Ties(timeline))
+        foreach (var tie in Ties(timeline.Slots))
         {
             var queues = tie
                 .GroupBy(entry => entry.Owner)
@@ -102,12 +98,17 @@ public static class TieOrderRules
         throw new InvalidOperationException($"Creature {creature} is tied with its own side but missing from its owner's order.");
     }
 
-    private static List<List<ActivationSlot>> Ties(CombatTimeline timeline)
+    /// <summary>
+    /// The ties of a timeline sorted on speed and initiative, as runs of slots that tie with the one before them
+    /// (<see cref="ActivationSlot.TiesWith"/>). The one definition of a tie: the builder rolls them and this
+    /// class orders them, so the two cannot disagree on what one is.
+    /// </summary>
+    internal static List<List<ActivationSlot>> Ties(IEnumerable<ActivationSlot> sorted)
     {
         var ties = new List<List<ActivationSlot>>();
-        foreach (var entry in timeline.Slots)
+        foreach (var entry in sorted)
         {
-            if (ties.Count > 0 && ties[^1][0].Speed == entry.Speed && ties[^1][0].Initiative == entry.Initiative)
+            if (ties.Count > 0 && ties[^1][0].TiesWith(entry))
             {
                 ties[^1].Add(entry);
             }

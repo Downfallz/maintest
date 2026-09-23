@@ -63,6 +63,19 @@ public sealed class HumanSeatTests
         await asked;
     }
 
+    /// <summary>A tie order is asked of the player, not of one creature, so any order answers it.</summary>
+    [Fact]
+    public async Task A_tie_order_is_answered_with_the_order_the_seat_is_given()
+    {
+        var seat = new HumanSeat(TestContext.Current.CancellationToken);
+        var asked = Task.Run(() => seat.DecideTieOrder(null!, new TieOrderOptions([[Creature, CreatureId.From(2)]])), TestContext.Current.CancellationToken);
+
+        await WaitingFor(seat, PlayerOptionsKind.TieOrder);
+        seat.Submit(PlayerDecision.OrderTies([CreatureId.From(2), Creature]), Asking(seat)).ShouldBeTrue();
+
+        (await asked).ShouldBe([CreatureId.From(2), Creature]);
+    }
+
     [Fact]
     public async Task A_decision_of_another_kind_than_the_question_is_not_an_answer_to_it()
     {

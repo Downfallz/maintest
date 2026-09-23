@@ -112,4 +112,14 @@ public sealed class TableDecisionBodyTests
         body.ToDecision(out var problem).ShouldBeNull();
         problem.ShouldNotBeEmpty();
     }
+
+    /// <summary>An id of zero is refused as a body that names no decision, not thrown on as a 500.</summary>
+    [Fact]
+    public void A_tie_order_body_naming_a_creature_id_that_cannot_exist_names_no_decision()
+    {
+        var body = new TableDecisionBody { Kind = "TieOrder", Order = [2, 0] };
+
+        body.ToDecision(out var problem).ShouldBeNull();
+        problem.ShouldNotBeEmpty();
+    }
 }

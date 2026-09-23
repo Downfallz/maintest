@@ -80,6 +80,7 @@ public sealed class MatchTests
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(creature, Arena.GuardPack)).Error.ShouldBe(MatchErrors.NotInProgress);
         match.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(MatchErrors.NotInProgress);
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(creature, Speed.Quick)).Error.ShouldBe(MatchErrors.NotInProgress);
+        match.SubmitTieOrder(PlayerSlot.Player1, [creature]).Error.ShouldBe(MatchErrors.NotInProgress);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(creature, Arena.Strike)).Error.ShouldBe(MatchErrors.NotInProgress);
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(creature, Arena.Strike), [])).Error.ShouldBe(MatchErrors.NotInProgress);
         match.ResolveNextAction().Error.ShouldBe(MatchErrors.NotInProgress);
@@ -214,6 +215,7 @@ public sealed class MatchTests
         match.CurrentRound.ShouldNotBeNull().Timeline.Slots.Select(slot => slot.Creature)
             .ShouldBe([CreatureId.From(4), CreatureId.From(1), CreatureId.From(3), CreatureId.From(2)]);
         match.CurrentRound.SubPhase.ShouldBe(RoundSubPhase.IntentSelection, "no side holds two places in one tie, so nobody has an order to give");
+        match.DomainEvents.OfType<TiesOrdered>().ShouldBeEmpty("the timeline the rolls built is the one the round plays");
     }
 
     /// <summary>

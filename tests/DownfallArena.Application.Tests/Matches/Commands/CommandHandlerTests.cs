@@ -64,6 +64,24 @@ public sealed class CommandHandlerTests
     }
 
     [Fact]
+    public async Task A_tie_order_reaches_the_aggregate()
+    {
+        var store = new MatchStore();
+        var match = store.Started();
+        MatchStore.PassEvolution(match);
+        foreach (var creature in match.Creatures)
+        {
+            match.SubmitSpeedChoice(creature.Owner, new SpeedChoice(creature.Id, Speed.Standard)).IsSuccess.ShouldBeTrue();
+        }
+
+        var handler = new SubmitTieOrderHandler(store.Workflow);
+        (await handler.HandleAsync(new SubmitTieOrder(match.Id, PlayerSlot.Player1, [CreatureId.From(2), CreatureId.From(1)]), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+
+        match.CurrentRound.ShouldNotBeNull().TieOrderOf(PlayerSlot.Player1).ShouldBe([CreatureId.From(2), CreatureId.From(1)]);
+        await Should.ThrowAsync<ArgumentNullException>(() => handler.HandleAsync(null!, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task Combat_commands_reach_the_aggregate_and_report_the_step()
     {
         var store = new MatchStore();

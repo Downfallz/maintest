@@ -167,4 +167,22 @@ public sealed class PlayerDecisionCheckTests
         Kind = PlayerOptionsKind.Target,
         Target = new TargetOptions(Mine, TestContent.Strike, legal),
     };
+
+    [Fact]
+    public void A_tie_order_is_accepted_only_when_it_names_every_offered_creature_once()
+    {
+        var pending = new PlayerOptions { Kind = PlayerOptionsKind.TieOrder, TieOrder = new TieOrderOptions([[Mine, CreatureId.From(2)]]) };
+
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([CreatureId.From(2), Mine])).IsSuccess.ShouldBeTrue();
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([Mine])).Error.ShouldBe(DecisionErrors.TieOrderNotOffered);
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([Mine, Mine])).Error.ShouldBe(DecisionErrors.TieOrderNotOffered);
+        PlayerDecisionCheck.Validate(pending, PlayerDecision.OrderTies([Mine, Theirs])).Error.ShouldBe(DecisionErrors.TieOrderNotOffered);
+    }
+
+    [Fact]
+    public void Two_tie_orders_naming_the_same_creatures_in_another_sequence_are_different_decisions()
+    {
+        PlayerDecision.OrderTies([Mine, Theirs]).ShouldNotBe(PlayerDecision.OrderTies([Theirs, Mine]));
+        PlayerDecision.OrderTies([Mine, Theirs]).ShouldBe(PlayerDecision.OrderTies([Mine, Theirs]));
+    }
 }

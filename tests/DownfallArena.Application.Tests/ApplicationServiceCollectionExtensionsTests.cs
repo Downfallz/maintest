@@ -65,6 +65,7 @@ public sealed class ApplicationServiceCollectionExtensionsTests
         provider.GetRequiredService<ICommandHandler<SubmitEvolutionChoice, Result>>().ShouldBeOfType<SubmitEvolutionChoiceHandler>();
         provider.GetRequiredService<ICommandHandler<PassEvolution, Result>>().ShouldBeOfType<PassEvolutionHandler>();
         provider.GetRequiredService<ICommandHandler<SubmitSpeedChoice, Result>>().ShouldBeOfType<SubmitSpeedChoiceHandler>();
+        provider.GetRequiredService<ICommandHandler<SubmitTieOrder, Result>>().ShouldBeOfType<SubmitTieOrderHandler>();
         provider.GetRequiredService<ICommandHandler<SubmitIntent, Result>>().ShouldBeOfType<SubmitIntentHandler>();
         provider.GetRequiredService<ICommandHandler<SubmitAction, Result>>().ShouldBeOfType<SubmitActionHandler>();
         provider.GetRequiredService<ICommandHandler<ResolveNextAction, Result<CombatStep>>>().ShouldBeOfType<ResolveNextActionHandler>();

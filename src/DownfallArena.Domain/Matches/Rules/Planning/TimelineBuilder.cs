@@ -32,14 +32,12 @@ public static class TimelineBuilder
             .OrderBy(slot => slot.Speed)
             .ThenByDescending(slot => slot.Initiative.Value)
             .ThenBy(slot => slot.Owner)
-            .ThenBy(slot => slot.Creature.Value)
-            .GroupBy(slot => (slot.Speed, slot.Initiative.Value))
-            .ToList();
+            .ThenBy(slot => slot.Creature.Value);
 
         var ordered = new List<ActivationSlot>();
-        foreach (var group in tied)
+        foreach (var tie in TieOrderRules.Ties(tied))
         {
-            ordered.AddRange(RollOff([.. group], random));
+            ordered.AddRange(RollOff(tie, random));
         }
 
         return CombatTimeline.Of(ordered);

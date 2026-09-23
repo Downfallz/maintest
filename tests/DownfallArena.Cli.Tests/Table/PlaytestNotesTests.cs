@@ -3,6 +3,7 @@ using System.Text.Json;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
@@ -60,6 +61,34 @@ public sealed class PlaytestNotesTests : IDisposable
         note.GetProperty("slot").GetString().ShouldBe("Player1");
         note.GetProperty("subPhase").GetString().ShouldBe("Evolution");
         note.GetProperty("sessionId").GetString().ShouldBe(table.Run.SessionId);
+    }
+
+    /// <summary>
+    /// A tie order records no step, so it writes no Decision note either: the n-th note of a seat is its n-th
+    /// step, by order and nothing else (playtest-app.md 5.3), and one note too many would put every later
+    /// duration beside the wrong decision (ADR 0063).
+    /// </summary>
+    [Fact]
+    public async Task A_tie_order_writes_no_decision_note_so_the_notes_stay_beside_their_steps()
+    {
+        var table = await Recording();
+
+        await Post(table, """{"kind":"Evolution","pass":true}""");
+        var decided = 1;
+        while (table.Person.Waiting?.Kind != PlayerOptionsKind.TieOrder)
+        {
+            await Waiting(table.Person, "Speed");
+            await Post(table, $$"""{"kind":"Speed","creature":{{table.Person.Waiting!.Creature!.Value.Value}},"speed":"Standard"}""");
+            decided++;
+            await Settle(table.Person);
+        }
+
+        await Post(table, $$"""{"kind":"TieOrder","order":[{{string.Join(",", await TiedOf(table))}}]}""");
+        await Waiting(table.Person, "Intent");
+
+        var notes = Notes(table).Where(note => note.GetProperty("kind").GetString() == "Decision").ToList();
+        notes.Count.ShouldBe(decided);
+        notes.ShouldAllBe(note => note.GetProperty("subPhase").GetString() != "TieOrder");
     }
 
     /// <summary>
@@ -360,6 +389,24 @@ public sealed class PlaytestNotesTests : IDisposable
 
         await Waiting(person, "Evolution");
         return (api, session, person, token, run);
+    }
+
+    /// <summary>Waits until the seat is asked something, whatever it is: the driver asks the other seat in between.</summary>
+    private static async Task Settle(HumanSeat person)
+    {
+        for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+    }
+
+    /// <summary>The seat's tied creatures as its options list them, which is the order that changes nothing.</summary>
+    private static async Task<IEnumerable<int>> TiedOf((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table)
+    {
+        var answer = await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token);
+        using var payload = JsonDocument.Parse(Text(answer));
+        return [.. payload.RootElement.GetProperty("options").GetProperty("tieOrder").GetProperty("ties")
+            .EnumerateArray().SelectMany(tie => tie.EnumerateArray()).Select(creature => creature.GetInt32())];
     }
 
     /// <summary>The seat blocks on another thread, so a test waits for the question rather than assuming it.</summary>

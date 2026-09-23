@@ -56,6 +56,23 @@ public sealed class MatchDriverTests
         match.Creatures.ShouldAllBe(creature => creature.KnownSpells.Count == 1);
     }
 
+    /// <summary>Every creature goes Standard and ties, so each seat is asked its tie order and the match takes it.</summary>
+    [Fact]
+    public async Task A_tie_order_is_asked_of_the_agent_and_submitted()
+    {
+        var store = new MatchStore();
+        var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1), new TestRandom(1));
+        var agent = Scripted(TestContent.Strike);
+        agent.DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>()).Returns(call => call.Arg<TieOrderOptions>().AsRolled.Reverse().ToList());
+
+        await Driver(store).PlayAsync(match.Id, agent, agent, TestContext.Current.CancellationToken);
+
+        agent.Received(2).DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>());
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.TieOrderOf(PlayerSlot.Player1).ShouldNotBeNull().Count.ShouldBe(2);
+        round.TieOrderOf(PlayerSlot.Player2).ShouldNotBeNull().Count.ShouldBe(2);
+    }
+
     [Fact]
     public async Task An_intent_left_without_a_legal_target_is_revealed_empty_and_the_match_still_ends()
     {

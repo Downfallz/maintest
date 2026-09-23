@@ -141,8 +141,11 @@ public sealed class Round : Entity<RoundId>
         ResolveCursor = TurnCursor.Start;
     }
 
-    /// <summary>The tie orders submitted this round, by player (ADR 0063).</summary>
-    public IReadOnlyDictionary<PlayerSlot, IReadOnlyList<CreatureId>> TieOrders => _tieOrders;
+    /// <summary>
+    /// The tie orders submitted this round, by player (ADR 0063). Internal: it holds both seats' hidden orders
+    /// at once, and only the match applies them; a seat reads its own with <see cref="TieOrderOf"/>.
+    /// </summary>
+    internal IReadOnlyDictionary<PlayerSlot, IReadOnlyList<CreatureId>> TieOrders => _tieOrders;
 
     public IReadOnlyList<CreatureId>? TieOrderOf(PlayerSlot slot) => _tieOrders.GetValueOrDefault(slot);
 
@@ -161,17 +164,21 @@ public sealed class Round : Entity<RoundId>
     }
 
     /// <summary>
-    /// Installs the timeline the tie orders produced. Only the order changes: the same slots, cursors at the
-    /// start, since nothing has been revealed yet.
+    /// Installs the timeline the tie orders produced. The same slots, and every place keeps its side, its speed
+    /// and its initiative: a tie order moves a player's creatures between their own places in one tie and
+    /// nothing else (ADR 0063). Cursors stay at the start, since nothing has been revealed yet.
     /// </summary>
     internal void ReorderTimeline(CombatTimeline timeline)
     {
         ArgumentNullException.ThrowIfNull(timeline);
         RequireSubPhase(RoundSubPhase.TieOrder, "reorder the timeline");
 
-        if (timeline.Count != Timeline.Count || timeline.Slots.Any(slot => !Timeline.Slots.Contains(slot)))
+        var samePlaces = timeline.Count == Timeline.Count
+            && timeline.Slots.All(Timeline.Slots.Contains)
+            && timeline.Slots.Zip(Timeline.Slots).All(pair => pair.First.Owner == pair.Second.Owner && pair.First.TiesWith(pair.Second));
+        if (!samePlaces)
         {
-            throw new InvalidOperationException($"Round {Number}: a tie order may move slots, never add or remove one.");
+            throw new InvalidOperationException($"Round {Number}: a tie order moves a player's creatures between their own places in a tie, and nothing else.");
         }
 
         Timeline = timeline;

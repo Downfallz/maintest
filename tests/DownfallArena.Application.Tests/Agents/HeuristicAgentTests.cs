@@ -21,6 +21,14 @@ public sealed class HeuristicAgentTests
     private static readonly CreatureId Four = CreatureId.From(4);
 
     [Fact]
+    public void A_tie_order_keeps_the_order_the_roll_off_left()
+    {
+        var options = new TieOrderOptions([[Two, One]]);
+
+        Agent.DecideTieOrder(Board(enemyHealth: 20), options).ShouldBe([Two, One]);
+    }
+
+    [Fact]
     public void The_intent_is_the_spell_with_the_best_expected_outcome()
     {
         var board = Board(enemyHealth: 20);

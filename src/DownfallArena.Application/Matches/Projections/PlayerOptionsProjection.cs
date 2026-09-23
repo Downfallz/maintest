@@ -75,8 +75,8 @@ public static class PlayerOptionsProjection
     }
 
     private static PlayerOptions TieOrder(Round round, PlayerSlot slot) =>
-        TieOrderRules.Waiting(round).Contains(slot)
-            ? new PlayerOptions { Kind = PlayerOptionsKind.TieOrder, SubPhase = round.SubPhase, TieOrder = new TieOrderOptions(TieOrderRules.GroupsOf(round.Timeline, slot)) }
+        TieOrderRules.Evaluate(round).Waiting.Contains(slot)
+            ? new PlayerOptions { Kind = PlayerOptionsKind.TieOrder, SubPhase = round.SubPhase, TieOrder = new TieOrderOptions(TieOrderRules.TiesOf(round.Timeline, slot)) }
             : Waiting(round);
 
     private static PlayerOptions Intent(Round round, PlayerSlot slot, IReadOnlyList<CreatureSnapshot> snapshots, IGameResources resources)

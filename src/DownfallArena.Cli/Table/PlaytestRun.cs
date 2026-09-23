@@ -270,6 +270,15 @@ internal sealed class PlaytestRun
         ArgumentNullException.ThrowIfNull(accepted);
 
         _served.Answered(slot, accepted.Answered);
+
+        // A tie order is a decision with no step beside it: the recording agent records none, since no encoding
+        // of one exists (ADR 0063). A note for it would put every later Decision note beside the wrong step, and
+        // the alignment is by order and nothing else (playtest-app.md 5.3).
+        if (accepted.Answered?.Kind == PlayerOptionsKind.TieOrder)
+        {
+            return Task.CompletedTask;
+        }
+
         return NoteAsync(
             PlaytestNote.Decision(Where(matchId, slot, round, subPhase), accepted.ServedAt, accepted.AcceptedAt, accepted.Answered?.Asked),
             cancellationToken);

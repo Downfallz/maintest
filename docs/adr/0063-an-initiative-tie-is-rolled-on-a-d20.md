@@ -32,7 +32,8 @@ A tie is two questions, and each gets its own answer.
   both players order at the same time, having seen the rolls, and before either declares an Intent. The other
   side's places never move. A round where no side holds two places in a tie passes through it without asking
   anyone. The order is hidden from the other player until both are in, like a Speed choice, and the timeline
-  it produces is public (`TiesOrdered`).
+  it produces is public (`TiesOrdered`). This amends the sub-phases of
+  [ADR 0010](0010-round-phases-and-sub-phases.md), which were ten and are eleven.
 
 ## Consequences
 

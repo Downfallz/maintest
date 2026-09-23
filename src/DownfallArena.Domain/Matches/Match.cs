@@ -386,7 +386,7 @@ public sealed class Match : AggregateRoot<MatchId>
             RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
-            RoundSubPhase.TieOrder => TieOrderRules.CanAdvance(round) && Automatic(() => ApplyTieOrders(round)),
+            RoundSubPhase.TieOrder => TieOrderRules.Evaluate(round).CanAdvance && Automatic(() => ApplyTieOrders(round)),
             RoundSubPhase.IntentSelection => AdvanceIf(IntentRules.Evaluate(round).CanAdvance),
             RoundSubPhase.RevealAndTarget => AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
             RoundSubPhase.ActionResolution => AdvanceIf(round.IsCombatResolved),

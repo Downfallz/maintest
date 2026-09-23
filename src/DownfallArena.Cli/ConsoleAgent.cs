@@ -39,7 +39,7 @@ internal sealed class ConsoleAgent(TextReader input, TextWriter output) : IPlaye
 
         ShowBoard(board);
         var order = new List<CreatureId>();
-        foreach (var group in options.Groups)
+        foreach (var group in options.Ties)
         {
             List<CreatureId> left = [.. group];
             while (left.Count > 1)

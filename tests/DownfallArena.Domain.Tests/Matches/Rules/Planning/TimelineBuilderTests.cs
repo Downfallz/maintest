@@ -129,6 +129,28 @@ public sealed class TimelineBuilderTests
             "equal initiative at different speeds is not a tie, and neither is a buffed creature above one");
     }
 
+    /// <summary>
+    /// Two creatures of one side that roll the same number are not rolled again: which of them takes which of
+    /// their side's places is their owner's tie order, not the dice's (ADR 0063).
+    /// </summary>
+    [Fact]
+    public void Creatures_of_one_side_that_roll_the_same_number_are_not_rolled_again()
+    {
+        var creatures = Arena.Snapshots(Arena.FourCreatures());
+        var rolls = new ScriptedRolls(10, 10, 4);
+
+        var timeline = TimelineBuilder.Build(creatures,
+        [
+            new SpeedChoice(Arena.Knight, Speed.Quick),
+            new SpeedChoice(Arena.Archer, Speed.Quick),
+            new SpeedChoice(Arena.Ghoul, Speed.Quick),
+            new SpeedChoice(Arena.Wraith, Speed.Standard),
+        ], rolls);
+
+        timeline.Slots.Select(slot => slot.Creature).ShouldBe([Arena.Knight, Arena.Archer, Arena.Ghoul, Arena.Wraith]);
+        rolls.Remaining.ShouldBe(0);
+    }
+
     /// <summary>A tie held by one side alone is its owner's to order (ADR 0063), so no die is rolled for it.</summary>
     [Fact]
     public void A_tie_held_by_one_side_alone_rolls_nothing()

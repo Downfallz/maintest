@@ -6,8 +6,8 @@ namespace DownfallArena.Application.Matches.Projections;
 /// The ties in which the player holds two places or more, each as their creatures in the order the roll-off
 /// left them (ADR 0063). A decision orders every one of them; a creature moves only within its own tie.
 /// </summary>
-public sealed record TieOrderOptions(IReadOnlyList<IReadOnlyList<CreatureId>> Groups)
+public sealed record TieOrderOptions(IReadOnlyList<IReadOnlyList<CreatureId>> Ties)
 {
     /// <summary>The order as it stands, every tie in timeline order: what a player who changes nothing submits.</summary>
-    public IReadOnlyList<CreatureId> AsRolled => [.. Groups.SelectMany(group => group)];
+    public IReadOnlyList<CreatureId> AsRolled => [.. Ties.SelectMany(tie => tie)];
 }

@@ -53,7 +53,7 @@ internal sealed record TableDecisionBody
                 return PlayerDecision.Buy(CreatureId.From(creature), TierId.Parse(tier));
             case "Speed" when Creature is { } creature && Enum.TryParse<Speed>(Speed, out var speed) && Enum.IsDefined(speed):
                 return PlayerDecision.ChooseSpeed(CreatureId.From(creature), speed);
-            case "TieOrder" when Order is { } order:
+            case "TieOrder" when Order is { } order && order.All(creature => creature > 0):
                 return PlayerDecision.OrderTies([.. order.Select(CreatureId.From)]);
             case "Intent" when Creature is { } creature && Spell is { } spell:
                 return PlayerDecision.DeclareIntent(CreatureId.From(creature), SpellId.Parse(spell));

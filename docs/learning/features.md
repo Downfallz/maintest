@@ -166,7 +166,7 @@ Global block, indexes 0 to 4:
 | --- | --- | --- |
 | 0 | `round_fraction` | round number over round cap; 0 before the first round |
 | 1 | `phase` | `RoundPhase` ordinal over 3: StartOfRound 0, Planning 1/3, Combat 2/3, EndOfRound 1 |
-| 2 | `sub_phase` | `RoundSubPhase` ordinal over 9: EnergyGain 0, ..., Finalization 1 |
+| 2 | `sub_phase` | the ten steps of ADR 0010 in order, over 9: EnergyGain 0, ..., Finalization 1. `TieOrder` (ADR 0063) reads as `TurnOrderResolution`, 4/9: the values are a table, not the enum's ordinal, so the step inserted later moved none of them |
 | 3 | `reveal_progress` | reveal cursor over timeline length; 0 while the timeline is empty |
 | 4 | `revealed_enemy_actions` | actions revealed this round whose actor is an enemy, over `T` |
 

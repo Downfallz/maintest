@@ -56,11 +56,11 @@ public sealed class SeatVisibilityTests
     }
 
     /// <summary>
-    /// A tie order is hidden while the other player may still be ordering theirs (ADR 0063); the timeline it
-    /// produces is public, like the one the roll-off built.
+    /// A tie order is hidden while the other player may still be ordering theirs (ADR 0063). The timeline it
+    /// produces is public, and walked with the other public events below.
     /// </summary>
     [Fact]
-    public void A_tie_order_is_seen_by_the_seat_that_gave_it_and_the_timeline_it_makes_by_both()
+    public void A_tie_order_is_seen_by_the_seat_that_gave_it_and_by_nobody_else()
     {
         var order = new TieOrderSubmitted(Match, Round, PlayerSlot.Player1, [Creature]);
 

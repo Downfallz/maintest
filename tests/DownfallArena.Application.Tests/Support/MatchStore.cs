@@ -108,9 +108,9 @@ internal sealed class MatchStore
         foreach (var slot in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
         {
             var round = match.CurrentRound.ShouldNotBeNull();
-            if (round.SubPhase == RoundSubPhase.TieOrder && TieOrderRules.Owes(round.Timeline, slot))
+            if (round.SubPhase == RoundSubPhase.TieOrder && TieOrderRules.HasTieOrderToGive(round.Timeline, slot))
             {
-                match.SubmitTieOrder(slot, [.. TieOrderRules.GroupsOf(round.Timeline, slot).SelectMany(group => group)]).IsSuccess.ShouldBeTrue();
+                match.SubmitTieOrder(slot, [.. TieOrderRules.TiesOf(round.Timeline, slot).SelectMany(group => group)]).IsSuccess.ShouldBeTrue();
             }
         }
     }

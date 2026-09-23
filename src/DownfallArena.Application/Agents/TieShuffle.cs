@@ -13,7 +13,7 @@ internal static class TieShuffle
         ArgumentNullException.ThrowIfNull(random);
 
         var order = new List<CreatureId>();
-        foreach (var group in options.Groups)
+        foreach (var group in options.Ties)
         {
             var shuffled = group.ToList();
             for (var index = shuffled.Count - 1; index > 0; index--)

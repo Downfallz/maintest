@@ -137,4 +137,28 @@ public sealed class PlayerOptionsProjectionTests
         Should.Throw<ArgumentNullException>(() => PlayerOptionsProjection.Build(null!, PlayerSlot.Player1, TestContent.Resources));
         Should.Throw<ArgumentNullException>(() => PlayerOptionsProjection.Build(match, PlayerSlot.Player1, null!));
     }
+
+    /// <summary>
+    /// ADR 0063: every creature ties, the fixture's rolls give Player 1 the first two places, and each seat is
+    /// offered its own tie to order; a seat that has given its order waits for the other.
+    /// </summary>
+    [Fact]
+    public void A_tie_order_is_offered_to_each_seat_that_holds_two_places_until_it_gives_one()
+    {
+        var match = new MatchStore().Started();
+        MatchStore.PassEvolution(match);
+        foreach (var creature in match.Creatures)
+        {
+            match.SubmitSpeedChoice(creature.Owner, new SpeedChoice(creature.Id, Speed.Standard)).IsSuccess.ShouldBeTrue();
+        }
+
+        var player1 = Options(match, PlayerSlot.Player1);
+        player1.Kind.ShouldBe(PlayerOptionsKind.TieOrder);
+        player1.TieOrder.ShouldNotBeNull().Ties.ShouldHaveSingleItem().ShouldBe([CreatureId.From(1), CreatureId.From(2)]);
+
+        match.SubmitTieOrder(PlayerSlot.Player1, [CreatureId.From(2), CreatureId.From(1)]).IsSuccess.ShouldBeTrue();
+
+        Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
+        Options(match, PlayerSlot.Player2).TieOrder.ShouldNotBeNull().AsRolled.ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
+    }
 }
