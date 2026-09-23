@@ -118,7 +118,12 @@ the match's own rules on them, so the agent can put a move on the board and keep
 - **The actor's critical roll** is weighted the way the scorer weights it: the round is played once on a
   forced critical and once on a miss, and the two are mixed by the actor's chance for that spell. Every
   other creature's roll is a miss, which keeps the cost at two rounds per candidate. On a miss alone, a spell
-  that crits three casts in four was priced at half its worth and never cast.
+  that crits three casts in four was priced at half its worth and never cast. The chance is read at the
+  speed the actor chose, which the timeline carries, so a Quick actor is priced at none.
+- **Every reading uses the speed each creature chose**, the enemy's included: the timeline carries them all.
+  The one-step score that breaks a tie, the targets each creature is taken to pick at its slot, and the spell
+  an enemy is guessed to declare are all read at that speed, so an enemy that chose Quick is guessed to cast
+  what it can roll rather than a critical it cannot.
 - **Speed and evolution** are the heuristic agent's: neither is a combat move, and the round they plan has no
   timeline yet to play out.
 - **Tie order** is its own, because it comes once the timeline is built; the agent it is built on is not
