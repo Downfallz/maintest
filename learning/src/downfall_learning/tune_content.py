@@ -462,7 +462,7 @@ def _tier_metrics(
     return measured
 
 
-# The z of a two-sided 95 % interval: the Wilson bound below reads the share a package's sample supports.
+# The z of a two-sided 95 % interval, for the package readings bounded by their own samples (ADR 0064, 0065).
 _USAGE_Z = 1.96
 
 
@@ -491,11 +491,19 @@ def _usage_share(members: Sequence[Mapping[str, object]], teaches: int) -> float
 
 def _wilson_lower(successes: int, trials: int) -> float:
     """The lower end of the Wilson score interval for ``successes`` out of ``trials``, at ``_USAGE_Z``."""
+    return _wilson(successes, trials)[0]
+
+
+def _wilson(successes: float, trials: int) -> tuple[float, float]:
+    """The Wilson score interval for ``successes`` out of ``trials``, at ``_USAGE_Z``.
+
+    ``successes`` may carry a half: a win share counts a draw as one half of a win.
+    """
     share = successes / trials
     z2 = _USAGE_Z * _USAGE_Z
     centre = share + z2 / (2 * trials)
     margin = _USAGE_Z * math.sqrt(share * (1 - share) / trials + z2 / (4 * trials * trials))
-    return (centre - margin) / (1 + z2 / trials)
+    return (centre - margin) / (1 + z2 / trials), (centre + margin) / (1 + z2 / trials)
 
 
 def _damage_spread(
@@ -538,9 +546,30 @@ def _damage_spread(
 
 
 def _win_spread(members: Sequence[Mapping[str, object]]) -> float | None:
-    """The gap between the best and worst win share of a tier, over the spells enough sides declared."""
-    scores = [float(member["score"]) for member in members if int(member.get("sides", 0)) >= ENOUGH_SIDES]
-    return max(scores) - min(scores) if len(scores) > 1 else None
+    """The gap between two win shares of a package, as far as the sides that declared them show (ADR 0065).
+
+    Over the spells enough sides declared, the largest lower bound of the gap between two of their win
+    shares: the 95 % Newcombe interval of the difference, built from each share's Wilson interval, and zero
+    where that interval crosses zero. Read raw, a catalogue whose every pair truly wins alike read a worst gap
+    of 0.254 at the median, from samples of a few dozen sides, while ``tier:blightweaver:v1``'s 0.66 against
+    0.15 on 22 and 27 sides is a gap no sample of that size draws by chance, and still reads 0.238 bounded.
+    """
+    read = [
+        (float(member["score"]), int(member.get("sides", 0)))
+        for member in members
+        if int(member.get("sides", 0)) >= ENOUGH_SIDES
+    ]
+    if len(read) < 2:
+        return None
+    return max(_gap_lower(first, second) for first, second in combinations(read, 2))
+
+
+def _gap_lower(first: tuple[float, int], second: tuple[float, int]) -> float:
+    """The lower end of the Newcombe interval of ``|p1 - p2|`` from two (share, trials) readings, or 0."""
+    (high, high_n), (low, low_n) = sorted((first, second), reverse=True)
+    high_lower, _ = _wilson(high * high_n, high_n)
+    _, low_upper = _wilson(low * low_n, low_n)
+    return max(0.0, (high - low) - math.sqrt((high - high_lower) ** 2 + (low_upper - low) ** 2))
 
 
 @dataclass(frozen=True)

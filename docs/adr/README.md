@@ -70,3 +70,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0062](0062-read-the-seat-on-the-exploring-run.md) | Read the seat advantage on the exploring run, not on the greedy mirror | Accepted |
 | [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie between the sides on a d20, and let each side order its own | Accepted |
 | [0064](0064-read-a-package-monopoly-on-what-its-sample-proves.md) | Read a package's monopoly on what its sample proves, and not against an even split | Accepted |
+| [0065](0065-read-a-package-win-gap-on-what-its-sides-prove.md) | Read a package's win gap on what its sides prove | Accepted |

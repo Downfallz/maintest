@@ -966,6 +966,33 @@ def test_a_sweep_that_found_fewer_targets_than_it_may_reach_is_not_read_as_weake
     assert metrics["tierDamageSpread"] == pytest.approx(1.0)
 
 
+# ADR 0065: the win spread is the lower bound of the gap, so two spells that win alike on a few dozen sides do
+# not read as a gap, and a gap no sample of that size draws by chance still does. The numbers are
+# tier:blightweaver:v1's on the exploring run: 0.659 on 22 sides against 0.148 on 27.
+def test_a_win_gap_the_sides_prove_is_read_at_its_lower_bound() -> None:
+    content, raw = one_tier(**{"spell:big": 22, "spell:small": 27})
+    raw["spellOutcomes"] = [
+        outcome("spell:big:v1", 22, 22, 22) | {"score": 0.659},
+        outcome("spell:small:v1", 27, 27, 27) | {"score": 0.148},
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierWinSpread"] == pytest.approx(0.238, abs=2e-3)
+
+
+def test_a_win_gap_the_sides_cannot_tell_from_chance_reads_zero() -> None:
+    content, raw = one_tier(**{"spell:big": 10, "spell:small": 26})
+    raw["spellOutcomes"] = [
+        outcome("spell:big:v1", 10, 10, 10) | {"score": 0.5},
+        outcome("spell:small:v1", 26, 26, 26) | {"score": 0.385},
+    ]
+
+    metrics = metrics_of(Evaluation.from_json(raw), "mirror", content)
+
+    assert metrics["tierWinSpread"] == 0.0
+
+
 def test_a_spell_too_few_sides_declared_is_left_out_of_the_win_spread() -> None:
     """Its win share on a handful of sides is noise, and the engine leaves it out of its table too."""
     raw = evaluation_json(0.5, 0.5)
