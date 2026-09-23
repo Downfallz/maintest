@@ -31,6 +31,70 @@ first.
 - **What it invalidates.** The content hash moved, so every score, weight set and tuning run before this is on
   other content. The tuning pass that was running on `4d7a841c` was stopped and restarts on this one.
 
+## 2026-09-23. Why the lookahead lost to greedy under ADR 0066: a Wait lure, fixed, and a deficit that is not a bug
+
+- **The question.** Under stacked picks the lookahead beat greedy 0.755; once a creature buys one package an
+  opportunity (ADR 0066) it scores **0.383** on the benchmark seeds, while going from 0.315 to 0.993 against
+  stun-first. Content `4d7a841c`, `main` at `1ba8c33`.
+- **Where the points go.** Of the 200 mirrored pairs against greedy, 95 are won by the same seat both times
+  (a pair shares its seed and so its d20 rolls: the dice decide), 76 by greedy both times and 29 by the
+  lookahead both times. The signal is 76 to 29. Swapping one decision at a time back to greedy's reading:
+
+  | lookahead playing | against greedy |
+  | --- | --- |
+  | its own intents and targets | 0.383 |
+  | its own intents, greedy's targets | 0.375 |
+  | greedy's intents, its own targets | 0.270 |
+  | greedy's intents and targets | 0.500 (the control: that is greedy) |
+
+  Both of its readings are worse than greedy's under the new rule, and neither alone explains the gap.
+- **A lure, found and fixed.** The lookahead cast Wait 248 times; greedy casts it once. Every one of those came
+  from a decision where the rollout guessed an enemy would drain the actor below the cost of every spell it
+  could afford (Parasite Jab, which greedy casts 1167 times), so each paid spell fizzled at the actor's slot
+  with `NotEnoughEnergy` and Wait, being free, won by the 0.6 its two energy is worth. The lookahead already
+  refuses to let a guessed death or stun decide a spell -- the one-step reading does -- and a guessed drain is
+  the same case, so it is now handled the same way. Wait falls from 248 casts to 1. The score does not move:
+  0.3825 before and after, the paired difference 0.0000 anywhere from -0.0155 to +0.0155, and exactly zero
+  against stun-first (0.9925), random (1.0000) and search-4 (0.5900). When the drain is real, a paid spell
+  fizzles anyway, so the lure cost a turn only in the worlds where the guess was wrong.
+- **What was tried and moved nothing.** The `pressure` weight at 0.5, 1 and 2 (0.383 to 0.388; 4 reads 0.347).
+  Ranking targets on the round's outcome and the one-step score, without the round's score (0.383). Passing
+  the actor's real Speed to the scorer's one-step readings, which read every creature at Standard (0.383).
+  In the target decisions where the two agents disagree and the actor can act, greedy hits the weaker target
+  200 times in 276: greedy focuses by the accident of its tie order and the lookahead spreads, and not one of
+  these levers turned that into points.
+- **What it licenses.** The lookahead's rollout reads a round through weights searched for the one-step
+  reading, and under ADR 0066 those weights price a longer game it was not measured on. A search of kind
+  `lookahead`, its weights fitted to its own reading, is the next thing to run; the Speed readings are a
+  correctness follow-up with no measured effect here.
+
+## 2026-09-23. Search 10, the first package rung under ADR 0066: it beats greedy and stun-first on unseen seeds, and learns the panel rather than the game
+
+- **The run.** `Search the agent weights` run 12 (#181), the committed experiment: the same content
+  (`4d7a841c`), panel (greedy, stun-first, random), check (search-4), start (the built-in weights), budget and
+  seed as search 9, on `main` with ADR 0066, so the two runs differ by the rule alone. The best candidate
+  scored **0.8533** from 0.7717 on the seeds it was searched on, the winner of 483 draws.
+- **What it found**, against the built-in weights: `initiative` 2.1 to 1.486, `energy` 0.3 to -0.165,
+  `damage` 1.0 to 0.727, `stun` 3.0 to 3.189, `pressure` 0 to 0.139, `heal` 0.8 to 0.671, `bleed` 0.8 to
+  0.852, `defense` 0.65 to 0.691, `kill` 5.0 to 4.966. Tempo and damage down, stuns up, a little pressure: a
+  different set from search 9's, which raised `kill` to 7.9 under stacked picks.
+- **The hold-out**, replayed here on the 200 held-out seeds (995317 onward, mirrored) with the weights as the
+  log prints them, on `main` (`1ba8c33`):
+
+  | opponent | found set | greedy (the start) | pairs, found set |
+  | --- | --- | --- | --- |
+  | greedy | **0.5500** | 0.5000 | 174 same seat, 23 won twice, 3 lost twice |
+  | stun-first | **1.0000** | 0.8025 | 200 won twice |
+  | random | 1.0000 | 1.0000 | 200 won twice |
+  | search-4 (the check) | **0.6325** | **0.8075** | 147 same seat, 53 won twice |
+
+- **What it says.** Against greedy the dice still decide most pairs, 174 of 200, but the rest go 23 to 3: under
+  ADR 0066 the greedy column carries a signal, where under search 9 it was a constant. It beats the old
+  champion outright. And against search-4, the opponent it never played, it scores 0.6325 where the built-in
+  weights score 0.8075: it gave up 17.5 points against an agent off its line to win its panel. By the
+  workflow's own reading that is a set that learned `greedy,stun-first,random`, not the game, so it is not a
+  rung and is not added to `learning/weights/`. The next rung puts search-4 in the panel.
+
 ## 2026-09-23. The lookahead orders its own ties, and on the benchmark seeds it changes nothing: every seating ends the round alike
 
 - **What changed.** The lookahead and minimax agents used to keep a tie in the order the roll-off left it
@@ -69,6 +133,41 @@ first.
   keeps the roll, loses nothing by it. It would start to matter with content that ties late, or a roster whose
   first rounds can kill.
 
+## 2026-09-23. Search 9, the first package rung under the d20: it beats stun-first on unseen seeds, and against greedy the dice decide every pair
+
+- **The run.** `Search the agent weights` run 9 (#181), the committed experiment: 10 rounds of 16 from the
+  built-in weights, scored as the mean against greedy, stun-first and random on the benchmark seeds, under
+  the d20 roll-off (ADR 0063) and stacked picks (before ADR 0066). The best candidate scored **0.7633** from
+  0.5125 on the seeds it was searched on, which is the winner of 483 draws and not a fair number.
+- **Not a controlled rerun of search 8.** Its `why` says the two runs differ by the rule alone, and they do
+  not: between them Throwing Star became a 2-energy attack on two targets (#172, ADR 0060), so the content
+  moved as well as the tie rule. Read this as a new search on content `4d7a841c`, not as the effect of
+  ADR 0063; search 8's own numbers were never read into this journal either, so there is no pair to compare.
+- **What it found**, against the built-in weights: `kill` 5.0 to 7.864, `energy` 0.3 to -0.432, `bleed` 0.8
+  to 1.471, `stun` 3.0 to 2.424, `initiative` 2.1 to 1.635, `damage` 1.0 to 0.648, `heal` 0.8 to 0.998,
+  `pressure` 0 to 0.174, `defense` 0.65 to 0.705. Kills up, energy priced negative, stuns and tempo down.
+- **The hold-out**, replayed here on the 200 seeds the workflow holds out (995317 onward, mirrored), with the
+  weights as the log prints them to three decimals, on `main` (`292e4f5`):
+
+  | opponent | found set | greedy |
+  | --- | --- | --- |
+  | stun-first | **0.7675** | 0.0125 |
+  | random | 1.0000 | 0.9962 |
+  | search-4 (the check) | 1.0000 | 1.0000 |
+  | greedy | 0.5000 | 0.5000 |
+
+  It beats the old champion on seeds it never saw, where the built-in weights lose to it 79 matches in 80:
+  that is a rung. Against random and search-4 both sit at the ceiling and say nothing.
+- **Against greedy there is no signal, and the reason is the d20.** In all 200 pairs the same seat wins
+  both mirrored matches. The two matches of a pair share a seed, so they share every roll, the roll-offs
+  included, and between two agents this close the dice decide the match and not the agent. Mirroring
+  cancels a seat; it cannot cancel dice both orders see alike. The greedy column of the search's own mean
+  is therefore a constant 0.5 for every candidate that plays like greedy, and the search was ranked by the
+  other two columns.
+- **What it licenses, and what not.** This was measured under stacked picks. ADR 0066 (one package a
+  creature an opportunity) changes the game the weights are priced for, so the set is not added to
+  `learning/weights/` from here: the rung is asked again once that rule is on `main`, and adopting a set
+  stays a dispatch with `apply`.
 ## 2026-09-23. A creature buys one package an opportunity, the mirror stops being one match, and the objective goes from 11.11 to 5.30
 
 - **What changed.** The two picks of an opportunity resolved in sequence (ADR 0056), so both could go to one
