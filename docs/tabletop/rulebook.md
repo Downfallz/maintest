@@ -386,8 +386,8 @@ Quick always beats Standard. A Quick Creature with Current initiative 0 still ac
 with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
 
 > **Example.** Round 4, which offers no Evolution opportunity. In Rounds 1 and 3 both Players spent their four
-> picks alike: Creature 1 owns Brute and Ironbound, Creature 4 owns Brute and Marauder, and Creatures 2, 3, 5
-> and 6 each own Occultist. Brute, Ironbound and Marauder are +1 each and Occultist is +2, so every Base
+> picks alike: Creature 1 owns Brute and Berserker, Creature 4 owns Brute and Marauder, and Creatures 2, 3, 5
+> and 6 each own Occultist. Brute, Berserker and Marauder are +1 each and Occultist is +2, so every Base
 > initiative reads 7. **Two sides that buy alike tie everywhere.**
 > In Round 3, Creature 4 hit Creature 2 with **Protective Slam**: `Initiative -2, 2 rounds`. Creature 2's
 > Current initiative is 7 - 2 = 5. Every other Creature's is 7.

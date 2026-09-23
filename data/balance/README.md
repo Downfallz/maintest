@@ -94,12 +94,13 @@ Every enabled package needs an entry with an intent, as every enabled spell does
 creates a package and prunes it when it deletes one. The 21 bonuses are the sums `scripts/build-tiers.py`
 seeded from the per-spell numbers it replaced (ADR 0057), which is what each entry's intent says.
 
-**Do not run a tuning pass with these knobs yet.** They are live — moving `tier:prowler` from 3 to 5 moves 54
-of the 71 objective metrics — and that is the problem: the same move takes the objective from 285.77 to
-101.76, all of it from `mirror.player1WinShare` (243.00 to 41.07) while every variety term gets worse. That
-term reads the seat advantage between two identical greedy agents, a mirror that is degenerate under packages:
-equal initiative is broken by the seat, so Player 1 takes 400 of 400. Initiative is exactly the lever that
-reaches it, so a search would buy seat asymmetry rather than balance (ADR 0061). The mirror reading is next.
+These knobs are live: moving `tier:prowler` from 3 to 5 moves 54 of the 71 objective metrics. When they
+shipped, a search could not be trusted with them. The objective scored the seat advantage of a degenerate
+greedy mirror, and initiative is the lever that reaches the seat, so a search would have bought seat asymmetry
+rather than balance (ADR 0061). ADR 0062 moved that reading to the exploring run, ADR 0063 took the seat out
+of the rules, ADRs 0064 and 0065 bounded the two package readings by their samples, and ADR 0066 stopped the
+picks from stacking. The content scored 8.35 on the 30-health rules of ADR 0068, where it scored 285.77, and
+the first pass with these knobs took it to 2.39 (journal, 2026-09-23).
 
 ## The objective
 

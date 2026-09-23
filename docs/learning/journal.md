@@ -4,6 +4,48 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-23. The first tuning pass with the package knobs: 8.35 to 2.39 on the benchmark seeds, 10.76 to 7.71 on seeds it never saw
+
+- **What ran.** `tune-content --seed 11 --iterations 6 --neighbours 6 --no-pairs` on content `4ab506fa` (30
+  health, ADR 0068), the benchmark seeds, the knobs of `data/balance/knobs.json` including the 21 package
+  initiative bonuses: 260 versions, 2080 evaluations, 3 h 37. The objective went from **8.35 to 2.39**.
+- **The seven moves**, applied here; the content hash goes from `4ab506fa` to `a030afc3`:
+
+  | knob | before | after |
+  | --- | --- | --- |
+  | `spell:basic_attack` damage | 2 | 1 |
+  | `spell:pummel` energy cost | 1 | 2 |
+  | `spell:enraged_charge` energy cost | 3 | 4 |
+  | `spell:chain_slash` critical chance | 0.50 | 0.45 |
+  | `spell:mortal_wound` first damage | 4 | 5 |
+  | `tier:ironbound` initiative bonus | 1 | 0 |
+  | `tier:plague_doctor` initiative bonus | 1 | 0 |
+
+- **On seeds it never saw.** `score-content` on 200 seeds from 995317, the content as it stood and the proposal,
+  the same objective: **10.76 to 7.71**. The terms outside their range:
+
+  | term | before, benchmark | after, benchmark | before, unseen | after, unseen |
+  | --- | --- | --- | --- | --- |
+  | `tierWinSpread` | 0.212 (0.38) | 0.067 (0.00) | 0.383 (5.43) | 0.246 (0.92) |
+  | `tierUsageShare` | 0.885 (5.81) | 0.841 (1.36) | 0.870 (3.96) | 0.885 (5.83) |
+  | `tierDamageSpread` | 2.568 (1.29) | 2.362 (0.52) | 2.400 (0.64) | 2.432 (0.75) |
+  | `spellUsageShare` | 0.343 (0.87) | 0.321 (0.50) | 0.336 (0.74) | 0.296 (0.22) |
+
+  Readings, with each penalty in brackets.
+- **What holds and what does not.** Two gains hold on the unseen seeds: the packages' win rates draw together
+  (`tierWinSpread` 0.383 to 0.246) and no spell takes as large a share of the casts (`spellUsageShare` 0.336
+  to 0.296). The exploring run now casts every spell, where two were never cast. The `tierUsageShare` gain does
+  not hold: 0.885 to 0.841 on the benchmark seeds, 0.870 to 0.885 on the unseen ones. That is selection on
+  the seeds the search ran on, and the term is where the next pass should look. The same content reads 8.35
+  on one set of 200 seeds and 10.76 on another, almost all of it `tierWinSpread` (0.212 against 0.383): the
+  package terms are still wide on 400 matches, which is why the check on unseen seeds is the one to trust.
+- **Match length.** The exploring run lasts 11.7 rounds on the unseen seeds, from 10.8. The greedy mirror
+  stays at the bottom edge of its band, 10.0 on the benchmark seeds and 9.9 on the unseen ones, since greedy
+  seldom casts what moved.
+- **Verdict.** Applied. It is better on seeds it never saw, by less than on the seeds it was searched on. The
+  tabletop rulebook's initiative example no longer uses Ironbound, whose bonus is now 0, and
+  `data/balance/README.md` drops the warning against tuning with the package knobs.
+
 ## 2026-09-23. A creature has 30 health and a match is held to 10-15 rounds, and the objective reads 8.35 on content `4ab506fa`
 
 - **What changed.** The game is designed for matches of ten to fifteen rounds, and under ADR 0066 the greedy

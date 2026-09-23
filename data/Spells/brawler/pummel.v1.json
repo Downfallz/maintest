@@ -3,7 +3,7 @@
   "name": "Pummel",
   "spellType": "Offensive",
   "creatureClass": "Brawler",
-  "energyCost": 1,
+  "energyCost": 2,
   "criticalChance": 0.767,
   "targeting": {
     "origin": "Enemy",
