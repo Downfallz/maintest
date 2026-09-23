@@ -63,7 +63,7 @@ public sealed class MatchDriverTests
         var store = new MatchStore();
         var match = store.Started(MatchStore.TwoOnTwo(roundCap: 1), new TestRandom(1));
         var agent = Scripted(TestContent.Strike);
-        agent.DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>()).Returns(call => call.Arg<TieOrderOptions>().AsRolled.Reverse().ToList());
+        agent.DecideTieOrder(Arg.Any<PlayerBoardState>(), Arg.Any<TieOrderOptions>()).Returns(call => [.. call.Arg<TieOrderOptions>().AsRolled.Reverse()]);
 
         await Driver(store).PlayAsync(match.Id, agent, agent, TestContext.Current.CancellationToken);
 

@@ -964,7 +964,8 @@ function tieOrderButtons(state, current) {
     const settled = orderOf([groups[index]], tapped);
     const status = document.createElement('p');
     status.className = 'muted';
-    status.textContent = `Order: ${settled.map(creature => `creature ${creature}`).join(' → ')}`;
+    const names = settled.map(creature => `creature ${creature}`).join(' → ');
+    status.textContent = `Order: ${names}`;
     row.append(status);
     if (left.length > 1) {
       for (const creature of left) {
