@@ -80,7 +80,7 @@ The five pieces this book names constantly, and where they are specified:
 | The `Targeted by` row | One box per caster number on every Creature board; a target marker sits in it from the reveal until the Resolution | [components.md 3.7](components.md#37-the-player-area-and-where-a-face-down-intent-sits) |
 
 Three components enforce a rule so you never have to remember it. A Stun token sits in the Speed slot, so a
-stunned Creature physically cannot be given a Speed token. A box in the `Targeted by` row holds one marker,
+stunned Creature cannot be given a Speed card. A box in the `Targeted by` row holds one marker,
 so one cast cannot name the same target twice. A Creature board turned to its `Defeated` back has no slots at
 all, so a dead Creature cannot be given Energy, a Condition or an Intent.
 
@@ -122,9 +122,11 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
 1. **Seat the Players.** The Player on the left is Player 1 and takes Player slot 1. The seat breaks no tie:
    a tie on the Combat timeline is settled by a Roll-off ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
 2. **Take the mats.** Each Player takes a player area mat, a player aid, one Evolution pick token per
-   Evolution pick per opportunity, and one tie order chit per Creature in a Team (`1st`, `2nd`, `3rd` at the
-   reference Team size). The pick tokens wait beside the mat until a Round with a pick mark
-   ([5.3](#53-evolution)).
+   Evolution pick per opportunity, one tie order chit per Creature in a Team (`1st`, `2nd`, `3rd` at the
+   reference Team size), and two Speed cards per Creature in a Team, a Quick card and a Standard card (six at
+   the reference Team size). The pick tokens wait beside the mat until a Round with a pick mark
+   ([5.3](#53-evolution)). The Speed cards go into your hand, and you keep them there out of sight
+   ([5.4](#54-speed)).
 3. **Take the Creature boards.** Each Player takes Team size boards. Player 1's are numbered 1, 2, 3 from
    their left; Player 2's are numbered 4, 5, 6. These numbers never change and they are the order tied Creatures
    roll in on the Combat timeline.
@@ -147,8 +149,8 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
    Spells come from.
 
 The board is now photographable, and it is the same board in every Match: six Creature boards at full Health
-and zero Energy, eighteen cards in two concealed hands, no package card with any Creature, an empty initiative
-track, and the Round marker on 1.
+and zero Energy, eighteen Spell cards and twelve Speed cards in two concealed hands, no package card with any
+Creature, an empty initiative track, and the Round marker on 1.
 
 ### 3.3 Check before you start
 
@@ -315,8 +317,12 @@ Sub-phase simply ends.
 **Trigger.** Evolution is done.
 **Actor.** Each Player, for each of their own living, unstunned Creatures, at the same time as the other
 Player.
-**Result.** Put that Creature's two-sided Speed token **face down** in its Speed slot, Quick side or Standard
-side up. Every such Creature gets exactly one. When both Players are done, turn all the tokens over together.
+**Result.** Choose one of that Creature's two Speed cards, Quick or Standard, and lay it **face down** in its
+Speed slot. Keep the other in your hand, out of sight. Every such Creature gets exactly one card. When both
+Players are done, turn all the cards over together.
+
+The turned cards stay face up in their slots for the rest of the Round: Action resolution reads them, because a
+Quick Creature does not roll. At Cleanup, take your Speed cards back into your hand.
 
 **What you are trading.** Quick acts before every Standard Creature — and **a Quick Creature cannot crit this
 Round**, however much Critical chance it and its Spell have. Standard keeps the crit and waits its turn. Go
@@ -325,13 +331,15 @@ Standard when the crit is what you are hoping for, or when you want the board to
 
 **A stunned Creature skips the Round entirely.** It takes no Speed choice, so it gets no Activation slot on
 the Combat timeline, so it declares no Intent and never acts. It is not "losing its attack": it is not in the
-Round. The Stun token sits in its Speed slot, so there is nowhere to put a Speed token.
+Round. The Stun token sits in its Speed slot, so there is nowhere to put a Speed card: both of its cards stay
+in your hand.
 
 A dead Creature is not in the Round either, for the same reason and one step earlier.
 
 > **Example.** Creature 4 was hit by **Crushing Stomp** last Round and carries a Stun token in its Speed slot.
-> Player 2 places Speed tokens on Creatures 5 and 6 only, and Player 1 on Creatures 1, 2 and 3. Five tokens go
-> down, five are turned over, and the Round will have five Activation slots, not six.
+> Player 2 lays Speed cards on Creatures 5 and 6 only, and Player 1 on Creatures 1, 2 and 3. Five cards go
+> down, five are turned over, and the Round will have five Activation slots, not six. Seven Speed cards stay
+> in the hands: one for each of the five Creatures, and both of Creature 4's.
 
 ### 5.5 Turn order resolution
 
@@ -340,7 +348,7 @@ A dead Creature is not in the Round either, for the same reason and one step ear
 Places in one tie.
 **Result.** Build the Combat timeline on the initiative track:
 
-1. Count the Quick tokens and set the divider so the Quick band holds that many slots.
+1. Count the Quick cards and set the divider so the Quick band holds that many slots.
 2. Read each Creature's **Current initiative**: its Base initiative, plus its Initiative buff Conditions, less
    its Initiative debuff Conditions, and never below zero.
 3. Place the Quick Creatures' markers in the Quick band, highest Current initiative first. Then the Standard
@@ -491,7 +499,7 @@ rail stays where it is.
 > Round 4: Creature 4 is stunned — no Speed choice, no Activation slot, no Intent. Cleanup of Round 4: lane
 > `2` to lane `1`.
 > Round 5: stunned again, the whole Round. Cleanup of Round 5: the token leaves lane `1` and is removed.
-> Round 6: Creature 4 takes a Speed token again. **A two-Round Stun costs two whole Rounds**, and it also cost
+> Round 6: Creature 4 takes a Speed card again. **A two-Round Stun costs two whole Rounds**, and it also cost
 > Creature 4 its activation in Round 3 if its slot had not yet resolved.
 
 ### 5.10 Finalization
@@ -558,7 +566,7 @@ This is the normal case, not a corner. Every Intent in the Round is revealed and
 resolves, so **you always choose your targets on a board that has not happened yet.**
 
 A target that dies before your slot comes up is dropped ([6.2](#62-a-per-target-failure-drops-one-target-not-the-action)).
-That is the cost of acting late, and it is the whole reason the Quick side of the Speed token exists.
+That is the cost of acting late, and it is the whole reason the Quick Speed card exists.
 
 Nothing overspills. A Creature at 3 Health hit for 10 takes 3, not 10: damage is capped by the Health left, a
 Heal by the Health missing, and a dead Creature takes neither. A cast that changes nothing on a target — 0
@@ -568,7 +576,8 @@ damage through a Defense buff, a Heal on a Creature at full Health — did nothi
 
 **Trigger.** The Speed Sub-phase begins and a Creature carries a Stun Condition.
 **Actor.** Its Player.
-**Result.** That Creature gets no Speed choice, no Activation slot and no Intent.
+**Result.** That Creature gets no Speed choice, no Activation slot and no Intent. Its Stun token is in its
+Speed slot, so no Speed card goes there.
 
 It still gains Energy at [5.1](#51-energy-gain). It still takes its Bleed ticks and its Regeneration ticks at
 [5.2](#52-ongoing-effects). Its Player can still buy it a Tier at [5.3](#53-evolution), because Evolution comes

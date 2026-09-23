@@ -1,6 +1,7 @@
 # Components and print-and-play
 
-Status: **Specification** (2026-09-14; brought up to the package model 2026-09-23). Phase 3 of
+Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
+question 14, 2026-09-23). Phase 3 of
 [plan.md](plan.md). It answers the **needs a component** rows of [translation.md](translation.md) and specifies
 a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -92,16 +93,18 @@ Totals first, then the derivation of each line.
 | --- | --- |
 | Spell cards | 216 |
 | Package cards | 126 |
+| Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
 | Condition tokens | 150 in 8 kinds |
-| Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 6 speed tokens, 4 pick tokens, 2 round markers, 18 target markers, 18 overflow chits, 20 blanks |
+| Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 target markers, 18 overflow chits, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
-| Paper | about 47 A4 or Letter sheets |
+| Paper | about 49 A4 or Letter sheets |
 
-The paper: 24 sheets of Spell cards and 14 of package cards (9 a sheet), 3 of creature boards (2 a sheet), 2
-player mats, 1 for the initiative and round tracks, 2 of tokens (266 pieces, none over 15 mm, and about 185 to
-a sheet at 15 mm), 1 of player aids. 47. Card backs would add 38 more; see Part 6, question 8.
+The paper: 24 sheets of Spell cards, 14 of package cards and 2 of Speed cards (9 a sheet; the second Speed
+sheet holds 3), 3 of creature boards (2 a sheet), 2 player mats, 1 for the initiative and round tracks, 2 of
+tokens (260 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
+add 40 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
 
@@ -118,6 +121,11 @@ What moved when evolution became packages, and why:
 | Spell card head | class and tree depth | **the package that teaches it, and its level** | The class names collide with the package names, and the tree depth is a number the game no longer reads (ADR 0058). [2.1](#21-what-is-printed-and-where-it-comes-from). |
 | Tie order chit | - | **6** | The Tie order is hidden until both Players have given theirs (ADR 0063). [1.5](#15-the-rest-of-the-pieces). |
 | Condition tokens | 144 | **150** | Content, not packages: `ice_spear` lowers Initiative by 1 now, a new face. [1.4](#14-condition-tokens). |
+
+That table records the package change, and its paper line stops at 47. The maintainer's answer to Part 6,
+question 14 moved three lines after it: the 6 two-sided Speed tokens became **12 Speed cards**
+([1.5](#15-the-rest-of-the-pieces), [2.6](#26-the-speed-card)), the token pieces went from 266 to 260, and the
+paper from 47 to **49** sheets.
 
 ### 1.1 Spell cards and package cards
 
@@ -216,7 +224,7 @@ for s in S:
 | Bleed | 4 a Round | 6 | `mortal_wound` on a target, `crazed_specter` and `revenant_guards` on their own caster; one each; 6 slots x 1 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
 | Energy regeneration | 2 a Round | 6 | `momentum`, Self only; 6 slots x 1 | **VALUE** |
-| Stun | - | 12 | A Stun **refreshes**, so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one fills the Speed slot so no Speed token can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. | **RULE** (the stacking policy, and the two places a Stun is shown) x **VALUE** (team size) |
+| Stun | - | 12 | A Stun **refreshes**, so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one sits in the Speed slot so no Speed card can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. | **RULE** (the stacking policy, and the two places a Stun is shown) x **VALUE** (team size) |
 | Defense buff | +1 | 6 | `guard`'s timed half, one ally; 6 slots x 1 | **VALUE** |
 | Defense buff | +2 | 18 | `revenant_guards`' timed half, up to 3 allies; 6 x 3 | **VALUE** |
 | Defense buff | +3 | 6 | `thundering_seal`'s timed half, one ally; 6 x 1 | **VALUE** |
@@ -243,7 +251,7 @@ supply that runs out is replaced by a blank token with the value written on it; 
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
-| Speed token, Quick on one face, Standard on the other | **6** | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`). Two-sided because the choice is one of two and is made face down; a two-sided token cannot hide which, Part 6, question 14. The Quick face needs a reminder that it forfeits the Critical roll (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. | **VALUE** (team size) |
+| Speed card, `Quick` or `Standard`, one common back, poker size | **12** = 6 per Player: a Quick and a Standard card for each Creature | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`), hidden until both Players have made theirs (`PlayerBoardStateProjection.cs:38`). A hidden choice of one of two needs both answers behind one back: the Player lays the chosen card face down in the Creature's Speed slot, keeps the other in hand, and both Players turn theirs together. Any Creature may take either Speed, and every Creature may take the same one, so a Player needs `RuleSet.TeamSize` cards of each: 2 Speeds x team size 3 x 2 Players. The Quick card carries the reminder that a Quick Creature rolls no critical that Round (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. Size, back and face: [2.6](#26-the-speed-card). The maintainer's answer to Part 6, question 14. | **VALUE** (team size) x **RULE** (two Speeds, one hidden simultaneous choice) |
 | Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number names the Creature on the track; ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`), so 1 to 3 are Player 1's. It breaks no tie: a tie between the sides is a d20 Roll-off, and tied Creatures roll in number order, which only fixes the order of the rolls (ADR 0063). | **VALUE** (team size) |
 | Tie order chit, `1st`, `2nd`, `3rd`, one common back | **6** = 3 per Player | The Tie order is given by both Players at the same time and hidden until both are in (ADR 0063, "like a Speed choice"), so it needs something that commits face down. A Player lays one chit face down on each of their tied Creatures' boards, and both Players turn them together. A Player orders at most all of their own Creatures, `RuleSet.TeamSize` = 3; two separate ties are each read low number first, so 3 chits cover any Round. This is translation.md's smallest answer ("three ordinal chits a Player"). | **VALUE** (team size) x **RULE** (a hidden, simultaneous Tie order) |
 | Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track, spent one a purchase, and the rest taken off when the Player passes or the Sub-phase ends (rulebook §5.3). A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
@@ -576,6 +584,45 @@ deep it sits. `Dreadnought . level 3` does not say what Dreadnought needs first 
 the Dreadnought package card does, once, for both of the Spells it teaches. The longest head line
 at `4d7a841c` is `Plague Doctor . level 2` (23 characters), inside the 38 a line holds.
 
+### 2.6 The Speed card
+
+Twelve cards, a Quick and a Standard for each Creature ([1.5](#15-the-rest-of-the-pieces)): the maintainer's
+answer to [Part 6, question 14](#14-a-two-sided-speed-token-cannot-be-placed-face-down). Nothing on it comes
+from `data/`: its two faces are the two Speeds of the glossary, and its count is the rule set's team size.
+
+```
++----------------------------------------------------+
+| Quick                                              |   the Speed, in the largest type on any card
+|====================================================|
+| Acts before every Standard Creature.               |
+| No critical roll this Round.                       |   the reminder: CriticalChanceOf is 0 for Quick
+|                                                    |
+| Speed card                                 4d7a84  |   what it is, content hash prefix
++----------------------------------------------------+
+
++----------------------------------------------------+
+| Standard                                           |
+|====================================================|
+| Acts after every Quick Creature.                   |
+| Critical as printed on the Spell.                  |
+|                                                    |
+| Speed card                                 4d7a84  |
++----------------------------------------------------+
+```
+
+| Choice | The constraint it answers |
+| --- | --- |
+| Poker size, 63.5 x 88.9 mm, the Spell card's and the package card's size | One card size in the box: one 3 x 3 grid for the generator to cut ([5.3](#53-the-sheet)) and one sleeve for a Player to buy, the reason [4.1](#41-the-package-card) gives. And a face-down Speed card hides the choice only if its face does not show through, which is the face-down Spell card's problem exactly: whatever question 8 settles for the one serves the other. A mini card (41 x 63 mm, 16 to a sheet) would print on one sheet instead of two, and need a second sleeve size to be as opaque. |
+| The face printed landscape | The Speed slot holds the card landscape, 88.9 mm wide, because that costs a board the least height ([3.1](#31-the-creature-board)). The face reads the way it lies. |
+| The Speed's name in the largest type on any card | It is read across the table: every Player reads every Speed when the cards are turned, to count the Quick cards and set the divider ([3.5](#35-the-initiative-track)), and again at Resolution, where a Quick Creature does not roll. |
+| One back for all 12, the same on Quick and Standard | The back is the whole of the component: a choice of one of two is hidden only behind a back the two answers share. Printed, it reads `Speed`, so a face-down Speed card is not taken for a face-down Intent, and it tells nothing about the face. Printed single-sided, the blank back is the common back, and the card needs the Spell card's opaque-backed sleeve. Part 6, question 8. |
+| The reminder on the Quick card, and its mirror on the Standard card | `CriticalChanceOf` is 0 for a Quick Creature whatever its Spell prints (`ResolutionRules.cs:85`). The cost is paid at Resolution and chosen here, so it is printed where it is chosen, or Quick reads as free (translation.md, the `Quick` critical row). `No critical roll` is the Spell card's own words for a cast that does not touch the die ([2.5](#25-three-card-faces-written-out)). |
+| No Creature number | Any Quick card serves any Creature: the slot a card lies in says whose it is. A number would make twelve different cards and change nothing the rule reads. |
+| The content hash prefix | Nothing on the card comes from the content, but [5.5](#55-the-invariant) holds every card face to the hash, and one rule for every card is one the generator cannot get wrong. |
+
+Each line of the face is under the 38 characters a line holds at 8 pt: the longest is
+`Acts before every Standard Creature.`, 36.
+
 ---
 
 ## Part 3. Boards and tracks
@@ -586,7 +633,7 @@ layout choice below names the rule it enforces physically.
 ### 3.1 The creature board
 
 A5, 105 x 148 mm, two to an A4 sheet. Front is the living Creature; back is printed `Defeated` with no slots
-at all, so a dead Creature cannot be given Energy, a Speed token, an Intent or a Condition - which is the rule
+at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a Condition - which is the rule
 `creatures.Where(creature => creature.IsAlive)` enforces in five different places.
 
 ```
@@ -606,7 +653,7 @@ at all, so a dead Creature cannot be given Energy, a Speed token, an Intent or a
 | Conditions   | new |   3   |   2   |   1   |  |   the duration dock
 |              |     |       |       |       |  |
 |-----------------------------------------------|
-| Speed [        ]   <- a Stun token sits here  |
+| Speed [ a card, 88.9 x 63.5 ] or a Stun token |
 | Targeted by  [1][2][3][4][5][6]               |
 +-----------------------------------------------+
 ```
@@ -616,9 +663,17 @@ at all, so a dead Creature cannot be given Energy, a Speed token, an Intent or a
 | The number 1 to 6 in the corner | It names the Creature: on its initiative marker, on its target markers and in the `Targeted by` row. Ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 Roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
 | The Health rail ending at 20 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
-| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The token physically fills the slot: there is nowhere to put a Speed token. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
+| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
 | The `Targeted by` row, one box per caster number | No duplicate targets (`TargetingRules.cs:68`): a caster has one marker per box, and a box holds one marker, so naming the same target twice is impossible. |
 | The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
+
+**The Speed slot is sized for a card now**, not a token (Part 6, question 14). A Speed card is poker size
+([2.6](#26-the-speed-card)), so the slot is a 90 x 65 mm rectangle, the card laid landscape with about a
+millimetre of play. Landscape costs the board the least height: 90 mm is inside the 95 mm of usable width
+[3.4](#34-initiative-two-small-rails-instead-of-one-long-one) names, where a portrait card would take 90 mm of
+the board's height instead of 65. On the 105 x 148 mm board drawn above, the slot takes 65 of the 148 mm, and the rails, the
+dock and the `Targeted by` row share the rest. Whether they fit there is part of question 15, which already
+asks what size the board is. The drawing is not to scale.
 
 ### 3.2 The condition dock, and the countdown
 
@@ -728,8 +783,8 @@ ordering printed along the edge:
  Your own tied Creatures: tie order chits, face down, turned together; you order them in your Places.
 ```
 
-The divider moves because a Round can have 0 to 6 Quick slots; it is set to the count of Quick tokens
-revealed. Placing is: reveal all six Speed tokens together, put the Quick Creatures' markers in order of
+The divider moves because a Round can have 0 to 6 Quick slots; it is set to the count of Quick cards
+turned. Placing is: turn every Speed card in play together, put the Quick Creatures' markers in order of
 Current initiative, then the Standard ones. Six markers, six lookups, a sort of at most
 six - the audit's numbers, unchanged.
 
@@ -818,9 +873,13 @@ An A4 landscape mat a Player, three columns, one a Creature:
 - **The target markers** are three per Creature, in that Creature's colour, carrying its number. Reveal and
   target walks the whole timeline before anything resolves, so all six casts' markers are on the table at
   once: 18 markers, and a Creature's `Targeted by` row shows who is pointing at it.
-- **Speed tokens** are placed face down on each board's Speed slot and turned together, which is what makes
-  the Speed choice the genuine simultaneous decision it is in the engine
-  (`PlayerBoardStateProjection.cs:38`).
+- **Speed cards**: a Player holds a Quick and a Standard card for each Creature, lays the chosen one face down
+  in that board's Speed slot and keeps the other in hand. Both Players turn theirs together, which is what
+  makes the Speed choice the genuine simultaneous decision it is in the engine
+  (`PlayerBoardStateProjection.cs:38`). The kept card needs no place on the mat: it stays in the concealed
+  hand, and it must, because a kept card seen is a played card known. So the player area holds nothing new
+  for question 14; what it gains is on the board, the card-sized Speed slot of
+  [3.1](#31-the-creature-board), which adds to question 15.
 
 ### 3.8 How a cast is declared and resolved, in components
 
@@ -972,6 +1031,9 @@ is the whole reason phase 3 specifies a generator instead of a table of card tex
   teaches - repeated 2 x team size times, laid out 9 to a sheet. 36 faces and 216 cards at `4d7a841c`.
 - **Package card sheets**: every enabled Tier's face, repeated 2 x team size times, 9 to a sheet. 21 faces
   and 126 cards, 14 sheets, at `4d7a841c`.
+- **Speed card sheets**: the Quick face and the Standard face of [2.6](#26-the-speed-card), each repeated 2 x
+  team size times, 9 to a sheet. 12 cards, 2 sheets. The rule set gives the count; the content gives nothing
+  but the hash.
 - **Component sheets**: 6 creature boards, 2 player mats, the initiative track, the round
   track with its pick marks computed from the rule set's schedule, and the token sheets.
 - **A manifest page**: Part 1's table, generated, with the content hash, the rule set, and the date. It is the
@@ -988,7 +1050,7 @@ the browser. No PDF library, no build step, nothing installed - the same weight 
 | Constraint | Choice | Why |
 | --- | --- | --- |
 | Paper | A4 (210 x 297) and US Letter (216 x 279), the same layout on both | 3 x 63.5 = 190.5 mm wide and 3 x 88.9 = 266.7 mm tall, plus 3 mm bleed on the outer edge, is 196.5 x 272.7 mm. It fits inside both. One layout, two papers. |
-| Cards a sheet | 9 | The 3 x 3 grid above. 216 Spell cards is **24 sheets**; 126 package cards is **14**. |
+| Cards a sheet | 9 | The 3 x 3 grid above. 216 Spell cards is **24 sheets**; 126 package cards is **14**; 12 Speed cards is **2**, the second holding 3 and padded with blanks. |
 | Bleed | 3 mm on the outer edge only; cards abut inside the grid | Neighbours share a cut line, so no bleed is wasted between them and a single cut serves two cards. |
 | Cut marks | Hairline marks in the outer margin, at every grid line, never across a card | A mark that crosses the card is printed on the card. Marks in the margin survive a guillotine and a craft knife. |
 | Fold marks | None | Cards are cut, not folded. Boards are printed one to a face. |
@@ -1035,6 +1097,7 @@ DOM, a fixture catalogue, a stub transport. What the tests hold:
 | A package's level is its own `level`, and a starting Spell's is 0 | ADR 0058 superseded the tree depth of ADR 0034. A depth computed from the tree is a number the game does not consult. |
 | A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none) and every Spell it teaches, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses. |
 | The copy count is 2 x the rule set's team size for a Spell some Creature could know, and 0 for one it could not | A rule set change reprints the deck; it must not need an edit. |
+| The Speed cards are 2 x team size of each face, the Quick face carries `No critical roll this Round`, and both faces share one back | Part 6, question 14: a Speed card whose back differs by face, or a Quick card without its cost, is a choice that is not hidden or not a trade. |
 | The pick marks are exactly the Rounds from 1 to 16 that `IsEvolutionRound` answers yes for, with the rule set's first Round and interval | The schedule is the rule set's, answered in one place (ADR 0056); a mat that worked out its own parity is a second schedule. |
 | Rendering fails, loudly, when a body line exceeds the text area or a body exceeds 4 lines, on either kind of card | The measurements in 2.3 and 4.1 hold for today's content. A tuning pass that lengthens a Duration or adds an effect, or an author who puts a fourth Spell in a package, must break the build rather than clip the card. |
 | Every emitted sheet carries the hash, and a missing or mismatched hash produces no output at all | The invariant of 5.5, as a property over the whole output. |
@@ -1060,7 +1123,7 @@ of the content it was built from.
 ## Part 6. Open questions
 
 Each one is a count or a choice this document cannot derive. None is answered here; questions 1 and 13 were
-answered elsewhere, and each says so.
+answered elsewhere, question 14 by the maintainer, and each says so.
 
 ### 1. Which die
 
@@ -1138,13 +1201,15 @@ reading. The third waits on a measurement.
 
 ### 8. Card backs
 
-A single back design costs 24 more sheets for the Spell cards and 14 for the package cards, 38 in all, and
-nearly doubles the print, for a deck whose hands are concealed and whose Intents are played face down - so
-the Spell card backs must at least be uniform. Package cards are never hidden, so they need a back only to be
-told apart from Spell cards in a pile; the heavy band of [4.1](#41-the-package-card) already does that.
-Printing single-sided and sleeving the Spell cards with an opaque backing card is the cheaper answer and
-needs sleeves. Which one the print-and-play assumes changes the sheet count from 47 to 71, or to 85 with
-package card backs too.
+A single back design costs 24 more sheets for the Spell cards, 14 for the package cards and 2 for the Speed
+cards, 40 in all, and nearly doubles the print, for a deck whose hands are concealed and whose Intents are
+played face down - so the Spell card backs must at least be uniform. The Speed card's back is not optional at
+all: it is what hides the choice ([2.6](#26-the-speed-card)), so it goes with the Spell cards on either
+answer. Package cards are never hidden, so they need a back only to be told apart from Spell cards in a pile;
+the heavy band of [4.1](#41-the-package-card) already does that. Printing single-sided and sleeving the Spell
+and Speed cards with an opaque backing card is the cheaper answer and needs sleeves. Which one the
+print-and-play assumes changes the sheet count from 49 to 75 (24 + 2 back sheets), or to 89 with package card
+backs too.
 
 ### 9. The schedule: printed marks or placed markers
 
@@ -1194,13 +1259,26 @@ the order, the chits leave the box and those sentences with them.
 
 ### 14. A two-sided Speed token cannot be placed face down
 
-Found while choosing the tie order chits, and older than them. [1.5](#15-the-rest-of-the-pieces) specifies one
-Speed token a Creature, Quick on one face and Standard on the other, "made face down". A token whose two faces
-are the two answers shows one of them whichever way it lies, so the choice is not hidden. A hidden choice of
-one of two needs two faces behind one common back: two Speed tokens a Creature, 12 in all, one played and one
-kept, or the six tokens played under a cover. The first is the Intent's own answer (a card from a hand, face
-down). This moves a count from 6 to 12; it is not changed here because it is not part of the package update,
-and the maintainer should see it first.
+**Answered by the maintainer, 2026-09-23: one card per Speed, placed face down** ("une carte par vitesse
+posée face cachée"). Each Creature gets two Speed cards, a Quick card and a Standard card behind one common
+back: 12 in all, 6 per Player. The Player lays the one they choose face down in the Creature's Speed slot and
+keeps the other, and both Players turn theirs together. It is the Intent's own pattern, a card from a hand
+played face down. The Quick card carries the reminder that a Quick Creature rolls no critical that Round
+(`ResolutionRules.CriticalChanceOf`). This manifest now says so in [1.5](#15-the-rest-of-the-pieces),
+[2.6](#26-the-speed-card), [3.1](#31-the-creature-board), [3.5](#35-the-initiative-track) and
+[3.7](#37-the-player-area-and-where-a-face-down-intent-sits), and the rulebook's setup, §5.4 and §6.4 say the
+same.
+
+The question as it was found, while choosing the tie order chits: [1.5](#15-the-rest-of-the-pieces) specified
+one Speed token a Creature, Quick on one face and Standard on the other, "made face down". A token whose two
+faces are the two answers shows one of them whichever way it lies, so the choice is not hidden. The two
+answers offered were two faces behind one common back (two a Creature, one played and one kept), or the six
+tokens played under a cover. The maintainer chose the first, as cards.
+
+What stays here is layout, not rule. The Speed slot now holds a poker card, landscape, so it takes 65 mm of
+the creature board's height ([3.1](#31-the-creature-board)), which question 15 has to fit. And a 15 mm Stun
+token occupies a card-sized slot without filling it, so the slot prints the token's place rather than being too
+small for anything else. The count moved from 6 to 12 and the paper from 47 to 49 sheets.
 
 ### 15. The player area does not hold what 3.7 puts on it
 
@@ -1213,6 +1291,11 @@ card below that. Which gives: the board's size (and the sheet count of 3 that fo
 an A3 player area, or a player area that is a printed guide for the table rather than a mat that holds the
 pieces? This is a layout question, not a rule, and the counts in Part 1 do not depend on it except the 3
 board sheets.
+
+Question 14's answer adds to it on the board and not on the mat. The Speed slot now holds a poker card
+landscape, 90 x 65 mm, so a board has 65 mm less height for its rails, its dock and its `Targeted by` row
+([3.1](#31-the-creature-board)): on the A6 board that is 44% of it, on an A5 board 31%. The card a Player keeps
+goes in the concealed hand, so the player area holds nothing new.
 
 ---
 
@@ -1233,7 +1316,7 @@ the component beside it has not.
 | 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces) |
 | 1.3 A pick buys a whole Tier | 126 package cards, face up with the Creature that bought them, [1.1](#11-spell-cards-and-package-cards) and [Part 4](#part-4-the-packages-as-an-object). Each card's `Needs` line is the prerequisite check; no Spell card prints a gate. |
 | 1.3 A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | The two Base initiative rails and the package card's bonus, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded). No Spell card prints an initiative. |
-| 1.4 One Speed choice per living, unstunned Creature | 6 Speed tokens and the Speed slot a Stun fills, [3.1](#31-the-creature-board); Part 6, question 14 |
+| 1.4 One Speed choice per living, unstunned Creature | 12 Speed cards, a Quick and a Standard a Creature behind one back, one laid face down and one kept, [1.5](#15-the-rest-of-the-pieces) and [2.6](#26-the-speed-card); the card-sized Speed slot a Stun token occupies, [3.1](#31-the-creature-board). Part 6, question 14, answered by the maintainer |
 | 1.5 The Combat timeline | The initiative track and 6 numbered markers, [3.5](#35-the-initiative-track) |
 | 1.5 Current initiative is Base plus buffs less debuffs, floored at zero | The Base initiative rails read with the dock's Initiative tokens, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) |
 | 1.5 A tie between the sides is rolled off on a d20 | The two d20s, [1.6](#16-dice), and the tie rules printed on the initiative track, [3.5](#35-the-initiative-track). The number on each board, [3.1](#31-the-creature-board), only fixes the order tied Creatures roll in. |
