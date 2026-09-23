@@ -15,7 +15,7 @@ namespace DownfallArena.Application.Learning;
 /// </summary>
 public sealed class FeatureSchema
 {
-    public const string CurrentVersion = "features:v6";
+    public const string CurrentVersion = "features:v7";
 
     /// <summary>The largest team size a schema supports: target masks hold one bit per board slot in an <c>int</c>.</summary>
     public const int MaxTeamSize = BoardSlots.MaxTeamSize;
@@ -28,7 +28,7 @@ public sealed class FeatureSchema
 
     /// <summary>The features that open every creature block, before the condition pairs, spell bits, and node bits.</summary>
     public static IReadOnlyList<string> CreatureFeatures { get; } =
-        ["alive", "health_fraction", "energy", "stunned", "defense", "initiative"];
+        ["alive", "health_fraction", "energy", "stunned", "defense", "initiative", "stun_immune"];
 
     private static readonly Dictionary<string, int> ConditionKindIndexes =
         ConditionKinds.Select((kind, index) => (kind, index)).ToDictionary(pair => pair.kind, pair => pair.index);

@@ -436,6 +436,108 @@ public sealed class CreatureTests
     }
 
     /// <summary>
+    /// ADR 0072: the cleanup that ends a stun leaves the creature immune through the next round, and the one
+    /// after that ends the immunity. The first tick after the stun lands is the one that does not count.
+    /// </summary>
+    [Fact]
+    public void A_creature_whose_stun_ends_is_immune_through_the_next_round()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1)).ShouldNotBeNull();
+
+        creature.TickConditions();
+        creature.IsStunned.ShouldBeTrue();
+        creature.IsStunImmune.ShouldBeFalse();
+
+        creature.TickConditions();
+        creature.IsStunned.ShouldBeFalse();
+        creature.IsStunImmune.ShouldBeTrue();
+
+        creature.TickConditions();
+        creature.IsStunImmune.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_stun_on_an_immune_creature_is_ignored()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+        creature.TickConditions();
+        creature.TickConditions();
+
+        creature.Apply(Stun.For(1)).ShouldBeNull();
+
+        creature.IsStunned.ShouldBeFalse();
+    }
+
+    /// <summary>
+    /// A second stun no longer restarts the first (ADR 0072 supersedes ADR 0041 there): otherwise a stun cast
+    /// every round would never end, and the immunity it leaves behind would never start.
+    /// </summary>
+    [Fact]
+    public void A_second_stun_does_not_restart_the_first()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+        creature.TickConditions();
+
+        creature.Apply(Stun.For(2)).ShouldBeNull();
+        creature.TickConditions();
+
+        creature.IsStunned.ShouldBeFalse();
+        creature.IsStunImmune.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void A_restored_creature_keeps_its_immunity()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+        creature.TickConditions();
+        creature.TickConditions();
+        var snapshot = creature.Snapshot();
+
+        snapshot.StunImmunityRounds.ShouldBe(1);
+        snapshot.IsStunImmune.ShouldBeTrue();
+        snapshot.CanBeStunned.ShouldBeFalse();
+        Creature.Restore(snapshot, Content.Creature(), []).IsStunImmune.ShouldBeTrue();
+        Should.Throw<ArgumentException>(() => Creature.Restore(snapshot with { StunImmunityRounds = 2 }, Content.Creature(), []));
+    }
+
+    /// <summary>ADR 0072 and ADR 0047: the immunity starts when a stun ends, so no match leaves a creature both.</summary>
+    [Fact]
+    public void A_snapshot_stunned_and_immune_at_once_is_not_restored()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+        var stunned = creature.Snapshot();
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(stunned with { StunImmunityRounds = 1 }, Content.Creature(), []));
+    }
+
+    [Fact]
+    public void A_creature_that_dies_immune_leaves_no_immunity_in_its_snapshot()
+    {
+        var creature = Spawn();
+        creature.Apply(Stun.For(1));
+        creature.TickConditions();
+        creature.TickConditions();
+        creature.TakeDamage(99);
+
+        creature.Snapshot().StunImmunityRounds.ShouldBe(0);
+        Creature.Restore(creature.Snapshot(), Content.Creature(), []).IsStunImmune.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_dead_snapshot_carrying_an_immunity_is_not_restored()
+    {
+        var creature = Spawn();
+        creature.TakeDamage(99);
+
+        Should.Throw<ArgumentException>(() => Creature.Restore(creature.Snapshot() with { StunImmunityRounds = 1 }, Content.Creature(), []));
+    }
+
+    /// <summary>
     /// What a creature knows and what it owns are handed out read-only in the strong sense. Ownership is held
     /// rather than inferred precisely so it cannot drift from the spells and the initiative that were paid for
     /// it; a caller that reached back through the returned set and granted a package would produce that drift

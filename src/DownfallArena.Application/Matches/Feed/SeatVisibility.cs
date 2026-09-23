@@ -32,6 +32,7 @@ public static class SeatVisibility
         typeof(ActionRevealed),
         typeof(CombatActionResolved),
         typeof(ConditionsExpired),
+        typeof(StunImmunityGained),
         typeof(OngoingEffectsApplied),
         typeof(TimelineBuilt),
         typeof(TieOrderSubmitted),
@@ -65,6 +66,7 @@ public static class SeatVisibility
             ActionRevealed => true,
             CombatActionResolved => true,
             ConditionsExpired => true,
+            StunImmunityGained => true,
             OngoingEffectsApplied => true,
 
             // The timeline is public the moment it is built -- it is served on every board -- and the round's

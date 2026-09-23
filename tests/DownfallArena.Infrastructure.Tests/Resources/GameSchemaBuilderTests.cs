@@ -193,6 +193,25 @@ public sealed class GameSchemaBuilderTests
         problems.ShouldContain("at least two targets");
     }
 
+    /// <summary>ADR 0072: a second stun is ignored whatever the file says, so a file that says otherwise is refused.</summary>
+    [Fact]
+    public void A_stun_authored_with_any_policy_but_ignore_is_refused()
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("Spells/refresher.v1.json", """
+                {
+                  "id": "spell:refresher:v1", "name": "Refresher", "spellType": "Offensive", "creatureClass": "Creature",
+                  "energyCost": 1, "criticalChance": 0,
+                  "targeting": { "origin": "Enemy", "scope": "SingleTarget", "maxTargets": 1 },
+                  "effects": [ { "kind": "Stun", "durationRounds": 1, "stacking": "Refresh" } ]
+                }
+                """);
+
+        var exception = Should.Throw<InvalidGameContentException>(() => GameSchemaBuilder.Build(content.Path));
+
+        string.Join("\n", exception.Problems).ShouldContain("a Stun is always 'Ignore'");
+    }
+
     [Fact]
     public void A_missing_content_folder_is_reported()
     {

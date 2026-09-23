@@ -193,11 +193,18 @@ public static class GameSchemaMapper
         return Guard(() => create(amount, rounds, stacking), context, problems);
     }
 
-    /// <summary>Stun: a number of rounds and nothing else. The one family that refreshes rather than stacks.</summary>
-    private static Effect? ForRounds(EffectDto dto, string context, List<string> problems, Func<int, StackingPolicy, Effect> create)
+    /// <summary>Stun: a number of rounds and nothing else. The one family that is ignored rather than stacked (ADR 0072).</summary>
+    private static Effect? ForRounds(EffectDto dto, string context, List<string> problems, Func<int, Effect> create)
     {
-        var stacking = Stacking(dto, context, problems, StackingPolicy.Refresh);
-        return Rounds(dto, context, problems) is { } rounds ? Guard(() => create(rounds, stacking), context, problems) : null;
+        // A second stun on a stunned or immune creature is ignored whatever the file says (ADR 0072), so a
+        // file that says otherwise is describing a rule the engine does not have.
+        if (Stacking(dto, context, problems, StackingPolicy.Ignore) != StackingPolicy.Ignore)
+        {
+            problems.Add($"{context}: a Stun is always 'Ignore': a second stun on a stunned or immune creature does nothing (ADR 0072).");
+            return null;
+        }
+
+        return Rounds(dto, context, problems) is { } rounds ? Guard(() => create(rounds), context, problems) : null;
     }
 
     /// <summary>DefenseBuff, DefenseDebuff, InitiativeBuff and InitiativeDebuff: an amount for a duration, which may be permanent.</summary>

@@ -285,6 +285,7 @@ public sealed class AdvanceTests
             creature.CurrentInitiative.ShouldBe(other.CurrentInitiative);
             creature.CriticalChance.ShouldBe(other.CriticalChance);
             creature.IsStunned.ShouldBe(other.IsStunned, $"creature {creature.Id}");
+            creature.StunImmunityRounds.ShouldBe(other.StunImmunityRounds, $"creature {creature.Id}");
             creature.KnownSpells.ShouldBe(other.KnownSpells, ignoreOrder: true);
             creature.Conditions.ShouldBe(other.Conditions, $"creature {creature.Id}");
         }

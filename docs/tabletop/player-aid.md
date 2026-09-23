@@ -2,7 +2,8 @@
 
 One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md), and it describes
 the same engine: Tiers bought on the Rule set's schedule, one a Creature an opportunity (ADR 0056, ADR 0059,
-ADR 0066), and ties settled by a Roll-off on a d20 (ADR 0063). The section number is beside each rule. Fill
+ADR 0066), ties settled by a Roll-off on a d20 (ADR 0063), and a Round of Stun immunity after every Stun
+(ADR 0072). The section number is beside each rule. Fill
 the setup table's values in before the first Match.
 
 ---
@@ -19,7 +20,7 @@ the setup table's values in before the first Match.
 | 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known and affordable. | 5.6 |
 | 7 | Combat | **Reveal and target** | Walk the timeline: flip, place target markers. **All six before any resolve. Nothing changes yet.** | 5.7 |
 | 8 | Combat | **Action resolution** | Walk the timeline again: resolve each cast fully, one at a time. | 5.8 |
-| 9 | End | **Cleanup** | Slide the dock left, then `new` into its lane. | 5.9 |
+| 9 | End | **Cleanup** | Slide the dock left, then `new` into its lane. A Stun ending on a living Creature leaves an **Immune** token in lane `1`. | 5.9 |
 | 10 | End | **Finalization** | Check the Win condition. Advance the Round marker or end the Match. | 5.10 |
 
 ---
@@ -121,24 +122,28 @@ A **per-target** failure is not a Fizzle: drop that target, pay the cost, resolv
 
 ## Condition timing (§7.1)
 
-**A Condition stacks. One application is one token. Only a Stun refreshes.**
+**A Condition stacks. One application is one token. Only a Stun does not: a Stun on a stunned or immune
+Creature is ignored.**
 
 | Condition | When it acts |
 | --- | --- |
 | **Energy regeneration** | Start of Round, **1st** |
 | **Regeneration** | Start of Round, **2nd** — before Bleed, on purpose |
 | **Bleed** | Start of Round, **3rd**. **Ignores Defense** |
-| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Also fizzles an action already revealed |
+| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Also fizzles an action already revealed. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
 | **Defense buff / debuff** | Read whenever Damage is computed |
 | **Initiative buff / debuff** | Read once, at Turn order resolution |
 
 **Cleanup, in two moves (§5.9):**
 
-1. Every token in a numbered lane slides **one lane left**; leaving lane `1` removes it.
+1. Every token in a numbered lane slides **one lane left**; leaving lane `1` removes it. A **Stun** token
+   leaving lane `1` of a living Creature is swapped for an **Immune** token in lane `1`, and the Stun token in
+   the Speed slot comes off. The next Cleanup removes the Immune token.
 2. Every token in `new` moves into the lane matching its printed Duration.
 
 > `new` is why **the first countdown does not count**. Read a Duration as "**this many of the following
-> Rounds**". A 1-round Bleed ticks once. A 2-round Stun takes the next two Rounds away.
+> Rounds**". A 1-round Bleed ticks once. A 2-round Stun takes the next two Rounds away, and no Stun can take
+> the Round after them.
 
 A **permanent** Condition moves a rail and takes no token. It never counts down.
 

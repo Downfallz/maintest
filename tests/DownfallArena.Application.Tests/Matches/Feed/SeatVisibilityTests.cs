@@ -31,7 +31,7 @@ public sealed class SeatVisibilityTests
             .Where(type => type is { IsAbstract: false, IsInterface: false } && typeof(IMatchEvent).IsAssignableFrom(type))
             .ToList();
 
-        events.Count.ShouldBe(17, "the domain has gained or lost an event; classify it in SeatVisibility");
+        events.Count.ShouldBe(18, "the domain has gained or lost an event; classify it in SeatVisibility");
         SeatVisibility.Classified.ShouldBe(events, ignoreOrder: true);
     }
 
@@ -96,6 +96,7 @@ public sealed class SeatVisibilityTests
         new ActionRevealed(Match, Round, Action),
         new CombatActionResolved(Match, Round, CombatResolution.Fizzle(Action, CombatErrors.AllTargetsInvalid), []),
         new ConditionsExpired(Match, Round, new Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>>()),
+        new StunImmunityGained(Match, Round, [Creature]),
         new OngoingEffectsApplied(Match, Round, [], [], []),
         new MatchStarted(Match, PlayerId.New(), PlayerId.New(), "content"),
         new MatchEnded(Match, Round, new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination)),

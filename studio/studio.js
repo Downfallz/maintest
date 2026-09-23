@@ -44,11 +44,12 @@ const EFFECTS = {
   // `stacking` here is two things: the kinds that get a stacking picker, and the value a new effect starts
   // at. That value has to be the engine's own fallback for the kind (`GameSchemaMapper`), because the page
   // writes it explicitly -- a studio-authored effect that started at the wrong one would pin the old
-  // behaviour rather than follow the rule. Everything stacks except Stun (ADR 0041).
+  // behaviour rather than follow the rule. Everything stacks except Stun, which is always ignored while a
+  // stun or the round of immunity after one is running (ADR 0072): the engine refuses any other policy on it.
   Bleed: { amounts: ['amountPerRound'], rounds: true, stacking: 'Stack' },
   Regeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Stack' },
   EnergyRegeneration: { amounts: ['amountPerRound'], rounds: true, stacking: 'Stack' },
-  Stun: { amounts: [], rounds: true, stacking: 'Refresh' },
+  Stun: { amounts: [], rounds: true, stacking: 'Ignore' },
   DefenseBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   DefenseDebuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },
   InitiativeBuff: { amounts: ['amount'], rounds: true, permanent: true, stacking: 'Stack' },

@@ -45,7 +45,8 @@ listed in [spells.md](spells.md).
   effects apply, lasting effects attach as conditions. At the start of a round living creatures gain the rule
   set's energy and bleeds deal their summed damage, ignoring defense. At cleanup every condition counts one
   round down, except that the first countdown after an application does not count: a one-round stun applied
-  in combat stuns the creature for the whole next round.
+  in combat stuns the creature for the whole next round. A creature whose stun ends at cleanup is immune to
+  stun through the next round, and a stun on a stunned or immune creature is ignored (ADR 0072).
 
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the
@@ -134,10 +135,12 @@ listed in [spells.md](spells.md).
         or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs
         less its defense debuffs, floored at zero (ADR 0035);
       - lasting effects attach as Conditions per their stacking policy: another one beside the ones already
-        there, except a Stun, which restarts the Stun the target carries (ADR 0041).
+        there, except a Stun, which is ignored on a Creature already stunned or immune to stun (ADR 0072; it
+        restarted the running Stun under ADR 0041). The cast's other effects still land.
 4. **End of round**
    1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an
-      application does not count.
+      application does not count. A living Creature whose Stun expires here is immune to stun through the next
+      Round, until the next Cleanup (ADR 0072).
    2. `Finalization`: the Win condition is checked; either the Match ends or the next Round starts.
 
 ### Determinism

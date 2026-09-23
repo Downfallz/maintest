@@ -259,3 +259,10 @@ test('an unbound declaration never reveals a spell or target marker', async () =
   assert.equal(liveChoice(creature, board, []).status, 'Revealed');
   assert.deepEqual(liveChoice(creature, board, []).action.targets, []);
 });
+
+// ADR 0072: the round after a stun ends, the next stun is ignored. A player plans around that as much as
+// around the stun itself, so the row says it.
+test('a creature immune to stun is badged as such', () => {
+  assert.deepEqual(badges({ id: 1, isStunned: false, isStunImmune: true }, []), ['immune to stun']);
+  assert.deepEqual(badges({ id: 1, isStunned: false, isStunImmune: false }, []), []);
+});

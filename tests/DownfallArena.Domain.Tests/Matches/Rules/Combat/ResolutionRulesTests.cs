@@ -196,6 +196,27 @@ public sealed class ResolutionRulesTests
         resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Ghoul, 2, false), new ConditionOutcome(Arena.Ghoul, Stun.For(1))]);
     }
 
+    /// <summary>
+    /// A stun on a creature that is stunned already, or immune (ADR 0072), is not an outcome: the damage still
+    /// lands, and nothing downstream reads a stun that was never going to happen.
+    /// </summary>
+    [Fact]
+    public void A_stun_on_a_creature_that_cannot_be_stunned_is_not_an_outcome()
+    {
+        var living = Arena.FourCreatures();
+        var knight = Arena.Find(living, Arena.Knight);
+        knight.Learn(Arena.Guard);
+        knight.Learn(Arena.Slam);
+        knight.GainEnergy(2);
+        Arena.Find(living, Arena.Ghoul).Apply(Stun.For(1));
+        var creatures = Arena.Snapshots(living);
+        var slam = CombatAction.Bind(new CombatIntent(Arena.Knight, Arena.Slam), [Arena.Wraith, Arena.Ghoul]);
+
+        var resolution = Resolve(slam, creatures, NoCrit);
+
+        resolution.Outcomes.ShouldBe([new DamageOutcome(Arena.Wraith, 2, false), new ConditionOutcome(Arena.Wraith, Stun.For(1)), new DamageOutcome(Arena.Ghoul, 2, false)]);
+    }
+
     [Fact]
     public void An_action_whose_targets_are_all_invalid_fizzles()
     {
