@@ -64,7 +64,7 @@ def knobs_document(**overrides: object) -> dict:
             "seeds": "benchmarks/benchmark-seeds.json",
             "evaluations": {"mirror": {"p1": "greedy", "p2": "greedy"}},
             "targets": [
-                {"metric": "averageRounds", "on": "mirror", "min": 8, "max": 16, "scale": 3, "weight": 1}
+                {"metric": "averageRounds", "on": "mirror", "min": 10, "max": 15, "scale": 3, "weight": 1}
             ],
         },
         "constraints": {"noNewStrictDominance": {"enabled": True}},
@@ -125,11 +125,11 @@ def test_scoring_a_catalogue_plays_it_once_and_keeps_the_numbers_behind_the_scor
 
     score = score_content(evaluator, knobs.objective, catalogue(tmp_path))
 
-    # 40 - 2 * (3 + 1) = 32 rounds, 16 over the top of the 8..16 band, scaled by 3: (16 / 3) ** 2.
+    # 40 - 2 * (3 + 1) = 32 rounds, 17 over the top of the 10..15 band, scaled by 3: (17 / 3) ** 2.
     assert evaluator.calls == 1
     assert score.metrics == {"mirror": {"averageRounds": 32.0}}
-    assert score.breakdown == {"mirror.averageRounds": pytest.approx((16 / 3) ** 2)}
-    assert score.score == pytest.approx((16 / 3) ** 2)
+    assert score.breakdown == {"mirror.averageRounds": pytest.approx((17 / 3) ** 2)}
+    assert score.score == pytest.approx((17 / 3) ** 2)
 
 
 def test_a_score_says_which_objective_read_it(tmp_path: Path) -> None:
@@ -159,7 +159,7 @@ def test_a_score_reads_as_what_is_outside_its_range(tmp_path: Path) -> None:
     text = format_score(score_content(FakeEvaluator(), knobs.objective, catalogue(tmp_path)), knobs.objective)
 
     assert "where 0 is every measurement inside its range" in text
-    assert "mirror.averageRounds: reads 32.000, should be 8 to 16" in text
+    assert "mirror.averageRounds: reads 32.000, should be 10 to 15" in text
 
 
 def test_a_catalogue_inside_every_band_scores_zero_and_lists_nothing(tmp_path: Path) -> None:
@@ -234,7 +234,7 @@ def test_score_content_plays_the_content_on_the_seed_file_it_is_given(
     written = json.loads((tmp_path / "out" / "score.json").read_text(encoding="utf-8"))
     assert written["seeds"] == str(unseen.resolve())
     assert written["metrics"]["mirror"]["averageRounds"] == pytest.approx(32.0)
-    assert written["score"] == pytest.approx((16 / 3) ** 2)
+    assert written["score"] == pytest.approx((17 / 3) ** 2)
     assert "Scored on" in capsys.readouterr().out
 
 

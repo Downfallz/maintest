@@ -4,6 +4,6 @@
   "evolutionPicksPerOpportunity": 2,
   "firstEvolutionRound": 1,
   "evolutionInterval": 2,
-  "roundCap": 12,
+  "roundCap": 20,
   "criticalMultiplier": 2.0
 }
