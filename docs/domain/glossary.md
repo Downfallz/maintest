@@ -44,7 +44,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Data builder | The tool that consolidates the authored content under `data/` into one validated `game.schema.json` with a Content hash (ADR 0009). | decided |
 | Content studio | The local page that browses, edits, versions and disables the authored content, and plays a match or an evaluation on it (ADR 0015). | decided |
 | Enabled | The authoring-only switch on an authored item: `"enabled": false` keeps it out of the build, and references to a disabled Spell are pruned (ADR 0015). | decided |
-| Talent tree | The tree of Spells a Creature can unlock, with `allOf`/`anyOf` prerequisites per node. | decided |
+| Talent tree | The authored tree that groups a Creature definition's Spells into families, with `allOf`/`anyOf` prerequisites per node. It no longer decides what Evolution may buy: Tier prerequisites do (ADR 0056), and the content tools still read the tree. | decided |
 | Game resources | The static, versioned catalogue of Creature definitions, Spells, and Talent trees. | decided |
 | Content hash | The SHA-256 of the consolidated Game resources; stamped on every match and simulation result as the resources version (ADR 0009). | decided |
 | Versioned id | A content identifier in the form `kind:name:vN` (`spell:pummel:v1`). Aliases without a version resolve to the latest at build time. | decided |
@@ -60,6 +60,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Phase driver | The loop inside the Match that runs each automatic step or asks the Progression gate, advances the Sub-phase, and raises an event, until the Round waits on a Player or the Match ends. | decided |
 | Planning | The Phase in which Players make Evolution choices, then Speed choices, after which the Combat timeline is built and any Tie order given. | decided |
 | Evolution | A Planning decision where a Player buys a Tier for a Creature, within the picks the Rule set's schedule gives that Round. The purchase teaches every Spell of the package at once and raises the Creature's Base initiative by the package's bonus, once (ADR 0056). The two picks of an opportunity resolve in sequence, so the second sees what the first bought. | decided |
+| Evolution opportunity | A Round in which the Rule set's schedule gives each Player Evolution picks: two, at Round 1 and every second Round after it (ADR 0056). Any other Round gives none. | decided |
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
 | Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |

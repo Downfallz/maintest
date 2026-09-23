@@ -750,11 +750,11 @@ category, and no rule here is new.
 The trace was re-run against the specification and `data/` on 2026-09-14, after ADR 0041 and ADR 0042 landed.
 The Evolution rows, the setup table's schedule and every worked example were re-run on 2026-09-23 against ADR
 0056, ADR 0057 and ADR 0059, `data/Tiers/`, `data/Spells/`, and the engine's `EvolutionRules`,
-`TierEligibility` and `Creature.BuyTier`. Every row below but one names the specification or a declared
-tabletop entry; none of them is owed to a rule the plan had only announced. **Phase 4's done-condition — every
-rule traces to `docs/domain/game-rules.md` or to a declared tabletop entry — is checkable line by line, and it
-checks out except for that one row**: a purchase being public the moment it happens is what the engine does,
-and `game-rules.md` does not say it. The fix belongs in `game-rules.md`, not here.
+`TierEligibility` and `Creature.BuyTier`. Every row below names the specification or a declared tabletop
+entry; none of them is owed to a rule the plan had only announced. **Phase 4's done-condition — every rule
+traces to `docs/domain/game-rules.md` or to a declared tabletop entry — is checkable line by line, and it
+checks out.** The one row that did not, a purchase being public the moment it happens, was what the engine
+did and `game-rules.md` did not say; the specification says it now.
 
 | This book | The specification |
 | --- | --- |
@@ -764,7 +764,7 @@ and `game-rules.md` does not say it. The fix belongs in `game-rules.md`, not her
 | [5.1](#51-energy-gain) | "Start of round", 1: `EnergyGain` |
 | [5.2](#52-ongoing-effects), the three passes and their order | "Start of round", 2: `OngoingEffects`, ADR 0019, ADR 0020 |
 | [5.3](#53-evolution), the schedule, availability, the purchase, the initiative bonus, sequence, the pass, the end of the Sub-phase | "Planning", 1: `Evolution`; "Planning rules (phase 5)"; ADR 0056, ADR 0057, ADR 0059 |
-| [5.3](#53-evolution), a purchase is public the moment it happens | Not stated in `game-rules.md`. The glossary implies it — a Creature carries the Tiers it has bought, and the Player board state shows both Teams as Snapshots — and the engine does it: the purchase applies at once (`Match.SubmitEvolutionChoice`) and both Players see `CreatureSnapshot.AcquiredTiers` |
+| [5.3](#53-evolution), a purchase is public the moment it happens | "Planning", 1: `Evolution`, "a purchase is public the moment it is made". The engine applies it at once (`Match.SubmitEvolutionChoice`) and both Players see `CreatureSnapshot.AcquiredTiers` |
 | [5.4](#54-speed), and the stunned Creature | "Planning", 2: `Speed` |
 | [5.5](#55-turn-order-resolution), and [6.6](#66-the-combat-timeline-and-its-tiebreaks) | "Planning", 3: `TurnOrderResolution`, and 4: `TieOrder`; ADR 0036, ADR 0063 |
 | [5.6](#56-intent-selection) | "Combat", 1: `IntentSelection` |

@@ -229,10 +229,6 @@ public sealed class Creature : Entity<CreatureId>
     }
 
     /// <summary>
-    /// Learns a spell and raises the base initiative by its Spell initiative, for the rest of the match. A
-    /// refused unlock raises nothing: a creature that already knows the spell, or is dead, keeps its base.
-    /// </summary>
-    /// <summary>
     /// Adds a spell to what this creature knows, idempotently. It grants no initiative of its own: a bonus
     /// belongs to the package that teaches the spell and is paid once, when the package is bought (ADR 0056).
     /// Idempotent because two packages may legitimately teach the same spell.
