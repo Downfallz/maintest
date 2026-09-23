@@ -139,7 +139,7 @@ public sealed class MatchTests
 
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).Error.ShouldBe(PlanningErrors.TierNotAvailable);
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).Error.ShouldBe(PlanningErrors.TierAlreadyOwned);
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).Error.ShouldBe(PlanningErrors.CreatureAlreadyEvolved);
 
         Table.CreatureNumber(match, 1).KnowsSpell(Arena.Guard).ShouldBeTrue();
         Table.CreatureNumber(match, 1).OwnsTier(Arena.GuardPack).ShouldBeTrue();
@@ -158,21 +158,23 @@ public sealed class MatchTests
     }
 
     /// <summary>
-    /// The second pick of an opportunity sees what the first one bought, which is what makes the two picks
-    /// sequential rather than simultaneous (ADR 0056): a creature reaches the top of a line in one round.
+    /// A creature buys at most one package an opportunity, so the two picks go to two creatures (ADR 0066): the
+    /// second pick cannot climb the level the first one opened, and the refusal changes nothing, while the
+    /// same pick on another creature goes through.
     /// </summary>
     [Fact]
-    public void The_second_pick_of_a_round_sees_what_the_first_one_bought()
+    public void A_creature_buys_at_most_one_package_a_round()
     {
         var match = Table.Started();
         var knight = CreatureId.From(1);
 
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(knight, Arena.SlamPack)).Error.ShouldBe(PlanningErrors.CreatureAlreadyEvolved);
 
-        Table.CreatureNumber(match, 1).OwnsTier(Arena.SlamPack).ShouldBeTrue();
-        Table.CreatureNumber(match, 1).KnowsSpell(Arena.Slam).ShouldBeTrue();
-        Table.CreatureNumber(match, 1).BaseInitiative.ShouldBe(Initiative.Of(8));
+        Table.CreatureNumber(match, 1).OwnsTier(Arena.SlamPack).ShouldBeFalse();
+        Table.CreatureNumber(match, 1).KnowsSpell(Arena.Slam).ShouldBeFalse();
+        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(2), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        Table.CreatureNumber(match, 2).OwnsTier(Arena.GuardPack).ShouldBeTrue();
     }
 
     [Fact]

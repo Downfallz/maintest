@@ -18,6 +18,8 @@ public static class PlanningErrors
     /// </summary>
     public static readonly DomainError NoPicksLeft = new("Planning.NoPicksLeft", "The player has no evolution pick left in this round.");
 
+    public static readonly DomainError CreatureAlreadyEvolved = new("Planning.CreatureAlreadyEvolved", "The creature has already bought a package in this round; each pick goes to a different creature.");
+
     public static readonly DomainError SpellAlreadyKnown = new("Planning.SpellAlreadyKnown", "The creature already knows this spell.");
 
     public static readonly DomainError UnknownTier = new("Planning.UnknownTier", "No package with this id is in the catalogue.");

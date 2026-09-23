@@ -53,7 +53,7 @@ public static class PlayerOptionsProjection
         }
 
         var creatures = snapshots
-            .Where(creature => creature.Owner == slot && creature.IsAlive)
+            .Where(creature => creature.Owner == slot && creature.IsAlive && !EvolutionRules.HasEvolved(slot, creature, round))
             .Select(creature => new EvolutionOption(creature.Id, TierEligibility.AvailableTiers(creature, resources)))
             .Where(option => option.AvailableTiers.Count > 0)
             .ToList();

@@ -113,8 +113,13 @@ public sealed class EvolutionRulesTests
             .IsSuccess.ShouldBeTrue();
     }
 
+    /// <summary>
+    /// Each creature buys at most one package a round (ADR 0066), so a pick counts only while a living creature
+    /// that has not bought is left to spend it on: once the Knight has bought and its ally is dead, Player 1's
+    /// second pick is gone, and a player down to one creature has one pick.
+    /// </summary>
     [Fact]
-    public void The_gate_counts_remaining_picks_capped_by_what_can_be_bought()
+    public void The_gate_counts_remaining_picks_capped_by_the_creatures_that_can_still_buy()
     {
         var living = Arena.FourCreatures();
         var round = Arena.RoundAt(RoundSubPhase.Evolution);
@@ -126,19 +131,41 @@ public sealed class EvolutionRulesTests
 
         round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack));
         living[0].BuyTier(Arena.Resources.GetTier(Arena.GuardPack));
+
+        EvolutionRules.Evaluate(Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default).Player1RemainingPicks.ShouldBe(1);
+
         living[1].TakeDamage(99);
 
-        var afterOnePick = EvolutionRules.Evaluate(Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default);
-        afterOnePick.Player1RemainingPicks.ShouldBe(1);
+        EvolutionRules.Evaluate(Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default).Player1RemainingPicks.ShouldBe(0, "the Knight has bought and its only ally is dead");
 
-        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.SlamPack));
-        living[0].BuyTier(Arena.Resources.GetTier(Arena.SlamPack));
         round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Ghoul, Arena.GuardPack));
         round.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Arena.Wraith, Arena.GuardPack));
 
         var done = EvolutionRules.Evaluate(Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default);
         done.CanAdvance.ShouldBeTrue();
         done.ShouldBe(new EvolutionGateResult(true, 0, 0));
+    }
+
+    [Fact]
+    public void A_player_down_to_one_creature_has_one_pick()
+    {
+        var living = Arena.FourCreatures();
+        living[1].TakeDamage(99);
+
+        EvolutionRules.Evaluate(Arena.Snapshots(living), Arena.RoundAt(RoundSubPhase.Evolution), Arena.Resources, RuleSet.Default)
+            .RemainingPicksOf(PlayerSlot.Player1).ShouldBe(1);
+    }
+
+    [Fact]
+    public void A_creature_that_has_bought_this_round_is_refused_a_second_package()
+    {
+        var living = Arena.FourCreatures();
+        var round = Arena.RoundAt(RoundSubPhase.Evolution);
+        round.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.GuardPack));
+        living[0].BuyTier(Arena.Resources.GetTier(Arena.GuardPack));
+
+        EvolutionRules.ValidateChoice(PlayerSlot.Player1, new EvolutionChoice(Arena.Knight, Arena.SlamPack), Arena.Snapshots(living), round, Arena.Resources, RuleSet.Default)
+            .Error.ShouldBe(PlanningErrors.CreatureAlreadyEvolved);
     }
 
     [Fact]

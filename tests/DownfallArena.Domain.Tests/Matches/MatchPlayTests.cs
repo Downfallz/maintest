@@ -140,8 +140,11 @@ public sealed class MatchPlayTests
     public void Stunned_creatures_skip_the_next_round()
     {
         var match = Table.Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        // The script needs Slam in round 1, and a creature buys one package a round (ADR 0066): it comes into
+        // the match already owning Slam's prerequisite, and the match's one pick for it buys Slam.
+        Table.CreatureNumber(match, 1).BuyTier(Arena.Resources.GetTier(Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         Table.ChooseStandard(match);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Slam)).IsSuccess.ShouldBeTrue();

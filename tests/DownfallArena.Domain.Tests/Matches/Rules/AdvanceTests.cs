@@ -28,8 +28,11 @@ public sealed class AdvanceTests
     public void A_board_advanced_through_every_step_of_a_match_lands_where_the_match_does()
     {
         var match = Table.Started();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        // The script needs Slam in round 1, and a creature buys one package a round (ADR 0066): it comes into
+        // the match already owning Slam's prerequisite, and the match's one pick for it buys Slam.
+        Table.CreatureNumber(match, 1).BuyTier(Arena.Resources.GetTier(Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(One, Arena.SlamPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(Three, Arena.GuardPack)).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         PlayCombat(match, new()
