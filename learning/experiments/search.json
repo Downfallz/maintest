@@ -1,9 +1,10 @@
 {
-  "why": "The lookahead's own rung under ADR 0066, the first since it lost its standing. Under stacked picks it beat greedy 0.755; once a creature buys one package an opportunity it scores 0.383, and #184 traced the gap to both of its readings, the intent and the target, not to a bug: a Wait lure it fell into cost nothing measurable once fixed. Its rollout reads a round through the built-in weights, which were set for the one-step reading and never searched for this one under the new rule, so this search fits the weights to the reading that plays them: every candidate plays as `lookahead:<weights>`, starting from the built-in set. The panel is greedy, search-4 and random, a candidate ranking last if it falls below the start against any: greedy because it is the opponent the lookahead now loses to, search-4 because search 10 showed a panel without it can be learned rather than the game, random as the floor. The check, off that line, is stun-first. The budget is 6 rounds of 12, smaller than the heuristic rungs', because a lookahead evaluation costs about four and a half times a heuristic one and the workflow stops at three hours. What would make it a rung: a set that, played as the lookahead, beats greedy on seeds it never saw, where the built-in weights read 0.383, and holds the check. The tell to read first: against greedy, how many mirrored pairs the dice decide (174 of 200 for search 10's heuristic set); if nearly all, the greedy column is a coin and the search ranks on the other two.",
-  "opponent": "greedy,heuristic:learning/weights/search-4.json,random",
-  "check_opponent": "heuristic:learning/weights/stun-first.json",
-  "kind": "lookahead",
-  "iterations": 6,
-  "population": 12,
+  "why": "The heuristic's rung on the 30-health content (ADR 0068), and the first to start from stun-first. The standings moved with the health: on the benchmark seeds, content 4ab506fa, stun-first beats greedy 0.886, search-4 0.950 and the built-in lookahead 0.785, pressure-floor beats greedy 0.874, and search-4, the bar every earlier rung was checked against, scores 0.485 against greedy. The ladder therefore climbs from the strongest set on this content, stun-first, rather than from a set that no longer beats the baseline. The panel is greedy, stun-first itself and pressure-floor, a candidate ranking last if it falls below the start against any: against stun-first the start scores the mirror's 0.5, so a candidate has to beat the set it came from to rank. Random is left out: every set beats it, and it costs a third of the budget in a game where a match now lasts about 15 rounds. The check, off that line and off the heuristic's reading, is the lookahead with its built-in weights. The budget is 10 rounds of 16, seed 0, as for the earlier heuristic rungs. What would make it a rung: a set that beats stun-first on seeds it never saw without falling below it against greedy, pressure-floor or the check.",
+  "initial": "learning/weights/stun-first.json",
+  "opponent": "greedy,heuristic:learning/weights/stun-first.json,heuristic:learning/weights/pressure-floor.json",
+  "check_opponent": "lookahead",
+  "kind": "heuristic",
+  "iterations": 10,
+  "population": 16,
   "seed": 0
 }
