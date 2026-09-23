@@ -2,7 +2,7 @@
   "id": "creature:main:v1",
   "name": "Main",
   "creatureClass": "Creature",
-  "baseHealth": 20,
+  "baseHealth": 30,
   "baseEnergy": 0,
   "baseDefense": 0,
   "baseInitiative": 5,
