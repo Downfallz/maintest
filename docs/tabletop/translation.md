@@ -21,7 +21,10 @@ left behind that this document reads is the content (`soul_devourer` back at 5 d
 > that cites `Spell initiative` or `Creature.UnlockSpell` names something the engine no longer has. Re-auditing
 > the tabletop translation against the package model is phase 7 of
 > [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md) and has not been done. Everything
-> outside evolution — combat, the timeline, conditions, the win condition — is unaffected.
+> outside evolution — combat, the timeline, conditions, the win condition — is unaffected, except one rule:
+> a timeline tie is rolled off on a d20 now, not broken by seat and Creature number
+> ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). A row here that calls the Creature number
+> the tiebreak is stale; the number only says the order tied Creatures roll in.
 
 ## What this is, and what it is not
 

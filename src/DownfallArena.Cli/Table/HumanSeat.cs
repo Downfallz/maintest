@@ -87,6 +87,9 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
         Required(Ask(new Question(PlayerOptionsKind.Speed, creature)).Speed);
 
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) =>
+        Ask(new Question(PlayerOptionsKind.TieOrder, Creature: null)).Order;
+
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);
@@ -101,7 +104,7 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     private PlayerDecision Ask(Question shape)
     {
-        // Stamped here rather than at the four call sites, which name the shape and have no reason to know
+        // Stamped here rather than at the call sites, which name the shape and have no reason to know
         // that two askings of it are two things.
         var question = shape with { Asked = Interlocked.Increment(ref _asked) };
         var answer = new TaskCompletionSource<PlayerDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -139,8 +142,8 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
 
     /// <summary>
     /// What the match is asking this seat. The creature is the one being asked about for a speed choice, an
-    /// intent and a target binding, and none for evolution, which is asked of the player rather than of one
-    /// creature.
+    /// intent and a target binding, and none for evolution or a tie order, which are asked of the player rather
+    /// than of one creature.
     /// </summary>
     /// <param name="Asked">
     /// Which asking this is, counted by the seat. It exists so that two questions of the same shape are two
@@ -160,8 +163,9 @@ internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent
                 return false;
             }
 
-            // Evolution names its own creature; the other three are asked about one, and the answer is for it.
-            return Kind == PlayerOptionsKind.Evolution || Creature is null || decision.Creature is null || decision.Creature == Creature;
+            // Evolution names its own creature and a tie order names several; the other three are asked about one
+            // creature, and the answer is for it.
+            return Kind is PlayerOptionsKind.Evolution or PlayerOptionsKind.TieOrder || Creature is null || decision.Creature is null || decision.Creature == Creature;
         }
     }
 }

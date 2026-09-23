@@ -6,6 +6,7 @@ import { badges, chipSource, chipText, conditionDock, healthShare, healthText, r
 import { backText, faceDown, handRows } from './hand.js';
 import { accumulate, feedLine, retainRoundEvents, roundRecap } from './feed.js';
 import { bands, cursorOf, side, withCursor } from './timeline.js';
+import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { drawn, matBands } from './mat.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 
@@ -333,6 +334,7 @@ function render(state, views) {
     state.chosen = null;
     state.error = '';
     state.evolving = null;
+    state.ordered = [];
     element('decision').scrollTop = 0;
     if (view.waitingFor === 'Intent' || view.waitingFor === 'Target') showTab(state, 'board');
   }
@@ -354,7 +356,7 @@ function render(state, views) {
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.catalogue, state.error]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.catalogue, state.error]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -844,6 +846,7 @@ function titleOf(state, view) {
   switch (view.waitingFor) {
     case 'Evolution': return `Buy a package · ${view.options.evolution?.remainingPicks ?? 0} pick(s) left`;
     case 'Speed': return `Speed of creature ${view.waitingCreature}`;
+    case 'TieOrder': return 'Tied: which of your creatures acts first?';
     case 'Intent': return `What does creature ${view.waitingCreature} do?`;
     case 'Target': {
       const spell = view.options.target?.spell;
@@ -865,6 +868,8 @@ function buttonsFor(state, current) {
     case 'Speed':
       return ['Quick', 'Standard'].map(speed =>
         button(speed, send({ kind: 'Speed', creature: view.waitingCreature, speed })));
+    case 'TieOrder':
+      return tieOrderButtons(state, current);
     case 'Intent':
       return intentButtons(state, current);
     case 'Target':
@@ -937,6 +942,55 @@ function packageCard(state, tier, onClick) {
 
   choice.append(head, body);
   return choice;
+}
+
+// The seat's own tied creatures, ordered one tap at a time (ties.js, ADR 0063). The roll-off already gave
+// each side its places; the first tap in a tie takes that tie's first place, and the last creature takes the
+// last place untapped. Nothing is sent until every tie is settled and the order is confirmed, and the order as
+// rolled can be kept in one tap: a tie nobody wants to reorder should cost nothing.
+function tieOrderButtons(state, current) {
+  const groups = current.view.options.tieOrder?.ties ?? [];
+  const tapped = state.ordered ?? [];
+  const send = order => () => submit(state, current, { kind: 'TieOrder', order });
+
+  const help = document.createElement('p');
+  help.className = 'choice-help';
+  help.textContent = 'The dice gave your side its places. Tap your creatures in the order they act.';
+
+  const ties = untapped(groups, tapped).map((left, index) => {
+    const row = document.createElement('div');
+    row.className = 'creature-picker';
+    row.setAttribute('aria-label', `Tie ${index + 1}`);
+    const settled = orderOf([groups[index]], tapped);
+    const status = document.createElement('p');
+    status.className = 'muted';
+    const names = settled.map(creature => `creature ${creature}`).join(' → ');
+    status.textContent = `Order: ${names}`;
+    row.append(status);
+    if (left.length > 1) {
+      for (const creature of left) {
+        const choice = button(`Creature ${creature}`, () => {
+          state.ordered = tap(groups, tapped, creature);
+          redraw(state);
+        });
+        choice.dataset.focus = `tie-${creature}`;
+        row.append(choice);
+      }
+    }
+    return row;
+  });
+
+  const confirm = button('Confirm this order', send(orderOf(groups, tapped)));
+  confirm.disabled = !isSettled(groups, tapped);
+  const keep = button('Keep the order the dice gave', send(orderOf(groups, [])));
+  keep.className = 'secondary';
+  const again = button('Start again', () => {
+    state.ordered = [];
+    redraw(state);
+  });
+  again.className = 'secondary';
+  again.disabled = tapped.length === 0;
+  return [help, ...ties, confirm, keep, again];
 }
 
 // An intent is declared in two taps, not one. A mis-tap on a phone is the misplay this app will produce most
@@ -1092,6 +1146,7 @@ async function submit(state, current, decision) {
 
     state.picked = [];
     state.chosen = null;
+    state.ordered = [];
     state.error = '';
   } catch {
     state.error = 'Could not reach the host. Check your connection before trying again.';

@@ -33,6 +33,9 @@ public sealed record PlayerDecision
     /// <summary>The targets bound to the intent being revealed. Empty when the spell has no legal target.</summary>
     public IReadOnlyList<CreatureId> Targets { get; private init; } = [];
 
+    /// <summary>The player's tied creatures, first to act first; empty for anything but a tie order.</summary>
+    public IReadOnlyList<CreatureId> Order { get; private init; } = [];
+
     /// <summary>Whether an evolution decision gives up the player's remaining picks for the round.</summary>
     public bool IsPass { get; private init; }
 
@@ -45,6 +48,13 @@ public sealed record PlayerDecision
 
     public static PlayerDecision ChooseSpeed(CreatureId creature, Speed speed) =>
         new(PlayerOptionsKind.Speed) { Creature = creature, Speed = speed };
+
+    /// <summary>Orders the player's own tied creatures among the places their side won (ADR 0063).</summary>
+    public static PlayerDecision OrderTies(IReadOnlyList<CreatureId> order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        return new(PlayerOptionsKind.TieOrder) { Order = [.. order] };
+    }
 
     public static PlayerDecision DeclareIntent(CreatureId creature, SpellId spell) =>
         new(PlayerOptionsKind.Intent) { Creature = creature, Spell = spell };
@@ -63,7 +73,8 @@ public sealed record PlayerDecision
         && Tier == other.Tier
         && Speed == other.Speed
         && IsPass == other.IsPass
-        && Targets.SequenceEqual(other.Targets);
+        && Targets.SequenceEqual(other.Targets)
+        && Order.SequenceEqual(other.Order);
 
-    public override int GetHashCode() => HashCode.Combine(Kind, Creature, Spell, Tier, Speed, IsPass, Targets.Count);
+    public override int GetHashCode() => HashCode.Combine(Kind, Creature, Spell, Tier, Speed, IsPass, Targets.Count, Order.Count);
 }

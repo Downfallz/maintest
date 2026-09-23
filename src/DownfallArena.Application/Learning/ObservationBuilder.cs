@@ -1,5 +1,6 @@
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches.Creatures;
+using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources.Effects;
 
 namespace DownfallArena.Application.Learning;
@@ -39,10 +40,31 @@ public sealed class ObservationBuilder(FeatureSchema schema)
     {
         features[0] = board.RoundNumber is { } round ? (float)round / schema.RoundCap : 0f;
         features[1] = board.Phase is { } phase ? (float)phase / 3f : 0f;
-        features[2] = board.SubPhase is { } subPhase ? (float)subPhase / 9f : 0f;
+        features[2] = board.SubPhase is { } subPhase ? SubPhaseValue(subPhase) : 0f;
         features[3] = board.Timeline.Count == 0 ? 0f : (float)board.RevealCursor / board.Timeline.Count;
         features[4] = (float)board.RevealedActions.Count(action => !slots.IsOwn(slots.SlotOf(action.Actor))) / schema.TeamSize;
     }
+
+    /// <summary>
+    /// The sub-phase as features:v6 has always encoded it, the ordinal of ADR 0010's ten steps over 9. Spelled
+    /// out rather than cast, because ADR 0063 inserted <see cref="RoundSubPhase.TieOrder"/> into the enum and a
+    /// cast would have moved every later value under the same schema id. TieOrder reads as the turn-order step it
+    /// belongs to; no decision is recorded there, so no dataset carries it.
+    /// </summary>
+    private static float SubPhaseValue(RoundSubPhase subPhase) => subPhase switch
+    {
+        RoundSubPhase.EnergyGain => 0f,
+        RoundSubPhase.OngoingEffects => 1f / 9f,
+        RoundSubPhase.Evolution => 2f / 9f,
+        RoundSubPhase.Speed => 3f / 9f,
+        RoundSubPhase.TurnOrderResolution or RoundSubPhase.TieOrder => 4f / 9f,
+        RoundSubPhase.IntentSelection => 5f / 9f,
+        RoundSubPhase.RevealAndTarget => 6f / 9f,
+        RoundSubPhase.ActionResolution => 7f / 9f,
+        RoundSubPhase.Cleanup => 8f / 9f,
+        RoundSubPhase.Finalization => 1f,
+        _ => throw new ArgumentOutOfRangeException(nameof(subPhase), subPhase, "A sub-phase features:v6 has no value for."),
+    };
 
     private void WriteCreature(CreatureSnapshot creature, float[] features, int offset)
     {

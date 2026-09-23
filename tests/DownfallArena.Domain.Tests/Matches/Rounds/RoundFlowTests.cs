@@ -30,7 +30,8 @@ public sealed class RoundFlowTests
     public void After_walks_forward_and_stops_at_the_end()
     {
         RoundFlow.After(RoundSubPhase.EnergyGain).ShouldBe(RoundSubPhase.OngoingEffects);
-        RoundFlow.After(RoundSubPhase.TurnOrderResolution).ShouldBe(RoundSubPhase.IntentSelection);
+        RoundFlow.After(RoundSubPhase.TurnOrderResolution).ShouldBe(RoundSubPhase.TieOrder);
+        RoundFlow.After(RoundSubPhase.TieOrder).ShouldBe(RoundSubPhase.IntentSelection);
         RoundFlow.After(RoundSubPhase.Finalization).ShouldBeNull();
     }
 }

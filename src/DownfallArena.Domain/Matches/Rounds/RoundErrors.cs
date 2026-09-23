@@ -14,6 +14,10 @@ public static class RoundErrors
 
     public static readonly DomainError SpeedAlreadyChosen = new("Round.SpeedAlreadyChosen", "A speed was already chosen for this creature.");
 
+    public static readonly DomainError TieOrderNotOpen = new("Round.TieOrderNotOpen", "Tie orders are not accepted in the current sub-phase.");
+
+    public static readonly DomainError TieOrderAlreadySubmitted = new("Round.TieOrderAlreadySubmitted", "This player already ordered their tied creatures for the round.");
+
     public static readonly DomainError IntentsNotOpen = new("Round.IntentsNotOpen", "Combat intents are not accepted in the current sub-phase.");
 
     public static readonly DomainError IntentAlreadySubmitted = new("Round.IntentAlreadySubmitted", "An intent was already submitted for this creature.");

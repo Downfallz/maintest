@@ -36,6 +36,7 @@ public sealed class PlayerBoardStateProjectionTests
         match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(2), Speed.Standard));
         match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(3), Speed.Standard));
         match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(4), Speed.Standard));
+        MatchStore.KeepTieOrder(match);
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), TestContent.Strike));
 
         var player1 = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);

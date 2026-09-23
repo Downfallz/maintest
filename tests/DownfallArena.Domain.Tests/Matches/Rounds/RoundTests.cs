@@ -14,6 +14,16 @@ public sealed class RoundTests
     private static readonly TierId GuardPack = TierId.Parse("tier:guard:v1");
     private static readonly TierId SlamPack = TierId.Parse("tier:slam:v1");
 
+    private static readonly CreatureId Archer = CreatureId.From(2);
+
+    // Knight and Archer hold the first and third places of one tie, and the Ghoul the second.
+    private static readonly CombatTimeline Tied = CombatTimeline.Of(
+    [
+        new ActivationSlot(PlayerSlot.Player1, Knight, Speed.Quick, Initiative.Of(5)),
+        new ActivationSlot(PlayerSlot.Player2, Ghoul, Speed.Quick, Initiative.Of(5)),
+        new ActivationSlot(PlayerSlot.Player1, Archer, Speed.Quick, Initiative.Of(5)),
+    ]);
+
     private static readonly CombatTimeline Timeline = CombatTimeline.Of(
     [
         new ActivationSlot(PlayerSlot.Player1, Knight, Speed.Quick, Initiative.Of(5)),
@@ -121,6 +131,44 @@ public sealed class RoundTests
         round.ResolveCursor.ShouldBe(TurnCursor.Start);
         round.NextSlotToReveal.ShouldBe(Timeline[0]);
         round.AllActionsBound.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_tie_order_is_accepted_once_per_player_during_tie_order_only()
+    {
+        var round = Round.First();
+
+        round.SubmitTieOrder(PlayerSlot.Player1, [Knight, Archer]).Error.ShouldBe(RoundErrors.TieOrderNotOpen);
+
+        AdvanceTo(round, RoundSubPhase.TieOrder);
+
+        round.SubmitTieOrder(PlayerSlot.Player1, [Archer, Knight]).IsSuccess.ShouldBeTrue();
+        round.SubmitTieOrder(PlayerSlot.Player1, [Knight, Archer]).Error.ShouldBe(RoundErrors.TieOrderAlreadySubmitted);
+        round.TieOrderOf(PlayerSlot.Player1).ShouldBe([Archer, Knight]);
+        round.TieOrderOf(PlayerSlot.Player2).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// A reordered timeline is installed only during TieOrder, and only when every place keeps its side, its
+    /// speed and its initiative (ADR 0063): the order may swap two of one side's creatures within a tie, never
+    /// hand a place to the other side or move a creature out of its band.
+    /// </summary>
+    [Fact]
+    public void A_reordered_timeline_keeps_every_place_where_it_was()
+    {
+        var round = Round.First();
+        AdvanceTo(round, RoundSubPhase.TurnOrderResolution);
+        round.SetTimeline(Tied);
+
+        Should.Throw<InvalidOperationException>(() => round.ReorderTimeline(Tied));
+
+        round.Advance();
+        Should.Throw<InvalidOperationException>(() => round.ReorderTimeline(CombatTimeline.Of([Tied[1], Tied[0], Tied[2]])));
+        Should.Throw<InvalidOperationException>(() => round.ReorderTimeline(CombatTimeline.Of([Tied[0], Tied[1]])));
+        var swapped = CombatTimeline.Of([Tied[2], Tied[1], Tied[0]]);
+        round.ReorderTimeline(swapped);
+
+        round.Timeline.ShouldBeSameAs(swapped);
     }
 
     [Fact]

@@ -21,6 +21,7 @@ internal static class Handlers
                 new SubmitEvolutionChoiceHandler(workflow),
                 new PassEvolutionHandler(workflow),
                 new SubmitSpeedChoiceHandler(workflow),
+                new SubmitTieOrderHandler(workflow),
                 new SubmitIntentHandler(workflow),
                 new SubmitActionHandler(workflow),
                 new ResolveNextActionHandler(workflow)),

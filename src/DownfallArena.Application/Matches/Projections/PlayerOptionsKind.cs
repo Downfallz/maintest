@@ -13,6 +13,9 @@ public enum PlayerOptionsKind
 
     Speed,
 
+    /// <summary>The player orders their own tied creatures among the places their side won (ADR 0063).</summary>
+    TieOrder,
+
     Intent,
 
     Target,

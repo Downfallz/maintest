@@ -37,6 +37,20 @@ public sealed class RandomAgentTests
         speeds.ShouldBe([Speed.Quick, Speed.Standard], ignoreOrder: true);
     }
 
+    /// <summary>Every order a random agent gives keeps each creature inside its own tie, and both orders of a pair occur.</summary>
+    [Fact]
+    public void A_tie_order_shuffles_each_tie_on_its_own()
+    {
+        var agent = new RandomAgent(new TestRandom(3));
+        var options = new TieOrderOptions([[CreatureId.From(1), CreatureId.From(2)], [CreatureId.From(5), CreatureId.From(6)]]);
+
+        var orders = Enumerable.Range(0, 40).Select(_ => agent.DecideTieOrder(Board, options)).ToList();
+
+        orders.ShouldAllBe(order => order.Take(2).ToHashSet().SetEquals(new[] { CreatureId.From(1), CreatureId.From(2) })
+            && order.Skip(2).ToHashSet().SetEquals(new[] { CreatureId.From(5), CreatureId.From(6) }));
+        orders.Select(order => order[0]).Distinct().Count().ShouldBe(2);
+    }
+
     [Fact]
     public void Intent_picks_one_castable_spell()
     {

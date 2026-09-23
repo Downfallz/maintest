@@ -12,6 +12,7 @@ public sealed record MatchCommandHandlers(
     ICommandHandler<SubmitEvolutionChoice, Result> SubmitEvolutionChoice,
     ICommandHandler<PassEvolution, Result> PassEvolution,
     ICommandHandler<SubmitSpeedChoice, Result> SubmitSpeedChoice,
+    ICommandHandler<SubmitTieOrder, Result> SubmitTieOrder,
     ICommandHandler<SubmitIntent, Result> SubmitIntent,
     ICommandHandler<SubmitAction, Result> SubmitAction,
     ICommandHandler<ResolveNextAction, Result<CombatStep>> ResolveNextAction);

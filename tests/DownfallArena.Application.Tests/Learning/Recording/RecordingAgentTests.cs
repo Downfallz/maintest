@@ -206,6 +206,9 @@ public sealed class RecordingAgentTests
             return inner.DecideSpeed(board, creature);
         }
 
+        // Not counted: a tie order is asked and never recorded, since no encoding of one exists (ADR 0063).
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => inner.DecideTieOrder(board, options);
+
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
         {
             Decisions++;

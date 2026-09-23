@@ -41,10 +41,9 @@ is beside it. Fill the setup table's values in before the first Match.
 
 1. **Quick before Standard.** Always, whatever the numbers.
 2. **Higher Current initiative first.**
-3. **Player 1 before Player 2.**
-4. **Lower Creature number first.**
-
-Rules 3 and 4 together: **Player 1's boards, left to right, then Player 2's.**
+3. **Tied with the other side? Roll off.** Each tied Creature rolls a d20: the highest takes the first place.
+   Equal rolls across the sides roll again. The seat breaks no tie.
+4. **Tied with your own?** Put your Creatures in your side's places in the order you want, before Intents.
 
 **Current initiative** = Base initiative + Initiative buffs - Initiative debuffs, never below 0. Read **once**,
 here. A debuff that lands in Combat does not reshuffle this Round.

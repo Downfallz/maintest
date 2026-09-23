@@ -35,6 +35,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddTransient<ICommandHandler<SubmitEvolutionChoice, Result>, SubmitEvolutionChoiceHandler>();
         services.TryAddTransient<ICommandHandler<PassEvolution, Result>, PassEvolutionHandler>();
         services.TryAddTransient<ICommandHandler<SubmitSpeedChoice, Result>, SubmitSpeedChoiceHandler>();
+        services.TryAddTransient<ICommandHandler<SubmitTieOrder, Result>, SubmitTieOrderHandler>();
         services.TryAddTransient<ICommandHandler<SubmitIntent, Result>, SubmitIntentHandler>();
         services.TryAddTransient<ICommandHandler<SubmitAction, Result>, SubmitActionHandler>();
         services.TryAddTransient<ICommandHandler<ResolveNextAction, Result<CombatStep>>, ResolveNextActionHandler>();

@@ -29,6 +29,7 @@ internal sealed class TableGate : IDisposable
             Around(commands.SubmitEvolutionChoice),
             Around(commands.PassEvolution),
             Around(commands.SubmitSpeedChoice),
+            Around(commands.SubmitTieOrder),
             Around(commands.SubmitIntent),
             Around(commands.SubmitAction),
             Around(commands.ResolveNextAction));

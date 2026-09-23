@@ -47,7 +47,7 @@ Read as the source of truth, in this order: `docs/domain/game-rules.md`, `docs/d
 | Talent tree | `data/TalentTrees`, `allOf`/`anyOf` prerequisites, 3 tiers under 3 classes | A tech-tree mat per class, or prerequisites printed on the card |
 | Evolution | 2 unlocks per player per round, raises base initiative (ADR 0017) | Draw the unlocked card into the creature's hand, move its initiative marker |
 | Speed | Quick or Standard per creature | A two-sided speed token per creature |
-| Combat timeline | Quick then Standard, initiative descending, ties by slot then id | An initiative track with six creature markers |
+| Combat timeline | Quick then Standard, initiative descending, ties rolled off on a d20 (ADR 0063) | An initiative track with six creature markers |
 | Intent | Hidden, one per creature, revealed in timeline order | A card played face down, flipped when its slot comes up |
 | Reveal and target | Targets chosen at reveal, after seeing what came before | Target markers placed when the card flips |
 | Effects | 4 instant, 8 lasting kinds, durations, stacking policy | Condition tokens with a value and a duration |

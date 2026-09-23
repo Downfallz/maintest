@@ -73,6 +73,8 @@ internal sealed class IntentCounter : IMatchRecorder
 
         public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => inner.DecideSpeed(board, creature);
 
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => inner.DecideTieOrder(board, options);
+
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
         {
             ArgumentNullException.ThrowIfNull(board);

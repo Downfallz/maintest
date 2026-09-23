@@ -68,6 +68,9 @@ Decisions:
   would have to guess about, so the answer is sound but incomplete. That was 45.6 % of all fizzles
   (ADR 0039).
 - **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
+- **Tie order**: the order the roll-off left (ADR 0063). The scorer reads one action at a time and has no view
+  of which of two of its own creatures should act first, so it does not pretend to; the random agent shuffles
+  each tie and the exploring one does at its rate.
 - **Evolution**: for each unlockable spell, its value as if the creature knew it and could afford it (the
   best target set on the current board), plus `w.initiative` x the spell's Spell initiative, the base
   initiative the unlock buys for the rest of the match (ADR 0017, priced by ADR 0018), minus `w.energy` x

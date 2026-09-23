@@ -81,7 +81,7 @@ internal static class Arena
 
     /// <summary>
     /// A round in the given combat sub-phase with the four creatures on the timeline, Knight first, then Archer,
-    /// Ghoul, Wraith (all Standard, equal initiative, ordered by player slot then creature id).
+    /// Ghoul, Wraith (all Standard, equal initiative, set in that order by hand rather than rolled off).
     /// </summary>
     public static Round CombatRoundAt(RoundSubPhase subPhase)
     {

@@ -27,4 +27,6 @@ public static class DecisionErrors
     public static readonly DomainError TooManyTargets = new("Decision.TooManyTargets", "This spell takes fewer targets than the decision binds.");
 
     public static readonly DomainError NoLegalTarget = new("Decision.NoLegalTarget", "This spell has no legal target right now, so the only action binds none.");
+
+    public static readonly DomainError TieOrderNotOffered = new("Decision.TieOrderNotOffered", "A tie order names every tied creature the options offer, once each, and nothing else.");
 }

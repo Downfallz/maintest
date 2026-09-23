@@ -43,6 +43,16 @@ public sealed class RecordingAgent(
         return speed;
     }
 
+    /// <summary>
+    /// Asked of whoever decides, and not recorded: a dataset step is a candidate the encoder can name, and no
+    /// encoding of a tie order exists yet, so a policy neither learns it nor is asked it (ADR 0063).
+    /// </summary>
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        return Deciding(board).Agent.DecideTieOrder(board, options);
+    }
+
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(board);

@@ -63,6 +63,8 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) => _oneStep.DecideSpeed(board, creature);
 
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => _oneStep.DecideTieOrder(board, options);
+
     /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
     /// the actor casting that spell on the best targets the board offers when its slot comes. Ties go to the

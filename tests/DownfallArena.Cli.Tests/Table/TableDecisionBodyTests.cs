@@ -1,6 +1,8 @@
+using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -89,8 +91,35 @@ public sealed class TableDecisionBodyTests
 
     /// <summary>The refusal says what was expected, and the four kinds are the engine's own.</summary>
     [Fact]
-    public void The_kinds_a_body_may_name_are_the_four_the_engine_asks_about()
+    public void The_kinds_a_body_may_name_are_the_five_the_engine_asks_about()
     {
-        TableDecisionBody.Kinds.ShouldBe("Evolution, Speed, Intent, Target");
+        TableDecisionBody.Kinds.ShouldBe("Evolution, Speed, TieOrder, Intent, Target");
+    }
+
+    [Fact]
+    public void A_tie_order_body_names_the_creatures_first_to_act_first()
+    {
+        var body = new TableDecisionBody { Kind = "TieOrder", Order = [2, 1] };
+
+        body.ToDecision(out _).ShouldBe(PlayerDecision.OrderTies([CreatureId.From(2), CreatureId.From(1)]));
+    }
+
+    [Fact]
+    public void A_tie_order_body_without_an_order_names_no_decision()
+    {
+        var body = new TableDecisionBody { Kind = "TieOrder" };
+
+        body.ToDecision(out var problem).ShouldBeNull();
+        problem.ShouldNotBeEmpty();
+    }
+
+    /// <summary>An id of zero is refused as a body that names no decision, not thrown on as a 500.</summary>
+    [Fact]
+    public void A_tie_order_body_naming_a_creature_id_that_cannot_exist_names_no_decision()
+    {
+        var body = new TableDecisionBody { Kind = "TieOrder", Order = [2, 0] };
+
+        body.ToDecision(out var problem).ShouldBeNull();
+        problem.ShouldNotBeEmpty();
     }
 }

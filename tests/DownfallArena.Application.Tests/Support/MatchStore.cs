@@ -4,6 +4,7 @@ using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Messaging;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
+using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Randomness;
 using NSubstitute;
@@ -64,10 +65,10 @@ internal sealed class MatchStore
 
     public static List<CreatureDefinitionId> Roster(RuleSet rules) => [.. Enumerable.Repeat(TestContent.Main, rules.TeamSize)];
 
-    /// <summary>A stored match that waits for players.</summary>
+    /// <summary>A stored match that waits for players. Its ties go to Player 1 unless a random source is given.</summary>
     public Match Empty(RuleSet? rules = null, IRandomSource? random = null)
     {
-        var match = Match.Create(MatchId.New(), TestContent.Resources, rules ?? TwoOnTwo(), random ?? new TestRandom(7));
+        var match = Match.Create(MatchId.New(), TestContent.Resources, rules ?? TwoOnTwo(), random ?? new FirstToRollWinsTies(new TestRandom(7)));
         _matches[match.Id] = match;
         return match;
     }
@@ -93,6 +94,24 @@ internal sealed class MatchStore
         foreach (var creature in match.Creatures.Where(creature => creature.IsAlive && !creature.IsStunned))
         {
             match.SubmitSpeedChoice(creature.Owner, new SpeedChoice(creature.Id, Speed.Standard)).IsSuccess.ShouldBeTrue();
+        }
+
+        KeepTieOrder(match);
+    }
+
+    /// <summary>
+    /// Every player who owes a tie order keeps the order the timeline holds (ADR 0063); nothing to do in a
+    /// round where no side has a tie of its own.
+    /// </summary>
+    public static void KeepTieOrder(Match match)
+    {
+        foreach (var slot in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
+        {
+            var round = match.CurrentRound.ShouldNotBeNull();
+            if (round.SubPhase == RoundSubPhase.TieOrder && TieOrderRules.HasTieOrderToGive(round.Timeline, slot))
+            {
+                match.SubmitTieOrder(slot, [.. TieOrderRules.TiesOf(round.Timeline, slot).SelectMany(group => group)]).IsSuccess.ShouldBeTrue();
+            }
         }
     }
 

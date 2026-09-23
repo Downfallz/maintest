@@ -27,6 +27,8 @@ public sealed class RandomAgent(IRandomSource random) : IPlayerAgent
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature) =>
         random.NextInt32(0, 2) == 0 ? Speed.Quick : Speed.Standard;
 
+    public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options) => TieShuffle.Of(options, random);
+
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
         ArgumentNullException.ThrowIfNull(intentOption);

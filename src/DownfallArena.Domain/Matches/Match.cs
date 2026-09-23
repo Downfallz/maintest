@@ -201,6 +201,37 @@ public sealed class Match : AggregateRoot<MatchId>
         return Result.Success();
     }
 
+    /// <summary>
+    /// Orders the player's own tied creatures among the places their side won in the roll-off (ADR 0063).
+    /// </summary>
+    public Result SubmitTieOrder(PlayerSlot slot, IReadOnlyList<CreatureId> order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        var open = RequireSubPhase(RoundSubPhase.TieOrder, RoundErrors.TieOrderNotOpen);
+        if (open.IsFailure)
+        {
+            return open;
+        }
+
+        var round = ActiveRound;
+        var validated = TieOrderRules.ValidateOrder(slot, order, round.Timeline);
+        if (validated.IsFailure)
+        {
+            return validated;
+        }
+
+        var accepted = round.SubmitTieOrder(slot, order);
+        if (accepted.IsFailure)
+        {
+            return accepted;
+        }
+
+        RaiseDomainEvent(new TieOrderSubmitted(Id, round.Id, slot, [.. order]));
+        Drive();
+        return Result.Success();
+    }
+
     public Result SubmitIntent(PlayerSlot slot, CombatIntent intent)
     {
         ArgumentNullException.ThrowIfNull(intent);
@@ -355,6 +386,7 @@ public sealed class Match : AggregateRoot<MatchId>
             RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
+            RoundSubPhase.TieOrder => TieOrderRules.Evaluate(round).CanAdvance && Automatic(() => ApplyTieOrders(round)),
             RoundSubPhase.IntentSelection => AdvanceIf(IntentRules.Evaluate(round).CanAdvance),
             RoundSubPhase.RevealAndTarget => AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
             RoundSubPhase.ActionResolution => AdvanceIf(round.IsCombatResolved),
@@ -392,9 +424,21 @@ public sealed class Match : AggregateRoot<MatchId>
     private void BuildTimeline()
     {
         var round = ActiveRound;
-        var timeline = TimelineBuilder.Build(Snapshots(), round.SpeedChoices);
+        var timeline = TimelineBuilder.Build(Snapshots(), round.SpeedChoices, _random);
         round.SetTimeline(timeline);
         RaiseDomainEvent(new TimelineBuilt(Id, round.Id, timeline));
+    }
+
+    private void ApplyTieOrders(Round round)
+    {
+        if (round.TieOrders.Count == 0)
+        {
+            return;
+        }
+
+        var timeline = TieOrderRules.Apply(round.Timeline, round.TieOrders);
+        round.ReorderTimeline(timeline);
+        RaiseDomainEvent(new TiesOrdered(Id, round.Id, timeline));
     }
 
     private bool FinalizeRound()

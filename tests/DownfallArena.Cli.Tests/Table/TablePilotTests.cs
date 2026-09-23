@@ -497,6 +497,12 @@ public sealed class TablePilotTests : IDisposable
             return inner.DecideSpeed(board, creature);
         }
 
+        public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
+        {
+            Hold();
+            return inner.DecideTieOrder(board, options);
+        }
+
         public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
         {
             Hold();
