@@ -121,7 +121,8 @@ What the rest of the plan therefore takes as given, and what it must not hard-co
   of their counts follow a value and which follow a rule, so a rebalanced game reprints rather than redesigns.
 - **The Creature's base Critical chance is zero** (ADR 0042): a Spell's printed chance is the chance rolled,
   and the fifteen Spells at zero never roll.
-- **A Condition stacks, except a Stun** (ADR 0041): one application is one token.
+- **A Condition stacks, except a Stun** (ADR 0041): one application is one token. A Stun on a Creature already
+  stunned or immune to Stun is ignored, and a Stun that ends leaves a Round of Stun immunity (ADR 0072).
 
 ### Phase 3. Components and print-and-play (`docs/tabletop/components.md` + a generator)
 

@@ -39,7 +39,25 @@ state (`ObservationBuilder`, phase L1). Its layout is a **feature schema**, iden
 
 ## Versions
 
-### features:v6 (published, ADR 0056)
+### features:v7 (published, ADR 0072)
+
+`features:v6` with one more feature at the end of the opening creature features: `stun_immune`, 1 through the
+round after a stun ends, when a stun cast on the creature would be ignored, and 0 otherwise. A creature block is
+`C = 7 + 2 x 8 + S + T`, and every offset past `+6` moves up by one:
+
+| Offset in block | Name | Value |
+| --- | --- | --- |
+| +0 to +5 | `alive` to `initiative` | as in v6 |
+| +6 | `stun_immune` | 1 while a stun would be ignored for immunity (ADR 0072) |
+| +7 to +22 | the eight condition pairs | as in v6 |
+| +23 to +23+S-1 | `knows_<spell id>` | as in v6 |
+| +23+S to +23+S+T-1 | `owns_<tier id>` | as in v6 |
+
+The immunity is a state of the creature and not a condition, so the condition pairs keep their eight kinds.
+Everything else is v6 unchanged. No run recorded under v6 is comparable to one under v7, and a policy trained
+under v6 is refused.
+
+### features:v6 (superseded by v7, ADR 0072)
 
 `features:v5` with the talent-node block replaced by a **package block**. A pick buys a tier now, so what a
 creature owns is recorded rather than guessed: the node bits were 1 when a creature knew every spell of a

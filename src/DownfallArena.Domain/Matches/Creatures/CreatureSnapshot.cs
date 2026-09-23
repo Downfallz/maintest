@@ -47,6 +47,18 @@ public sealed record CreatureSnapshot
 
     public required IReadOnlyList<ConditionSnapshot> Conditions { get; init; }
 
+    /// <summary>
+    /// Rounds left of the immunity a stun leaves behind (ADR 0072): one through the round after a stun ends,
+    /// zero otherwise. Defaults to zero, which is every creature a snapshot was taken of before the rule.
+    /// </summary>
+    public int StunImmunityRounds { get; init; }
+
+    /// <summary>Whether a stun would be ignored for immunity. A stunned creature ignores one too; <see cref="CanBeStunned"/> says both.</summary>
+    public bool IsStunImmune => IsAlive && StunImmunityRounds > 0;
+
+    /// <summary>Whether a stun cast on this creature would land: alive, and neither stunned nor immune (ADR 0072).</summary>
+    public bool CanBeStunned => IsAlive && !IsStunned && !IsStunImmune;
+
     public bool IsDead => Health.IsZero;
 
     public bool IsAlive => !IsDead;

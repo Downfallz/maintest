@@ -6,6 +6,7 @@ using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.Domain.Matches.Rules.Rounds;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 using DownfallArena.SharedKernel.Randomness;
@@ -390,10 +391,23 @@ public sealed class Match : AggregateRoot<MatchId>
             RoundSubPhase.IntentSelection => AdvanceIf(IntentRules.Evaluate(round).CanAdvance),
             RoundSubPhase.RevealAndTarget => AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
             RoundSubPhase.ActionResolution => AdvanceIf(round.IsCombatResolved),
-            RoundSubPhase.Cleanup => Automatic(() => RaiseDomainEvent(new ConditionsExpired(Id, round.Id, Expired(UpkeepRules.Cleanup(creatures))))),
+            RoundSubPhase.Cleanup => Automatic(() => Cleanup(round, creatures)),
             RoundSubPhase.Finalization => FinalizeRound(),
             _ => throw new InvalidOperationException($"Sub-phase {round.SubPhase} has no driver step."),
         };
+    }
+
+    private void Cleanup(Round round, IReadOnlyList<Creature> creatures)
+    {
+        var expired = UpkeepRules.Cleanup(creatures);
+        RaiseDomainEvent(new ConditionsExpired(Id, round.Id, Expired(expired)));
+        List<CreatureId> immune = [.. creatures
+            .Where(creature => creature.IsStunImmune && expired.TryGetValue(creature.Id, out var gone) && gone.Any(condition => condition.Effect is Stun))
+            .Select(creature => creature.Id)];
+        if (immune.Count > 0)
+        {
+            RaiseDomainEvent(new StunImmunityGained(Id, round.Id, immune));
+        }
     }
 
     private void RaiseOngoingEffects(Round round, OngoingEffectTicks ticks) =>

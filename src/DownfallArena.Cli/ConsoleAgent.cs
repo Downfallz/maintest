@@ -102,7 +102,7 @@ internal sealed class ConsoleAgent(TextReader input, TextWriter output) : IPlaye
     }
 
     private static string Describe(CreatureSnapshot creature) =>
-        $"#{creature.Id} {creature.Name} HP {creature.Health}/{creature.MaxHealth} EN {creature.Energy}" + (creature.IsStunned ? " (stunned)" : string.Empty);
+        $"#{creature.Id} {creature.Name} HP {creature.Health}/{creature.MaxHealth} EN {creature.Energy}" + (creature.IsStunned ? " (stunned)" : string.Empty) + (creature.IsStunImmune ? " (immune to stun)" : string.Empty);
 
     /// <summary>
     /// Shows a numbered menu and returns the chosen index, or <c>null</c> when the optional "none" entry was chosen.

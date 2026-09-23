@@ -46,7 +46,7 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0038](0038-a-wasted-action-is-a-fizzle-whatever-wasted-it.md) | A wasted action is a fizzle, whatever wasted it | Accepted |
 | [0039](0039-the-bot-binds-its-targets-on-a-board-that-has-not-happened-yet.md) | The bot binds its targets on a board that has not happened yet | Accepted |
 | [0040](0040-remove-the-fizzle-weight.md) | Remove the fizzle weight | Accepted |
-| [0041](0041-a-condition-stacks-unless-it-is-a-stun.md) | A Condition stacks unless it is a Stun | Accepted |
+| [0041](0041-a-condition-stacks-unless-it-is-a-stun.md) | A Condition stacks unless it is a Stun | Accepted, amended by [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) |
 | [0042](0042-a-creature-has-no-base-critical-chance.md) | A Creature has no base critical chance | Accepted |
 | [0043](0043-a-control-spell-is-not-an-attack-and-reach-is-not-force.md) | A control spell is not an attack, and reach is not force | Accepted |
 | [0044](0044-the-exploit-target-compares-against-a-yardstick-that-does-not-hold.md) | The exploit target compares against a yardstick that does not hold | Superseded by [0052](0052-read-the-exploit-term-as-the-best-of-a-panel.md) |
@@ -77,4 +77,5 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0069](0069-reveal-all-spells-before-targeting.md) | Reveal all spells before choosing targets | Superseded by [0070](0070-reveal-spells-with-confirmed-targets.md) |
 | [0070](0070-reveal-spells-with-confirmed-targets.md) | Reveal spells together with confirmed targets | Accepted |
 | [0071](0071-read-a-match-length-on-the-exploring-run.md) | Read a match's length on the exploring run, not on the greedy mirror | Accepted |
+| [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md) | A creature is immune to stun the round after one ends | Accepted |
 | [0073](0073-a-bleed-is-priced-as-the-damage-defense-would-block.md) | A bleed is priced as the damage a defense would block | Accepted |

@@ -30,7 +30,7 @@ public sealed class EffectTests
         bleed.Stacking.ShouldBe(StackingPolicy.Stack);
         Bleed.Of(1, 2, StackingPolicy.Refresh).Stacking.ShouldBe(StackingPolicy.Refresh);
         stun.Duration.Rounds.ShouldBe(1);
-        stun.Stacking.ShouldBe(StackingPolicy.Refresh);
+        stun.Stacking.ShouldBe(StackingPolicy.Ignore);
 
         Should.Throw<ArgumentOutOfRangeException>(() => Bleed.Of(0, 3));
         Should.Throw<ArgumentOutOfRangeException>(() => Bleed.Of(1, 0));

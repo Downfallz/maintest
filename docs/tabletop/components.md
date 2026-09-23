@@ -2,7 +2,7 @@
 
 Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
 question 14, 2026-09-23, to one package a Creature an opportunity the same day, to 30 Health the same
-day again, and to a 20-Round cap the same day once more). Phase 3 of
+day again, to a 20-Round cap the same day once more, and to Stun immunity the same day). Phase 3 of
 [plan.md](plan.md). It answers the **needs a component** rows of [translation.md](translation.md) and specifies
 a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -29,6 +29,11 @@ What is current, exactly:
   ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
   Base initiative tens rail ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)) and the cards a
   Match can put in hands ([1.1](#11-spell-cards-and-package-cards)). No piece count moved; the paper is 49.
+- **A Stun ends, and leaves a Round of Stun immunity**
+  ([ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md)). A Stun on a Creature already
+  stunned or immune to Stun is ignored, where it used to restart. The box gains **6 Immune tokens**
+  ([1.5](#15-the-rest-of-the-pieces)) and the Cleanup one swap ([3.2](#32-the-condition-dock-and-the-countdown)).
+  The token pieces go from 260 to 266, which the same 2 token sheets hold; the paper stays 49.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -47,7 +52,7 @@ that enforces the rule**, with the command beside it.
 [ADR 0042](../adr/0042-a-creature-has-no-base-critical-chance.md) shipped in PR #76 and are now files here;
 they say what the plan said they would, and what this document takes from them is unchanged: the Creature's
 base Critical chance is zero (`data/Creatures/main.v1.json` reads `baseCriticalChance: 0`), and a Condition
-stacks except a Stun, which refreshes.
+stacks except a Stun, which refreshed until ADR 0072 made it ignored (above).
 
 ### How a count is marked
 
@@ -69,7 +74,9 @@ From [plan.md](plan.md), phase 2 and the Decisions section:
 - Two Players, **three Creatures each**, all six from `data/Creatures/main.v1.json`.
 - The Creature's base Critical chance is **zero**. A Spell's printed chance is the chance rolled. The 15
   Spells at zero never roll.
-- A Condition **stacks**, except a Stun, which **refreshes**. One application is one token.
+- A Condition **stacks**, except a Stun, which is **ignored** on a Creature already stunned or immune to Stun.
+  One application is one token. A Stun that ends leaves its Creature immune to Stun for the next Round
+  (ADR 0072).
 - A critical is a **die roll** and the catalogue will be authored onto the die's grid. The die is a **d20**
   ([d20-criticals.md](d20-criticals.md), settled, not built); [Part 1.6](#16-dice) keeps what each candidate
   cost. A timeline tie between the sides is rolled on the same die (ADR 0063).
@@ -109,14 +116,14 @@ Totals first, then the derivation of each line.
 | Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
 | Condition tokens | 150 in 8 kinds |
-| Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 target markers, 18 overflow chits, 20 blanks |
+| Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 target markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
 | Paper | about 49 A4 or Letter sheets |
 
 The paper: 24 sheets of Spell cards, 14 of package cards and 2 of Speed cards (9 a sheet; the second Speed
 sheet holds 3), 3 of creature boards (2 a sheet), 2 player mats, 1 for the initiative and round tracks, 2 of
-tokens (260 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
+tokens (266 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
 add 40 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
@@ -140,6 +147,8 @@ question 14 moved three lines after it: the 6 two-sided Speed tokens became **12
 ([1.5](#15-the-rest-of-the-pieces), [2.6](#26-the-speed-card)), the token pieces went from 266 to 260, and the
 paper from 47 to **49** sheets. The 20-Round cap moved two cells of it, the Round track's and the tens rail's,
 and no count: the Round track still shares one sheet with the initiative track ([3.6](#36-the-round-track)).
+ADR 0072 moved one count after that: **6 Immune tokens**, so the token pieces went from 260 to **266**, still
+on 2 sheets, and the paper stays 49 ([1.5](#15-the-rest-of-the-pieces)).
 
 ### 1.1 Spell cards and package cards
 
@@ -239,7 +248,7 @@ for s in S:
 | Bleed | 4 a Round | 6 | `mortal_wound` on a target, `crazed_specter` and `revenant_guards` on their own caster; one each; 6 slots x 1 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
 | Energy regeneration | 2 a Round | 6 | `momentum`, Self only; 6 slots x 1 | **VALUE** |
-| Stun | - | 12 | A Stun **refreshes**, so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one sits in the Speed slot so no Speed card can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. | **RULE** (the stacking policy, and the two places a Stun is shown) x **VALUE** (team size) |
+| Stun | - | 12 | A Stun on a Creature already stunned is **ignored** (ADR 0072), so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one sits in the Speed slot so no Speed card can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. The Round of Stun immunity after it is not a Condition and has its own token ([1.5](#15-the-rest-of-the-pieces)). | **RULE** (a Stun on a stunned Creature is ignored, and the two places a Stun is shown) x **VALUE** (team size) |
 | Defense buff | +1 | 6 | `guard`'s timed half, one ally; 6 slots x 1 | **VALUE** |
 | Defense buff | +2 | 18 | `revenant_guards`' timed half, up to 3 allies; 6 x 3 | **VALUE** |
 | Defense buff | +3 | 6 | `thundering_seal`'s timed half, one ally; 6 x 1 | **VALUE** |
@@ -279,6 +288,7 @@ is 16 short of that ceiling. Part 6, question 5.
 | Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule, and the rule has no bound: permanent Defense buffs and debuffs both stack (ADR candidate 3, open). | **RULE** (no bound exists) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -684,7 +694,7 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 | The number 1 to 6 in the corner | It names the Creature: on its initiative marker, on its target markers and in the `Targeted by` row. Ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`): 1 to 3 is Player 1, left to right. **It breaks no tie.** A tie between the sides is a d20 Roll-off, and a tie within one side is its owner's Tie order (ADR 0063). The number decides one thing more: tied Creatures roll in number order, lowest first. That fixes the order of the rolls and changes no result, so a table that rolls in another order has lost nothing. |
 | The Health rail ending at 30 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
-| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
+| The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. The token comes off at the Cleanup that ends the Stun, when the dock's Stun token becomes an Immune token ([3.2](#32-the-condition-dock-and-the-countdown)); nothing goes in the Speed slot for the immunity, since an immune Creature takes a Speed card. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
 | A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a purchase moves off the mat lies on the buyer's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
 | The `Targeted by` row, one box per caster number | No duplicate targets (`TargetingRules.cs:68`): a caster has one marker per box, and a box holds one marker, so naming the same target twice is impossible. |
 | The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
@@ -701,13 +711,22 @@ asks what size the board is. The drawing is not to scale.
 
 Four lanes: `new`, `3`, `2`, `1`. A Condition token is placed in `new` when it is applied. At **Cleanup**:
 
-1. every token already in a numbered lane slides one lane left; a token leaving lane `1` is removed;
+1. every token already in a numbered lane slides one lane left; a token leaving lane `1` is removed, except
+   that a Stun token leaving lane `1` of a living Creature is swapped for an Immune token in lane `1`, and the
+   Stun token in the Speed slot comes off with it;
 2. every token in `new` moves into the lane matching the Duration printed on it.
 
 That is the whole countdown, and it is why the board has a `new` lane: it makes "**the first countdown after
 an application does not count**" (`Condition.cs:12,88-100`) a piece of geometry instead of a rule a player has
-to recall on the Round they apply something. A refresh - which is only Stun - removes the old token and places
-the new one in `new`, which is exactly `Condition.Refresh` setting the flag again (`Condition.cs:85`).
+to recall on the Round they apply something. Nothing refreshes any more: a Stun on a Creature already stunned
+or immune to Stun is ignored (ADR 0072), so no token is ever moved back into `new`.
+
+The swap in move 1 does the same for Stun immunity (ADR 0072). The engine counts the immunity down at the
+start of `Creature.TickConditions`, before the Stun expires in the same call, and sets it to one Round when a
+Stun expires on a living Creature; so it runs through the next Round and ends at the next Cleanup. The
+Immune token did not slide, so the next Cleanup's move 1 takes it out of lane `1` at exactly that moment. The
+immunity is not a Condition, and the dock holds its token only because lane `1` is the lane the next Cleanup
+empties.
 
 Four lanes is derived: the longest Duration in the catalogue is 3 Rounds (`summon_minions`' Bleed,
 `momentum`'s Energy regeneration), plus the `new` lane. **VALUE**: a longer Duration authored in `data/` is a
@@ -1258,7 +1277,8 @@ answer. Package cards are never hidden, so they need a back only to be told apar
 the heavy band of [4.1](#41-the-package-card) already does that. Printing single-sided and sleeving the Spell
 and Speed cards with an opaque backing card is the cheaper answer and needs sleeves. Which one the
 print-and-play assumes changes the sheet count from 49 to 75 (24 + 2 back sheets), or to 89 with package card
-backs too.
+backs too. A double-sided print would also let the 6 Immune tokens become the back of the 12 Stun tokens and
+leave the box ([1.5](#15-the-rest-of-the-pieces)); single-sided, they are pieces of their own.
 
 ### 9. The schedule: printed marks or placed markers
 
@@ -1363,11 +1383,11 @@ of board height, and nothing else: the counts in Part 1 are unchanged.
 ## Part 7. Coverage: the "needs a component" rows
 
 Every **needs a component** verdict in [translation.md](translation.md), and what answers it. The row names
-are translation.md's as it reads on this branch after its package re-audit: 17 from Part 1, 8 from Part 2, 19
-from Part 3; 44 of 44. The re-audit was written alongside this document, so if a row name has moved since,
+are translation.md's as it reads on this branch after its package re-audit and its ADR 0072 re-read: 18 from
+Part 1, 8 from Part 2, 19 from Part 3; 45 of 45. The re-audit was written alongside this document, so if a row name has moved since,
 the component beside it has not.
 
-### The 17 sub-phase rows
+### The 18 sub-phase rows
 
 | translation.md row | Component |
 | --- | --- |
@@ -1388,6 +1408,7 @@ the component beside it has not.
 | 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 150 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.9 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.10 Every Condition counts one Round down and expires at zero | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.10 A Creature whose Stun ends is immune to Stun for the next Round | 6 Immune tokens, [1.5](#15-the-rest-of-the-pieces), swapped for the Stun token in lane `1` and taken off by the next Cleanup's slide, [3.2](#32-the-condition-dock-and-the-countdown) |
 
 ### The 8 effect kinds
 
@@ -1396,7 +1417,7 @@ the component beside it has not.
 | `Bleed` | 48 tokens: 18 at 1, 18 at 2, 6 at 3, 6 at 4 |
 | `Regeneration` | 6 tokens at 3 |
 | `EnergyRegeneration` | 6 tokens at 2 |
-| `Stun` | 12 tokens, two a Creature: a Stun refreshes, so a Creature carries one, and it needs a token in the Speed slot and one in the dock |
+| `Stun` | 12 tokens, two a Creature: a Stun on a stunned Creature is ignored, so a Creature carries one, and it needs a token in the Speed slot and one in the dock. Plus 6 Immune tokens, one a Creature, for the Round of Stun immunity after it ([1.5](#15-the-rest-of-the-pieces)) |
 | `DefenseBuff` | 30 timed tokens (6 at +1, 18 at +2, 6 at +3); a permanent buff moves the rail and needs none |
 | `DefenseDebuff` | 18 timed tokens at -2; a permanent debuff moves the rail |
 | `InitiativeBuff` | 18 tokens at +2 |

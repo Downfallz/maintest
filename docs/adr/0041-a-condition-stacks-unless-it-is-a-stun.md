@@ -1,7 +1,7 @@
 # 0041. A Condition stacks unless it is a Stun
 
 Date: 2026-09-14
-Status: Accepted
+Status: Accepted, amended by [0072](0072-a-creature-is-immune-to-stun-the-round-after-one.md)
 
 ## Context
 

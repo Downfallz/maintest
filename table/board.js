@@ -26,16 +26,18 @@ export function statPairs(creature) {
   ];
 }
 
-// The badges beside a row's stats: whether the creature is stunned, and the speed it was given once the
+// The badges beside a row's stats: whether the creature is stunned or, the round after a stun ends, immune to
+// the next one (ADR 0072), and the speed it was given once the
 // timeline is built (playtest-app.md §3.1). A stun chip in the dock says a condition is running; it does not
 // say the creature has lost its speed slot this round, which is the thing a player plans around -- and the
 // speed lives in the timeline, which is a strip of six and not a thing read per creature.
 //
-// Both words are the payload's: `isStunned` is the snapshot's own field, and the speed is the band the engine
+// Every word is the payload's: `isStunned` and `isStunImmune` are the snapshot's own fields, and the speed is the band the engine
 // put the slot in.
 export function badges(creature, timeline) {
   const found = [];
   if (creature?.isStunned === true) found.push('stunned');
+  if (creature?.isStunImmune === true) found.push('immune to stun');
   const slot = (timeline ?? []).find(one => one?.creature === creature?.id);
   if (typeof slot?.speed === 'string' && slot.speed !== '') found.push(slot.speed);
   return found;

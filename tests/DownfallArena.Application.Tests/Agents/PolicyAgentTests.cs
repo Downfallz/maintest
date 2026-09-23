@@ -129,7 +129,7 @@ public sealed class PolicyAgentTests
         var policy = Policy((RendIntent, 1.0));
 
         Should.Throw<InvalidDataException>(() => (policy with { Kind = "tree" }).Validated()).Message.ShouldContain("clone, value");
-        Should.Throw<InvalidDataException>(() => (policy with { SchemaVersion = "features:v9", SchemaId = "features:v9+0123456789ab" }).Validated()).Message.ShouldContain("features:v6");
+        Should.Throw<InvalidDataException>(() => (policy with { SchemaVersion = "features:v9", SchemaId = "features:v9+0123456789ab" }).Validated()).Message.ShouldContain("features:v7");
         Should.Throw<InvalidDataException>(() => (policy with { SchemaId = "features:v1+0123456789ab" }).Validated());
         Should.Throw<InvalidDataException>(() => (policy with { ActionKeys = [RendIntent, RendIntent], Weights = Rows(Schema.Length, 2), Bias = [0.0, 0.0] }).Validated());
         Should.Throw<InvalidDataException>(() => (policy with { Bias = [0.0, 0.0] }).Validated());
