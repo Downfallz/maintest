@@ -1,7 +1,7 @@
 # Components and print-and-play
 
 Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
-question 14, 2026-09-23). Phase 3 of
+question 14, 2026-09-23, and to one package a Creature an opportunity the same day). Phase 3 of
 [plan.md](plan.md). It answers the **needs a component** rows of [translation.md](translation.md) and specifies
 a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -10,9 +10,11 @@ What is current, exactly:
 
 - **Evolution is the package model.** A pick buys a whole Tier: every Spell in it and one initiative bonus
   ([ADR 0056](../adr/0056-a-pick-buys-a-package-every-other-round.md)). Two picks at Round 1 and every second
-  Round after. The packages are authored in `data/Tiers/`
-  ([ADR 0057](../adr/0057-a-package-is-authored-not-derived.md)). No Spell has an initiative of its own, and no
-  Spell card prints one ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)).
+  Round after, each for a different Creature: a Creature buys at most one package an opportunity
+  ([ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md)). The packages are authored in
+  `data/Tiers/` ([ADR 0057](../adr/0057-a-package-is-authored-not-derived.md)). No Spell has an initiative of
+  its own, and no Spell card prints one
+  ([ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)).
 - **A timeline tie is rolled off on a d20** between the sides, and each Player orders their own tied Creatures
   ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). The Creature number breaks no tie. It
   names the Creature, and it fixes the order tied Creatures roll in.
@@ -62,7 +64,8 @@ From [plan.md](plan.md), phase 2 and the Decisions section:
   ([d20-criticals.md](d20-criticals.md), settled, not built); [Part 1.6](#16-dice) keeps what each candidate
   cost. A timeline tie between the sides is rolled on the same die (ADR 0063).
 - Evolution buys **packages** (Tiers), two picks at Round 1 and every second Round after, and a package's
-  prerequisites are the only rule for what a Creature may buy (ADR 0056).
+  prerequisites are the only rule for what a Creature may buy (ADR 0056). A Creature buys at most one
+  package an opportunity, so the two picks go to two Creatures (ADR 0066).
 
 The board this manifest is built on, and the commands that read it:
 
@@ -114,9 +117,9 @@ What moved when evolution became packages, and why:
 | Package card | - | **126** | translation.md's verdict on "A pick buys a whole Tier": Tier cards, 21 kinds. A bought card lies face up with its Creature and is the public record of what it owns. [1.1](#11-spell-cards-and-package-cards), [Part 4](#part-4-the-packages-as-an-object). |
 | Talent pips | 82 | **0** | The package card is the record, so nothing is marked on a mat. |
 | Paper | 35 sheets | **47** | 14 sheets of package cards in, 2 talent tree mats out. |
-| Pick tokens | 4 | **4** | Still 2 a Player, but only in a Round that offers an opportunity. |
+| Pick tokens | 4 | **4** | Still 2 a Player, but only in a Round that offers an opportunity. Since ADR 0066 a token that buys lies on the buyer's board until the Sub-phase ends; one token marks one Creature, so the count holds. [1.5](#15-the-rest-of-the-pieces). |
 | Round track | 16 spaces | 16 spaces, **8 pick marks** | The schedule is printed where a Player looks for the Round. [3.6](#36-the-round-track). |
-| Base initiative, tens rail | 0 to 5 | **0 to 4** | The ceiling fell from 52 to 44. [3.4](#34-initiative-two-small-rails-instead-of-one-long-one). |
+| Base initiative, tens rail | 0 to 5 | **0 to 2** | The ceiling fell from 52 to 44 with packages, and to 29 when a Creature could buy only one an opportunity (ADR 0066). [3.4](#34-initiative-two-small-rails-instead-of-one-long-one), and Part 6, question 11. |
 | Spell card foot | `Unlock: +N initiative`, `Requires: ...` | **neither** | ADR 0059 and ADR 0056. [2.1](#21-what-is-printed-and-where-it-comes-from). |
 | Spell card head | class and tree depth | **the package that teaches it, and its level** | The class names collide with the package names, and the tree depth is a number the game no longer reads (ADR 0058). [2.1](#21-what-is-printed-and-where-it-comes-from). |
 | Tie order chit | - | **6** | The Tie order is hidden until both Players have given theirs (ADR 0063). [1.5](#15-the-rest-of-the-pieces). |
@@ -132,7 +135,7 @@ paper from 47 to **49** sheets.
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
 | Spell card | **216** = 36 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell a Tier teaches: a package's prerequisites are the only rule, so multiclassing is free (ADR 0056), and both Players play the same Creature definition. Six copies is the ceiling. A Spell that is neither in the starting kit nor taught by an enabled Tier can never be known, and gets **no** copy; at `4d7a841c` there is none, so all 36 are printed. | 36 is a **VALUE** (content: 3 starting, 33 taught); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per Creature that could know it is a **RULE** |
-| Package card | **126** = 21 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a level-3 Tier costs a Creature 3 purchases, 9 for a whole Team, inside the 16 a Player makes in 16 Rounds. So all six Creatures can own the same Tier in one Match. 126 is exactly 14 sheets. | 21 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
+| Package card | **126** = 21 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a level-3 Tier costs a Creature 3 purchases at 3 opportunities, 9 for a whole Team, inside the 16 a Player makes in 16 Rounds. So all six Creatures can own the same Tier in one Match. 126 is exactly 14 sheets. | 21 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
 
 What a Match actually consumes is smaller, and it is the number the open question in Part 6 is about. The
 command below also gives the Base initiative ceiling that
@@ -145,28 +148,29 @@ import json,glob
 R=json.load(open('docs/tabletop/playtest.rules.json'))
 T=[json.load(open(p)) for p in glob.glob('data/Tiers/*.json')];T=[t for t in T if t.get('enabled',True)]
 o=[r for r in range(1,17) if r>=R['firstEvolutionRound'] and (r-R['firstEvolutionRound'])%R['evolutionInterval']==0]
-P=R['evolutionPicksPerOpportunity']*len(o);ix={t['id']:i for i,t in enumerate(T)};n=len(T)
+P=R['evolutionPicksPerOpportunity']*len(o);C=len(o);ix={t['id']:i for i,t in enumerate(T)};n=len(T)
 need=[sum(1<<ix[q] for q in t['prerequisites']) for t in T];bb={};bs={}
 for m in range(1<<n):
   own=[i for i in range(n) if m>>i&1]
   if any(need[i]&~m for i in own): continue
   k=len(own);bb[k]=max(bb.get(k,0),sum(T[i]['initiativeBonus'] for i in own));bs[k]=max(bs.get(k,0),len({s for i in own for s in T[i]['spells']}))
 f=lambda d,k:max(v for j,v in d.items() if j<=k)
-print('opportunities',o,'picks a Player',P)
-print('most Spells a Player adds',max(f(bs,a)+f(bs,b)+f(bs,P-a-b) for a in range(P+1) for b in range(P+1-a)))   # a Team of 3
-print('most Base initiative one Creature buys',f(bb,P))"
-# opportunities [1, 3, 5, 7, 9, 11, 13, 15] picks a Player 16
+print('opportunities',o,'picks a Player',P,'purchases one Creature',C)   # one package a Creature an opportunity
+print('most Spells a Player adds',max(f(bs,a)+f(bs,b)+f(bs,P-a-b) for a in range(C+1) for b in range(C+1) if 0<=P-a-b<=C))   # a Team of 3
+print('most Base initiative one Creature buys',f(bb,C))"
+# opportunities [1, 3, 5, 7, 9, 11, 13, 15] picks a Player 16 purchases one Creature 8
 # most Spells a Player adds 28
-# most Base initiative one Creature buys 39
+# most Base initiative one Creature buys 24
 ```
 
 6 Creatures x 3 starting Spells = 18 cards in hands at setup. A 16-Round Match offers 8 opportunities, so a
-Player makes at most 16 purchases. The most Spells 16 purchases add is 28: the 3 level-1 packages on each of
-three Creatures (9 purchases, 18 Spells, two a purchase), then 4 level-2 packages and the 3 level-3 packages
-above them (7 purchases, 10 Spells). So **at most 18 + 2 x 28 = 74 cards are in hands in a 16-Round Match**,
-down from 82 when a pick bought one Spell every Round. The box still carries 216 because which 74 is a choice
-the Players make, and six Creatures may all buy the same package. The same holds for package cards: a Match
-lays out at most 2 x 16 = 32 of the 126, one a purchase.
+Player makes at most 16 purchases, and one Creature at most 8 of them, one an opportunity (ADR 0066). The most
+Spells 16 purchases add is 28: the 3 level-1 packages on each of three Creatures (9 purchases, 18 Spells, two a
+purchase), then 4 level-2 packages and the 3 level-3 packages above them (7 purchases, 10 Spells), spread so
+that no Creature makes more than 8; ADR 0066 left the 28 where it was. So **at most 18 + 2 x 28 = 74 cards are
+in hands in a 16-Round Match**, down from 82 when a pick bought one Spell every Round. The box still carries
+216 because which 74 is a choice the Players make, and six Creatures may all buy the same package. The same
+holds for package cards: a Match lays out at most 2 x 16 = 32 of the 126, one a purchase.
 
 ### 1.2 Boards and mats
 
@@ -189,7 +193,7 @@ counts and the ends.
 | Defense buffs | 6 | 0 to 20. See [3.3](#33-defense-two-rails-because-the-floor-is-applied-once). | **VALUE** (the largest Damage, the critical multiplier) |
 | Defense debuffs | 6 | 0 to 20, the same reason mirrored. | **VALUE** |
 | Base initiative, units | 6 | 0 to 9. | **RULE** (a decimal rail) |
-| Base initiative, tens | 6 | 0 to 4. Together the two rails read 0 to 49, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Base initiative of 44. | **VALUE** (the packages' `initiativeBonus`, the picks an opportunity, the schedule) |
+| Base initiative, tens | 6 | 0 to 2. Together the two rails read 0 to 29, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Base initiative of 29. | **VALUE** (the packages' `initiativeBonus`, the schedule) x **RULE** (one package a Creature an opportunity, ADR 0066) |
 
 **36 stat markers**, six of each of the six rails above. Print them as 10mm discs in six Creature colours.
 
@@ -254,7 +258,7 @@ supply that runs out is replaced by a blank token with the value written on it; 
 | Speed card, `Quick` or `Standard`, one common back, poker size | **12** = 6 per Player: a Quick and a Standard card for each Creature | One Speed choice per living, unstunned Creature (`SpeedRules.cs:13-45`), hidden until both Players have made theirs (`PlayerBoardStateProjection.cs:38`). A hidden choice of one of two needs both answers behind one back: the Player lays the chosen card face down in the Creature's Speed slot, keeps the other in hand, and both Players turn theirs together. Any Creature may take either Speed, and every Creature may take the same one, so a Player needs `RuleSet.TeamSize` cards of each: 2 Speeds x team size 3 x 2 Players. The Quick card carries the reminder that a Quick Creature rolls no critical that Round (`ResolutionRules.CriticalChanceOf`), since that cost is what makes the choice a choice. Size, back and face: [2.6](#26-the-speed-card). The maintainer's answer to Part 6, question 14. | **VALUE** (team size) x **RULE** (two Speeds, one hidden simultaneous choice) |
 | Initiative marker, numbered 1 to 6 | **6** | One per Creature, placed on the initiative track. The number names the Creature on the track; ids are handed out in join order (`Match.Spawn`, `Match.cs:324-333`), so 1 to 3 are Player 1's. It breaks no tie: a tie between the sides is a d20 Roll-off, and tied Creatures roll in number order, which only fixes the order of the rolls (ADR 0063). | **VALUE** (team size) |
 | Tie order chit, `1st`, `2nd`, `3rd`, one common back | **6** = 3 per Player | The Tie order is given by both Players at the same time and hidden until both are in (ADR 0063, "like a Speed choice"), so it needs something that commits face down. A Player lays one chit face down on each of their tied Creatures' boards, and both Players turn them together. A Player orders at most all of their own Creatures, `RuleSet.TeamSize` = 3; two separate ties are each read low number first, so 3 chits cover any Round. This is translation.md's smallest answer ("three ordinal chits a Player"). | **VALUE** (team size) x **RULE** (a hidden, simultaneous Tie order) |
-| Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track, spent one a purchase, and the rest taken off when the Player passes or the Sub-phase ends (rulebook §5.3). A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
+| Evolution pick token | **4** | 2 per Player (`RuleSet.EvolutionPicksPerOpportunity`), put on the mat only in a Round with a pick mark on the Round track. A purchase moves one from the mat onto the board of the Creature that bought, and it stays there until the Sub-phase ends: a Creature holding one has bought this opportunity and cannot be picked again (`Planning.CreatureAlreadyEvolved`, ADR 0066). A pass takes the tokens still on the mat off it; the end of the Sub-phase takes every token off the mats and the boards (rulebook §5.3). One token marks one Creature, and a Player's picks go to different Creatures, so 2 a Player still covers every opportunity. A Round with no opportunity gives nobody a pick (`RuleSet.EvolutionPicksIn`), so the tokens stay off the mat. | **VALUE** (picks an opportunity) |
 | Round marker | **1** | One position on the Round track. | **RULE** |
 | Round cap marker | **1** | Placed at setup on the space equal to the `RuleSet`'s Round cap, so the track's end is a component and not a memory. | **VALUE** |
 | Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
@@ -648,7 +652,7 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 |          debuffs 0 ................. 20 [-20] |
 |          Defense = buffs - debuffs, never < 0 |
 |-----------------------------------------------|
-| Base initiative   tens 0..4   units 0..9      |
+| Base initiative   tens 0..2   units 0..9      |
 |-----------------------------------------------|
 | Conditions   | new |   3   |   2   |   1   |  |   the duration dock
 |              |     |       |       |       |  |
@@ -664,6 +668,7 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 | The Health rail ending at 20 | A Heal is capped by the Health missing (`Creature.cs:271`). The marker cannot go past the end of the rail. |
 | The `Defeated` back with no slots | A dead Creature takes no damage, no healing, no Energy, no Spell and no Condition. |
 | The Speed slot, and a Stun token that occupies it | A stunned Creature takes no Speed choice, so it gets no Activation slot and no Intent (`SpeedRules.cs:34`, `TimelineBuilder.cs:23-28`). The Stun token is in the slot: there is nowhere to put a Speed card. The slot prints the token's place at its centre, since a 15 mm token no longer fills a card-sized slot and a card laid over it would hide it. This is the biggest effect in the game and the one most likely to be played as "loses its attack". |
+| A pick token laid in the header, beside the number | A Creature buys at most one package an opportunity (`EvolutionRules.cs:56-59`, ADR 0066). The token a purchase moves off the mat lies on the buyer's board until the Sub-phase ends, so a Creature that has bought is marked, and a second pick for it is not made. Nothing is printed for it: the header has room for a 15 mm token, and the token is there for one Sub-phase. |
 | The `Targeted by` row, one box per caster number | No duplicate targets (`TargetingRules.cs:68`): a caster has one marker per box, and a box holds one marker, so naming the same target twice is impossible. |
 | The Energy rail being face up | An Intent must be affordable (`IntentRules.cs:50-69`), and a Player must be able to check that without revealing the Intent. Energy is public in the engine's own projection, so the rail is public too. |
 
@@ -724,18 +729,18 @@ print(max(e['amount'] for p in glob.glob('data/Spells/**/*.json',recursive=True)
 
 Base initiative only ever grows, by the `initiativeBonus` of every package bought, once a purchase
 (ADR 0056; glossary, Base initiative). No Spell adds anything (ADR 0059). Its ceiling in a 16-Round Match is
-the last line of the command in [1.1](#11-spell-cards-and-package-cards): **39**.
+the last line of the command in [1.1](#11-spell-cards-and-package-cards): **24**.
 
-A Player makes 2 picks at each of 8 opportunities: **16 purchases**, all of them possible on one Creature.
-The 21 packages' bonuses sum to 47, but a Creature cannot own all 21 with 16 picks, and a level-3 package
-cannot be bought without the two below it. The 16 prerequisite-closed packages that pay the most pay 39, so
-**Base initiative tops out at 5 + 39 = 44.** Current initiative adds the Initiative buffs on top.
-`death_squad` is +2 for a Round on up to 3 allies and it stacks, but only a Creature that owns Deathstalker
-can cast it, and a Creature at 44 has spent all 16 of its Player's purchases: its allies own nothing, so the
-only `death_squad` it can carry is its own, and Deathstalker is among the 16 packages that pay 39. So
-**Current initiative tops out at 46**. Sharing the purchases does worse: each ally that buys Prowler,
-Assassin and Deathstalker spends 3 purchases to add 2, and the best such split reads 43. Under one Spell a
-pick, twice every Round, the ceilings were 52 and 58.
+A Player makes 2 picks at each of 8 opportunities: 16 purchases. A Creature buys at most one package an
+opportunity (ADR 0066), so **8 of them at most land on one Creature**. The 21 packages' bonuses sum to 47,
+but a Creature cannot own all 21 with 8 picks, and a level-3 package cannot be bought without the two below
+it. The 8 prerequisite-closed packages that pay the most pay 24, so **Base initiative tops out at 5 + 24 =
+29.** Current initiative adds the Initiative buffs on top. `death_squad` is +2 for a Round on up to 3 allies
+and it stacks, but only a Creature that owns Deathstalker can cast it. Deathstalker is among the 8 packages
+that pay 24, and the Player's other 8 purchases are enough for both allies to buy Prowler, Assassin and
+Deathstalker, 3 each. So three `death_squad`s can land on the Creature at 29, and **Current initiative tops out
+at 35**. While two packages could land on one Creature an opportunity (ADR 0056, before ADR 0066), the
+ceilings were 44 and 46; under one Spell a pick, twice every Round, 52 and 58.
 
 ```bash
 python3 -c "
@@ -749,21 +754,22 @@ for m in range(1<<n):
   k=len(own);v=sum(T[i]['initiativeBonus'] for i in own);b[k]=max(b.get(k,0),v)
   if m>>ds&1: bd[k]=max(bd.get(k,0),v)
 f=lambda d,k:max([v for j,v in d.items() if j<=k] or [-99])
-print(max(5+f(bd if own else b,16-3*a)+2*(own+a) for a in range(3) for own in (0,1)))"   # 46
+print(max(5+f(bd if own else b,8)+2*(own+a) for a in range(3) for own in (0,1) if 3*a<=16-8))"   # 35
 ```
 
-The command assumes the 16 purchases of a 16-Round Match and that an ally's `death_squad` costs it the three
-packages from Prowler up; it reads the same prerequisite-closed sets as the Base ceiling, so it moves when a
-bonus does.
+The command assumes the 8 opportunities of a 16-Round Match: 8 purchases on the Creature, one an opportunity,
+and the Player's other 8 for its allies, where an ally's `death_squad` costs it the three packages from
+Prowler up. It reads the same prerequisite-closed sets as the Base ceiling, so it moves when a bonus does.
 
-A rail to 44 is 45 cells and 225 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 4
-and units 0 to 9, are 15 cells** and read as one two-digit number. The print constraint is the board's 95 mm
-of usable width; the rule is the ceiling of 44. A bonus is 0 to 5 at `4d7a841c`, so a purchase is one marker
+A rail to 29 is 30 cells and 150 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 2
+and units 0 to 9, are 13 cells** and read as one two-digit number. The print constraint is the board's 95 mm
+of usable width; the rule is the ceiling of 29. A bonus is 0 to 5 at `4d7a841c`, so a purchase is one marker
 move on the units rail, sometimes carrying into the tens rail.
 
 The tens rail is a **VALUE** twice over. The bonuses are balance knobs now (ADR 0061), and
 `data/balance/knobs.json` lets a tuning pass move each one up to its declared `max`. At every package's `max`,
-the same command reads a ceiling of 5 + 71 = 76, which is a tens rail to 7. Part 6, question 11.
+the same command reads a ceiling of 5 + 40 = 45, which is a tens rail to 4: the rail this manifest printed
+before ADR 0066. Part 6, question 11.
 
 Current initiative is **not** on a rail. It is Base plus the dock's Initiative buff tokens less its Initiative
 debuff tokens, floored at zero, and it is read **once a Round**, when the timeline is built. That is the
@@ -803,7 +809,7 @@ A tie is settled on the track in two steps (ADR 0063), and the components carry 
    skips step 2.
 
 The track is an **ordering** device and carries no numbers. The alternative, a value track a marker is placed
-on, needs 47 cells, 0 to the Current initiative ceiling of 46 in 3.4, and would still need the tie rules
+on, needs 36 cells, 0 to the Current initiative ceiling of 35 in 3.4, and would still need the tie rules
 printed.
 
 ### 3.6 The round track
@@ -828,7 +834,7 @@ their place. In the engine's order (`RoundSubPhase.cs`, eleven sub-phases since 
 
 ```
  Start: energy -> energy regeneration -> regeneration -> bleed
- Planning: evolution (marked Rounds: 2 picks a player) -> speed (face down)
+ Planning: evolution (marked Rounds: 2 picks a player, one a creature) -> speed (face down)
            -> timeline, ties rolled off -> order your own ties (face down)
  Combat: intents (face down) -> reveal and target, all six -> resolve, all six
  End: conditions count down -> check the win condition
@@ -869,7 +875,9 @@ An A4 landscape mat a Player, three columns, one a Creature:
   it but for its top band, which carries the name, the level and the bonus ([4.1](#41-the-package-card)). A
   Creature's record reads as a list, and the newest card shows whole.
 - **The pick tokens** sit on the mat's header. Two a Player, put there only in a Round the Round track marks
-  as an opportunity, one spent a purchase, the rest taken off when the Player passes or the Sub-phase ends.
+  as an opportunity. A purchase moves one onto the header of the buyer's board ([3.1](#31-the-creature-board)),
+  where it marks that Creature as done for the opportunity (ADR 0066). A pass takes the tokens still on the
+  mat off it, and the end of the Sub-phase takes every token off the mat and the boards.
 - **The target markers** are three per Creature, in that Creature's colour, carrying its number. Reveal and
   target walks the whole timeline before anything resolves, so all six casts' markers are on the table at
   once: 18 markers, and a Creature's `Targeted by` row shows who is pointing at it.
@@ -901,9 +909,10 @@ A pick buys a Tier: a named package of Spells with a level, the Tiers it require
 (ADR 0056). 21 are enabled at `4d7a841c`: 3 at level 1, 9 at level 2, 9 at level 3. Each level-2 package
 requires one level-1 package and each level-3 package requires one level-2 package, so the 21 form three
 families of seven, one opened by each level-1 package. **Prerequisites are the only rule**: the talent tree
-gates nothing, and multiclassing is free, so a Creature may own packages from all three families. The two
-picks of an opportunity resolve in sequence, so a Creature can buy a package and the one above it in the same
-Round.
+gates nothing, and multiclassing is free, so a Creature may own packages from all three families. A Creature
+buys at most one package an opportunity, so the two picks of an opportunity go to two Creatures
+([ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md)), and the top of a family arrives at
+Round 5 at the earliest.
 
 What the table has to hold, for each Creature: which Tiers it owns, whether the next one's prerequisite is
 among them, and what it knows because of them. The package card holds all three, face up with the Creature,
@@ -967,7 +976,8 @@ easy card to print. The band is two lines at 8 pt, about 10 mm with its rule, so
 
 ### 4.2 How a purchase reaches the hand, and how the bonus is recorded
 
-A purchase spends one pick token and is **three actions in a fixed order**, the order of rulebook §5.3:
+A purchase moves one pick token from the mat onto the buyer's board and is **three actions in a fixed
+order**, the order of rulebook §5.3:
 
 1. **Package card.** Put a copy of the Tier's package card face up in that Creature's column, on the top of
    its stagger. This is the public record that the Creature owns the Tier, and it is what the opponent reads
@@ -988,11 +998,13 @@ Rules of the sub-phase that the components carry rather than the rulebook:
   mistake anyone can see.
 - **A prerequisite is a card.** Every Tier a card `Needs` must already lie with the same Creature. The check
   is a read down one stagger's bands.
-- **The second pick sees the first.** The first purchase's card is on the table before the second pick is
-  chosen, so the table is always the board the engine validates against.
+- **A pick token on a board is the one-a-Creature rule.** A Creature board holding a pick token has bought
+  this opportunity, and a second pick for it is refused (`Planning.CreatureAlreadyEvolved`, ADR 0066). The
+  purchase's card is on the table before the next pick is chosen, so the table is always the board the engine
+  validates against.
 - **A refused purchase changes nothing** (ADR 0056: no half-taught package, no bonus without the Tier). Step 1
   is the step that can be refused, and it comes first, so a refusal happens before any Spell card or rail
-  moves. The pick token is spent with the card, not before it.
+  moves. The pick token moves with the card, not before it.
 - **The starting kit grants no bonus.** No Tier teaches it, so it has no package card and no `+B`, and a
   Player never adds initiative for it.
 
@@ -1234,12 +1246,13 @@ lands.
 
 ### 11. The Base initiative rail and the bonus knobs
 
-The tens rail runs 0 to 4 because the most Base initiative one Creature can buy in 16 Rounds is 39, for a
-Base of 44 ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)). Each package's `initiativeBonus` is
-a balance knob now (ADR 0061), with a declared `max` in `data/balance/knobs.json`. At every `max` the ceiling
-is 5 + 71 = 76. Print the tens rail to 4 and reprint six boards when a tuning pass raises a bonus, or print it
-to 7 (18 cells, 90 mm, inside the 95 mm the board has) so no pass inside the declared bounds reprints
-anything? It is question 3's shape, with a derived bound instead of a guessed one.
+The tens rail runs 0 to 2 because the most Base initiative one Creature can buy in 16 Rounds is 24, for a
+Base of 29 ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 8 packages, one an opportunity
+(ADR 0066). Each package's `initiativeBonus` is a balance knob now (ADR 0061), with a declared `max` in
+`data/balance/knobs.json`. At every `max` the ceiling is 5 + 40 = 45. Print the tens rail to 2 and reprint six
+boards when a tuning pass raises a bonus, or print it to 4 (15 cells, 75 mm, the rail printed before ADR 0066)
+so no pass inside the declared bounds reprints anything? It is question 3's shape, with a derived bound
+instead of a guessed one. ADR 0066 made the second answer cheaper: it was 18 cells to cover 76.
 
 ### 12. Where the generator reads the card words from
 
@@ -1314,7 +1327,7 @@ the component beside it has not.
 | 1.1 Energy gain per Round | The Energy rail, [1.3](#13-stat-markers-and-the-rails-they-ride) and [1.7](#17-the-energy-track-what-ends-it) |
 | 1.1 Energy has no maximum | The Energy rail's end at 32 and the overflow chit, [1.7](#17-the-energy-track-what-ends-it) |
 | 1.3 An opportunity at Round 1 and every second Round after | The 8 pick marks on the Round track, [3.6](#36-the-round-track) |
-| 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces) |
+| 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces); a token that buys lies on the buyer's board until the Sub-phase ends, [3.1](#31-the-creature-board), which also carries the restate row "A Creature buys at most one Tier an opportunity" |
 | 1.3 A pick buys a whole Tier | 126 package cards, face up with the Creature that bought them, [1.1](#11-spell-cards-and-package-cards) and [Part 4](#part-4-the-packages-as-an-object). Each card's `Needs` line is the prerequisite check; no Spell card prints a gate. |
 | 1.3 A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | The two Base initiative rails and the package card's bonus, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded). No Spell card prints an initiative. |
 | 1.4 One Speed choice per living, unstunned Creature | 12 Speed cards, a Quick and a Standard a Creature behind one back, one laid face down and one kept, [1.5](#15-the-rest-of-the-pieces) and [2.6](#26-the-speed-card); the card-sized Speed slot a Stun token occupies, [3.1](#31-the-creature-board). Part 6, question 14, answered by the maintainer |

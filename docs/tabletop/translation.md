@@ -1,6 +1,7 @@
 # Translation audit
 
-Status: **Evidence** (2026-09-14; Part 1 and Part 4 re-audited 2026-09-23). Phase 1 of [plan.md](plan.md).
+Status: **Evidence** (2026-09-14; Part 1 and Part 4 re-audited 2026-09-23, and their Evolution rows re-read
+for ADR 0066 the same day). Phase 1 of [plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -14,14 +15,16 @@ Status: **Evidence** (2026-09-14; Part 1 and Part 4 re-audited 2026-09-23). Phas
   depth in the Talent tree), [ADR 0059](../adr/0059-retire-the-spell-initiative-the-package-pays-it-now.md)
   (no Spell initiative), [ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md) (a tie between the
   sides is rolled off on a d20, and each side orders its own tied Creatures in `TieOrder`, the eleventh
-  sub-phase), and #160 (a `Quick` Creature rolls no critical, which game-rules.md states and no ADR records).
-  The Evolution rows (1.3), the timeline rows (1.5), the critical rows of 1.9 and Candidate 3 were rewritten
-  for them, and the `TieOrder` rows (1.6) and Candidate 6 are new. The rest of Part 1 was checked against the
-  same engine and content; only the targeting counts in 1.8 had moved. Every citation into a file those
-  changes rewrote — `Match.cs`, `Creature.cs`, `RuleSet.cs`, `Round.cs`, `ResolutionRules.cs`, the
-  Planning rules, the board projection, `GameSchemaMapper.cs`, `ConditionTests.cs` — was re-pointed at the
-  current line. Citations into files they left alone (`UpkeepRules.cs`, `ConditionSet.cs`, `Condition.cs`,
-  the other Combat rules) were not re-checked line by
+  sub-phase), [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md) (a Creature buys at most
+  one Tier an opportunity, so the two picks go to two Creatures), and #160 (a `Quick` Creature rolls no
+  critical, which game-rules.md states and no ADR records). The Evolution rows (1.3), the timeline rows
+  (1.5), the critical rows of 1.9 and Candidate 3 were rewritten for them, and the `TieOrder` rows (1.6) and
+  Candidate 6 are new. The rest of Part 1 was checked against the same engine and content; only the targeting
+  counts in 1.8 had moved. Every citation into a file those changes rewrote — `Match.cs`, `Creature.cs`,
+  `RuleSet.cs`, `Round.cs`, `ResolutionRules.cs`, the Planning rules, the board projection,
+  `GameSchemaMapper.cs`, `ConditionTests.cs` — was re-pointed at the current line; ADR 0066 changed
+  `EvolutionRules.cs` again, and its citations were re-pointed after it. Citations into files they left alone
+  (`UpkeepRules.cs`, `ConditionSet.cs`, `Condition.cs`, the other Combat rules) were not re-checked line by
   line: the file and the method they name are right, and a few line numbers have drifted since the first
   audit (`ConditionSet.cs` and `Condition.cs` among them).
 - **Parts 2 and 3 are still read at content `938bef5e`**, what
@@ -117,17 +120,17 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | Mechanic | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- |
 | An opportunity at Round 1 and every second Round after | `RuleSet.IsEvolutionRound` and `EvolutionPicksIn` (`Matches/RuleSet.cs:80-84`), at 1, 2 and 2 by default (`RuleSet.cs:30`); the one schedule the validation, the gate and the projections all ask (ADR 0056) | 1 look at the Round track a Round, 0 arithmetic if the opportunity Rounds are marked on it. The table's 8 to 16 Rounds ([plan.md](plan.md)) hold 4 to 8 opportunities | **needs a component** | A Round track with the opportunity Rounds marked. Nothing is lost; every other Round has one step fewer. |
-| Two picks an opportunity, per Player, shared across the Team | `rules.EvolutionPicksIn(round.Number) - round.EvolutionChoicesOf(slot).Count` (`Rules/Planning/EvolutionRules.cs:92-95`), refused past it (`EvolutionRules.cs:49-52`) | 2 tokens spent from a Player supply on an opportunity Round; the choice is which Creature and which Tier | **needs a component** | Two pick tokens a Player. Nothing is lost. |
+| Two picks an opportunity, per Player, shared across the Team | `rules.EvolutionPicksIn(round.Number) - round.EvolutionChoicesOf(slot).Count` (`Rules/Planning/EvolutionRules.cs:100-103`), refused past it (`EvolutionRules.cs:49-52`) | 2 tokens moved from a Player's mat onto the boards of the Creatures that bought, on an opportunity Round; the choice is which two Creatures and which Tier for each | **needs a component** | Two pick tokens a Player. Nothing is lost. |
 | The Players pick in turn, Player 1 first | The domain takes the two Players' picks in any order and applies each at once (`Match.cs:116-153`). The order is the driver's: it asks Player 1, then Player 2, for one pick each, every pass (`Application/Matches/Driving/MatchDriver.cs:26-48`), and every host plays through it, the table's included. A purchase is public the moment it lands, since the other Player's board state carries full snapshots of these Creatures (`Application/Matches/Projections/PlayerBoardStateProjection.cs:19-20`) | 1 pick each in turn, at most 4 an opportunity; 0 arithmetic. Player 2 chooses their first pick knowing Player 1's first purchase | **restate** | Nothing at the table, and the rulebook already says it (rulebook.md §5.3). But it is the one place the seat still orders anything since ADR 0063, and it lives in an Application loop, not in the domain: ADR candidate 6. |
 | A pick buys a whole Tier | `Creature.BuyTier` records the Tier as owned and teaches every Spell it sells at once (`Creatures/Creature.cs:202-229`), called only once the choice is validated (`Match.cs:127-148`, ADR 0056) | 1 Tier card set beside the creature board and its 1 or 2 Spell cards taken from the library; 0 arithmetic. Any number of Creatures, of either Player, may own the same Tier | **needs a component** | Tier cards, 21 kinds, each showing its level, its prerequisite, its Spells and its bonus. Nothing is lost. How many copies of each the box holds, Spell cards included, is the component-designer's count, made from how often one Tier is owned twice in a Match, which is the tabletop-mathematician's measurement. |
-| Prerequisites are the only rule, and the Talent tree gates nothing | `TierEligibility.AvailableTiers`: a Tier the Creature does not own whose prerequisites it owns (`Rules/Planning/TierEligibility.cs:23-42`), checked by `EvolutionRules.ValidateChoice` (`EvolutionRules.cs:54-66`) and again by `BuyTier` (`Creature.cs:216-219`). No family is closed to a Creature, so multiclassing is free (ADR 0056, ADR 0058) | 0 lookups for the 3 openers; 1 for any other Tier: is the one Tier it names beside this creature board. A Creature chooses from 3 Tiers at Round 1, and from 5 once it owns one opener (the 2 other openers and that opener's 3 level-2 Tiers) | **restate** | Nothing. The prerequisite is one line on the Tier card, and eligibility is read off the board, not computed. The Talent tree mat the first audit asked for is not needed to play; if the box keeps one, it is a map of the families, not a gate. |
-| Picks inside an opportunity are sequential, not simultaneous | The purchase is applied before the next choice is validated (`Match.cs:127-148`), so the second pick sees the first (ADR 0056) | A Creature can buy an opener and a Tier above it in the same Round: `tier:brute:v1` then `tier:ironbound:v1`, which sells `full_plate`, in Round 1 | **restate** | Nothing, but it is how a Creature reaches level 3 at Round 3, and it has to be said. |
-| A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | `BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value)` (`Creature.cs:227`, ADR 0056). No Spell carries an initiative any more (ADR 0059) | 1 marker move on an initiative track, once, at the purchase. Bonuses in `data/Tiers`: 1, 2 or 3 at level 1; 0 to 3 at level 2; 2 to 5 at level 3; a level-3 Tier and the two it stands on add 4 to 11 together. The largest Base initiative the content can produce is 52: 5, plus all 21 bonuses, for a Creature sold every Tier | **needs a component** | An initiative track per creature board, and the bonus printed on the Tier card, not on a Spell card. Nothing is lost; it is one move a purchase, not a per-cast cost. Where the track ends is the component-designer's call, as the Energy track's was. |
+| Prerequisites are the only rule, and the Talent tree gates nothing | `TierEligibility.AvailableTiers`: a Tier the Creature does not own whose prerequisites it owns (`Rules/Planning/TierEligibility.cs:23-42`), checked by `EvolutionRules.ValidateChoice` (`EvolutionRules.cs:61-73`) and again by `BuyTier` (`Creature.cs:216-219`). No family is closed to a Creature, so multiclassing is free (ADR 0056, ADR 0058) | 0 lookups for the 3 openers; 1 for any other Tier: is the one Tier it names beside this creature board. A Creature chooses from 3 Tiers at Round 1, and from 5 once it owns one opener (the 2 other openers and that opener's 3 level-2 Tiers) | **restate** | Nothing. The prerequisite is one line on the Tier card, and eligibility is read off the board, not computed. The Talent tree mat the first audit asked for is not needed to play; if the box keeps one, it is a map of the families, not a gate. |
+| A Creature buys at most one Tier an opportunity | A choice for a Creature that has already bought this Round is refused with `Planning.CreatureAlreadyEvolved` (`EvolutionRules.cs:56-59`), read off the Round's own choices (`HasEvolved`, `EvolutionRules.cs:128-134`; ADR 0066). The two picks go to two Creatures, so neither depends on the other: a Tier the first opens is one only its buyer may buy, and its buyer is done for the Round. It replaces ADR 0056's sequential picks, under which the greedy mirror put both picks on one Creature in half its opportunities | 1 look a pick, 0 arithmetic: the pick token a purchase moves lies on the buyer's board until the Sub-phase ends, and a board holding one is not picked. The top of a family arrives at Round 5 at the earliest: `tier:brute:v1` at Round 1, `tier:ironbound:v1`, which sells `full_plate`, at Round 3, `tier:dreadnought:v1` at Round 5 | **restate** | Nothing: the pick tokens of the row above carry it, laid on the buyer's board instead of set aside (components.md §1.5). It has to be said, with the one-Creature case, since it is the only thing that ever refuses a pick for a Tier the Creature could otherwise buy. |
+| A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | `BaseInitiative = BaseInitiative.Plus(tier.InitiativeBonus.Value)` (`Creature.cs:227`, ADR 0056). No Spell carries an initiative any more (ADR 0059) | 1 marker move on an initiative track, once, at the purchase. Bonuses in `data/Tiers`: 1, 2 or 3 at level 1; 0 to 3 at level 2; 2 to 5 at level 3; a level-3 Tier and the two it stands on add 4 to 11 together. The largest Base initiative the content can produce is 52: 5, plus all 21 bonuses, for a Creature sold every Tier. At one Tier an opportunity (ADR 0066), the table's 16 Rounds sell one Creature at most 8, and the most they can reach is 29 ([components.md](components.md) §3.4) | **needs a component** | An initiative track per creature board, and the bonus printed on the Tier card, not on a Spell card. Nothing is lost; it is one move a purchase, not a per-cast cost. Where the track ends is the component-designer's call, as the Energy track's was. |
 | The starting kit raises nothing | The definition's `baseInitiative` is where a Creature starts (`Creature.cs:38`); the three starting Spells belong to no Tier (ADR 0058) | 0 | **keep as is** | Nothing. The asymmetry the first audit reported is gone: every other Spell is sold by exactly one Tier, so two Creatures that know the same Spells own the same Tiers and carry the same Base initiative. |
 | A Spell already known is granted, not refused | `Creature.Learn` is idempotent (`Creature.cs:236-240`), so a Tier selling a known Spell is still bought (`Creature.cs:221-225`) | 0. Unreachable with this content: no Spell is sold by two Tiers, and no Tier sells a starting Spell | **keep as is** | Nothing. The rulebook need not say it until the content makes it reachable. |
-| A refused purchase changes nothing | `BuyTier` checks a dead Creature, a Tier already owned and a missing prerequisite before it changes anything (`Creature.cs:206-219`); `ValidateChoice` has already refused all three (`EvolutionRules.cs:31-66`) | 0 | **keep as is** | Nothing. |
+| A refused purchase changes nothing | `BuyTier` checks a dead Creature, a Tier already owned and a missing prerequisite before it changes anything (`Creature.cs:206-219`); `ValidateChoice` has already refused all three (`EvolutionRules.cs:31-73`) | 0 | **keep as is** | Nothing. |
 | Evolution pass | A Player gives up their remaining picks (`Match.cs:155-174`) | 1 declaration | **restate** | Nothing. |
-| The sub-phase ends when no Player has an *effective* pick left, and at once on a Round without an opportunity | Remaining picks are the schedule's less those spent, capped by how many Tiers the Player's living Creatures can buy (`EvolutionRules.cs:75-117`); a Round the schedule skips is complete as it opens | 0 on a Round without an opportunity: the step is skipped. On an opportunity Round the cap never bites while a Creature lives: a living Creature has a Tier left to buy until it owns all 21, which takes 11 opportunities spent on it alone | **restate** | Nothing. Two sentences in the rulebook: skip Evolution on the Rounds the track does not mark, and the step ends when both Players have spent or passed. |
+| The sub-phase ends when no Player has an *effective* pick left, and at once on a Round without an opportunity | Remaining picks are the schedule's less those spent, capped by how many of the Player's living Creatures have not bought this Round and have a Tier available (`EvolutionRules.cs:83-126`, ADR 0066); a Round the schedule skips is complete as it opens | 0 on a Round without an opportunity: the step is skipped. On an opportunity Round the cap bites when a Player has fewer living Creatures than picks: a Player down to one living Creature has one pick. The Tier half never bites: a Creature has a Tier left to buy until it owns all 21, which takes 21 opportunities at one a Round, more than the 15 a 30-Round cap offers | **restate** | Nothing. Three sentences in the rulebook: skip Evolution on the Rounds the track does not mark, one Tier a Creature, and the step ends when both Players have spent, passed, or have no Creature left to buy for. |
 
 ### 1.4 `Speed` (Planning)
 
@@ -415,28 +418,28 @@ single Creature can bank well over a hundred Energy. A physical track ends at so
 ### Candidate 3. Permanent stat buffs stack without a bound
 
 > **Open, and this row overstated its case.** The maintainer holds that the line is balanced and that
-> `full_plate` is not available in Round 1. The Tiers read here say it is: `tier:brute:v1` requires nothing,
-> `tier:ironbound:v1` requires `tier:brute:v1` and sells `full_plate`, and the two picks of an opportunity are
-> sequential (ADR 0056), so Round 1 buys the one and then the other, and the Creature's 2 Energy affords the
-> cast. What this row left out is the price: casting it every
+> `full_plate` is not available in Round 1. Since ADR 0066 the Tiers read here agree: `tier:brute:v1` requires
+> nothing, `tier:ironbound:v1` requires `tier:brute:v1` and sells `full_plate`, and a Creature buys at most one
+> Tier an opportunity, so Round 1 buys the one and Round 3, the next opportunity, the other. Under ADR 0056's
+> sequential picks, before it, Round 1 bought both. What this row left out is the price: casting it every
 > Round spends that Creature's activation every Round, so it never attacks. Whether the line is degenerate is
 > therefore still a measurement, not the proof this row claimed — and phase 2 having been dropped as a
 > measurement exercise, who makes it is open. What is not in doubt: nothing bounds the total, so the table
 > needs an unbounded supply of Defense tokens until something does.
 >
-> Re-read at content `4d7a841c`: the route runs through two Tiers now rather than the Talent tree, and it is
-> still the two picks of Round 1; `full_plate`'s cost and amount are unchanged, and so are the other three
-> Defense buff Spells' amounts, so the reading below stands. ADR 0041 does not touch it — `DefenseBuff`
-> already defaulted to `Stack`.
+> Re-read at content `4d7a841c`: the route runs through two Tiers now rather than the Talent tree, and since
+> ADR 0066 it takes two opportunities, Rounds 1 and 3; `full_plate`'s cost and amount are unchanged, and so
+> are the other three Defense buff Spells' amounts, so the reading below stands two Rounds later. ADR 0041
+> does not touch it — `DefenseBuff` already defaulted to `Stack`.
 
 **What the table shows.** `DefenseBuff` defaults to `Stack` (`Resources/Effects/DefenseBuff.cs:13`), a
 permanent Duration never counts down (`Condition.cs:34-36`), and nothing caps total Defense above
 (`Creature.cs:95-97`). `full_plate` is Self-targeted, costs 1, gives +3 permanent, and is castable from
-Round 1: the two Evolution picks of Round 1 buy `tier:brute:v1` then `tier:ironbound:v1`, and the Creature
-has 2 Energy. Cast
-every Round, its Defense is 3k after Round k. The largest single hit in the catalogue is 10
-(`psycho_rush`, `engulfing_flames`, `hateful_sacrifice`); doubled by a critical that is 20. From Round 7 the
-Creature takes zero from every attack in the game except a Bleed, which ignores Defense. `thundering_seal`
+Round 3: an Evolution pick buys `tier:brute:v1` in Round 1 and another `tier:ironbound:v1` in Round 3, and
+the Creature gains 2 Energy every Round. Cast every Round from Round 3, its Defense is 3(k - 2) after Round k.
+The largest single hit in the catalogue is 10 (`psycho_rush`, `engulfing_flames`, `hateful_sacrifice`);
+doubled by a critical that is 20. From Round 9 the Creature takes zero from every attack in the game except a
+Bleed, which ignores Defense. `thundering_seal`
 does the same for an ally at +3, `guard` at +1 and `revenant_guards` for the whole Team at +2 a cast: all
 four Defense buff Spells carry a permanent half. The plan
 already calls this "probably not what anyone wants"; the table gives the round number.
@@ -519,10 +522,11 @@ order would play another game without breaking a test.
   box, and a digest move. It spreads the seat's advantage or disadvantage evenly over a Match, and agents
   may learn to time purchases around it, which is what ADR 0063 said of alternating ties.
 - *Hidden, simultaneous purchases, revealed together, like Speed.* Costs: a domain change (purchases held
-  back from the other Player's board until both are in, and a ruling on what a Player's own second pick
-  sees, which ADR 0056 settled as "the first one's result"), a digest move, and a pick hidden behind a
-  screen at the table. It removes the information the second picker has, which is what makes the seat
-  matter here.
+  back from the other Player's board until both are in), a digest move, and a pick hidden behind a screen at
+  the table. It removes the information the second picker has, which is what makes the seat matter here. A
+  Player's own two picks no longer need a ruling: since ADR 0066 they go to two Creatures and cannot depend
+  on each other. ADR 0066 rejected hiding those two for that reason, as a second hidden decision for no
+  gain; it did not weigh what one Player's purchase tells the other, which is this candidate.
 
 ### Not raised, and why
 

@@ -1,7 +1,7 @@
 # 0056. A pick buys a package, and two of them arrive every other round
 
 Date: 2026-09-22
-Status: Accepted
+Status: Accepted, amended by [0066](0066-a-creature-buys-one-package-an-opportunity.md)
 
 ## Context
 

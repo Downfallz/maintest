@@ -85,8 +85,10 @@ public sealed class Round : Entity<RoundId>
             return Result.Failure(RoundErrors.EvolutionNotOpen);
         }
 
+        // One choice a creature a round (ADR 0066). The rules refuse it first, with a code that says why; this
+        // keeps the history the rule reads from ever holding two.
         var choices = _evolutionChoices[slot];
-        if (choices.Contains(choice))
+        if (choices.Any(existing => existing.Creature == choice.Creature))
         {
             return Result.Failure(RoundErrors.EvolutionAlreadySubmitted);
         }

@@ -51,6 +51,13 @@ public static class EvolutionRules
             return Result.Failure(PlanningErrors.NoPicksLeft);
         }
 
+        // One package per creature per opportunity (ADR 0066): the picks go to different creatures, so no
+        // creature climbs two levels in one round and neither pick depends on the other.
+        if (HasEvolved(creature, round))
+        {
+            return Result.Failure(PlanningErrors.CreatureAlreadyEvolved);
+        }
+
         if (!resources.TryGetTier(choice.Tier, out _))
         {
             return Result.Failure(PlanningErrors.UnknownTier);
@@ -67,10 +74,11 @@ public static class EvolutionRules
     }
 
     /// <summary>
-    /// The sub-phase is complete when no player has an effective pick left: picks are capped by the rule set's
-    /// schedule and by how many packages the player's living creatures can actually buy, and a player who
-    /// passed has none. A round the schedule gives no opportunity is therefore complete as soon as it opens,
-    /// which is how an even round costs nobody an input rather than stalling for two passes.
+    /// The sub-phase is complete when no player has an effective pick left. Picks are capped by the rule set's
+    /// schedule and by the creatures <see cref="Offers"/> names, since each buys at most one package a round
+    /// (ADR 0066), so a player down to one living creature has one pick; a player who passed has none. A round
+    /// the schedule gives no opportunity is complete as soon as it opens, which is how an even round costs
+    /// nobody an input rather than stalling for two passes.
     /// </summary>
     public static EvolutionGateResult Evaluate(
         IReadOnlyList<CreatureSnapshot> creatures,
@@ -107,12 +115,30 @@ public static class EvolutionRules
             return 0;
         }
 
-        // A pick is only effective if some creature has something to buy. Counted per creature and summed
-        // rather than counted once, because two creatures may each buy the same package.
-        var available = creatures
-            .Where(creature => creature.Owner == slot && creature.IsAlive)
-            .Sum(creature => TierEligibility.AvailableTiers(creature, resources).Count);
-
-        return Math.Min(remaining, available);
+        return Math.Min(remaining, Offers(slot, creatures, round, resources).Count);
     }
+
+    /// <summary>
+    /// The creatures a pick of this player's can go to this round, each with the packages it can buy: the one
+    /// answer the gate counts and the options a player is shown, so the two cannot disagree (ADR 0066).
+    /// </summary>
+    public static IReadOnlyList<EvolutionOffer> Offers(
+        PlayerSlot slot,
+        IReadOnlyList<CreatureSnapshot> creatures,
+        Round round,
+        IGameResources resources)
+    {
+        ArgumentNullException.ThrowIfNull(creatures);
+        ArgumentNullException.ThrowIfNull(round);
+        ArgumentNullException.ThrowIfNull(resources);
+
+        return [.. creatures
+            .Where(creature => creature.Owner == slot && creature.IsAlive && !HasEvolved(creature, round))
+            .Select(creature => new EvolutionOffer(creature.Id, TierEligibility.AvailableTiers(creature, resources)))
+            .Where(offer => offer.Tiers.Count > 0)];
+    }
+
+    /// <summary>Whether the creature has already bought a package in this round.</summary>
+    private static bool HasEvolved(CreatureSnapshot creature, Round round) =>
+        round.EvolutionChoicesOf(creature.Owner).Any(choice => choice.Creature == creature.Id);
 }

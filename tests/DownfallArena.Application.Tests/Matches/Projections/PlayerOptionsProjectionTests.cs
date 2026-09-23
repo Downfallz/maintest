@@ -60,10 +60,9 @@ public sealed class PlayerOptionsProjectionTests
         afterOne.RemainingPicks.ShouldBe(1);
         afterOne.Creatures.ShouldBe(
         [
-            new EvolutionOption(CreatureId.From(1), [TestContent.BothPack, TestContent.JabPack, TestContent.SlamPack]),
             new EvolutionOption(CreatureId.From(2), [TestContent.BothPack, TestContent.GuardPack, TestContent.JabPack]),
         ],
-        "the creature that bought Guard has Slam open and Guard gone; the other is where it was");
+        "the creature that bought Guard buys nothing more this round, Slam included; the other is where it was (ADR 0066)");
 
         match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
@@ -93,7 +92,7 @@ public sealed class PlayerOptionsProjectionTests
     {
         var match = new MatchStore().Started();
         match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.GuardPack)).IsSuccess.ShouldBeTrue();
-        match.SubmitEvolutionChoice(PlayerSlot.Player1, new EvolutionChoice(CreatureId.From(1), TestContent.SlamPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
         match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
         MatchStore.ChooseStandard(match);
 
@@ -102,11 +101,11 @@ public sealed class PlayerOptionsProjectionTests
         player1.Kind.ShouldBe(PlayerOptionsKind.Intent);
         player1.Intent.ShouldNotBeNull().Creatures.ShouldBe(
         [
-            new IntentOption(CreatureId.From(1), [TestContent.Guard, TestContent.Slam, TestContent.Strike]),
+            new IntentOption(CreatureId.From(1), [TestContent.Guard, TestContent.Strike]),
             new IntentOption(CreatureId.From(2), [TestContent.Strike]),
         ]);
 
-        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), TestContent.Slam)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), TestContent.Guard)).IsSuccess.ShouldBeTrue();
         match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(2), TestContent.Strike)).IsSuccess.ShouldBeTrue();
         Options(match, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
         Options(match, PlayerSlot.Player2).Intent.ShouldNotBeNull().Creatures.Select(option => option.Creature).ShouldBe([CreatureId.From(3), CreatureId.From(4)]);
