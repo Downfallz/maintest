@@ -213,3 +213,49 @@ test('a row with no timeline yet badges only what it knows', () => {
 test('a creature the timeline does not carry gets no speed badge', () => {
   assert.deepEqual(badges({ id: 9, isStunned: false }, [{ creature: 1, speed: 'Quick' }]), []);
 });
+
+test('turn numbers follow server order even with tied or higher initiative elsewhere', async () => {
+  const { turnOrder } = await import('./board.js');
+  const board = { timeline: [{ creature: 3, initiative: 1 }, { creature: 1, initiative: 9 }, { creature: 2, initiative: 9 }] };
+  assert.equal(turnOrder({ id: 1 }, board), 2);
+  assert.equal(turnOrder({ id: 3 }, board), 1);
+  assert.equal(turnOrder({ id: 2 }, board), 3);
+  assert.equal(turnOrder({ id: 4 }, board), null);
+  assert.equal(turnOrder({ id: 1 }, { timeline: [] }), null);
+});
+
+test('live enemy choices stay hidden until revealed, then persist through resolution', async () => {
+  const { liveChoice } = await import('./board.js');
+  const creature = { id: 4, knownSpells: ['secret'] };
+  const board = { roundNumber: 3, timeline: [{ creature: 4, speed: 'Quick' }], intents: [{ actor: 4, spell: 'secret' }], revealedActions: [], resolveCursor: 0 };
+  assert.equal(liveChoice(creature, board, []).action, undefined);
+  assert.equal(liveChoice(creature, board, []).status, 'Hidden until reveal');
+  board.revealedActions = [{ actor: 4, spell: 'shown', targets: [1] }];
+  assert.equal(liveChoice(creature, board, []).status, 'Revealed');
+  board.resolveCursor = 1;
+  assert.equal(liveChoice(creature, board, []).status, 'Resolved');
+  assert.equal(liveChoice(creature, board, []).action.spell, 'shown');
+});
+
+test('a previous-round enemy choice is labelled separately and event round identity wins over poll round', async () => {
+  const { liveChoice } = await import('./board.js');
+  const entries = [{ round: 4, event: { kind: 'CombatActionResolved', roundId: 3, resolution: { action: { actor: 4, spell: 'last', targets: [1] }, isCritical: true } } }];
+  const choice = liveChoice({ id: 4 }, { roundNumber: 4 }, entries);
+  assert.equal(choice.action, undefined); assert.equal(choice.previous.round, 3); assert.equal(choice.previous.action.spell, 'last');
+  assert.equal(liveChoice({ id: 5 }, { roundNumber: 4 }, entries).previous, null);
+  assert.equal(liveChoice({ id: 4 }, { roundNumber: 5 }, entries).previous, null);
+  assert.equal(liveChoice({ id: 4 }, { roundNumber: 3 }, entries).status, 'Critical');
+});
+
+test('an unbound declaration never reveals a spell or target marker', async () => {
+  const { liveChoice } = await import('./board.js');
+  const creature = { id: 4 };
+  const board = { roundNumber: 1, revealedIntents: [{ actor: 4, spell: 'shown' }], revealedActions: [] };
+  const waiting = liveChoice(creature, board, []);
+  assert.equal(waiting.action, undefined);
+  assert.equal(waiting.status, 'Hidden until reveal');
+  assert.deepEqual(targetedBy(1, board), []);
+  board.revealedActions = [{ actor: 4, spell: 'shown', targets: [] }];
+  assert.equal(liveChoice(creature, board, []).status, 'Revealed');
+  assert.deepEqual(liveChoice(creature, board, []).action.targets, []);
+});

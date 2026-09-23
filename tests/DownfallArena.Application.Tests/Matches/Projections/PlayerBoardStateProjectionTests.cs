@@ -96,6 +96,53 @@ public sealed class PlayerBoardStateProjectionTests
     }
 
     [Fact]
+    public void The_first_target_decision_sees_no_public_actions_and_the_fifth_sees_only_the_first_four()
+    {
+        var match = new MatchStore().Started(RuleSet.Create(3, 2, 2, 30, 2.0));
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+        var round = match.CurrentRound.ShouldNotBeNull();
+        var timeline = round.Timeline.Slots;
+
+        foreach (var activation in timeline.Take(5))
+        {
+            match.SubmitIntent(activation.Owner, new CombatIntent(activation.Creature, TestContent.Strike)).IsSuccess.ShouldBeTrue();
+        }
+
+        foreach (var player in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
+        {
+            var hidden = PlayerBoardStateProjection.Build(match, player);
+            hidden.SubPhase.ShouldBe(RoundSubPhase.IntentSelection);
+            hidden.RevealedActions.ShouldBeEmpty();
+            hidden.Intents.ShouldAllBe(intent => hidden.Allies.Any(creature => creature.Id == intent.Actor));
+        }
+
+        var last = timeline[^1];
+        match.SubmitIntent(last.Owner, new CombatIntent(last.Creature, TestContent.Strike)).IsSuccess.ShouldBeTrue();
+
+        foreach (var player in new[] { PlayerSlot.Player1, PlayerSlot.Player2 })
+        {
+            var revealed = PlayerBoardStateProjection.Build(match, player);
+            revealed.SubPhase.ShouldBe(RoundSubPhase.RevealAndTarget);
+            revealed.RevealedActions.ShouldBeEmpty();
+            revealed.RevealCursor.ShouldBe(0);
+        }
+
+        foreach (var activation in timeline.Take(4))
+        {
+            var target = timeline.First(other => other.Owner != activation.Owner).Creature;
+            var action = CombatAction.Bind(new CombatIntent(activation.Creature, TestContent.Strike), [target]);
+            match.SubmitAction(activation.Owner, action).IsSuccess.ShouldBeTrue();
+        }
+
+        var fifth = PlayerBoardStateProjection.Build(match, timeline[4].Owner);
+        fifth.RevealedActions.Select(action => action.Actor).ShouldBe(timeline.Take(4).Select(activation => activation.Creature));
+        fifth.RevealedActions.ShouldAllBe(action => action.Targets.Count == 1);
+        fifth.RevealCursor.ShouldBe(4);
+        fifth.ResolveCursor.ShouldBe(0);
+    }
+
+    [Fact]
     public void Null_arguments_are_rejected()
     {
         Should.Throw<ArgumentNullException>(() => PlayerBoardStateProjection.Build(null!, PlayerSlot.Player1));
