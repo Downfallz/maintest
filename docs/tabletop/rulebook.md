@@ -59,7 +59,7 @@ Three things make the game:
 - **Nothing is a reservation.** Energy is spent at Resolution, not when you declare. A Creature can be killed,
   stunned or drained between the reveal and the resolution, and its cast then does nothing at all.
 
-A Match runs 8 to 16 Rounds, which is 15 to 30 minutes once you know the book.
+A Match runs 10 to 15 Rounds, which is 15 to 30 minutes once you know the book.
 
 If the Round cap is reached with both Teams still standing, the Team with the most total remaining Health
 wins. Equal totals are a draw.
@@ -104,7 +104,7 @@ one of them in a sentence.
 | Evolution picks per opportunity | Tiers a Player may buy in a Round that offers an Evolution opportunity | ______ | 2 |
 | First evolution Round | The first Round that offers an Evolution opportunity | ______ | 1 |
 | Interval between opportunities | How many Rounds apart the opportunities are: 1 is every Round, 2 every other Round | ______ | 2 |
-| Round cap | The space the Round cap marker occupies | ______ | the table plays 8 to 16; the Round track holds 16 |
+| Round cap | The space the Round cap marker occupies | ______ | 20 (the table plays 10 to 15; the Round track holds 20) |
 | Critical multiplier | What a critical cast multiplies by | ______ | 2 |
 
 The die is not on this table, because it is not a Rule set value and it does not move: it is a **d20**, for
@@ -535,7 +535,7 @@ rail stays where it is.
   **highest total remaining Health** wins; equal totals are a draw.
 - Otherwise, advance the Round marker one space and start the next Round at [5.1](#51-energy-gain).
 
-> **Example.** The Round cap marker is on space 12. At the end of Round 12 both Teams are still standing.
+> **Example.** The Round cap marker is on space 20. At the end of Round 20 both Teams are still standing.
 > Player 1's Creatures are at 11, 0 and 6 Health: total 17. Player 2's are at 4, 9 and 5: total 18. **Player 2
 > wins**, even though Player 1 has more Creatures standing. Health is the tiebreak, not survivors.
 

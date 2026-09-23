@@ -36,7 +36,7 @@ document wins on *when*.
   `IRandomSource` (`src/DownfallArena.SharedKernel/Randomness/IRandomSource.cs:11,16`) and `TimeProvider`
   (registered at `src/DownfallArena.Application/ApplicationServiceCollectionExtensions.cs:29`) answer
   everything this app needs.
-- **The content moves under the app, deliberately and often.** The maintainer is tuning toward 8 to 16 Rounds
+- **The content moves under the app, deliberately and often.** The maintainer is tuning toward 10 to 15 Rounds
   (plan.md:110-118). Nothing in `table/` may carry a Spell, a number or a card face. This is checked by a test
   from stage 3 on, not by review alone.
 

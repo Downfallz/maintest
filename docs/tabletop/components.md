@@ -1,8 +1,8 @@
 # Components and print-and-play
 
 Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
-question 14, 2026-09-23, to one package a Creature an opportunity the same day, and to 30 Health the same
-day again). Phase 3 of
+question 14, 2026-09-23, to one package a Creature an opportunity the same day, to 30 Health the same
+day again, and to a 20-Round cap the same day once more). Phase 3 of
 [plan.md](plan.md). It answers the **needs a component** rows of [translation.md](translation.md) and specifies
 a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
@@ -24,6 +24,11 @@ What is current, exactly:
   rather than 20 ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)). What that moved is the
   Health rail ([1.3](#13-stat-markers-and-the-rails-they-ride), [3.1](#31-the-creature-board)) and the reach
   of the Bleed supply ([1.4](#14-condition-tokens)); no piece count moved.
+- **A Match is 10 to 15 Rounds, and the table's Round cap is 20** (ADR 0068; the plan said 8 to 16). The
+  Round track grew from 16 spaces to 20, and everything sized per Round was recomputed for 20: the pick marks
+  ([3.6](#36-the-round-track)), the Energy rail and its chit ([1.7](#17-the-energy-track-what-ends-it)), the
+  Base initiative tens rail ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)) and the cards a
+  Match can put in hands ([1.1](#11-spell-cards-and-package-cards)). No piece count moved; the paper is 49.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -59,7 +64,8 @@ A count is often both: 216 Spell cards is one card per Creature per Spell (RULE)
 From [plan.md](plan.md), phase 2 and the Decisions section:
 
 - A **faithful port**. A rule that costs bookkeeping gets a component; nothing is dropped.
-- A Match is **8 to 16 Rounds**. Everything sized per Round is built for **16** and says so.
+- A Match is **10 to 15 Rounds** (ADR 0068). The table's Round cap is **20**, so everything sized per Round
+  is built for **20** and says so: a Match can run to its cap.
 - Two Players, **three Creatures each**, all six from `data/Creatures/main.v1.json`.
 - The Creature's base Critical chance is **zero**. A Spell's printed chance is the chance rolled. The 15
   Spells at zero never roll.
@@ -75,7 +81,7 @@ The board this manifest is built on, and the commands that read it:
 
 ```bash
 grep -n 'Default {' src/DownfallArena.Domain/Matches/RuleSet.cs   # new(3, 2, 2, 30, 2.0, 1, 2)
-cat docs/tabletop/playtest.rules.json                             # the table's rule set: the same, with a 12-Round cap
+cat docs/tabletop/playtest.rules.json                             # the table's rule set: the same, with a 20-Round cap
 cat data/Creatures/main.v1.json                                   # Health 30, Energy 0, Defense 0, Base initiative 5
 find data/Spells -name '*.json' | wc -l                           # 36
 ls data/Tiers/*.json | wc -l                                      # 21, none disabled
@@ -83,8 +89,8 @@ ls data/Tiers/*.json | wc -l                                      # 21, none dis
 
 `RuleSet.Default` is 3 Creatures a Team, 2 Energy a Round, 2 Evolution picks an opportunity, the first
 opportunity at Round 1 and one every 2 Rounds after it, a 30-Round cap, a critical multiplier of 2.0. The
-table's rule set file (`table --rules`) has the same numbers and a 12-Round cap. The cap is the one value the
-table replaces, and it is a setup: the Round track is built for 16.
+table's rule set file (`table --rules`) has the same numbers and a 20-Round cap. The cap is the one value the
+table replaces, and it is a setup: the Round track is built for 20, so a table may set any cap up to 20.
 
 The 21 Tiers: 3 at level 1 with two Spells each, 9 at level 2 with one Spell each, 9 at level 3 with two
 Spells each. They teach 33 Spells, each exactly once. The other 3 are the starting kit, which no Tier
@@ -122,8 +128,8 @@ What moved when evolution became packages, and why:
 | Talent pips | 82 | **0** | The package card is the record, so nothing is marked on a mat. |
 | Paper | 35 sheets | **47** | 14 sheets of package cards in, 2 talent tree mats out. |
 | Pick tokens | 4 | **4** | Still 2 a Player, but only in a Round that offers an opportunity. Since ADR 0066 a token that buys lies on the buyer's board until the Sub-phase ends; one token marks one Creature, so the count holds. [1.5](#15-the-rest-of-the-pieces). |
-| Round track | 16 spaces | 16 spaces, **8 pick marks** | The schedule is printed where a Player looks for the Round. [3.6](#36-the-round-track). |
-| Base initiative, tens rail | 0 to 5 | **0 to 2** | The ceiling fell from 52 to 44 with packages, and to 29 when a Creature could buy only one an opportunity (ADR 0066). [3.4](#34-initiative-two-small-rails-instead-of-one-long-one), and Part 6, question 11. |
+| Round track | 16 spaces | **20** spaces, **10 pick marks** | The schedule is printed where a Player looks for the Round. [3.6](#36-the-round-track). 16 spaces and 8 marks until the cap went to 20. |
+| Base initiative, tens rail | 0 to 5 | **0 to 3** | In 16 Rounds the ceiling fell from 52 to 44 with packages, and to 29 when a Creature could buy only one an opportunity (ADR 0066): a rail to 2. The 20-Round cap gives a Creature 10 purchases, and the ceiling is 33. [3.4](#34-initiative-two-small-rails-instead-of-one-long-one), and Part 6, question 11. |
 | Spell card foot | `Unlock: +N initiative`, `Requires: ...` | **neither** | ADR 0059 and ADR 0056. [2.1](#21-what-is-printed-and-where-it-comes-from). |
 | Spell card head | class and tree depth | **the package that teaches it, and its level** | The class names collide with the package names, and the tree depth is a number the game no longer reads (ADR 0058). [2.1](#21-what-is-printed-and-where-it-comes-from). |
 | Tie order chit | - | **6** | The Tie order is hidden until both Players have given theirs (ADR 0063). [1.5](#15-the-rest-of-the-pieces). |
@@ -132,14 +138,15 @@ What moved when evolution became packages, and why:
 That table records the package change, and its paper line stops at 47. The maintainer's answer to Part 6,
 question 14 moved three lines after it: the 6 two-sided Speed tokens became **12 Speed cards**
 ([1.5](#15-the-rest-of-the-pieces), [2.6](#26-the-speed-card)), the token pieces went from 266 to 260, and the
-paper from 47 to **49** sheets.
+paper from 47 to **49** sheets. The 20-Round cap moved two cells of it, the Round track's and the tens rail's,
+and no count: the Round track still shares one sheet with the initiative track ([3.6](#36-the-round-track)).
 
 ### 1.1 Spell cards and package cards
 
 | Component | Count | The rule beside the count | Follows |
 | --- | --- | --- | --- |
 | Spell card | **216** = 36 Spells x 6 copies | A card in a hand is what lets an Intent be played face down, so a Creature needs its own copy of every Spell it knows. Any of the six Creatures can come to know any Spell a Tier teaches: a package's prerequisites are the only rule, so multiclassing is free (ADR 0056), and both Players play the same Creature definition. Six copies is the ceiling. A Spell that is neither in the starting kit nor taught by an enabled Tier can never be known, and gets **no** copy; at `4ab506fa` there is none, so all 36 are printed. | 36 is a **VALUE** (content: 3 starting, 33 taught); 6 is 2 Players x team size 3, a **VALUE** (`RuleSet.TeamSize`); one copy per Creature that could know it is a **RULE** |
-| Package card | **126** = 21 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a level-3 Tier costs a Creature 3 purchases at 3 opportunities, 9 for a whole Team, inside the 16 a Player makes in 16 Rounds. So all six Creatures can own the same Tier in one Match. 126 is exactly 14 sheets. | 21 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
+| Package card | **126** = 21 Tiers x 6 copies | A bought card lies face up with the Creature that bought it: that is the public record that it owns the Tier (rulebook §5.3). So a Creature needs its own copy of every Tier it owns. Any of the six Creatures may buy any Tier, since prerequisites are the only rule (ADR 0056), and the ceiling is reachable: a level-3 Tier costs a Creature 3 purchases at 3 opportunities, 9 for a whole Team, inside the 20 a Player makes in 20 Rounds. So all six Creatures can own the same Tier in one Match. 126 is exactly 14 sheets. | 21 is a **VALUE** (content, enabled Tiers); 6 is 2 Players x team size, a **VALUE**; one copy per Creature that could own it is a **RULE** |
 
 What a Match actually consumes is smaller, and it is the number the open question in Part 6 is about. The
 command below also gives the Base initiative ceiling that
@@ -151,7 +158,7 @@ python3 -c "
 import json,glob
 R=json.load(open('docs/tabletop/playtest.rules.json'))
 T=[json.load(open(p)) for p in glob.glob('data/Tiers/*.json')];T=[t for t in T if t.get('enabled',True)]
-o=[r for r in range(1,17) if r>=R['firstEvolutionRound'] and (r-R['firstEvolutionRound'])%R['evolutionInterval']==0]
+o=[r for r in range(1,21) if r>=R['firstEvolutionRound'] and (r-R['firstEvolutionRound'])%R['evolutionInterval']==0]
 P=R['evolutionPicksPerOpportunity']*len(o);C=len(o);ix={t['id']:i for i,t in enumerate(T)};n=len(T)
 need=[sum(1<<ix[q] for q in t['prerequisites']) for t in T];bb={};bs={}
 for m in range(1<<n):
@@ -162,19 +169,19 @@ f=lambda d,k:max(v for j,v in d.items() if j<=k)
 print('opportunities',o,'picks a Player',P,'purchases one Creature',C)   # one package a Creature an opportunity
 print('most Spells a Player adds',max(f(bs,a)+f(bs,b)+f(bs,P-a-b) for a in range(C+1) for b in range(C+1) if 0<=P-a-b<=C))   # a Team of 3
 print('most Base initiative one Creature buys',f(bb,C))"
-# opportunities [1, 3, 5, 7, 9, 11, 13, 15] picks a Player 16 purchases one Creature 8
-# most Spells a Player adds 28
-# most Base initiative one Creature buys 24
+# opportunities [1, 3, 5, 7, 9, 11, 13, 15, 17, 19] picks a Player 20 purchases one Creature 10
+# most Spells a Player adds 34
+# most Base initiative one Creature buys 28
 ```
 
-6 Creatures x 3 starting Spells = 18 cards in hands at setup. A 16-Round Match offers 8 opportunities, so a
-Player makes at most 16 purchases, and one Creature at most 8 of them, one an opportunity (ADR 0066). The most
-Spells 16 purchases add is 28: the 3 level-1 packages on each of three Creatures (9 purchases, 18 Spells, two a
-purchase), then 4 level-2 packages and the 3 level-3 packages above them (7 purchases, 10 Spells), spread so
-that no Creature makes more than 8; ADR 0066 left the 28 where it was. So **at most 18 + 2 x 28 = 74 cards are
-in hands in a 16-Round Match**, down from 82 when a pick bought one Spell every Round. The box still carries
-216 because which 74 is a choice the Players make, and six Creatures may all buy the same package. The same
-holds for package cards: a Match lays out at most 2 x 16 = 32 of the 126, one a purchase.
+6 Creatures x 3 starting Spells = 18 cards in hands at setup. The command reads the Rounds 1 to 20, the
+Round track's spaces. A 20-Round Match offers 10 opportunities, so a Player makes at most 20 purchases, and one
+Creature at most 10 of them, one an opportunity (ADR 0066). The most Spells 20 purchases add is 34: the 3
+level-1 packages on each of three Creatures (9 purchases, 18 Spells, two a purchase), then 6 level-2 packages
+and the 5 level-3 packages above five of them (11 purchases, 16 Spells), spread so that no Creature makes more
+than 10. So **at most 18 + 2 x 34 = 86 cards are in hands in a 20-Round Match**. In 16 Rounds it was 74. The
+box still carries 216 because which 86 is a choice the Players make, and six Creatures may all buy the same
+package. The same holds for package cards: a Match lays out at most 2 x 20 = 40 of the 126, one a purchase.
 
 ### 1.2 Boards and mats
 
@@ -183,7 +190,7 @@ holds for package cards: a Match lays out at most 2 x 16 = 32 of the 126, one a 
 | Creature board | **6** | One per Creature in play: 2 Players x `RuleSet.TeamSize` 3. Each carries the Creature's number, 1 to 6: who it is on the track and on a target marker, and the order tied Creatures roll in. The number breaks no tie (ADR 0063). | **VALUE** (team size) |
 | Player area mat | **2** | One per Player. A Match seats exactly two. | **RULE** |
 | Initiative track | **1** | Six ordered slots, a Quick band above a Standard band. Six is the number of Activation slots a Round can have: one per living, unstunned Creature. | **VALUE** (team size) |
-| Round track | **1**, 16 spaces, 8 pick marks | A Match is 8 to 16 Rounds (given). The track is printed for the top of that band. The Round cap marker is placed on the space equal to the `RuleSet`'s cap at setup. A pick mark is printed on every Round that offers an opportunity: Round 1 and every second Round after, so 1, 3, ..., 15 (`RuleSet.IsEvolutionRound`). | **RULE** for 16 (the given band); the cap marker and the pick marks are **VALUE**s (the cap; `FirstEvolutionRound`, `EvolutionInterval`) |
+| Round track | **1**, 20 spaces, 10 pick marks | A Match is 10 to 15 Rounds (given, ADR 0068), and the table's Round cap is 20 (`playtest.rules.json`). The track is printed to the cap, so the Round cap marker always has its space. The Round cap marker is placed on the space equal to the `RuleSet`'s cap at setup. A pick mark is printed on every Round that offers an opportunity: Round 1 and every second Round after, so 1, 3, ..., 19 (`RuleSet.IsEvolutionRound`). | The 20 spaces, the cap marker and the pick marks are **VALUE**s (the table's cap; the cap; `FirstEvolutionRound`, `EvolutionInterval`) |
 
 ### 1.3 Stat markers and the rails they ride
 
@@ -192,12 +199,12 @@ counts and the ends.
 
 | Rail | Markers | Where it ends, and why | Follows |
 | --- | --- | --- | --- |
-| Health | 6 | 0 to 30, in two rows. `baseHealth` is 30 (ADR 0068; it was 20) and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:271`), so nothing goes above it. One row of 31 cells is 155 mm, past the 95 mm a board row holds ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)), so it runs 0 to 15 and 16 to 30, like the Energy rail. | **VALUE** (`baseHealth`) |
-| Energy | 6 | 0 to 32. See [1.7](#17-the-energy-track-what-ends-it). | **VALUE** (`EnergyPerRound`) x **RULE** (16 Rounds) |
+| Health | 6 | 0 to 30, in two rows. `baseHealth` is 30 (ADR 0068; it was 20) and `Creature.Heal` clamps to `MaxHealth - Health` (`Creature.cs:271`), so nothing goes above it. One row of 31 cells is 155 mm, past the 95 mm a board row holds ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)), so it runs 0 to 15 and 16 to 30. | **VALUE** (`baseHealth`) |
+| Energy | 6 | 0 to 40, in three rows: 0 to 13, 14 to 27, 28 to 40. See [1.7](#17-the-energy-track-what-ends-it). 41 cells in two rows would be 21 in one, 105 mm, past the 95 mm a board row holds, so it takes a third. | **VALUE** (`EnergyPerRound`) x **VALUE** (the 20-Round cap) |
 | Defense buffs | 6 | 0 to 20. See [3.3](#33-defense-two-rails-because-the-floor-is-applied-once). | **VALUE** (the largest Damage, the critical multiplier) |
 | Defense debuffs | 6 | 0 to 20, the same reason mirrored. | **VALUE** |
 | Base initiative, units | 6 | 0 to 9. | **RULE** (a decimal rail) |
-| Base initiative, tens | 6 | 0 to 2. Together the two rails read 0 to 29, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Base initiative of 29. | **VALUE** (the packages' `initiativeBonus`, the schedule) x **RULE** (one package a Creature an opportunity, ADR 0066) |
+| Base initiative, tens | 6 | 0 to 3. Together the two rails read 0 to 39, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Base initiative of 33. | **VALUE** (the packages' `initiativeBonus`, the schedule) x **RULE** (one package a Creature an opportunity, ADR 0066) |
 
 **36 stat markers**, six of each of the six rails above. Print them as 10mm discs in six Creature colours.
 
@@ -270,7 +277,7 @@ is 16 short of that ceiling. Part 6, question 5.
 | Round marker | **1** | One position on the Round track. | **RULE** |
 | Round cap marker | **1** | Placed at setup on the space equal to the `RuleSet`'s Round cap, so the track's end is a component and not a memory. | **VALUE** |
 | Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
-| Energy overflow chit, +32 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
+| Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule, and the rule has no bound: permanent Defense buffs and debuffs both stack (ADR candidate 3, open). | **RULE** (no bound exists) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
@@ -356,12 +363,12 @@ Energy has no maximum in the engine (`Energy.cs:3`, `GainEnergy` at `Creature.cs
 has settled that the engine does not change: **the component is what ends it** (translation.md, ADR candidate
 2).
 
-**The track runs 0 to 32.** The rule beside the count: a living Creature gains `RuleSet.EnergyPerRound` = 2
-every Round (`UpkeepRules.cs:13-22`), and a Match is at most 16 Rounds, so **2 x 16 = 32 is the Energy a
-Creature banks by doing nothing at all**. That is the gain no play can refuse, and it is the honest end of a
-printed track.
+**The track runs 0 to 40.** The rule beside the count: a living Creature gains `RuleSet.EnergyPerRound` = 2
+every Round (`UpkeepRules.cs:13-22`), and a table's Match is at most 20 Rounds, its Round cap, so **2 x 20 = 40
+is the Energy a Creature banks by doing nothing at all**. That is the gain no play can refuse, and it is the
+honest end of a printed track. It ran to 32 while the track was built for 16 Rounds.
 
-Four Spells in the catalogue touch Energy. Three of them can push a Creature above 32, and all three cost a
+Four Spells in the catalogue touch Energy. Three of them can push a Creature above 40, and all three cost a
 cast:
 
 ```bash
@@ -378,9 +385,9 @@ The most one Creature can gain in one Round is **14**: 2 from the Round, 6 from 
 Conditions of its own (Self-targeted, 3 Rounds, and the per-Round family stacks), 4 from its two allies each
 casting `restorative_burst` on it, and 2 from spending its own Activation slot on `wait`.
 
-**What a player does at the end of the track.** A Creature whose Energy would pass 32 takes an **Energy
-overflow chit** worth 32 and its marker returns to 0. One chit per Creature is in the box: a second chit means
-a Creature banking more than 64 Energy in 16 Rounds, which is an average of 4 a Round with nothing ever spent
+**What a player does at the end of the track.** A Creature whose Energy would pass 40 takes an **Energy
+overflow chit** worth 40 and its marker returns to 0. One chit per Creature is in the box: a second chit means
+a Creature banking more than 80 Energy in 20 Rounds, which is an average of 4 a Round with nothing ever spent
 while the most expensive Spell in the catalogue costs 4. If it happens, the blank tokens of
 [1.4](#14-condition-tokens) cover it. The rulebook says the rule plainly: **Energy has no maximum; the track
 is a track, not a cap.**
@@ -654,14 +661,15 @@ at all, so a dead Creature cannot be given Energy, a Speed card, an Intent or a 
 |-----------------------------------------------|
 | Health   0 1 2 ................ 14 15         |   two rows, one marker, ends at 30
 |          16 17 ................ 29 30         |
-| Energy   0 1 2 ................ 15 16         |   two rows, one marker, ends at 32
-|          17 18 ................ 31 32   [+32] |   the overflow chit's place
+| Energy   0 1 2 ................ 12 13         |   three rows, one marker, ends at 40
+|          14 15 ................ 26 27         |
+|          28 29 ................ 39 40   [+40] |   the overflow chit's place
 |-----------------------------------------------|
 | Defense  buffs   0 ................. 20 [+20] |
 |          debuffs 0 ................. 20 [-20] |
 |          Defense = buffs - debuffs, never < 0 |
 |-----------------------------------------------|
-| Base initiative   tens 0..2   units 0..9      |
+| Base initiative   tens 0..3   units 0..9      |
 |-----------------------------------------------|
 | Conditions   | new |   3   |   2   |   1   |  |   the duration dock
 |              |     |       |       |       |  |
@@ -737,19 +745,20 @@ print(max(e['amount'] for p in glob.glob('data/Spells/**/*.json',recursive=True)
 ### 3.4 Initiative: two small rails instead of one long one
 
 Base initiative only ever grows, by the `initiativeBonus` of every package bought, once a purchase
-(ADR 0056; glossary, Base initiative). No Spell adds anything (ADR 0059). Its ceiling in a 16-Round Match is
-the last line of the command in [1.1](#11-spell-cards-and-package-cards): **24**.
+(ADR 0056; glossary, Base initiative). No Spell adds anything (ADR 0059). Its ceiling in a 20-Round Match is
+the last line of the command in [1.1](#11-spell-cards-and-package-cards): **28**.
 
-A Player makes 2 picks at each of 8 opportunities: 16 purchases. A Creature buys at most one package an
-opportunity (ADR 0066), so **8 of them at most land on one Creature**. The 21 packages' bonuses sum to 47,
-but a Creature cannot own all 21 with 8 picks, and a level-3 package cannot be bought without the two below
-it. The 8 prerequisite-closed packages that pay the most pay 24, so **Base initiative tops out at 5 + 24 =
-29.** Current initiative adds the Initiative buffs on top. `death_squad` is +2 for a Round on up to 3 allies
-and it stacks, but only a Creature that owns Deathstalker can cast it. Deathstalker is among the 8 packages
-that pay 24, and the Player's other 8 purchases are enough for both allies to buy Prowler, Assassin and
-Deathstalker, 3 each. So three `death_squad`s can land on the Creature at 29, and **Current initiative tops out
-at 35**. While two packages could land on one Creature an opportunity (ADR 0056, before ADR 0066), the
-ceilings were 44 and 46; under one Spell a pick, twice every Round, 52 and 58.
+A Player makes 2 picks at each of 10 opportunities: 20 purchases. A Creature buys at most one package an
+opportunity (ADR 0066), so **10 of them at most land on one Creature**. The 21 packages' bonuses sum to 47,
+but a Creature cannot own all 21 with 10 picks, and a level-3 package cannot be bought without the two below
+it. The 10 prerequisite-closed packages that pay the most pay 28, so **Base initiative tops out at 5 + 28 =
+33.** Current initiative adds the Initiative buffs on top. `death_squad` is +2 for a Round on up to 3 allies
+and it stacks, but only a Creature that owns Deathstalker can cast it. Deathstalker is among the 10 packages
+that pay 28, and the Player's other 10 purchases are enough for both allies to buy Prowler, Assassin and
+Deathstalker, 3 each. So three `death_squad`s can land on the Creature at 33, and **Current initiative tops out
+at 39**. In a 16-Round Match the two ceilings were 29 and 35. While two packages could land on one Creature an
+opportunity (ADR 0056, before ADR 0066), they were 44 and 46 in 16 Rounds; under one Spell a pick, twice every
+Round, 52 and 58.
 
 ```bash
 python3 -c "
@@ -763,22 +772,23 @@ for m in range(1<<n):
   k=len(own);v=sum(T[i]['initiativeBonus'] for i in own);b[k]=max(b.get(k,0),v)
   if m>>ds&1: bd[k]=max(bd.get(k,0),v)
 f=lambda d,k:max([v for j,v in d.items() if j<=k] or [-99])
-print(max(5+f(bd if own else b,8)+2*(own+a) for a in range(3) for own in (0,1) if 3*a<=16-8))"   # 35
+print(max(5+f(bd if own else b,10)+2*(own+a) for a in range(3) for own in (0,1) if 3*a<=20-10))"   # 39
 ```
 
-The command assumes the 8 opportunities of a 16-Round Match: 8 purchases on the Creature, one an opportunity,
-and the Player's other 8 for its allies, where an ally's `death_squad` costs it the three packages from
-Prowler up. It reads the same prerequisite-closed sets as the Base ceiling, so it moves when a bonus does.
+The command assumes the 10 opportunities of a 20-Round Match: 10 purchases on the Creature, one an
+opportunity, and the Player's other 10 for its allies, where an ally's `death_squad` costs it the three
+packages from Prowler up. It reads the same prerequisite-closed sets as the Base ceiling, so it moves when a
+bonus does.
 
-A rail to 29 is 30 cells and 150 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 2
-and units 0 to 9, are 13 cells** and read as one two-digit number. The print constraint is the board's 95 mm
-of usable width; the rule is the ceiling of 29. A bonus is 0 to 5 at `4ab506fa`, so a purchase is one marker
-move on the units rail, sometimes carrying into the tens rail.
+A rail to 33 is 34 cells and 170 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 3
+and units 0 to 9, are 14 cells**, 70 mm, and read as one two-digit number. The print constraint is the
+board's 95 mm of usable width; the rule is the ceiling of 33. A bonus is 0 to 5 at `4ab506fa`, so a purchase
+is one marker move on the units rail, sometimes carrying into the tens rail.
 
 The tens rail is a **VALUE** twice over. The bonuses are balance knobs now (ADR 0061), and
 `data/balance/knobs.json` lets a tuning pass move each one up to its declared `max`. At every package's `max`,
-the same command reads a ceiling of 5 + 40 = 45, which is a tens rail to 4: the rail this manifest printed
-before ADR 0066. Part 6, question 11.
+the same command reads a ceiling of 5 + 48 = 53, which is a tens rail to 5: the rail this manifest printed
+before packages. Part 6, question 11.
 
 Current initiative is **not** on a rail. It is Base plus the dock's Initiative buff tokens less its Initiative
 debuff tokens, floored at zero, and it is read **once a Round**, when the timeline is built. That is the
@@ -818,21 +828,32 @@ A tie is settled on the track in two steps (ADR 0063), and the components carry 
    skips step 2.
 
 The track is an **ordering** device and carries no numbers. The alternative, a value track a marker is placed
-on, needs 36 cells, 0 to the Current initiative ceiling of 35 in 3.4, and would still need the tie rules
+on, needs 40 cells, 0 to the Current initiative ceiling of 39 in 3.4, and would still need the tie rules
 printed.
 
 ### 3.6 The round track
 
-Sixteen spaces. The Round marker advances one space at Finalization. The **Round cap marker** is placed at
+Twenty spaces. The Round marker advances one space at Finalization. The **Round cap marker** is placed at
 setup on the space equal to the `RuleSet`'s Round cap: when the Round marker reaches it, the Match ends on
 total remaining Health (`WinCondition.cs:23-26`). The cap is a component rather than a memory, and moving it
 is how a shorter or longer Match is set up without a reprint.
 
+**Why twenty.** A Match is designed to last 10 to 15 Rounds (ADR 0068), and the table's Round cap is 20
+(`playtest.rules.json`), so the Round cap marker needs a space 20. The track stops at the cap: a space past it
+is one no Match reaches. It was 16 spaces while the band was 8 to 16. A cap above 20 needs a longer track,
+and a reprint of this one sheet.
+
+**How it is laid out.** A space is 16 mm, a 15 mm token with a millimetre of play. Twenty in one row would be
+320 mm, past the long side of an A4 sheet (297 mm) and of a Letter one (279 mm), so the track runs in **two
+rows of ten**, 1 to 10 above 11 to 20, both read left to right, which is 160 x 32 mm. It still shares its
+sheet with the initiative track. On the last Round the Round marker stands on the cap marker: both are flat
+15 mm tokens, so one sits on the other.
+
 **The pick marks.** Evolution offers picks only at an opportunity: Round 1 and every second Round after
 (`RuleSet.IsEvolutionRound`, ADR 0056). A Round without one gives nobody a pick, and its Evolution ends as it
 opens. So every space that is an opportunity carries a printed pick mark, two small pick-token outlines: at
-the table's schedule, spaces 1, 3, 5, 7, 9, 11, 13 and 15, **8 marks**. The rule beside the count: the
-Rounds r from 1 to 16 with r >= `FirstEvolutionRound` and (r - `FirstEvolutionRound`) a multiple of
+the table's schedule, spaces 1, 3, 5, ..., 17 and 19, **10 marks**. The rule beside the count: the
+Rounds r from 1 to 20 with r >= `FirstEvolutionRound` and (r - `FirstEvolutionRound`) a multiple of
 `EvolutionInterval`. The Players put their pick tokens on their mats when the Round marker stands on a mark,
 and not otherwise. "Is it a pick Round?" is then a look at the track, not a parity sum. The marks are a
 **VALUE**: a schedule with another first Round or interval reprints this one sheet. The cap is a marker
@@ -1041,7 +1062,7 @@ differs on the head (Part 6, question 10).
 | --- | --- | --- |
 | `data/dst/game.schema.json` | The consolidated, validated catalogue the data builder writes (ADR 0009): `spells`, `creatures`, `tiers`, `talentTrees` | It is the only place aliases are resolved, references are validated and `"enabled": false` items are pruned. Reading `data/Spells/**` or `data/Tiers/**` would print content a build does not have, and would have to reimplement the pruning rules of `data/README.md`. The generator reads `tiers[]` for the package cards and the Spell card heads, and does not read `talentTrees[]` at all: the tree gates nothing (ADR 0056). |
 | `data/dst/game.schema.sha256` | The content hash | The stamp every sheet carries, and the identity of the deck. |
-| A rule set file | Team size, energy a Round, picks an opportunity, the first opportunity Round, the interval, the Round cap, the critical multiplier: the seven fields of `docs/tabletop/playtest.rules.json` | **The content hash does not cover the `RuleSet`**, and half the counts in Part 1 come from it: the copies of both decks, the pick tokens, the pick marks. A deck plus a set of boards is only valid for a content hash **and** a rule set, so both are stamped. The table host already reads this file (`table --rules`, `RuleSetFile`), and the generator takes the same one. Where that file should live is still Part 6, question 6. |
+| A rule set file | Team size, energy a Round, picks an opportunity, the first opportunity Round, the interval, the Round cap, the critical multiplier: the seven fields of `docs/tabletop/playtest.rules.json` | **The content hash does not cover the `RuleSet`**, and half the counts in Part 1 come from it: the copies of both decks, the pick tokens, the pick marks, the Round track's spaces and the Energy rail's end. A deck plus a set of boards is only valid for a content hash **and** a rule set, so both are stamped. The table host already reads this file (`table --rules`, `RuleSetFile`), and the generator takes the same one. Where that file should live is still Part 6, question 6. |
 | The die | A d20 ([d20-criticals.md](d20-criticals.md), settled) | The threshold `d20: N+` is printed when the chance is a whole number of twentieths, and omitted when it is not, rather than rounded. The rule that every chance is a twentieth is settled and not built, so today some cards print a percentage alone. |
 
 Cards are **generated, never transcribed**. A tuning pass reprints the deck rather than invalidating it, which
@@ -1057,7 +1078,8 @@ is the whole reason phase 3 specifies a generator instead of a table of card tex
   team size times, 9 to a sheet. 12 cards, 2 sheets. The rule set gives the count; the content gives nothing
   but the hash.
 - **Component sheets**: 6 creature boards, 2 player mats, the initiative track, the round
-  track with its pick marks computed from the rule set's schedule, and the token sheets.
+  track with a space for every Round up to the rule set's Round cap and its pick marks computed from the rule
+  set's schedule, and the token sheets.
 - **A manifest page**: Part 1's table, generated, with the content hash, the rule set, and the date. It is the
   page that tells a reader whether their box matches their game. It lists any Spell that gets no copy because
   no package teaches it, since that is a content defect a printer should see (ADR 0058 calls it unacquirable).
@@ -1120,7 +1142,7 @@ DOM, a fixture catalogue, a stub transport. What the tests hold:
 | A catalogue of N enabled Tiers produces exactly N package faces, each with its name, level, bonus, a `Needs` line naming every prerequisite (`Needs nothing` for none) and every Spell it teaches, and 2 x team size copies of each | The package card is where a purchase is checked. A missing prerequisite is a card that sells what the engine refuses. |
 | The copy count is 2 x the rule set's team size for a Spell some Creature could know, and 0 for one it could not | A rule set change reprints the deck; it must not need an edit. |
 | The Speed cards are 2 x team size of each face, the Quick face carries `No critical roll this Round`, and both faces share one back | Part 6, question 14: a Speed card whose back differs by face, or a Quick card without its cost, is a choice that is not hidden or not a trade. |
-| The pick marks are exactly the Rounds from 1 to 16 that `IsEvolutionRound` answers yes for, with the rule set's first Round and interval | The schedule is the rule set's, answered in one place (ADR 0056); a mat that worked out its own parity is a second schedule. |
+| The Round track has one space per Round up to the rule set's Round cap (20 in `playtest.rules.json`), and the pick marks are exactly the Rounds on it that `IsEvolutionRound` answers yes for, with the rule set's first Round and interval | The schedule is the rule set's, answered in one place (ADR 0056); a mat that worked out its own parity is a second schedule. A track shorter than the cap leaves the Round cap marker nowhere to go. |
 | Rendering fails, loudly, when a body line exceeds the text area or a body exceeds 4 lines, on either kind of card | The measurements in 2.3 and 4.1 hold for today's content. A tuning pass that lengthens a Duration or adds an effect, or an author who puts a fourth Spell in a package, must break the build rather than clip the card. |
 | Every emitted sheet carries the hash, and a missing or mismatched hash produces no output at all | The invariant of 5.5, as a property over the whole output. |
 | 9 cards a sheet, cards abutting, marks only in the outer margin, and a short last sheet padded with blanks rather than a wrapped card | A card split across two sheets is 216 cards of waste. |
@@ -1161,7 +1183,7 @@ own grid contains no multiple of 0.05. Both are content changes with a journal e
 
 - **216 cards** (this manifest). Any legal game is playable. 24 sheets, which is most of the print-and-play.
 - **Six copies of the three starting Spells and two of each of the other 33: 84 cards, 10 sheets.** A Match
-  uses at most 74 cards ([1.1](#11-spell-cards-and-package-cards)), so this is enough for almost every
+  uses at most 86 cards ([1.1](#11-spell-cards-and-package-cards)), so this is enough for almost every
   game - and a game where three Creatures buy the same package runs out, which is a rule change by the back
   door and fork A forbids it. How often that game happens is the measurement question 7 waits on for the
   package cards: how often one Tier is owned by more than two Creatures.
@@ -1180,9 +1202,10 @@ the second costs a third row of board height, which question 15 is already short
 
 ### 4. The energy overflow chit
 
-The track ends at 32 because 2 a Round for 16 Rounds is the gain no play can refuse. One overflow chit a
-Creature is in the box on the reasoning that a second means banking over 64. Is one chit a Creature right, or
-should the box carry the theoretical rate (14 a Round, so 7 chits a Creature) and accept the punch-out?
+The track ends at 40 because 2 a Round for 20 Rounds, the table's cap, is the gain no play can refuse. One
+overflow chit a Creature is in the box on the reasoning that a second means banking over 80. Is one chit a
+Creature right, or should the box carry the theoretical rate (14 a Round for 20 Rounds is 280, so 7 chits a
+Creature) and accept the punch-out?
 
 ### 5. The condition supply, and what a supply that runs out means
 
@@ -1214,10 +1237,10 @@ twice.
   126 cards, 14 sheets. The record sits with the Creature, and it is what translation.md's verdict and the
   rulebook's §5.3 describe. The prerequisite check is a read down one stagger.
 - **Two package mats**, one a Player: a box per Tier in three columns by level, three pip boxes in each, one
-  pip a purchase. 2 sheets and 32 pips instead of 14 sheets: a Player makes at most 2 picks at each of 8
-  opportunities in 16 Rounds, so 16 pips a Player. The whole Team's progress and the families are one glance,
+  pip a purchase. 2 sheets and 40 pips instead of 14 sheets: a Player makes at most 2 picks at each of 10
+  opportunities in 20 Rounds, so 20 pips a Player. The whole Team's progress and the families are one glance,
   and the record is away from the boards. The rulebook would change its step 1 from "card" to "pip".
-- **Fewer package cards.** 126 is the rule's ceiling, and it is reachable. A Match lays out at most 32. How
+- **Fewer package cards.** 126 is the rule's ceiling, and it is reachable. A Match lays out at most 40. How
   often one Tier is owned by two, three or six Creatures in a real Match is the `tabletop-mathematician`'s
   measurement (translation.md says so), and a smaller box is a question only that measurement can open, on the
   same terms as question 2: a copy count that a legal game can exceed is a rule change by the back door.
@@ -1239,12 +1262,12 @@ backs too.
 
 ### 9. The schedule: printed marks or placed markers
 
-The Round track prints 8 pick marks, on the Rounds the table's schedule makes opportunities
+The Round track prints 10 pick marks, on the Rounds the table's schedule makes opportunities
 ([3.6](#36-the-round-track)). A schedule with another first Round or interval reprints the track, which is one
 sheet. The alternative is the Round cap's answer: pick markers placed at setup, as many as the schedule has
-opportunities in 16 Rounds (8 at interval 2, 16 at interval 1, so the box would carry 16). Which one depends on
-whether the schedule is a setting a table changes between Matches, like the cap, or a rule it plays, like the
-picks themselves. That is the maintainer's to say, and it is the same question as where the rule set file
+opportunities in 20 Rounds (10 at interval 2, 20 at interval 1, so the box would carry 20). Which one depends
+on whether the schedule is a setting a table changes between Matches, like the cap, or a rule it plays, like
+the picks themselves. That is the maintainer's to say, and it is the same question as where the rule set file
 lives (question 6).
 
 ### 10. The class on a Spell card
@@ -1259,13 +1282,14 @@ lands.
 
 ### 11. The Base initiative rail and the bonus knobs
 
-The tens rail runs 0 to 2 because the most Base initiative one Creature can buy in 16 Rounds is 24, for a
-Base of 29 ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 8 packages, one an opportunity
+The tens rail runs 0 to 3 because the most Base initiative one Creature can buy in 20 Rounds is 28, for a
+Base of 33 ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 10 packages, one an opportunity
 (ADR 0066). Each package's `initiativeBonus` is a balance knob now (ADR 0061), with a declared `max` in
-`data/balance/knobs.json`. At every `max` the ceiling is 5 + 40 = 45. Print the tens rail to 2 and reprint six
-boards when a tuning pass raises a bonus, or print it to 4 (15 cells, 75 mm, the rail printed before ADR 0066)
+`data/balance/knobs.json`. At every `max` the ceiling is 5 + 48 = 53. Print the tens rail to 3 and reprint six
+boards when a tuning pass raises a bonus, or print it to 5 (16 cells, 80 mm, the rail printed before packages)
 so no pass inside the declared bounds reprints anything? It is question 3's shape, with a derived bound
-instead of a guessed one. ADR 0066 made the second answer cheaper: it was 18 cells to cover 76.
+instead of a guessed one. ADR 0066 made the second answer cheaper: in 16 Rounds it was 18 cells to cover 76.
+The 20-Round cap made it dearer again by one cell: in 16 Rounds it was a rail to 4, 15 cells, to cover 45.
 
 ### 12. Where the generator reads the card words from
 
@@ -1330,6 +1354,10 @@ did not fit either: one row of 21 cells is 105 mm at the 5 mm a cell of
 [3.4](#34-initiative-two-small-rails-instead-of-one-long-one), past the 95 mm a row holds, and the drawing in
 [3.1](#31-the-creature-board) did not say so. The player area and the counts in Part 1 are unchanged.
 
+The 20-Round cap adds to it once more. The Energy rail runs 0 to 40 ([1.7](#17-the-energy-track-what-ends-it)):
+41 cells, and two rows of 21 would be 105 mm, so it takes three rows where it took two. That is one more row
+of board height, and nothing else: the counts in Part 1 are unchanged.
+
 ---
 
 ## Part 7. Coverage: the "needs a component" rows
@@ -1344,8 +1372,8 @@ the component beside it has not.
 | translation.md row | Component |
 | --- | --- |
 | 1.1 Energy gain per Round | The Energy rail, [1.3](#13-stat-markers-and-the-rails-they-ride) and [1.7](#17-the-energy-track-what-ends-it) |
-| 1.1 Energy has no maximum | The Energy rail's end at 32 and the overflow chit, [1.7](#17-the-energy-track-what-ends-it) |
-| 1.3 An opportunity at Round 1 and every second Round after | The 8 pick marks on the Round track, [3.6](#36-the-round-track) |
+| 1.1 Energy has no maximum | The Energy rail's end at 40 and the overflow chit, [1.7](#17-the-energy-track-what-ends-it) |
+| 1.3 An opportunity at Round 1 and every second Round after | The 10 pick marks on the Round track, [3.6](#36-the-round-track) |
 | 1.3 Two picks an opportunity, per Player, shared across the Team | 4 Evolution pick tokens, [1.5](#15-the-rest-of-the-pieces); a token that buys lies on the buyer's board until the Sub-phase ends, [3.1](#31-the-creature-board), which also carries the restate row "A Creature buys at most one Tier an opportunity" |
 | 1.3 A pick buys a whole Tier | 126 package cards, face up with the Creature that bought them, [1.1](#11-spell-cards-and-package-cards) and [Part 4](#part-4-the-packages-as-an-object). Each card's `Needs` line is the prerequisite check; no Spell card prints a gate. |
 | 1.3 A purchase raises Base initiative by the Tier's initiative bonus, once, for the Match | The two Base initiative rails and the package card's bonus, [3.4](#34-initiative-two-small-rails-instead-of-one-long-one) and [4.2](#42-how-a-purchase-reaches-the-hand-and-how-the-bonus-is-recorded). No Spell card prints an initiative. |

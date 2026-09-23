@@ -17,7 +17,7 @@ section, ready to be numbered and moved into `docs/adr/` by whoever lands the co
 What this document takes as given, from [plan.md](plan.md) and [components.md](components.md):
 
 - A **faithful port** (plan.md:188-199). The app plays the engine's rules through the engine.
-- A Match is **8 to 16 Rounds** and 15 to 30 minutes (plan.md:108-125). Wall-clock is the target the app is
+- A Match is **10 to 15 Rounds** and 15 to 30 minutes (plan.md:108-125). Wall-clock is the target the app is
   built to measure; the engine measures rounds and cannot measure minutes.
 - The components of phase 3 are the screen layout. The initiative track, the creature board, the condition
   dock, the player area and the talent mat are specified in components.md:491-764, and the app renders those
@@ -215,7 +215,7 @@ The objects of components.md, one for one, so a player who has seen the cardboar
 | Face-down intent | A card back on each Creature that has declared. The seat's own back is tappable and reads its own card; the opponent's back carries no data at all | `PlayerBoardState.Intents` is the seat's own (`PlayerBoardState.cs:40-41`); the opponent's is a count, never a card |
 | Target markers and the `Targeted by` row (components.md:649-679) | Tapping a legal target marks it; each Creature row shows which casters point at it | `TargetOptions.LegalTargets` and `PlayerBoardState.RevealedActions` |
 | Talent mat (components.md:694-764) | A separate tab: three class bands, every Spell with a pip box per Creature, the gates printed on the band | The card projection of 1.3 for the tree, `KnownSpells` for the pips, `EvolutionOption.UnlockableSpells` for what is tappable now |
-| Round track (components.md:628-647) | `Round 7 of 16` in the header, with the Round's shape as a collapsible strip | `PlayerBoardState.RoundNumber`, `Phase`, `SubPhase`; the cap from the session stamp |
+| Round track (components.md:628-647) | `Round 7 of 20` in the header, with the Round's shape as a collapsible strip | `PlayerBoardState.RoundNumber`, `Phase`, `SubPhase`; the cap from the session stamp |
 
 The player aid's two load-bearing orderings — healing before bleeding, and the critical applied before Defense
 is subtracted (components.md:645-647) — are on the round strip, because they are the two a player gets wrong.
@@ -416,7 +416,7 @@ What the app does about it:
    answer: a printed deck and an app that disagree about the Round cap is a playtest of neither.
 
 **And when the content changes while a session is open.** It will, often: the maintainer is tuning toward
-8 to 16 Rounds. Nothing happens to the open session. `IGameResources` is resolved once, as a singleton, from
+10 to 15 Rounds. Nothing happens to the open session. `IGameResources` is resolved once, as a singleton, from
 the built schema (`InfrastructureServiceCollectionExtensions.cs:38-46`), the `Match` keeps the hash it was
 created with (`Match.cs:38,46`), and that hash is on every board the client fetches
 (`PlayerBoardState.cs:20`). The host **must not reload**: a Match whose rules changed mid-Round is a playtest
