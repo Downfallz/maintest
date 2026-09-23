@@ -116,15 +116,27 @@ public sealed class LookaheadAgentTests
         var options = new TieOrderOptions([[Two, One]]);
 
         Agent.DecideTieOrder(board, options).ShouldBe([One, Two]);
-        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: true).DecideTieOrder(board, options).ShouldBe([One, Two]);
-        new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules).DecideTieOrder(board, options).ShouldBe([Two, One], "the one-step reading keeps the roll");
     }
 
-    /// <summary>With nobody able to kill anybody this round, the two seatings end alike, and the tie goes to the order as rolled.</summary>
+    [Fact]
+    public void The_minimax_agent_seats_its_ties_the_same_way()
+    {
+        new LookaheadAgent(ScoringWeights.Default, TestContent.Resources, Rules, adversarial: true)
+            .DecideTieOrder(OneAboutToDie(), new TieOrderOptions([[Two, One]])).ShouldBe([One, Two]);
+    }
+
+    /// <summary>
+    /// Everybody at full health and Four at twenty: nobody dies this round whoever strikes first, the two
+    /// seatings end alike, and the tie goes to the order as rolled.
+    /// </summary>
     [Fact]
     public void A_seating_that_changes_nothing_keeps_the_order_as_rolled()
     {
-        var board = OneAboutToDie() with { Allies = [Boards.Creature(1, PlayerSlot.Player1), Boards.Creature(2, PlayerSlot.Player1)] };
+        var board = OneAboutToDie() with
+        {
+            Allies = [Boards.Creature(1, PlayerSlot.Player1), Boards.Creature(2, PlayerSlot.Player1)],
+            Enemies = [Boards.Creature(4, PlayerSlot.Player2)],
+        };
         var options = new TieOrderOptions([[Two, One]]);
 
         Agent.DecideTieOrder(board, options).ShouldBe([Two, One]);

@@ -20,8 +20,9 @@ first.
   | random | 0.9988 | 0.9988 | +0.0000 | 1609 | 4 |
   | stun-first | 0.3150 | 0.3150 | +0.0000 | 1611 | 0 |
 
-  The minimax agent against greedy: 800 asked, none moved. The counts come from a temporary trace that is not
-  in the change.
+  The minimax agent against greedy: 800 asked, none moved. The scores and the paired differences replay with
+  `evaluate --p1 lookahead --p2 <opponent> --seeds benchmarks/benchmark-seeds.json` on each build and
+  `paired`; the two right-hand columns were counted with a temporary trace that is not in the change.
 - **Why nothing moves.** Every tie against greedy falls in round 1 or 2, while the two teams, the same roster,
   still mirror each other: both seatings are worth exactly 0, since each side deals the other the same damage
   whichever creature of a tie acts first. Against the other two opponents the seatings are worth

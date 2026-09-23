@@ -67,23 +67,35 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// <summary>
     /// The seating of its own tied creatures whose round ends best (ADR 0063): each way of putting them in
     /// the places the roll-off gave this side, the round played out from the first slot on it. No intent is
-    /// declared yet, on either side, so every creature plays what this agent would guess for it: an ally what
-    /// the agent it is built on would declare, an enemy what the scorer would. The minimax agent reads it the
-    /// same way, since a worst reply is only defined against one actor's move and here every ally moves.
-    /// Ties go to the order as rolled. A side holds at most its team in ties, so this plays at most six rounds.
+    /// declared yet, on either side, so every creature plays what this agent would guess for it, guessed once
+    /// on the board as rolled: an ally what the agent it is built on would declare, each on its own rather than
+    /// reading the others, and an enemy what the scorer would, the enemy's own tie kept as rolled. The minimax
+    /// agent reads it the same way, since a worst reply is only defined against one actor's move and here every
+    /// ally moves. Ties go to the order as rolled.
+    /// <para>
+    /// The seatings are the product of each tie's permutations, team size factorial at most: six on the
+    /// default rules. Past <see cref="MostSeatings"/> the roll is kept rather than let a large team make one
+    /// decision cost thousands of rounds.
+    /// </para>
     /// </summary>
     public IReadOnlyList<CreatureId> DecideTieOrder(PlayerBoardState board, TieOrderOptions options)
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(options);
 
-        var creatures = Creatures(board);
         var best = options.AsRolled;
+        if (options.Ties.Aggregate(1L, (product, tie) => product * Factorial(tie.Count)) > MostSeatings)
+        {
+            return best;
+        }
+
+        var creatures = Creatures(board);
+        var guesses = Guesses(board, creatures);
         var bestValue = RoundValue.Lowest;
         foreach (var order in Orders(options.Ties))
         {
             var seated = board with { Timeline = Seat(board.Timeline, order) };
-            var value = PlayOut(seated, creatures, 0, null, Guesses(seated, creatures), _ => null, ForcedRandom.NotCritical);
+            var value = PlayOut(seated, creatures, 0, null, new Dictionary<CreatureId, SpellId?>(guesses), _ => null, ForcedRandom.NotCritical);
             if (value.CompareTo(bestValue) > 0)
             {
                 best = order;
@@ -93,6 +105,11 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
 
         return best;
     }
+
+    /// <summary>The most seatings a tie order plays out: a team of four, all tied.</summary>
+    private const int MostSeatings = 24;
+
+    private static long Factorial(int count) => count <= 1 ? 1 : count * Factorial(count - 1);
 
     /// <summary>
     /// The spell whose round ends best: for each castable spell, the round played out from its first slot with
