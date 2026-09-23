@@ -8,6 +8,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
@@ -154,6 +155,55 @@ public sealed class LookaheadAgentTests
         Agent.DecideTieOrder(OneAboutToDie(), new TieOrderOptions([tie])).ShouldBe(tie);
     }
 
+    /// <summary>
+    /// Four acts first and is guessed to Sap One, draining the two energy Slam costs, so in the round played out
+    /// Slam fizzles and only Rest, which is free, still resolves. That is a reading of the guess, not of the
+    /// spells: in every world where Four does something else Slam is the cast, and the round says nothing about
+    /// those. The one-step reading decides, as it does when the actor is guessed dead.
+    /// </summary>
+    [Fact]
+    public void A_guess_that_drains_the_actor_does_not_lure_it_into_the_free_spell()
+    {
+        var (resources, board) = FourAboutToSapOne();
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules).DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Slam])).ShouldBe(TestContent.Slam);
+    }
+
+    /// <summary>
+    /// The same board read by minimax: Sap is not a guess there but the worst Four can do, and against it Slam
+    /// certainly fizzles while Rest resolves, so the round decides and the one-step reading does not.
+    /// </summary>
+    [Fact]
+    public void Minimax_keeps_the_free_spell_against_a_drain_it_cannot_avoid()
+    {
+        var (resources, board) = FourAboutToSapOne();
+
+        new LookaheadAgent(ScoringWeights.Default, resources, Rules, adversarial: true).DecideIntent(board, new IntentOption(One, [Rest.Id, TestContent.Slam])).ShouldBe(Rest.Id);
+    }
+
+    /// <summary>
+    /// One (two energy, knows Rest, bought Slam) for Player1; Four (knows Sap) for Player2. Four acts first.
+    /// </summary>
+    private static (IGameResources Resources, PlayerBoardState Board) FourAboutToSapOne()
+    {
+        var rester = CreatureDefinitionId.Parse("creature:rester:v1");
+        var sapper = CreatureDefinitionId.Parse("creature:sapper:v1");
+        var resources = GameResources.Create(
+            "test",
+            [.. TestContent.Resources.Creatures, Definition(rester, Rest.Id), Definition(sapper, Sap.Id)],
+            [.. TestContent.Resources.Spells, Sap, Rest],
+            [.. TestContent.Resources.TalentTrees],
+            [.. TestContent.Resources.Tiers]);
+        var one = (Boards.Creature(1, PlayerSlot.Player1) with { DefinitionId = rester, Energy = Energy.Of(2), KnownSpells = new HashSet<SpellId> { Rest.Id } }).Bought(TestContent.SlamPack);
+        var four = Boards.Creature(4, PlayerSlot.Player2) with { DefinitionId = sapper, KnownSpells = new HashSet<SpellId> { Sap.Id } };
+        var board = Boards.Board(PlayerSlot.Player1, [one], [four]) with
+        {
+            RoundNumber = 1,
+            Timeline = [Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
+        };
+        return (resources, board);
+    }
+
     [Fact]
     public void An_uncastable_spell_binds_no_target()
     {
@@ -289,6 +339,19 @@ public sealed class LookaheadAgentTests
             Timeline = [Slot(One, PlayerSlot.Player1), Slot(Four, PlayerSlot.Player2), Slot(Two, PlayerSlot.Player1)],
         };
     }
+
+    private static CreatureDefinition Definition(CreatureDefinitionId id, SpellId starting) =>
+        CreatureDefinition.Create(id, id.Value, CreatureClass.Creature, new CreatureStats(Health.Of(20), Energy.Of(0), Defense.Of(0), Initiative.Of(5), CriticalChance.Of(0.05)), TestContent.Tree, [starting]);
+
+    /// <summary>A free drain an enemy can guess-cast on the actor before its slot.</summary>
+    private static Spell Sap { get; } = Spell.Create(
+        SpellId.Parse("spell:sap:v1"), "Sap", SpellType.Offensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Enemy), [EnergyDrain.Of(2)]);
+
+    /// <summary>A free spell that gives its caster energy: what still resolves when every paid spell would fizzle.</summary>
+    private static Spell Rest { get; } = Spell.Create(
+        SpellId.Parse("spell:rest:v1"), "Rest", SpellType.Defensive, CreatureClass.Creature, new SpellStats(Energy.Of(0), CriticalChance.None),
+        TargetingSpec.SingleTarget(TargetOrigin.Self), [EnergyGain.Of(2)]);
 
     private static PlayerBoardState OneAboutToDie()
     {
