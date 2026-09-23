@@ -392,7 +392,7 @@ public sealed class Match : AggregateRoot<MatchId>
     private void BuildTimeline()
     {
         var round = ActiveRound;
-        var timeline = TimelineBuilder.Build(Snapshots(), round.SpeedChoices);
+        var timeline = TimelineBuilder.Build(Snapshots(), round.SpeedChoices, _random);
         round.SetTimeline(timeline);
         RaiseDomainEvent(new TimelineBuilt(Id, round.Id, timeline));
     }

@@ -66,3 +66,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0058](0058-a-tier-is-the-package-the-balance-objective-reads.md) | Read a tier as the package, in the balance objective and the content audit | Accepted |
 | [0059](0059-retire-the-spell-initiative-the-package-pays-it-now.md) | Retire Spell initiative: the package pays it now | Accepted |
 | [0060](0060-spells-sold-together-must-differ-in-play.md) | Spells sold together must differ in play, and Throwing Star buys reach | Accepted |
+| [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) | Roll an initiative tie on a d20 | Accepted |

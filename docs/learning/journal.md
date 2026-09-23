@@ -4,6 +4,36 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-23. An initiative tie is rolled on a d20, and the greedy mirror goes from 400 Player 1 wins to 188
+
+- **What changed.** The Combat timeline rolls off a tie on a d20 instead of breaking it by Player slot, then
+  Creature id (ADR 0063). The rolls draw on the match's random source, the same one the critical rolls use,
+  so every match with a tie plays differently from here on. The content does not move. The engine does, and
+  the digest for content `4d7a841c` is regenerated.
+- **The mirror.** Greedy against greedy on the benchmark seeds: Player 1 won **400 of 400** before, and wins
+  **188** now (212 to Player 2). It is still one match played 400 times: every entry ends by Elimination in 6
+  rounds, 38 health to 0. What changed is who wins it. The dice decide now, where the seat decided before.
+- **The objective**, on content `6df8dc30` with the knobs and weights of that content, the objective as it
+  stood before ADR 0062, the benchmark seeds, before and after the rule:
+
+  | reading | seat | d20 |
+  | --- | --- | --- |
+  | score | 285.77 | **58.63** |
+  | `mirror.player1WinShare` | 1.000 | 0.470 |
+  | `variety.player1WinShare` | 0.480 | 0.445 |
+  | `variety.tierWinSpread` | 0.348 | 0.609 |
+  | `variety.averageRounds` | 8.50 | 8.06 |
+  | `skill.player1WinShare` | 0.500 | 0.497 |
+  | `exploit.winRateA` | 0.978 | 0.988 |
+
+  The 243 points the seat was worth are gone. The largest remaining terms are `variety.tierUsageShare` (35.68)
+  and `variety.tierWinSpread` (21.07). The second one grew: a package's win rate on the exploring run now
+  carries the dice as well as the package. `variety.player1WinShare` at 0.445 is 0.005 under its band, about
+  one standard deviation of a share on 400 matches.
+- **What it means for ADR 0062.** The mirror's seat reading is back in its band, but by chance: the mirror
+  plays one board, and a coin now decides it. Reading the seat on the exploring run is still the reading with
+  signal, so ADR 0062 stands.
+
 ## 2026-09-23. Throwing Star buys reach, and the Prowler's split flips from 7 % to 85 % instead of balancing
 
 - **What changed.** `throwing_star` becomes `Multi`, up to two enemies, 2 energy for 3 damage, level with its

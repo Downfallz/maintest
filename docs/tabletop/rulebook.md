@@ -114,13 +114,13 @@ chance is 0 (ADR 0042), which is why [6.7](#67-the-critical-roll) reads a cast's
 
 ### 3.2 The procedure
 
-1. **Seat the Players.** The Player on the left is Player 1 and takes Player slot 1. Ties on the Combat
-   timeline go to Player 1, so this seat is decided before anything else, not during.
+1. **Seat the Players.** The Player on the left is Player 1 and takes Player slot 1. The seat breaks no tie:
+   ties on the Combat timeline are rolled off ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
 2. **Take the mats.** Each Player takes a player area mat, a Talent tree mat, a player aid, and one Evolution
    pick token per Evolution pick per Round.
 3. **Take the Creature boards.** Each Player takes Team size boards. Player 1's are numbered 1, 2, 3 from
-   their left; Player 2's are numbered 4, 5, 6. These numbers never change and they are the last tiebreak on
-   the Combat timeline.
+   their left; Player 2's are numbered 4, 5, 6. These numbers never change and they are the order tied Creatures
+   roll in on the Combat timeline.
 4. **Set the rails.** On every Creature board, put the Health marker on the Creature definition's Health, the
    Energy marker on its Energy, both Defense markers on 0, and the Base initiative markers on its Base
    initiative. Reference: Health 20, Energy 0, Defense 0 and 0, Base initiative 5.
@@ -306,7 +306,8 @@ A dead Creature is not in the Round either, for the same reason and one step ear
    its Initiative debuff Conditions, and never below zero.
 3. Place the Quick Creatures' markers in the Quick band, highest Current initiative first. Then the Standard
    Creatures' markers in the Standard band, the same way.
-4. Break every tie with: **Player 1 before Player 2**, then **the lower Creature number first**.
+4. Roll off every tie: each tied Creature's owner rolls a d20 for it, the highest roll goes first, and
+   Creatures that rolled the same number roll again among themselves ([6.6](#66-the-combat-timeline-and-its-tiebreaks)).
 
 Quick always beats Standard. A Quick Creature with Current initiative 0 still acts before a Standard Creature
 with 20. It pays for that with its Critical roll: a Quick Creature never crits (5.4).
@@ -315,10 +316,11 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 > Base initiatives: Creature 1 is 6, Creatures 2, 3, 5 and 6 are 5, Creature 4 is 6. Current initiatives are
 > the same except Creature 2, which reads 5 - 2 = 3.
 > Creatures 1 and 4 chose Quick; the rest chose Standard. The divider goes after the second slot.
-> Quick band: Creature 1 and Creature 4 are tied at 6, so **Player 1 first**: 1, then 4.
-> Standard band: Creatures 3, 5 and 6 are tied at 5, so Player 1 first, then the lower number: 3, then 5,
-> then 6. Creature 2 at 3 is last.
-> The timeline is **1, 4, 3, 5, 6, 2**.
+> Quick band: Creature 1 and Creature 4 are tied at 6, so they roll off: 8 for Creature 1, 15 for Creature 4.
+> 4, then 1.
+> Standard band: Creatures 3, 5 and 6 are tied at 5 and roll 11, 11 and 2. Creature 6 is last of the three;
+> Creatures 3 and 5 roll again, 4 and 17: 5, then 3, then 6. Creature 2 at 3 is last and rolls nothing.
+> The timeline is **4, 1, 5, 3, 6, 2**.
 
 ### 5.6 Intent selection
 
@@ -553,12 +555,13 @@ into the `new` lane. Only a Stun refreshes; see
 
 1. **Quick before Standard.** Always, whatever the numbers.
 2. **Higher Current initiative first.**
-3. **Player 1 before Player 2.**
-4. **The lower Creature number first.**
+3. **The roll-off.** Every Creature still tied rolls a d20; the highest goes first. Creatures that rolled the
+   same number roll again, among themselves only, until each is separated.
 
-Creature numbers are fixed at setup and never change, so rule 4 always separates two slots and the order is
-never ambiguous. Player 1's boards are numbered 1 to 3 and Player 2's 4 to 6, so rules 3 and 4 read together
-as "**Player 1's boards, left to right, then Player 2's**".
+The seat decides nothing ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). Under packages two
+sides buying the same package in the same round tie on every Creature, and a tie that always went to Player 1
+decided the whole match. Roll in board order, lowest number first, so nobody argues about who rolls when; the
+order of rolling changes nothing. A Creature that ties with nobody does not roll.
 
 Current initiative is read **once**, when the timeline is built. An Initiative debuff that lands during Combat
 does not reshuffle the Round it landed in.
@@ -739,8 +742,9 @@ Four presentation rules are the table's and are declared as such, per
 - **The Round cap is a marker on the Round track**, set from the Rule set at setup. The engine's cap is a
   `RuleSet` value and plays any number unchanged.
 - **Player 1 is the seat on the left**, taken at setup ([3.2](#32-the-procedure), step 1). The engine gives
-  Player slot 1 to whoever joins first, which a table has no equivalent of. The slot is what the timeline's
-  third tiebreak reads, so it has to be settled before the first Round and not argued during one.
+  Player slot 1 to whoever joins first, which a table has no equivalent of. The slot breaks no tie since
+  [ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md); it names the seats and the order tied
+  Creatures roll in, which changes nothing.
 
 Two things this book does **not** carry, because they change nothing a Player can see: a Condition's
 **Condition source** (ADR 0027) and the per-source shares of a Bleed tick. They exist for the balance

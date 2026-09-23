@@ -194,6 +194,26 @@ public sealed class MatchTests
         timeline.Slots.Select(slot => slot.Creature).ShouldBe([CreatureId.From(1), CreatureId.From(4), CreatureId.From(2), CreatureId.From(3)]);
     }
 
+    /// <summary>
+    /// ADR 0063: the match rolls its ties on its own random source, so a seeded match replays them and the
+    /// seat decides nothing. Creatures 1 and 4 tie as Quick, 2 and 3 as Standard, and the rolls favour Player 2
+    /// both times.
+    /// </summary>
+    [Fact]
+    public void The_match_rolls_its_initiative_ties_on_its_random_source()
+    {
+        var match = Table.Started(random: new ScriptedRolls(6, 17, 9, 14));
+        Table.PassEvolution(match);
+
+        match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(1), Speed.Quick)).IsSuccess.ShouldBeTrue();
+        match.SubmitSpeedChoice(PlayerSlot.Player1, new SpeedChoice(CreatureId.From(2), Speed.Standard)).IsSuccess.ShouldBeTrue();
+        match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(3), Speed.Standard)).IsSuccess.ShouldBeTrue();
+        match.SubmitSpeedChoice(PlayerSlot.Player2, new SpeedChoice(CreatureId.From(4), Speed.Quick)).IsSuccess.ShouldBeTrue();
+
+        match.CurrentRound.ShouldNotBeNull().Timeline.Slots.Select(slot => slot.Creature)
+            .ShouldBe([CreatureId.From(4), CreatureId.From(1), CreatureId.From(3), CreatureId.From(2)]);
+    }
+
     [Fact]
     public void Intents_then_targets_follow_the_timeline_and_open_the_resolution()
     {

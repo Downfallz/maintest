@@ -9,6 +9,9 @@ namespace DownfallArena.Application.Tests.Evaluation;
 public sealed class EvaluationRunnerTests
 {
     private static readonly RuleSet Rules = MatchStore.TwoOnTwo(roundCap: 6);
+
+    /// <summary>Seeds on which the random agents declare at least one spell on every side.</summary>
+    private static readonly int[] EverySideSeeds = [1, 2, 3, 5];
     private static readonly RunStamp Stamp = RunStamp.Create(new EngineVersion("abc123def456", false), TestContent.Resources, Rules, FeatureSchema.Build(TestContent.Resources, Rules), "Random", "Random", 1);
 
     [Fact]
@@ -84,12 +87,14 @@ public sealed class EvaluationRunnerTests
 
     /// <summary>
     /// A spell every side declares sits at one half by construction: it is on the winning side and the losing
-    /// side of every match. That is the reading the table rests on — one half means no signal.
+    /// side of every match. That is the reading the table rests on — one half means no signal. Random agents
+    /// declare a spell on every side only on some seeds, and these are ones where they do: seed 4 stopped being
+    /// one when ties started rolling a d20 (ADR 0063), since the rolls draw on the match's random source.
     /// </summary>
     [Fact]
     public async Task A_spell_every_side_declares_scores_one_half()
     {
-        var evaluation = await EvaluateAsync([1, 2, 3, 4], withCombat: true);
+        var evaluation = await EvaluateAsync(EverySideSeeds, withCombat: true);
 
         var everywhere = evaluation.SpellOutcomes.Where(outcome => outcome.Sides == SidesOf(evaluation)).ToList();
 
@@ -104,7 +109,7 @@ public sealed class EvaluationRunnerTests
     [Fact]
     public async Task Self_play_counts_the_replayed_matches_once()
     {
-        int[] seeds = [1, 2, 3, 4];
+        var seeds = EverySideSeeds;
 
         var evaluation = await EvaluateAsync(seeds, withCombat: true);
 

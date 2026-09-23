@@ -25,7 +25,7 @@ listed in [spells.md](spells.md).
   effective pick left (capped by what their living creatures can buy) -- which is immediately, in a round the
   schedule offers no opportunity. A speed choice must target an own, living, unstunned creature, and the
   sub-phase completes when every such creature has one. The timeline orders Quick before Standard, initiative
-  descending, then player slot, then creature id. The `RuleSet` value object carries team size, energy per
+  descending, and rolls off a tie on a d20: the highest roll first, equal rolls rolled again (ADR 0063). The `RuleSet` value object carries team size, energy per
   round, evolution picks per opportunity, the first evolution round and the interval between opportunities,
   the round cap, and the critical multiplier (ADR 0056).
 
@@ -98,7 +98,8 @@ listed in [spells.md](spells.md).
       one and cannot roll a critical that Round, whatever its own and its Spell's chances add up to.** Without
       that cost the choice decides nothing, since acting earlier is never worse.
    3. `TurnOrderResolution` (automatic): the Combat timeline is built: Quick slots by Initiative descending,
-      then Standard slots by Initiative descending; ties by Player slot, then Creature id.
+      then Standard slots by Initiative descending. Creatures tied in a band each roll a d20 and the highest acts
+      first; equal rolls roll again among themselves. The seat breaks no tie (ADR 0063).
 3. **Combat**
    1. `IntentSelection`: each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
       valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature

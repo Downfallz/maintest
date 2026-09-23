@@ -64,10 +64,10 @@ internal sealed class MatchStore
 
     public static List<CreatureDefinitionId> Roster(RuleSet rules) => [.. Enumerable.Repeat(TestContent.Main, rules.TeamSize)];
 
-    /// <summary>A stored match that waits for players.</summary>
+    /// <summary>A stored match that waits for players. Its ties go to Player 1 unless a random source is given.</summary>
     public Match Empty(RuleSet? rules = null, IRandomSource? random = null)
     {
-        var match = Match.Create(MatchId.New(), TestContent.Resources, rules ?? TwoOnTwo(), random ?? new TestRandom(7));
+        var match = Match.Create(MatchId.New(), TestContent.Resources, rules ?? TwoOnTwo(), random ?? new FirstToRollWinsTies(new TestRandom(7)));
         _matches[match.Id] = match;
         return match;
     }

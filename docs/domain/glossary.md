@@ -63,8 +63,9 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
 | Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
-| Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by Player slot then Creature id. | decided |
+| Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by a Roll-off. | decided |
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
+| Roll-off | How Creatures tied on the Combat timeline, in one band with the same Current initiative, are ordered: each rolls a d20, the highest acts first, and equal rolls roll again among themselves (ADR 0063). | decided |
 | Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |
 | Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
 | Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. It carries one share per Condition source, adding up to exactly what the Creature took. | decided |
