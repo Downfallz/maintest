@@ -255,7 +255,10 @@ with the stun immunity and the bleed price in, it beats the built-in lookahead a
 had played it takes every match from Greedy, `stun-first` and `search-19`, and 0.995 from the built-in
 lookahead, and is even with `lookahead-20` (0.495). It is the first set with a negative `stun` weight: it does
 not stun. Its own mirror reaches the round cap in 0.67 of its matches, where `search-19`'s reached it in all
-but a few. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+but a few. `search-23.json` is the first rung under the defense buff ceiling (ADR 0076), searched from `search-21`
+against Greedy, `search-21` and the lookahead with `lookahead-20` (journal, 2026-09-24): on 200 seeds nothing
+had played it takes every match from Greedy and `search-21` and beats `lookahead-20` 0.685, and it gives
+`stun-first`, which was not in its panel, back to 0.560. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
