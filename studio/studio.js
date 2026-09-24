@@ -10,6 +10,7 @@
 import { backendForThisPage } from './backend.js';
 import { storeToken, storedToken } from './github.js';
 import { STALE_POINTER, aliasOfSpell, constraintsOf, entryAliasesOf, entryDocument, entryFor, entryProblems, formatNumber, kitAliases, newKnob, objectiveOf, pointersOf, readBalance, readings, seedEntry, summarise, survey, unclaimedPointer, withEntry } from './balance.js';
+import { explore, spellLibrary, reader } from './codex.js';
 import { startersOverlapping, tierNamed, tierWarnings, tiersBehind, tiersTeaching } from './tiers.js';
 
 // Not `const`: a token pasted or forgotten picks a different backend, and every call reads this at call time.
@@ -104,7 +105,7 @@ const TEMPLATES = {
 // `draft` and `entry` are the two documents one spell sheet edits: the spell's own file, and its entry in the
 // balance knobs, which is a different file with a different meaning (ADR 0025). They dirty separately and are
 // written by the same Save, so the page always says which of the two a Save is about to move.
-const state = { catalogue: null, tab: 'spells', selected: null, draft: null, dirty: false, entry: null, knobsDirty: false, node: null, busy: false, runs: [], weights: null, audit: null };
+const state = { catalogue: null, tab: 'tiers', browseTab: 'tiers', section: 'explore', editing: false, codex: {}, restoring: false, selected: null, draft: null, dirty: false, entry: null, knobsDirty: false, node: null, busy: false, runs: [], weights: null, audit: null };
 
 /** Below this width the list and the panels are sheets over the editor rather than beside it (studio.css agrees). */
 const narrow = globalThis.matchMedia('(max-width: 899px)');
@@ -297,13 +298,14 @@ function renderHeader() {
 }
 
 function renderNav() {
+  const tabKey = state.browseTab;
   for (const tab of document.querySelectorAll('.tab')) {
-    tab.classList.toggle('selected', tab.dataset.tab === state.tab);
+    tab.classList.toggle('selected', tab.dataset.tab === tabKey);
     tab.querySelector('.count').textContent = String(documentsOf(tab.dataset.tab).length || '');
   }
 
   const filter = $('search').value.trim().toLowerCase();
-  const items = documentsOf(state.tab)
+  const items = documentsOf(tabKey)
     .filter(item => !filter || item.id.toLowerCase().includes(filter) || (item.name || '').toLowerCase().includes(filter))
     .sort((left, right) => (left.name || left.id).localeCompare(right.name || right.id));
 
@@ -319,7 +321,7 @@ function renderNav() {
     $('list').replaceChildren(element('li', { className: 'none', textContent: filter ? 'Nothing matches.' : 'Nothing here yet.' }));
   }
 
-  $('new').querySelector('span').textContent = `New ${TABS[state.tab].label}`;
+  $('new').querySelector('span').textContent = `New ${TABS[state.browseTab].label}`;
 }
 
 /**
@@ -419,6 +421,8 @@ function effectSummary(effect) {
 }
 
 function select(path, node = null) {
+  if (state.busy || (state.selected?.path !== path && !leaveDraft())) return;
+  if (state.selected?.path === path && (state.dirty || state.knobsDirty)) return;
   const found = findDocument(path);
   if (!found) {
     state.selected = null;
@@ -426,13 +430,18 @@ function select(path, node = null) {
     state.entry = null;
     state.knobsDirty = false;
     state.node = null;
+    state.dirty = false;
+    state.editing = false;
     renderNav();
     renderDetail();
+    recordLocation();
     return;
   }
 
   const changed = state.selected?.path !== path;
+  if (changed) state.editing = Boolean(node);
   state.tab = found.tab;
+  state.browseTab = found.tab;
   state.selected = found.item;
   state.draft = clone(found.item.document);
   state.dirty = false;
@@ -446,7 +455,11 @@ function select(path, node = null) {
   renderDetail();
   closeNav();
   // A new item starts at its title; a save re-selects the same one and must not throw the reader to the top.
-  if (changed) globalThis.scrollTo({ top: 0 });
+  if (changed) {
+    recordLocation();
+    globalThis.scrollTo({ top: 0 });
+    $('detail').focus({ preventScroll: true });
+  }
 }
 
 function nodeNamed(root, code) {
@@ -633,9 +646,15 @@ function spellList(target, key, { onChange = null } = {}) {
 // ---------- detail views ----------
 
 function renderDetail() {
+  if (!state.catalogue) return;
   const view = $('detail');
+  document.body.classList.toggle('editing', state.editing);
+  syncPrimaryNavigation();
   if (!state.selected || !state.draft) {
-    view.replaceChildren(overview());
+    const content = state.section === 'spells'
+      ? spellLibrary(state.catalogue, state.codex, select)
+      : explore(state.catalogue, state.codex, select, renderDetail);
+    view.replaceChildren(content);
     return;
   }
 
@@ -646,6 +665,13 @@ function renderDetail() {
       element('div', { className: 'banner error', textContent: `${item.path}: ${item.problem}` }),
       element('p', { className: 'muted', textContent: 'The studio will not edit a file it cannot read: fix the JSON by hand, then reload this page.' }),
     );
+    return;
+  }
+
+  if (!state.editing) {
+    view.replaceChildren(reader(item, state.catalogue, select, () => {
+      state.editing = true; renderDetail(); $('detail').focus({ preventScroll: true });
+    }, goBack));
     return;
   }
 
@@ -665,8 +691,11 @@ function renderDetail() {
 function header(item) {
   // One tap back to where this came from: the list, on a phone, where it is a sheet; the overview on a desk,
   // where the list never left.
-  const back = element('button', { type: 'button', className: 'back', ariaLabel: 'Back to the list', title: 'Back to the list' }, [icon('back')]);
-  back.addEventListener('click', () => { if (narrow.matches) openNav(); else select(null); });
+  const back = element('button', { type: 'button', className: 'back', ariaLabel: 'Back to reading', title: 'Back to reading' }, [icon('back')]);
+  back.addEventListener('click', () => {
+    if (!leaveDraft()) return;
+    state.editing = false; select(item.path);
+  });
   return element('div', { className: 'title' }, [
     back,
     element('div', { className: 'title-text' }, [
@@ -702,138 +731,8 @@ function actions(item) {
   ]);
 }
 
-// ---------- the overview ----------
-
-/**
- * What the content is, on one screen: each creature with its numbers, what it starts with, and its talent
- * tree drawn as a tree, every spell a chip that opens it and every node a tap into the tree editor. What no
- * creature is on comes after. It is what the page opens on, and what nothing-selected shows.
- */
-function overview() {
-  const creatures = documentsOf('creatures');
-  const trees = documentsOf('talentTrees');
-  const spells = documentsOf('spells');
-  const off = spells.filter(spell => !spell.enabled).length;
-  const view = element('div', { className: 'overview' });
-
-  if (!creatures.length && !trees.length && !spells.length) {
-    view.append(element('div', { className: 'empty' }, [
-      icon('sparkle'),
-      element('h2', { textContent: 'Nothing here yet' }),
-      element('p', { textContent: 'Create a creature, a spell or a talent tree from the list, and it shows up here.' }),
-      browseButton('Open the list'),
-    ]));
-    return view;
-  }
-
-  const offNote = off ? ` (${off} off)` : '';
-  view.append(element('div', { className: 'overview-head' }, [
-    element('h2', { textContent: 'Overview' }),
-    element('p', { className: 'muted', textContent: `${plural(creatures.length, 'creature')}, ${spells.length} spells${offNote}, ${plural(trees.length, 'talent tree')}. Tap anything to open it.` }),
-  ]));
-
-  const covered = new Set();
-  for (const creature of creatures) view.append(creatureCard(creature, covered));
-  const orphans = trees.filter(tree => !covered.has(tree.path));
-  if (orphans.length) {
-    view.append(element('h3', { className: 'section', textContent: creatures.length ? 'Talent trees no creature is on' : 'Talent trees' }));
-    for (const tree of orphans) view.append(treeCard(tree));
-  }
-
-  return view;
-}
-
-/** Opens the list -- a sheet on a phone; on a desk it is already there, so the filter box takes the focus. */
-function browseButton(label) {
-  const button = element('button', { type: 'button', className: 'button' }, [icon('list'), element('span', { textContent: label })]);
-  button.addEventListener('click', () => { if (narrow.matches) openNav(); else $('search').focus(); });
-  return button;
-}
-
-function creatureCard(creature, covered) {
-  if (creature.problem) return brokenCard(creature, 'creature');
-  const doc = creature.document || {};
-  const tree = documentsOf('talentTrees').find(candidate => candidate.id === resolveReference(doc.talentTreeId));
-  if (tree) covered.add(tree.path);
-
-  const card = element('div', { className: `card overview-card${creature.enabled ? '' : ' off'}` });
-  card.append(cardTitle(creature, doc.creatureClass));
-  card.append(element('div', { className: 'pills' }, [
-    pill(doc.baseHealth, 'hp'),
-    pill(doc.baseEnergy, 'energy'),
-    pill(doc.baseDefense, 'def'),
-    pill(doc.baseInitiative, 'init'),
-    pill(percent(Number(doc.baseCriticalChance) || 0), 'crit'),
-  ]));
-
-  const starting = asArray(doc.startingSpellIds);
-  card.append(
-    element('div', { className: 'label', textContent: starting.length ? 'Starts with' : 'Starts with nothing' }),
-    element('div', { className: 'chips' }, starting.map(spellLink)),
-  );
-
-  if (tree) {
-    card.append(element('div', { className: 'label' }, ['Talent tree ', treeLink(tree)]), compactTree(tree));
-  } else if (doc.talentTreeId) {
-    card.append(element('div', { className: 'label warn', textContent: `Talent tree ${doc.talentTreeId} is not in the catalogue.` }));
-  } else {
-    card.append(element('div', { className: 'label', textContent: 'No talent tree.' }));
-  }
-
-  return card;
-}
-
-function treeCard(tree) {
-  if (tree.problem) return brokenCard(tree, 'talent tree');
-  const card = element('div', { className: `card overview-card${tree.enabled ? '' : ' off'}` });
-  card.append(cardTitle(tree, tree.enabled ? 'talent tree' : 'talent tree, off'), compactTree(tree));
-  return card;
-}
-
-/** A file that did not parse: the way in, and what is wrong with it, and nothing read from its document. */
-function brokenCard(item, kind) {
-  return element('div', { className: 'card overview-card broken' }, [
-    cardTitle(item, `${kind}, does not parse`),
-    element('div', { className: 'label warn', textContent: `${item.path}: ${item.problem}` }),
-  ]);
-}
-
-/** The name as the way in, and beside it what kind of thing it is. */
-function cardTitle(item, kind) {
-  const open = miniButton(item.name || item.id, () => select(item.path), 'link title-link');
-  return element('h3', {}, [open, element('span', { className: 'muted', textContent: kind })]);
-}
-
-function treeLink(tree) {
-  return miniButton(tree.name || tree.id, () => select(tree.path), 'link');
-}
-
 function pill(value, unit) {
   return element('span', { className: 'pill' }, [element('b', { textContent: String(value ?? '?') }), ` ${unit}`]);
-}
-
-/** The tree with nothing to edit on it: a code per node, the spells it teaches, and the lines between. */
-function compactTree(tree) {
-  const list = element('ul', { className: 'tree compact' });
-  const draw = node => {
-    const pick = element('button', { type: 'button', className: 'node-pick', title: node.name || node.code }, [
-      element('span', { className: 'code', textContent: node.code || '(no code)' }),
-      node.name && node.name !== node.code ? element('span', { className: 'muted', textContent: node.name }) : null,
-    ]);
-    pick.addEventListener('click', () => select(tree.path, node));
-    const card = element('div', { className: 'node' }, [element('div', { className: 'head' }, [pick])]);
-    const taught = asArray(node.spells).filter(spell => spell?.id);
-    if (taught.length) {
-      card.append(element('div', { className: 'chips' }, taught.map(spell => spellLink(spell.id))));
-    }
-    const entry = element('li', {}, [card]);
-    const children = asArray(node.children).filter(child => child && typeof child === 'object');
-    if (children.length) entry.append(element('ul', {}, children.map(draw)));
-    return entry;
-  };
-  const root = tree.document?.root;
-  list.append(draw(root && typeof root === 'object' ? root : emptyNode('Root', 'Root')));
-  return list;
 }
 
 function spellEditor() {
@@ -2267,6 +2166,8 @@ async function remove(item) {
 }
 
 async function create() {
+  if (!leaveDraft()) return;
+  state.tab = state.browseTab;
   const template = TEMPLATES[state.tab]();
   const parsed = parseId(template.id);
   const name = window.prompt(`Name of the new ${TABS[state.tab].label} (letters, digits and underscores)`, parsed.name);
@@ -2320,6 +2221,8 @@ async function create() {
     ? ['Its balance entry is seeded with no knob: say on the sheet which of its numbers a tuning pass may move.']
     : owed);
   select(path);
+  state.editing = true;
+  renderDetail();
 }
 
 async function build() {
@@ -2372,23 +2275,72 @@ async function run() {
 
 async function load() {
   const catalogue = await act('Reading the content', () => backend.read());
-  if (!catalogue) return;
+  if (!catalogue) {
+    const retry = $('retry');
+    if (retry) retry.hidden = false;
+    document.querySelector('.loading-state')?.replaceChildren('The catalogue could not be loaded.');
+    return;
+  }
   state.catalogue = catalogue;
   renderHeader();
   renderNav();
-  renderDetail();
+  restoreLocation();
   if (!catalogue.problems.length) clearBanner();
 }
 
 for (const tab of document.querySelectorAll('.tab')) {
   tab.addEventListener('click', () => {
-    state.tab = tab.dataset.tab;
-    state.selected = null;
-    state.draft = null;
-    state.node = null;
+    state.browseTab = tab.dataset.tab;
+    $('search').value = '';
     renderNav();
-    renderDetail();
   });
+}
+
+function leaveDraft() {
+  if (state.busy) return false;
+  if ((state.dirty || state.knobsDirty) && !window.confirm('Discard your unsaved changes?')) return false;
+  state.dirty = false;
+  state.knobsDirty = false;
+  return true;
+}
+
+function syncPrimaryNavigation() {
+  $('explore-view').setAttribute('aria-pressed', String(state.section === 'explore'));
+  $('spells-view').setAttribute('aria-pressed', String(state.section === 'spells'));
+}
+
+function goSection(section) {
+  if (!leaveDraft()) return;
+  closeSheets();
+  state.section = section;
+  select(null);
+  globalThis.scrollTo({ top: 0 });
+  $('detail').focus({ preventScroll: true });
+}
+
+function goBack() {
+  if (history.state?.codex) history.back();
+  else goSection(state.section);
+}
+
+function recordLocation() {
+  if (state.restoring) return;
+  const hash = state.selected ? `#entry=${encodeURIComponent(state.selected.path)}` : `#${state.section}`;
+  if (location.hash !== hash) history.pushState({ codex: true, section: state.section }, '', hash);
+}
+
+function restoreLocation() {
+  if (!state.catalogue) return;
+  if (!leaveDraft()) { recordLocation(); return; }
+  state.restoring = true;
+  closeSheets();
+  state.section = history.state?.section ?? (location.hash === '#spells' ? 'spells' : 'explore');
+  let path = null;
+  try { if (location.hash.startsWith('#entry=')) path = decodeURIComponent(location.hash.slice(7)); } catch { path = null; }
+  state.editing = false;
+  select(path);
+  state.restoring = false;
+  if (!path && !location.hash) history.replaceState({ section: state.section }, '', '#explore');
 }
 
 // ---------- the sheets ----------
@@ -2398,20 +2350,25 @@ function openNav() {
   document.body.classList.add('nav-open');
   $('browse').setAttribute('aria-expanded', 'true');
   syncScrim();
-  $('list').querySelector('li.selected')?.scrollIntoView({ block: 'center' });
+  $('search').focus({ preventScroll: true });
 }
 
 function closeNav() {
+  const returnFocus = $('nav').contains(document.activeElement);
   document.body.classList.remove('nav-open');
   $('browse').setAttribute('aria-expanded', 'false');
   syncScrim();
+  if (returnFocus) $('browse').focus({ preventScroll: true });
 }
 
-const PANELS = ['run', 'runs', 'audit', 'balance', 'access'];
+const PANELS = ['run', 'runs', 'audit', 'balance', 'access', 'tools'];
 
-/** The scrim is there whenever something is open over the editor on a phone; studio.css hides it on a desk. */
+/** Sheets cover the reader at every width; keep hidden content out of keyboard navigation. */
 function syncScrim() {
-  $('scrim').hidden = !document.body.classList.contains('nav-open') && PANELS.every(id => $(id).hidden);
+  const open = document.body.classList.contains('nav-open') || PANELS.some(id => !$(id).hidden);
+  $('scrim').hidden = !open;
+  $('detail').inert = open;
+  document.body.classList.toggle('sheet-open', open);
 }
 
 function closePanels() {
@@ -2422,9 +2379,11 @@ function closePanels() {
 }
 
 function closeSheets() {
+  const returnFocus = PANELS.some(id => $(id).contains(document.activeElement));
   closeNav();
   closePanels();
   syncScrim();
+  if (returnFocus) $('tools-panel').focus({ preventScroll: true });
 }
 
 // The agents the engine can seat (docs/learning/agents.md). The kinds that read a file keep a box for its
@@ -2652,8 +2611,7 @@ function togglePanel(id, load) {
   syncScrim();
   if (!opening) return;
   load();
-  // On a desk the panel is a card above the editor; opened from halfway down a form, it would open out of sight.
-  if (!narrow.matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  panel.querySelector('.close')?.focus({ preventScroll: true });
 }
 
 /**
@@ -2704,8 +2662,7 @@ function renderToken() {
     ? 'Saving from here commits to studio/content.'
     : 'Reading only. Paste a token to save from this page.';
 
-  // The toolbar carries the answer to "can this page save?", so it is on screen without opening anything --
-  // which is the whole reason the token has a panel of its own rather than a corner of the run sheet.
+  // The access card under Tools states whether this page can save before opening the credential panel.
   $('access-label').textContent = held ? 'Can save' : 'Read only';
   $('access-panel').title = held
     ? 'This page saves to studio/content. Tap to change or forget the token.'
@@ -2752,6 +2709,12 @@ fillAgentPicker('p1');
 fillAgentPicker('p2');
 syncAgents();
 
+$('home').addEventListener('click', () => goSection('explore'));
+$('explore-view').addEventListener('click', () => goSection('explore'));
+$('spells-view').addEventListener('click', () => goSection('spells'));
+$('tools-panel').addEventListener('click', () => togglePanel('tools', () => {}));
+$('retry').addEventListener('click', load);
+window.addEventListener('popstate', restoreLocation);
 $('search').addEventListener('input', renderNav);
 $('new').addEventListener('click', create);
 $('build').addEventListener('click', build);
@@ -2776,11 +2739,9 @@ $('browse').addEventListener('click', () => { if (document.body.classList.contai
 $('nav-close').addEventListener('click', closeNav);
 $('scrim').addEventListener('click', closeSheets);
 for (const button of document.querySelectorAll('.panel .close')) {
-  button.addEventListener('click', () => { $(button.dataset.close).hidden = true; $(`${button.dataset.close}-panel`).setAttribute('aria-pressed', 'false'); syncScrim(); });
+  button.addEventListener('click', closeSheets);
 }
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeSheets(); });
-// Growing past the phone width leaves the shell's sheets behind; the scrim must not stay over the desk.
-narrow.addEventListener('change', () => { if (!narrow.matches) closeSheets(); });
 adoptBackendKind();
 
 window.addEventListener('beforeunload', event => {
