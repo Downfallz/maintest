@@ -409,16 +409,18 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             var stacked = 0;
             var prevented = 0.0;
 
-            // Longest first, so each buff is priced on top of the ones that outlast it.
+            // Longest first, so each buff is priced on top of the ones that outlast it. A point past the ceiling
+            // adds no defense and so prevents nothing (ADR 0076).
+            var room = DefenseBuffRoom(target);
             foreach (var buff in Buffs(resolution, targetId).OrderByDescending(buff => buff.Duration.Rounds ?? PermanentConditionRounds))
             {
-                var before = ThreatOn(target, creatures, stacked);
+                var before = ThreatOn(target, creatures, Math.Min(stacked, room));
                 stacked += buff.Amount;
-                prevented += (before - ThreatOn(target, creatures, stacked)) * (buff.Duration.Rounds ?? PermanentConditionRounds);
+                prevented += (before - ThreatOn(target, creatures, Math.Min(stacked, room))) * (buff.Duration.Rounds ?? PermanentConditionRounds);
             }
 
             terms = terms with { Defense = terms.Defense - (sign * prevented / Math.Max(1, allies)) };
-            if (bare >= health && ThreatOn(target, creatures, stacked) < health + Restored(resolution, target, targetId))
+            if (bare >= health && ThreatOn(target, creatures, Math.Min(stacked, room)) < health + Restored(resolution, target, targetId))
             {
                 terms = terms with { Kill = terms.Kill - sign };
             }
@@ -426,6 +428,14 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
         return terms;
     }
+
+    /// <summary>
+    /// How many more points of defense buff would still raise a creature's defense: the ceiling less the buffs
+    /// it already holds, never below zero (ADR 0076).
+    /// </summary>
+    private static int DefenseBuffRoom(CreatureSnapshot target) => Math.Max(
+        0,
+        Creature.DefenseBuffCeiling - target.Conditions.Select(condition => condition.Effect).OfType<DefenseBuff>().Sum(buff => buff.Amount));
 
     /// <summary>The defense buffs one resolution puts on one creature.</summary>
     private static IEnumerable<DefenseBuff> Buffs(CombatResolution resolution, CreatureId targetId) =>

@@ -483,8 +483,10 @@ Resolve one Combat action in this order, and do not reorder it:
    multiplied by a critical.
 7. **Take the target markers back.**
 
-A Creature's **total Defense** is its base Defense plus its Defense buffs less its Defense debuffs, and the
-floor at zero is applied to that total, not to anything on the way. The two Defense rails hold the two sums
+A Creature's **total Defense** is its base Defense plus its Defense buffs, **counted up to 10 and no
+further**, less its Defense debuffs, and the floor at zero is applied to that total, not to anything on the
+way. The buff rail can read more than 10: every buff is still there and still counts down, it only adds
+nothing past 10 until another one expires. The two Defense rails hold the two sums
 side by side so this is one subtraction, done when a Condition lands, not once per incoming cast.
 
 > **Example.** Creature 2 casts **Engulfing Flames** on Creature 5: cost 3, `One enemy`, `Damage 10`,
@@ -778,12 +780,12 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 
 Two sums, and both floor at zero **after** the subtraction, never before:
 
-- **Total Defense** = base Defense + Defense buffs - Defense debuffs, never below zero.
+- **Total Defense** = base Defense + Defense buffs (at most 10) - Defense debuffs, never below zero.
 - **Current initiative** = Base initiative + Initiative buffs - Initiative debuffs, never below zero.
 
 A **permanent** Condition never counts down. Move the rail and put no token on the dock: there is nothing to
-undo and nothing to remember. Nothing in the game caps how high a permanent Defense buff can go, which is why
-the overflow chits exist.
+undo and nothing to remember. Permanent and timed Defense buffs share one ceiling of 10 (ADR 0076): stack past
+it and the rail keeps counting, but the Creature's Defense does not.
 
 **Stun immunity is not a Condition.** No Spell applies it, a critical cannot touch it, and it has no Duration
 of its own: the Cleanup that ends a living Creature's Stun starts it, and the next Cleanup ends it

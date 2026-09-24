@@ -37,6 +37,13 @@ public sealed class Creature : Entity<CreatureId>
     /// <summary>How long the immunity a stun leaves behind lasts: the one round after it ends (ADR 0072).</summary>
     private const int StunImmunityDuration = 1;
 
+    /// <summary>
+    /// The most a creature's defense buffs add to its defense, permanent and timed together, however many are
+    /// active (ADR 0076). A buff past it is still held and still counts down: it only adds nothing while the
+    /// others fill the ceiling, and counts again when one of them expires.
+    /// </summary>
+    public const int DefenseBuffCeiling = 10;
+
     private Creature(CreatureId id, PlayerSlot owner, CreatureDefinition definition)
         : base(id)
     {
@@ -106,7 +113,7 @@ public sealed class Creature : Entity<CreatureId>
     public bool IsStunImmune => IsAlive && _stunImmunity > 0;
 
     public Defense TotalDefense => BaseStats.Defense
-        .Plus(_conditions.Sum<DefenseBuff>(buff => buff.Amount))
+        .Plus(Math.Min(DefenseBuffCeiling, _conditions.Sum<DefenseBuff>(buff => buff.Amount)))
         .Minus(_conditions.Sum<DefenseDebuff>(debuff => debuff.Amount));
 
     /// <summary>

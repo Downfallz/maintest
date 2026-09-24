@@ -287,7 +287,7 @@ is 16 short of that ceiling. Part 6, question 5.
 | Round cap marker | **1** | Placed at setup on the space equal to the `RuleSet`'s Round cap, so the track's end is a component and not a memory. | **VALUE** |
 | Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
-| Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule, and the rule has no bound: permanent Defense buffs and debuffs both stack (ADR candidate 3, open). | **RULE** (no bound exists) |
+| Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
 | Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
@@ -743,7 +743,9 @@ rail that stops at zero would be wrong: a Creature at 0 base carrying a -4 debuf
 total Defense of 0 in the engine, and a rail clamped at zero would show 3.
 
 Two rails hold the un-floored sums, and the printed line under them is the reading:
-`Defense = buffs - debuffs, never below 0`. That turns the audit's complaint - "1 sum over the Condition
+`Defense = buffs (at most 10) - debuffs, never below 0`. The buffs count for at most 10 together (ADR 0076),
+but the buff rail keeps the whole sum: a buff past the ceiling is still held and counts again when another
+one expires. That turns the audit's complaint - "1 sum over the Condition
 tokens per target, per cast" (translation.md 1.8) - into **one subtraction of two numbers that are side by
 side**, done when a Condition lands or expires rather than once per incoming cast. The debuff rail is at zero
 in most games: only three Spells lower Defense.
@@ -751,8 +753,9 @@ in most games: only three Spells lower Defense.
 Both rails run 0 to 20, with overflow chits. The rule beside 20: the largest Damage in the catalogue is 10,
 the critical multiplier is 2.0, so **20 Defense blanks every attack in the game**, and the only damage that
 gets through is a Bleed tick, which ignores Defense (`UpkeepRules.cs:67`). It is a **VALUE**: a catalogue with
-a bigger hit or a bigger multiplier reprints the boards. It is not a cap - nothing caps Defense (ADR candidate
-3, open) - which is why the chits exist.
+a bigger hit or a bigger multiplier reprints the boards. Since ADR 0076 the buffs *read* at most 10, so the
+buff rail past 10 only keeps count of what is held; the debuff rail has no ceiling, which is why the chits
+exist.
 
 ```bash
 python3 -c "

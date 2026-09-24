@@ -407,6 +407,29 @@ public sealed class ActionScorerTests
         slam.Score.ShouldBeGreaterThan(strike.Score);
     }
 
+    /// <summary>
+    /// ADR 0076: a point of defense buff past the ceiling adds no defense, so it prevents nothing. The debuff
+    /// holds the total at zero, so the threat the actor faces is the one the plain Guard test prices, and
+    /// only the room left under the ceiling changes: one point of Guard's two, then none.
+    /// </summary>
+    [Theory]
+    [InlineData(9, 0.65 * 1 * 2)]
+    [InlineData(10, 0.0)]
+    public void A_defense_buff_is_priced_only_for_the_points_under_the_ceiling(int held, double expected)
+    {
+        var board = Board(enemyHealth: 20);
+        board[0] = board[0] with
+        {
+            Conditions =
+            [
+                new ConditionSnapshot(DefenseBuff.Of(held, Duration.Permanent), null),
+                new ConditionSnapshot(DefenseDebuff.Of(held, Duration.Permanent), null),
+            ],
+        };
+
+        Scorer.Estimate(board[0], TestContent.Guard, board).ShouldBe(expected, 1e-9);
+    }
+
     [Fact]
     public void Estimate_values_a_spell_as_if_it_were_known_and_affordable()
     {
