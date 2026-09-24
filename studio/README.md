@@ -1,7 +1,7 @@
 # Content studio
 
-One page to look at the game content, change it, and see what the change does (ADR 0015). It needs the engine
-running behind it, because it writes files and plays matches:
+A mobile field guide for packages, progression and spells, with an explicit content editor (ADR 0077).
+Reading on GitHub Pages needs no engine. Run locally to edit files and play matches:
 
 ```bash
 dotnet run --project src/DownfallArena.Cli -- studio        # then open http://127.0.0.1:5099/
@@ -33,9 +33,7 @@ rather than against `main`, and opens the run it started. That needs *Actions* w
 
 The token is a **fine-grained personal access token**, scoped to this one repository, with *Contents*, *Pull
 requests* and *Actions* write. Paste it into the hosted page's own **Read only / Can save** panel, where *Keep it* stores it and *Forget it*
-removes it; the page picks its backend again on the spot rather than waiting for a reload. That toolbar
-button is also the answer to "can this page save?" without opening anything, which is why the token has a
-panel of its own rather than a corner of the run sheet. It is kept in
+removes it; the page picks its backend again on the spot rather than waiting for a reload. The access button under **Tools** shows whether this page can save and opens its own credential panel. It is kept in
 `localStorage`, sent to `api.github.com` and nowhere else, and it is a standing credential in a browser: that
 cost is accepted rather than argued away in ADR 0023, and it is revocable in one click on GitHub. Give it an
 expiry.
@@ -57,19 +55,22 @@ a stored token is what separates a page that can save from one that can only rea
 
 ## What the page does
 
-The page is written for a phone first. It opens on the **overview**: every creature with its numbers, what it
-starts with, and its talent tree drawn as a tree, where each node is a tap into the tree editor and each spell a
-chip that opens the spell. A bar along the bottom of the screen holds **Browse**, the list of creatures, spells,
-trees and packages as a sheet that closes on a pick, and the panels below, each a sheet of its own — the last of them
-only on the published page, where whether this page can save is a thing worth saying. An editor's
-four actions sit in their own bar just above it, so saving never needs a scroll; the list rows carry the
-numbers a reader scans for (a spell's class, type, cost and what it does), and every number field opens the
-numeric keypad. From 900px wide the same page becomes the list beside the editor, the panels as cards above
-it, and the actions next to the title.
+The page opens on **Explore**: the current package families and their tiers, derived from authored prerequisites,
+with every prerequisite and included spell one tap away. Class trees remain authoring content and do not
+supply the progression display. **Spells** offers search by name, effect and package, plus type filters.
+
+The persistent navigation has four destinations: **Explore**, **Spells**, **Catalogue**, and **Tools**. Catalogue
+opens a searchable sheet for every document, including disabled content. Tools groups the run, history,
+audit, balance, access and build controls. Sheets work on phones and desktops; reading gets the full width.
+
+Opening a document shows a readable reference card. **Edit content** opens the existing schema-aware forms;
+**Back to reading** returns to the card. Navigation confirms before discarding an unsaved draft. Each card
+has a shareable URL fragment, and browser Back walks through previously opened cards. Searches and the
+selected family survive a return from a card during the same session.
 
 | Panel | What you get |
 | --- | --- |
-| Overview | What the page opens on: each creature's stats, starting spells and talent tree, then the trees no creature is on. Everything on it is one tap into its editor. |
+| Explore | Current package families, tiers, prerequisites, included spells and the creatures’ starting kit. |
 | Creatures | Base stats, class, talent tree (one click away), starting spells (each one click away). |
 | Spells | Type, class, energy cost, critical chance bonus, targeting, and the effect list with the fields each effect kind actually takes. No spell initiative: a spell buys none of its own, the package that teaches it pays one bonus (ADR 0056). Plus **Used by**: every package that teaches it, every creature and talent node that names it, and the aliases pointing at it. |
 | Talent trees | The tree as a tree. Pick a node to edit its code, its prerequisites and the spells it teaches; add or remove nodes and spells; every spell chip navigates to that spell. It gates nothing a pick buys — under free multiclassing it is where a class is authored, not what a creature has to climb. |
@@ -296,3 +297,19 @@ authoring concern, and nothing in it touches a file.
 The host answers the machine it runs on and nothing else. Loopback binding is not enough on its own — a page
 in the same browser can post a form at `127.0.0.1` — so a write needs `Content-Type: application/json`, which
 a cross-site form cannot set, and a request that says it came from another site is refused.
+
+## Browser verification
+
+The page still has no runtime dependencies or build step. Browser tests alone use pinned Playwright:
+
+```bash
+cd studio/browser
+npm ci
+npx playwright install chromium
+npm test
+```
+
+The tests serve the actual static assets with catalogue fixtures assembled from `data/`, exercise phone
+(320px and 390px) and desktop layouts, and verify linked reading, search, direct URLs, draft protection,
+sheets and the GitHub Pages subpath. Screenshots are kept in `test-results/`; CI uploads them with failure
+traces as the `studio-browser` artifact. Pure catalogue and backend tests remain install-free.

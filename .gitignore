@@ -89,3 +89,8 @@ coverage.xml
 # scratch space for scripts/sweep-weight.py
 .sweep/
 .sweep.lock
+
+# Browser verification dependencies and output
+node_modules/
+studio/browser/test-results/
+studio/browser/playwright-report/

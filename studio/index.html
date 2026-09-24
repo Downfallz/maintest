@@ -4,9 +4,8 @@
   <meta charset="utf-8">
   <!-- viewport-fit=cover: the bottom bars pad themselves with the safe area, so nothing hides under a home indicator. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#161a22" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#101719">
   <title>Downfall Arena content studio</title>
   <!-- Says "there is no icon" without a request: a static host has no route to answer one with. -->
   <link rel="icon" href="data:,">
@@ -30,41 +29,39 @@
     <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></symbol>
   </svg>
 
+  <a class="skip-link" href="#detail">Skip to content</a>
   <header>
-    <div class="brand">
-      <h1>Downfall Arena <span>studio</span></h1>
-      <span id="hash" class="badge mono">content not built</span>
-    </div>
-    <!-- One set of buttons for both shapes of the page: a segmented control up here on a desk, the bar along
-         the bottom of a phone. "Browse" opens the list where the list is a sheet; a desk always shows it. -->
-    <fieldset class="toolbar" id="toolbar" aria-label="Panels">
-      <button id="browse" type="button" class="tool" aria-controls="nav" aria-expanded="false">
-        <svg><use href="#i-list"/></svg><span>Browse</span>
-      </button>
-      <button id="run-panel" type="button" class="tool" aria-controls="run" aria-pressed="false">
-        <svg><use href="#i-play"/></svg><span>Run<span class="long"> a match</span></span>
-      </button>
-      <button id="runs-panel" type="button" class="tool" aria-controls="runs" aria-pressed="false">
-        <svg><use href="#i-history"/></svg><span>Runs</span>
-      </button>
-      <button id="audit-panel" type="button" class="tool" aria-controls="audit" aria-pressed="false">
-        <svg><use href="#i-audit"/></svg><span>Audit</span>
-      </button>
-      <button id="balance-panel" type="button" class="tool" aria-controls="balance" aria-pressed="false">
-        <svg><use href="#i-balance"/></svg><span>Balance</span>
-      </button>
-      <!-- Only on the published page, where saving is a token away and nothing else on screen would say so. -->
-      <button id="access-panel" type="button" class="tool" aria-controls="access" aria-pressed="false" hidden>
-        <svg><use href="#i-key"/></svg><span id="access-label">Read only</span>
-      </button>
+    <button id="home" class="brand" type="button" aria-label="Downfall Arena home">
+      <span class="brand-mark" aria-hidden="true">◈</span>
+      <span><strong>DOWNFALL<span class="brand-arena"> ARENA</span></strong><small>THE FIELD GUIDE</small></span>
+    </button>
+    <fieldset class="toolbar" id="toolbar" aria-label="Main navigation">
+      <button id="explore-view" type="button" class="tool" aria-pressed="true"><svg aria-hidden="true"><use href="#i-sparkle"/></svg><span>Explore</span></button>
+      <button id="spells-view" type="button" class="tool" aria-pressed="false"><svg aria-hidden="true"><use href="#i-play"/></svg><span>Spells</span></button>
+      <button id="browse" type="button" class="tool" aria-controls="nav" aria-expanded="false"><svg aria-hidden="true"><use href="#i-list"/></svg><span>Catalogue</span></button>
+      <button id="tools-panel" type="button" class="tool" aria-controls="tools" aria-pressed="false"><svg aria-hidden="true"><use href="#i-balance"/></svg><span>Tools</span></button>
     </fieldset>
-    <button id="build" type="button" class="button">Build</button>
+    <span class="header-note">Explore. Adapt. Evolve.</span>
   </header>
 
   <div id="banner" class="banner" hidden></div>
 
   <!-- Behind whichever sheet is open on a phone; a tap on it closes the sheet. -->
   <div id="scrim" class="scrim" hidden></div>
+
+  <section id="tools" class="panel" hidden aria-labelledby="tools-title">
+    <div class="panel-head"><h2 id="tools-title">Studio tools</h2><button type="button" class="close" data-close="tools" aria-label="Close tools"><svg><use href="#i-close"/></svg></button></div>
+    <p class="hint">Create, refine and test the content. To edit an item, open its page and choose Edit content.</p>
+    <div class="tools-grid">
+      <button id="run-panel" type="button" class="tool-card" aria-controls="run" aria-pressed="false"><strong>Run a match ↗</strong><span>Try the content with game agents</span></button>
+      <button id="runs-panel" type="button" class="tool-card" aria-controls="runs" aria-pressed="false"><strong>Run history</strong><span>Read and compare results</span></button>
+      <button id="audit-panel" type="button" class="tool-card" aria-controls="audit" aria-pressed="false"><strong>Content audit</strong><span>Check reachability and consistency</span></button>
+      <button id="balance-panel" type="button" class="tool-card" aria-controls="balance" aria-pressed="false"><strong>Balance</strong><span>Inspect tuning values and constraints</span></button>
+      <button id="access-panel" type="button" class="tool-card" aria-controls="access" aria-pressed="false" hidden><strong id="access-label">Read only</strong><span>Manage access for saving changes</span></button>
+      <button id="build" type="button" class="tool-card"><strong>Build content</strong><span>Validate with the local engine</span></button>
+    </div>
+    <p class="tools-version"><span id="hash" class="badge mono">Loading catalogue…</span></p>
+  </section>
 
   <section id="run" class="panel" hidden aria-labelledby="run-title">
     <div class="panel-head">
@@ -190,24 +187,27 @@
     <div id="balance-body" class="scroll"></div>
   </section>
 
-  <main>
+  <main id="main">
     <nav id="nav" aria-label="Content">
       <div class="nav-head">
         <div class="tabs" id="tabs">
           <button type="button" class="tab" data-tab="creatures">Creatures <span class="count"></span></button>
-          <button type="button" class="tab selected" data-tab="spells">Spells <span class="count"></span></button>
-          <button type="button" class="tab" data-tab="talentTrees">Trees <span class="count"></span></button>
-          <button type="button" class="tab" data-tab="tiers">Packages <span class="count"></span></button>
+          <button type="button" class="tab" data-tab="spells">Spells <span class="count"></span></button>
+          <button type="button" class="tab" data-tab="talentTrees">Class trees <span class="count"></span></button>
+          <button type="button" class="tab selected" data-tab="tiers">Packages <span class="count"></span></button>
         </div>
         <button type="button" class="close" id="nav-close" aria-label="Close the list"><svg><use href="#i-close"/></svg></button>
       </div>
-      <input id="search" type="search" placeholder="Filter by name or id" aria-label="Filter content" autocomplete="off">
+      <input id="search" type="search" placeholder="Find content…" aria-label="Filter content" autocomplete="off">
       <ul id="list"></ul>
       <div class="nav-foot">
         <button id="new" type="button" class="button"><svg><use href="#i-plus"/></svg><span>New</span></button>
       </div>
     </nav>
-    <section id="detail"></section>
+    <section id="detail" tabindex="-1" aria-label="Content guide">
+      <div class="loading-state" role="status">Opening the field guide…</div>
+      <button id="retry" type="button" class="button" hidden>Try again</button>
+    </section>
   </main>
 
   <script type="module" src="studio.js"></script>

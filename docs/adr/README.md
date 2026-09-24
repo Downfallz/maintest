@@ -82,3 +82,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0074](0074-a-tuning-pass-confirms-a-new-leader-on-seeds-it-was-not-chosen-on.md) | A tuning pass confirms a new leader on seeds it was not chosen on | Accepted |
 | [0075](0075-capture-public-state-around-each-combat-action.md) | Capture public state around each combat action | Accepted |
 | [0076](0076-defense-buffs-count-for-at-most-ten.md) | Defense buffs count for at most ten | Accepted |
+| [0077](0077-a-mobile-field-guide-before-the-editor.md) | A mobile field guide before the editor | Accepted |
