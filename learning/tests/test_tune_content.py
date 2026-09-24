@@ -19,6 +19,7 @@ from downfall_learning.search_weights import EngineCommand, EvaluationError
 from downfall_learning.tune_content import (
     METRIC_DEFINITIONS,
     Candidate,
+    ConfirmationSeeds,
     ContentEngine,
     EngineContentEvaluator,
     MemoizingEvaluator,
@@ -377,6 +378,80 @@ def test_a_search_that_finds_nothing_says_so_rather_than_proposing_noise(tmp_pat
 
     assert not result.improved
     assert result.best.moves == ()
+
+
+class ContraryEvaluator(FakeEvaluator):
+    """A second seed block that disagrees with the first: the damage the first rewards, it punishes."""
+
+    def evaluate(self, spells: Mapping[str, dict]) -> dict[str, dict[str, float]]:
+        self.calls += 1
+        damage = sum(spell["effects"][0]["amount"] for spell in spells.values())
+        return {"mirror": {"averageRounds": 12.0 + 3.0 * damage}}
+
+
+def test_a_candidate_the_confirmation_seeds_do_not_back_never_takes_the_lead(tmp_path: Path) -> None:
+    """Better on the seeds it was chosen on, worse on seeds it was not: a gain to set aside (ADR 0074)."""
+    knobs = load(tmp_path)
+    confirm = ConfirmationSeeds(ContraryEvaluator(), "confirm.json")
+
+    options = TuneOptions(iterations=4, neighbours=3, seed=3, confirm=confirm)
+    result = tune_content(FakeEvaluator(), knobs, catalogue(tmp_path), options)
+
+    assert result.best.moves == ()
+    assert result.confirmations
+    assert not any(confirmation.accepted for confirmation in result.confirmations)
+    assert all(confirmation.challenger.score < result.initial.score for confirmation in result.confirmations)
+
+
+def test_a_candidate_better_on_both_seed_blocks_takes_the_lead(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    confirm = ConfirmationSeeds(FakeEvaluator(), "confirm.json")
+
+    options = TuneOptions(iterations=4, neighbours=3, seed=3, confirm=confirm)
+    result = tune_content(FakeEvaluator(), knobs, catalogue(tmp_path), options)
+
+    assert result.improved
+    assert result.best.confirmed is not None and result.initial.confirmed is not None
+    assert result.best.confirmed < result.initial.confirmed
+    assert all(confirmation.accepted for confirmation in result.confirmations)
+
+
+def test_a_round_puts_at_most_one_candidate_to_the_confirmation_seeds(tmp_path: Path) -> None:
+    """The content as it stands once, then the opening and every round one challenger at most."""
+    knobs = load(tmp_path)
+    confirming = ContraryEvaluator()
+
+    options = TuneOptions(iterations=5, neighbours=4, seed=1, confirm=ConfirmationSeeds(confirming, "c.json"))
+    result = tune_content(FakeEvaluator(), knobs, catalogue(tmp_path), options)
+
+    assert confirming.calls <= 1 + 1 + options.iterations
+    assert len(result.confirmations) <= 1 + options.iterations
+
+
+def test_a_search_without_confirmation_seeds_keeps_what_the_search_seeds_say(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+
+    result = tune_content(FakeEvaluator(), knobs, catalogue(tmp_path), TuneOptions(iterations=4, seed=3))
+
+    assert result.improved
+    assert result.confirmations == ()
+    assert result.best.confirmed is None
+
+
+def test_the_proposal_says_what_the_confirmation_seeds_said(tmp_path: Path) -> None:
+    knobs = load(tmp_path)
+    confirm = ConfirmationSeeds(ContraryEvaluator(), "confirm.json")
+    options = TuneOptions(iterations=2, seed=3, confirm=confirm)
+    result = tune_content(FakeEvaluator(), knobs, catalogue(tmp_path), options)
+
+    written = json.loads((result.write(tmp_path / "out", tmp_path) / "tune.json").read_text(encoding="utf-8"))
+    report = format_result(result, knobs.objective)
+
+    assert written["confirmSeeds"] == "confirm.json"
+    assert len(written["confirmations"]) == len(result.confirmations)
+    assert written["initial"]["confirmed"] == pytest.approx(result.initial.confirmed)
+    assert "On the confirmation seeds, 'confirm.json'" in report
+    assert "set aside" in report
 
 
 def test_every_candidate_the_search_played_is_kept(tmp_path: Path) -> None:
