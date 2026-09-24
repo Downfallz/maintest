@@ -320,13 +320,13 @@ not have to pass; the Sub-phase simply ends. Then every pick token comes off the
 > **Player 1, second pick.** Player 1 wants Marauder for Creature 1. Marauder is level 2 and requires Brute, so
 > it is available to Creature 1 now. But Creature 1 holds a pick token: it has bought this Round, and the pick
 > is refused. Player 1 buys **Occultist for Creature 2** instead. Lightning Bolt and Rejuvenate go into the
-> hand, and the bonus of +2 takes Base initiative to 7.
+> hand, and the bonus of +3 takes Base initiative to 8.
 > **Player 2, second pick: Brute, for Creature 5.** Creature 1 owning Brute does not stop Creature 5 buying it.
 > Base initiative 6.
 > Both Players have spent their picks, and the Sub-phase ends: the four pick tokens come off the boards.
 > Marauder waits for Creature 1 until Round 3, since Round 2 offers no opportunity. Warmonger, the level 3 Tier
-> above Marauder, waits until Round 5 at the earliest. Until Round 3, Creature 4 at 8 has the highest Base
-> initiative on the table.
+> above Marauder, waits until Round 5 at the earliest. Until Round 3, Creatures 2 and 4 at 8 share the highest
+> Base initiative on the table, one on each side.
 >
 > **Example, one Creature left.** Round 7 offers an opportunity. Player 2 has only Creature 6 alive, and it
 > owns Occultist. Player 2 has **one** pick, not two: Creature 6 is the only Creature it can go to. Player 2
@@ -390,7 +390,7 @@ with 20. It pays for that with its Critical roll: a Quick Creature never crits (
 
 > **Example.** Round 4, which offers no Evolution opportunity. In Rounds 1 and 3 both Players spent their four
 > picks alike: Creature 1 owns Brute and Ironbound, Creature 4 owns Brute and Marauder, and Creatures 2, 3, 5
-> and 6 each own Occultist. Brute, Ironbound and Marauder are +1 each and Occultist is +2, so every Base
+> and 6 each own Brute and Berserker. Brute, Ironbound, Marauder and Berserker are +1 each, so every Base
 > initiative reads 7. **Two sides that buy alike tie everywhere.**
 > In Round 3, Creature 4 hit Creature 2 with **Protective Slam**: `Initiative -2, 2 rounds`. Creature 2's
 > Current initiative is 7 - 2 = 5. Every other Creature's is 7.

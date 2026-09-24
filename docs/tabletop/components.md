@@ -1022,7 +1022,7 @@ print('widest line', max(L)); print('body lines', sorted(set(x[2] for x in L)))"
 # body lines [2, 3]
 ```
 
-The widest line on any package card is 23 characters (`level 3 . +4 initiative`) against the 38 a line
+The widest line on any package card is 23 characters (`level 3 . +3 initiative`) against the 38 a line
 holds at 8 pt, and a body is 2 or 3 lines of the 4 the Spell card's body box holds. The package card is the
 easy card to print. The band is two lines at 8 pt, about 10 mm with its rule, so a stagger costs 10 mm a card.
 
