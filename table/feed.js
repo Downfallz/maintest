@@ -130,6 +130,7 @@ function recapAction(entry, board, cards) {
   const action = resolution.action ?? {};
   return {
     sequence: entry.sequence,
+    ...(event.frame ? { frame: event.frame, action } : {}),
     actor: recapCreature(action.actor, board),
     spell: cards?.get?.(action.spell)?.name ?? action.spell ?? 'Unknown spell',
     targets: (action.targets ?? []).map(id => recapCreature(id, board)),

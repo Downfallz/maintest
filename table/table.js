@@ -9,6 +9,7 @@ import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
+import { playbackBoard, playbackChanges } from './replay.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -390,9 +391,14 @@ function render(state, views) {
     ? 'The match is over.'
     : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`;
   state.palette = talentPalette(state.catalogue, state.cards);
-  renderTimeline(view.board);
-  renderBoard(state, current);
-  renderMat(state, current);
+  const display = state.playback ? { ...current, view: {
+    ...view, board: playbackBoard(state.playback, view.board), waitingFor: null, options: {},
+    roundEvents: (view.roundEvents ?? []).filter(entry => entry.sequence < state.playback.actions[state.playback.index].sequence
+      || (state.playback.stage === 'after' && entry.sequence === state.playback.actions[state.playback.index].sequence)),
+  } } : current;
+  renderTimeline(display.view.board);
+  renderBoard(state, display);
+  renderMat(state, display);
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
@@ -513,6 +519,7 @@ function renderBoard(state, current) {
     roundEvents: view.roundEvents,
     active: state.playback ? state.playback.actions[state.playback.index]?.actor.id : isAsked(view) ? view.waitingCreature : null,
     playback: state.playback?.actions[state.playback.index],
+    playbackStage: state.playback?.stage,
     draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen : null,
     targeting: isAsked(view) && view.waitingFor === 'Target',
     candidates: !state.playback && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
@@ -691,6 +698,17 @@ function line(state, creature, which, marks) {
   }
 
   box.append(who, health, stats, tags, dock(state, creature.conditions));
+  if (marks?.playbackStage === 'after') {
+    const changes = document.createElement('div');
+    changes.className = 'replay-changes';
+    for (const change of playbackChanges(marks.playback, creature)) {
+      const chip = document.createElement('span');
+      chip.className = `recap-effect ${change.tone}`;
+      chip.textContent = change.text;
+      changes.append(chip);
+    }
+    box.append(changes);
+  }
   if (which === 'enemy') {
     box.append(enemyChoice(state, creature, marks?.board, marks?.roundEvents));
   } else {
@@ -970,8 +988,7 @@ function renderRecap(state, view) {
   element('recap-actions').replaceChildren(...rows);
 }
 
-// Review public results at the reader's pace. This never re-runs the engine or estimates intermediate HP;
-// the separate note identifies the board totals as current. The next question is acknowledged only on exit.
+// The next question is acknowledged only on exit; historical frames never replace the live view.
 function syncPlayback(state, current) {
   if (state.playback && state.playback.seat !== current.seat) state.playback = null;
   state.playbackSeen ??= new Map();
@@ -983,7 +1000,7 @@ function syncPlayback(state, current) {
 }
 
 function startPlayback(state, seat, recap) {
-  state.playback = { seat, round: recap.round, actions: recap.actions, index: 0 };
+  state.playback = { seat, round: recap.round, actions: recap.actions, index: 0, stage: recap.actions[0]?.frame ? 'before' : 'after' };
   state.picked = [];
   state.chosen = null;
   hidePhaseNotice(state);
@@ -1004,34 +1021,45 @@ function finishPlayback(state) {
 function movePlayback(state, step) {
   const replay = state.playback;
   if (!replay) return;
+  if (replay.actions[replay.index].frame && ((step > 0 && replay.stage === 'before') || (step < 0 && replay.stage === 'after'))) {
+    replay.stage = step > 0 ? 'after' : 'before';
+    redraw(state);
+    return;
+  }
+  if (replay.index === 0 && step < 0) return;
   if (replay.index + step >= replay.actions.length) { finishPlayback(state); return; }
   replay.index = Math.max(0, replay.index + step);
+  replay.stage = step > 0 && replay.actions[replay.index].frame ? 'before' : 'after';
   redraw(state);
 }
 
 function renderPlayback(state, current) {
   const replay = state.playback;
   const action = replay.actions[replay.index];
+  const before = action.frame && replay.stage === 'before';
   element('phase-round').textContent = `Round ${replay.round}`;
   element('upkeep').hidden = true;
   element('phase-current').textContent = 'Resolution replay';
   element('phase-turn').textContent = `Action ${replay.index + 1} of ${replay.actions.length} · ${action.actor.label}`;
-  element('phase-reminder').textContent = 'Next: following action · Previous: review again · Skip: return to the match';
+  element('phase-reminder').textContent = 'Next: apply / advance · Previous: review again · Skip: return to the match';
   element('phase').textContent = `Round ${replay.round} · Resolution replay`;
-  element('playback-title').textContent = `${action.actor.label} acts`;
-  element('playback-count').textContent = `Action ${replay.index + 1} of ${replay.actions.length}`;
+  element('playback-title').textContent = `${action.actor.label} ${before ? 'is about to act' : 'acted'}`;
+  element('playback-count').textContent = `Action ${replay.index + 1} of ${replay.actions.length}${action.frame ? ` · ${before ? 'Before' : 'After'}` : ''}`;
+  element('playback-board-note').textContent = action.frame
+    ? `${before ? 'Before' : 'After'} action ${replay.index + 1} · recorded battlefield · cleanup and upkeep appear when you return to the match.`
+    : 'This recording has no action snapshots · battlefield totals show the current state.';
   const held = element('playback-action');
-  held.replaceChildren(recapRow(action));
-  if (state.playbackFrame !== `${replay.seat}/${replay.round}/${replay.index}`) {
-    state.playbackFrame = `${replay.seat}/${replay.round}/${replay.index}`;
+  held.replaceChildren(recapRow(before ? { ...action, status: 'Ready', effects: [], reason: 'Press Next to apply this recorded action.', dropped: [] } : action));
+  if (state.playbackFrame !== `${replay.seat}/${replay.round}/${replay.index}/${replay.stage}`) {
+    state.playbackFrame = `${replay.seat}/${replay.round}/${replay.index}/${replay.stage}`;
     if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) held.animate?.([{ opacity: .25 }, { opacity: 1 }], { duration: 240 });
   }
   const previous = button('← Previous', () => movePlayback(state, -1));
   previous.dataset.focus = 'playback-previous';
-  previous.disabled = replay.index === 0;
+  previous.disabled = replay.index === 0 && (before || !action.frame);
   const last = replay.index === replay.actions.length - 1;
   const onward = current.view.over ? 'Match results' : `Continue to round ${current.view.board.roundNumber}`;
-  const next = button(last ? onward : 'Next action →', () => movePlayback(state, 1));
+  const next = button(before ? 'Next: apply action →' : last ? onward : 'Next action →', () => movePlayback(state, 1));
   next.dataset.focus = 'playback-next';
   const skip = button(current.view.over ? 'Skip to results' : `Skip to round ${current.view.board.roundNumber}`, () => finishPlayback(state));
   skip.dataset.focus = 'playback-skip';

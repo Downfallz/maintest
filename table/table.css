@@ -656,3 +656,7 @@ body:has(#table) { padding-bottom: 24px; }
 #decision[data-kind="TieOrder"] { display: block; }
 #decision[data-kind="TieOrder"] .creature-picker { flex-wrap: wrap; }
 #decision[data-kind="TieOrder"] .creature-picker > p { flex: 1 0 100%; }
+
+.replay-changes { display: flex; flex-wrap: wrap; gap: .35rem; }
+.replay-changes:empty { display: none; }
+.recap-status.ready { color: var(--muted); }

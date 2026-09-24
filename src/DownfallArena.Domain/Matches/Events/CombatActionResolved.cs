@@ -16,4 +16,5 @@ public sealed record CombatActionResolved(
     MatchId MatchId,
     RoundId RoundId,
     CombatResolution Resolution,
-    IReadOnlyList<EffectOutcome> AppliedOutcomes) : IMatchEvent;
+    IReadOnlyList<EffectOutcome> AppliedOutcomes,
+    CombatActionFrame? Frame = null) : IMatchEvent;

@@ -115,6 +115,32 @@ public sealed partial class TableApiTests : IDisposable
         feed.ShouldNotContain("\"player2\":{");
     }
 
+    [Fact]
+    public async Task Completed_actions_serve_public_before_and_after_frames_in_the_seat_feed()
+    {
+        var table = await Seated();
+        await PlayUpToTargeting(table);
+        await AnswerEach(table, PlayerOptionsKind.Target, creature => $$"""{"kind":"Target","creature":{{creature}},"targets":[3]}""", until: PlayerOptionsKind.Speed);
+
+        using var payload = JsonDocument.Parse(Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token)));
+        var actions = payload.RootElement.GetProperty("feed").EnumerateArray()
+            .Select(entry => entry.GetProperty("event"))
+            .Where(matchEvent => matchEvent.GetProperty("kind").GetString() == "CombatActionResolved").ToList();
+        actions.Count.ShouldBe(4);
+        foreach (var action in actions)
+        {
+            var frame = action.GetProperty("frame");
+            frame.EnumerateObject().Select(property => property.Name).ShouldBe(["before", "after", "timeline", "rollOffs"], ignoreOrder: true);
+            frame.GetProperty("before").GetArrayLength().ShouldBe(4);
+            frame.GetProperty("after").GetArrayLength().ShouldBe(4);
+            frame.GetProperty("timeline").GetArrayLength().ShouldBe(4);
+            var creature = frame.GetProperty("before")[0];
+            creature.GetProperty("health").GetInt32().ShouldBeGreaterThan(0);
+            creature.GetProperty("conditions").ValueKind.ShouldBe(JsonValueKind.Array);
+            creature.TryGetProperty("intents", out _).ShouldBeFalse();
+        }
+    }
+
     /// <summary>
     /// The other seat's intents are the game's hidden information, and the feed is the one place they could
     /// escape as plain text. Played for rather than asserted at a moment when there is nothing to hide.
