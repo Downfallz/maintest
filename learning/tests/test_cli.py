@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pytest
 
 from conftest import evaluation_json, stamp_json, write_run
 from downfall_learning import cli
+from downfall_learning.knobs import Content, Objective
 from downfall_learning.policy import Policy
 
 
@@ -309,3 +311,59 @@ def test_score_content_refuses_the_same_broken_objective_before_touching_the_eng
     error = capsys.readouterr().err
     assert "weights/gone.json" in error
     assert "no-such-engine" not in error
+
+
+def confirming_namespace(tmp_path: Path, **overrides: object) -> argparse.Namespace:
+    knobs = tmp_path / "data" / "balance" / "knobs.json"
+    knobs.parent.mkdir(parents=True, exist_ok=True)
+    values: dict[str, object] = {
+        "knobs": knobs,
+        "confirm": True,
+        "confirm_seeds": None,
+        "repo": tmp_path,
+        "engine": ["engine"],
+        "data": tmp_path / "data",
+        "output": tmp_path / "out",
+        "builder": ["builder"],
+    }
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+NO_CONTENT = Content(spells={}, files={})
+
+
+def objective_confirming_on(path: str) -> Objective:
+    return Objective(seeds="seeds.json", evaluations={}, targets=(), confirm_seeds=path)
+
+
+def test_a_pass_confirms_on_the_objectives_seeds_read_from_its_own_repository(tmp_path: Path) -> None:
+    """The path is the repository's, not the launching directory's, and the engine is handed it absolute."""
+    arguments = confirming_namespace(tmp_path)
+
+    confirm = cli._confirmation_seeds(arguments, objective_confirming_on("confirm.json"), NO_CONTENT)
+
+    assert confirm is not None
+    assert confirm.seeds == str((tmp_path / "confirm.json").resolve())
+
+
+def test_a_confirmation_file_on_the_command_line_wins_over_the_objectives(tmp_path: Path) -> None:
+    arguments = confirming_namespace(tmp_path, confirm_seeds=tmp_path / "mine.json")
+
+    confirm = cli._confirmation_seeds(arguments, objective_confirming_on("confirm.json"), NO_CONTENT)
+
+    assert confirm is not None
+    assert confirm.seeds == str((tmp_path / "mine.json").resolve())
+
+
+def test_a_pass_told_not_to_confirm_keeps_what_the_search_seeds_say(tmp_path: Path) -> None:
+    arguments = confirming_namespace(tmp_path, confirm=False)
+    objective = objective_confirming_on("confirm.json")
+
+    assert cli._confirmation_seeds(arguments, objective, NO_CONTENT) is None
+
+
+def test_an_objective_without_confirmation_seeds_confirms_nothing(tmp_path: Path) -> None:
+    arguments = confirming_namespace(tmp_path)
+
+    assert cli._confirmation_seeds(arguments, objective_confirming_on(""), NO_CONTENT) is None

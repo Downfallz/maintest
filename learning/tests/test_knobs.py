@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -415,6 +416,55 @@ def test_an_evaluation_naming_a_weights_file_that_is_there_is_accepted(tmp_path:
     knobs = load_knobs(write_knobs(tmp_path, document))
 
     assert validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path) == []
+
+
+def confirmation_objective(tmp_path: Path, search: list[int], confirm: list[int] | None) -> Knobs:
+    (tmp_path / "seeds.json").write_text(json.dumps({"seeds": search}), encoding="utf-8")
+    if confirm is not None:
+        (tmp_path / "confirm.json").write_text(json.dumps({"seeds": confirm}), encoding="utf-8")
+    document = knobs_json(
+        objective={
+            "seeds": "seeds.json",
+            "confirmSeeds": "confirm.json",
+            "evaluations": {"mirror": {"p1": "greedy", "p2": "greedy"}},
+            "targets": [{"metric": "drawRate", "on": "mirror", "max": 0.05, "scale": 0.05, "weight": 1}],
+        }
+    )
+    return load_knobs(write_knobs(tmp_path, document))
+
+
+def test_confirmation_seeds_sharing_a_seed_with_the_search_seeds_are_refused(tmp_path: Path) -> None:
+    """A seed on both lists is a match the challenger was chosen on and then confirmed on (ADR 0074)."""
+    knobs = confirmation_objective(tmp_path, search=[1, 2, 3], confirm=[3, 4])
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == [
+        "objective: confirmSeeds shares 1 seed(s) with the search seeds, 3; a confirmation has to be played "
+        "on matches the search never saw."
+    ]
+
+
+def test_confirmation_seeds_that_are_not_there_are_reported(tmp_path: Path) -> None:
+    knobs = confirmation_objective(tmp_path, search=[1, 2, 3], confirm=None)
+
+    problems = validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path)
+
+    assert problems == ["objective: confirmSeeds reads 'confirm.json', which is not a file."]
+
+
+def test_confirmation_seeds_clear_of_the_search_seeds_are_accepted(tmp_path: Path) -> None:
+    knobs = confirmation_objective(tmp_path, search=[1, 2, 3], confirm=[4, 5])
+
+    assert knobs.objective.confirm_seeds == "confirm.json"
+    assert validate(knobs, content(**{"spell:attack": ATTACK}), root=tmp_path) == []
+
+
+def test_the_confirmation_seeds_leave_the_objective_fingerprint_alone(tmp_path: Path) -> None:
+    """They decide which candidate a search keeps, never the score a candidate gets."""
+    with_them = confirmation_objective(tmp_path, search=[1, 2, 3], confirm=[4, 5]).objective
+
+    assert with_them.fingerprint == replace(with_them, confirm_seeds="").fingerprint
 
 
 def test_every_agent_of_a_panel_is_checked_and_an_empty_panel_is_refused(tmp_path: Path) -> None:
