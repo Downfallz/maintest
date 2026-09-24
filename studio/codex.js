@@ -60,7 +60,7 @@ export function explore(catalogue, ui, open, repaint) {
   view.append(append(h('section', 'codex-hero'),
     label('THE ARENA FIELD GUIDE'),
     h('h2', '', 'Find your next move.'),
-    h('p', 'codex-copy', 'Explore the paths. Learn the spells. Build your own combination.'),
+    h('p', 'codex-copy', 'Every package. Every spell. Your next build.'),
     append(h('div', 'hero-stats'), stat(packages.length, 'packages'), stat(spells.length, 'spells'), stat(new Set(packages.map(item => item.document.level)).size, 'tiers'))));
   if (!packages.length) { view.append(message('No enabled packages yet. Open Catalogue to add the first one.')); return view; }
   const selected = groups.find(group => group.root.id === ui.family) ?? groups[0];
@@ -150,7 +150,7 @@ function packageReading(view, item, catalogue, open) {
 
 function spellReading(view, item, catalogue, open) {
   const doc = item.document;
-  view.append(append(h('div', 'reader-stats'), stat(doc.energyCost ?? 0, 'energy'), stat(targetText(doc.targeting), 'target'), stat(`${Math.round((doc.criticalChance ?? 0) * 100)}%`, 'critical bonus')));
+  view.append(append(h('div', 'reader-stats'), stat(doc.energyCost ?? 0, 'energy'), stat(targetText(doc.targeting), 'target'), stat(`${Number(((doc.criticalChance ?? 0) * 100).toFixed(2))}%`, 'critical bonus')));
   view.append(title(doc.spellType ?? 'SPELL', 'What it does', 'Authored effect values; actual results depend on the combat situation.'));
   for (const effect of doc.effects ?? []) view.append(effectRow(effect));
   if (doc.casterEffects?.length) {

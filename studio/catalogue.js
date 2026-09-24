@@ -35,7 +35,7 @@ export function packagesTeaching(spell, catalogue) {
 export function spellMatches(item, query, type, catalogue) {
   if (type !== 'All' && item.document?.spellType !== type) return false;
   const search = [item.name, item.id, item.document?.creatureClass,
-    ...(item.document?.effects ?? []).map(effect => effect.kind),
+    ...[...(item.document?.effects ?? []), ...(item.document?.casterEffects ?? [])].map(effect => effect.kind),
     ...packagesTeaching(item, catalogue).map(pack => pack.name)].join(' ').toLowerCase();
   return query.toLowerCase().trim().split(/\s+/).every(word => search.includes(word));
 }

@@ -2662,8 +2662,7 @@ function renderToken() {
     ? 'Saving from here commits to studio/content.'
     : 'Reading only. Paste a token to save from this page.';
 
-  // The toolbar carries the answer to "can this page save?", so it is on screen without opening anything --
-  // which is the whole reason the token has a panel of its own rather than a corner of the run sheet.
+  // The access card under Tools states whether this page can save before opening the credential panel.
   $('access-label').textContent = held ? 'Can save' : 'Read only';
   $('access-panel').title = held
     ? 'This page saves to studio/content. Tap to change or forget the token.'

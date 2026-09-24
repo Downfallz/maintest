@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { active, packageFamilies, packageParents, packagesTeaching, spellMatches, effectText, targetText } from './catalogue.js';
 
 const pack = (id, level, prerequisites = [], spells = []) => ({ id, name: id, enabled: true, document: { level, prerequisites, spells } });
-const spell = { id: 'spark:v1', name: 'Spark', document: { spellType: 'Offensive', effects: [{ kind: 'Damage' }] } };
+const spell = { id: 'spark:v1', name: 'Spark', document: { spellType: 'Offensive', effects: [{ kind: 'Damage' }], casterEffects: [{ kind: 'Bleed' }] } };
 
 test('families follow authored prerequisites across aliases and multiple parents, without looping', () => {
   const catalogue = { aliases: { root: 'root:v1' }, tiers: [pack('root:v1', 1), pack('other', 1), pack('child', 2, ['root']), pack('hybrid', 3, ['child', 'other']), pack('cycle-a', 2, ['cycle-b']), pack('cycle-b', 3, ['cycle-a'])] };
@@ -27,6 +27,7 @@ test('spell search combines words, effects and package names while respecting th
   const catalogue = { aliases: { spark: 'spark:v1' }, tiers: [pack('Occultist', 1, [], ['spark'])] };
   assert.equal(packagesTeaching(spell, catalogue)[0].id, 'Occultist');
   assert.equal(spellMatches(spell, ' OCCULTIST damage ', 'All', catalogue), true);
+  assert.equal(spellMatches(spell, 'bleed', 'All', catalogue), true);
   assert.equal(spellMatches(spell, 'spark missing', 'All', catalogue), false);
   assert.equal(spellMatches(spell, 'spark', 'Defensive', catalogue), false);
 });
