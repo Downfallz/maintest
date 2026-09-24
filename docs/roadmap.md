@@ -204,7 +204,8 @@ Legacy: everything the new solution needed is ported. `legacy/` still holds the 
 - Persistence beyond memory; API host; UI (Blazor or web front) per ADR when needed.
 - Learning: agents smarter than random and the content iteration loop; planned in
   [`learning-roadmap.md`](learning-roadmap.md).
-- Property-based tests for resolution ordering and timeline determinism.
+- Property-based tests for resolution ordering and timeline determinism (done: `Invariants/` in
+  `DownfallArena.Infrastructure.Tests`, twelve invariants over 230 seeded matches on the real content).
 
 ## Working agreement per phase
 
