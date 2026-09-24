@@ -344,10 +344,17 @@ a spell without saying what it is for fails the build.
 It also **reports**, with the exit code still 0, a spell whose whole box sits under a rival: the most it can
 be worth anywhere inside its own bounds, against what a spell at its depth or shallower carries today. The
 case it exists for is `pummel`, which tops out around 5.4 against `lightning_bolt`'s 6.7 — so a tuning pass
-asked to make it a choice was searching a box that did not contain the answer, and then reported that it had
+that only moved `pummel` was searching a box that did not contain the answer, and then reported that it had
 found nothing as though it had looked in the right place. Either side of such a pair is a way out, which is
 why it is a finding and not a failure: widening the one and lowering the other are both answers, and picking
 between them is a design decision.
+
+What the report can say is whether the second way is open. Every rival above the spell's ceiling is also
+read at the bottom of **its** own bounds, at the corner worst for it and its dearest price. When each can
+come down under the ceiling, the finding names what has to come down, and a tuning pass already holds that
+move. Only when one cannot is the pair stuck, and only then does the finding ask for different bounds. It
+used to ask for them every time, and on content `0f036b75` all eight findings were the first kind: `pummel`
+tops out at 5.40 a round, and `lightning_bolt` at 6.47 today can come down to 1.17 inside its own bounds.
 
 The reading is coarse on purpose — no board, no defense, no cap at a target's health, no threat
 behind a defensive effect (so a `DefenseBuff` is priced as `defense x amount x rounds`, a stand-in and not
