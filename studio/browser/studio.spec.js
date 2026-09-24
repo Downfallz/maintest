@@ -20,7 +20,7 @@ async function fit(page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 async function shot(page, info, name) {
-  await page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: false });
+  await page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: false, animations: 'disabled' });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -101,9 +101,11 @@ test('catalogue sheets and tools fit the viewport and leave the current reader i
   await expect(page.getByLabel('Level', { exact: true })).toBeVisible();
   await page.locator('#tools-panel').click();
   await expect(page.locator('#tools')).toBeVisible();
+  await expect(page.locator('#scrim')).toBeVisible();
   await fit(page); await shot(page, info, 'tools');
   await page.keyboard.press('Escape');
   await expect(page.locator('#tools')).toBeHidden();
+  await expect(page.locator('#tools-panel')).toBeFocused();
 });
 
 test('GitHub Pages subpath reads deployed data without a token', async ({ page }) => {

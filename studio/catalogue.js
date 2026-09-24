@@ -42,7 +42,9 @@ export function spellMatches(item, query, type, catalogue) {
 
 export function effectText(effect) {
   const amount = effect.amount ?? effect.amountPerRound ?? 0;
-  const duration = effect.permanent ? 'permanently' : `for ${effect.durationRounds ?? 1} round${(effect.durationRounds ?? 1) === 1 ? '' : 's'}`;
+  const rounds = effect.durationRounds ?? 1;
+  const unit = rounds === 1 ? 'round' : 'rounds';
+  const duration = effect.permanent ? 'permanently' : `for ${rounds} ${unit}`;
   switch (effect.kind) {
     case 'Damage': return `Deal ${amount} damage`;
     case 'Heal': return `Restore ${amount} HP`;
