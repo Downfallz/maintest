@@ -4,6 +4,42 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-24. The tuner's exploit panel is measured again under the current rules, and five sets that lose to Greedy leave it
+
+- **What changed.** The `exploit` evaluation of `data/balance/knobs.json` plays a panel of searched sets and reads
+  the best of them (ADR 0052, ADR 0053). It was `search-4`, `mixture-mean`, `pressure-floor`, `stun-first` and
+  `kill-first`, all fitted before the stun immunity, the bleed price and the defense ceiling (ADR 0072, 0073,
+  0076). It is now `search-23`, `search-21`, `pressure-floor`, `search-19` and `stun-first`. The content does
+  not move.
+- **The measurement.** Every heuristic weights file against Greedy on the benchmark seeds, the seeds the
+  objective reads, content `4ab506fa`, `main` at `f48645d`. Agent A's score, average rounds and share at the
+  round cap:
+
+  | set | score | rounds | at the cap |
+  | --- | --- | --- | --- |
+  | `search-23` | 1.000 | 17.38 | 0.000 |
+  | `search-21` | 1.000 | 19.35 | 0.000 |
+  | `pressure-floor` | 0.990 | 13.99 | 0.013 |
+  | `search-19` | 0.953 | 15.99 | 0.037 |
+  | `stun-first` | 0.922 | 14.16 | 0.020 |
+  | `kill-first` | 0.806 | 16.73 | 0.085 |
+  | `search-3` | 0.500 | 8.74 | 0.000 |
+  | `search-2` | 0.492 | 10.42 | 0.000 |
+  | `search-4` | 0.485 | 8.71 | 0.000 |
+  | `mixture-mean` | 0.468 | 8.87 | 0.000 |
+  | `mixture-worst` | 0.443 | 8.94 | 0.000 |
+
+- **What it says.** A set that no longer beats Greedy can never be the best exploiter, so `search-4` and
+  `mixture-mean` left, and `search-2`, `search-3` and `mixture-worst` stay out. `search-23` and `search-21` take
+  every match and joined. `kill-first` still beats Greedy but is the weakest of the six that do, and it left so
+  that a candidate still costs five `exploit` evaluations. The objective reads 6.786 on the benchmark seeds with
+  either panel. The best exploiter was `pressure-floor` (0.990, 13.99 rounds) and is now `search-23` (1.000,
+  17.38 rounds); both are above the 10-round floor, so the `exploit` term scores nothing either way. It changes
+  what the next tuning pass is measured against, not where the content stands today.
+- **What it costs.** The new sets play longer matches, 14 to 19 rounds against Greedy where `search-4` and
+  `mixture-mean` played about 9, so a tuning pass's candidate will take longer on the runner than the 61.7
+  seconds `tune.yml` budgets. The first pass under this panel should be sized with that in mind.
+
 ## 2026-09-24. Search 23 is the first rung under the defense buff ceiling, and it gives back `stun-first`
 
 - **What ran.** #202: `search-weights --kind heuristic` from `search-21`, against Greedy, `search-21` and the
