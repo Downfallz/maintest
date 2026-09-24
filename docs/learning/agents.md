@@ -245,7 +245,12 @@ it in the panel beside Greedy and `pressure-floor` (journal, 2026-09-23): on 200
 takes every match from all three, and from `search-4` and Random, while the lookahead's built-in reading
 holds it to 0.78. Its own mirror, like `stun-first`'s and `pressure-floor`'s, never ends before the round
 cap: those three are agents to play against, and their mirrors say something about how they read
-initiative rather than about the game (journal, 2026-09-23). Changing `greedy.json` itself changes nothing for `greedy`, which reads
+initiative rather than about the game (journal, 2026-09-23). `lookahead-20.json` is a set for the lookahead
+rather than for the one-step reading: searched as `lookahead:<weights>` from the built-in weights against
+Greedy, `stun-first` and `pressure-floor` (journal, 2026-09-24), and replayed on 200 seeds nothing had played
+with the stun immunity and the bleed price in, it beats the built-in lookahead against Greedy (0.98 to 0.54),
+`stun-first` (0.70 to 0.56), `pressure-floor` (1.00 to 0.46) and `search-4`, and cannot be told from it against
+`search-19` (0.37 to 0.34). Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
