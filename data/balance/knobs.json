@@ -767,7 +767,7 @@
     },
     "tier:occultist": {
       "name": "Occultist",
-      "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 2 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Sorcerer's opener: a bolt and a heal, the attack and the repair of the family. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 2, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the eleventh tuning pass moved it to 3 (journal, 2026-09-24).",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
@@ -782,7 +782,7 @@
     },
     "tier:prowler": {
       "name": "Prowler",
-      "intent": "The Scoundrel's opener, and the fastest of the three: the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Scoundrel's opener, and with Occultist the fastest of the three since the eleventh tuning pass: the first bleed and the throwing star. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 3 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs",
         "The Scoundrel line is the fast one at every level it is seeded at; a pass that makes it the slow one has changed what the class is, not tuned it"
@@ -1058,7 +1058,7 @@
     },
     "tier:warmonger": {
       "name": "Warmonger",
-      "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). 4 is the sum of the per-spell bonuses this package replaced, seeded by `scripts/build-tiers.py` (ADR 0057): a migration baseline that nothing has measured, and the reason this knob exists.",
+      "intent": "The Mercenary's close: the two-target slash and the stacking armour. Its initiative bonus is what the purchase adds to the buyer's Base initiative for the rest of the match, once (ADR 0056). It was seeded at 4, the sum of the per-spell bonuses this package replaced (`scripts/build-tiers.py`, ADR 0057), and the eleventh tuning pass moved it to 3 (journal, 2026-09-24).",
       "keep": [
         "The spells it teaches, its level and its prerequisites are the progression, and are never knobs"
       ],
