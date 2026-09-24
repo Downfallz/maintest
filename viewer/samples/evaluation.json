@@ -1,7 +1,7 @@
 {
   "stamp": {
     "engineVersion": "abc123def456",
-    "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+    "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
     "ruleSet": {
       "teamSize": 2,
       "energyPerRound": 2,
@@ -11,7 +11,7 @@
       "firstEvolutionRound": 1,
       "evolutionInterval": 2
     },
-    "featureSchema": "features:v7\u002Bf8655f8428df",
+    "featureSchema": "features:v6\u002Bc741bdb3a97e",
     "player1Agent": "Random",
     "player2Agent": "Random",
     "baseSeed": 1
@@ -29,17 +29,17 @@
       "low": 0.5,
       "high": 0.5
     },
-    "averageRemainingHealth": 31.166666666666668,
+    "averageRemainingHealth": 34.166666666666664,
     "spellUsage": {
-      "spell:guard:v1": 26,
-      "spell:strike:v1": 34
+      "spell:guard:v1": 35,
+      "spell:strike:v1": 25
     },
-    "spellEntropy": 0.9871377743721863,
+    "spellEntropy": 0.9798687566511528,
     "actions": 60,
     "fizzles": 0,
-    "criticals": 2,
+    "criticals": 3,
     "fizzleRate": 0,
-    "criticalRate": 0.03333333333333333
+    "criticalRate": 0.05
   },
   "agentB": {
     "agent": "Random",
@@ -54,17 +54,17 @@
       "low": 0.5,
       "high": 0.5
     },
-    "averageRemainingHealth": 31.166666666666668,
+    "averageRemainingHealth": 34.166666666666664,
     "spellUsage": {
-      "spell:guard:v1": 26,
-      "spell:strike:v1": 34
+      "spell:guard:v1": 35,
+      "spell:strike:v1": 25
     },
-    "spellEntropy": 0.9871377743721863,
+    "spellEntropy": 0.9798687566511528,
     "actions": 60,
     "fizzles": 0,
-    "criticals": 2,
+    "criticals": 3,
     "fizzleRate": 0,
-    "criticalRate": 0.03333333333333333
+    "criticalRate": 0.05
   },
   "matches": 6,
   "draws": 0,
@@ -74,14 +74,14 @@
   "spellOutcomes": [
     {
       "spell": "spell:guard:v1",
-      "intents": 26,
+      "intents": 35,
       "sides": 6,
       "wins": 3,
       "losses": 3,
       "draws": 0,
-      "resolved": 26,
+      "resolved": 35,
       "fizzled": 0,
-      "criticals": 0,
+      "criticals": 3,
       "damage": 0,
       "hits": 0,
       "conditionDamage": 0,
@@ -98,26 +98,26 @@
       "initiativeDebuffs": 0,
       "defenseDebuffs": 0,
       "initiativeBuffs": 0,
-      "resolvedWhenWon": 8,
+      "resolvedWhenWon": 11,
       "score": 0.5,
-      "intentsPerSide": 4.333333333333333,
+      "intentsPerSide": 5.833333333333333,
       "resolveRate": 1,
       "damagePerCast": 0,
       "damagePerTarget": 0,
-      "castShareWhenWon": 0.3076923076923077
+      "castShareWhenWon": 0.3142857142857143
     },
     {
       "spell": "spell:strike:v1",
-      "intents": 34,
+      "intents": 25,
       "sides": 6,
       "wins": 3,
       "losses": 3,
       "draws": 0,
-      "resolved": 34,
+      "resolved": 25,
       "fizzled": 0,
-      "criticals": 2,
-      "damage": 2,
-      "hits": 2,
+      "criticals": 0,
+      "damage": 0,
+      "hits": 0,
       "conditionDamage": 0,
       "conditionHealing": 0,
       "conditionEnergy": 0,
@@ -125,20 +125,20 @@
       "energy": 0,
       "energyDrained": 0,
       "stuns": 0,
-      "bleeds": 34,
+      "bleeds": 25,
       "regens": 0,
       "energyRegenerations": 0,
       "defenseBuffs": 0,
       "initiativeDebuffs": 0,
       "defenseDebuffs": 0,
       "initiativeBuffs": 0,
-      "resolvedWhenWon": 22,
+      "resolvedWhenWon": 19,
       "score": 0.5,
-      "intentsPerSide": 5.666666666666667,
+      "intentsPerSide": 4.166666666666667,
       "resolveRate": 1,
-      "damagePerCast": 0.058823529411764705,
-      "damagePerTarget": 1,
-      "castShareWhenWon": 0.6470588235294118
+      "damagePerCast": 0,
+      "damagePerTarget": 0,
+      "castShareWhenWon": 0.76
     }
   ],
   "pairs": [
@@ -147,111 +147,111 @@
       "aFirst": {
         "index": 0,
         "seed": 1,
-        "matchId": "01a0d105-d9a2-7702-a404-b404cd7c0273",
-        "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+        "matchId": "01a0c728-5083-7ffb-9e78-71dbd24f5d10",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
           "isDraw": false
         },
         "rounds": 5,
-        "player1RemainingHealth": 28,
-        "player2RemainingHealth": 34
+        "player1RemainingHealth": 30,
+        "player2RemainingHealth": 39
       },
       "bFirst": {
         "index": 0,
         "seed": 1,
-        "matchId": "01a0d105-d9cd-7170-a12d-4b0adbb21697",
-        "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+        "matchId": "01a0c728-5098-7b06-8291-cb94121ec713",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
           "isDraw": false
         },
         "rounds": 5,
-        "player1RemainingHealth": 28,
-        "player2RemainingHealth": 34
+        "player1RemainingHealth": 30,
+        "player2RemainingHealth": 39
       },
       "scoreOfA": 0.5,
       "winsOfA": 1,
       "winsOfB": 1,
       "draws": 0,
-      "remainingHealthOfA": 62,
-      "remainingHealthOfB": 62
+      "remainingHealthOfA": 69,
+      "remainingHealthOfB": 69
     },
     {
       "seed": 2,
       "aFirst": {
         "index": 1,
         "seed": 2,
-        "matchId": "01a0d105-d9a3-71e7-a6ec-6cb90a6f4883",
-        "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+        "matchId": "01a0c728-5083-7e2b-8d94-8b73f6bb2968",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
           "isDraw": false
         },
         "rounds": 5,
-        "player1RemainingHealth": 27,
-        "player2RemainingHealth": 34
+        "player1RemainingHealth": 29,
+        "player2RemainingHealth": 38
       },
       "bFirst": {
         "index": 1,
         "seed": 2,
-        "matchId": "01a0d105-d9cd-7340-8412-8a06662fb6e1",
-        "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+        "matchId": "01a0c728-5098-72d5-88c9-d02833ae57a3",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
         "outcome": {
           "winner": "Player2",
           "reason": "RoundCap",
           "isDraw": false
         },
         "rounds": 5,
-        "player1RemainingHealth": 27,
-        "player2RemainingHealth": 34
+        "player1RemainingHealth": 29,
+        "player2RemainingHealth": 38
       },
       "scoreOfA": 0.5,
       "winsOfA": 1,
       "winsOfB": 1,
       "draws": 0,
-      "remainingHealthOfA": 61,
-      "remainingHealthOfB": 61
+      "remainingHealthOfA": 67,
+      "remainingHealthOfB": 67
     },
     {
       "seed": 3,
       "aFirst": {
         "index": 2,
         "seed": 3,
-        "matchId": "01a0d105-d9a3-7dfd-94fb-0e7e3922e9e3",
-        "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+        "matchId": "01a0c728-5083-769f-a9da-ab39c8d23d55",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
         "outcome": {
           "winner": "Player1",
           "reason": "RoundCap",
           "isDraw": false
         },
         "rounds": 5,
-        "player1RemainingHealth": 34,
-        "player2RemainingHealth": 30
+        "player1RemainingHealth": 40,
+        "player2RemainingHealth": 29
       },
       "bFirst": {
         "index": 2,
         "seed": 3,
-        "matchId": "01a0d105-d9cd-76fa-bd59-960af539889c",
-        "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
+        "matchId": "01a0c728-5098-75db-8968-adaa6e9a8577",
+        "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
         "outcome": {
           "winner": "Player1",
           "reason": "RoundCap",
           "isDraw": false
         },
         "rounds": 5,
-        "player1RemainingHealth": 34,
-        "player2RemainingHealth": 30
+        "player1RemainingHealth": 40,
+        "player2RemainingHealth": 29
       },
       "scoreOfA": 0.5,
       "winsOfA": 1,
       "winsOfB": 1,
       "draws": 0,
-      "remainingHealthOfA": 64,
-      "remainingHealthOfB": 64
+      "remainingHealthOfA": 69,
+      "remainingHealthOfB": 69
     }
   ],
   "drawRate": 0
