@@ -132,8 +132,9 @@ listed in [spells.md](spells.md).
         target's damage and direct heal by
         the Rule set's crit multiplier, floored, and nothing else (ADR 0033);
       - instant effects apply (damage reduced by the target's total Defense, floor zero; heal; energy given,
-        or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs
-        less its defense debuffs, floored at zero (ADR 0035);
+        or taken up to what the target has). A Creature's total Defense is its base plus its defense buffs,
+        which count for at most 10 together however many are active (ADR 0076), less its defense debuffs,
+        floored at zero (ADR 0035);
       - lasting effects attach as Conditions per their stacking policy: another one beside the ones already
         there, except a Stun, which is ignored on a Creature already stunned or immune to stun (ADR 0072; it
         restarted the running Stun under ADR 0041). The cast's other effects still land.

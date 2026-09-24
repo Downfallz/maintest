@@ -126,6 +126,47 @@ public sealed class ConditionTests
         creature.TotalDefense.ShouldBe(Defense.Of(1));
     }
 
+    /// <summary>ADR 0076: permanent and timed buffs share one ceiling, whatever the mix.</summary>
+    [Fact]
+    public void Defense_buffs_add_nothing_past_the_ceiling()
+    {
+        var creature = Spawn();
+
+        creature.Apply(DefenseBuff.Of(8, Duration.Permanent));
+        creature.Apply(DefenseBuff.Of(5, Duration.OfRounds(2)));
+
+        creature.Conditions.Count.ShouldBe(2);
+        creature.TotalDefense.ShouldBe(Defense.Of(Creature.DefenseBuffCeiling));
+    }
+
+    /// <summary>A buff past the ceiling is held, not dropped: it counts again once another one expires.</summary>
+    [Fact]
+    public void A_buff_past_the_ceiling_counts_again_when_another_expires()
+    {
+        var creature = Spawn();
+        creature.Apply(DefenseBuff.Of(6, Duration.Permanent));
+        creature.Apply(DefenseBuff.Of(6, Duration.OfRounds(1)));
+        creature.Apply(DefenseBuff.Of(3, Duration.Permanent));
+        creature.TotalDefense.ShouldBe(Defense.Of(10));
+
+        creature.TickConditions();
+        creature.TickConditions();
+
+        creature.TotalDefense.ShouldBe(Defense.Of(9));
+    }
+
+    /// <summary>The ceiling is on the buffs, so a debuff lowers what the ceiling left, not what the buffs add up to.</summary>
+    [Fact]
+    public void A_defense_debuff_lowers_the_total_the_ceiling_left()
+    {
+        var creature = Spawn();
+        creature.Apply(DefenseBuff.Of(14, Duration.Permanent));
+
+        creature.Apply(DefenseDebuff.Of(3, Duration.OfRounds(1)));
+
+        creature.TotalDefense.ShouldBe(Defense.Of(7));
+    }
+
     [Fact]
     public void Initiative_debuffs_lower_the_current_initiative_down_to_zero()
     {

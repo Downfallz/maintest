@@ -82,8 +82,8 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 6. **Apply the `Caster:` line**, once.
 7. **Take the markers back.**
 
-**Total Defense** = base Defense + Defense buffs - Defense debuffs, never below 0. Floor the **total**, not
-the halves.
+**Total Defense** = base Defense + Defense buffs (**at most 10**) - Defense debuffs, never below 0. Floor the
+**total**, not the halves.
 
 ---
 
