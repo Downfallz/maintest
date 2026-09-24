@@ -13,6 +13,7 @@ import * as timeline from './timeline.js';
 import * as mat from './mat.js';
 import * as notes from './notes.js';
 import * as ties from './ties.js';
+import * as replay from './replay.js';
 
 // A small DOM double exercises the shipped page without adding a browser dependency to the Node gate.
 class Element {
@@ -63,7 +64,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay,
     document, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });
@@ -846,6 +847,75 @@ test('loading an old recap does not auto replay it, but its replay button is ava
   p.context.movePlayback(p.state, 1); p.context.movePlayback(p.state, 1);
   assert.equal(p.state.playback, null);
   assert.equal(p.nodes.playback.hidden, true);
+});
+
+function framedRound(p) {
+  const entries = completedRound(1);
+  const before = [
+    { ...p.view.board.allies[0], health: 17, energy: 4, currentInitiative: 8, totalDefense: 1, conditions: [], isAlive: true },
+    { ...p.view.board.enemies[0], health: 3, energy: 2, conditions: [], isAlive: true },
+  ];
+  const after = [{ ...before[0], health: 20, energy: 2 }, { ...before[1], health: 0, isAlive: false }];
+  const timeline = [{ creature: 1, owner: 'Player1', speed: 'Standard', initiative: 8 }, { creature: 2, owner: 'Player2', speed: 'Standard', initiative: 5 }];
+  entries[0].event.frame = { before, after, timeline, rollOffs: [{ creature: 1, rolls: [19] }] };
+  entries[0].event.appliedOutcomes.push({ kind: 'HealOutcome', target: 1, amount: 3, onCaster: true });
+  entries[1].event.frame = { before: after, after, timeline, rollOffs: [] };
+  return entries;
+}
+
+test('recorded frames rewind stats, death, timeline and energy without replacing live state', async () => {
+  const p = page(); const sent = []; p.current.transport.decide = async body => { sent.push(body); return { ok: true }; };
+  p.draw(); p.view.roundEvents = framedRound(p); p.view.board.roundNumber = 2; p.view.board.allies[0].energy = 6;
+  const live = JSON.stringify(p.view.board); p.draw();
+  assert.equal(p.state.playback.stage, 'before');
+  assert.match(p.nodes.allies.textContent, /17\/20 HP/);
+  assert.match(p.nodes.enemies.textContent, /3\/20 HP/);
+  assert.doesNotMatch(p.nodes['playback-action'].textContent, /Damage 3|Heal 3|Critical/);
+  assert.match(p.nodes.timeline.textContent, /d20 19/);
+  assert.match(p.nodes['playback-board-note'].textContent, /Before action 1/);
+  assert.equal(p.nodes['playback-controls'].children[0].disabled, true);
+
+  p.nodes['playback-controls'].children[1].click();
+  assert.equal(p.state.playback.stage, 'after');
+  assert.match(p.nodes.allies.textContent, /20\/20 HP/);
+  assert.match(p.nodes.allies.textContent, /HP 17 → 20Energy 4 → 2/);
+  assert.match(p.nodes.enemies.textContent, /HP 3 → 0/);
+  assert.match(p.nodes.enemies.children[0].className, /dead/);
+  assert.match(p.nodes['playback-action'].textContent, /Heal 3 · caster/);
+  assert.equal(p.nodes['playback-controls'].children[0].disabled, false);
+  p.view.feedNext = 100; p.draw(); assert.equal(p.state.playback.stage, 'after');
+  p.context.movePlayback(p.state, -1);
+  assert.match(p.nodes.enemies.textContent, /3\/20 HP/);
+  assert.doesNotMatch(p.nodes.enemies.children[0].className, /dead/);
+  p.context.movePlayback(p.state, 1); p.context.movePlayback(p.state, 1);
+  assert.equal(p.state.playback.index, 1); assert.equal(p.state.playback.stage, 'before');
+  p.context.movePlayback(p.state, -1);
+  assert.equal(p.state.playback.index, 0); assert.equal(p.state.playback.stage, 'after');
+  p.context.movePlayback(p.state, 1); p.context.movePlayback(p.state, 1);
+  assert.match(p.nodes['playback-action'].textContent, /Fizzled/);
+  assert.doesNotMatch(p.nodes.allies.textContent, /HP 17 →/);
+  await p.context.submit(p.state, p.current, { kind: 'Intent', spell: 'one' });
+  assert.equal(sent.length, 0); assert.equal(JSON.stringify(p.view.board), live);
+  p.context.movePlayback(p.state, 1);
+  assert.equal(p.state.playback, null);
+  assert.equal(p.nodes.allies.children[0].children[2].children[0].children[0].textContent, '6');
+  assert.equal(p.nodes.timeline.textContent, '');
+});
+
+test('replay shows recorded conditions and spellbooks and skip restores the next round', () => {
+  const p = page(); p.draw(); const entries = framedRound(p);
+  entries[0].event.frame.after[0] = { ...entries[0].event.frame.after[0], isStunned: true, totalDefense: 3,
+    conditions: [{ effect: { kind: 'Stun', duration: { rounds: 1 } }, remainingRounds: 1, isFresh: true }], knownSpells: ['one'] };
+  p.view.roundEvents = entries; p.view.board.roundNumber = 2; p.draw();
+  p.context.movePlayback(p.state, 1);
+  assert.match(p.nodes.allies.textContent, /stunned/);
+  assert.match(p.nodes.allies.textContent, /Defense 1 → 3/);
+  assert.doesNotMatch(p.nodes['own-hand'].textContent, /Second card/);
+  p.context.keyboardDecision(p.state, keyEvent('ArrowLeft'));
+  assert.doesNotMatch(p.nodes.allies.textContent, /stunned/);
+  p.context.keyboardDecision(p.state, keyEvent('Escape'));
+  assert.equal(p.state.playback, null);
+  assert.match(p.nodes['own-hand'].textContent, /Second card/);
 });
 
 test('end-of-match replay uses results controls and hotseat fences keep the review hidden', () => {

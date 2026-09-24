@@ -310,10 +310,12 @@ public sealed class Match : AggregateRoot<MatchId>
         // only ever resolved for a slot the timeline holds, and a slot is only built from a speed choice.
         var speed = round.SpeedChoiceOf(action.Actor)?.Speed
             ?? throw new InvalidOperationException($"Actor {action.Actor} is resolving an action without a speed choice.");
-        var resolution = ResolutionRules.Resolve(action, Snapshots(), _resources, RuleSet, _random, speed);
+        var before = Snapshots();
+        var resolution = ResolutionRules.Resolve(action, before, _resources, RuleSet, _random, speed);
         var applied = CombatExecution.Apply(resolution, Creatures);
+        var frame = new CombatActionFrame(before, Snapshots(), [.. round.Timeline.Slots], [.. round.Timeline.RollOffs]);
         round.MarkActionResolved();
-        RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied));
+        RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied, frame));
         Drive();
 
         return Result.Success(new CombatStep(round.Id, resolution, applied, round.IsFinalized, State == MatchState.Ended));

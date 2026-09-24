@@ -26,8 +26,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   It remains available throughout the next round and after the match ends. Escape closes it.
 - Newly completed rounds open an action-by-action resolution review in the decision column. Previous and
   Next traverse actual public results (including criticals, fizzles and dropped targets); Skip returns to the
-  latest round or match results. The actor and targets are highlighted on the battlefield. This is recorded
-  playback, not a second combat simulation: the board is explicitly labelled as showing current totals.
+  latest round or match results. The actor and targets are highlighted on the battlefield. Each action starts
+  with the recorded Before state; Next applies its After state and shows actual outcomes and stat changes.
+  Previous reverses either step. HP, energy, conditions, spellbooks and the timeline come from engine
+  snapshots captured before cleanup and upkeep (ADR 0075). Skip restores the latest state including upkeep.
+  Older recordings without snapshots explicitly label their battlefield as current totals.
   New-round controls and their asking acknowledgement wait until the review closes; replay controls send
   no decisions. Arrow keys step backward/forward and Escape skips. Reloading does not auto-play old history;
   the recap's Replay action by action button makes it available on demand.

@@ -1,7 +1,7 @@
 {
   "stamp": {
     "engineVersion": "abc123def456",
-    "contentHash": "31cb1748b95840e1fc11d49ff25c6f11dbbb9ee75d4435ddbe57618bb7ac07d5",
+    "contentHash": "f1ef168467e7718dd5b183e7ab80f886f2b56faa88b740dbf4725a0cf61e8374",
     "ruleSet": {
       "teamSize": 2,
       "energyPerRound": 2,
@@ -11,14 +11,14 @@
       "firstEvolutionRound": 1,
       "evolutionInterval": 2
     },
-    "featureSchema": "features:v6\u002Bc741bdb3a97e",
+    "featureSchema": "features:v7\u002Bf8655f8428df",
     "player1Agent": "Random",
     "player2Agent": "Random",
     "baseSeed": 1
   },
-  "createdAt": "2026-09-22T03:28:22.1589772+00:00",
-  "schemaId": "features:v6\u002Bc741bdb3a97e",
-  "schemaVersion": "features:v6",
+  "createdAt": "2026-09-24T01:26:55.0940865+00:00",
+  "schemaId": "features:v7\u002Bf8655f8428df",
+  "schemaVersion": "features:v7",
   "featureNames": [
     "round_fraction",
     "phase",
@@ -31,6 +31,7 @@
     "own0_stunned",
     "own0_defense",
     "own0_initiative",
+    "own0_stun_immune",
     "own0_Bleed_amount",
     "own0_Bleed_remaining",
     "own0_Regeneration_amount",
@@ -56,6 +57,7 @@
     "own1_stunned",
     "own1_defense",
     "own1_initiative",
+    "own1_stun_immune",
     "own1_Bleed_amount",
     "own1_Bleed_remaining",
     "own1_Regeneration_amount",
@@ -81,6 +83,7 @@
     "enemy0_stunned",
     "enemy0_defense",
     "enemy0_initiative",
+    "enemy0_stun_immune",
     "enemy0_Bleed_amount",
     "enemy0_Bleed_remaining",
     "enemy0_Regeneration_amount",
@@ -106,6 +109,7 @@
     "enemy1_stunned",
     "enemy1_defense",
     "enemy1_initiative",
+    "enemy1_stun_immune",
     "enemy1_Bleed_amount",
     "enemy1_Bleed_remaining",
     "enemy1_Regeneration_amount",

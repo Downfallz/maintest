@@ -39,6 +39,7 @@ internal sealed class TableFiles
             ["/mat.js"] = (Path.Combine(tableDirectory, "mat.js"), JavaScript),
             ["/hand.js"] = (Path.Combine(tableDirectory, "hand.js"), JavaScript),
             ["/feed.js"] = (Path.Combine(tableDirectory, "feed.js"), JavaScript),
+            ["/replay.js"] = (Path.Combine(tableDirectory, "replay.js"), JavaScript),
             ["/notes.js"] = (Path.Combine(tableDirectory, "notes.js"), JavaScript),
 
             // The pilot's own page. It is a route of this host rather than a second one, because it reads the
