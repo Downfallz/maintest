@@ -3,6 +3,8 @@
   "about": "What a balance pass is allowed to change about each spell, and what each spell is for. Read data/balance/README.md before editing. This file is authoring metadata: the data builder never reads it, so it does not touch the content hash.",
   "objective": {
     "seeds": "benchmarks/benchmark-seeds.json",
+    "confirmSeeds": "benchmarks/confirmation-seeds.json",
+    "confirm": "The seeds a tuning pass confirms a new leader on (ADR 0074): 400 seeds from 2000000, clear of the benchmark seeds and of the 200 above them the hold-out replays on. A round's best candidate is chosen on the benchmark seeds out of every candidate of the round, so its score there is the best of several noisy readings and flatters it; it takes the lead only if it also beats the leader here, where it was not chosen. The objective at 200 seeds moves 2.6 from one seed block to the next on the same content, and a single move measured neutral at 200 seeds read 2.4 worse at 800. This changes which candidate a pass keeps, never the score a candidate gets.",
     "evaluations": {
       "mirror": {
         "p1": "greedy",

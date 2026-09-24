@@ -69,10 +69,12 @@ jobs:
     # before a single round of the climb. So the budget is what changed, not the ceiling:
     #
     #   sweep 243 + the catalogue itself + 6 rounds of 6 = 280 candidates = about 4h48
+    #   plus the confirmations of ADR 0074 (the catalogue and at most one challenger a batch, each on 400
+    #   seeds, so about two candidates each) = about 16 candidates more = about 5h05
     #
-    # which leaves an hour for the setup, the hold-out and the gate. Tune 10 ran 24 rounds with the paired
-    # opening on, reached 349 candidates without finishing, and was killed at the ceiling **with nothing to
-    # show**, because the proposal is only written when the search ends.
+    # which leaves just under an hour for the setup, the hold-out and the gate. Tune 10 ran 24 rounds with
+    # the paired opening on, reached 349 candidates without finishing, and was killed at the ceiling **with
+    # nothing to show**, because the proposal is only written when the search ends.
     #
     # The paired opening is off by default for the same reason (Codex's review of #138). It builds every legal
     # pair of one spell's knobs for every spell the sweep did not improve, in both directions, which is not
