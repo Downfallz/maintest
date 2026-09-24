@@ -250,7 +250,12 @@ rather than for the one-step reading: searched as `lookahead:<weights>` from the
 Greedy, `stun-first` and `pressure-floor` (journal, 2026-09-24), and replayed on 200 seeds nothing had played
 with the stun immunity and the bleed price in, it beats the built-in lookahead against Greedy (0.98 to 0.54),
 `stun-first` (0.70 to 0.56), `pressure-floor` (1.00 to 0.46) and `search-4`, and cannot be told from it against
-`search-19` (0.37 to 0.34). Changing `greedy.json` itself changes nothing for `greedy`, which reads
+`search-19` (0.37 to 0.34). `search-21.json` is the heuristic's rung under both rules, searched from
+`search-19` with it in the panel beside Greedy and `stun-first` (journal, 2026-09-24): on 200 seeds nothing
+had played it takes every match from Greedy, `stun-first` and `search-19`, and 0.995 from the built-in
+lookahead, and is even with `lookahead-20` (0.495). It is the first set with a negative `stun` weight: it does
+not stun. Its own mirror reaches the round cap in 0.67 of its matches, where `search-19`'s reached it in all
+but a few. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
