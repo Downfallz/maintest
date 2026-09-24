@@ -234,6 +234,14 @@ one step, leaning four to one on the knobs the sweep showed can move a metric. A
 constraint or moves more than `--max-changes` knobs is redrawn before the engine ever sees it, so the budget
 goes on content worth playing.
 
+**A new leader has to win twice** ([ADR 0074](../../docs/adr/0074-a-tuning-pass-confirms-a-new-leader-on-seeds-it-was-not-chosen-on.md)).
+After the sweep and after every round, the best candidate of the batch is compared with the leader on the
+benchmark seeds, as before. If it wins there, it is played again on the objective's `confirmSeeds`
+(`benchmarks/confirmation-seeds.json`, 400 seeds no candidate is chosen on), and it takes the lead only if it
+beats the leader there too. The reason is the noise: the objective moves 2.6 from one block of 200 seeds to the
+next on the same content, so the best of a round is mostly the luckiest. The report lists every challenger
+with both readings. `--no-confirm` runs the pass without it, and `--confirm-seeds` names another file.
+
 The sweep is there because of a real miss. A uniform draw over 29 knobs with a budget of 40 candidates
 leaves a one-in-four chance that any given knob is never tried, and the first full run lost that coin flip
 on `lightning_bolt`'s energy cost — one move worth more than everything the search did find. `--no-sweep`
@@ -261,6 +269,7 @@ So the workflow's defaults are what fits rather than what used to:
 | --- | --- | --- |
 | the opening sweep | 243 | 4h10 |
 | plus the catalogue itself and 6 rounds of 6 | 280 | **4h48** |
+| plus the confirmations of ADR 0074, 400 seeds each: the catalogue and at most one a batch | about 16 | about 16 min |
 | 24 rounds, as tune 10 ran it, paired opening on | killed at 349 | **> 6h, nothing kept** |
 
 Tune 10 was killed at the ceiling with nothing to show, since the proposal is only written when the search

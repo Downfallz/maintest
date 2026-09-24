@@ -55,6 +55,7 @@ from downfall_learning.train_value import SHARES, ValueOptions, train_value
 from downfall_learning.tune_content import (
     DATA_BUILDER_COMMAND,
     PAIR_DEPTH,
+    ConfirmationSeeds,
     ContentEngine,
     EngineContentEvaluator,
     TuneOptions,
@@ -160,6 +161,19 @@ def _add_tune_content(commands: argparse._SubParsersAction) -> None:
         default=PAIR_DEPTH,
         help="how many steps one knob of a paired move may take once its first step moved a measurement "
         "without improving the score; 1 is the opening move alone",
+    )
+    tune.add_argument(
+        "--confirm-seeds",
+        type=Path,
+        default=None,
+        help="the seed file a round's best has to beat the leader on too before it takes the lead "
+        "(default: the objective's confirmSeeds, ADR 0074)",
+    )
+    tune.add_argument(
+        "--no-confirm",
+        dest="confirm",
+        action="store_false",
+        help="keep every round's best that beats the leader on the search seeds alone, as before ADR 0074",
     )
     tune.add_argument("--repo", type=Path, default=Path.cwd(), help=REPO_HELP)
     tune.add_argument(
@@ -568,16 +582,8 @@ def _content_evaluator(
     objective = knobs.objective
     if seeds is not None:
         objective = Objective(seeds=seeds, evaluations=objective.evaluations, targets=objective.targets)
-    engine = EngineCommand(root=arguments.repo, seeds=objective.seeds or EngineCommand().seeds)
-    if arguments.engine:
-        engine = replace(engine, command=tuple(arguments.engine))
-    builder = getattr(arguments, "builder", None)
-    host = ContentEngine(
-        engine=engine,
-        data=arguments.data,
-        workdir=arguments.output / "work",
-        builder=tuple(builder) if builder else DATA_BUILDER_COMMAND,
-    )
+    host = _content_engine(arguments, objective, arguments.output / "work")
+    engine = host.engine
     # Both, each against the trees it is built from. The comment here used to say the evaluator checked the
     # engine, which was true of `CliEvaluator` and never of `EngineContentEvaluator` -- so a run whose
     # builder happened to be fresh played every candidate on a stale CLI and said nothing.
@@ -589,11 +595,46 @@ def _content_evaluator(
     return knobs, content, objective, EngineContentEvaluator(host, objective, content)
 
 
+def _content_engine(arguments: argparse.Namespace, objective: Objective, workdir: Path) -> ContentEngine:
+    engine = EngineCommand(root=arguments.repo, seeds=objective.seeds or EngineCommand().seeds)
+    if arguments.engine:
+        engine = replace(engine, command=tuple(arguments.engine))
+    builder = getattr(arguments, "builder", None)
+    return ContentEngine(
+        engine=engine,
+        data=arguments.data,
+        workdir=workdir,
+        builder=tuple(builder) if builder else DATA_BUILDER_COMMAND,
+    )
+
+
+def _confirmation_seeds(
+    arguments: argparse.Namespace, objective: Objective, content: Content
+) -> ConfirmationSeeds | None:
+    """The second seed block of ADR 0074, played by an evaluator of its own, or ``None`` when there is none.
+
+    The file on the command line wins over the objective's; either is read from the repository the knobs file
+    belongs to and handed to the engine absolute, the way ``score-content`` hands it its seeds.
+    """
+    if not arguments.confirm:
+        return None
+    if arguments.confirm_seeds is not None:
+        path = Path(arguments.confirm_seeds).resolve()
+    elif objective.confirm_seeds:
+        path = (_repository_of(arguments.knobs) / objective.confirm_seeds).resolve()
+    else:
+        return None
+    confirming = Objective(seeds=str(path), evaluations=objective.evaluations, targets=objective.targets)
+    host = _content_engine(arguments, confirming, arguments.output / "confirm")
+    return ConfirmationSeeds(EngineContentEvaluator(host, confirming, content), str(path))
+
+
 def _tune_content(arguments: argparse.Namespace) -> int:
     prepared = _content_evaluator(arguments)
     if prepared is None:
         return 1
     knobs, content, _, evaluator = prepared
+    confirm = _confirmation_seeds(arguments, knobs.objective, content)
     options = TuneOptions(
         iterations=arguments.iterations,
         neighbours=arguments.neighbours,
@@ -605,6 +646,7 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         # The proposal is on disk from the opening pass on, because a pass that runs for hours is killed by a
         # job timeout rather than ended by one, and the artifact is uploaded either way.
         checkpoint=lambda reached: reached.write(arguments.output, arguments.data, complete=False),
+        confirm=confirm,
     )
     result = tune_content(evaluator, knobs, content, options, _progress(arguments, "tune-content"))
     result.write(arguments.output, arguments.data)
@@ -617,7 +659,8 @@ def _tune_content(arguments: argparse.Namespace) -> int:
         print(f"Applied to {len(written)} spell file(s). Rebuild the content and regenerate the digest.")
     elif arguments.apply:
         print("Nothing improved, so nothing was applied.")
-    print(f"{evaluator.calls} evaluation(s) played; the proposal is in '{arguments.output}'.")
+    confirmations = f" and {confirm.evaluator.calls} on the confirmation seeds" if confirm else ""
+    print(f"{evaluator.calls} evaluation(s) played{confirmations}; the proposal is in '{arguments.output}'.")
     return 0
 
 

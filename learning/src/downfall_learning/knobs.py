@@ -185,6 +185,10 @@ class Objective:
     seeds: str
     evaluations: Mapping[str, Mapping[str, Any]]
     targets: tuple[Target, ...]
+    #: A second seed file, disjoint from ``seeds``, that a candidate chosen on ``seeds`` has to win on as well
+    #: before a search keeps it (ADR 0074). Not part of the fingerprint: it changes which candidate a search
+    #: keeps, never the score a candidate gets, so scores read with and without it stay comparable.
+    confirm_seeds: str = ""
 
     def breakdown(self, metrics: Mapping[str, Mapping[str, float]]) -> dict[str, float]:
         """The penalty of every target whose metric the measurements carry, by ``evaluation.metric``.
@@ -676,7 +680,38 @@ def _objective_problems(knobs: Knobs, root: Path | None) -> list[str]:
     ]
     if root is not None:
         problems.extend(_agent_problems(knobs, root))
+        problems.extend(_confirmation_problems(knobs.objective, root))
     return problems
+
+
+def _confirmation_problems(objective: Objective, root: Path) -> list[str]:
+    """The confirmation seeds have to exist and share no seed with the search seeds (ADR 0074).
+
+    A seed on both lists is a match the challenger was chosen on and then confirmed on, which is the bias the
+    confirmation is there to remove.
+    """
+    if not objective.confirm_seeds:
+        return []
+    confirm = root / objective.confirm_seeds
+    if not confirm.is_file():
+        return [f"objective: confirmSeeds reads '{objective.confirm_seeds}', which is not a file."]
+    search = root / objective.seeds
+    if not objective.seeds or not search.is_file():
+        return []
+    shared = set(_seed_list(search)) & set(_seed_list(confirm))
+    if shared:
+        return [
+            f"objective: confirmSeeds shares {len(shared)} seed(s) with the search seeds, "
+            f"{', '.join(str(seed) for seed in sorted(shared)[:5])}; a confirmation has to be played on "
+            "matches the search never saw."
+        ]
+    return []
+
+
+def _seed_list(path: Path) -> list[int]:
+    document = json.loads(path.read_text(encoding="utf-8"))
+    seeds = document.get("seeds", []) if isinstance(document, dict) else document
+    return [int(seed) for seed in seeds]
 
 
 def panel(evaluation: Mapping[str, Any], side: str) -> tuple[str, ...]:
@@ -1336,6 +1371,7 @@ def _objective(body: Mapping[str, object]) -> Objective:
     targets = body.get("targets", [])
     return Objective(
         seeds=str(body.get("seeds", "")),
+        confirm_seeds=str(body.get("confirmSeeds", "")),
         evaluations=body.get("evaluations", {}),
         targets=tuple(
             Target(

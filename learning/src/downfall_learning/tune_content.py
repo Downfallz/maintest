@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from itertools import combinations
 from pathlib import Path
 from typing import Any, Protocol
@@ -111,14 +111,44 @@ class Candidate:
     score: float
     breakdown: Mapping[str, float]
     metrics: Mapping[str, Mapping[str, float]]
+    #: The same objective read on the confirmation seeds, for a candidate that was put up for the lead
+    #: (ADR 0074); ``None`` for one that never was, which is most of them.
+    confirmed: float | None = None
 
     def to_json(self) -> dict[str, object]:
-        return {
+        body: dict[str, object] = {
             "iteration": self.iteration,
             "score": round(self.score, 6),
             "moves": [move.to_json() for move in self.moves],
             "penalties": {name: round(value, 6) for name, value in self.breakdown.items()},
             "metrics": {evaluation: dict(measured) for evaluation, measured in self.metrics.items()},
+        }
+        if self.confirmed is not None:
+            body["confirmed"] = round(self.confirmed, 6)
+        return body
+
+
+@dataclass(frozen=True)
+class Confirmation:
+    """A candidate that beat the leader on the search seeds, and what the confirmation seeds said of it.
+
+    The search seeds pick the challenger out of every candidate of a round, so its score there is the best
+    of several noisy readings and reads better than the catalogue is. The confirmation seeds never took part
+    in that choice, so the two confirmed scores are a fair comparison (ADR 0074).
+    """
+
+    iteration: int
+    challenger: Candidate
+    leader: Candidate
+    accepted: bool
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "iteration": self.iteration,
+            "accepted": self.accepted,
+            "challenger": _readings(self.challenger),
+            "leader": _readings(self.leader),
+            "moves": [move.to_json() for move in self.challenger.moves],
         }
 
 
@@ -193,6 +223,19 @@ class Pairing:
     played: set[tuple[tuple[str, float], ...]] = field(default_factory=set)
 
 
+def _readings(candidate: Candidate) -> dict[str, float | None]:
+    confirmed = None if candidate.confirmed is None else round(candidate.confirmed, 6)
+    return {"score": round(candidate.score, 6), "confirmed": confirmed}
+
+
+@dataclass(frozen=True)
+class ConfirmationSeeds:
+    """The second seed block a challenger has to win on before it takes the lead (ADR 0074)."""
+
+    evaluator: ContentEvaluator
+    seeds: str
+
+
 @dataclass(frozen=True)
 class TuneOptions:
     iterations: int = 8
@@ -207,6 +250,9 @@ class TuneOptions:
     #: to catch, so what it has found is put somewhere durable as it goes: tune 10 played 349 candidates
     #: over six hours and reported none of them.
     checkpoint: Callable[[TuneResult], None] | None = None
+    #: The second seed block a round's best has to beat the leader on as well (ADR 0074); ``None`` keeps
+    #: every round's best that beats it on the search seeds alone, as the search did before.
+    confirm: ConfirmationSeeds | None = None
 
 
 @dataclass(frozen=True)
@@ -224,6 +270,11 @@ class TuneResult:
     played: int = 0
     #: Which objective scored every candidate (`objective_version`).
     objective: Mapping[str, str] = field(default_factory=dict)
+    #: Every challenger put to the confirmation seeds, accepted or not, in the order it was (ADR 0074).
+    #: Empty when the search ran without them.
+    confirmations: tuple[Confirmation, ...] = ()
+    #: The seed file the confirmations were played on, or empty when there were none.
+    confirm_seeds: str = ""
 
     @property
     def improved(self) -> bool:
@@ -264,6 +315,8 @@ class TuneResult:
             # What the report's first line says, so the artifact and the report cannot disagree about how
             # much of the search the engine actually played.
             "played": self.played,
+            "confirmSeeds": self.confirm_seeds,
+            "confirmations": [confirmation.to_json() for confirmation in self.confirmations],
             "candidates": [candidate.to_json() for candidate in self.candidates],
         }
         (directory / "tune.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -799,6 +852,50 @@ class MemoizingEvaluator:
         return measured
 
 
+class _Confirmer:
+    """Puts a challenger to the confirmation seeds, and keeps the leader unless it wins there too.
+
+    Without confirmation seeds every challenger that beats the leader on the search seeds takes the lead,
+    which is what the search did before ADR 0074.
+    """
+
+    def __init__(self, confirm: ConfirmationSeeds | None, objective: Objective, content: Content) -> None:
+        # Memoized for the reason the search evaluator is: a rejected challenger can be drawn again.
+        self._evaluator = MemoizingEvaluator(confirm.evaluator) if confirm else None
+        self._objective = objective
+        self._content = content
+        self.seeds = confirm.seeds if confirm else ""
+        self.confirmations: list[Confirmation] = []
+
+    def confirmed(self, candidate: Candidate) -> Candidate:
+        if self._evaluator is None or candidate.confirmed is not None:
+            return candidate
+        metrics = self._evaluator.evaluate(apply_moves(self._content.documents, candidate.moves))
+        return replace(candidate, confirmed=self._objective.score(metrics))
+
+    def leader(self, leader: Candidate, played: Sequence[Candidate], iteration: int) -> Candidate:
+        """The leader after a round: the best of ``played`` if it beats ``leader`` on both seed blocks.
+
+        Only the round's best is confirmed, so a round costs one confirmation play at most, and a rejected
+        challenger does not hand its place to the runner-up: the runner-up was not put to the test either.
+        """
+        if not played:
+            return leader
+        challenger = min(played, key=lambda candidate: candidate.score)
+        if challenger.score >= leader.score:
+            return leader
+        if self._evaluator is None:
+            return challenger
+        challenger = self.confirmed(challenger)
+        accepted = _below(challenger.confirmed, leader.confirmed)
+        self.confirmations.append(Confirmation(iteration, challenger, leader, accepted))
+        return challenger if accepted else leader
+
+
+def _below(challenger: float | None, leader: float | None) -> bool:
+    return challenger is not None and leader is not None and challenger < leader
+
+
 def tune_content(
     evaluator: ContentEvaluator,
     knobs: Knobs,
@@ -810,6 +907,10 @@ def tune_content(
 
     Every candidate is legal by construction — a proposal that breaks a constraint is redrawn before the
     engine ever sees it — so the budget is spent on content worth playing.
+
+    ``options.confirm``, when there is one, is the second seed block a round's best candidate has to beat
+    the leader on as well before it takes the lead (ADR 0074). The content as it stands is played on it once,
+    and each round plays at most one challenger there.
 
     ``options.checkpoint``, when there is one, is handed the search so far after the opening pass and after
     every round.
@@ -823,8 +924,9 @@ def tune_content(
     objective = knobs.objective
     search = Search(knobs=knobs, content=content, options=options)
     climb = Climb(evaluator, objective, search, np.random.default_rng(options.seed))
+    confirmer = _Confirmer(options.confirm, objective, content)
 
-    first = _candidate(evaluator, objective, content.documents, moves=(), iteration=0)
+    first = confirmer.confirmed(_candidate(evaluator, objective, content.documents, moves=(), iteration=0))
     best = first
     history: list[Candidate] = []
     favour: set[str] = set()
@@ -838,6 +940,8 @@ def tune_content(
             files={**content.files, **content.package_files},
             played=evaluator.plays,
             objective=objective_version(objective),
+            confirmations=tuple(confirmer.confirmations),
+            confirm_seeds=confirmer.seeds,
         )
 
     def record() -> None:
@@ -853,7 +957,7 @@ def tune_content(
             if not _same(candidate.metrics, first.metrics)
             for move in candidate.moves
         }
-        best = min([first, *swept], key=lambda candidate: candidate.score)
+        best = confirmer.leader(first, swept, iteration=0)
         progress.write(f"opening pass done · best {best.score:.2f} from {first.score:.2f}")
         record()
     # Only now: the opening's size is not knowable before it runs, and the climb's is exact.
@@ -861,7 +965,7 @@ def tune_content(
     for iteration in range(1, options.iterations + 1):
         neighbours = _neighbours(climb, best, favour, iteration)
         history.extend(neighbours)
-        best = min([best, *neighbours], key=lambda candidate: candidate.score)
+        best = confirmer.leader(best, neighbours, iteration)
         progress.write(f"round {iteration}/{options.iterations} · best {best.score:.2f}")
         record()
     progress.finish(f"best {best.score:.2f} from {first.score:.2f}")
@@ -1225,6 +1329,7 @@ def format_result(result: TuneResult, objective: Objective) -> str:
             "  by this same objective.",
         ]
     )
+    lines.extend(_confirmation_lines(result))
 
     changes = _changes(result, objective)
     better = [row for row in changes if row[1] < -0.005]
@@ -1272,6 +1377,34 @@ def format_result(result: TuneResult, objective: Objective) -> str:
             f"| {low}..{high} | {penalty} |"
         )
     return "\n".join(lines)
+
+
+def _confirmation_lines(result: TuneResult) -> list[str]:
+    """What the confirmation seeds said, so a reader sees how many gains were noise (ADR 0074).
+
+    The search seeds' score of a proposal is the best of every candidate it was chosen from, and reads better
+    than the catalogue is; the confirmed scores never took part in a choice, so they are the pair to believe.
+    """
+    if not result.confirm_seeds:
+        return []
+    initial, best = result.initial.confirmed, result.best.confirmed
+    lines = ["", f"On the confirmation seeds, '{result.confirm_seeds}'"]
+    if initial is not None and best is not None:
+        lines.append(f"  {initial:.3f} -> {best:.3f}, on seeds no candidate was chosen on.")
+    taken = sum(1 for confirmation in result.confirmations if confirmation.accepted)
+    lines.append(
+        f"  {len(result.confirmations)} candidate(s) beat the leader on the search seeds; {taken} beat it on "
+        f"these too and took the lead, and {len(result.confirmations) - taken} did not and were set aside."
+    )
+    for confirmation in result.confirmations:
+        verdict = "took the lead" if confirmation.accepted else "set aside"
+        lines.append(
+            f"  round {confirmation.iteration}: {confirmation.challenger.score:.2f} against "
+            f"{confirmation.leader.score:.2f} on the search seeds, "
+            f"{_number(confirmation.challenger.confirmed)} against {_number(confirmation.leader.confirmed)} "
+            f"here, {verdict}"
+        )
+    return lines
 
 
 def _changes(result: TuneResult, objective: Objective) -> list[tuple[str, float]]:
