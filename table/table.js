@@ -1037,6 +1037,8 @@ function renderPlayback(state, current) {
   const replay = state.playback;
   const action = replay.actions[replay.index];
   const before = action.frame && replay.stage === 'before';
+  const stage = before ? 'Before' : 'After';
+  const position = `Action ${replay.index + 1} of ${replay.actions.length}`;
   element('phase-round').textContent = `Round ${replay.round}`;
   element('upkeep').hidden = true;
   element('phase-current').textContent = 'Resolution replay';
@@ -1044,26 +1046,33 @@ function renderPlayback(state, current) {
   element('phase-reminder').textContent = 'Next: apply / advance · Previous: review again · Skip: return to the match';
   element('phase').textContent = `Round ${replay.round} · Resolution replay`;
   element('playback-title').textContent = `${action.actor.label} ${before ? 'is about to act' : 'acted'}`;
-  element('playback-count').textContent = `Action ${replay.index + 1} of ${replay.actions.length}${action.frame ? ` · ${before ? 'Before' : 'After'}` : ''}`;
+  element('playback-count').textContent = action.frame ? `${position} · ${stage}` : position;
   element('playback-board-note').textContent = action.frame
-    ? `${before ? 'Before' : 'After'} action ${replay.index + 1} · recorded battlefield · cleanup and upkeep appear when you return to the match.`
+    ? `${stage} action ${replay.index + 1} · recorded battlefield · cleanup and upkeep appear when you return to the match.`
     : 'This recording has no action snapshots · battlefield totals show the current state.';
   const held = element('playback-action');
   held.replaceChildren(recapRow(before ? { ...action, status: 'Ready', effects: [], reason: 'Press Next to apply this recorded action.', dropped: [] } : action));
-  if (state.playbackFrame !== `${replay.seat}/${replay.round}/${replay.index}/${replay.stage}`) {
-    state.playbackFrame = `${replay.seat}/${replay.round}/${replay.index}/${replay.stage}`;
-    if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) held.animate?.([{ opacity: .25 }, { opacity: 1 }], { duration: 240 });
-  }
+  animatePlayback(state, held);
   const previous = button('← Previous', () => movePlayback(state, -1));
   previous.dataset.focus = 'playback-previous';
   previous.disabled = replay.index === 0 && (before || !action.frame);
   const last = replay.index === replay.actions.length - 1;
   const onward = current.view.over ? 'Match results' : `Continue to round ${current.view.board.roundNumber}`;
-  const next = button(before ? 'Next: apply action →' : last ? onward : 'Next action →', () => movePlayback(state, 1));
+  let nextLabel = last ? onward : 'Next action →';
+  if (before) nextLabel = 'Next: apply action →';
+  const next = button(nextLabel, () => movePlayback(state, 1));
   next.dataset.focus = 'playback-next';
   const skip = button(current.view.over ? 'Skip to results' : `Skip to round ${current.view.board.roundNumber}`, () => finishPlayback(state));
   skip.dataset.focus = 'playback-skip';
   element('playback-controls').replaceChildren(previous, next, skip);
+}
+
+function animatePlayback(state, held) {
+  const replay = state.playback;
+  const key = `${replay.seat}/${replay.round}/${replay.index}/${replay.stage}`;
+  if (state.playbackFrame === key) return;
+  state.playbackFrame = key;
+  if (!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) held.animate?.([{ opacity: .25 }, { opacity: 1 }], { duration: 240 });
 }
 
 function recapPerson(person) {
