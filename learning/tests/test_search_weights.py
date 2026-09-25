@@ -22,6 +22,7 @@ from downfall_learning.search_weights import (
     missing_engine,
     reads_as_a_tie,
     search_weights,
+    split_opponent,
     win_rate_lines,
 )
 
@@ -210,6 +211,57 @@ def test_the_search_anchors_its_floor_on_what_it_started_from(tmp_path: Path, fa
 
 def _even(score: float) -> Score:
     return Score.of(Evaluation.from_json(evaluation_json(score, score)))
+
+
+def test_an_opponent_with_a_count_plays_only_the_first_seeds_of_the_file(
+    tmp_path: Path, fake_engine: list[str]
+) -> None:
+    (tmp_path / "seeds.json").write_text(json.dumps({"seeds": list(range(100, 110))}), encoding="utf-8")
+    engine = EngineCommand(
+        root=tmp_path, command=tuple(fake_engine), opponent="greedy,lookahead@4", seeds="seeds.json"
+    )
+    evaluator = CliEvaluator(engine, tmp_path / "work")
+
+    score = evaluator.evaluate(TARGET)
+
+    against = dict(score.parts)
+    assert against["greedy"].matches == 20
+    assert against["lookahead@4"].matches == 8
+    asked = json.loads((tmp_path / "work" / "candidate-evaluation-vs-lookahead-4.args.json").read_text())
+    assert asked["--p2"] == "lookahead"
+    assert json.loads(Path(asked["--seeds"]).read_text())["seeds"] == [100, 101, 102, 103]
+
+
+def test_a_count_past_the_end_of_the_seed_file_plays_the_whole_file(
+    tmp_path: Path, fake_engine: list[str]
+) -> None:
+    (tmp_path / "seeds.json").write_text(json.dumps({"seeds": [1, 2, 3]}), encoding="utf-8")
+    engine = EngineCommand(
+        root=tmp_path, command=tuple(fake_engine), opponent="random@50", seeds="seeds.json"
+    )
+
+    score = CliEvaluator(engine, tmp_path / "work").evaluate(TARGET)
+
+    assert score.matches == 6
+
+
+@pytest.mark.parametrize(
+    ("entry", "expected"),
+    [
+        ("greedy", ("greedy", None)),
+        ("lookahead:weights/lookahead-20.json@60", ("lookahead:weights/lookahead-20.json", 60)),
+        ("heuristic:weights@home.json", ("heuristic:weights@home.json", None)),
+    ],
+)
+def test_an_opponent_entry_splits_into_its_spec_and_the_seeds_it_plays(
+    entry: str, expected: tuple[str, int | None]
+) -> None:
+    assert split_opponent(entry) == expected
+
+
+def test_an_opponent_that_plays_no_seed_is_refused() -> None:
+    with pytest.raises(ValueError, match="plays no seed"):
+        EngineCommand(opponent="greedy,lookahead@0")
 
 
 def test_an_empty_opponent_list_is_refused() -> None:

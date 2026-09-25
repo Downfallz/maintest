@@ -100,7 +100,8 @@ def _add_search_weights(commands: argparse._SubParsersAction) -> None:
         default="greedy",
         help="agent B of every evaluation (default greedy), or several separated by commas: a candidate then"
         " scores the mean over them, and a candidate that falls below the start against any of them ranks"
-        " below every one that did not, so it cannot win by learning one of them",
+        " below every one that did not, so it cannot win by learning one of them; <spec>@<n> plays that"
+        " opponent on the first n seeds only, a cheaper seat for one as dear as the lookahead",
     )
     search.add_argument(
         "--kind",
