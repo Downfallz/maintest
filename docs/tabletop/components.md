@@ -2,9 +2,9 @@
 
 Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
 question 14, 2026-09-23, to one package a Creature an opportunity the same day, to 30 Health the same
-day again, to a 20-Round cap the same day once more, and to Stun immunity the same day). Phase 3 of
-[plan.md](plan.md). It answers the **needs a component** rows of [translation.md](translation.md) and specifies
-a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
+day again, to a 20-Round cap the same day once more, and to Stun immunity the same day; to the redesigned
+`momentum`, 2026-09-25). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+[translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
 What is current, exactly:
@@ -19,7 +19,8 @@ What is current, exactly:
 - **A timeline tie is rolled off on a d20** between the sides, and each Player orders their own tied Creatures
   ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). The Creature number breaks no tie. It
   names the Creature, and it fixes the order tied Creatures roll in.
-- **Every count is read at content `4ab506fa`** and the schedule in `docs/tabletop/playtest.rules.json`.
+- **Every count is read at content `4ab506fa`**, except the ones `momentum`'s redesign moved (the last point
+  below, read at `813bb91b`), and the schedule in `docs/tabletop/playtest.rules.json`.
   Re-run the commands when the hash moves. `4ab506fa` is `4d7a841c` with a Creature's base Health at 30
   rather than 20 ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)). What that moved is the
   Health rail ([1.3](#13-stat-markers-and-the-rails-they-ride), [3.1](#31-the-creature-board)) and the reach
@@ -34,6 +35,19 @@ What is current, exactly:
   stunned or immune to Stun is ignored, where it used to restart. The box gains **6 Immune tokens**
   ([1.5](#15-the-rest-of-the-pieces)) and the Cleanup one swap ([3.2](#32-the-condition-dock-and-the-countdown)).
   The token pieces go from 260 to 266, which the same 2 token sheets hold; the paper stays 49.
+- **`momentum` is a free strike, and no card places an Energy regeneration**
+  ([ADR 0078](../adr/0078-momentum-is-a-free-strike-that-gathers-energy.md), content `813bb91b`, which is
+  `0f036b75` with that one Spell changed). It costs 0, deals `Damage 2` to one enemy and gives its caster
+  `Energy +2` in the same cast, where it gave itself 2 Energy a Round for 3 Rounds. No Spell authors an
+  `EnergyRegeneration` now; the engine keeps the kind and its place in the Start passes, so the rule and the
+  Round track's strip stay, but the box loses its **6 Energy regeneration tokens**
+  ([1.4](#14-condition-tokens)). The Condition tokens go from 150 to 144 in 7 kinds, the token pieces from
+  266 to 260 on the same 2 sheets, and the paper stays 49. What else moved: the most Energy one Creature can
+  gain in a Round ([1.7](#17-the-energy-track-what-ends-it)), the widest card line
+  ([2.3](#23-the-measurement)), the Spells with a caster line ([2.1](#21-what-is-printed-and-where-it-comes-from),
+  [2.4](#24-the-seven-that-need-a-second-sentence)), and Part 7. Those readings are at `813bb91b`; every other
+  count in this document is still read at `4ab506fa`, and what tune run 11 moved between that and `0f036b75`
+  (two package bonuses) is not re-read here.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -115,7 +129,7 @@ Totals first, then the derivation of each line.
 | Package cards | 126 |
 | Speed cards | 12 |
 | Boards and mats | 6 creature boards, 2 player mats, 1 initiative track, 1 round track |
-| Condition tokens | 150 in 8 kinds |
+| Condition tokens | 144 in 7 kinds |
 | Markers and chits | 36 stat markers, 6 initiative markers, 6 tie order chits, 4 pick tokens, 2 round markers, 18 target markers, 18 overflow chits, 6 Immune tokens, 20 blanks |
 | Player aids | 2 |
 | Dice | 2 d20 |
@@ -123,7 +137,7 @@ Totals first, then the derivation of each line.
 
 The paper: 24 sheets of Spell cards, 14 of package cards and 2 of Speed cards (9 a sheet; the second Speed
 sheet holds 3), 3 of creature boards (2 a sheet), 2 player mats, 1 for the initiative and round tracks, 2 of
-tokens (266 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
+tokens (260 pieces, none over 15 mm, and about 185 to a sheet at 15 mm), 1 of player aids. 49. Card backs would
 add 40 more; see Part 6, question 8.
 
 What moved when evolution became packages, and why:
@@ -148,7 +162,9 @@ question 14 moved three lines after it: the 6 two-sided Speed tokens became **12
 paper from 47 to **49** sheets. The 20-Round cap moved two cells of it, the Round track's and the tens rail's,
 and no count: the Round track still shares one sheet with the initiative track ([3.6](#36-the-round-track)).
 ADR 0072 moved one count after that: **6 Immune tokens**, so the token pieces went from 260 to **266**, still
-on 2 sheets, and the paper stays 49 ([1.5](#15-the-rest-of-the-pieces)).
+on 2 sheets, and the paper stays 49 ([1.5](#15-the-rest-of-the-pieces)). ADR 0078 took one count out: no
+Spell places an Energy regeneration, so its **6 tokens** leave the box, the Condition tokens go from 150 to
+**144** and the token pieces from 266 back to **260**, and the paper stays 49 ([1.4](#14-condition-tokens)).
 
 ### 1.1 Spell cards and package cards
 
@@ -247,7 +263,6 @@ for s in S:
 | Bleed | 3 a Round | 6 | `poison_slash`, one target; 6 slots x 1 | **VALUE** |
 | Bleed | 4 a Round | 6 | `mortal_wound` on a target, `crazed_specter` and `revenant_guards` on their own caster; one each; 6 slots x 1 | **VALUE** |
 | Regeneration | 3 a Round | 6 | `healing_screech`, one ally; 6 slots x 1 | **VALUE** |
-| Energy regeneration | 2 a Round | 6 | `momentum`, Self only; 6 slots x 1 | **VALUE** |
 | Stun | - | 12 | A Stun on a Creature already stunned is **ignored** (ADR 0072), so a Creature carries at most one, ever — but one Stun needs **two** tokens at once: one sits in the Speed slot so no Speed card can go there ([3.1](#31-the-creature-board)), and one counts the Duration down in the dock ([3.2](#32-the-condition-dock-and-the-countdown)). A token cannot be in two places. Two per Creature. The Round of Stun immunity after it is not a Condition and has its own token ([1.5](#15-the-rest-of-the-pieces)). | **RULE** (a Stun on a stunned Creature is ignored, and the two places a Stun is shown) x **VALUE** (team size) |
 | Defense buff | +1 | 6 | `guard`'s timed half, one ally; 6 slots x 1 | **VALUE** |
 | Defense buff | +2 | 18 | `revenant_guards`' timed half, up to 3 allies; 6 x 3 | **VALUE** |
@@ -256,13 +271,20 @@ for s in S:
 | Initiative buff | +2 | 18 | `death_squad`, up to 3 allies; 6 x 3 | **VALUE** |
 | Initiative debuff | -1 | 6 | `ice_spear`, one enemy; 6 x 1 | **VALUE** |
 | Initiative debuff | -2 | 6 | `protective_slam`, one enemy; 6 x 1 | **VALUE** |
-| **Total** | | **150** | | |
+| **Total** | | **144** | | |
 
-Every amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 3; Energy
-regeneration is 2; timed Defense is 1, 2 or 3; every Initiative buff is 2; an Initiative debuff is 1 or 2;
-every Defense debuff is 2. That is why a token set this small covers a 36-Spell catalogue. The -1 face is new
-at `4d7a841c` (`ice_spear` was -2 when this table was first read), and it is the whole of the change from
-144 to 150.
+Every amount in the catalogue is on this list and no other: Bleed is 1, 2, 3 or 4; Regeneration is 3; timed
+Defense is 1, 2 or 3; every Initiative buff is 2; an Initiative debuff is 1 or 2; every Defense debuff is 2.
+That is why a token set this small covers a 36-Spell catalogue. The -1 face is new at `4d7a841c`
+(`ice_spear` was -2 when this table was first read), and it is the whole of the change from 144 to 150.
+
+**No Energy regeneration token.** At `813bb91b` no Spell authors an `EnergyRegeneration`, so the command
+above prints none and no cast can place one: `momentum`, the only Spell that did, deals Damage and gives its
+caster Energy on the spot since ADR 0078. The 6 tokens at 2 a Round (`momentum`, Self only, 6 slots x 1) left
+the box with it, and that is the whole of the change from 150 to 144. The engine still has the kind and
+still ticks it first at the Start of a Round, so the rule stays in the rulebook and on the Round track; a
+Spell that authored one again would bring the face back, sized by the same rule, as a reprint of the token
+sheet. **VALUE** (content).
 
 **The supply is one Round at the maximum rate, and Durations run to 3.** A Bleed from `summon_minions` lives 3
 Rounds, so the rule's own ceiling is three times the table above for that face: 54 Bleed-2 tokens. To reach
@@ -288,7 +310,7 @@ is 16 short of that ceiling. Part 6, question 5.
 | Target marker | **18** = 6 sets of 3 | Every Intent on the timeline is revealed and targeted **before any of them resolves** (`ActionRules.cs:16-52`, and `ActionResolution` is a later sub-phase), so all six casts have their targets on the board at once. 3 is the largest `maxTargets` in the catalogue: 25 Spells at 1, two at 2, nine at 3. Each set carries its caster's number. | **VALUE** (team size, `maxTargets`) |
 | Energy overflow chit, +40 | **6** | One per Creature. See [1.7](#17-the-energy-track-what-ends-it). | **RULE** |
 | Defense overflow chit, +20 and -20 | **12** | Six of each. The Defense rails are bounded by what can matter, not by the rule. Buffs read at most 10 (ADR 0076) but the rail keeps the whole sum, and debuffs have no bound. | **RULE** (no bound exists) |
-| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
+| Immune token, printed `Immune to Stun` | **6** | Stun immunity: a living Creature whose Stun ends at Cleanup is immune to Stun until the next Cleanup (`Creature.TickConditions`, `Creature.CanBeStunned`, ADR 0072). The Stun token leaving lane `1` is swapped for an Immune token in the same lane, so the next Cleanup's first move removes it and nobody counts ([3.2](#32-the-condition-dock-and-the-countdown)). A Creature carries at most one: it is immune only in the one Round after a Stun, and a Stun cannot land while it is. So one per Creature, 2 Players x team size 3. **Its own token, not the Stun token's back.** The print-and-play is single-sided (a blank back is the common back, [2.6](#26-the-speed-card) and Part 6, question 8), so an `Immune` back on the Stun token would be the only duplex print on the token sheets, for all 12 Stun tokens since any of them can be the one in the dock. Six more 15 mm pieces fit on the 2 token sheets already counted (266 of about 370), so they cost no paper; since ADR 0078 took out the 6 Energy regeneration tokens it is 260. | **RULE** (one Stun immunity a Creature at a time) x **VALUE** (team size) |
 | Blank token | **20** | The supply escape of [1.4](#14-condition-tokens). | not derived; see Part 6, question 5 |
 | Player aid | **2** | One a Player: the Round sequence, the timeline tiebreaks, the Condition timing, and the two orderings of [3.6](#36-the-round-track). Phase 4 writes what it says (plan.md); this manifest reserves the component and its sheet. | **RULE** |
 
@@ -388,12 +410,17 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
   d=json.load(open(p))
   for e in d['effects']+d.get('casterEffects',[]):
     if 'Energy' in e['kind']: print(d['id'].split(':')[1], e)"
-# wait EnergyGain 2 | restorative_burst EnergyGain 2 | momentum EnergyRegeneration 2 for 3 rounds | soul_devourer EnergyDrain 3
+# wait EnergyGain 2 | restorative_burst EnergyGain 2 | momentum EnergyGain 2 | soul_devourer EnergyDrain 3
 ```
 
-The most one Creature can gain in one Round is **14**: 2 from the Round, 6 from three overlapping `momentum`
-Conditions of its own (Self-targeted, 3 Rounds, and the per-Round family stacks), 4 from its two allies each
-casting `restorative_burst` on it, and 2 from spending its own Activation slot on `wait`.
+`momentum`'s `EnergyGain` is its caster effect: it lands on the Creature that casts it, not on the enemy it
+hits (ADR 0078).
+
+The most one Creature can gain in one Round is **8**: 2 from the Round, 4 from its two allies each casting
+`restorative_burst` on it, and 2 from its own Activation slot, spent on `wait` or on `momentum`, whose caster
+line gives the same 2. A Creature has one slot, so it is one or the other. Nothing reaches it from earlier
+Rounds any more: it was 14 while `momentum` placed an Energy regeneration on its own caster, 2 a Round for 3
+Rounds, and three of those overlapping added 6.
 
 **What a player does at the end of the track.** A Creature whose Energy would pass 40 takes an **Energy
 overflow chit** worth 40 and its marker returns to 0. One chit per Creature is in the box: a second chit means
@@ -418,7 +445,7 @@ Everything needed to resolve a cast without the rulebook. Each line names the fi
 | Head | Every package that teaches it, with its level: `Lich . level 3`, or `Starting spell` | the enabled `tiers[]` whose `spells` name it; `creatures[].startingSpellIds` | Where the card is filed in the library, and which purchases bring it to a hand. It is not a gate: the package's gate is printed once, on its package card. A starting Spell belongs to no package and sits at level 0 (ADR 0058). A Spell two packages teach is still one face: the head lists them all, lowest level first and then by name, joined by ` / ` (`Starting spell` first when it is one too), and the card is filed under the first. At `4ab506fa` every head names one |
 | Body | Targeting, one line | `targeting.origin`, `scope`, `maxTargets` | Origin, scope and count are one sentence: `Self`, `One enemy`, `One ally`, `Up to 2 enemies`, `Up to 3 allies` |
 | Body | One line per effect, with its amount and Duration | `effects[]` | |
-| Body | One line per caster effect, prefixed `Caster:` and set below a rule | `casterEffects[]` | ADR 0031: once per cast, never multiplied, none of them on a Fizzle. Seven Spells carry one, and it must not read as a target effect |
+| Body | One line per caster effect, prefixed `Caster:` and set below a rule | `casterEffects[]` | ADR 0031: once per cast, never multiplied, none of them on a Fizzle. Eight Spells carry one at `813bb91b` (seven until ADR 0078 gave `momentum` its `Caster: Energy +2`), and it must not read as a target effect |
 | Foot | Critical chance, as a percentage, and the d20 threshold when the chance is a whole number of twentieths | `criticalChance` | The printed chance is the chance rolled (ADR 0042). A chance off the twentieths prints no threshold rather than a rounded one ([d20-criticals.md](d20-criticals.md)) |
 | Foot | Content hash, first 6 characters, and the Spell's versioned id | the build | A deck from two content hashes is a broken deck; see [Part 5](#part-5-the-generator-specified) |
 
@@ -455,7 +482,7 @@ which is the Duration entry's own vocabulary.
 | `EnergyGain` / `EnergyDrain` | `Energy +2` / `Energy -2` |
 | `Bleed` | `Bleed 4 a round, 2 rounds` |
 | `Regeneration` | `Regeneration 3 a round, 2 rounds` |
-| `EnergyRegeneration` | `Energy regeneration 2 a round, 3 rounds` |
+| `EnergyRegeneration` | `Energy regeneration 2 a round, 3 rounds` (no card prints it at `813bb91b`; the line stays because the schema still admits the kind, and the generator prints what the build hands it) |
 | `Stun` | `Stun, 2 rounds` |
 | `DefenseBuff` / `DefenseDebuff` | `Defense +3, permanent` / `Defense -2, 1 round` |
 | `InitiativeBuff` / `InitiativeDebuff` | `Initiative +2, 1 round` / `Initiative -2, 2 rounds` |
@@ -507,15 +534,15 @@ for p in glob.glob('data/Spells/**/*.json',recursive=True):
 def r(t,v): print(t,'max',max(v),'median',statistics.median(x[0] for x in v),'min',min(v))
 print('widest line',max(W),' lines per card',sorted(collections.Counter(L).items()))
 r('body    ',B);r('statline',S)"
-# widest line (39, 'momentum')  lines per card [(2, 17), (3, 17), (4, 2)]
+# widest line (32, 'revenant_guards')  lines per card [(2, 16), (3, 18), (4, 2)]
 # body     max (95, 'revenant_guards') median 38.0 min (16, 'wait')
 # statline max (119, 'revenant_guards') median 64.5 min (41, 'rejuvenate')
 ```
 
 | Reading | Value | What it means for the layout |
 | --- | --- | --- |
-| Body lines per card | 2, 3 or 4 | 17 cards at 2, 17 at 3, 2 at 4. The 4-line box is enough for every card in the catalogue. |
-| Widest single line | **39 characters** (`momentum`: `Energy regeneration 2 a round, 3 rounds`) | One character over the 38 a line holds. It wraps to a second line with a 3 mm hanging indent, and `momentum` has only 2 lines, so the card has the room. Nothing else in the catalogue wraps. |
+| Body lines per card | 2, 3 or 4 | 16 cards at 2, 18 at 3, 2 at 4. The 4-line box is enough for every card in the catalogue. `momentum` went from 2 lines to 3 with ADR 0078. |
+| Widest single line | **32 characters** (`revenant_guards` and `crazed_specter`: `Caster: Bleed 4 a round, 1 round`; the command names one) | Six under the 38 a line holds. **Nothing in the catalogue wraps.** The one line that did, `momentum`'s `Energy regeneration 2 a round, 3 rounds` at 39, left with ADR 0078, so the 3 mm hanging indent it wrapped with serves no card today. |
 | Whole body, one string | max **95** characters (`revenant_guards`), median **38**, min **16** (`wait`) | 95 characters is under three full lines. No card is tight on the body alone. |
 | Whole statline (cost, targeting, effects, caster, critical) | max **119** (`revenant_guards`), median **64.5**, min **41** (`rejuvenate`) | The statline is never printed as one string - it is spread across the head, the body and the foot - so this is a total, not a line length: 119 characters over a head, four body lines and a foot. It was 143 while it carried the `Unlock` line. The audit reached the same conclusion on a rendering of its own, and it does not depend on the join: nothing overflows. |
 
@@ -540,9 +567,11 @@ line holds:
 Two of the seven use all four lines, and none of their lines is over 32 characters. **The layout that fits
 them is one effect to a line.** Not prose: a line per effect, each with its own Duration, and a 0.3 pt rule
 above the caster line. That is what makes `revenant_guards`' four separate things - two Defense Conditions on
-up to three allies and a Bleed on itself - four things on the card instead of one sentence to parse. Two more
-Spells carry a Caster effect and are not in the seven because their statline is short
-(`hateful_sacrifice`, `parasite_jab`); they use the same rule and the same prefix.
+up to three allies and a Bleed on itself - four things on the card instead of one sentence to parse. Three
+more Spells carry a Caster effect and are not in the seven because their statline is short
+(`hateful_sacrifice`, `momentum`, `parasite_jab`); they use the same rule and the same prefix. `momentum`, the
+third since ADR 0078, reads `One enemy` (9) / `Damage 2` (8) / `Caster: Energy +2` (17): three lines of 4, and
+the rule is what says the 2 Energy go to the Assassin that struck and not to the enemy it struck.
 
 ### 2.5 Three card faces, written out
 
@@ -728,9 +757,9 @@ Immune token did not slide, so the next Cleanup's move 1 takes it out of lane `1
 immunity is not a Condition, and the dock holds its token only because lane `1` is the lane the next Cleanup
 empties.
 
-Four lanes is derived: the longest Duration in the catalogue is 3 Rounds (`summon_minions`' Bleed,
-`momentum`'s Energy regeneration), plus the `new` lane. **VALUE**: a longer Duration authored in `data/` is a
-fifth lane and a reprint of six boards.
+Four lanes is derived: the longest Duration in the catalogue is 3 Rounds (`summon_minions`' Bleed, the only
+one since ADR 0078 took `momentum`'s Energy regeneration out), plus the `new` lane. **VALUE**: a longer
+Duration authored in `data/` is a fifth lane and a reprint of six boards.
 
 Permanent Conditions never enter the dock. They move a rail and are discarded, because they never count down
 (`Condition.cs:42-44`) and never have to be undone.
@@ -895,6 +924,11 @@ their place. In the engine's order (`RoundSubPhase.cs`, eleven sub-phases since 
 The two orderings that change results and will be got wrong are on it and on the player aid: **healing before
 bleeding** (`UpkeepRules.cs:24-28`, ADR 0019), and **the critical is applied before Defense is subtracted**
 (`ResolutionRules.cs:91`).
+
+The strip keeps `energy regeneration` although no card places one since ADR 0078: it is a pass the engine
+still runs in that place (`UpkeepRules.cs:35-73`), and the ADR keeps it in the rules. At `813bb91b` it has
+nothing to tick, so a table skips it at no cost, and the strip does not need a reprint when content brings
+one back.
 
 ### 3.7 The player area, and where a face-down intent sits
 
@@ -1226,8 +1260,9 @@ the second costs a third row of board height, which question 15 is already short
 
 The track ends at 40 because 2 a Round for 20 Rounds, the table's cap, is the gain no play can refuse. One
 overflow chit a Creature is in the box on the reasoning that a second means banking over 80. Is one chit a
-Creature right, or should the box carry the theoretical rate (14 a Round for 20 Rounds is 280, so 7 chits a
-Creature) and accept the punch-out?
+Creature right, or should the box carry the theoretical rate (8 a Round for 20 Rounds is 160, so 4 chits a
+Creature; it was 14 a Round, 280 and 7 chits, until ADR 0078 took `momentum`'s Energy regeneration out) and
+accept the punch-out?
 
 ### 5. The condition supply, and what a supply that runs out means
 
@@ -1236,7 +1271,8 @@ to three times that for the Durations over one Round - 54 Bleed-2 tokens - which
 unreachable and 30 does not ([1.4](#14-condition-tokens)), though only if both Players play for it. The
 20 blanks cover 20 of the 36 tokens past that supply. Three answers: print one Round's worth and carry the
 blank-token escape (this manifest); print the rule's ceiling - each face's supply times its own longest
-Duration, which is 216 condition tokens - and one more sheet; or bound the rule, which is an engine change and
+Duration, which is 204 condition tokens at `813bb91b`, the Stun's 12 counted once since it cannot stack - and
+one more sheet; or bound the rule, which is an engine change and
 belongs to ADR candidates 2 and 3, not here.
 
 ### 6. Where the rule set comes from
@@ -1386,9 +1422,11 @@ of board height, and nothing else: the counts in Part 1 are unchanged.
 ## Part 7. Coverage: the "needs a component" rows
 
 Every **needs a component** verdict in [translation.md](translation.md), and what answers it. The row names
-are translation.md's as it reads on this branch after its package re-audit and its ADR 0072 re-read: 18 from
-Part 1, 8 from Part 2, 19 from Part 3; 45 of 45. The re-audit was written alongside this document, so if a row name has moved since,
-the component beside it has not.
+are translation.md's as it reads on this branch after its package re-audit, its ADR 0072 re-read and its
+ADR 0078 re-read: 18 from Part 1, 7 from Part 2, 18 from Part 3; 43 of 43. ADR 0078 took two rows out, the
+`EnergyRegeneration` kind and the `momentum` Spell, because no card places an Energy regeneration any more
+and their verdicts are no longer **needs a component** ([1.4](#14-condition-tokens)). The re-audit was
+written alongside this document, so if a row name has moved since, the component beside it has not.
 
 ### The 18 sub-phase rows
 
@@ -1408,32 +1446,31 @@ the component beside it has not.
 | 1.8 Reveal in timeline order, bind targets at reveal | 18 target markers and the `Targeted by` row, [3.7](#37-the-player-area-and-where-a-face-down-intent-sits) |
 | 1.9 One critical roll a cast | The die, [1.6](#16-dice), and the card's printed chance |
 | 1.9 Total Defense is base plus buffs less debuffs, floored at zero | The two Defense rails, [3.3](#33-defense-two-rails-because-the-floor-is-applied-once) |
-| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 150 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
+| 1.9 A lasting Effect attaches as a Condition per its Stacking policy | The 144 Condition tokens and the dock, [1.4](#14-condition-tokens) and [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.9 `Stack` adds another Condition | The same, plus the supply rule and the blank tokens |
 | 1.10 Every Condition counts one Round down and expires at zero | The dock's four lanes and the two-step Cleanup, [3.2](#32-the-condition-dock-and-the-countdown) |
 | 1.10 A Creature whose Stun ends is immune to Stun for the next Round | 6 Immune tokens, [1.5](#15-the-rest-of-the-pieces), swapped for the Stun token in lane `1` and taken off by the next Cleanup's slide, [3.2](#32-the-condition-dock-and-the-countdown) |
 
-### The 8 effect kinds
+### The 7 effect kinds
 
 | Effect kind | Token, and its supply |
 | --- | --- |
 | `Bleed` | 48 tokens: 18 at 1, 18 at 2, 6 at 3, 6 at 4 |
 | `Regeneration` | 6 tokens at 3 |
-| `EnergyRegeneration` | 6 tokens at 2 |
 | `Stun` | 12 tokens, two a Creature: a Stun on a stunned Creature is ignored, so a Creature carries one, and it needs a token in the Speed slot and one in the dock. Plus 6 Immune tokens, one a Creature, for the Round of Stun immunity after it ([1.5](#15-the-rest-of-the-pieces)) |
 | `DefenseBuff` | 30 timed tokens (6 at +1, 18 at +2, 6 at +3); a permanent buff moves the rail and needs none |
 | `DefenseDebuff` | 18 timed tokens at -2; a permanent debuff moves the rail |
 | `InitiativeBuff` | 18 tokens at +2 |
 | `InitiativeDebuff` | 12 tokens: 6 at -1, 6 at -2 |
 
-### The 19 spells
+### The 18 spells
 
-Each of the 19 Spells the audit sent to phase 3, and what one cast of it puts on the table. Permanent halves
-move a rail and place nothing.
+Each of the 18 Spells the audit sent to phase 3, and what one cast of it puts on the table. Permanent halves
+move a rail and place nothing. `momentum` was the 19th until ADR 0078: it places nothing now, and its
+`Damage 2` and `Caster: Energy +2` move two rails that are already on the board.
 
 | Spell | What a cast places |
 | --- | --- |
-| `momentum` | 1 Energy regeneration 2 |
 | `full_plate` | Nothing. +3 on its own Defense buff rail, permanent |
 | `guard` | 1 Defense buff +1 (2 rounds); +1 on the rail, permanent |
 | `thundering_seal` | 1 Defense buff +3 (2 rounds); +3 on the rail, permanent |
