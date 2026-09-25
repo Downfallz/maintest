@@ -256,6 +256,11 @@ def main() -> int:
             score = min(1.0, score + 0.2)
     evaluation = json.loads(Path(__file__).with_name("template.json").read_text())
     evaluation["stamp"]["player1Agent"] = options["--p1"]
+    # What the engine was asked, beside what it wrote, for a test to read back.
+    Path(options["--out"]).with_suffix(".args.json").write_text(json.dumps(options))
+    seeds = Path(options["--seeds"])
+    if seeds.is_file():
+        evaluation["matches"] = 2 * len(json.loads(seeds.read_text())["seeds"])
     for name in ("score", "winRate"):
         low, high = max(0.0, score - 0.05), min(1.0, score + 0.05)
         evaluation["agentA"][name] = {"mean": score, "low": low, "high": high}

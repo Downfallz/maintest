@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       opponent:
-        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores the mean over them, and one that falls below the start against any of them ranks below every one that did not, so it cannot win by learning one of them (journal, 2026-09-16). Empty: what learning/experiments/search.json says, else greedy"
+        description: "Agent B of every evaluation, or several separated by commas, e.g. greedy,heuristic:learning/weights/search-4.json,random: a candidate then scores the mean over them, and one that falls below the start against any of them ranks below every one that did not, so it cannot win by learning one of them (journal, 2026-09-16). <spec>@<n> plays that one on the first n seeds only, a cheaper seat for the lookahead; the hold-out replays it on every seed. Empty: what learning/experiments/search.json says, else greedy"
         default: ""
       check_opponent:
         description: "A second opponent the hold-out also replays both agents against. A set that beats the opponent it was searched against and falls against this one learned that opponent, not the game (journal, 2026-09-16). Empty: what the experiment file says, else random; `none` for no check at all"
@@ -337,7 +337,14 @@ jobs:
           # column where the found set scores below what it started from is named, because a mean can be won
           # by learning one opponent and the search's floor was measured on the seeds it searched. The first
           # opponent keeps the plain file names every run so far wrote.
+          # An opponent the search played on a few seeds only (`<spec>@<n>`) is replayed here on every one:
+          # the hold-out is where a cheap seat gets its full reading, so the count is dropped.
           read -r -a opponents <<< "${OPPONENT//,/ }"
+          for index in "${!opponents[@]}"; do
+            if [[ "${opponents[index]}" =~ ^(.+)@[0-9]+$ ]]; then
+              opponents[index]="${BASH_REMATCH[1]}"
+            fi
+          done
           found_sum=0
           baseline_sum=0
           fell=()

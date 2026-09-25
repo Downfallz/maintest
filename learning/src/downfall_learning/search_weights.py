@@ -226,7 +226,8 @@ class EngineCommand:
     command: Sequence[str] = ENGINE_COMMAND
     #: Agent B of every evaluation, or several separated by commas: the score is then the mean over them
     #: under the floor the search anchors on its start (``Score.mixture``), so a candidate cannot win by
-    #: learning one opponent at the cost of another.
+    #: learning one opponent at the cost of another. ``<spec>@<n>`` plays that opponent on the first ``n``
+    #: seeds of the file only (:func:`split_opponent`).
     opponent: str = "greedy"
     seeds: str = "benchmarks/benchmark-seeds.json"
     kind: str = "heuristic"
@@ -238,11 +239,29 @@ class EngineCommand:
             )
         if not self.opponents:
             raise ValueError("The opponent is empty; name one agent spec, or several separated by commas.")
+        for opponent in self.opponents:
+            if split_opponent(opponent)[1] == 0:
+                raise ValueError(f"'{opponent}' plays no seed; '@<n>' needs at least one.")
 
     @property
     def opponents(self) -> tuple[str, ...]:
         """The opponents of every evaluation, one or more, in the order given."""
         return tuple(part.strip() for part in self.opponent.split(",") if part.strip())
+
+
+def split_opponent(entry: str) -> tuple[str, int | None]:
+    """An opponent entry as the agent spec and how many seeds it plays: ``<spec>@<n>`` plays the first ``n``
+    seeds of the seed file, a bare spec all of them.
+
+    A seat for an opponent too dear to play on every seed. The lookahead costs about four heuristics a match,
+    and every search that left it out of its panel lost to it: search 25 went from 0.599 to 0.043 against it
+    (journal, 2026-09-25), and run 22 ran past three hours with it in. On fewer seeds its floor is read on
+    fewer matches, so it is wider and holds a candidate less tightly; the hold-out replays it on every seed.
+    """
+    spec, separator, count = entry.rpartition("@")
+    if separator and spec and count.isdigit():
+        return spec, int(count)
+    return entry, None
 
 
 class CliEvaluator:
@@ -309,15 +328,16 @@ class CliEvaluator:
 
     def _evaluate_against(self, spec: str, opponent: str, output: Path) -> Score:
         output.parent.mkdir(parents=True, exist_ok=True)
+        agent, count = split_opponent(opponent)
         arguments = [
             *self._engine.command,
             "evaluate",
             "--p1",
             spec,
             "--p2",
-            opponent,
+            agent,
             "--seeds",
-            self._engine.seeds,
+            self._seeds(count),
             "--out",
             str(output),
         ]
@@ -331,6 +351,20 @@ class CliEvaluator:
             tail = "\n".join((completed.stderr or completed.stdout).splitlines()[-10:])
             raise EvaluationError(f"The engine exited with {completed.returncode}:\n{tail}")
         return Score.of(load_evaluation(output))
+
+    def _seeds(self, count: int | None) -> str:
+        """The seed file an opponent plays: the engine's, or its first ``count`` seeds, in the workdir."""
+        if count is None:
+            return self._engine.seeds
+        source = Path(self._engine.seeds)
+        path = source if source.is_absolute() else self._engine.root / source
+        seeds = json.loads(path.read_text())["seeds"]
+        if count >= len(seeds):
+            return self._engine.seeds
+        subset = self._workdir / f"seeds-first-{count}.json"
+        if not subset.is_file():
+            subset.write_text(json.dumps({"seeds": seeds[:count]}), encoding="utf-8")
+        return str(subset)
 
 
 @dataclass(frozen=True)
