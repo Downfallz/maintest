@@ -478,15 +478,15 @@
     "spell:momentum": {
       "name": "Momentum",
       "class": "Assassin",
-      "intent": "Wait's opposite trade, and the spell whose name finally says what it does: Wait hands over energy now, Momentum builds it, a point at the start of each of the next few rounds. The Assassin spends the same activation and comes out ahead if the match lasts, behind if it does not. It no longer buys speed on the side: the three points of Base initiative it used to grant on unlock belonged to the spell, and a pick buys a package now (ADR 0059). What is left is the energy trade, whole.",
+      "intent": "The Assassin's free strike: a light hit that costs nothing and gathers energy as it lands. It is Wait with a blade in it -- the same activation and the same price, zero -- and where Wait only gathers, Momentum gathers and cuts. The owner asked for it on 2026-09-25 (journal): an attack that costs no energy, deals two or three and gives two or three back. It used to build energy over the next rounds (`EnergyRegeneration`), and no agent cast it: the top of that box was 2.40 a round against rivals at 7 and more.",
       "keep": [
-        "Free, like Wait, and it is the same activation: the trade is when the energy arrives, not what it costs",
-        "It builds rather than hands over: the day it gives energy on the spot it is Wait again"
+        "Free: it costs no energy, which is the whole point of the spell",
+        "An attack on one enemy, and the energy lands on its caster in the same cast",
+        "Small on both halves, a hit and an income, never a nuke: the Assassin's filler, not its finisher"
       ],
-      "note": "The first spell to use `EnergyRegeneration`, which ADR 0020 added and deliberately left unused, naming Momentum as one of the two candidates. Do not read its bounds as a route to making it castable: at 0.3 a point of energy the top of this box is 2.40 an activation against an attack's 6-and-up, so `check-knobs` reports it -- against `healing_screech`'s 7.20 today, `full_plate` when this note was written -- and will keep reporting it. That finding is right, and one of the two ways out it named has now been tried: ADR 0037 swept the price of energy and moved it 0.2 to 0.3, which took this ceiling from 1.60 to 2.40 and did not clear the bar. The remaining way out is the rival's bounds. Widening this spell until it clears 7.20 on its own would mean handing out 24 points of energy a cast, down from 36 at the old price.",
       "knobs": [
-        { "path": "/effects/0/amountPerRound", "min": 1, "max": 2, "step": 1 },
-        { "path": "/effects/0/durationRounds", "min": 2, "max": 4, "step": 1 }
+        { "path": "/effects/0/amount", "min": 1, "max": 3, "step": 1 },
+        { "path": "/casterEffects/0/amount", "min": 1, "max": 3, "step": 1 }
       ]
     },
     "spell:death_squad": {

@@ -101,13 +101,12 @@ Each is a rule to decide, not an oversight:
 Two more places where the model forced a hand:
 
 - **Spells with no effect.** Legacy Wait and Momentum did literally nothing. A spell needs at least one
-  effect here, so Wait is `EnergyGain` on the caster: pass the round and gather. **Momentum is
-  `EnergyRegeneration`** — the first spell to use the kind ADR 0020 added and deliberately left unused, which
-  named it as one of the two candidates. It is Wait's opposite trade: Wait hands energy over now, Momentum
-  builds it over the next few rounds. Summon Minions was the other candidate and declines the nomination: at
-  0.3 a point an energy spell tops out around 2.40 an activation, and two energy openers would have been two
-  dead openers. ADR 0037 raised the price from 0.2 and that ceiling moved 1.60 to 2.40, which changes nothing
-  here: the bar an opener has to clear is an attack's 6 and up.
+  effect here, so Wait is `EnergyGain` on the caster: pass the round and gather. Momentum was first
+  `EnergyRegeneration`, the kind ADR 0020 added and named it for: Wait's opposite trade, energy built over the
+  next few rounds. At 0.3 a point that tops out around 2.40 an activation against an attack's 6 and up, and no
+  agent cast it. **Since ADR 0078 Momentum is a free strike that gathers energy**: no cost, Damage 2 on one
+  enemy and `EnergyGain` 2 on its caster, Wait with a blade in it. No spell carries `EnergyRegeneration`
+  now; the kind stays in the engine.
 - **Passive spells.** `Full Plate` is `SpellType.Passive` in both models, but nothing implements a passive
   yet, so it is a castable, self-targeted, permanent defense buff. Legacy made it free; here it is priced,
   because free plus permanent plus re-castable is bounded by nothing but the round cap (`check-knobs` reports
@@ -148,7 +147,7 @@ a tuning pass changing what it is worth. Its ADR says why.
 | Parasite Jab | Leech | Offensive | 2 | 0.5 | Enemy | Damage 2 |
 | Hateful Sacrifice | Leech | Offensive | 3 | 0.5 | Enemy | Damage 10 |
 | Soul Devourer | Leech | Offensive | 3 | — | Enemy | Damage 3 |
-| Momentum | Assassin | Defensive | 0 | — | Self | EnergyGain 1 |
+| Momentum † | Assassin | Offensive | 0 | — | Enemy | Damage 2; caster: EnergyGain 2 |
 | Death Squad | Assassin | Defensive | 2 | — | up to 3 allies | EnergyGain 1 |
 | Mortal Wound | Assassin | Offensive | 3 | 0.5 | Enemy | Damage 4, Bleed 4/r for 2r |
 | Noxious Cure | Trickster | Defensive | 2 | 0.33 | up to 3 allies | Heal 3 |

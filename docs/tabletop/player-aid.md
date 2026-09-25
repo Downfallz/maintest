@@ -127,7 +127,7 @@ Creature is ignored.**
 
 | Condition | When it acts |
 | --- | --- |
-| **Energy regeneration** | Start of Round, **1st** |
+| **Energy regeneration** | Start of Round, **1st** *(no card applies it today)* |
 | **Regeneration** | Start of Round, **2nd** — before Bleed, on purpose |
 | **Bleed** | Start of Round, **3rd**. **Ignores Defense** |
 | **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Also fizzles an action already revealed. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |

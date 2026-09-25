@@ -1,20 +1,25 @@
 {
   "id": "spell:momentum:v1",
   "name": "Momentum",
-  "spellType": "Defensive",
+  "spellType": "Offensive",
   "creatureClass": "Assassin",
   "energyCost": 0,
   "criticalChance": 0,
   "targeting": {
-    "origin": "Self",
+    "origin": "Enemy",
     "scope": "SingleTarget",
     "maxTargets": 1
   },
   "effects": [
     {
-      "kind": "EnergyRegeneration",
-      "amountPerRound": 2,
-      "durationRounds": 3
+      "kind": "Damage",
+      "amount": 2
+    }
+  ],
+  "casterEffects": [
+    {
+      "kind": "EnergyGain",
+      "amount": 2
     }
   ],
   "enabled": true
