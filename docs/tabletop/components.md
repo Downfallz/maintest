@@ -3,7 +3,7 @@
 Status: **Specification** (2026-09-14; brought up to the package model and to the Speed cards of Part 6,
 question 14, 2026-09-23, to one package a Creature an opportunity the same day, to 30 Health the same
 day again, to a 20-Round cap the same day once more, and to Stun immunity the same day; to the redesigned
-`momentum`, 2026-09-25). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
+`momentum`, 2026-09-25, and to tune run 11's two package bonuses the same day). Phase 3 of [plan.md](plan.md). It answers the **needs a component** rows of
 [translation.md](translation.md) and specifies a generator. **The generator is specified, not implemented**: there is no `printshop/` directory, and nothing
 under `tools/` or `scripts/` prints a sheet.
 
@@ -19,8 +19,8 @@ What is current, exactly:
 - **A timeline tie is rolled off on a d20** between the sides, and each Player orders their own tied Creatures
   ([ADR 0063](../adr/0063-an-initiative-tie-is-rolled-on-a-d20.md)). The Creature number breaks no tie. It
   names the Creature, and it fixes the order tied Creatures roll in.
-- **Every count is read at content `4ab506fa`**, except the ones `momentum`'s redesign moved (the last point
-  below, read at `813bb91b`), and the schedule in `docs/tabletop/playtest.rules.json`.
+- **Every count is read at content `4ab506fa`**, except the ones `momentum`'s redesign and tune run 11 moved
+  (the last two points below, read at `813bb91b`), and the schedule in `docs/tabletop/playtest.rules.json`.
   Re-run the commands when the hash moves. `4ab506fa` is `4d7a841c` with a Creature's base Health at 30
   rather than 20 ([ADR 0068](../adr/0068-a-match-lasts-ten-to-fifteen-rounds.md)). What that moved is the
   Health rail ([1.3](#13-stat-markers-and-the-rails-they-ride), [3.1](#31-the-creature-board)) and the reach
@@ -45,9 +45,18 @@ What is current, exactly:
   266 to 260 on the same 2 sheets, and the paper stays 49. What else moved: the most Energy one Creature can
   gain in a Round ([1.7](#17-the-energy-track-what-ends-it)), the widest card line
   ([2.3](#23-the-measurement)), the Spells with a caster line ([2.1](#21-what-is-printed-and-where-it-comes-from),
-  [2.4](#24-the-seven-that-need-a-second-sentence)), and Part 7. Those readings are at `813bb91b`; every other
-  count in this document is still read at `4ab506fa`, and what tune run 11 moved between that and `0f036b75`
-  (two package bonuses) is not re-read here.
+  [2.4](#24-the-seven-that-need-a-second-sentence)), and Part 7. Those readings are at `813bb91b`.
+- **Tune run 11 moved two package bonuses**, Occultist from +2 to +3 and Warmonger from +4 to +3 (PR #208,
+  journal 2026-09-24; it is what lies between `4ab506fa` and `0f036b75`). The bonuses still sum to 47 and
+  still run 0 to 5, but the 10 packages one Creature can own now pay 29, not 28. So the Base initiative
+  ceiling goes from 33 to **34** and the Current initiative ceiling from 39 to **40**
+  ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)), read at `813bb91b`. **No piece count
+  moves and no rail is reprinted**: the Base initiative rails read 0 to 39 and still cover 34, and Current
+  initiative is on no rail. What else moved is text: [1.1](#11-spell-cards-and-package-cards)'s command
+  output, [1.3](#13-stat-markers-and-the-rails-they-ride), the rejected value track of
+  [3.5](#35-the-initiative-track) (41 cells, not 40) and Part 6, question 11; the package card's
+  measurement ([4.1](#41-the-package-card)) was re-run and did not move. Every other count in this document
+  is still read at `4ab506fa`.
 
 [Part 7](#part-7-coverage-the-needs-a-component-rows) answers translation.md's rows as its package re-audit
 (phase 7 of [docs/domain/tier-evolution-plan.md](../domain/tier-evolution-plan.md)) reads on this branch.
@@ -150,7 +159,7 @@ What moved when evolution became packages, and why:
 | Paper | 35 sheets | **47** | 14 sheets of package cards in, 2 talent tree mats out. |
 | Pick tokens | 4 | **4** | Still 2 a Player, but only in a Round that offers an opportunity. Since ADR 0066 a token that buys lies on the buyer's board until the Sub-phase ends; one token marks one Creature, so the count holds. [1.5](#15-the-rest-of-the-pieces). |
 | Round track | 16 spaces | **20** spaces, **10 pick marks** | The schedule is printed where a Player looks for the Round. [3.6](#36-the-round-track). 16 spaces and 8 marks until the cap went to 20. |
-| Base initiative, tens rail | 0 to 5 | **0 to 3** | In 16 Rounds the ceiling fell from 52 to 44 with packages, and to 29 when a Creature could buy only one an opportunity (ADR 0066): a rail to 2. The 20-Round cap gives a Creature 10 purchases, and the ceiling is 33. [3.4](#34-initiative-two-small-rails-instead-of-one-long-one), and Part 6, question 11. |
+| Base initiative, tens rail | 0 to 5 | **0 to 3** | In 16 Rounds the ceiling fell from 52 to 44 with packages, and to 29 when a Creature could buy only one an opportunity (ADR 0066): a rail to 2. The 20-Round cap gives a Creature 10 purchases, and the ceiling was 33; tune run 11 made it 34, inside the same rail. [3.4](#34-initiative-two-small-rails-instead-of-one-long-one), and Part 6, question 11. |
 | Spell card foot | `Unlock: +N initiative`, `Requires: ...` | **neither** | ADR 0059 and ADR 0056. [2.1](#21-what-is-printed-and-where-it-comes-from). |
 | Spell card head | class and tree depth | **the package that teaches it, and its level** | The class names collide with the package names, and the tree depth is a number the game no longer reads (ADR 0058). [2.1](#21-what-is-printed-and-where-it-comes-from). |
 | Tie order chit | - | **6** | The Tie order is hidden until both Players have given theirs (ADR 0063). [1.5](#15-the-rest-of-the-pieces). |
@@ -196,8 +205,11 @@ print('most Spells a Player adds',max(f(bs,a)+f(bs,b)+f(bs,P-a-b) for a in range
 print('most Base initiative one Creature buys',f(bb,C))"
 # opportunities [1, 3, 5, 7, 9, 11, 13, 15, 17, 19] picks a Player 20 purchases one Creature 10
 # most Spells a Player adds 34
-# most Base initiative one Creature buys 28
+# most Base initiative one Creature buys 29
 ```
+
+That output is read at `813bb91b`. At `4ab506fa` the last line read 28; tune run 11's Occultist +3 and
+Warmonger +3 moved it, and nothing else in it.
 
 6 Creatures x 3 starting Spells = 18 cards in hands at setup. The command reads the Rounds 1 to 20, the
 Round track's spaces. A 20-Round Match offers 10 opportunities, so a Player makes at most 20 purchases, and one
@@ -229,7 +241,7 @@ counts and the ends.
 | Defense buffs | 6 | 0 to 20. See [3.3](#33-defense-two-rails-because-the-floor-is-applied-once). | **VALUE** (the largest Damage, the critical multiplier) |
 | Defense debuffs | 6 | 0 to 20, the same reason mirrored. | **VALUE** |
 | Base initiative, units | 6 | 0 to 9. | **RULE** (a decimal rail) |
-| Base initiative, tens | 6 | 0 to 3. Together the two rails read 0 to 39, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Base initiative of 33. | **VALUE** (the packages' `initiativeBonus`, the schedule) x **RULE** (one package a Creature an opportunity, ADR 0066) |
+| Base initiative, tens | 6 | 0 to 3. Together the two rails read 0 to 39, which covers the ceiling computed in [3.4](#34-initiative-two-small-rails-instead-of-one-long-one): a Base initiative of 34 at `813bb91b`. | **VALUE** (the packages' `initiativeBonus`, the schedule) x **RULE** (one package a Creature an opportunity, ADR 0066) |
 
 **36 stat markers**, six of each of the six rails above. Print them as 10mm discs in six Creature colours.
 
@@ -797,18 +809,20 @@ print(max(e['amount'] for p in glob.glob('data/Spells/**/*.json',recursive=True)
 
 Base initiative only ever grows, by the `initiativeBonus` of every package bought, once a purchase
 (ADR 0056; glossary, Base initiative). No Spell adds anything (ADR 0059). Its ceiling in a 20-Round Match is
-the last line of the command in [1.1](#11-spell-cards-and-package-cards): **28**.
+the last line of the command in [1.1](#11-spell-cards-and-package-cards): **29** at `813bb91b`.
 
 A Player makes 2 picks at each of 10 opportunities: 20 purchases. A Creature buys at most one package an
 opportunity (ADR 0066), so **10 of them at most land on one Creature**. The 21 packages' bonuses sum to 47,
 but a Creature cannot own all 21 with 10 picks, and a level-3 package cannot be bought without the two below
-it. The 10 prerequisite-closed packages that pay the most pay 28, so **Base initiative tops out at 5 + 28 =
-33.** Current initiative adds the Initiative buffs on top. `death_squad` is +2 for a Round on up to 3 allies
+it. The 10 prerequisite-closed packages that pay the most pay 29: one set only, Prowler's whole family of
+seven for 22 and Occultist, Elementalist and Harbinger for 7. Before tune run 11 two sets tied at 28, that one
+and the Prowler family with Brute, Marauder and Warmonger; Occultist's +1 raised the first, and Warmonger's
+-1 dropped the second. So **Base initiative tops out at 5 + 29 = 34.** Current initiative adds the Initiative buffs on top. `death_squad` is +2 for a Round on up to 3 allies
 and it stacks, but only a Creature that owns Deathstalker can cast it. Deathstalker is among the 10 packages
-that pay 28, and the Player's other 10 purchases are enough for both allies to buy Prowler, Assassin and
-Deathstalker, 3 each. So three `death_squad`s can land on the Creature at 33, and **Current initiative tops out
-at 39**. In a 16-Round Match the two ceilings were 29 and 35. While two packages could land on one Creature an
-opportunity (ADR 0056, before ADR 0066), they were 44 and 46 in 16 Rounds; under one Spell a pick, twice every
+that pay 29, and the Player's other 10 purchases are enough for both allies to buy Prowler, Assassin and
+Deathstalker, 3 each. So three `death_squad`s can land on the Creature at 34, and **Current initiative tops out
+at 40**. Before tune run 11 (Occultist +2, Warmonger +4, at `4ab506fa`) the two ceilings were 33 and 39. In
+a 16-Round Match they were 29 and 35. While two packages could land on one Creature an opportunity (ADR 0056, before ADR 0066), they were 44 and 46 in 16 Rounds; under one Spell a pick, twice every
 Round, 52 and 58.
 
 ```bash
@@ -823,7 +837,7 @@ for m in range(1<<n):
   k=len(own);v=sum(T[i]['initiativeBonus'] for i in own);b[k]=max(b.get(k,0),v)
   if m>>ds&1: bd[k]=max(bd.get(k,0),v)
 f=lambda d,k:max([v for j,v in d.items() if j<=k] or [-99])
-print(max(5+f(bd if own else b,10)+2*(own+a) for a in range(3) for own in (0,1) if 3*a<=20-10))"   # 39
+print(max(5+f(bd if own else b,10)+2*(own+a) for a in range(3) for own in (0,1) if 3*a<=20-10))"   # 40
 ```
 
 The command assumes the 10 opportunities of a 20-Round Match: 10 purchases on the Creature, one an
@@ -831,10 +845,11 @@ opportunity, and the Player's other 10 for its allies, where an ally's `death_sq
 packages from Prowler up. It reads the same prerequisite-closed sets as the Base ceiling, so it moves when a
 bonus does.
 
-A rail to 33 is 34 cells and 170 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 3
+A rail to 34 is 35 cells and 175 mm at a readable 5 mm a cell, which no board holds. **Two rails, tens 0 to 3
 and units 0 to 9, are 14 cells**, 70 mm, and read as one two-digit number. The print constraint is the
-board's 95 mm of usable width; the rule is the ceiling of 33. A bonus is 0 to 5 at `4ab506fa`, so a purchase
-is one marker move on the units rail, sometimes carrying into the tens rail.
+board's 95 mm of usable width; the rule is the ceiling of 34, which the rails' 0 to 39 covers with 5 to spare
+(6 before tune run 11). A bonus is 0 to 5 at `813bb91b`, so a purchase is one marker move on the units rail,
+sometimes carrying into the tens rail.
 
 The tens rail is a **VALUE** twice over. The bonuses are balance knobs now (ADR 0061), and
 `data/balance/knobs.json` lets a tuning pass move each one up to its declared `max`. At every package's `max`,
@@ -843,7 +858,8 @@ before packages. Part 6, question 11.
 
 Current initiative is **not** on a rail. It is Base plus the dock's Initiative buff tokens less its Initiative
 debuff tokens, floored at zero, and it is read **once a Round**, when the timeline is built. That is the
-audit's own count: one marker move, read once. Only 3 Spells in the catalogue touch Initiative, and none of
+audit's own count: one marker move, read once. So its ceiling of 40, one past the 39 the Base rails read,
+needs no cell anywhere: the buffs are tokens in the dock, and no rail ever carries the sum. Only 3 Spells in the catalogue touch Initiative, and none of
 them is permanent, so most boards have nothing to add.
 
 ### 3.5 The initiative track
@@ -879,8 +895,8 @@ A tie is settled on the track in two steps (ADR 0063), and the components carry 
    skips step 2.
 
 The track is an **ordering** device and carries no numbers. The alternative, a value track a marker is placed
-on, needs 40 cells, 0 to the Current initiative ceiling of 39 in 3.4, and would still need the tie rules
-printed.
+on, needs 41 cells, 0 to the Current initiative ceiling of 40 in 3.4 (40 cells to 39 before tune run 11), and
+would still need the tie rules printed.
 
 ### 3.6 The round track
 
@@ -1040,7 +1056,8 @@ What each piece of the layout answers:
 | `Needs` on every card, by name | The rule, and what the check reads: a Creature may buy a Tier only if every Tier it `Needs` already lies face up with that Creature. A level-1 card prints `Needs nothing`, so no card has a blank a player has to interpret. |
 | No talent tree class, no family map | The tree gates nothing (ADR 0056, ADR 0058). A card that drew its gates would teach a second eligibility rule, the alternative ADR 0056 rejected. |
 
-The measurement, at `4ab506fa`:
+The measurement, at `813bb91b` (the same output at `4ab506fa`, where the widest line was Warmonger's
+`level 3 . +4 initiative`):
 
 ```bash
 python3 -c "
@@ -1341,11 +1358,13 @@ lands.
 
 ### 11. The Base initiative rail and the bonus knobs
 
-The tens rail runs 0 to 3 because the most Base initiative one Creature can buy in 20 Rounds is 28, for a
-Base of 33 ([3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 10 packages, one an opportunity
-(ADR 0066). Each package's `initiativeBonus` is a balance knob now (ADR 0061), with a declared `max` in
-`data/balance/knobs.json`. At every `max` the ceiling is 5 + 48 = 53. Print the tens rail to 3 and reprint six
-boards when a tuning pass raises a bonus, or print it to 5 (16 cells, 80 mm, the rail printed before packages)
+The tens rail runs 0 to 3 because the most Base initiative one Creature can buy in 20 Rounds is 29 at
+`813bb91b`, for a Base of 34 (28 and 33 before tune run 11,
+[3.4](#34-initiative-two-small-rails-instead-of-one-long-one)): 10 packages, one an opportunity (ADR 0066). Each package's `initiativeBonus` is a balance knob now (ADR 0061), with a declared `max` in
+`data/balance/knobs.json`. At every `max` the ceiling is 5 + 48 = 53 (re-read at `813bb91b`: tune run 11
+moved two values and no `max`). Tune run 11 is the first pass to test the first answer: it raised the
+ceiling by one, and the rail to 3 absorbed it with 5 left. Print the tens rail to 3 and reprint six
+boards when a tuning pass takes the ceiling past 39, or print it to 5 (16 cells, 80 mm, the rail printed before packages)
 so no pass inside the declared bounds reprints anything? It is question 3's shape, with a derived bound
 instead of a guessed one. ADR 0066 made the second answer cheaper: in 16 Rounds it was 18 cells to cover 76.
 The 20-Round cap made it dearer again by one cell: in 16 Rounds it was a rail to 4, 15 cells, to cover 45.
