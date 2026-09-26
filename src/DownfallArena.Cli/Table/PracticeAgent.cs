@@ -131,5 +131,5 @@ internal sealed class PracticeAgent(PracticeScenario scenario, IPlayerAgent fall
 
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options) =>
         Human(board, PlayerOptionsKind.Target, options.Actor) ? person!.DecideTargets(board, options)
-            : options.LegalTargets.Candidates.Take(options.LegalTargets.MaxTargets).ToList();
+            : [.. options.LegalTargets.Candidates.Take(options.LegalTargets.MaxTargets)];
 }

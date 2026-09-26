@@ -51,7 +51,8 @@ export function guidancePanel(document, view, chosen, picked, cards) {
   heading.textContent = 'If cast on the current board';
   panel.append(heading);
   for (const row of targetLines(guide, picked)) {
-    line(`Creature ${row.target} · ${row.plain}${row.plain === row.critical ? '' : ` | Critical: ${row.critical}`}`);
+    const critical = row.plain === row.critical ? '' : ` | Critical: ${row.critical}`;
+    line(`Creature ${row.target} · ${row.plain}${critical}`);
   }
   if (guide.casterEffects?.length) line(`On caster, once: ${guide.casterEffects.map(effectText).join(', ')}`);
   const caveat = document.createElement('small');

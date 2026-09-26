@@ -11,19 +11,18 @@ import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { playbackBoard, playbackChanges } from './replay.js';
 import { guidancePanel, spellSummary } from './guidance.js';
-import { mountPractice } from './practice.js';
+import { practice, storage } from './startup.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
 // by the engine's own gates. Nothing here decides anything, and nothing here knows a spell by name.
-const storage = kept();
 const element = id => document.getElementById(id);
 
 // How many feed entries the page keeps. The log draws the last twelve; a few times that leaves room to scroll
 // back through the round without holding a whole match in memory on a phone.
 const FeedKept = 60;
 
-mountPractice(document, globalThis.location, storage).then(boot);
+boot(practice);
 
 function boot(practice) {
   const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
@@ -33,15 +32,6 @@ function boot(practice) {
     // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
     if (!practice) tidy();
     start(held.map(({ seat, token }) => ({ seat, transport: httpTransport(seat, token) })), practice ? 'player1' : null);
-  }
-}
-
-function kept() {
-  try {
-    return globalThis.localStorage ?? null;
-  } catch {
-    // A browser that refuses storage refuses reading the property too.
-    return null;
   }
 }
 

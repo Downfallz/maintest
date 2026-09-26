@@ -11,7 +11,8 @@ test.beforeAll(async () => {
   await new Promise(done => probe.listen(0, '127.0.0.1', done));
   const port = probe.address().port;
   await new Promise(done => probe.close(done));
-  host = spawn('dotnet', [resolve(root, 'artifacts/bin/DownfallArena.Cli/debug/DownfallArena.Cli.dll'), 'table', '--practice', '--port', String(port)], { cwd: root });
+  const dotnet = resolve(process.env.DOTNET_ROOT ?? '/usr/share/dotnet', 'dotnet');
+  host = spawn(dotnet, [resolve(root, 'artifacts/bin/DownfallArena.Cli/debug/DownfallArena.Cli.dll'), 'table', '--practice', '--port', String(port)], { cwd: root });
   let log = '';
   host.stdout.on('data', data => { log += data.toString(); });
   host.stderr.on('data', data => { log += data.toString(); });
@@ -25,7 +26,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  if (host && host.exitCode === null) {
+  if (host?.exitCode === null) {
     const closed = new Promise(done => host.once('exit', done));
     host.kill('SIGINT');
     await closed;

@@ -67,8 +67,11 @@ internal sealed class PracticeRun : IAsyncDisposable
             }
 
             var events = services.GetRequiredService<MatchTraceRecorder>();
-            var api = new TableApi(session, session.Queries, seats, CatalogueProjection.Build(resources, rules), events,
-                guide: new DecisionGuideProjection(resources, rules), feedStart: events.EntriesOf(session.MatchId).Count);
+            var api = new TableApi(session, session.Queries, seats, CatalogueProjection.Build(resources, rules), events)
+            {
+                Guide = new DecisionGuideProjection(resources, rules),
+                FeedStart = events.EntriesOf(session.MatchId).Count,
+            };
             return new PracticeRun(host, stopping, session, api, token, scenario);
         }
         catch

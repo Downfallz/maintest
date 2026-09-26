@@ -24,8 +24,8 @@ public sealed class DecisionGuideProjection(IGameResources resources, RuleSet ru
         }
 
         var creatures = board.Allies.Concat(board.Enemies).ToList();
-        return actor.KnownSpells.OrderBy(id => id.Value, StringComparer.Ordinal)
-            .Select(id => Spell(board, actor, creatures, id)).ToList();
+        return [.. actor.KnownSpells.OrderBy(id => id.Value, StringComparer.Ordinal)
+            .Select(id => Spell(board, actor, creatures, id))];
     }
 
     private SpellGuidance Spell(PlayerBoardState board, CreatureSnapshot actor, List<CreatureSnapshot> creatures, SpellId id)

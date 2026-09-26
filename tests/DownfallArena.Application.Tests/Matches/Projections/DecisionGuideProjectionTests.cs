@@ -95,7 +95,7 @@ public sealed class DecisionGuideProjectionTests
         var spell = Spell.Create(TestContent.Strike, "Probe", SpellType.Offensive, CreatureClass.Creature,
             new SpellStats(Energy.Of(1), CriticalChance.Of(0.5)), TargetingSpec.Multi(TargetOrigin.Enemy, 2), [Damage.Of(3)], [Heal.Of(2)]);
         var resources = GameResources.Create("preview", TestContent.Resources.Creatures,
-            TestContent.Resources.Spells.Select(one => one.Id == spell.Id ? spell : one).ToList(), TestContent.Resources.TalentTrees, TestContent.Resources.Tiers);
+            [.. TestContent.Resources.Spells.Select(one => one.Id == spell.Id ? spell : one)], TestContent.Resources.TalentTrees, TestContent.Resources.Tiers);
 
         var advice = new DecisionGuideProjection(resources, MatchStore.TwoOnTwo()).Build(Board(), Actor).Single();
 
