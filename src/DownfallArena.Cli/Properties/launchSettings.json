@@ -1,5 +1,10 @@
 {
   "profiles": {
+    "table (practice scenarios)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --practice",
+      "workingDirectory": "../.."
+    },
     "table (hotseat)": {
       "commandName": "Project",
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --who mk",

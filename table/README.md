@@ -182,6 +182,10 @@ dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
 dotnet run --project src/DownfallArena.Cli -- table --practice
 ```
 
+In Visual Studio, open `DownfallArena.slnx`, set `DownfallArena.Cli` as the startup
+project, select the `table (practice scenarios)` launch profile, and press F5. If
+the compiled schema is missing, run the DataBuilder command above once first.
+
 Open the practice link printed by the host. Select a scenario and press **Start
 scenario**; **Restart this scenario** returns to the same question with the same
 seed. The page goes straight to your decision; simulated setup rounds do not open a
