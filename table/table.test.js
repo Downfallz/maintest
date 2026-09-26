@@ -14,6 +14,8 @@ import * as mat from './mat.js';
 import * as notes from './notes.js';
 import * as ties from './ties.js';
 import * as replay from './replay.js';
+import * as guidance from './guidance.js';
+import * as practice from './practice.js';
 
 // A small DOM double exercises the shipped page without adding a browser dependency to the Node gate.
 class Element {
@@ -64,7 +66,7 @@ function page() {
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
   };
   for (const node of Object.values(nodes)) node.owner = document;
-  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay,
+  const context = vm.createContext({ ...transport, ...seats, ...session, ...card, ...board, ...hand, ...feed, ...timeline, ...mat, ...notes, ...ties, ...replay, ...guidance, ...practice,
     document, URLSearchParams, console, innerHeight: 800, location: { search: '' }, setInterval: () => {},
     setTimeout: (action, delay) => { timers.set(++timerId, action); delays.set(timerId, delay); return timerId; }, clearTimeout: id => timers.delete(id),
   });

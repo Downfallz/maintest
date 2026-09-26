@@ -83,3 +83,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0075](0075-capture-public-state-around-each-combat-action.md) | Capture public state around each combat action | Accepted |
 | [0076](0076-defense-buffs-count-for-at-most-ten.md) | Defense buffs count for at most ten | Accepted |
 | [0077](0077-a-mobile-field-guide-before-the-editor.md) | A mobile field guide before the editor | Accepted |
+| [0078](0078-decision-previews-and-reproducible-practice.md) | Decision previews and reproducible practice | Accepted |

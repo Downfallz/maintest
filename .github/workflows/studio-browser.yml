@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'studio/**'
+      - 'table/**'
+      - 'src/**'
       - 'viewer/viewer.css'
       - 'data/**'
       - '.github/workflows/studio-browser.yml'
@@ -22,9 +24,19 @@ jobs:
         run: |
           npm ci --ignore-scripts
           node node_modules/playwright/cli.js install --with-deps chromium
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Build the practice host and catalogue
+        run: |
+          dotnet build src/DownfallArena.Cli
+          dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
       - name: Verify mobile and desktop journeys
         working-directory: studio/browser
         run: npm test
+      - name: Verify practice journeys with the real engine
+        working-directory: studio/browser
+        run: node node_modules/playwright/cli.js test --config table.config.js
       - name: Keep previews and failure traces
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

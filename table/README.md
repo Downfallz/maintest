@@ -162,3 +162,50 @@ For a browser check, exercise Evolution, Speed, Intent and Target, pass the devi
 Talents and expand another creature's hand. Check a narrow phone and a desktop, with a scrolled hand and a
 slow connection. Verify that only the chosen action is submitted, unavailable cards remain readable, and
 that the handover screen covers the entire board.
+## Decision guidance and practice
+
+Before confirming a spell or target, the table shows the engine's energy cost, energy
+left after paying it, turn position, and plain/critical effects against the current
+targets. Choosing speed shows the Quick/Standard trade and each spell's critical
+chance. Unaffordable cards keep the engine's reason visible. Caster effects appear
+once, separately from target effects.
+
+The preview is explicitly conditional: earlier actions can change the board, rolls
+are unknown, and computed effects still go through execution caps and condition
+stacking. It never reads hidden enemy choices or consumes the match's random stream.
+The Before/After replay remains the record of what actually happened (ADR 0078).
+
+Start a separate practice table with the standard built catalogue:
+
+```bash
+dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
+dotnet run --project src/DownfallArena.Cli -- table --practice
+```
+
+Open the practice link printed by the host. Select a scenario and press **Start
+scenario**; **Restart this scenario** returns to the same question with the same
+seed. The page goes straight to your decision; simulated setup rounds do not open a
+replay. `--bind <your LAN IPv4 address>` and `--port N` also work for a phone.
+
+| Scenario | Starting point | Try |
+| --- | --- | --- |
+| Choose your target | Round 1, Lightning Bolt targets | Compare targets and the energy left after cost |
+| Build a multiclass creature | Round 3, evolution | Add a different level-1 package to Brute or take a level-2 upgrade |
+| Interrupt an action | Round 5, Tranquilizer Dart targets | Stun before an enemy acts; follow skipped actions and later immunity |
+| Read a layered resolution | Round 5, Toxic Waves targets | Follow multiple targets, bleed and Psycho Rush's caster effect |
+
+Practice uses seed 17 and a ten-round cap, plays its setup through the actual engine,
+and continues normally after handing player 1 to you. It writes no playtest files or
+training episodes. A reset creates a new match and invalidates its previous seat
+token. It cannot reset an ordinary table. Custom content that cannot satisfy the
+recipe fails with an explanation; rebuild the standard catalogue to use these recipes.
+
+Browser checks against the live engine, on phone and desktop:
+
+```bash
+dotnet build src/DownfallArena.Cli
+cd studio/browser
+npm ci --ignore-scripts
+node node_modules/playwright/cli.js install chromium
+node node_modules/playwright/cli.js test --config table.config.js
+```

@@ -86,7 +86,8 @@ internal static class TableHost
             Token(),
             (slot, wanted) => Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, options, rules, agents, random));
 
-        var api = new TableApi(session, session.Queries, seats, catalogue, events, run, pilot);
+        var api = new TableApi(session, session.Queries, seats, catalogue, events, run, pilot,
+            new Application.Matches.Projections.DecisionGuideProjection(resources, rules));
         var codes = new JoinCodes(seats);
         using var server = new TableServer(options.Bind, options.Port, api, new TableFiles(TableDirectory), codes, run);
 

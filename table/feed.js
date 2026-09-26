@@ -146,7 +146,7 @@ function recapAction(entry, board, cards) {
   };
 }
 
-function recapEffectText(outcome) {
+export function recapEffectText(outcome) {
   const effect = outcome?.effect;
   const kind = effect?.kind ?? (outcome?.kind ?? '').replace(/Outcome$/, '');
   const amount = effect?.amount ?? effect?.amountPerRound ?? outcome?.amount;

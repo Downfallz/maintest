@@ -10,24 +10,30 @@ import { classColour, talentClasses, packageForest, talentPalette } from './mat.
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { playbackBoard, playbackChanges } from './replay.js';
+import { guidancePanel, spellSummary } from './guidance.js';
+import { mountPractice } from './practice.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
 // by the engine's own gates. Nothing here decides anything, and nothing here knows a spell by name.
 const storage = kept();
-const held = heldSeats(globalThis.location?.search ?? '', storage);
 const element = id => document.getElementById(id);
 
 // How many feed entries the page keeps. The log draws the last twelve; a few times that leaves room to scroll
 // back through the round without holding a whole match in memory on a phone.
 const FeedKept = 60;
 
-if (held.length === 0) {
-  element('phase').textContent = 'Type the code the host printed, or open the link it printed.';
-} else {
-  // The token is kept, so the address bar does not have to be. What is left is a page a reload brings back.
-  tidy();
-  start(held.map(({ seat, token }) => ({ seat, transport: httpTransport(seat, token) })));
+mountPractice(document, globalThis.location, storage).then(boot);
+
+function boot(practice) {
+  const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
+  if (held.length === 0) {
+    element('phase').textContent = practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.';
+  } else {
+    // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
+    if (!practice) tidy();
+    start(held.map(({ seat, token }) => ({ seat, transport: httpTransport(seat, token) })), practice ? 'player1' : null);
+  }
 }
 
 function kept() {
@@ -45,12 +51,12 @@ function tidy() {
   }
 }
 
-function start(seats) {
+function start(seats, holder = null) {
   // `holder` is the seat the person now holding the device said they are, which is the only thing that lets
   // the board be shown at all. `shown` is the seat on screen, so picked targets never survive a handover.
   // `cards` is the catalogue, fetched once: it cannot change while a host runs.
   const state = {
-    seats, views: [], holder: null, shown: null, asked: null,
+    seats, views: [], holder, shown: null, asked: null,
     acknowledged: null, announced: null, announcing: null,
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
@@ -603,6 +609,13 @@ function heldCard(state, spell, offered, creature, current, reference) {
 
   const availability = document.createElement('span');
   availability.className = 'card-availability';
+  const guide = creature === current.view.waitingCreature ? current.view.guidance?.find(one => one.spell === spell.spell) : null;
+  if (guide) {
+    const advice = document.createElement('p');
+    advice.className = 'card-advice';
+    advice.textContent = spellSummary(guide);
+    face.append(advice);
+  }
   availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Tap again to declare' : 'Select card →') : reference ? 'Spell reference' : spell.castable ? 'Available' : 'Not available now';
   face.append(availability);
   if (offered) {
@@ -1140,6 +1153,7 @@ function renderDecision(state, current) {
   element('evolution-budget').replaceChildren(...(view.waitingFor === 'Evolution' && isAsked(view) ? [evolutionBudget(state, view)] : []));
   const asking = element('asking');
   const choices = element('choices');
+  element('decision-guide').replaceChildren();
   element('problem').hidden = !state.error;
   element('problem').textContent = state.error;
   element('decision').dataset.kind = view.waitingFor ?? 'Waiting';
@@ -1172,7 +1186,10 @@ function renderDecision(state, current) {
     ? `${healthText(actor)} HP · ${actor.energy ?? 0} energy`
     : '';
   asking.textContent = titleOf(state, view);
-  choices.replaceChildren(...buttonsFor(state, current));
+  const buttons = buttonsFor(state, current);
+  const guidance = guidancePanel(document, view, state.chosen, state.picked, state.cards);
+  element('decision-guide').replaceChildren(guidance);
+  choices.replaceChildren(...buttons);
 }
 
 function titleOf(state, view) {

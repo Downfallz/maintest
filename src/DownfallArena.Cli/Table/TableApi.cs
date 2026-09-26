@@ -29,7 +29,7 @@ namespace DownfallArena.Cli.Table;
 /// still the only thing that says what is legal. And it never invents a refusal: a tap that arrives after the
 /// screen moved on is late, not illegal, and says so with a 409 the page can act on.
 /// </remarks>
-internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null, TablePilot? pilot = null)
+internal sealed class TableApi(TableSession session, MatchQueryHandlers queries, IReadOnlyList<TableSeat> seats, CatalogueView catalogue, MatchTraceRecorder events, PlaytestRun? run = null, TablePilot? pilot = null, DecisionGuideProjection? guide = null, int feedStart = 0)
 {
     public const string TokenHeader = "X-Seat-Token";
 
@@ -193,6 +193,8 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
 
     private async Task<StudioResponse> SeatAsync(TableSeat seat, int since, long? shown)
     {
+        // Practice starts at its prepared question; setup rounds must not open a replay over that question.
+        since = Math.Max(since, feedStart);
         var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
         if (board.IsFailure)
         {
@@ -237,6 +239,7 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
                 options = options.Value,
                 waitingFor = waiting?.Kind.ToString(),
                 waitingCreature = waiting?.Creature,
+                guidance = guide?.Build(board.Value, waiting?.Creature),
 
                 // Which asking this is. The page sends it back once it has drawn it, and that is what starts
                 // the clock: two questions of the same shape in a row are two askings, and the second must not

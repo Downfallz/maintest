@@ -20,6 +20,7 @@
     <Content Include="..\..\table\table.css" Link="table\table.css" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\*.js" Exclude="..\..\table\*.test.js" Link="table\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\.github\workflows\pages.yml" Link="pages.yml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\**\*.json" Exclude="..\..\data\dst\**;..\..\data\balance\**" Link="practice-content\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
