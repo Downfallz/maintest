@@ -4,7 +4,7 @@ using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Application.Matches.Projections;
 
-/// <summary>Computed effects on this board, before execution caps and condition stacking (ADR 0078).</summary>
+/// <summary>Computed effects on this board, before execution caps and condition stacking (ADR 0079).</summary>
 public sealed record SpellGuidance(
     SpellId Spell,
     int Cost,

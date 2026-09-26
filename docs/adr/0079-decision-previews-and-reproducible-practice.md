@@ -1,4 +1,4 @@
-# ADR 0078: Decision previews and reproducible practice
+# ADR 0079: Decision previews and reproducible practice
 
 ## Status
 

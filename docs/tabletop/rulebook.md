@@ -1,7 +1,8 @@
 # Downfall Arena: the rulebook
 
 Status: **Draft** (2026-09-14, evolution rewritten 2026-09-23, one Tier a Creature an opportunity
-2026-09-23, starting Health 30 the same day, Stun immunity the same day). Phase 4 of [plan.md](plan.md).
+2026-09-23, starting Health 30 the same day, Stun immunity the same day, no Energy regeneration on any card
+2026-09-25). Phase 4 of [plan.md](plan.md).
 
 > **What this book describes.** The engine as of
 > [ADR 0066](../adr/0066-a-creature-buys-one-package-an-opportunity.md). Evolution is the package model: a pick
@@ -236,6 +237,8 @@ A dead Creature gains nothing. Its board is on its `Defeated` back and has no En
 **Result.** Three passes, in this order, and the order changes results:
 
 1. **Energy regeneration.** Every Energy regeneration Condition gives its Creature its amount of Energy.
+   No Spell in the current catalogue applies one, so this pass finds nothing; it stays first because the
+   engine runs it first.
 2. **Regeneration.** Every Regeneration Condition heals its Creature by its amount, capped by the Health the
    Creature is missing.
 3. **Bleed.** Every Bleed Condition deals its amount of damage to its Creature. **A Bleed tick ignores
@@ -771,7 +774,7 @@ gets one Round back after every Stun ([6.4](#64-a-stunned-creature-skips-the-rou
 | --- | --- | --- | --- | --- |
 | **Bleed** | Damage equal to its amount, **ignoring Defense** | Start of Round, third pass, after Regeneration | Stacks: both tick, add them | Condition dock |
 | **Regeneration** | Heals its amount, capped by the Health missing | Start of Round, second pass, **before** Bleed | Stacks | Condition dock |
-| **Energy regeneration** | Gives its amount of Energy | Start of Round, first pass | Stacks | Condition dock |
+| **Energy regeneration** | Gives its amount of Energy. No Spell in the current catalogue applies it | Start of Round, first pass | Stacks | Condition dock |
 | **Stun** | No Speed choice, no Activation slot, no Intent; fizzles an action already revealed | Speed Sub-phase, and Action resolution | **Ignored**, and so is a Stun in the Round after one ends | The Speed slot, and the dock; when it ends, an Immune token in lane `1` for one Round |
 | **Defense buff** | Raises total Defense | Read whenever Damage is computed against this Creature | Stacks | The Defense buff rail; a timed one also gets a dock token |
 | **Defense debuff** | Lowers total Defense | The same | Stacks | The Defense debuff rail; a timed one also gets a dock token |

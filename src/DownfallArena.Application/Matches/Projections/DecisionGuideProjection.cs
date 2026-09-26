@@ -10,7 +10,7 @@ namespace DownfallArena.Application.Matches.Projections;
 
 /// <summary>
 /// Reads only a seat's visible board and uses independent rolls. Looking at advice cannot change a match
-/// or discover an opponent's undeclared action (ADR 0078).
+/// or discover an opponent's undeclared action (ADR 0079).
 /// </summary>
 public sealed class DecisionGuideProjection(IGameResources resources, RuleSet rules)
 {

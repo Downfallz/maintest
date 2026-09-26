@@ -1325,6 +1325,59 @@ def test_a_spell_whose_whole_box_sits_under_a_rival_is_reported() -> None:
     assert [report for report in outclassed(content, knobs, WEIGHTS) if "spell:small" in report]
 
 
+def outclassed_by_big(*rival_knobs: dict) -> list[str]:
+    """`spell:small`, topping out at 4.5 a round, beside a `spell:big` at 13.5 with the bounds given."""
+    content, knobs = boxed(
+        "spell:small",
+        1,
+        spell(id="spell:small:v1", effects=[{"kind": "Damage", "amount": 2}]),
+        {"path": DAMAGE_POINTER, "minimum": 1, "maximum": 3, "step": 1},
+    )
+    content.spells["spell:big"] = spell(id="spell:big:v1", effects=[{"kind": "Damage", "amount": 9}])
+    content.tiers["spell:big"] = 1
+    content.files["spell:big"] = Path("y.json")
+    if rival_knobs:
+        knobs.spells["spell:big"] = SpellKnobs(
+            alias="spell:big",
+            name="spell:big",
+            creature_class="Creature",
+            intent="Something.",
+            keep=(),
+            note=None,
+            knobs=tuple(Knob(target="spell:big", **knob) for knob in rival_knobs),
+        )
+    return [report for report in outclassed(content, knobs, WEIGHTS) if report.startswith("spell:small")]
+
+
+def test_a_rival_its_own_bounds_can_bring_under_the_ceiling_is_named_as_the_move() -> None:
+    """The eight findings of content `0f036b75`: the rival can come down, so the bounds are not in the way."""
+    (report,) = outclassed_by_big({"path": DAMAGE_POINTER, "minimum": 1, "maximum": 9, "step": 1})
+
+    assert "has to come down under 4.50" in report
+    assert "different bounds" not in report
+
+
+def test_a_rival_that_cannot_come_down_far_enough_asks_for_different_bounds() -> None:
+    (report,) = outclassed_by_big({"path": DAMAGE_POINTER, "minimum": 7, "maximum": 9, "step": 1})
+
+    assert "no less than 10.50" in report
+    assert "needs different bounds" in report
+
+
+def test_a_rival_with_no_bounds_of_its_own_asks_for_different_bounds() -> None:
+    """A spell no knob moves carries today's value at its floor too."""
+    (report,) = outclassed_by_big()
+
+    assert "needs different bounds" in report
+
+
+def test_a_rival_that_can_only_get_dearer_is_read_at_its_dearest_price() -> None:
+    """Nine damage at eight energy comes up a round in four: 3.375 a round, under the ceiling of 4.5."""
+    (report,) = outclassed_by_big({"path": "/energyCost", "minimum": 2, "maximum": 8, "step": 1})
+
+    assert "has to come down under 4.50" in report
+
+
 def test_a_spell_whose_box_reaches_past_its_rival_is_not_reported() -> None:
     """The `poison_slash` case: the bounds already contain an answer, so there is nothing to report."""
     content, knobs = boxed(

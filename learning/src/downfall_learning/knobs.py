@@ -1200,9 +1200,40 @@ def _value_ceiling(spell: SpellKnobs, document: Mapping[str, object], weights: M
     return cast_value(top, weights) / _rounds_a_cast(cheapest)
 
 
+def _value_floor(spell: SpellKnobs, document: Mapping[str, object], weights: Mapping[str, float]) -> float:
+    """The least a spell can be worth anywhere inside its own bounds: :func:`_value_ceiling`'s other corner.
+
+    Every knob at the end that is worst for the spell, and the cost at the *dearest* price the bounds reach.
+    It answers the question :func:`outclassed` has to ask of a rival: whether the rival can come down far
+    enough inside its own bounds, which is the other way out of a spell being outclassed.
+
+    The same cheapness and the same one-way error as the ceiling, turned round: this corner may be a catalogue
+    the constraints refuse, so it can understate the floor. Then :func:`outclassed` reads a pair as one the
+    rival's bounds can settle when the constraints would stop them, and says less than it could. It never says
+    a pair is stuck when it is not.
+    """
+    bottom = dict(document)
+    dearest = _energy_cost(document)
+    for knob in spell.knobs:
+        try:
+            read_value(bottom, knob.path)
+        except KnobsError:
+            continue
+        if knob.path == ENERGY_COST:
+            dearest = max(dearest, int(knob.maximum))
+            continue
+        bottom = with_value(bottom, knob.path, _worst_corner(document, knob))
+    return cast_value(bottom, weights) / _rounds_a_cast(dearest)
+
+
 def _best_corner(document: Mapping[str, object], knob: Knob) -> float:
     """The end of a knob's range that is best for the spell: its maximum, unless more of it is a price."""
     return knob.minimum if _addresses_a_price(document, knob.path) else knob.maximum
+
+
+def _worst_corner(document: Mapping[str, object], knob: Knob) -> float:
+    """The end of a knob's range that is worst for the spell: the other end from :func:`_best_corner`."""
+    return knob.maximum if _addresses_a_price(document, knob.path) else knob.minimum
 
 
 def _addresses_a_price(document: Mapping[str, object], path: str) -> bool:
@@ -1240,16 +1271,21 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
     """Spells no move inside their own bounds brings up to what a rival already carries today.
 
     The case this exists for: `pummel` tops out around 5.4 against `lightning_bolt`'s 6.9, so a tuning pass
-    asked to make it a choice is searching a box that does not contain the answer, and then reports that it
+    that only moves `pummel` is searching a box that does not contain the answer, and then reports that it
     found nothing as though it had looked in the right place. A greedy agent takes the best score and
     nothing else, so a spell that cannot reach the top of its tier is not merely weaker than its neighbour:
     it is never cast at all, and the first sign of that is a search that keeps coming back empty.
 
     Read against what the rival carries *today*, because either side of the pair is a way out -- widening
     this spell's bounds and lowering the rival's are both answers, and which one is right is a design
-    decision rather than something a check can pick. A spell is only measured against its own depth or
-    shallower, the same rule :func:`dominance` uses, so being outclassed by something deeper in the tree is
-    the reward for getting there and is not reported.
+    decision rather than something a check can pick. What the check can say is whether the second one is
+    open: every rival above the ceiling is also read at the bottom of its own bounds (:func:`_value_floor`).
+    When each can come down under the ceiling, the report names what has to come down and a tuning pass holds
+    that move already. Only when one cannot is the pair stuck, and only then does the report ask for different
+    bounds. It asked for them on all eight findings of content `0f036b75`, where every rival could come down.
+
+    A spell is only measured against its own depth or shallower, the same rule :func:`dominance` uses, so
+    being outclassed by something deeper in the tree is the reward for getting there and is not reported.
 
     An attack is only ever read against another attack, and a spell that deals no damage only against
     another that deals none, for the reason `tierDamageSpread` gives: a heal and an attack share no unit.
@@ -1301,17 +1337,43 @@ def outclassed(content: Content, knobs: Knobs, weights: Mapping[str, float] | No
             and max_targets(content.spells[other]) <= reach
             and deals_damage(content.spells[other]) == attacks
         }
-        if not rivals:
-            continue
-        best, bar = max(rivals.items(), key=itemgetter(1))
         ceiling = _value_ceiling(spell, document, prices)
-        if ceiling < bar:
+        above = {other: value for other, value in rivals.items() if value > ceiling}
+        if not above:
+            continue
+        best, bar = max(above.items(), key=itemgetter(1))
+        head = (
+            f"{alias} reaches at most {ceiling:.2f} a round at the top of its own bounds, and {best} carries "
+            f"{bar:.2f} today at tier {content.tiers.get(best, '?')}"
+        )
+        floors = {other: _rival_floor(other, content, knobs, prices, current) for other in above}
+        stuck, floor = max(floors.items(), key=itemgetter(1))
+        if floor > ceiling:
             reports.append(
-                f"{alias} reaches at most {ceiling:.2f} a round at the top of its own bounds, and {best} "
-                f"carries {bar:.2f} today at tier {content.tiers.get(best, '?')}: no move inside these "
-                "bounds makes it a choice, so one of the two spells needs different bounds."
+                f"{head}: {stuck} carries no less than {floor:.2f} at the bottom of its own bounds, so no "
+                "move inside either spell's bounds makes it a choice, and one of the two needs different "
+                "bounds."
+            )
+        else:
+            rest = len(above) - 1
+            who = f", and {rest} other spell(s) carry more than {ceiling:.2f} too: each" if rest else ": it"
+            reports.append(
+                f"{head}{who} has to come down under {ceiling:.2f} before this one is a choice, and its own "
+                "bounds allow that."
             )
     return reports
+
+
+def _rival_floor(
+    alias: str,
+    content: Content,
+    knobs: Knobs,
+    weights: Mapping[str, float],
+    current: Mapping[str, float],
+) -> float:
+    """How low a rival can go inside its own bounds; what it carries today when it has none to move."""
+    spell = knobs.spells.get(alias)
+    return current[alias] if spell is None else _value_floor(spell, content.spells[alias], weights)
 
 
 def _effects(document: Mapping[str, object]) -> dict[str, tuple[float, ...]]:

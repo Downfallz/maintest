@@ -36,7 +36,7 @@ the last one found, and the file is where a rung says what it is for before it i
 | --- | --- | --- |
 | `why` | one paragraph on what this rung is for; it is printed in the run summary | nothing |
 | `initial` | the weights the search starts from, which is what lets the ladder climb | the built-in ones, which `greedy` plays |
-| `opponent` | agent B of every evaluation, or several separated by commas: a candidate scores the mean over them, and one that falls below the start against any of them ranks last, so it cannot win by learning one | `greedy` |
+| `opponent` | agent B of every evaluation, or several separated by commas: a candidate scores the mean over them, and one that falls below the start against any of them ranks last, so it cannot win by learning one. `<spec>@<n>` plays that one on the first `n` seeds of the file only, a cheaper seat for an opponent as dear as the lookahead; the hold-out replays it on every seed | `greedy` |
 | `check_opponent` | a second opponent the hold-out replays both agents against, off the line the search was run on | `random` |
 | `kind` | the agent kind that plays each candidate: `heuristic`, `lookahead` or `minimax` | `heuristic` |
 | `seeds` | the seed file of every evaluation | `benchmarks/benchmark-seeds.json` |

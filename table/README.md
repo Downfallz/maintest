@@ -173,7 +173,7 @@ once, separately from target effects.
 The preview is explicitly conditional: earlier actions can change the board, rolls
 are unknown, and computed effects still go through execution caps and condition
 stacking. It never reads hidden enemy choices or consumes the match's random stream.
-The Before/After replay remains the record of what actually happened (ADR 0078).
+The Before/After replay remains the record of what actually happened (ADR 0079).
 
 Start a separate practice table with the standard built catalogue:
 

@@ -42,7 +42,8 @@ tests/
   DownfallArena.SharedKernel.Tests  Unit tests for primitives, identifiers, stats.
   DownfallArena.Domain.Tests        Unit tests for the domain (fast, no mocks needed). Sees Domain internals.
   DownfallArena.Application.Tests   Use case tests with NSubstitute for ports.
-  DownfallArena.Infrastructure.Tests Adapter tests (in-memory, file-backed, seeded random).
+  DownfallArena.Infrastructure.Tests Adapter tests (in-memory, file-backed, seeded random), and the match invariants
+                                    (Invariants/): rules checked on every match of a seeded batch on the real content.
   DownfallArena.Cli.Tests           Host tests: the console commands and the studio's HTTP host.
   DownfallArena.Architecture.Tests  NetArchTest rules that fail the build when layering is violated.
 docs/
@@ -76,9 +77,9 @@ dotnet run --project src/DownfallArena.Cli -- benchmark            # verify the 
 dotnet run --project src/DownfallArena.Cli -- studio               # the content studio on http://127.0.0.1:5099 (studio/README.md)
 dotnet run --project src/DownfallArena.Cli -- table --rules <file> --p2 greedy   # two people at one screen, or one against a bot (ADR 0054); --handover N starts as bots and hands over at round N; --bind <address> serves a phone on the same network instead of this machine only; the session is recorded into runs/playtest/<id>/ (--record names another root, --who <initials> stamps who played, --no-record writes nothing at all), and /session/<id> shows it in the viewer once the match is over; the console prints a pilot token, and `/pilot?token=<it>` is the operator's own page -- who is playing each seat, what each is being asked and the one swap each is waiting to make, plus the form that hands a seat over from the top of a round the match has not reached (`POST /api/pilot/seats/player1 {"agent":"greedy","round":7}` is the same thing from a shell). It shows no board and no hand: the operator is usually one of the two players (stage 6)
 dotnet run --project src/DownfallArena.Cli -- studio --export site/data  # what the published studio reads, as files (ADR 0023)
-dotnet run --project src/DownfallArena.Cli -- table --practice          # four reproducible scenarios, selected/restarted in the browser; unrecorded, separate from an ordinary table (ADR 0078)
+dotnet run --project src/DownfallArena.Cli -- table --practice          # four reproducible scenarios, selected/restarted in the browser; unrecorded, separate from an ordinary table (ADR 0079)
 uv sync --project learning && uv run --project learning ruff check learning && (cd learning && uv run pytest)   # the Python side
-uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md); --kind lookahead|minimax tunes them for that reading instead; --opponent greedy,heuristic:<w.json>,random scores each candidate as the mean over the list, ranking any candidate that falls below the start against one of them last, so it cannot learn one opponent
+uv run --project learning search-weights -o runs/search             # tune the heuristic weights with the built CLI (docs/learning/training.md); --kind lookahead|minimax tunes them for that reading instead; --opponent greedy,heuristic:<w.json>,random scores each candidate as the mean over the list, ranking any candidate that falls below the start against one of them last, so it cannot learn one opponent; `<spec>@<n>` seats one on the first n seeds only, how the lookahead fits in a panel
 uv run --project learning check-knobs                                # the balance knobs against the content they describe (data/balance/README.md)
 uv run --project learning tune-content -o runs/tune-1                # search those knobs for a better catalogue (ADR 0021); --apply writes it; a new leader has to win on benchmarks/confirmation-seeds.json too (ADR 0074), --no-confirm skips that
 uv run --project learning score-content -o runs/score --seeds unseen.json   # play the content as it stands on a seed file, no search: how a proposal is checked on seeds it was not searched on
