@@ -660,3 +660,20 @@ body:has(#table) { padding-bottom: 24px; }
 .replay-changes { display: flex; flex-wrap: wrap; gap: .35rem; }
 .replay-changes:empty { display: none; }
 .recap-status.ready { color: var(--muted); }
+
+/* Decision guidance stays beside the commitment on narrow and wide screens. */
+.decision-guide:empty { display: none; }
+.decision-guide { padding: .85rem; margin-block: .7rem; border: 1px solid #456b61; border-radius: 12px; background: #172923; }
+.decision-guide p { margin-block: .35rem; line-height: 1.5; }
+.decision-guide small { display: block; color: #bbc9c2; line-height: 1.5; margin-top: .65rem; }
+.card-advice { padding: .5rem .75rem; margin: 0; color: #c6e4d3; font-size: .78rem; line-height: 1.4; }
+.practice-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem 1rem; max-width: 1100px; margin: 1rem auto; padding: 1rem; border: 1px solid #456b61; border-radius: 16px; background: #172923; }
+.practice-panel[hidden] { display: none; }
+.practice-panel > div, .practice-panel > p, .practice-panel > output { grid-column: 1 / -1; }
+.practice-panel h2, .practice-panel p { margin: 0; }
+.practice-panel select { min-height: 44px; max-width: 100%; color: inherit; background: #111917; border: 1px solid #628477; border-radius: 8px; padding: .6rem; font: inherit; }
+.practice-panel output { font-size: .8rem; color: #bbc9c2; }
+@media (max-width: 600px) {
+  .practice-panel { grid-template-columns: minmax(0, 1fr); margin: .75rem; }
+  .practice-panel > * { grid-column: 1; }
+}

@@ -53,6 +53,8 @@ internal sealed record CliOptions
     /// </summary>
     public bool Recording { get; init; } = true;
 
+    public bool Practice { get; init; }
+
     /// <summary>
     /// Who is playing, as initials. It goes into the run stamp as <c>human:&lt;initials&gt;</c>, so
     /// <c>compare-stamps</c> reports the agents axis between two sessions played by different people rather
@@ -101,15 +103,21 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
+    private const string RecordOption = "--record";
+
+    private const string PracticeOption = "--practice";
+
     private static readonly string[] Known =
     [
-        "--seed", "--matches", "--out", "--schema", "--record", "--traces", "--trace", "--p1", "--p2",
+        "--seed", "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules", "--bind",
         "--who",
     ];
+
+    private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", "--seed", "--handover", "--p1", "--p2"];
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -117,7 +125,11 @@ internal sealed record CliOptions
 
         var command = args.Count > 0 && !args[0].StartsWith("--", StringComparison.Ordinal) ? args[0] : "play";
         var (values, flags) = Scan(args, skipCommand: command == args.ElementAtOrDefault(0));
-        if (flags.Contains("--no-record") && values.ContainsKey("--record"))
+        if (flags.Contains(PracticeOption) && (command != "table" || PracticeConflicts.Any(values.ContainsKey)))
+        {
+            throw new ArgumentException("'--practice' is for table only and supplies its own rules, seed and seats; it cannot record a session.");
+        }
+        if (flags.Contains("--no-record") && values.ContainsKey(RecordOption))
         {
             throw new ArgumentException("'--no-record' and '--record' ask for opposite things; pass one or neither.");
         }
@@ -129,7 +141,7 @@ internal sealed record CliOptions
             Matches = values.TryGetValue("--matches", out var matches) ? int.Parse(matches, CultureInfo.InvariantCulture) : 100,
             Output = values.GetValueOrDefault("--out") ?? (command == "evaluate" ? "evaluation.json" : "simulation.csv"),
             SchemaPath = values.GetValueOrDefault("--schema") ?? DefaultSchemaPath,
-            Record = values.GetValueOrDefault("--record"),
+            Record = values.GetValueOrDefault(RecordOption),
             Trace = values.GetValueOrDefault("--trace"),
             Traces = values.TryGetValue("--traces", out var traces) ? ParseTraces(traces) : null,
             Player1 = AgentSpec.Parse(values.GetValueOrDefault("--p1") ?? "random"),
@@ -139,7 +151,8 @@ internal sealed record CliOptions
             Handover = values.TryGetValue("--handover", out var handover) ? ParseHandover(handover) : null,
             Rules = values.GetValueOrDefault("--rules"),
             Who = values.GetValueOrDefault("--who"),
-            Recording = !flags.Contains("--no-record"),
+            Recording = !flags.Contains("--no-record") && !flags.Contains(PracticeOption),
+            Practice = flags.Contains(PracticeOption),
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
@@ -179,7 +192,7 @@ internal sealed record CliOptions
     }
 
     /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
-    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record" };
+    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption };
 
     /// <summary>A trace count, rejected here so a typo is one line rather than a run that keeps nothing.</summary>
     private static int ParseTraces(string text)

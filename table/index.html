@@ -17,6 +17,15 @@
       </details>
     </header>
 
+    <section id="practice" class="practice-panel" aria-label="Practice scenarios" hidden>
+      <div><p class="eyebrow">Decision lab</p><h2>Try a moment. Learn a move.</h2></div>
+      <label for="practice-scenario">Scenario</label>
+      <select id="practice-scenario"></select>
+      <p id="practice-goal"></p>
+      <button id="practice-start" type="button">Start scenario</button>
+      <output id="practice-status" aria-live="polite"></output>
+    </section>
+
     <!-- Opaque and above every control: neither seat can read the board during handover. -->
     <section id="pass" hidden aria-labelledby="pass-seat">
       <div class="pass-emblem" aria-hidden="true">D</div>
@@ -69,6 +78,7 @@
               <h2 id="asking" aria-live="polite">Waiting for the other seat…</h2>
               <p id="decision-context" class="decision-context"></p>
               <div id="evolution-budget" hidden></div>
+              <div id="decision-guide"></div>
               <div id="choices"></div>
               <details id="shortcuts" class="shortcuts">
                 <summary>Keyboard shortcuts <kbd>?</kbd></summary>

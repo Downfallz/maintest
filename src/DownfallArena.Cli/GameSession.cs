@@ -93,7 +93,7 @@ internal sealed class GameSession
         Console.WriteLine($"Engine {EngineVersion.Current}. Content {_resources.Version}. Schema {_schema.Id}.{seed}");
     }
 
-    private bool UsesSessionSeed => _options.Command is not "benchmark" && (_options.Command is not "evaluate" || _options.Seeds is null);
+    private bool UsesSessionSeed => !_options.Practice && _options.Command is not "benchmark" && (_options.Command is not "evaluate" || _options.Seeds is null);
 
     /// <summary>Runs the command the options name; a command's exit code is the process's.</summary>
     public async Task<int> RunAsync()
@@ -113,6 +113,10 @@ internal sealed class GameSession
             case "benchmark":
                 return await BenchmarkAsync();
             case "table":
+                if (_options.Practice)
+                {
+                    return await Table.PracticeHost.RunAsync(_options);
+                }
                 // The table is the one command that plays a rule set of its own: the board game is balanced
                 // for 10 to 15 rounds, not for the engine's thirty (docs/tabletop/plan.md). It falls back to the
                 // same default as every other command, and says so out loud rather than defaulting silently.
