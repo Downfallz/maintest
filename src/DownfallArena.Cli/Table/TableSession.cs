@@ -116,7 +116,7 @@ internal sealed class TableSession : IDisposable
         return new TableSession(matchId, player1, player2, queries, gate, outcome, () =>
         {
             recorder?.Forget(matchId);
-            repository.ForgetAsync(matchId).GetAwaiter().GetResult();
+            repository.ForgetAsync(matchId, CancellationToken.None).GetAwaiter().GetResult();
         });
     }
 
