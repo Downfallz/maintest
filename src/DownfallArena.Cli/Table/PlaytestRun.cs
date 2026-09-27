@@ -65,20 +65,17 @@ internal sealed class PlaytestRun
     private readonly int _seed;
 
     private PlaytestRun(
-        string sessionId,
-        string location,
-        IArtifactWriter writer,
-        IArtifactReader reader,
+        RunPlace place,
         RunRecorder recorder,
         MatchTraceRecorder events,
         RunStamp stamp,
         TimeProvider clock,
         int seed)
     {
-        SessionId = sessionId;
-        Location = location;
-        _writer = writer;
-        _reader = reader;
+        SessionId = place.SessionId;
+        Location = place.Location;
+        _writer = place.Writer;
+        _reader = place.Reader;
         _recorder = recorder;
         _events = events;
         _stamp = stamp;
@@ -147,15 +144,14 @@ internal sealed class PlaytestRun
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(clock);
 
-        var name = id;
-        var writer = store.Writer(name);
+        var place = RunPlace.In(store, id);
         var schema = FeatureSchema.Build(setup.Resources, setup.Rules);
         var stamp = RunStamp.Create(EngineVersion.Current, setup.Resources, setup.Rules, schema, setup.Player1Agent, setup.Player2Agent, setup.Seed);
 
         // One trace, because a session is one match: the limit is what stops the recorder from being asked for
         // a second one it never had.
         var recorder = new RunRecorder(
-            writer,
+            place.Writer,
             stamp,
             new ObservationBuilder(schema),
             new ActionEncoder(schema),
@@ -164,7 +160,7 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(name, store.LocationOf(name), writer, store.Reader(name), recorder, events, stamp, clock, setup.Seed);
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed);
     }
 
     /// <summary>

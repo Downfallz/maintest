@@ -19,7 +19,6 @@ internal sealed class HostedTables : IDisposable
 
     private readonly StudioContent _content = new();
     private readonly IHost _host;
-    private readonly string _runs = Path.Combine(Path.GetTempPath(), $"downfall-lobby-{Guid.NewGuid():N}");
 
     public HostedTables(bool recording = false)
     {
@@ -28,13 +27,13 @@ internal sealed class HostedTables : IDisposable
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },
             seed: 7,
             logMatchToConsole: false);
-        Composer = new TableComposer(_host.Services, Rules, recording ? new FileArtifactStore(_runs) : null);
+        Composer = new TableComposer(_host.Services, Rules, recording ? new FileArtifactStore(RunsDirectory) : null);
     }
 
     public TableComposer Composer { get; }
 
     /// <summary>Where a recording host writes its runs: one directory per table opened.</summary>
-    public string RunsDirectory => _runs;
+    public string RunsDirectory { get; } = Path.Combine(Path.GetTempPath(), $"downfall-lobby-{Guid.NewGuid():N}");
 
     public IServiceProvider Services => _host.Services;
 
@@ -48,9 +47,9 @@ internal sealed class HostedTables : IDisposable
     {
         _host.Dispose();
         _content.Dispose();
-        if (Directory.Exists(_runs))
+        if (Directory.Exists(RunsDirectory))
         {
-            Directory.Delete(_runs, recursive: true);
+            Directory.Delete(RunsDirectory, recursive: true);
         }
     }
 }

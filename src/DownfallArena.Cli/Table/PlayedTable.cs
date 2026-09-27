@@ -16,31 +16,31 @@ internal sealed class PlayedTable : IDisposable
     private int _closed;
 
     public PlayedTable(
-        string id,
+        TableOpening opening,
         TableSession session,
         TableApi api,
         IReadOnlyList<TableSeat> seats,
         TablePilot pilot,
         PlaytestRun? run,
-        CancellationTokenSource stopping,
-        DateTimeOffset createdAt)
+        CancellationTokenSource stopping)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(opening);
+        ArgumentException.ThrowIfNullOrWhiteSpace(opening.Id);
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(api);
         ArgumentNullException.ThrowIfNull(seats);
         ArgumentNullException.ThrowIfNull(pilot);
         ArgumentNullException.ThrowIfNull(stopping);
 
-        Id = id;
+        Id = opening.Id;
         Session = session;
         Api = api;
         Seats = seats;
         Pilot = pilot;
         Run = run;
         _stopping = stopping;
-        CreatedAt = createdAt;
-        _touched = createdAt.UtcTicks;
+        CreatedAt = opening.At;
+        _touched = opening.At.UtcTicks;
     }
 
     /// <summary>The session id: the run's name in its store, and what a page, a code and a pilot token all name.</summary>
@@ -80,7 +80,9 @@ internal sealed class PlayedTable : IDisposable
     /// <summary>The round the match has reached, off seat 1's board, or none before the first.</summary>
     public async Task<int?> RoundAsync()
     {
-        var board = await Session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(Session.MatchId, PlayerSlot.Player1));
+        // Never cancelled by the table's own stopping: a listing reads a table that is being let go of, and
+        // a disposed source is an exception where a null would do.
+        var board = await Session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(Session.MatchId, PlayerSlot.Player1), CancellationToken.None);
         return board.IsSuccess ? board.Value.RoundNumber : null;
     }
 

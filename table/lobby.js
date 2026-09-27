@@ -45,7 +45,7 @@ export function lobbyTransport(token, fetchImpl = globalThis.fetch.bind(globalTh
 // Where the operator signs in, when the host says a sign-in is what is missing, or nothing. A 401 carrying a
 // login is the platform's door; a 403 is a token the console printed and this page was not opened with.
 export function signInNeeded(answer) {
-  return answer && answer.status === 401 && typeof answer.body?.login === 'string' ? answer.body.login : null;
+  return answer?.status === 401 && typeof answer.body?.login === 'string' ? answer.body.login : null;
 }
 
 // What the form asks for, or the reason it is not asked at all. The host checks all of this again; this is so
@@ -103,7 +103,8 @@ function stateOf(table) {
 export function said(answer) {
   if (answer.ok) {
     const codes = (answer.body?.seats ?? []).filter(seat => seat.code).map(seat => `${seat.slot} ${seat.code}`);
-    return { refused: false, line: `Table ${answer.body?.id ?? ''} opened${codes.length > 0 ? `: ${codes.join(', ')}` : ''}.` };
+    const toReadOut = codes.length > 0 ? `: ${codes.join(', ')}` : '';
+    return { refused: false, line: `Table ${answer.body?.id ?? ''} opened${toReadOut}.` };
   }
 
   const body = answer.body ?? {};

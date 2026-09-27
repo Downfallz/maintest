@@ -39,36 +39,52 @@ internal sealed class TableRegistry : IDisposable
     private readonly Lock _gate = new();
     private readonly Dictionary<string, PlayedTable> _byId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PlayedTable> _byToken = new(StringComparer.Ordinal);
-    private readonly JoinCodes _codes = new();
-    private readonly int _mostUnderWay;
     private DateTimeOffset _swept = DateTimeOffset.MinValue;
+    private int _reserved;
 
     /// <param name="mostUnderWay">How many tables may be under way at once; a test lowers it to reach the bound.</param>
     public TableRegistry(int mostUnderWay = MostUnderWay)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(mostUnderWay, 1);
-        _mostUnderWay = mostUnderWay;
+        Capacity = mostUnderWay;
     }
 
     /// <summary>How many tables this host lets be under way at once.</summary>
-    public int Capacity => _mostUnderWay;
+    public int Capacity { get; }
 
     /// <summary>The join codes, minted for every seat a person holds as its table is added.</summary>
-    public JoinCodes Codes => _codes;
+    public JoinCodes Codes { get; } = new();
 
     /// <summary>
-    /// Whether one more table would fit. Asked before a table is composed, because composing one opens its
-    /// recording and starts its match, and a table refused afterwards would have written a run nobody played.
-    /// <see cref="TryAdd" /> asks again under the lock; this is the cheap answer, not the authoritative one.
+    /// A place for one more table, taken before the table is composed, or none when the host is full.
+    /// Composing a table opens its recording and starts its match, so the place has to be held first: two
+    /// requests arriving for the last one would otherwise both compose, and one would be refused having
+    /// written a run nobody played. A reservation not handed to <see cref="Add" /> is given back when it is
+    /// disposed.
     /// </summary>
-    public bool HasRoom
+    public Reservation? Reserve()
     {
-        get
+        lock (_gate)
         {
-            lock (_gate)
+            if (UnderWay() + _reserved >= Capacity)
             {
-                return UnderWay() < _mostUnderWay;
+                return null;
             }
+
+            _reserved++;
+            return new Reservation(this);
+        }
+    }
+
+    /// <summary>Adds a table into the place reserved for it, minting the codes of its seats.</summary>
+    public void Add(PlayedTable table, Reservation reservation)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(reservation);
+        lock (_gate)
+        {
+            reservation.Spend();
+            Register(table);
         }
     }
 
@@ -78,27 +94,32 @@ internal sealed class TableRegistry : IDisposable
         ArgumentNullException.ThrowIfNull(table);
         lock (_gate)
         {
-            if (UnderWay() >= _mostUnderWay)
+            if (UnderWay() + _reserved >= Capacity)
             {
                 return false;
             }
 
-            // An id names a run's directory and the tokenless session page, so two tables with one id would
-            // write into each other and read as each other. Thirty-two random bits a second make this a bug
-            // rather than a chance, and a bug is thrown, not routed.
-            if (!_byId.TryAdd(table.Id, table))
-            {
-                throw new InvalidOperationException($"A table with id '{table.Id}' is already at this host.");
-            }
-
-            _byToken[table.Pilot.Token] = table;
-            foreach (var seat in table.Seats)
-            {
-                _byToken[seat.Token] = table;
-                _codes.Mint(seat);
-            }
-
+            Register(table);
             return true;
+        }
+    }
+
+    /// <summary>Under the lock: the table into every map, and a code for every seat a person holds.</summary>
+    private void Register(PlayedTable table)
+    {
+        // An id names a run's directory and the tokenless session page, so two tables with one id would
+        // write into each other and read as each other. Thirty-two random bits a second make this a bug
+        // rather than a chance, and a bug is thrown, not routed.
+        if (!_byId.TryAdd(table.Id, table))
+        {
+            throw new InvalidOperationException($"A table with id '{table.Id}' is already at this host.");
+        }
+
+        _byToken[table.Pilot.Token] = table;
+        foreach (var seat in table.Seats)
+        {
+            _byToken[seat.Token] = table;
+            Codes.Mint(seat);
         }
     }
 
@@ -214,13 +235,50 @@ internal sealed class TableRegistry : IDisposable
 
     private int UnderWay() => _byId.Values.Count(held => !held.IsOver);
 
+    /// <summary>
+    /// A place held for a table being composed. Spent when the table is added, given back when disposed
+    /// unspent: a composition that failed must not leave the host one table smaller for ever.
+    /// </summary>
+    public sealed class Reservation : IDisposable
+    {
+        private TableRegistry? _registry;
+
+        internal Reservation(TableRegistry registry)
+        {
+            _registry = registry;
+        }
+
+        /// <summary>Under the registry's lock: the place is the table's now.</summary>
+        internal void Spend()
+        {
+            if (_registry is { } registry)
+            {
+                registry._reserved--;
+                _registry = null;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_registry is not { } registry)
+            {
+                return;
+            }
+
+            lock (registry._gate)
+            {
+                Spend();
+            }
+        }
+    }
+
     private void Forget(PlayedTable table)
     {
         _byToken.Remove(table.Pilot.Token);
         foreach (var seat in table.Seats)
         {
             _byToken.Remove(seat.Token);
-            _codes.Forget(seat);
+            Codes.Forget(seat);
         }
     }
 }

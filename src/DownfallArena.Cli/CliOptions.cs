@@ -126,19 +126,23 @@ internal sealed record CliOptions
 
     private const string LobbyOption = "--lobby";
 
+    private const string SeedOption = "--seed";
+
+    private const string HandoverOption = "--handover";
+
     private const string PlatformAuthOption = "--platform-auth";
 
     private static readonly string[] Known =
     [
-        "--seed", "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
-        "--seeds", "--benchmarks", "--data", "--port", "--export", "--handover", "--rules", "--bind",
+        SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", "--trace", "--p1", "--p2",
+        "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
         "--who",
     ];
 
-    private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", "--seed", "--handover", "--p1", "--p2"];
+    private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", SeedOption, HandoverOption, "--p1", "--p2"];
 
     /// <summary>What describes the table a host starts with, which a lobby host starts without.</summary>
-    private static readonly string[] LobbyConflicts = ["--seed", "--handover", "--p1", "--p2", "--who"];
+    private static readonly string[] LobbyConflicts = [SeedOption, HandoverOption, "--p1", "--p2", "--who"];
 
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
@@ -146,27 +150,15 @@ internal sealed record CliOptions
 
         var command = args.Count > 0 && !args[0].StartsWith("--", StringComparison.Ordinal) ? args[0] : "play";
         var (values, flags) = Scan(args, skipCommand: command == args.ElementAtOrDefault(0));
-        if (flags.Contains(PracticeOption) && (command != "table" || PracticeConflicts.Any(values.ContainsKey)))
+        if (Contradiction(command, values, flags) is { } contradiction)
         {
-            throw new ArgumentException("'--practice' is for table only and supplies its own rules, seed and seats; it cannot record a session.");
-        }
-        if (flags.Contains(LobbyOption) && (command != "table" || flags.Contains(PracticeOption) || LobbyConflicts.Any(values.ContainsKey)))
-        {
-            throw new ArgumentException("'--lobby' is for table only and starts with no session: the lobby says who sits where, so --p1, --p2, --who, --handover and --seed have nothing to describe.");
-        }
-        if (flags.Contains(PlatformAuthOption) && command != "table")
-        {
-            throw new ArgumentException("'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.");
-        }
-        if (flags.Contains("--no-record") && values.ContainsKey(RecordOption))
-        {
-            throw new ArgumentException("'--no-record' and '--record' ask for opposite things; pass one or neither.");
+            throw new ArgumentException(contradiction);
         }
 
         return new CliOptions
         {
             Command = command,
-            Seed = values.TryGetValue("--seed", out var seed) ? int.Parse(seed, CultureInfo.InvariantCulture) : null,
+            Seed = values.TryGetValue(SeedOption, out var seed) ? int.Parse(seed, CultureInfo.InvariantCulture) : null,
             Matches = values.TryGetValue("--matches", out var matches) ? int.Parse(matches, CultureInfo.InvariantCulture) : 100,
             Output = values.GetValueOrDefault("--out") ?? (command == "evaluate" ? "evaluation.json" : "simulation.csv"),
             SchemaPath = values.GetValueOrDefault("--schema") ?? DefaultSchemaPath,
@@ -177,7 +169,7 @@ internal sealed record CliOptions
             Player2 = AgentSpec.Parse(values.GetValueOrDefault("--p2") ?? "random"),
             Player1Named = values.ContainsKey("--p1"),
             Player2Named = values.ContainsKey("--p2"),
-            Handover = values.TryGetValue("--handover", out var handover) ? ParseHandover(handover) : null,
+            Handover = values.TryGetValue(HandoverOption, out var handover) ? ParseHandover(handover) : null,
             Rules = values.GetValueOrDefault("--rules"),
             Who = values.GetValueOrDefault("--who"),
             Recording = !flags.Contains("--no-record") && !flags.Contains(PracticeOption),
@@ -192,6 +184,33 @@ internal sealed record CliOptions
             Port = values.TryGetValue("--port", out var port) ? ParsePort(port) : DefaultPort,
             Export = values.GetValueOrDefault("--export"),
         };
+    }
+
+    /// <summary>
+    /// What a command line asks for that it cannot have together, or null when it is consistent. Each flag
+    /// that reshapes the table names what it makes meaningless, so a typo is one line rather than a run that
+    /// quietly ignored half its arguments.
+    /// </summary>
+    private static string? Contradiction(string command, Dictionary<string, string> values, HashSet<string> flags)
+    {
+        if (flags.Contains(PracticeOption) && (command != "table" || PracticeConflicts.Any(values.ContainsKey)))
+        {
+            return "'--practice' is for table only and supplies its own rules, seed and seats; it cannot record a session.";
+        }
+
+        if (flags.Contains(LobbyOption) && (command != "table" || flags.Contains(PracticeOption) || LobbyConflicts.Any(values.ContainsKey)))
+        {
+            return "'--lobby' is for table only and starts with no session: the lobby says who sits where, so --p1, --p2, --who, --handover and --seed have nothing to describe.";
+        }
+
+        if (flags.Contains(PlatformAuthOption) && command != "table")
+        {
+            return "'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.";
+        }
+
+        return flags.Contains("--no-record") && values.ContainsKey(RecordOption)
+            ? "'--no-record' and '--record' ask for opposite things; pass one or neither."
+            : null;
     }
 
     /// <summary>

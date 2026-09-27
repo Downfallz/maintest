@@ -40,7 +40,7 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         TableRequestBody? posted;
         try
         {
-            posted = string.IsNullOrWhiteSpace(body) ? new TableRequestBody() : JsonSerializer.Deserialize<TableRequestBody>(body, TableRequestBody.Options);
+            posted = string.IsNullOrWhiteSpace(body) ? new TableRequestBody(null, null, null, null, null) : JsonSerializer.Deserialize<TableRequestBody>(body, Web);
         }
         catch (JsonException exception)
         {
@@ -62,12 +62,19 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
 
         var player1 = Seat(posted.Player1, "player1", ref problem);
         var player2 = Seat(posted.Player2, "player2", ref problem);
-        return problem is null
-            ? new TableRequest(player1, player2, string.IsNullOrWhiteSpace(posted.Who) ? null : posted.Who.Trim(), posted.Handover, posted.Seed)
-            : Nothing;
+        if (problem is not null)
+        {
+            return Nothing;
+        }
+
+        var who = string.IsNullOrWhiteSpace(posted.Who) ? null : posted.Who.Trim();
+        return new TableRequest(player1, player2, who, posted.Handover, posted.Seed);
     }
 
     private static readonly TableRequest Nothing = new(null, null, null, null, null);
+
+    /// <summary>camelCase, like everything else on this host's wire.</summary>
+    private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
     private static AgentSpec? Seat(string? named, string slot, ref string? problem)
     {
@@ -87,19 +94,6 @@ internal sealed record TableRequest(AgentSpec? Player1, AgentSpec? Player2, stri
         }
     }
 
-    /// <summary>The JSON the lobby posts, camelCase like everything else on this host's wire.</summary>
-    private sealed record TableRequestBody
-    {
-        public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
-
-        public string? Player1 { get; init; }
-
-        public string? Player2 { get; init; }
-
-        public string? Who { get; init; }
-
-        public int? Handover { get; init; }
-
-        public int? Seed { get; init; }
-    }
+    /// <summary>The JSON the lobby posts.</summary>
+    private sealed record TableRequestBody(string? Player1, string? Player2, string? Who, int? Handover, int? Seed);
 }

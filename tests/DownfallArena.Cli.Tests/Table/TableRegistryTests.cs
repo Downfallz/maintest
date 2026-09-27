@@ -1,4 +1,9 @@
+using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Cli.Table;
+using DownfallArena.SharedKernel.Identifiers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -111,6 +116,86 @@ public sealed class TableRegistryTests : IDisposable
 
         registry.Sweep(idle.CreatedAt + TableRegistry.IdleFor + TableRegistry.IdleFor).ShouldBe([idle.Id]);
         await Should.ThrowAsync<OperationCanceledException>(() => idle.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// A place is held before a table is composed, and counts until the table takes it or the holder lets go:
+    /// two requests for the last place cannot both compose a table.
+    /// </summary>
+    [Fact]
+    public async Task A_place_reserved_counts_against_the_host_until_it_is_taken_or_given_back()
+    {
+        using var registry = new TableRegistry(mostUnderWay: 1);
+
+        var held = registry.Reserve().ShouldNotBeNull();
+        registry.Reserve().ShouldBeNull("the one place is held");
+        held.Dispose();
+
+        using var again = registry.Reserve().ShouldNotBeNull();
+        using var table = await Composed(HostedTables.OnePerson);
+        registry.Add(table, again);
+        registry.ById(table.Id).ShouldBeSameAs(table);
+        registry.Reserve().ShouldBeNull("the place is the table's now");
+        again.Dispose();
+        registry.Reserve().ShouldBeNull("disposing a spent reservation gives nothing back");
+    }
+
+    /// <summary>
+    /// A table let go of is forgotten by the host's stores too: the repository that held its match and the
+    /// recorder that kept its feed. A host that plays for days would otherwise keep every match it ever played.
+    /// </summary>
+    [Fact]
+    public async Task A_table_let_go_of_is_forgotten_by_the_repository_and_the_trace_recorder()
+    {
+        var table = await Composed(HostedTables.Bots);
+        await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        var repository = _hosted.Services.GetRequiredService<IMatchRepository>();
+        var recorder = _hosted.Services.GetRequiredService<MatchTraceRecorder>();
+        (await repository.FindAsync(table.Session.MatchId, TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        recorder.EntriesOf(table.Session.MatchId).ShouldNotBeEmpty();
+
+        table.Dispose();
+        await Forgotten(repository, table.Session.MatchId);
+
+        recorder.EntriesOf(table.Session.MatchId).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// A table's bots draw from sources derived from its seed, so the seed a run stamp carries replays the
+    /// session whatever other tables the host played before it.
+    /// </summary>
+    [Fact]
+    public async Task Two_tables_opened_with_one_seed_play_the_same_match()
+    {
+        var dice = new TableRequest(AgentSpec.Parse("random"), AgentSpec.Parse("random"), Who: null, Handover: null, Seed: 11);
+        var recorder = _hosted.Services.GetRequiredService<MatchTraceRecorder>();
+        using var first = await Composed(dice);
+        var firstOutcome = await first.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        using var second = await Composed(dice);
+        var secondOutcome = await second.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        var one = recorder.EntriesOf(first.Session.MatchId).Select(entry => entry.Event.GetType().Name).ToList();
+        var other = recorder.EntriesOf(second.Session.MatchId).Select(entry => entry.Event.GetType().Name).ToList();
+
+        one.ShouldNotBeEmpty();
+        other.ShouldBe(one);
+        secondOutcome.Value.Winner.ShouldBe(firstOutcome.Value.Winner);
+    }
+
+    /// <summary>The forgetting runs once the driver has stopped, on its own task, so a test waits for it.</summary>
+    private static async Task Forgotten(IMatchRepository repository, MatchId matchId)
+    {
+        for (var attempt = 0; attempt < 300; attempt++)
+        {
+            if (await repository.FindAsync(matchId, TestContext.Current.CancellationToken) is null)
+            {
+                return;
+            }
+
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        throw new InvalidOperationException("The repository still holds the match of a table that was let go of.");
     }
 
     /// <summary>

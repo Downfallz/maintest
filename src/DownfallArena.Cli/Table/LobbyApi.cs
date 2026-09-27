@@ -92,10 +92,10 @@ internal sealed class LobbyApi
             return StudioResponse.OfPlainText(400, problem);
         }
 
-        // Asked before composing, because composing opens the recording and starts the match: a table
-        // refused afterwards would have written a run nobody played. Asked again, under the lock, when it is
-        // added.
-        if (!_registry.HasRoom)
+        // The place is taken before composing, because composing opens the recording and starts the match: a
+        // table refused afterwards would have written a run nobody played.
+        using var reservation = _registry.Reserve();
+        if (reservation is null)
         {
             return Full();
         }
@@ -112,12 +112,7 @@ internal sealed class LobbyApi
             return StudioResponse.OfPlainText(400, failure.Message);
         }
 
-        if (!_registry.TryAdd(table))
-        {
-            table.Dispose();
-            return Full();
-        }
-
+        _registry.Add(table, reservation);
         Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : $"code {_registry.Codes.Of(seat)}")}"))}");
         return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }

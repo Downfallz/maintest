@@ -6,6 +6,7 @@ using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Application.Ports;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Randomness;
@@ -66,15 +67,18 @@ internal sealed class TableComposer
         var stopping = new CancellationTokenSource();
         try
         {
-            var random = _services.GetRequiredService<IRandomSource>();
             var agents = _services.GetRequiredService<IAgentFactory>();
             var resources = _services.GetRequiredService<IGameResources>();
             var events = _services.GetRequiredService<MatchTraceRecorder>();
             var seed = request.Seed ?? RandomNumberGenerator.GetInt32(int.MaxValue);
             var id = PlaytestRun.NewId(_clock);
 
-            var seat1 = Seat(PlayerSlot.Player1, request.Player1, request, agents, random, stopping.Token);
-            var seat2 = Seat(PlayerSlot.Player2, request.Player2, request, agents, random, stopping.Token);
+            // Each seat draws from its own source, derived from the table's seed the way `GameSession` derives
+            // an agent's: a table's bots then replay from the seed its run stamp carries, whatever other tables
+            // this host played before or beside it. A source shared across tables would make every recording
+            // depend on the order the host's requests happened to arrive in.
+            var seat1 = Seat(PlayerSlot.Player1, request.Player1, request, agents, Source(seed, PlayerSlot.Player1), stopping.Token);
+            var seat2 = Seat(PlayerSlot.Player2, request.Player2, request, agents, Source(seed, PlayerSlot.Player2), stopping.Token);
 
             var run = _store is { } store
                 ? PlaytestRun.Open(
@@ -102,9 +106,9 @@ internal sealed class TableComposer
             var seats = new[] { seat1.Seat, seat2.Seat };
             var pilot = new TablePilot(
                 Token(),
-                (slot, wanted) => Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, request, agents, random));
+                (slot, wanted) => Seating(slot == PlayerSlot.Player1 ? seat1.Seat : seat2.Seat, wanted, request, agents, Source(seed, slot)));
             var api = new TableApi(session, session.Queries, seats, _catalogue, events, run, pilot) { Guide = _guide };
-            var table = new PlayedTable(id, session, api, seats, pilot, run, stopping, _clock.GetUtcNow());
+            var table = new PlayedTable(new TableOpening(id, _clock.GetUtcNow()), session, api, seats, pilot, run, stopping);
 
             // Closed the moment the match has an outcome rather than when the host stops. The host keeps
             // serving so two people can read the end screen and write a comment, and a session page opened
@@ -118,11 +122,19 @@ internal sealed class TableComposer
         }
         catch
         {
-            stopping.Cancel();
+            await stopping.CancelAsync();
             stopping.Dispose();
             throw;
         }
     }
+
+    /// <summary>
+    /// A seat's own random source: the table's seed and the slot, the same derivation <c>GameSession</c> uses
+    /// for an agent named on the command line, so a bot seated at a table draws what the same bot would draw
+    /// in a <c>play</c> of that seed.
+    /// </summary>
+    private IRandomSource Source(int seed, PlayerSlot slot) =>
+        _services.GetRequiredService<IRandomSourceFactory>().Create(unchecked((seed * 31) + (slot == PlayerSlot.Player1 ? 1 : 2)));
 
     /// <summary>
     /// Closes the session's dataset, and only on a match that reached an outcome. A session someone walked away
@@ -158,7 +170,7 @@ internal sealed class TableComposer
         {
             // ObjectDisposedException among them: the table was let go of while its files were being written,
             // which is the operator closing it, not a broken host.
-            Console.Error.WriteLine($"  Session {run.SessionId} could not be written to '{run.Location}': {exception.Message}");
+            await Console.Error.WriteLineAsync($"  Session {run.SessionId} could not be written to '{run.Location}': {exception.Message}");
         }
         finally
         {
