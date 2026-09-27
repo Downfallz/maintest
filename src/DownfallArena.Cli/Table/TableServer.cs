@@ -59,7 +59,7 @@ internal sealed class TableServer : IDisposable
     /// It carries no seat token. The page is the whole session and belongs to both players, the host binds one
     /// address they are both at, and there is nothing left to hide once the match is decided.
     /// </remarks>
-    private StudioResponse SessionPage(string id)
+    private async Task<StudioResponse> SessionPageAsync(string id)
     {
         if (_run is not { } run)
         {
@@ -85,7 +85,7 @@ internal sealed class TableServer : IDisposable
 
         try
         {
-            var artifacts = run.Artifacts();
+            var artifacts = await run.ArtifactsAsync();
             return artifacts.Count == 0
                 ? StudioResponse.OfPlainText(404, $"Session '{id}' has no artifact to show.")
                 : StudioResponse.OfText(200, StudioResponse.Html, ViewerPage.Render(StudioHost.ViewerDirectory, id, artifacts));
@@ -121,7 +121,7 @@ internal sealed class TableServer : IDisposable
 
         if (path.StartsWith(SessionPrefix, StringComparison.Ordinal))
         {
-            return SessionPage(path[SessionPrefix.Length..].TrimEnd('/'));
+            return await SessionPageAsync(path[SessionPrefix.Length..].TrimEnd('/'));
         }
 
         return await _api.HandleAsync(method, path, body, request.Headers[TableApi.TokenHeader], request.Headers["If-None-Match"], request.Url?.Query);

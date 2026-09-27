@@ -53,7 +53,7 @@ internal static class TableHost
         // the disk as it found it.
         var run = options.Recording
             ? PlaytestRun.Open(
-                options.Record ?? DefaultRunsDirectory,
+                await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory),
                 new PlaytestSetup(
                     resources,
                     rules,
@@ -146,7 +146,7 @@ internal static class TableHost
         // anybody plays a session they meant to keep.
         Console.WriteLine(run is null
             ? "  Recording nothing: no session directory, no notes, no trace (--no-record)."
-            : $"  Recording session {run.SessionId} into '{run.Directory}'");
+            : $"  Recording session {run.SessionId} into '{run.Location}'");
 
         // The rule set is named before anything is played. The board game is balanced for 10 to 15 rounds and
         // the engine's default caps at thirty, so a table that took one silently would be testing another
@@ -193,7 +193,7 @@ internal static class TableHost
     {
         if (!session.Outcome.IsCompletedSuccessfully || session.Outcome.Result.IsFailure)
         {
-            Console.WriteLine($"  Session {run.SessionId} was not finished; '{run.Directory}' holds it as far as it got.");
+            Console.WriteLine($"  Session {run.SessionId} was not finished; '{run.Location}' holds it as far as it got.");
             return;
         }
 
@@ -205,7 +205,7 @@ internal static class TableHost
         }
 
         await run.FinishAsync(session.MatchId, board.Value);
-        Console.WriteLine($"  Session {run.SessionId} written to '{run.Directory}'");
+        Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
     }
 
     /// <summary>

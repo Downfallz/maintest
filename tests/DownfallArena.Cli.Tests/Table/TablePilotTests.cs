@@ -11,6 +11,7 @@ using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Randomness;
 using DownfallArena.Infrastructure.Resources.Authoring;
 using DownfallArena.SharedKernel.Identifiers;
@@ -379,12 +380,12 @@ public sealed class TablePilotTests : IDisposable
         table.Api.HandleAsync("POST", $"/api/pilot/seats/{slot}", $$"""{"agent":"{{agent}}","round":{{round}}}""", PilotToken);
 
     private static IReadOnlyList<JsonElement> Lines(PlaytestRun run, string relativePath) =>
-        [.. File.ReadAllLines(Path.Combine(run.Directory, relativePath))
+        [.. File.ReadAllLines(Path.Combine(run.Location, relativePath))
             .Where(line => line.Length > 0)
             .Select(line => JsonDocument.Parse(line).RootElement)];
 
     private static JsonElement Read(PlaytestRun run, string relativePath) =>
-        JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Directory, relativePath))).RootElement;
+        JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Location, relativePath))).RootElement;
 
     private static async Task<PlayerBoardState> Board(TableSession session)
     {
@@ -404,7 +405,7 @@ public sealed class TablePilotTests : IDisposable
 
         var resources = _host.Services.GetRequiredService<IGameResources>();
         var run = PlaytestRun.Open(
-            _runs,
+            new FileArtifactStore(_runs),
             new PlaytestSetup(resources, Rules, Seed: 7, "Greedy", "Greedy"),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
             TimeProvider.System);

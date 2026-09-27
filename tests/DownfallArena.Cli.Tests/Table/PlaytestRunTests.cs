@@ -11,6 +11,7 @@ using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Resources.Authoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,10 +55,10 @@ public sealed class PlaytestRunTests : IDisposable
         outcome.IsSuccess.ShouldBeTrue();
         await run.FinishAsync(session.MatchId, await Board(session), TestContext.Current.CancellationToken);
 
-        Directory.GetFiles(run.Directory).Select(Path.GetFileName).ShouldBe(
+        Directory.GetFiles(run.Location).Select(Path.GetFileName).ShouldBe(
             ["catalogue.json", "episodes.jsonl", "manifest.json", "notes.jsonl", "steps.jsonl"],
             ignoreOrder: true);
-        File.Exists(Path.Combine(run.Directory, "traces", $"{session.MatchId}.json")).ShouldBeTrue();
+        File.Exists(Path.Combine(run.Location, "traces", $"{session.MatchId}.json")).ShouldBeTrue();
     }
 
     [Fact]
@@ -97,7 +98,7 @@ public sealed class PlaytestRunTests : IDisposable
         // Every step of an abandoned session is lost: RunRecorder holds them until the match is closed. The
         // notes and the trace survive, the dataset does not, and a reader who finds nine rounds of trace
         // beside an empty steps.jsonl should know that is the design and not a bug.
-        File.ReadAllText(Path.Combine(run.Directory, "steps.jsonl")).ShouldBeEmpty();
+        File.ReadAllText(Path.Combine(run.Location, "steps.jsonl")).ShouldBeEmpty();
     }
 
     /// <summary>
@@ -279,12 +280,12 @@ public sealed class PlaytestRunTests : IDisposable
     }
 
     private static IReadOnlyList<JsonElement> Lines(PlaytestRun run, string relativePath) =>
-        [.. File.ReadAllLines(Path.Combine(run.Directory, relativePath))
+        [.. File.ReadAllLines(Path.Combine(run.Location, relativePath))
             .Where(line => line.Length > 0)
             .Select(line => JsonDocument.Parse(line).RootElement)];
 
     private static JsonElement Read(PlaytestRun run, string relativePath) =>
-        JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Directory, relativePath))).RootElement;
+        JsonDocument.Parse(File.ReadAllText(Path.Combine(run.Location, relativePath))).RootElement;
 
     /// <summary>A session that stops at the first question, because a person is holding one of the seats.</summary>
     private async Task<(PlaytestRun Run, TableSession Session, HumanSeat Person)> StartedWithAPerson()
@@ -326,7 +327,7 @@ public sealed class PlaytestRunTests : IDisposable
 
         var resources = _host.Services.GetRequiredService<IGameResources>();
         var run = PlaytestRun.Open(
-            _runs,
+            new FileArtifactStore(_runs),
             new PlaytestSetup(resources, Rules, Seed: 7, player1Agent, "greedy"),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
             TimeProvider.System);

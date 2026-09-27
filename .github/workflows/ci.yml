@@ -58,7 +58,15 @@ jobs:
   build-and-test:
     name: Build, format check, test, analyse
     runs-on: ubuntu-latest
+    # The storage emulator the blob artifact adapter is tested against (ADR 0080). Without it those tests
+    # skip and say so; here they run.
+    services:
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite
+        ports:
+          - 10000:10000
     env:
+      AZURITE_BLOB_ENDPOINT: http://127.0.0.1:10000/devstoreaccount1
       # Sonar steps are skipped when the token is absent (forks, or the secret not configured yet).
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_PROJECT_KEY: Downfallz_maintest
