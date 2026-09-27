@@ -87,3 +87,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0079](0079-decision-previews-and-reproducible-practice.md) | Decision previews and reproducible practice | Accepted |
 | [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted |
 | [0081](0081-a-host-of-tables-found-by-their-tokens.md) | A host of tables, each found by its tokens, opened from a lobby behind the operator's door | Accepted |
+| [0082](0082-deploy-from-github-to-azure-without-a-secret.md) | Deploy the table from GitHub to Azure without a secret | Accepted |
