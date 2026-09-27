@@ -1,8 +1,8 @@
 name: Deploy the table
 
-# The hosted table (ADR 0080, ADR 0082). A pull request that touches the image or the infrastructure builds
-# the image and tries it; a push to main that touches anything the image carries also pushes it to GitHub's
-# container registry and deploys it to Azure. Nothing here holds a secret: Azure is reached with an identity
+# The hosted table (ADR 0080, ADR 0082). A pull request that touches anything the image carries builds the
+# image and tries it, so a change that breaks only the container is caught before it merges; a push to main
+# that touches the same paths also pushes the image to GitHub's container registry and deploys it to Azure. Nothing here holds a secret: Azure is reached with an identity
 # federated to this repository's `azure` environment, and the registry with the run's own token.
 #
 # Deploying needs the one-time setup in infra/README.md. Until its repository variables exist the deploy job
@@ -29,11 +29,24 @@ on:
       - Directory.Packages.props
       - .github/scripts/try-table-image.sh
       - .github/workflows/deploy.yml
+  # The same paths as the push above, on purpose: what is tried before a merge is what is deployed after it.
   pull_request:
     paths:
       - Dockerfile
       - .dockerignore
       - infra/**
+      - src/**
+      - tools/**
+      - data/**
+      - table/**
+      - viewer/index.html
+      - viewer/viewer.css
+      - learning/weights/**
+      - models/**
+      - docs/tabletop/playtest.rules.json
+      - global.json
+      - Directory.Build.props
+      - Directory.Packages.props
       - .github/scripts/try-table-image.sh
       - .github/workflows/deploy.yml
   workflow_dispatch:
@@ -147,12 +160,14 @@ jobs:
           RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           SIGN_IN_CLIENT_ID: ${{ vars.TABLE_SIGNIN_CLIENT_ID }}
           OPERATORS: ${{ vars.TABLE_OPERATORS }}
+          NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
         run: |
           az deployment group create \
             --resource-group "$RESOURCE_GROUP" \
             --name "table-${GITHUB_RUN_NUMBER}" \
             --template-file infra/main.bicep \
             --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
+              namePrefix="${NAME_PREFIX:-downfall}" \
             --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"
           url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
           redirect="$(jq -r .redirectUri.value "$RUNNER_TEMP/outputs.json")"

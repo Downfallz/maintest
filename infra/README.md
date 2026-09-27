@@ -35,8 +35,9 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
    It registers the three resource providers, creates `downfall-table` in `canadacentral`, an app
    registration GitHub deploys as (federated to this repository's `azure` environment, allowed to change that
    one resource group and to assign one role in it), and the registration the lobby's sign-in uses (no client
-   secret). It prints six repository variables and sets them when `gh` is signed in. `LOCATION`,
-   `RESOURCE_GROUP` and `REPO` override the defaults.
+   secret). It prints seven repository variables and sets them when `gh` is signed in. `LOCATION`,
+   `RESOURCE_GROUP`, `REPO` and `PREFIX` override the defaults; the prefix travels to the template through
+   the `TABLE_NAME_PREFIX` variable, so every resource name follows it.
 
 2. **Deploy.** Run the *Deploy the table* workflow from the Actions tab (or push to `main`). The first run
    builds and pushes the image, and its deploy job fails on the next step, on purpose.

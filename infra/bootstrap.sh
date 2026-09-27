@@ -9,7 +9,9 @@
 # end are ids, which the workflow reads as repository variables; with the GitHub CLI signed in, it sets them.
 #
 # Settings (environment): REPO (default Downfallz/maintest), LOCATION (default canadacentral),
-# RESOURCE_GROUP (default downfall-table), PREFIX (default downfall, as infra/main.bicep's namePrefix).
+# RESOURCE_GROUP (default downfall-table), PREFIX (default downfall). PREFIX begins every resource's name;
+# it is handed to the workflow as a repository variable, which hands it to infra/main.bicep as namePrefix, so
+# the names this script looks for are the names the template makes.
 set -euo pipefail
 
 REPO="${REPO:-Downfallz/maintest}"
@@ -20,6 +22,12 @@ DEPLOYER_NAME="${PREFIX}-table-deploy"
 SIGN_IN_NAME="${PREFIX}-table-signin"
 APP_NAME="${PREFIX}-table"
 ENVIRONMENT="azure"
+
+# The template's own bounds, and a storage account's alphabet: its name is the prefix and a hash.
+if [[ ! "$PREFIX" =~ ^[a-z0-9]{3,11}$ ]]; then
+  echo "PREFIX must be 3 to 11 lowercase letters or digits; '$PREFIX' is not." >&2
+  exit 2
+fi
 
 # The one role infra/main.bicep assigns: Storage Blob Data Contributor, to the app's own identity.
 BLOB_CONTRIBUTOR="ba92f5b4-2d11-453d-a403-e96b0029c9fe"
@@ -120,6 +128,7 @@ setup() {
   variable AZURE_RESOURCE_GROUP "$RESOURCE_GROUP"
   variable TABLE_SIGNIN_CLIENT_ID "$sign_in"
   variable TABLE_OPERATORS "$operator"
+  variable TABLE_NAME_PREFIX "$PREFIX"
   echo
   echo "Next: run the 'Deploy the table' workflow, make the downfall-table package public, then run"
   echo "'infra/bootstrap.sh redirect' once (infra/README.md, steps 3 to 5)."
