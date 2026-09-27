@@ -1,0 +1,183 @@
+name: Deploy the table
+
+# The hosted table (ADR 0080, ADR 0082). A pull request that touches anything the image carries builds the
+# image and tries it, so a change that breaks only the container is caught before it merges; a push to main
+# that touches the same paths also pushes the image to GitHub's container registry and deploys it to Azure. Nothing here holds a secret: Azure is reached with an identity
+# federated to this repository's `azure` environment, and the registry with the run's own token.
+#
+# Deploying needs the one-time setup in infra/README.md. Until its repository variables exist the deploy job
+# is skipped, so main stays green on a fork or before anybody has set Azure up.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - infra/**
+      - src/**
+      - tools/**
+      - data/**
+      - table/**
+      - viewer/index.html
+      - viewer/viewer.css
+      - learning/weights/**
+      - models/**
+      - docs/tabletop/playtest.rules.json
+      - global.json
+      - Directory.Build.props
+      - Directory.Packages.props
+      - .github/scripts/try-table-image.sh
+      - .github/workflows/deploy.yml
+  # The same paths as the push above, on purpose: what is tried before a merge is what is deployed after it.
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - infra/**
+      - src/**
+      - tools/**
+      - data/**
+      - table/**
+      - viewer/index.html
+      - viewer/viewer.css
+      - learning/weights/**
+      - models/**
+      - docs/tabletop/playtest.rules.json
+      - global.json
+      - Directory.Build.props
+      - Directory.Packages.props
+      - .github/scripts/try-table-image.sh
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and never one cancelled half-way: a revision interrupted mid-rollout is worse
+# than the next push waiting a minute.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: Build and try the image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.name.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Tagged with the commit, never `latest`: the container app then names exactly what it runs, and the
+      # engine version stamped on every recording is the same twelve characters.
+      - name: Name the image
+        id: name
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "image=ghcr.io/${OWNER,,}/downfall-table:${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}
+        run: docker build --build-arg ENGINE_COMMIT="${GITHUB_SHA::12}" --tag "$IMAGE" .
+
+      - name: Try it the way the container app runs it
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}
+        run: .github/scripts/try-table-image.sh "$IMAGE"
+
+      # The template is compiled and linted on every run, a warning included: a deployment is the wrong
+      # place to learn that a property name is misspelled.
+      - name: Check the infrastructure template
+        run: |
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep lint --file infra/main.bicep 2>&1 | tee "$RUNNER_TEMP/bicep-lint.txt"
+          if grep -Eq '(Warning|Error) ' "$RUNNER_TEMP/bicep-lint.txt"; then
+            echo "::error::The Bicep linter has something to say about infra/main.bicep."
+            exit 1
+          fi
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
+          docker push "$IMAGE"
+
+  deploy:
+    name: Deploy to Azure
+    needs: image
+    if: github.event_name != 'pull_request' && vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    environment: azure
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The container app pulls without a credential, so the package has to be public. GitHub makes a new
+      # package private whatever its repository is; that is one click, once (infra/README.md), and this is
+      # where forgetting it is said in a sentence rather than in a revision that never starts.
+      - name: The image can be pulled without a credential
+        env:
+          IMAGE: ${{ needs.image.outputs.image }}
+        run: |
+          repository="${IMAGE#ghcr.io/}"
+          repository="${repository%:*}"
+          tag="${IMAGE##*:}"
+          token="$(curl -fsS "https://ghcr.io/token?scope=repository:${repository}:pull" | jq -r .token)"
+          if ! curl -fsS -o /dev/null -H "Authorization: Bearer ${token}" \
+            -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+            "https://ghcr.io/v2/${repository}/manifests/${tag}"; then
+            echo "::error::${IMAGE} cannot be pulled anonymously. Make the downfall-table package public in the repository owner's package settings (infra/README.md, step 3)."
+            exit 1
+          fi
+
+      - name: Sign in to Azure
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy
+        env:
+          IMAGE: ${{ needs.image.outputs.image }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          SIGN_IN_CLIENT_ID: ${{ vars.TABLE_SIGNIN_CLIENT_ID }}
+          OPERATORS: ${{ vars.TABLE_OPERATORS }}
+          NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
+        run: |
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "table-${GITHUB_RUN_NUMBER}" \
+            --template-file infra/main.bicep \
+            --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
+              namePrefix="${NAME_PREFIX:-downfall}" \
+            --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"
+          url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
+          redirect="$(jq -r .redirectUri.value "$RUNNER_TEMP/outputs.json")"
+          {
+            echo "### The table is at ${url}"
+            echo
+            echo "- Lobby: ${url}/lobby"
+            echo "- Image: \`${IMAGE}\`"
+            echo "- Recordings: $(jq -r .recordings.value "$RUNNER_TEMP/outputs.json")"
+            echo
+            echo "The sign-in registration must list \`${redirect}\` as a web redirect URI. The first deployment"
+            echo "is the one that makes that address; infra/README.md, step 5, adds it once."
+          } >> "$GITHUB_STEP_SUMMARY"

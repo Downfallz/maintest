@@ -16,7 +16,8 @@ The host plays as many tables as an evening needs (ADR 0081). Open `/lobby?token
 console prints>` to see them and to open more: choose who sits in each seat, read each seat's code to its
 player, and follow the pilot link to hand a seat over. `--lobby` starts the host with no table at all, which
 is how it runs in its container, and `--platform-auth` makes the platform's sign-in the operator's door
-instead of a printed token (ADR 0080). From a shell:
+instead of a printed token (ADR 0080). The hosted table runs exactly that, on Azure: see
+[infra/README.md](../infra/README.md). From a shell:
 
 ```bash
 curl -H "X-Seat-Token: <operator token>" -H "Content-Type: application/json" \

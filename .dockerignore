@@ -1,0 +1,25 @@
+# An allowlist: the image is built from what is named here and nothing else, so a local run directory, a
+# build output or a settings file cannot end up in it by being in the working tree.
+*
+
+!global.json
+!Directory.Build.props
+!Directory.Packages.props
+!DownfallArena.slnx
+!.editorconfig
+!src/
+!tools/
+!data/
+!table/
+!viewer/index.html
+!viewer/viewer.css
+!docs/tabletop/playtest.rules.json
+!learning/weights/
+!models/
+
+# Inside what is allowed: what a build makes, and what the page does not ship.
+**/bin/
+**/obj/
+data/dst/
+table/*.test.js
+table/README.md
