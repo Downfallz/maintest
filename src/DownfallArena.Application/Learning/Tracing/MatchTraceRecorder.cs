@@ -64,6 +64,13 @@ public sealed class MatchTraceRecorder(IMatchRepository matches) : IDomainEventL
     /// </summary>
     public int Length(MatchId matchId) => _entries.GetValueOrDefault(matchId)?.Count ?? 0;
 
+    /// <summary>
+    /// Forgets a match without handing its trace to anybody: what a host does with a match it recorded
+    /// nowhere, or abandoned, once nobody reads its feed any more (ADR 0081). Forgetting a match this
+    /// recorder never held is nothing.
+    /// </summary>
+    public void Forget(MatchId matchId) => _entries.TryRemove(matchId, out _);
+
     /// <summary>The trace of a match, which the recorder then forgets.</summary>
     public MatchTrace Complete(MatchId matchId, RunStamp stamp, int? seed)
     {

@@ -111,6 +111,49 @@ public sealed class CliOptionsTests
         options.Who.ShouldBe("mk");
     }
 
+    /// <summary>A lobby host starts with no table, and trusts the platform's sign-in only when told (ADR 0081).</summary>
+    [Fact]
+    public void A_lobby_host_is_asked_for_and_so_is_trusting_the_platform()
+    {
+        var options = CliOptions.Parse(["table", "--lobby", "--rules", "tabletop.json", "--platform-auth"]);
+
+        options.Lobby.ShouldBeTrue();
+        options.PlatformAuth.ShouldBeTrue();
+        options.Rules.ShouldBe("tabletop.json");
+    }
+
+    [Fact]
+    public void A_table_starts_with_one_session_and_trusts_no_header_unless_asked()
+    {
+        var options = CliOptions.Parse(["table", "--rules", "tabletop.json"]);
+
+        options.Lobby.ShouldBeFalse();
+        options.PlatformAuth.ShouldBeFalse();
+    }
+
+    /// <summary>What describes the one table a host starts with has nothing to describe on a lobby host.</summary>
+    [Theory]
+    [InlineData("--p1")]
+    [InlineData("--p2")]
+    [InlineData("--who")]
+    [InlineData("--handover")]
+    [InlineData("--seed")]
+    public void A_lobby_refuses_to_be_told_about_the_table_it_does_not_start_with(string argument)
+    {
+        var refused = Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--lobby", argument, "1"]));
+
+        refused.Message.ShouldContain("--lobby");
+    }
+
+    [Theory]
+    [InlineData("table", "--lobby", "--practice")]
+    [InlineData("play", "--lobby")]
+    [InlineData("studio", "--platform-auth")]
+    public void The_lobby_and_the_platform_s_sign_in_are_the_table_s_alone(params string[] args)
+    {
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(args));
+    }
+
     /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>
     [Fact]
     public void Recording_nowhere_and_recording_somewhere_cannot_both_be_asked_for()

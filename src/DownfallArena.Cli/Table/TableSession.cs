@@ -1,6 +1,8 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning.Tracing;
 using DownfallArena.Application.Matches.Commands;
 using DownfallArena.Application.Matches.Driving;
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Messaging;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
@@ -16,12 +18,14 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 /// <remarks>
 /// The driver runs off the calling thread because a seat held by a person blocks inside it, waiting for a tap
-/// that arrives on another thread entirely. That is also why a host built on this plays one session per
-/// process (<c>docs/tabletop/playtest-app.md</c>).
+/// that arrives on another thread entirely. That is also why a host built on this plays only so many at once:
+/// each is a thread (<c>docs/tabletop/playtest-app.md</c>, ADR 0081).
 /// </remarks>
 internal sealed class TableSession : IDisposable
 {
-    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, MatchQueryHandlers queries, TableGate gate, Task<Result<MatchOutcome>> outcome)
+    private readonly Action _forget;
+
+    private TableSession(MatchId matchId, SeatAgent player1, SeatAgent player2, MatchQueryHandlers queries, TableGate gate, Task<Result<MatchOutcome>> outcome, Action forget)
     {
         MatchId = matchId;
         Player1 = player1;
@@ -29,6 +33,7 @@ internal sealed class TableSession : IDisposable
         Queries = queries;
         Gate = gate;
         Outcome = outcome;
+        _forget = forget;
     }
 
     public MatchId MatchId { get; }
@@ -41,8 +46,16 @@ internal sealed class TableSession : IDisposable
 
     private TableGate Gate { get; }
 
-    /// <summary>Releases the lock the match was played behind. The match itself is over or abandoned by then.</summary>
-    public void Dispose() => Gate.Dispose();
+    /// <summary>
+    /// Releases the lock the match was played behind, and lets the host's stores forget the match: the
+    /// repository that held it and the trace recorder that kept its feed. The match itself is over or
+    /// abandoned by then, and a host that plays many for days would otherwise keep every one (ADR 0081).
+    /// </summary>
+    public void Dispose()
+    {
+        Gate.Dispose();
+        _forget();
+    }
 
     public SeatAgent Player1 { get; }
 
@@ -97,7 +110,14 @@ internal sealed class TableSession : IDisposable
         var played2 = wrap?.Invoke(matchId, player2) ?? player2;
         var outcome = Task.Run(() => driver.PlayAsync(matchId, played1, played2, cancellationToken), cancellationToken);
 
-        return new TableSession(matchId, player1, player2, queries, gate, outcome);
+        // The recorder is optional: only a host that shows a feed registers one.
+        var repository = services.GetRequiredService<IMatchRepository>();
+        var recorder = services.GetService<MatchTraceRecorder>();
+        return new TableSession(matchId, player1, player2, queries, gate, outcome, () =>
+        {
+            recorder?.Forget(matchId);
+            repository.ForgetAsync(matchId, CancellationToken.None).GetAwaiter().GetResult();
+        });
     }
 
     /// <summary>The seat of a slot, so a caller says which player rather than which field.</summary>

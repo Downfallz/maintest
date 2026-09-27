@@ -13,8 +13,8 @@ namespace DownfallArena.Cli.Table;
 /// <remarks>
 /// It blocks the driver on purpose. The driver asks a seat for a decision and expects one back; a person is
 /// simply an agent that takes a while. Blocking is what lets the whole engine, its gates and ADR 0039's
-/// per-creature board re-read work unchanged, and it is the reason a host built on this plays one session per
-/// process (<c>docs/tabletop/playtest-app.md</c>). What it does not do is decide anything: the question it is
+/// per-creature board re-read work unchanged, and it is the reason a host built on this plays only so many
+/// sessions at once (<c>docs/tabletop/playtest-app.md</c>, ADR 0081). What it does not do is decide anything: the question it is
 /// waiting on is public, and whoever answers has to answer that exact question.
 /// </remarks>
 internal sealed class HumanSeat(CancellationToken cancellation) : IPlayerAgent

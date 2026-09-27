@@ -65,20 +65,17 @@ internal sealed class PlaytestRun
     private readonly int _seed;
 
     private PlaytestRun(
-        string sessionId,
-        string location,
-        IArtifactWriter writer,
-        IArtifactReader reader,
+        RunPlace place,
         RunRecorder recorder,
         MatchTraceRecorder events,
         RunStamp stamp,
         TimeProvider clock,
         int seed)
     {
-        SessionId = sessionId;
-        Location = location;
-        _writer = writer;
-        _reader = reader;
+        SessionId = place.SessionId;
+        Location = place.Location;
+        _writer = place.Writer;
+        _reader = place.Reader;
         _recorder = recorder;
         _events = events;
         _stamp = stamp;
@@ -131,22 +128,30 @@ internal sealed class PlaytestRun
     /// is built from it rather than from the engine default: a dataset whose schema describes a different
     /// rule set than the match played is a dataset that trains on a mislabelled board.
     /// </summary>
-    public static PlaytestRun Open(IArtifactStore store, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock)
+    public static PlaytestRun Open(IArtifactStore store, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock) =>
+        Open(store, NewId(clock), setup, events, clock);
+
+    /// <summary>
+    /// Opens a session under the id the host gave it. The id is minted by the host rather than here because a
+    /// session has one whether or not it is recorded: it is what a page, a join code and a pilot token all
+    /// name, and a table told <c>--no-record</c> still has to be found by it (ADR 0081).
+    /// </summary>
+    public static PlaytestRun Open(IArtifactStore store, string id, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(store);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(clock);
 
-        var name = Name(clock);
-        var writer = store.Writer(name);
+        var place = RunPlace.In(store, id);
         var schema = FeatureSchema.Build(setup.Resources, setup.Rules);
         var stamp = RunStamp.Create(EngineVersion.Current, setup.Resources, setup.Rules, schema, setup.Player1Agent, setup.Player2Agent, setup.Seed);
 
         // One trace, because a session is one match: the limit is what stops the recorder from being asked for
         // a second one it never had.
         var recorder = new RunRecorder(
-            writer,
+            place.Writer,
             stamp,
             new ObservationBuilder(schema),
             new ActionEncoder(schema),
@@ -155,7 +160,7 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(name, store.LocationOf(name), writer, store.Reader(name), recorder, events, stamp, clock, setup.Seed);
+        return new PlaytestRun(place, recorder, events, stamp, clock, setup.Seed);
     }
 
     /// <summary>
@@ -479,11 +484,13 @@ internal sealed class PlaytestRun
     }
 
     /// <summary>
-    /// A name that sorts by when it was played and cannot collide with a session started in the same second.
-    /// The clock is the injected one, so a test names a session rather than racing one.
+    /// A session id: when it was opened, to the second, so it sorts by when it was played, and four random
+    /// bytes so two tables opened in the same second are two ids. It is the run's name in its store, the id
+    /// every note carries, and the one thing the tokenless session page is reached by, which is why it is
+    /// not a counter. The clock is the injected one, so a test names a session rather than racing one.
     /// </summary>
-    private static string Name(TimeProvider clock) =>
+    public static string NewId(TimeProvider clock) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"{clock.GetUtcNow():yyyyMMdd-HHmmss}-{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(2))}");
+            $"{clock.GetUtcNow():yyyyMMdd-HHmmss}-{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4))}");
 }

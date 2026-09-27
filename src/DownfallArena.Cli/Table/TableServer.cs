@@ -5,38 +5,47 @@ using DownfallArena.Cli.Studio;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// The table's HTTP host: the page, one seat's API, and the short code a player types to reach their seat. It
-/// binds the address it is given — the loopback one by default, and the machine's own when the players are two
-/// people passing a phone across a table (ADR 0054).
+/// The table's HTTP host: the pages, the lobby, every table's API, and the short code a player types to reach
+/// their seat. It binds the address it is given — the loopback one by default, the machine's own when the
+/// players are two people passing a phone across a table (ADR 0054), and every interface in its container
+/// (ADR 0080).
 /// </summary>
 /// <remarks>
+/// <para>
 /// Two fences, and they answer different attacks. The same-origin check refuses a request another page made
 /// on the player's behalf, exactly as the studio's does, which is why it is the same one (ADR 0015,
 /// <see cref="HttpHost.CrossSite" />). The seat token refuses a request that asks for a seat it does not
 /// hold — the one that matters here, because hotseat puts both tokens in one browser and a leak would produce
 /// a playtest that looks perfectly normal and is worthless. It is also the fence that holds when the host
 /// leaves the loopback address, where the other one no longer says anything about who is on the network.
+/// </para>
+/// <para>
+/// Which table a request is for is what its token says (ADR 0081): the registry finds the table a seat or
+/// pilot token belongs to, and that table's API answers as it always did. The lobby is the one set of routes
+/// that reaches no table, and it is behind the operator's door instead.
+/// </para>
 /// </remarks>
 internal sealed class TableServer : IDisposable
 {
     private const string SessionPrefix = "/session/";
 
     private readonly HttpHost _host;
-    private readonly TableApi _api;
+    private readonly TableRegistry _registry;
     private readonly TableFiles _files;
-    private readonly JoinCodes _codes;
-    private readonly PlaytestRun? _run;
+    private readonly LobbyApi _lobby;
+    private readonly TimeProvider _clock;
 
-    public TableServer(string address, int port, TableApi api, TableFiles files, JoinCodes codes, PlaytestRun? run = null)
+    public TableServer(string address, int port, TableRegistry registry, TableFiles files, LobbyApi lobby, TimeProvider clock)
     {
-        ArgumentNullException.ThrowIfNull(api);
+        ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(files);
-        ArgumentNullException.ThrowIfNull(codes);
+        ArgumentNullException.ThrowIfNull(lobby);
+        ArgumentNullException.ThrowIfNull(clock);
 
-        _api = api;
+        _registry = registry;
         _files = files;
-        _codes = codes;
-        _run = run;
+        _lobby = lobby;
+        _clock = clock;
         _host = new HttpHost(address, port, AnswerAsync);
     }
 
@@ -61,17 +70,21 @@ internal sealed class TableServer : IDisposable
     /// </remarks>
     private async Task<StudioResponse> SessionPageAsync(string id)
     {
-        if (_run is not { } run)
+        if (_registry.ById(id) is not { } table)
+        {
+            return StudioResponse.OfPlainText(404, $"No session '{id}' at this host.");
+        }
+
+        // Somebody reading the session is somebody at the table: the hour a finished table is kept for is
+        // measured from its last reader, not from its last tap.
+        table.Touch(_clock.GetUtcNow());
+
+        if (table.Run is not { } run)
         {
             return StudioResponse.OfPlainText(404, "This table is not recording a session.");
         }
 
-        if (!string.Equals(id, run.SessionId, StringComparison.Ordinal))
-        {
-            return StudioResponse.OfPlainText(404, $"This host is playing session {run.SessionId}, not '{id}'. One session per process (ADR 0054).");
-        }
-
-        if (!_api.IsDecided)
+        if (!table.Api.IsDecided)
         {
             return StudioResponse.OfPlainText(409, "The session is still being played. Its trace carries both seats' boards, so it is served once the match has an outcome.");
         }
@@ -101,7 +114,7 @@ internal sealed class TableServer : IDisposable
         var path = request.Url?.AbsolutePath ?? "/";
         if (JoinCodes.Names(path))
         {
-            return _codes.Answer(path);
+            return _registry.Codes.Answer(path);
         }
 
         if (!path.StartsWith("/api/", StringComparison.Ordinal) && !path.StartsWith(SessionPrefix, StringComparison.Ordinal))
@@ -124,6 +137,28 @@ internal sealed class TableServer : IDisposable
             return await SessionPageAsync(path[SessionPrefix.Length..].TrimEnd('/'));
         }
 
-        return await _api.HandleAsync(method, path, body, request.Headers[TableApi.TokenHeader], request.Headers["If-None-Match"], request.Url?.Query);
+        // A host whose lobby nobody opens still lets go of the tables nobody is at: any request may sweep,
+        // once a minute at most.
+        var now = _clock.GetUtcNow();
+        foreach (var gone in _registry.SweepIfDue(now))
+        {
+            Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
+        }
+
+        var token = request.Headers[TableApi.TokenHeader];
+        if (LobbyApi.Names(path))
+        {
+            return await _lobby.HandleAsync(method, path, body, token, request.Headers[OperatorGate.PrincipalHeader]);
+        }
+
+        // The token says which table, and the table's own API says the rest. A token no table holds is
+        // answered as a missing one: which half of it was wrong is not information a stranger is given.
+        if (_registry.ByToken(token) is not { } table)
+        {
+            return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TableApi.TokenHeader}'.");
+        }
+
+        table.Touch(now);
+        return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
 }

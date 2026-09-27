@@ -23,4 +23,10 @@ public sealed class InMemoryMatchRepository : IMatchRepository
         _matches[match.Id] = match;
         return Task.CompletedTask;
     }
+
+    public Task ForgetAsync(MatchId id, CancellationToken cancellationToken = default)
+    {
+        _matches.TryRemove(id, out _);
+        return Task.CompletedTask;
+    }
 }

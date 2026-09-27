@@ -5,6 +5,11 @@
       "commandLineArgs": "table --practice",
       "workingDirectory": "../.."
     },
+    "table (lobby — open tables from /lobby, as the container does)": {
+      "commandName": "Project",
+      "commandLineArgs": "table --lobby --rules docs/tabletop/playtest.rules.json",
+      "workingDirectory": "../.."
+    },
     "table (hotseat)": {
       "commandName": "Project",
       "commandLineArgs": "table --rules docs/tabletop/playtest.rules.json --who mk",

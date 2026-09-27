@@ -1,0 +1,10 @@
+/* The lobby borrows the pilot's shapes (a card per thing, one form) and adds only what a table list needs:
+   a code big enough to read across a room, and the door to the platform's sign-in. */
+.tables { margin-top: 22px; }
+.table-card h2 { font-size: 15px; overflow-wrap: anywhere; }
+.table-card dl { grid-template-columns: auto 1fr; }
+.table-card .code { font-size: 20px; letter-spacing: 3px; color: var(--gold); }
+.table-card a { color: var(--ally); }
+.table-card .close { margin-top: 12px; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; background: var(--raised); color: var(--ink); font: inherit; }
+input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; background: var(--raised); color: var(--ink); width: 10ch; }
+.sign-in { display: inline-block; margin: 18px 0 0; padding: 12px 18px; border: 1px solid var(--gold); border-radius: 9px; color: var(--gold); text-decoration: none; }

@@ -109,6 +109,24 @@ public sealed class JoinCodesTests : IDisposable
         Encoding.UTF8.GetString(answer.Body).ShouldNotContain("token-1");
     }
 
+    /// <summary>A host plays many tables, and a code is the host's: forgotten with its table, it names nothing.</summary>
+    [Fact]
+    public void A_code_forgotten_with_its_table_names_no_seat_and_the_others_still_do()
+    {
+        var gone = Seat(PlayerSlot.Player1, "token-1", held: true);
+        var kept = Seat(PlayerSlot.Player1, "token-2", held: true);
+        var codes = new JoinCodes();
+        var forgotten = codes.Mint(gone)!;
+        var remaining = codes.Mint(kept)!;
+
+        codes.Forget(gone);
+
+        codes.Of(gone).ShouldBeNull();
+        codes.Answer($"{JoinCodes.Prefix}{forgotten}").Status.ShouldBe(404);
+        codes.Answer($"{JoinCodes.Prefix}{remaining}").Status.ShouldBe(303);
+        codes.Mint(Seat(PlayerSlot.Player2, "token-3", held: false)).ShouldBeNull();
+    }
+
     [Theory]
     [InlineData("/j/ABCD1234", true)]
     [InlineData("/api/session", false)]
