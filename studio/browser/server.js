@@ -6,8 +6,12 @@ const root = resolve('../..');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname.replace(/^\/maintest/, '');
-  const relative = pathname === '/' ? '/index.html' : pathname;
-  const base = relative === '/viewer.css' ? 'viewer' : 'studio';
+  const table = pathname.startsWith('/table/');
+  const asset = table ? pathname.slice('/table'.length) : pathname;
+  const relative = asset === '/' ? '/index.html' : asset;
+  let base = 'studio';
+  if (table) base = 'table';
+  else if (relative === '/viewer.css') base = 'viewer';
   const file = resolve(root, base, `.${relative}`);
   if (!file.startsWith(`${root}/${base}/`)) { response.writeHead(404).end(); return; }
   try {

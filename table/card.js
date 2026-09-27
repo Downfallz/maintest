@@ -47,16 +47,21 @@ export function cardDetails(card) {
   ].filter(row => row.text);
 }
 
+// A chance of zero is no chance: the card prints nothing rather than a stat that never fires.
+function hasCritical(card) {
+  return Number.parseFloat(card?.critical) > 0;
+}
+
 export function cardStats(card) {
   const stats = [];
-  if (card?.critical) stats.push({ kind: 'critical', symbol: '✦', label: 'Crit chance', value: card.critical, hint: ['Standard only', card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : ''].filter(Boolean).join(' · ') });
+  if (hasCritical(card)) stats.push({ kind: 'critical', symbol: '✦', label: 'Crit chance', value: card.critical, hint: ['Standard only', card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : ''].filter(Boolean).join(' · ') });
   return stats;
 }
 
 // The chance, and the face of the die when the chance is a twentieth. The threshold is the host's: whether a
 // chance can be rolled on a d20 is a property of the content, not of the screen.
 export function criticalLine(card) {
-  if (!card?.critical) return '';
+  if (!hasCritical(card)) return '';
   return card.criticalThreshold ? `Crit ${card.critical} · d20 ${card.criticalThreshold}+` : `Crit ${card.critical}`;
 }
 

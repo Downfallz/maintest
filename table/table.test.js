@@ -60,7 +60,7 @@ function page() {
   const ids = [...readFileSync(new URL('./index.html', import.meta.url), 'utf8').matchAll(/id="([^"]+)"/g)].map(match => match[1]);
   const nodes = Object.fromEntries(ids.map(id => [id, new Element()]));
   const document = {
-    activeElement: null,
+    activeElement: null, body: new Element('body'), documentElement: new Element('html'),
     getElementById: id => nodes[id],
     createElement: tag => Object.assign(new Element(tag), { owner: document }),
     querySelectorAll: selector => Object.values(nodes).flatMap(node => node.querySelectorAll(selector)),
@@ -90,6 +90,9 @@ function page() {
 }
 
 function held(p) { return p.nodes['own-hand'].children[0].children[0].children[1]; }
+
+// The inspector's purchase controls, without the phone's way back to the package list.
+function unlocks(p) { return p.nodes.mat.children[2].querySelectorAll('button').filter(node => node.className === 'atlas-unlock'); }
 
 test('an unchanged poll leaves the focused card and scrolled hand in the DOM', () => {
   const p = page(); p.draw();
@@ -273,9 +276,35 @@ test('speed selection opens the acting spellbook as readable reference without o
   const row = p.nodes['own-hand'].children[0].children[0];
   assert.match(row.className, /active/);
   assert.match(row.textContent, /choose speed/);
-  assert.match(held(p).children[0].className, /reference/);
+  assert.match(held(p).children[0].className, /speed-spell/);
   assert.equal(held(p).children[0].events.click, undefined);
   assert.equal(p.nodes.planning.scrolledIntoView, true);
+});
+
+test('speed reference highlights positive host chances without repeating the spellbook in the guide', () => {
+  const p = page();
+  p.view.waitingFor = 'Speed'; p.view.options = { speed: { missing: [1] } };
+  p.state.cards.get('one').critical = '35%';
+  p.state.cards.get('one').effects = ['Damage 7'];
+  p.state.cards.get('two').critical = '0%';
+  p.view.guidance = [{ spell: 'one', standardCriticalChance: .77 }, { spell: 'two', standardCriticalChance: 0 }];
+  p.draw();
+  const [first, second] = held(p).children;
+  assert.equal(first.tagName, 'details');
+  assert.match(first.children[0].textContent, /First card.*2 energy.*77% crit/);
+  assert.match(first.children[1].textContent, /Damage 7/);
+  assert.doesNotMatch(second.textContent, /crit|0%/);
+  assert.doesNotMatch(p.nodes['decision-guide'].textContent, /First card|Second card|77%|0%/);
+  assert.equal(first.events.click, undefined);
+});
+
+test('speed references respect a zero host override and tolerate missing catalogue cards', () => {
+  const p = page(); p.view.waitingFor = 'Speed'; p.view.options = { speed: {} };
+  p.state.cards.get('one').critical = '35%';
+  p.state.cards.delete('two');
+  p.view.guidance = [{ spell: 'one', standardCriticalChance: 0 }]; p.draw();
+  assert.doesNotMatch(held(p).children[0].textContent, /crit|35%/);
+  assert.equal(held(p).children[1].children[0].textContent, 'two');
 });
 
 test('a new intent brings its controls and hand into view together, once', () => {
@@ -394,11 +423,63 @@ test('the talent inspector uses the selected evolution creature and offers only 
   const p = page(); talentFixture(p); p.view.waitingFor = 'Evolution';
   p.view.options = { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:two:v1'] }, { creature: 3, availableTiers: [] }] } };
   p.state.inspectClass = 'tier:two:v1'; p.draw(); assert.match(p.nodes.mat.children[2].textContent, /Available now/);
-  assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 1);
+  assert.equal(unlocks(p).length, 1);
   p.nodes.choices.children[0].children[1].events.click();
   assert.match(p.nodes.mat.children[2].textContent, /✓ Package acquired/);
   assert.doesNotMatch(p.nodes.mat.textContent, /Available now/);
-  assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 0);
+  assert.equal(unlocks(p).length, 0);
+});
+
+test('an opponent card is marked as a reference rather than as a spell nobody may cast', () => {
+  const p = page(); p.view.board.enemies[0].knownSpells = ['one']; p.draw();
+  const face = p.nodes['enemy-hand'].children[0].children[1].children[0];
+  assert.match(face.className, /reference/);
+  assert.match(face.textContent, /Spell reference/);
+  assert.doesNotMatch(face.textContent, /Not available now/);
+});
+
+test('the battlefield opens over the page from the round bar and closes on a second tap or Escape', () => {
+  const p = page(); p.draw();
+  p.context.showBoard(p.state, true);
+  assert.match(p.document.body.className, /board-open/);
+  assert.equal(p.nodes['board-toggle'].attributes['aria-pressed'], 'true');
+  assert.match(p.nodes['board-toggle'].textContent, /Battlefield ✕/);
+  assert.equal(p.document.documentElement.style['--board-top'], '1460px');
+  let prevented = false;
+  p.context.keyboardDecision(p.state, { key: 'Escape', preventDefault: () => { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.doesNotMatch(p.document.body.className, /board-open/);
+  assert.equal(p.nodes['board-toggle'].attributes['aria-pressed'], 'false');
+  assert.equal(p.nodes['board-toggle'].textContent, 'Battlefield');
+});
+
+test('a new question waits under an open battlefield and is guided to when it closes', () => {
+  const p = page(); p.draw(); p.nodes.planning.scrolledIntoView = false;
+  p.context.showBoard(p.state, true);
+  p.view.waitingAsked++; p.draw();
+  assert.equal(p.nodes.planning.scrolledIntoView, false);
+  p.context.showBoard(p.state, false);
+  assert.equal(p.nodes.planning.scrolledIntoView, true);
+});
+
+test('a handover closes the battlefield so the next seat starts at its own move', () => {
+  const p = page(); p.draw(); p.context.showBoard(p.state, true);
+  p.state.holder = 'player2'; p.state.rendered = null; p.draw();
+  assert.equal(p.nodes.pass.hidden, false);
+  assert.equal(p.state.boardOpen, false);
+  assert.doesNotMatch(p.document.body.className, /board-open/);
+});
+
+test('on a phone, choosing a package in the atlas brings its spells up with a way back to the list', () => {
+  const p = page(); talentFixture(p); p.context.innerWidth = 390; p.draw();
+  const tree = p.nodes.mat.children[1].children[0].children[0];
+  tree.children[0].click();
+  const inspector = p.nodes.mat.children[2];
+  assert.equal(inspector.scrolledIntoView, true);
+  assert.equal(inspector.children[0].className, 'atlas-back reference-link');
+  assert.match(inspector.textContent, /First package · Tier 1/);
+  p.state.rendered = null; p.draw();
+  assert.equal(p.nodes.mat.children[2].scrolledIntoView, undefined);
 });
 
 test('opponent spellbooks grow only from public known spells and preserve their expansion', () => {
@@ -511,7 +592,7 @@ test('an atlas unlock uses the guarded current asking and rejects a stale inspec
   p.view.options = { evolution: { creatures: [{ creature: 1, availableTiers: ['tier:two:v1'] }] } };
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; };
   p.state.inspectClass = 'tier:two:v1'; p.draw();
-  const unlock = p.nodes.mat.children[2].querySelectorAll('button')[0];
+  const unlock = unlocks(p)[0];
   await unlock.events.click(); assert.equal(sent.length, 1); assert.equal(sent[0].creature, 1); assert.equal(sent[0].tier, 'tier:two:v1'); assert.equal(sent[0].spell, undefined);
   p.state.views = [{ ...p.current, view: { ...p.view, waitingAsked: 2 } }]; p.draw();
   await unlock.events.click(); assert.equal(sent.length, 1);
@@ -747,7 +828,7 @@ test('targeting names the actual host cursor separately from creature identity i
 
 test('announcements last longer, pause while reading and can be kept open', () => {
   const p = page(); p.context.setupPhaseControls(p.state); p.draw();
-  assert.equal(p.delays.get(p.state.phaseTimer), 15000);
+  assert.equal(p.delays.get(p.state.phaseTimer), 6000);
   p.nodes['phase-notice'].events.mouseenter();
   assert.equal(p.timers.has(p.state.phaseTimer), false);
   p.nodes['phase-notice'].events.mouseleave();
@@ -760,7 +841,7 @@ test('announcements last longer, pause while reading and can be kept open', () =
   p.nodes['phase-notice-close'].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.roundNumber++; p.draw();
-  assert.equal(p.delays.get(p.state.phaseTimer), 20000);
+  assert.equal(p.delays.get(p.state.phaseTimer), 8000);
 });
 
 test('announcement history is bounded, separate per seat, and replays without changing current decisions', () => {
@@ -955,7 +1036,7 @@ test('a purchased creature leaves the offer list and the atlas cannot buy again 
   p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:one:v1'] }] } };
   p.state.inspectClass = 'tier:one:v1';
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
-  const old = p.nodes.mat.children[2].querySelectorAll('button')[0];
+  const old = unlocks(p)[0];
   p.view.board.allies[0].acquiredTiers = ['tier:one:v1'];
   p.view.board.evolutionChoices = [{ creature: 1, tier: 'tier:one:v1' }];
   p.view.options.evolution = { remainingPicks: 1, creatures: [{ creature: 3, availableTiers: ['tier:one:v1'] }] };
@@ -963,7 +1044,7 @@ test('a purchased creature leaves the offer list and the atlas cannot buy again 
   assert.match(p.nodes.asking.textContent, /Creature 3/);
   assert.match(p.nodes['evolution-budget'].textContent, /1 \/ 2 team picks remaining/);
   p.state.inspectCreature = 1; p.state.inspectClass = 'tier:two:v1'; p.draw();
-  assert.equal(p.nodes.mat.children[2].querySelectorAll('button').length, 0);
+  assert.equal(unlocks(p).length, 0);
   await old.click(); assert.equal(sent.length, 0);
 });
 

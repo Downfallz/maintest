@@ -56,8 +56,12 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
 - Desktop keeps the battlefield beside a compact planning desk with the acting spellbook. The board stays
   visible while the page scrolls through longer spell lists; neither board nor hand has a clipped inner
-  scrolling pane. Cards wrap into two columns and the active creature appears first. Phones retain the
-  stacked flow and horizontal hand; jump links remain available below desktop width.
+  scrolling pane. Cards wrap into two columns and the active creature appears first. Below desktop width
+  the round bar carries a Battlefield button, always there: it opens every creature, the spellbooks
+  revealed and the turn order over the page under the bar, and a second tap (or Escape) closes it where the
+  player left off. A handover closes it. Phones list the hand as compact rows (name, cues, cost, effects on
+  one or two lines; the rules reminder and the declare cue on the chosen card) and wrap the turn order into
+  rows, so nothing on the table scrolls sideways.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's available packages at a time. Each pick buys all of a package's spells
@@ -65,7 +69,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   living creatures, with at most one package per creature per opportunity (ADR 0066). Both the atlas and
   decision panel show effective remaining and spent picks; switching creature never resets them. The host
   supplies the next evolution round, displayed in the phase guide between opportunities.
-- Speed opens the acting creature's spellbook as a readable reference. Each new Speed or Intent question
+- Speed opens the acting creature's spellbook as a compact reference: name, energy cost and positive
+  Standard critical chance, with effects available by expanding a spell. Zero critical stats are omitted
+  throughout the spell cards. On phones, the masthead shows the seat and Round guide; round and phase stay
+  in the sticky bar. The expanded guide overlays that bar. Each new Speed or Intent question
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
   preserve deliberate scrolling. Other hands remain expandable.
@@ -77,7 +84,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   maximize, reset or close it. Arrow keys on the title move it as well. Phones use a full-screen panel.
   Its sticky toolbar keeps the creature, round, Evolution pick number and remaining picks visible.
   Down from the last package or spell choice reaches the explorer; Enter opens it and Up returns to the choices.
-- The atlas draws the package prerequisite graph in three rows (tiers 1–3). Names and edges come from
+- The atlas draws the package prerequisite graph in three rows (tiers 1–3); a phone reads it top to bottom
+  instead, one family per block with each upgrade beside the package it grows from, and choosing a package
+  brings its spells up with a way back to the list. Names and edges come from
   catalogue packages, not the retired per-spell gates. Select a package to read its prerequisites by name,
   initiative bonus and all its spell faces side by side. Ownership comes from `acquiredTiers`, independently
   of known spells; only the host's `availableTiers` can enable a purchase.
@@ -99,10 +108,10 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The energy cost has an icon and a visible label. Spell stats show critical chance, its Standard-only
   reminder and host-provided d20 threshold. Initiative and acquisition requirements appear once per package,
   never as obsolete spell stats. Targeting and effect cues retain their visual markers.
-- Phase changes show a non-blocking announcement below the top bar for 15 seconds. It does
+- Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
-  New rounds get a larger, gold-accented “Round N begins” announcement for 20 seconds, alongside upkeep
+  New rounds get a larger, gold-accented “Round N begins” announcement for 8 seconds, alongside upkeep
   results and the next task. Loading an existing round does not pretend that a new round just started.
   Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
   the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier
@@ -141,7 +150,7 @@ a decision has been sent.
 | Enter | Confirm the selected intent or valid target set; activate a focused button normally |
 | 1–9 during Evolution or in the atlas | Choose the creature to evolve or inspect |
 | T | Open / close the Talent atlas |
-| Escape | Close the atlas; otherwise clear the pending card/target selection |
+| Escape | Close the battlefield or the atlas; otherwise clear the pending card/target selection |
 | ? | Show / hide contextual shortcut help |
 | Tab, Enter / Space | Navigate and activate controls, including class nodes and unlocks |
 | ← / → | Switch Evolution creatures, or focus the next speed, spell or legal target |
