@@ -69,13 +69,29 @@ public sealed class HttpHostTests
 
     /// <summary>
     /// A wildcard prefix needs a URL reservation on Windows, which is a host that does not start on the machine
-    /// the playtest is on. An explicit interface address needs none, so that is what the table asks for.
+    /// the playtest is on. An explicit interface address needs none, so that is what the table asks for there.
     /// </summary>
     [Fact]
-    public void A_wildcard_is_refused_rather_than_translated_into_an_address()
+    public void A_wildcard_is_refused_where_it_needs_a_reservation()
     {
-        Should.Throw<ArgumentException>(() => HttpHost.Bindable("0.0.0.0"))
+        Should.Throw<ArgumentException>(() => HttpHost.Bindable("0.0.0.0", wildcardNeedsReservation: true))
             .Message.ShouldContain("one interface address");
+    }
+
+    /// <summary>In the Linux container the table is hosted in, every interface is the address there is (ADR 0080).</summary>
+    [Fact]
+    public void A_wildcard_binds_every_interface_where_no_reservation_is_needed()
+    {
+        HttpHost.Bindable(HttpHost.AnyInterface, wildcardNeedsReservation: false).ShouldBe("0.0.0.0");
+        HttpHost.OnlyThisMachine(HttpHost.AnyInterface).ShouldBeFalse();
+    }
+
+    /// <summary>The runtime's listener spells every interface <c>+</c>, not <c>0.0.0.0</c>; the player is still told the address typed.</summary>
+    [Fact]
+    public void A_wildcard_is_given_to_the_listener_as_a_plus_prefix()
+    {
+        HttpHost.Prefix(HttpHost.AnyInterface, 5123, wildcardNeedsReservation: false).ShouldBe("http://+:5123/");
+        HttpHost.Prefix(HttpHost.Loopback, 5123, wildcardNeedsReservation: true).ShouldBe("http://127.0.0.1:5123/");
     }
 
     [Theory]

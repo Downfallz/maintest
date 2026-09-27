@@ -7,7 +7,8 @@ namespace DownfallArena.Cli.Hosting;
 /// <summary>
 /// An HTTP host on one interface address: the listener, the accept loop, the body, and the one answer written
 /// back. The studio binds the loopback address and nothing else (ADR 0015, ADR 0023); the table binds what it
-/// is told, because two people passing a phone need a host the phone can reach (ADR 0054).
+/// is told, because two people passing a phone need a host the phone can reach (ADR 0054), and in its
+/// container every interface, because the container's ingress is the only way in (ADR 0080).
 /// </summary>
 /// <remarks>
 /// The two hosts of this CLI are this plus a route table, and what differs between them is only which routes
@@ -41,25 +42,52 @@ internal sealed class HttpHost : IDisposable
         // Sonar's S5332 says this line is insecure and is right about the protocol; it is ignored for this
         // file alone, in ci.yml, where the reasoning is written out beside the repository's one other ignore.
         Url = $"http://{Bindable(address)}:{port}/";
-        _listener.Prefixes.Add(Url);
+        _listener.Prefixes.Add(Prefix(address, port));
     }
+
+    /// <summary>
+    /// What the listener is given for an address. The wildcard is not a host this runtime's
+    /// <see cref="HttpListener" /> accepts in a prefix (it answers "the request is not supported" at start);
+    /// it spells every interface <c>+</c>. Every other address is its own prefix, and <see cref="Url" /> keeps
+    /// the address as typed either way, because that is the one a player is told.
+    /// </summary>
+    private static string Prefix(string address, int port) => Prefix(address, port, OperatingSystem.IsWindows());
+
+    /// <summary>
+    /// <see cref="Prefix(string, int)" /> with the platform fact passed in, the way <see cref="Bindable(string, bool)" />
+    /// takes it: the translation is the same on every platform, and a test of it should not depend on which one
+    /// runs it.
+    /// </summary>
+    internal static string Prefix(string address, int port, bool wildcardNeedsReservation) =>
+        $"http://{(Bindable(address, wildcardNeedsReservation) == AnyInterface ? "+" : address)}:{port}/";
 
     public string Url { get; }
 
     /// <summary>Whether only this machine can reach it, which is what the table has to say out loud.</summary>
     public bool IsLoopback { get; }
 
+    /// <summary>The wildcard: every interface of the machine, which is what a container is told to bind (ADR 0080).</summary>
+    public const string AnyInterface = "0.0.0.0";
+
     /// <summary>
     /// The address, refused here when it is not one this host can bind, so a typo is one line at start-up
     /// rather than a listener exception. Three things are refused and each for its own reason. A wildcard
     /// (<c>0.0.0.0</c>, <c>::</c>) needs a URL reservation on Windows where an explicit interface address needs
-    /// none (ADR 0054, open question 1). A shorthand form is refused although <see cref="IPAddress" /> accepts
-    /// it, because "192.168.1" parses as 192.168.0.1: a host that binds an address the player did not type is
-    /// worse than one that will not start. And an IPv6 literal is refused because this runtime's
-    /// <see cref="HttpListener" /> cannot parse back the bracketed prefix it would be given — it is a playtest
-    /// tool on a home network, and the honest answer is that it takes an IPv4 address.
+    /// none (ADR 0054, open question 1), so it is refused there and there only: in the Linux container the
+    /// table is hosted in (ADR 0080) every interface is the one address there is. A shorthand form is refused
+    /// although <see cref="IPAddress" /> accepts it, because "192.168.1" parses as 192.168.0.1: a host that
+    /// binds an address the player did not type is worse than one that will not start. And an IPv6 literal is
+    /// refused because this runtime's <see cref="HttpListener" /> cannot parse back the bracketed prefix it
+    /// would be given — it is a playtest tool on a home network, and the honest answer is that it takes an
+    /// IPv4 address.
     /// </summary>
-    public static string Bindable(string address)
+    public static string Bindable(string address) => Bindable(address, OperatingSystem.IsWindows());
+
+    /// <summary>
+    /// <see cref="Bindable(string)" /> with the one platform fact it depends on passed in, so both answers are
+    /// tested on the machine the tests run on.
+    /// </summary>
+    internal static string Bindable(string address, bool wildcardNeedsReservation)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(address);
         if (!IPAddress.TryParse(address, out var parsed) || parsed.AddressFamily != AddressFamily.InterNetwork)
@@ -67,7 +95,7 @@ internal sealed class HttpHost : IDisposable
             throw new ArgumentException($"'{address}' is not an IPv4 address to bind. Give the interface address of this machine, such as {Loopback} or the one a phone on the same network reaches it by.", nameof(address));
         }
 
-        if (parsed.Equals(IPAddress.Any))
+        if (parsed.Equals(IPAddress.Any) && wildcardNeedsReservation)
         {
             throw new ArgumentException($"Bind one interface address rather than '{address}': a wildcard needs a URL reservation on Windows, where an explicit address needs none.", nameof(address));
         }
@@ -77,8 +105,12 @@ internal sealed class HttpHost : IDisposable
             : throw new ArgumentException($"'{address}' is read as {parsed} rather than as itself. Write all four numbers.", nameof(address));
     }
 
-    /// <summary>Whether an address is one only this machine can reach, which is a thing its players are told.</summary>
-    public static bool OnlyThisMachine(string address) => IPAddress.IsLoopback(IPAddress.Parse(Bindable(address)));
+    /// <summary>
+    /// Whether an address is one only this machine can reach, which is a thing its players are told. The
+    /// wildcard is read as reachable whatever the platform: the question is who can reach it, not whether
+    /// this machine can bind it.
+    /// </summary>
+    public static bool OnlyThisMachine(string address) => IPAddress.IsLoopback(IPAddress.Parse(Bindable(address, wildcardNeedsReservation: false)));
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
