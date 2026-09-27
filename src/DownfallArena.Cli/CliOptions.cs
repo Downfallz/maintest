@@ -56,6 +56,20 @@ internal sealed record CliOptions
     public bool Practice { get; init; }
 
     /// <summary>
+    /// Whether the table starts with no session and waits for the lobby to open them (ADR 0081): the hosted
+    /// table's shape, where nobody is at the console. Without it the command line describes the one table
+    /// the host starts with, as it always did.
+    /// </summary>
+    public bool Lobby { get; init; }
+
+    /// <summary>
+    /// Whether a platform in front of this host signs the operator in and stamps every request with who they
+    /// are (<c>X-MS-CLIENT-PRINCIPAL-NAME</c>, ADR 0080). Trusted only when said: read on a laptop, that header
+    /// is one anybody can type.
+    /// </summary>
+    public bool PlatformAuth { get; init; }
+
+    /// <summary>
     /// Who is playing, as initials. It goes into the run stamp as <c>human:&lt;initials&gt;</c>, so
     /// <c>compare-stamps</c> reports the agents axis between two sessions played by different people rather
     /// than calling them the same player (<c>docs/tabletop/app-roadmap.md</c>, stage 5).
@@ -103,12 +117,16 @@ internal sealed record CliOptions
 
     public const int DefaultPort = 5099;
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table [--seed N] [--matches N] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
 
     private const string PracticeOption = "--practice";
+
+    private const string LobbyOption = "--lobby";
+
+    private const string PlatformAuthOption = "--platform-auth";
 
     private static readonly string[] Known =
     [
@@ -119,6 +137,9 @@ internal sealed record CliOptions
 
     private static readonly string[] PracticeConflicts = [RecordOption, "--trace", "--rules", "--seed", "--handover", "--p1", "--p2"];
 
+    /// <summary>What describes the table a host starts with, which a lobby host starts without.</summary>
+    private static readonly string[] LobbyConflicts = ["--seed", "--handover", "--p1", "--p2", "--who"];
+
     public static CliOptions Parse(IReadOnlyList<string> args)
     {
         ArgumentNullException.ThrowIfNull(args);
@@ -128,6 +149,14 @@ internal sealed record CliOptions
         if (flags.Contains(PracticeOption) && (command != "table" || PracticeConflicts.Any(values.ContainsKey)))
         {
             throw new ArgumentException("'--practice' is for table only and supplies its own rules, seed and seats; it cannot record a session.");
+        }
+        if (flags.Contains(LobbyOption) && (command != "table" || flags.Contains(PracticeOption) || LobbyConflicts.Any(values.ContainsKey)))
+        {
+            throw new ArgumentException("'--lobby' is for table only and starts with no session: the lobby says who sits where, so --p1, --p2, --who, --handover and --seed have nothing to describe.");
+        }
+        if (flags.Contains(PlatformAuthOption) && command != "table")
+        {
+            throw new ArgumentException("'--platform-auth' is for table only: it says a platform in front of the host signs the operator in.");
         }
         if (flags.Contains("--no-record") && values.ContainsKey(RecordOption))
         {
@@ -153,6 +182,8 @@ internal sealed record CliOptions
             Who = values.GetValueOrDefault("--who"),
             Recording = !flags.Contains("--no-record") && !flags.Contains(PracticeOption),
             Practice = flags.Contains(PracticeOption),
+            Lobby = flags.Contains(LobbyOption),
+            PlatformAuth = flags.Contains(PlatformAuthOption),
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
             Seeds = values.GetValueOrDefault("--seeds"),
             Benchmarks = values.GetValueOrDefault("--benchmarks") ?? DefaultBenchmarks,
@@ -192,7 +223,7 @@ internal sealed record CliOptions
     }
 
     /// <summary>The options that carry nothing after them, so the scanner does not swallow the next argument.</summary>
-    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption };
+    private static readonly HashSet<string> Valueless = new(StringComparer.Ordinal) { "--write", "--no-record", PracticeOption, LobbyOption, PlatformAuthOption };
 
     /// <summary>A trace count, rejected here so a typo is one line rather than a run that keeps nothing.</summary>
     private static int ParseTraces(string text)

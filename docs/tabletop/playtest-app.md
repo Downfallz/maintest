@@ -156,6 +156,13 @@ Plain HTTP, JSON, request and response. Polling, not push.
 | `GET` | `/pilot`, `/pilot.css`, `/pilot.js` | The operator's own page (§ the roadmap's stage 6), from the same fixed route table. It is served to anybody who asks; what it can read is fenced by the token it is opened with, not by the page being secret. |
 | `GET` | `/api/pilot` | The session, the two seats, who is playing each one, which seat is being asked and for what kind of decision, and the swap each seat is waiting to make. **No board, no hand, no Intent** — the operator is usually one of the two players. |
 | `POST` | `/api/pilot/seats/{slot}` | `{"agent": "greedy", "round": 7}`: who plays that seat from the top of a round the match has not reached. `200` with the swap, or `409` with the code (`Table.SwapMidRound`, `Table.NoSuchAgent`, `Table.MatchOver`). |
+| `GET` | `/lobby`, `/lobby.css`, `/lobby.js` | The operator's lobby (ADR 0081): the tables this host is playing and the form that opens one. Served to anybody; what it can do is fenced by what the request carries. |
+| `GET` | `/api/tables` | Every table: where it is, who is in each seat, the codes, the pilot link, where the session is written. Behind the operator's door: the token the console printed, or the platform's sign-in (`--platform-auth`), which answers a stranger `401` with where to sign in. |
+| `POST` | `/api/tables` | `{"player1": "person", "player2": "greedy", "who": "mk", "handover": 7}`: opens a table, the same request the command line composes. `201` with the table as the listing shows it. |
+| `DELETE` | `/api/tables/{id}` | Closes a table: its match stopped, its codes forgotten, its recording kept as far as it got. |
+
+Which table a seat, pilot or session route reaches is what its token says: the host keeps a registry from
+every token to its table, so no route carries a session id (ADR 0081).
 
 The three pilot routes carry the pilot's own token instead, which is never a seat's: a pilot can move both
 seats, so a seat token that could also pilot would let either player hand their opponent's seat to a bot — and
@@ -476,7 +483,7 @@ Stated, not implied.
 | **A human-rolled die** | The engine rolls, through `IRandomSource`. Letting a player roll a physical d20 and type the face would be an adapter on that **existing** port, and it is the only way to playtest the die of decision B (plan.md:201-222) rather than the probability. **Which die is settled — a d20, with every chance a whole number of twentieths ([d20-criticals.md](d20-criticals.md))** — so the reason it is still out of v1 is not the die but the record: a typed face is an input nothing replays from a seed, and a number a player can mistype with no undo. v1 prints the threshold the card carries (`d20: 14+`) and says whether the roll landed. It cannot print the face: `CombatResolution` carries `IsCritical` and not the value behind it (`CombatResolution.cs:43`), so a face would mean a Domain change with its own ADR. |
 | **Content editing** | That is the studio (ADR 0015). The table host reads the built schema and never writes content. |
 | **Printing** | That is the printshop of components.md:766-860. |
-| **Accounts, matchmaking, a lobby, spectators, chat** | There is one session per host process, and two people who are in the same room. |
+| **Accounts, matchmaking, spectators, chat** | Two people who are in the same room, or on the same link. The one lobby there is (ADR 0081) is the operator's, for opening tables; a player still joins by a code, without an account. |
 | **Rendering `notes.jsonl` in the viewer** | The viewer ignores it today (5.1). A first pass of playtests should say what is worth charting before anything is charted. |
 | **Animation, art, sound, i18n** | None of them is the measurement. |
 
@@ -496,8 +503,10 @@ person tests the app itself between playtests.
    and an address the machine does not answer on is one line and exit 1 rather than a stack. Since ADR 0080
    the wildcard `0.0.0.0` is accepted everywhere but Windows: it is what the table's container binds, where
    the platform's ingress is the only way in.
-2. **Two sessions at once.** One host, one session, is the assumption everywhere above. Two tables at a
-   playtest evening means either two ports or a session id in every route.
+2. **Two sessions at once.** ~~One host, one session, is the assumption everywhere above. Two tables at a
+   playtest evening means either two ports or a session id in every route.~~ Settled by ADR 0081: neither.
+   A seat token already names its seat uniquely, so it names its table too, and the host is a registry of
+   tables found by their tokens. Tables are opened from `/lobby`, behind the operator's door.
 3. **Who the players were.** A seat name is free text in the stamp. Whether a playtest wants a person's name in
    a committed artifact is a question for the first playtest, not for this document.
 

@@ -1,11 +1,11 @@
 using System.Security.Cryptography;
 using DownfallArena.Cli.Studio;
-using DownfallArena.Domain.Matches;
 
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// One short code per seat a person holds, and the route that turns a typed code into that seat's token.
+/// One short code per seat a person holds, across every table this host is playing, and the route that turns
+/// a typed code into that seat's token.
 /// </summary>
 /// <remarks>
 /// A seat token is 128 random bits because it is the whole fence around a seat (<see cref="TableSeat" />), and
@@ -18,6 +18,9 @@ namespace DownfallArena.Cli.Table;
 ///
 /// The alphabet leaves out I, L, O and U: the first three are the mistakes people actually make reading a code
 /// aloud, and the fourth is left out for the reason Crockford leaves it out.
+///
+/// The codes are the host's rather than one table's (ADR 0081): a code typed into the host has to reach one
+/// seat of one table, so it is minted against everything already minted and forgotten when its table goes.
 /// </remarks>
 internal sealed class JoinCodes
 {
@@ -27,18 +30,61 @@ internal sealed class JoinCodes
 
     private const int Length = 8;
 
+    private readonly Lock _gate = new();
     private readonly Dictionary<string, TableSeat> _seats = new(StringComparer.Ordinal);
-    private readonly Dictionary<PlayerSlot, string> _codes = [];
+    private readonly Dictionary<string, string> _codes = new(StringComparer.Ordinal);
+
+    public JoinCodes()
+    {
+    }
 
     /// <summary>Mints a code for every seat a person holds. A bot's seat has nobody to hand one to.</summary>
     public JoinCodes(IEnumerable<TableSeat> seats)
     {
         ArgumentNullException.ThrowIfNull(seats);
-        foreach (var seat in seats.Where(seat => seat.Person is not null))
+        foreach (var seat in seats)
         {
-            var code = RandomNumberGenerator.GetString(Alphabet, Length);
+            Mint(seat);
+        }
+    }
+
+    /// <summary>
+    /// Mints a code for a seat a person holds, or nothing for a bot's: a bot's seat has nobody to hand one to.
+    /// A code already in use is minted again rather than shared, which at 40 bits is a loop that runs once.
+    /// </summary>
+    public string? Mint(TableSeat seat)
+    {
+        ArgumentNullException.ThrowIfNull(seat);
+        if (seat.Person is null)
+        {
+            return null;
+        }
+
+        lock (_gate)
+        {
+            string code;
+            do
+            {
+                code = RandomNumberGenerator.GetString(Alphabet, Length);
+            }
+            while (_seats.ContainsKey(code));
+
             _seats[code] = seat;
-            _codes[seat.Slot] = code;
+            _codes[seat.Token] = code;
+            return code;
+        }
+    }
+
+    /// <summary>Forgets a seat's code, once its table is gone: a code that still answered would name a seat nobody can play.</summary>
+    public void Forget(TableSeat seat)
+    {
+        ArgumentNullException.ThrowIfNull(seat);
+        lock (_gate)
+        {
+            if (_codes.Remove(seat.Token, out var code))
+            {
+                _seats.Remove(code);
+            }
         }
     }
 
@@ -46,7 +92,10 @@ internal sealed class JoinCodes
     public string? Of(TableSeat seat)
     {
         ArgumentNullException.ThrowIfNull(seat);
-        return _codes.GetValueOrDefault(seat.Slot);
+        lock (_gate)
+        {
+            return _codes.GetValueOrDefault(seat.Token);
+        }
     }
 
     public static bool Names(string path) => path.StartsWith(Prefix, StringComparison.Ordinal);
@@ -61,8 +110,14 @@ internal sealed class JoinCodes
         ArgumentNullException.ThrowIfNull(path);
         var typed = Typed(path[Prefix.Length..].TrimEnd('/'));
 
+        TableSeat? seat;
+        lock (_gate)
+        {
+            _seats.TryGetValue(typed, out seat);
+        }
+
         // A code that names no seat is a typo, and a typo is not told which half it got right.
-        return _seats.TryGetValue(typed, out var seat)
+        return seat is not null
             ? StudioResponse.OfRedirect($"/?{seat.Name}={seat.Token}")
             : StudioResponse.OfPlainText(404, "That code does not name a seat at this table. Read it again from the host's screen.");
     }

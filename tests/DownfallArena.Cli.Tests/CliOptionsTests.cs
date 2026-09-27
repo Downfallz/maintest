@@ -111,6 +111,27 @@ public sealed class CliOptionsTests
         options.Who.ShouldBe("mk");
     }
 
+    /// <summary>A lobby host starts with no table, so nothing that describes one may be given (ADR 0081).</summary>
+    [Fact]
+    public void A_lobby_starts_with_no_table_and_refuses_to_be_told_about_one()
+    {
+        var options = CliOptions.Parse(["table", "--lobby", "--rules", "tabletop.json", "--platform-auth"]);
+
+        options.Lobby.ShouldBeTrue();
+        options.PlatformAuth.ShouldBeTrue();
+        options.Rules.ShouldBe("tabletop.json");
+        CliOptions.Parse(["table", "--rules", "tabletop.json"]).Lobby.ShouldBeFalse();
+        CliOptions.Parse(["table"]).PlatformAuth.ShouldBeFalse();
+        foreach (var argument in new[] { "--p1", "--p2", "--who", "--handover", "--seed" })
+        {
+            Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--lobby", argument, "1"])).Message.ShouldContain("--lobby");
+        }
+
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["table", "--lobby", "--practice"]));
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["play", "--lobby"]));
+        Should.Throw<ArgumentException>(() => CliOptions.Parse(["studio", "--platform-auth"]));
+    }
+
     /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>
     [Fact]
     public void Recording_nowhere_and_recording_somewhere_cannot_both_be_asked_for()

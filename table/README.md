@@ -10,6 +10,19 @@ dotnet run --project src/DownfallArena.Cli -- table --p2 greedy
 Open the seat link printed by the host. For two people sharing a screen, omit `--p2 greedy` and use the
 hotseat link. See [the playtest specification](../docs/tabletop/playtest-app.md) for rules and recording.
 
+## Many tables, one host
+
+The host plays as many tables as an evening needs (ADR 0081). Open `/lobby?token=<the operator token the
+console prints>` to see them and to open more: choose who sits in each seat, read each seat's code to its
+player, and follow the pilot link to hand a seat over. `--lobby` starts the host with no table at all, which
+is how it runs in its container, and `--platform-auth` makes the platform's sign-in the operator's door
+instead of a printed token (ADR 0080). From a shell:
+
+```bash
+curl -H "X-Seat-Token: <operator token>" -H "Content-Type: application/json" \
+  -d '{"player1":"person","player2":"greedy","who":"mk"}' http://127.0.0.1:5099/api/tables
+```
+
 ## Preview
 
 Earlier visual baseline, before the desktop workspace and floating atlas. These illustrative fixtures are
