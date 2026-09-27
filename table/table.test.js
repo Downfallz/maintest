@@ -273,9 +273,35 @@ test('speed selection opens the acting spellbook as readable reference without o
   const row = p.nodes['own-hand'].children[0].children[0];
   assert.match(row.className, /active/);
   assert.match(row.textContent, /choose speed/);
-  assert.match(held(p).children[0].className, /reference/);
+  assert.match(held(p).children[0].className, /speed-spell/);
   assert.equal(held(p).children[0].events.click, undefined);
   assert.equal(p.nodes.planning.scrolledIntoView, true);
+});
+
+test('speed reference highlights positive host chances without repeating the spellbook in the guide', () => {
+  const p = page();
+  p.view.waitingFor = 'Speed'; p.view.options = { speed: { missing: [1] } };
+  p.state.cards.get('one').critical = '35%';
+  p.state.cards.get('one').effects = ['Damage 7'];
+  p.state.cards.get('two').critical = '0%';
+  p.view.guidance = [{ spell: 'one', standardCriticalChance: .77 }, { spell: 'two', standardCriticalChance: 0 }];
+  p.draw();
+  const [first, second] = held(p).children;
+  assert.equal(first.tagName, 'details');
+  assert.match(first.children[0].textContent, /First card.*2 energy.*77% crit/);
+  assert.match(first.children[1].textContent, /Damage 7/);
+  assert.doesNotMatch(second.textContent, /crit|0%/);
+  assert.doesNotMatch(p.nodes['decision-guide'].textContent, /First card|Second card|77%|0%/);
+  assert.equal(first.events.click, undefined);
+});
+
+test('speed references respect a zero host override and tolerate missing catalogue cards', () => {
+  const p = page(); p.view.waitingFor = 'Speed'; p.view.options = { speed: {} };
+  p.state.cards.get('one').critical = '35%';
+  p.state.cards.delete('two');
+  p.view.guidance = [{ spell: 'one', standardCriticalChance: 0 }]; p.draw();
+  assert.doesNotMatch(held(p).children[0].textContent, /crit|35%/);
+  assert.equal(held(p).children[1].children[0].textContent, 'two');
 });
 
 test('a new intent brings its controls and hand into view together, once', () => {
@@ -747,7 +773,7 @@ test('targeting names the actual host cursor separately from creature identity i
 
 test('announcements last longer, pause while reading and can be kept open', () => {
   const p = page(); p.context.setupPhaseControls(p.state); p.draw();
-  assert.equal(p.delays.get(p.state.phaseTimer), 15000);
+  assert.equal(p.delays.get(p.state.phaseTimer), 6000);
   p.nodes['phase-notice'].events.mouseenter();
   assert.equal(p.timers.has(p.state.phaseTimer), false);
   p.nodes['phase-notice'].events.mouseleave();
@@ -760,7 +786,7 @@ test('announcements last longer, pause while reading and can be kept open', () =
   p.nodes['phase-notice-close'].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.roundNumber++; p.draw();
-  assert.equal(p.delays.get(p.state.phaseTimer), 20000);
+  assert.equal(p.delays.get(p.state.phaseTimer), 8000);
 });
 
 test('announcement history is bounded, separate per seat, and replays without changing current decisions', () => {

@@ -11,7 +11,7 @@ export function spellSummary(guide) {
   if (guide.unavailableReason) return guide.unavailableReason;
   const timing = guide.turn ? `Turn ${guide.turn} · ` : '';
   const critical = guide.chosenSpeed === 'Quick' ? guide.quickCriticalChance : guide.standardCriticalChance;
-  return `${timing}${guide.cost} energy → ${guide.energyAfterCost} after cost · ${chance(critical)} critical`;
+  return `${timing}${guide.cost} energy → ${guide.energyAfterCost} after cost${critical > 0 ? ` · ${chance(critical)} critical` : ''}`;
 }
 
 
@@ -24,7 +24,7 @@ export function targetLines(guide, picked = []) {
   }));
 }
 
-export function guidancePanel(document, view, chosen, picked, cards) {
+export function guidancePanel(document, view, chosen, picked) {
   const panel = document.createElement('section');
   panel.className = 'decision-guide';
   panel.setAttribute('aria-label', 'Before you confirm');
@@ -35,11 +35,7 @@ export function guidancePanel(document, view, chosen, picked, cards) {
     panel.append(p);
   };
   if (view.waitingFor === 'Speed') {
-    line('Quick acts before every Standard slot and cannot roll a critical. Standard keeps your critical chance. Initiative orders each band; ties are settled afterwards.');
-    for (const guide of view.guidance ?? []) {
-      if (guide.unavailableReason) continue;
-      line(`${cards.get(guide.spell)?.name ?? guide.spell} · Quick ${chance(guide.quickCriticalChance)} / Standard ${chance(guide.standardCriticalChance)} critical`);
-    }
+    line('Quick acts before Standard, without crits. Standard crit chances are shown in the spell list below.');
     return panel;
   }
   const spell = view.waitingFor === 'Target' ? view.options.target?.spell : chosen;

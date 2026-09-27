@@ -65,7 +65,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   living creatures, with at most one package per creature per opportunity (ADR 0066). Both the atlas and
   decision panel show effective remaining and spent picks; switching creature never resets them. The host
   supplies the next evolution round, displayed in the phase guide between opportunities.
-- Speed opens the acting creature's spellbook as a readable reference. Each new Speed or Intent question
+- Speed opens the acting creature's spellbook as a compact reference: name, energy cost and positive
+  Standard critical chance, with effects available by expanding a spell. Zero critical stats are omitted
+  throughout the spell cards. On phones, the masthead shows the seat and Round guide; round and phase stay
+  in the sticky bar. The expanded guide overlays that bar. Each new Speed or Intent question
   keeps the battlefield and planning desk visible together on desktop; smaller screens guide to the
   active decision. Later polls and local selection
   preserve deliberate scrolling. Other hands remain expandable.
@@ -99,10 +102,10 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The energy cost has an icon and a visible label. Spell stats show critical chance, its Standard-only
   reminder and host-provided d20 threshold. Initiative and acquisition requirements appear once per package,
   never as obsolete spell stats. Targeting and effect cues retain their visual markers.
-- Phase changes show a non-blocking announcement below the top bar for 15 seconds. It does
+- Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Reduced-motion preferences disable
   the entrance animation; hotseat handovers hide and cancel the departing seat's announcement.
-  New rounds get a larger, gold-accented “Round N begins” announcement for 20 seconds, alongside upkeep
+  New rounds get a larger, gold-accented “Round N begins” announcement for 8 seconds, alongside upkeep
   results and the next task. Loading an existing round does not pretend that a new round just started.
   Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
   the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier

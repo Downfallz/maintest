@@ -4,7 +4,7 @@ import { effectText, spellSummary, targetLines } from './guidance.js';
 
 test('summary uses host amounts, order and the chosen speed', () => {
   const guide = { cost: 7, energyAfterCost: 13, turn: 4, chosenSpeed: 'Quick', quickCriticalChance: 0, standardCriticalChance: .64 };
-  assert.equal(spellSummary(guide), 'Turn 4 · 7 energy → 13 after cost · 0% critical');
+  assert.equal(spellSummary(guide), 'Turn 4 · 7 energy → 13 after cost');
   assert.match(spellSummary({ ...guide, chosenSpeed: 'Standard' }), /64% critical/);
   assert.equal(spellSummary({ unavailableReason: 'A stunned creature cannot act.' }), 'A stunned creature cannot act.');
 });

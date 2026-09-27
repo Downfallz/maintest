@@ -62,7 +62,7 @@ test('a card prints no gate, no tree depth and no unlock bonus, whatever it is h
 test('the die line appears only when the host computed a threshold', () => {
   assert.equal(criticalLine({ critical: '35%', criticalThreshold: 14 }), 'Crit 35% · d20 14+');
   assert.equal(criticalLine({ critical: '33%' }), 'Crit 33%');
-  assert.equal(criticalLine({ critical: '0%' }), 'Crit 0%');
+  assert.equal(criticalLine({ critical: '0%' }), '');
 });
 
 test('a spell id finds its card, and a spell the catalogue does not carry finds none', () => {
@@ -101,14 +101,15 @@ test('the catalogue itself is what the mat and the rule line are drawn from', as
   assert.equal(await loadCatalogue([]), null);
 });
 
-test('visual stat groups preserve zero and non-d20 chances without inventing absent stats', async () => {
+test('visual stat groups omit zero and preserve non-d20 chances without inventing absent stats', async () => {
   const { cardStats, cardDetails } = await import('./card.js');
   assert.deepEqual(cardStats({}), []);
   const stats = cardStats({ initiative: 0, critical: '33%' });
   assert.equal(stats.length, 1);
   assert.equal(stats[0].value, '33%');
   assert.equal(stats[0].hint, 'Standard only');
-  assert.equal(cardStats({ critical: '0%' })[0].value, '0%');
+  assert.deepEqual(cardStats({ critical: '0%' }), []);
+  assert.deepEqual(cardStats({ critical: '0.0%' }), []);
   assert.equal(cardDetails({ requires: 'retired spell gate' }).length, 0);
   assert.deepEqual(cardDetails({}), []);
   assert.equal(cardDetails(card).find(row => row.role === 'target').text, card.targeting);

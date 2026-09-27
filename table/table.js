@@ -10,13 +10,18 @@ import { classColour, talentClasses, packageForest, talentPalette } from './mat.
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
 import { playbackBoard, playbackChanges } from './replay.js';
-import { guidancePanel, spellSummary } from './guidance.js';
+import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { practice, storage } from './startup.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
 // by the engine's own gates. Nothing here decides anything, and nothing here knows a spell by name.
 const element = id => document.getElementById(id);
+
+function setPhase(text, repeated = false) {
+  element('phase').textContent = text;
+  element('phase').dataset.repeated = String(repeated);
+}
 
 // How many feed entries the page keeps. The log draws the last twelve; a few times that leaves room to scroll
 // back through the round without holding a whole match in memory on a phone.
@@ -27,7 +32,7 @@ boot(practice);
 function boot(practice) {
   const held = practice?.seats ?? heldSeats(globalThis.location?.search ?? '', storage);
   if (held.length === 0) {
-    element('phase').textContent = practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.';
+    setPhase(practice ? 'Choose a practice scenario below.' : 'Type the code the host printed, or open the link it printed.');
   } else {
     // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
     if (!practice) tidy();
@@ -203,7 +208,7 @@ async function refresh(state) {
     await poll(state);
   } catch {
     state.rendered = null;
-    element('phase').textContent = 'Connection lost · retrying…';
+    setPhase('Connection lost · retrying…');
   } finally {
     state.polling = false;
   }
@@ -237,7 +242,7 @@ async function poll(state) {
 
     if (!answer.ok) {
       state.rendered = null;
-      element('phase').textContent = answer.body?.message ?? `The host answered ${answer.status}.`;
+      setPhase(answer.body?.message ?? `The host answered ${answer.status}.`);
       return;
     }
 
@@ -268,7 +273,7 @@ async function poll(state) {
     state.views = [];
     element('table').hidden = true;
     element('pass').hidden = true;
-    element('phase').textContent = 'This browser holds no seat at this table. Type the code the host printed.';
+    setPhase('This browser holds no seat at this table. Type the code the host printed.');
     return;
   }
 
@@ -383,9 +388,9 @@ function render(state, views) {
     return;
   }
 
-  element('phase').textContent = view.over
+  setPhase(view.over
     ? 'The match is over.'
-    : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`;
+    : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`, !view.over);
   state.palette = talentPalette(state.catalogue, state.cards);
   const display = state.playback ? { ...current, view: {
     ...view, board: playbackBoard(state.playback, view.board), waitingFor: null, options: {},
@@ -572,21 +577,58 @@ function handRow(state, row, asked, current) {
   who.textContent = `Creature ${row.creature}${active ? (reference ? ' · choose speed · spell reference' : ' · choose a card') : row.declared ? ' · declared' : ''}`;
 
   const held = document.createElement('div');
-  held.className = 'held-cards';
+  held.className = `held-cards${reference ? ' speed-reference' : ''}`;
   held.dataset.scroll = `hand-${row.creature}`;
   // Tappable only on the creature being asked: every row says what its creature could cast, which is what
   // makes the hand readable, but only one creature is being asked at a time.
-  held.append(...row.spells.map(spell => heldCard(state, spell, active && !reference && spell.castable, row.creature, current, reference)));
+  held.append(...row.spells.map(spell => reference ? speedSpell(state, spell, row.creature, current) : heldCard(state, spell, active && spell.castable, row.creature, current)));
 
   one.append(who, held);
   return one;
 }
 
+// Speed is a comparison of critical chances, with the full host-authored spell only a tap away.
+function speedSpell(state, spell, creature, current) {
+  const card = state.cards.get(spell.spell);
+  const guide = creature === current.view.waitingCreature ? current.view.guidance?.find(one => one.spell === spell.spell) : null;
+  const reference = document.createElement('details');
+  reference.className = 'speed-spell';
+  const summary = document.createElement('summary');
+  const name = document.createElement('strong');
+  name.textContent = cardTitle(card) || spell.spell;
+  summary.append(name);
+  const cost = cardCost(card);
+  if (cost !== '') {
+    const energy = document.createElement('span');
+    energy.className = 'speed-cost';
+    energy.textContent = `${cost} energy`;
+    summary.append(energy);
+  }
+  const critical = guide?.standardCriticalChance == null ? cardStats(card)[0]?.value : guide.standardCriticalChance > 0 ? chance(guide.standardCriticalChance) : '';
+  if (critical) {
+    const badge = document.createElement('span');
+    badge.className = 'speed-critical';
+    badge.textContent = `✦ ${critical} crit`;
+    badge.title = 'Critical chance at Standard speed';
+    summary.append(badge);
+  }
+  const body = document.createElement('div');
+  body.className = 'speed-spell-details';
+  const lines = [...cardDetails(card).map(row => row.text), card?.criticalNote, guide?.unavailableReason].filter(Boolean);
+  for (const text of lines) {
+    const line = document.createElement('p');
+    line.textContent = text;
+    body.append(line);
+  }
+  reference.append(summary, body);
+  return reference;
+}
+
 // One card in the hand: its whole face, dimmed when the creature cannot cast it, and a tap surface when it is
 // the one being asked for.
-function heldCard(state, spell, offered, creature, current, reference) {
+function heldCard(state, spell, offered, creature, current) {
   const face = document.createElement('div');
-  face.className = ['card held', reference ? 'reference' : '', spell.castable ? 'castable' : '', offered ? 'offered' : '', offered && spell.spell === state.chosen ? 'chosen' : '']
+  face.className = ['card held', spell.castable ? 'castable' : '', offered ? 'offered' : '', offered && spell.spell === state.chosen ? 'chosen' : '']
     .filter(Boolean)
     .join(' ');
 
@@ -606,7 +648,7 @@ function heldCard(state, spell, offered, creature, current, reference) {
     advice.textContent = spellSummary(guide);
     face.append(advice);
   }
-  availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Tap again to declare' : 'Select card →') : reference ? 'Spell reference' : spell.castable ? 'Available' : 'Not available now';
+  availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Tap again to declare' : 'Select card →') : spell.castable ? 'Available' : 'Not available now';
   face.append(availability);
   if (offered) {
     const offeredSpells = current.view.options.intent?.creatures?.find(one => one.creature === creature)?.castableSpells ?? [];
@@ -1047,7 +1089,7 @@ function renderPlayback(state, current) {
   element('phase-current').textContent = 'Resolution replay';
   element('phase-turn').textContent = `Action ${replay.index + 1} of ${replay.actions.length} · ${action.actor.label}`;
   element('phase-reminder').textContent = 'Next: apply / advance · Previous: review again · Skip: return to the match';
-  element('phase').textContent = `Round ${replay.round} · Resolution replay`;
+  setPhase(`Round ${replay.round} · Resolution replay`, true);
   element('playback-title').textContent = `${action.actor.label} ${before ? 'is about to act' : 'acted'}`;
   element('playback-count').textContent = action.frame ? `${position} · ${stage}` : position;
   element('playback-board-note').textContent = action.frame
@@ -1177,7 +1219,7 @@ function renderDecision(state, current) {
     : '';
   asking.textContent = titleOf(state, view);
   const buttons = buttonsFor(state, current);
-  const guidance = guidancePanel(document, view, state.chosen, state.picked, state.cards);
+  const guidance = guidancePanel(document, view, state.chosen, state.picked);
   element('decision-guide').replaceChildren(guidance);
   choices.replaceChildren(...buttons);
 }
@@ -1344,7 +1386,7 @@ function hidePhaseNotice(state) {
 function showPhaseNotice(state, { title, detail, upkeep, newRound }, replay = false) {
   hidePhaseNotice(state);
   state.noticePinned = replay;
-  state.noticeDuration = newRound ? 20000 : 15000;
+  state.noticeDuration = newRound ? 8000 : 6000;
   const notice = element('phase-notice');
   notice.dataset.kind = newRound ? 'round' : 'phase';
   element('phase-notice-context').textContent = replay ? 'Earlier announcement · review' : 'Phase update';

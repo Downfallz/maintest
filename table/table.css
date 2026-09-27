@@ -677,3 +677,39 @@ body:has(#table) { padding-bottom: 24px; }
   .practice-panel { grid-template-columns: minmax(0, 1fr); margin: .75rem; }
   .practice-panel > * { grid-column: 1; }
 }
+
+/* References remain above the sticky round bar; long guides scroll within the viewport. */
+#shape { z-index: 30; }
+.guide-body { max-height: min(680px, 75dvh); overflow-y: auto; overscroll-behavior: contain; }
+.card-stats:empty { display: none; }
+
+/* All speed candidates fit in a compact list; effects stay available on disclosure. */
+#own-hand .held-cards.speed-reference { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; overflow: visible; }
+.speed-spell { border: 1px solid var(--line); border-radius: 9px; background: #14231d; min-width: 0; }
+#own-hand .speed-spell > summary { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 10px; margin: 0; border: 0; font-size: 12px; list-style: none; }
+.speed-spell > summary::-webkit-details-marker { display: none; }
+.speed-spell > summary::after { content: '+'; color: var(--muted); }
+.speed-spell[open] > summary::after { content: '−'; }
+.speed-spell > summary strong { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.speed-cost { color: var(--muted); white-space: nowrap; font-size: 11px; }
+.speed-critical { color: #ffe0a4; background: #65501f; border-radius: 5px; padding: 4px 6px; white-space: nowrap; font-weight: 700; font-size: 11px; }
+.speed-spell:has(.speed-critical) { border-color: #887344; }
+.speed-spell-details { padding: 0 12px 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.speed-spell-details p { margin: 6px 0 0; }
+.speed-spell > summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 9px; }
+@media (max-width: 760px) {
+  .masthead { min-height: 44px; padding: 0; flex-wrap: nowrap; gap: 12px; }
+  .masthead .brand { display: none; }
+  .session-state { flex: 1; width: auto; order: 0; margin: 0; flex-wrap: wrap; gap: 4px 10px; }
+  #phase[data-repeated="true"] { display: none; }
+  #shape { margin-left: auto; flex-shrink: 0; }
+  #shape > summary { min-height: 44px; display: flex; align-items: center; }
+  #shape > summary::before { content: '▸'; margin-right: 5px; }
+  #shape[open] > summary::before { content: '▾'; }
+  #shape > summary::-webkit-details-marker { display: none; }
+  .guide-body { top: 44px; }
+  #table { margin-top: 8px; }
+  #decision[data-kind="Speed"] #asking { font-size: 24px; }
+  #decision[data-kind="Speed"] #choices > button { min-height: 56px; font-size: 19px; }
+  #decision[data-kind="Speed"] #choices > button::before { display: none; }
+}
