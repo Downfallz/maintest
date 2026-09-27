@@ -59,8 +59,9 @@ not recorded matches. Card text and creature names in the actual app come from t
   scrolling pane. Cards wrap into two columns and the active creature appears first. Below desktop width
   the round bar carries a Battlefield button, always there: it opens every creature, the spellbooks
   revealed and the turn order over the page under the bar, and a second tap (or Escape) closes it where the
-  player left off. A handover closes it. Phones wrap the hand into a grid and the turn order into rows, so
-  nothing on the table scrolls sideways.
+  player left off. A handover closes it. Phones list the hand as compact rows (name, cues, cost, effects on
+  one or two lines; the rules reminder and the declare cue on the chosen card) and wrap the turn order into
+  rows, so nothing on the table scrolls sideways.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's available packages at a time. Each pick buys all of a package's spells

@@ -751,3 +751,37 @@ body:has(#table) { padding-bottom: 24px; }
 @media (max-width: 760px) {
   .atlas-back { display: block; margin: 0 0 10px auto; }
 }
+
+/* A phone's hand is a list to choose from, not a spread of printed cards: one compact row per spell with
+   its name, cost, cues and effects. The rules reminder and the "select" label come back on the chosen card. */
+@media (max-width: 760px) {
+  .board-toggle { min-height: 34px; padding: 5px 10px; font-size: 12px; }
+  :is(#own-hand, .enemy-books) .held-cards { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  :is(#own-hand, .enemy-books) .held { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px 11px; border-radius: 10px; }
+  :is(#own-hand, .enemy-books) .held > .card-head { display: contents; }
+  :is(#own-hand, .enemy-books) .held .card-title { order: 1; min-width: 0; font-size: 16px; }
+  :is(#own-hand, .enemy-books) .held .class-accent .card-title { padding-left: 7px; border-left: 3px solid var(--class-color); }
+  :is(#own-hand, .enemy-books) .held > .card-cues { order: 2; }
+  :is(#own-hand, .enemy-books) .held > .card-stats { order: 3; }
+  :is(#own-hand, .enemy-books) .held .card-cost { order: 4; margin-left: auto; }
+  :is(#own-hand, .enemy-books) .held > .card-body { order: 5; }
+  :is(#own-hand, .enemy-books) .held > .card-advice { order: 6; }
+  :is(#own-hand, .enemy-books) .held .card-meta { display: none; }
+  :is(#own-hand, .enemy-books) .held .card-cost { flex: none; flex-direction: row; width: auto; height: 26px; padding: 0 8px; border-radius: 6px; font-size: 13px; }
+  :is(#own-hand, .enemy-books) .held .card-cost small { display: none; }
+  :is(#own-hand, .enemy-books) .held .card-cues { margin: 0; }
+  :is(#own-hand, .enemy-books) .held .card-cue[data-tone="critical"] { display: none; }
+  :is(#own-hand, .enemy-books) .held .card-stats { margin: 0; }
+  :is(#own-hand, .enemy-books) .held .card-stat { display: flex; gap: 4px; padding: 3px 6px; border-radius: 5px; }
+  :is(#own-hand, .enemy-books) .held .card-stat > span { font-size: 0; }
+  :is(#own-hand, .enemy-books) .held .card-stat > span::before { content: '✦ Crit'; font-size: 10px; }
+  :is(#own-hand, .enemy-books) .held .card-stat > strong { font-size: 12px; }
+  :is(#own-hand, .enemy-books) .held .card-stat > small { display: none; }
+  :is(#own-hand, .enemy-books) .held > .card-body { flex: 1 0 100%; margin: 0; padding-top: 6px; font-size: 12px; line-height: 1.45; }
+  :is(#own-hand, .enemy-books) .held .card-line { display: inline; padding: 0; }
+  :is(#own-hand, .enemy-books) .held .card-line + .card-line::before { content: ' · '; }
+  :is(#own-hand, .enemy-books) .held:not(.chosen) .card-critical-note { display: none; }
+  :is(#own-hand, .enemy-books) .held > .card-advice { flex: 1 0 100%; padding: 0; font-size: 11px; }
+  :is(#own-hand, .enemy-books) .held:not(.chosen) > .card-availability { display: none; }
+  :is(#own-hand, .enemy-books) .held > .card-availability { flex: 1 0 100%; margin: 0; }
+}

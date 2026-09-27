@@ -127,3 +127,18 @@ test('the talent atlas lays its families out without overlap or sideways panning
   await expect(page.locator('.talent-inspector')).toContainText('East Master 2 · Tier 3');
   await expect(page.locator('.talent-inspector .talent-class')).toBeInViewport();
 });
+
+test('a phone lists the castable spells as compact rows, the chosen one with its declare cue', async ({ page }, info) => {
+  const intent = { ...view, waitingFor: 'Intent', options: { intent: { creatures: [{ creature: 1, castableSpells: cards.map(card => card.id) }] } },
+    board: { ...view.board, subPhase: 'IntentSelection' } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: intent }));
+  await expect(page.locator('#own-hand .held.offered')).toHaveCount(cards.length);
+  const heights = await page.locator('#own-hand .held.offered').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height));
+  if (info.project.name !== 'desktop') expect(Math.max(...heights)).toBeLessThan(140);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const pummel = page.locator('#own-hand .held.offered').filter({ hasText: 'Pummel' });
+  await pummel.click();
+  await expect(pummel).toContainText('Tap again to declare');
+  await expect(pummel.locator('.card-availability')).toBeVisible();
+  await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
+});
