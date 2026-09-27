@@ -90,8 +90,8 @@ public sealed class HttpHostTests
     [Fact]
     public void A_wildcard_is_given_to_the_listener_as_a_plus_prefix()
     {
-        HttpHost.Prefix(HttpHost.AnyInterface, 5123).ShouldBe("http://+:5123/");
-        HttpHost.Prefix(HttpHost.Loopback, 5123).ShouldBe("http://127.0.0.1:5123/");
+        HttpHost.Prefix(HttpHost.AnyInterface, 5123, wildcardNeedsReservation: false).ShouldBe("http://+:5123/");
+        HttpHost.Prefix(HttpHost.Loopback, 5123, wildcardNeedsReservation: true).ShouldBe("http://127.0.0.1:5123/");
     }
 
     [Theory]

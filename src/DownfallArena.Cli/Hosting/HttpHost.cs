@@ -51,8 +51,15 @@ internal sealed class HttpHost : IDisposable
     /// it spells every interface <c>+</c>. Every other address is its own prefix, and <see cref="Url" /> keeps
     /// the address as typed either way, because that is the one a player is told.
     /// </summary>
-    internal static string Prefix(string address, int port) =>
-        $"http://{(Bindable(address) == AnyInterface ? "+" : address)}:{port}/";
+    private static string Prefix(string address, int port) => Prefix(address, port, OperatingSystem.IsWindows());
+
+    /// <summary>
+    /// <see cref="Prefix(string, int)" /> with the platform fact passed in, the way <see cref="Bindable(string, bool)" />
+    /// takes it: the translation is the same on every platform, and a test of it should not depend on which one
+    /// runs it.
+    /// </summary>
+    internal static string Prefix(string address, int port, bool wildcardNeedsReservation) =>
+        $"http://{(Bindable(address, wildcardNeedsReservation) == AnyInterface ? "+" : address)}:{port}/";
 
     public string Url { get; }
 
