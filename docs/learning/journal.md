@@ -4,6 +4,73 @@ One entry per change that moves a number: content, engine, agents, or the benchm
 the run stamps involved so that any two results can be compared on one axis at a time (ADR 0013). Newest
 first.
 
+## 2026-09-25. Search 26 seats the lookahead in the panel and finds nothing above search-23
+
+- **What ran.** #214: `search-weights --kind heuristic` from `search-23`, against Greedy, `search-21`,
+  `stun-first`, `search-19`, `pressure-floor` and `lookahead:learning/weights/lookahead-20.json@50`, all under
+  the start's floor. It ran 5 rounds of 8, seed 0, on content `813bb91b`, and played 41 candidates, 246
+  evaluations, in 1h45. The seat `@50` put the lookahead on the first 50 benchmark seeds only. The whole search
+  cost 2.5 to 2.8 minutes a candidate, against 2.0 for search 25's five heuristics: the lookahead fit.
+- **What it found.** Nothing. The start scored 0.8135 over the six, and no candidate beat it. Every one
+  either scored lower or fell below the start's floor against one of the six. No weights file, and the
+  hold-out had nothing to replay.
+- **What it says.** Against the whole panel, `search-23` is where this search stops. The last three searches
+  each climbed by giving something back, and a panel that holds all of it leaves no direction open at this
+  spread (sigma 0.5 of each weight). One run does not say whether a smaller step would find one. The heuristic
+  ladder has reached what a one-step scorer can hold against every agent here, and the next gain is more
+  likely to come from the learning loop (features:v7) than from another rung.
+
+## 2026-09-25. Half the healing on a bleeding creature ends two of the four stalled mirrors, and the owner keeps healing whole
+
+- **What was measured.** A counterfactual engine outside the repository. A heal on a creature that carries a
+  Bleed gives half, rounded down, or nothing at all. Direct heals and Regeneration ticks were both reduced.
+  Content `813bb91b`. The agents were not told, so every scorer still priced a heal at full value.
+- **The strong mirrors**, 200 seeds from 995317. Average rounds, share at the 30-round cap:
+
+  | mirror | as it stands | half the heal | no heal |
+  | --- | --- | --- | --- |
+  | `stun-first` | 21.9, 0.190 | 21.3, 0.140 | 20.6, 0.090 |
+  | `search-19` | 27.1, 0.140 | 26.2, 0.145 | 25.5, 0.115 |
+  | `search-21` | 26.6, 0.270 | **23.0, 0.055** | 23.8, 0.020 |
+  | `search-23` | 20.8, 0.190 | **18.3, 0.005** | 17.0, 0.000, and every match a draw |
+  | Greedy | 10.6, 0.000 | 10.7, 0.000 | 10.6, 0.000 |
+
+- **The objective at half the heal**, `score-content` on 800 seeds from 3000000: 5.191 to 4.684, within the
+  noise. The exploring run goes from 10.69 to 10.38 rounds. The best exploiter falls against Greedy from 0.998
+  to 0.952.
+- **What it says.** Half the heal ends the stall the entry of 2026-09-24 traced to healing, `search-21`'s
+  bleed healed back by `restorative_gush`. It ends `search-23`'s too. It leaves `stun-first` and `search-19`,
+  whose stall is the stun trade and the defense, and every strong mirror still runs 18 to 26 rounds against a
+  band of 10 to 15. No healing at all turns the `search-23` mirror into a draw in every match: both teams
+  bleed out in the same round.
+- **Decided.** The owner keeps healing whole. The rule is not adopted and no engine change ships. The numbers
+  stay here for the next time the stall comes up.
+
+## 2026-09-25. Tuning pass 12 finds nothing the noise does not, on a catalogue that had already moved
+
+- **What ran.** #216, [workflow run 12](https://github.com/Downfallz/maintest/actions/runs/36063145023):
+  `tune-content --seed 1 --iterations 2 --neighbours 6 --max-changes 12 --pair-depth 2`, no pairs, on content
+  `0f036b75`. That is the catalogue before Momentum changed (ADR 0078). It played 236 versions in 4h06: 1848
+  evaluations, and 32 on the confirmation seeds.
+- **What it moved.** `tranquilizer_dart` stun duration 2 to 1, and `death_squad` cost 2 to 3. The objective went
+  from 2.277 to 2.222 on its own seeds, and from 2.926 to 2.738 on the confirmation seeds. The confirmation
+  set aside the opening pass's best, which read 1.64 on the search seeds and 3.263 on the confirmation seeds.
+  It also read 4.051 to 3.441 on the workflow's hold-out.
+- **On the catalogue as it is now.** The two moves were replayed on `813bb91b`, with Momentum a free strike,
+  using `score-content`:
+
+  | seeds | `813bb91b` | with the two moves |
+  | --- | --- | --- |
+  | 200 from 995317 | 4.132 | **4.719** |
+  | 800 from 3000000 | 5.191 | **3.951** |
+
+  One block says worse and the other better. The better one is mostly `tierUsageShare`, which moved 0.96 to
+  0.12 on a gain of 0.06 on the seeds the pass chose on.
+- **Verdict.** Not applied, and #216 is closed. The gain the pass found is a tenth of the objective's noise.
+  The two readings on the current catalogue disagree in sign. Its digest was written for a content hash that
+  `main` no longer builds. The confirmation seeds did their job: they caught the one challenger that would
+  have been a large false gain. The next pass runs on `813bb91b`.
+
 ## 2026-09-25. Search 25 widens the panel to five heuristics and loses the lookahead: the ladder needs the lookahead in it
 
 - **What ran.** #209: `search-weights --kind heuristic` from `search-23`, against Greedy, `search-21`,
