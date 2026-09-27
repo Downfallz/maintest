@@ -55,7 +55,7 @@ function start(seats, holder = null) {
     acknowledged: null, announced: null, announcing: null,
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
-    cards: new Map(), packages: new Map(), catalogue: null, tab: 'board', feeds: new Map(),
+    cards: new Map(), packages: new Map(), catalogue: null, tab: 'board', boardOpen: false, feeds: new Map(),
   };
   load(state);
   setupTalentWindow(state);
@@ -75,8 +75,8 @@ function start(seats, holder = null) {
     });
   }
 
-  element('hand-board').addEventListener('click', () => element('board').scrollIntoView({ block: 'start', behavior: 'instant' }));
-  element('board-move').addEventListener('click', () => element('decision').scrollIntoView({ block: 'start', behavior: 'instant' }));
+  element('board-toggle').addEventListener('click', () => showBoard(state, !state.boardOpen));
+  globalThis.addEventListener?.('resize', () => placeBoard(state));
   element('hand-talents').addEventListener('click', () => openTalents(state));
 
   // The two one-tap notes, built once. They read the state at the moment they are tapped, so the note lands
@@ -297,6 +297,33 @@ function showTab(state, name) {
   element('talent-window').hidden = name !== 'mat';
 }
 
+// Below the laptop layout the battlefield is one tap from any question and one tap back. It opens over the
+// page, under the round bar that holds the button, so the spellbook stays where the player had scrolled it
+// and nothing has to be scrolled to reach the board or to come back from it.
+function showBoard(state, open) {
+  // Taking the board out of the page shortens it, which can clamp the scroll; closing puts the player back.
+  if (open && !state.boardOpen) state.boardReturn = globalThis.scrollY ?? 0;
+  const returning = !open && state.boardOpen;
+  state.boardOpen = open;
+  document.body?.classList.toggle('board-open', open);
+  const toggle = element('board-toggle');
+  toggle.setAttribute('aria-pressed', String(open));
+  toggle.textContent = open ? 'Battlefield ✕' : 'Battlefield';
+  toggle.title = open ? 'Back to your move' : 'Show every creature';
+  placeBoard(state);
+  if (open) element('board').scrollTop = 0;
+  if (!returning) return;
+  globalThis.scrollTo?.(0, state.boardReturn ?? 0);
+  const current = activeSeat(state.views, state.holder);
+  if (current && !state.playback && !needsPass(current, state.holder)) guideDecision(state, current);
+}
+
+function placeBoard(state) {
+  if (!state.boardOpen) return;
+  const bottom = element('phase-dock').getBoundingClientRect().bottom;
+  document.documentElement?.style.setProperty('--board-top', `${Math.max(0, bottom)}px`);
+}
+
 function selectable(face, selected, onClick) {
   face.tabIndex = 0;
   face.setAttribute('role', 'button');
@@ -380,6 +407,7 @@ function render(state, views) {
   element('pass').hidden = !fence;
   element('table').hidden = fence;
   if (fence) {
+    showBoard(state, false);
     hidePhaseNotice(state);
     element('upkeep').open = false;
     element('announcements').open = false;
@@ -421,6 +449,7 @@ function render(state, views) {
       : view.waitingFor === 'TieOrder' ? '← → Browse tied creatures · Enter to order · Confirm when ready'
         : '1–9 Select card / target · Enter to confirm';
   restorePosition(saved);
+  placeBoard(state);
   if (!state.playback) guideDecision(state, current);
   else if (state.guidedPlayback !== `${state.playback.seat}/${state.playback.round}`) {
     state.guidedPlayback = `${state.playback.seat}/${state.playback.round}`;
@@ -431,7 +460,8 @@ function render(state, views) {
 // Guide each new question once, after the handover fence is down. Polls and local selections never
 // pull the player back after they deliberately scroll elsewhere to inspect the board.
 function guideDecision(state, current) {
-  if (state.guidedAsking === state.asked || current.view.over || current.view.playedByBot) return;
+  // A player reading the open battlefield is not moved under it; closing it guides them instead.
+  if (state.boardOpen || state.guidedAsking === state.asked || current.view.over || current.view.playedByBot) return;
   state.guidedAsking = state.asked;
   const kind = current.view.waitingFor;
   const desktop = globalThis.innerWidth >= 1100;
@@ -462,7 +492,7 @@ function renderNotes(view) {
   element('comment').hidden = !kept || !commentIsOpen(view);
 }
 
-// The initiative track: the engine's order, banded by speed, scrolling sideways at 360 px. The strip never
+// The initiative track: the engine's order, banded by speed, wrapping on a phone rather than scrolling. The strip never
 // sorts -- ties and all, this is the order the round is played in (timeline.js).
 function renderTimeline(board) {
   const cursor = withCursor(board.timeline, cursorOf(board));
@@ -587,6 +617,13 @@ function handRow(state, row, asked, current) {
   return one;
 }
 
+// The host's chance for this creature when it has one, the card's own otherwise; a chance of zero is none.
+function standardCritical(card, guide) {
+  const chanceOf = guide?.standardCriticalChance;
+  if (chanceOf == null) return cardStats(card)[0]?.value ?? '';
+  return chanceOf > 0 ? chance(chanceOf) : '';
+}
+
 // Speed is a comparison of critical chances, with the full host-authored spell only a tap away.
 function speedSpell(state, spell, creature, current) {
   const card = state.cards.get(spell.spell);
@@ -604,7 +641,7 @@ function speedSpell(state, spell, creature, current) {
     energy.textContent = `${cost} energy`;
     summary.append(energy);
   }
-  const critical = guide?.standardCriticalChance == null ? cardStats(card)[0]?.value : guide.standardCriticalChance > 0 ? chance(guide.standardCriticalChance) : '';
+  const critical = standardCritical(card, guide);
   if (critical) {
     const badge = document.createElement('span');
     badge.className = 'speed-critical';
@@ -625,22 +662,18 @@ function speedSpell(state, spell, creature, current) {
 }
 
 // One card in the hand: its whole face, dimmed when the creature cannot cast it, and a tap surface when it is
-// the one being asked for.
-function heldCard(state, spell, offered, creature, current) {
+// the one being asked for. An opponent's revealed card is a reference: it says so rather than "not available".
+function heldCard(state, spell, offered, creature, current, reference = false) {
   const face = document.createElement('div');
-  face.className = ['card held', spell.castable ? 'castable' : '', offered ? 'offered' : '', offered && spell.spell === state.chosen ? 'chosen' : '']
+  const chosen = offered && spell.spell === state.chosen;
+  face.className = ['card held', reference && 'reference', spell.castable && 'castable', offered && 'offered', chosen && 'chosen']
     .filter(Boolean)
     .join(' ');
 
   const parts = cardParts(state, spell.spell, '');
-  if (parts === null) {
-    face.textContent = spell.spell;
-  } else {
-    face.append(...parts);
-  }
+  if (parts === null) face.textContent = spell.spell;
+  else face.append(...parts);
 
-  const availability = document.createElement('span');
-  availability.className = 'card-availability';
   const guide = creature === current.view.waitingCreature ? current.view.guidance?.find(one => one.spell === spell.spell) : null;
   if (guide) {
     const advice = document.createElement('p');
@@ -648,17 +681,27 @@ function heldCard(state, spell, offered, creature, current) {
     advice.textContent = spellSummary(guide);
     face.append(advice);
   }
-  availability.textContent = offered ? (spell.spell === state.chosen ? '✓ Tap again to declare' : 'Select card →') : spell.castable ? 'Available' : 'Not available now';
+  const availability = document.createElement('span');
+  availability.className = 'card-availability';
+  availability.textContent = availabilityText(spell, offered, chosen, reference);
   face.append(availability);
-  if (offered) {
-    const offeredSpells = current.view.options.intent?.creatures?.find(one => one.creature === creature)?.castableSpells ?? [];
-    const number = offeredSpells.indexOf(spell.spell) + 1;
-    if (number > 0 && number <= 9) availability.textContent = `[${number}] ${availability.textContent}`;
-    face.dataset.focus = `card-${creature}-${spell.spell}`;
-    selectable(face, spell.spell === state.chosen, () => chooseCard(state, current, spell.spell));
-  }
-
+  if (offered) offerCard(state, current, face, availability, spell, creature, chosen);
   return face;
+}
+
+function availabilityText(spell, offered, chosen, reference) {
+  if (offered) return chosen ? '✓ Tap again to declare' : 'Select card →';
+  if (reference) return 'Spell reference';
+  return spell.castable ? 'Available' : 'Not available now';
+}
+
+// The asked creature's castable card: numbered for the keyboard, and selected by a tap.
+function offerCard(state, current, face, availability, spell, creature, chosen) {
+  const offeredSpells = current.view.options.intent?.creatures?.find(one => one.creature === creature)?.castableSpells ?? [];
+  const number = offeredSpells.indexOf(spell.spell) + 1;
+  if (number > 0 && number <= 9) availability.textContent = `[${number}] ${availability.textContent}`;
+  face.dataset.focus = `card-${creature}-${spell.spell}`;
+  selectable(face, chosen, () => chooseCard(state, current, spell.spell));
 }
 
 // A creature board: numbers and a bar, never a rail, and the dock under it (board.js).
@@ -908,7 +951,7 @@ function renderMat(state, current) {
     filter.append(option);
   }
   filter.value = classes.some(group => group.id === state.inspectClass) ? state.inspectClass : '';
-  filter.addEventListener('change', () => { state.inspectClass = filter.value; redraw(state); });
+  filter.addEventListener('change', () => { state.inspectClass = filter.value; state.revealPackage = true; redraw(state); });
   toolbar.append(heading, help, picker, filter);
   if (evolution) toolbar.append(evolutionBudget(state, view));
   const forest = packageForest(state.catalogue);
@@ -922,17 +965,28 @@ function renderMat(state, current) {
   graph.append(roots);
   // The overview is compact; full spell faces appear for the selected class only.
   const selected = classes.find(group => group.id === filter.value);
-  const detail = document.createElement('div');
-  detail.className = 'talent-inspector';
-  if (selected) detail.append(talentLane(state, selected, current, creature));
-  else {
-    const prompt = document.createElement('p');
-    prompt.className = 'atlas-prompt';
-    prompt.textContent = 'Select a package above to see its spells, initiative bonus and prerequisites.';
-    detail.append(prompt);
-  }
+  const detail = atlasInspector(state, selected, graph, current, creature);
   if (classes.length === 0) help.textContent = 'The talent catalogue is not available yet.';
   element('mat').replaceChildren(toolbar, graph, detail);
+  if (state.revealPackage && selected && globalThis.innerWidth <= 760) detail.scrollIntoView({ block: 'start' });
+  state.revealPackage = false;
+}
+
+// On a phone the graph is a long list, so the package it opens is brought up with the way back to the list.
+function atlasInspector(state, selected, graph, current, creature) {
+  const detail = document.createElement('div');
+  detail.className = 'talent-inspector';
+  if (selected) {
+    const back = button('↑ All packages', () => graph.scrollIntoView({ block: 'start' }));
+    back.className = 'atlas-back reference-link';
+    detail.append(back, talentLane(state, selected, current, creature));
+    return detail;
+  }
+  const prompt = document.createElement('p');
+  prompt.className = 'atlas-prompt';
+  prompt.textContent = 'Select a package above to see its spells, initiative bonus and prerequisites.';
+  detail.append(prompt);
+  return detail;
 }
 
 function talentLane(state, group, current, creature) {
@@ -1881,9 +1935,10 @@ function treeNode(state, node, classes, creature) {
   const pick = button('', () => {
     if (!group) return;
     state.inspectClass = group.id;
+    state.revealPackage = true;
     redraw(state);
   });
-  pick.className = `tree-node${group?.id === state.inspectClass ? ' selected' : ''}${offered ? ' unlockable' : ''}`;
+  pick.className = ['tree-node', group?.id === state.inspectClass && 'selected', offered && 'unlockable', known && 'known'].filter(Boolean).join(' ');
   pick.dataset.focus = `tree-${node.key}`;
   pick.setAttribute('aria-pressed', String(group?.id === state.inspectClass));
   pick.disabled = !group;
@@ -1975,6 +2030,11 @@ function setupTalentWindow(state) {
 // repeating the same number never commits a card or target by accident. Enter is the explicit commit.
 function keyboardDecision(state, event) {
   if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+  if (event.key === 'Escape' && state.boardOpen) {
+    event.preventDefault();
+    showBoard(state, false);
+    return;
+  }
   const target = event.target;
   if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName?.toUpperCase())) return;
   const current = activeSeat(state.views, state.holder);

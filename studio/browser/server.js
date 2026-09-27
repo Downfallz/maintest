@@ -9,7 +9,9 @@ createServer(async (request, response) => {
   const table = pathname.startsWith('/table/');
   const asset = table ? pathname.slice('/table'.length) : pathname;
   const relative = asset === '/' ? '/index.html' : asset;
-  const base = table ? 'table' : relative === '/viewer.css' ? 'viewer' : 'studio';
+  let base = 'studio';
+  if (table) base = 'table';
+  else if (relative === '/viewer.css') base = 'viewer';
   const file = resolve(root, base, `.${relative}`);
   if (!file.startsWith(`${root}/${base}/`)) { response.writeHead(404).end(); return; }
   try {

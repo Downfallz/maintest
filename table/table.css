@@ -35,9 +35,9 @@ button, [role="button"] { touch-action: manipulation; }
 .session-state { margin-left: auto; text-align: right; }
 .seat-label { color: var(--gold); font-size: 12px; }
 #phase { margin-top: 5px; font-size: 13px; }
-#shape { position: relative; font-size: 12px; }
+#shape { position: relative; z-index: 30; font-size: 12px; }
 summary { cursor: pointer; min-height: 44px; padding: 13px 0; }
-.guide-body { position: absolute; right: 0; top: 45px; width: 310px; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 15px 40px #0008; z-index: 5; line-height: 1.8; }
+.guide-body { position: absolute; right: 0; top: 45px; width: 310px; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 15px 40px #0008; z-index: 5; line-height: 1.8; max-height: min(680px, 75dvh); overflow-y: auto; overscroll-behavior: contain; }
 .guide-body ol, .guide-body ul { padding-left: 20px; }
 #table { max-width: 1500px; margin: 24px auto 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
 .play-area, .action-area, #board, .team-section, .hand-section { min-width: 0; }
@@ -354,7 +354,6 @@ body:has(#table) { overflow: auto; }
   #planning .hand-section { padding-top: 12px; }
   .hand-section > .section-heading { align-items: center; gap: 6px; margin-bottom: 8px; }
   .hand-actions .reference-link { min-height: 30px; padding: 5px 8px; font-size: 10px; }
-  #hand-board, #board-move { display: none; }
   .hand-row.active .hand-who { font-size: 11px; margin-bottom: 6px; }
   #own-hand .held-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   #own-hand .held { padding: 12px; }
@@ -399,8 +398,8 @@ body:has(#table) { overflow: auto; }
   #decision #asking { font-size: 30px; }
   #choices { grid-column: 1; grid-row: auto; }
   #decision[data-kind="Speed"] #choices > button { min-height: 76px; font-size: 21px; }
-  #own-hand .held-cards { display: flex; overflow-x: auto; }
-  #own-hand .held { flex: 0 0 240px; }
+  #own-hand .held-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; overflow: visible; align-items: start; }
+  #own-hand .held { padding: 12px; }
   .enemy-books { display: block; }
   #decision[data-kind="Evolution"] #choices { grid-template-columns: 1fr; }
   .hand-actions .reference-link { font-size: 11px; padding: 8px; }
@@ -650,6 +649,7 @@ body:has(#table) { padding-bottom: 24px; }
 .tree-progress, .tree-offer { font-size: 9px; }
 .package-summary { margin: 8px 0; color: var(--muted); line-height: 1.5; }
 .talent-lane > .atlas-unlock { margin: 10px 0; }
+.talent-lane > .talent-status { color: #c3cfbf; }
 .talent-lane > .talent-tier { margin-top: 12px; }
 .package-card { border-top: 3px solid var(--class-color); }
 .package-requires { margin-top: 8px; color: #546151; font-size: 10px; }
@@ -667,6 +667,7 @@ body:has(#table) { padding-bottom: 24px; }
 .decision-guide p { margin-block: .35rem; line-height: 1.5; }
 .decision-guide small { display: block; color: #bbc9c2; line-height: 1.5; margin-top: .65rem; }
 .card-advice { padding: .5rem .75rem; margin: 0; color: #c6e4d3; font-size: .78rem; line-height: 1.4; }
+.held:is(.castable, .reference) .card-advice { color: #2f5a44; }
 .practice-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem 1rem; max-width: 1100px; margin: 1rem auto; padding: 1rem; border: 1px solid #456b61; border-radius: 16px; background: #172923; }
 .practice-panel[hidden] { display: none; }
 .practice-panel > div, .practice-panel > p, .practice-panel > output { grid-column: 1 / -1; }
@@ -677,11 +678,6 @@ body:has(#table) { padding-bottom: 24px; }
   .practice-panel { grid-template-columns: minmax(0, 1fr); margin: .75rem; }
   .practice-panel > * { grid-column: 1; }
 }
-
-/* References remain above the sticky round bar; long guides scroll within the viewport. */
-#shape { z-index: 30; }
-.guide-body { max-height: min(680px, 75dvh); overflow-y: auto; overscroll-behavior: contain; }
-.card-stats:empty { display: none; }
 
 /* All speed candidates fit in a compact list; effects stay available on disclosure. */
 #own-hand .held-cards.speed-reference { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; overflow: visible; }
@@ -712,4 +708,46 @@ body:has(#table) { padding-bottom: 24px; }
   #decision[data-kind="Speed"] #asking { font-size: 24px; }
   #decision[data-kind="Speed"] #choices > button { min-height: 56px; font-size: 19px; }
   #decision[data-kind="Speed"] #choices > button::before { display: none; }
+}
+
+/* The battlefield is one tap away below the laptop layout: the button rides in the round bar, and the board
+   opens over the page under it, so the spellbook keeps its place. On a laptop the board is beside the desk. */
+.board-toggle { margin-left: auto; align-self: center; min-height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: #f1dab0; background: #2b3a2e; border: 1px solid #c5ac6c; border-radius: 8px; }
+.board-toggle[aria-pressed="true"] { background: #c5ac6c; color: #17251f; }
+@media (min-width: 1100px) {
+  .board-toggle { display: none; }
+}
+@media (max-width: 1099px) {
+  #phase-dock { background: #17251f; }
+  .phase-primary { align-items: center; }
+  #tab-board { display: none; }
+  body.board-open { overflow: hidden; }
+  body.board-open #board { position: fixed; z-index: 23; inset: var(--board-top, 0px) 0 0; margin: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 14px max(24px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid #64735a; }
+}
+
+/* On a phone the prerequisite graph reads top to bottom: one family per block, each upgrade beside the
+   package it grows from, and nothing to pan sideways. The turn order wraps for the same reason. */
+@media (max-width: 760px) {
+  .talent-window .talent-toolbar { position: static; box-shadow: none; }
+  .talent-window #mat { scroll-padding-top: 0; }
+  .tree-map { max-height: none; overflow: visible; padding: 4px 0 12px; }
+  .tree-map ul { display: grid; gap: 6px; padding: 0; }
+  .tree-map .tree-roots { gap: 14px; }
+  .tree-map li { min-width: 0; padding: 0; text-align: left; }
+  .tree-map li::before, .tree-map li::after, .tree-map ul ul::before { display: none; }
+  .tree-roots > li > ul { margin: 6px 0 0 10px; padding-left: 10px; border-left: 1px solid #7b8d80; }
+  .tree-roots > li > ul > li { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .tree-node { max-width: none; min-height: 0; height: auto; padding: 8px 10px; text-align: left; border-top-width: 1px; border-left-width: 4px; }
+  .tree-title { font-size: 15px; overflow-wrap: normal; }
+  .tree-progress { margin-top: 3px; }
+  .tree-node:not(.unlockable, .known) .tree-offer { display: none; }
+  .initiative-section .strip { display: grid; gap: 8px; overflow: visible; }
+  .initiative-section .band { display: block; min-width: 0; }
+  .initiative-section .band-name { margin-bottom: 4px; }
+  .initiative-section .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .initiative-section .slot { min-width: 0; padding: 5px; }
+}
+.atlas-back { display: none; }
+@media (max-width: 760px) {
+  .atlas-back { display: block; margin: 0 0 10px auto; }
 }

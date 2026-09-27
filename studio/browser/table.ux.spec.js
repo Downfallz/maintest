@@ -11,8 +11,16 @@ const view = {
   board: { roundNumber: 3, subPhase: 'Speed', allies: [{ id: 1, name: 'Creature 1', health: 6, maxHealth: 30, energy: 4, knownSpells: cards.map(card => card.id) }],
     enemies: [{ id: 2, health: 20, maxHealth: 30 }], intents: [], timeline: [] },
 };
+// Three families of three upgrades, each with one successor: the shape of the standard catalogue's packages.
+const packages = ['North', 'East', 'West'].flatMap((family, root) => [
+  { id: `tier:${family}:v1`, name: family, level: 1, prerequisites: [], spells: [cards[root].id], initiativeBonus: 1 },
+  ...[1, 2, 3].flatMap(branch => [
+    { id: `tier:${family}-${branch}:v1`, name: `${family} Adept ${branch}`, level: 2, prerequisites: [`tier:${family}:v1`], spells: [cards[3].id], initiativeBonus: 1 },
+    { id: `tier:${family}-${branch}-master:v1`, name: `${family} Master ${branch}`, level: 3, prerequisites: [`tier:${family}-${branch}:v1`], spells: [cards[4].id], initiativeBonus: 3 },
+  ]),
+]);
 const catalogue = {
-  cards, packages: [], contentHash: 'fixture', rules: { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, evolutionInterval: 2, firstEvolutionRound: 1, roundCap: 20, criticalMultiplier: 2 },
+  cards, packages, contentHash: 'fixture', rules: { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, evolutionInterval: 2, firstEvolutionRound: 1, roundCap: 20, criticalMultiplier: 2 },
   round: { subPhases: ['Upkeep', 'Evolution', 'EnergyGain', 'Speed', 'TurnOrderResolution', 'TieOrder', 'IntentSelection', 'RevealAndTarget', 'ActionResolution', 'Cleanup', 'Finalization'],
     orderings: ['Healing resolves before bleeding.', 'A critical is applied before defense is subtracted.'] },
 };
@@ -73,4 +81,49 @@ test('connection errors remain visible in the compact header', async ({ page }) 
   await page.route('**/api/seat/player1**', route => route.abort());
   await expect(page.locator('#phase')).toHaveText('Connection lost · retrying…');
   await expect(page.locator('#phase')).toBeVisible();
+});
+
+test('the battlefield opens from the round bar over the page and closes back to the same place', async ({ page }, info) => {
+  await expect(page.locator('#hand-board')).toHaveCount(0);
+  await expect(page.locator('#board-move')).toHaveCount(0);
+  const toggle = page.locator('#board-toggle');
+  if (info.project.name === 'desktop') {
+    await expect(toggle).toBeHidden();
+    await expect(page.locator('#board')).toBeInViewport();
+    return;
+  }
+  await page.locator('#phase-notice-close').click();
+  await page.locator('.speed-reference').first().scrollIntoViewIfNeeded();
+  const scrolled = await page.evaluate(() => scrollY);
+  await expect(toggle).toBeInViewport();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  const [dock, board] = await Promise.all([page.locator('#phase-dock').boundingBox(), page.locator('#board').boundingBox()]);
+  expect(Math.abs(board.y - (dock.y + dock.height))).toBeLessThanOrEqual(1);
+  await expect(page.locator('#allies')).toContainText('Creature 1');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('battlefield-open.png'), animations: 'disabled' });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
+});
+
+test('the talent atlas lays its families out without overlap or sideways panning', async ({ page }, info) => {
+  await page.locator('#phase-notice-close').click();
+  await page.locator('#hand-talents').click();
+  await expect(page.locator('.tree-node')).toHaveCount(packages.length);
+  const boxes = await page.locator('.tree-node').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
+  for (const [index, one] of boxes.entries()) {
+    for (const other of boxes.slice(index + 1)) {
+      const overlap = one.left < other.right - 1 && other.left < one.right - 1 && one.top < other.bottom - 1 && other.top < one.bottom - 1;
+      expect(overlap).toBe(false);
+    }
+  }
+  if (info.project.name !== 'desktop') {
+    expect(await page.locator('#mat').evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  }
+  await page.screenshot({ path: info.outputPath('talent-atlas.png'), animations: 'disabled' });
+  await page.locator('.tree-node').filter({ hasText: 'East Master 2' }).click();
+  await expect(page.locator('.talent-inspector')).toContainText('East Master 2 · Tier 3');
+  await expect(page.locator('.talent-inspector .talent-class')).toBeInViewport();
 });

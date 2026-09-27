@@ -11,7 +11,9 @@ export function spellSummary(guide) {
   if (guide.unavailableReason) return guide.unavailableReason;
   const timing = guide.turn ? `Turn ${guide.turn} · ` : '';
   const critical = guide.chosenSpeed === 'Quick' ? guide.quickCriticalChance : guide.standardCriticalChance;
-  return `${timing}${guide.cost} energy → ${guide.energyAfterCost} after cost${critical > 0 ? ` · ${chance(critical)} critical` : ''}`;
+  const parts = [`${timing}${guide.cost} energy → ${guide.energyAfterCost} after cost`];
+  if (critical > 0) parts.push(`${chance(critical)} critical`);
+  return parts.join(' · ');
 }
 
 

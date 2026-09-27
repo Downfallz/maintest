@@ -44,7 +44,7 @@
             <p id="phase-notice-detail"></p>
             <div class="notice-controls"><button id="phase-notice-pin" type="button">Keep open</button><button id="phase-notice-close" type="button" aria-label="Close announcement">Close ×</button></div>
           </div>
-          <div class="phase-primary"><strong id="phase-round"></strong><strong id="phase-current"></strong><span id="phase-turn"></span></div>
+          <div class="phase-primary"><strong id="phase-round"></strong><strong id="phase-current"></strong><span id="phase-turn"></span><button id="board-toggle" type="button" class="board-toggle" aria-controls="board" aria-pressed="false">Battlefield</button></div>
           <p id="phase-reminder"></p>
           <div class="phase-tools">
           <details id="phase-progress"><summary>Round flow</summary><ol id="phase-steps" aria-label="Round phases"></ol></details>
@@ -91,7 +91,7 @@
             </section>
           </aside>
           <section class="hand-section" aria-labelledby="hand-heading">
-            <div class="section-heading"><h2 id="hand-heading">Your spellbook</h2><div class="hand-actions"><button id="hand-board" type="button" class="reference-link">Battlefield ↓</button><button id="hand-talents" type="button" class="reference-link">Explore packages &amp; tiers →</button></div></div>
+            <div class="section-heading"><h2 id="hand-heading">Your spellbook</h2><div class="hand-actions"><button id="hand-talents" type="button" class="reference-link">Explore packages &amp; tiers →</button></div></div>
             <div id="own-hand"></div>
           </section>
         </section>
@@ -106,7 +106,7 @@
         <section id="board" aria-label="Battlefield">
           <p id="playback-board-note" class="muted" hidden></p>
           <section class="team-section" aria-labelledby="enemy-heading">
-            <div class="section-heading"><h2 id="enemy-heading"><span class="side-dot enemy-dot"></span>Opponent</h2><button id="board-move" type="button" class="reference-link">Your move ↑</button></div>
+            <div class="section-heading"><h2 id="enemy-heading"><span class="side-dot enemy-dot"></span>Opponent</h2></div>
             <div id="enemies" class="team-grid"></div>
             <div id="enemy-hand" class="enemy-books" aria-label="Opponent spellbooks"></div>
           </section>
