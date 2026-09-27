@@ -85,3 +85,4 @@ Accepted ADRs are immutable. To change a decision, write a new ADR that supersed
 | [0077](0077-a-mobile-field-guide-before-the-editor.md) | A mobile field guide before the editor | Accepted |
 | [0078](0078-momentum-is-a-free-strike-that-gathers-energy.md) | Momentum is a free strike that gathers energy | Accepted |
 | [0079](0079-decision-previews-and-reproducible-practice.md) | Decision previews and reproducible practice | Accepted |
+| [0080](0080-host-the-table-on-azure-container-apps.md) | Host the table on Azure Container Apps, with the studio left on GitHub Pages | Accepted |

@@ -156,7 +156,6 @@ public sealed class CliOptionsTests
 
     /// <summary>A typo in an address is one line here, not a stack out of the listener.</summary>
     [Theory]
-    [InlineData("0.0.0.0")]
     [InlineData("localhost")]
     [InlineData("192.168.1")]
     public void An_address_no_host_can_bind_is_refused_while_parsing(string address)
