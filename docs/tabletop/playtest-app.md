@@ -493,7 +493,9 @@ person tests the app itself between playtests.
    refuses a wildcard, which is what needs the reservation. It also refuses a shorthand (`192.168.1` is read
    as 192.168.0.1 by `IPAddress`) and an IPv6 literal, whose bracketed prefix this runtime's `HttpListener`
    cannot parse back. A LAN bind on the maintainer's own machine was checked; Windows is still unverified,
-   and an address the machine does not answer on is one line and exit 1 rather than a stack.
+   and an address the machine does not answer on is one line and exit 1 rather than a stack. Since ADR 0080
+   the wildcard `0.0.0.0` is accepted everywhere but Windows: it is what the table's container binds, where
+   the platform's ingress is the only way in.
 2. **Two sessions at once.** One host, one session, is the assumption everywhere above. Two tables at a
    playtest evening means either two ports or a session id in every route.
 3. **Who the players were.** A seat name is free text in the stamp. Whether a playtest wants a person's name in
