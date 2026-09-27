@@ -80,7 +80,8 @@ Actions.**
 
 - `HttpHost.Bindable` accepts `0.0.0.0` outside Windows; `HttpHost.AnyInterface`.
 - A Blob adapter for `IArtifactWriter`, and a reader port for what `PlaytestRun.Artifacts()` reads back with
-  `File.*` today, both tested against Azurite.
+  `File.*` today, both tested against Azurite. The Azure SDK (`Azure.Storage.Blobs`, `Azure.Identity`) is
+  referenced by Infrastructure and nothing inward of it, which the architecture tests already enforce.
 - A multi-session table, with its own ADR: create a session, join a seat by code, tokens persisted, the pilot
   behind the platform's authentication.
 - A `Dockerfile`, the Bicep under `infra/`, a `deploy.yml` workflow, and the one-time bootstrap the owner runs
