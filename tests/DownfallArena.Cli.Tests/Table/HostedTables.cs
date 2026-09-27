@@ -1,4 +1,5 @@
 using DownfallArena.Application.Agents;
+using DownfallArena.Application.Learning.Ports;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
@@ -21,13 +22,19 @@ internal sealed class HostedTables : IDisposable
     private readonly IHost _host;
 
     public HostedTables(bool recording = false)
+        : this(recording ? directory => new FileArtifactStore(directory) : null)
+    {
+    }
+
+    /// <param name="store">The store a recording host writes to, made over <see cref="RunsDirectory" />.</param>
+    public HostedTables(Func<string, IArtifactStore>? store)
     {
         new ContentStore(_content.Path).Build(Path.Combine(_content.Path, "dst"));
         _host = CliHost.Build(
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },
             seed: 7,
             logMatchToConsole: false);
-        Composer = new TableComposer(_host.Services, Rules, recording ? new FileArtifactStore(RunsDirectory) : null);
+        Composer = new TableComposer(_host.Services, Rules, store?.Invoke(RunsDirectory));
     }
 
     public TableComposer Composer { get; }
