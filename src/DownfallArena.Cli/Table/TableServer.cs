@@ -75,6 +75,10 @@ internal sealed class TableServer : IDisposable
             return StudioResponse.OfPlainText(404, $"No session '{id}' at this host.");
         }
 
+        // Somebody reading the session is somebody at the table: the hour a finished table is kept for is
+        // measured from its last reader, not from its last tap.
+        table.Touch(_clock.GetUtcNow());
+
         if (table.Run is not { } run)
         {
             return StudioResponse.OfPlainText(404, "This table is not recording a session.");

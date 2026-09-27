@@ -119,6 +119,29 @@ public sealed class TableServerTests : IAsyncDisposable
         (await Get($"{url}session/nowhere", token: null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    /// <summary>
+    /// Reading a finished session counts as being at the table: the hour it is kept for runs from its last
+    /// reader, so a session page someone keeps open is not swept from under them.
+    /// </summary>
+    [Fact]
+    public async Task Reading_a_session_keeps_its_table_from_being_let_go_of()
+    {
+        var url = Serve(OperatorGate.BehindPlatform());
+        var finished = await Opened(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Finished(finished);
+        _clock.Now = finished.CreatedAt + TableRegistry.FinishedFor - TimeSpan.FromMinutes(10);
+        (await Get($"{url}session/{finished.Id}", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        _clock.Now = finished.CreatedAt + TableRegistry.FinishedFor + TimeSpan.FromMinutes(10);
+
+        // Any request sweeps; this one is a stranger's, which is as good a sweep as any.
+        (await Get($"{url}api/session", token: null)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+
+        _registry.ById(finished.Id).ShouldNotBeNull("it was read twenty minutes ago, not an hour ago");
+        (await Get($"{url}session/{finished.Id}", token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
     /// <summary>A host whose lobby nobody opens still lets go: any request sweeps, by the host's clock.</summary>
     [Fact]
     public async Task Any_request_lets_go_of_a_table_nobody_has_been_at_for_long_enough()

@@ -65,6 +65,7 @@ internal sealed class TableComposer
         ArgumentNullException.ThrowIfNull(request);
 
         var stopping = new CancellationTokenSource();
+        TableSession? session = null;
         try
         {
             var agents = _services.GetRequiredService<IAgentFactory>();
@@ -93,7 +94,7 @@ internal sealed class TableComposer
                 await run.StartAsync(_catalogue, cancellationToken);
             }
 
-            var session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, stopping.Token);
+            session = await TableSession.StartAsync(_services, _rules, seed, seat1.Agent, seat2.Agent, run is { } recording ? recording.Wrap : null, stopping.Token);
 
             // One checkpoint before anybody has tapped anything, so the trace file exists from the start. A
             // session abandoned at its first question is then a readable run rather than one missing a file,
@@ -123,9 +124,34 @@ internal sealed class TableComposer
         catch
         {
             await stopping.CancelAsync();
-            stopping.Dispose();
+            Abandon(session, stopping);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Lets go of a table that failed to open. A session that had already started is a match in the host's
+    /// stores and a driver on its own task, and nothing will ever find it to let go of it: no table holds it,
+    /// so no sweep reaches it. It is disposed once its driver has stopped, the way a table's is, so an outage
+    /// of the store that made every opening fail does not also leave a match behind each attempt.
+    /// </summary>
+    private static void Abandon(TableSession? session, CancellationTokenSource stopping)
+    {
+        if (session is null)
+        {
+            stopping.Dispose();
+            return;
+        }
+
+        session.Outcome.ContinueWith(
+            _ =>
+            {
+                session.Dispose();
+                stopping.Dispose();
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     /// <summary>
