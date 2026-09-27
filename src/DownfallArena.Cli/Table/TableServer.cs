@@ -133,6 +133,14 @@ internal sealed class TableServer : IDisposable
             return await SessionPageAsync(path[SessionPrefix.Length..].TrimEnd('/'));
         }
 
+        // A host whose lobby nobody opens still lets go of the tables nobody is at: any request may sweep,
+        // once a minute at most.
+        var now = _clock.GetUtcNow();
+        foreach (var gone in _registry.SweepIfDue(now))
+        {
+            Console.WriteLine($"  Session {gone} let go of: nobody has asked for it in a while.");
+        }
+
         var token = request.Headers[TableApi.TokenHeader];
         if (LobbyApi.Names(path))
         {
@@ -146,7 +154,7 @@ internal sealed class TableServer : IDisposable
             return StudioResponse.OfPlainText(403, $"Every request carries the seat's own '{TableApi.TokenHeader}'.");
         }
 
-        table.Touch(_clock.GetUtcNow());
+        table.Touch(now);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
 }

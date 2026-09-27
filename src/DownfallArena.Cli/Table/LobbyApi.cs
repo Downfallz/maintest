@@ -58,7 +58,7 @@ internal sealed class LobbyApi
         var rest = path[Prefix.Length..].Trim('/');
         return (method, rest) switch
         {
-            ("GET", "") => List(),
+            ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
             ("DELETE", { Length: > 0 } id) => Close(id, operatorName),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
@@ -74,13 +74,13 @@ internal sealed class LobbyApi
             ? StudioResponse.OfJson(new { error = "Lobby.SignIn", message = "Sign in to open a table.", login = OperatorGate.Login }, ArtifactJson.LineOptions, status: 401)
             : StudioResponse.OfJson(new { error = "Lobby.Token", message = $"The lobby carries the operator's token the console printed, as '{TableApi.TokenHeader}'." }, ArtifactJson.LineOptions, status: 403);
 
-    private StudioResponse List() =>
+    private async Task<StudioResponse> ListAsync() =>
         StudioResponse.OfJson(
             new
             {
                 rules = _rules,
                 recording = _composer.Records,
-                tables = _registry.All().Select(Described).ToArray(),
+                tables = await Task.WhenAll(_registry.All().Select(DescribedAsync)),
             },
             ArtifactJson.LineOptions);
 
@@ -90,6 +90,14 @@ internal sealed class LobbyApi
         if (problem is not null)
         {
             return StudioResponse.OfPlainText(400, problem);
+        }
+
+        // Asked before composing, because composing opens the recording and starts the match: a table
+        // refused afterwards would have written a run nobody played. Asked again, under the lock, when it is
+        // added.
+        if (!_registry.HasRoom)
+        {
+            return Full();
         }
 
         PlayedTable table;
@@ -107,15 +115,18 @@ internal sealed class LobbyApi
         if (!_registry.TryAdd(table))
         {
             table.Dispose();
-            return StudioResponse.OfJson(
-                new { error = "Lobby.Full", message = $"This host has {_registry.Capacity} tables under way, which is as many as it takes. Close one first." },
-                ArtifactJson.LineOptions,
-                status: 409);
+            return Full();
         }
 
         Console.WriteLine($"  Session {table.Id} opened by {operatorName}: {string.Join(", ", table.Seats.Select(seat => $"{seat.Name} {(seat.Person is null ? table.Session.Seat(seat.Slot).Seated.Name : $"code {_registry.Codes.Of(seat)}")}"))}");
-        return StudioResponse.OfJson(Described(table), ArtifactJson.LineOptions, status: 201);
+        return StudioResponse.OfJson(await DescribedAsync(table), ArtifactJson.LineOptions, status: 201);
     }
+
+    private StudioResponse Full() =>
+        StudioResponse.OfJson(
+            new { error = "Lobby.Full", message = $"This host has {_registry.Capacity} tables under way, which is as many as it takes. Close one first." },
+            ArtifactJson.LineOptions,
+            status: 409);
 
     private StudioResponse Close(string id, string operatorName)
     {
@@ -129,14 +140,16 @@ internal sealed class LobbyApi
     }
 
     /// <summary>One table as the lobby shows it: where it is, who is in each seat, and how to reach it.</summary>
-    private object Described(PlayedTable table) =>
+    private async Task<object> DescribedAsync(PlayedTable table) =>
         new
         {
             id = table.Id,
             createdAt = table.CreatedAt,
             over = table.IsOver,
             finished = table.IsFinished,
-            round = table.Session.IsOver ? null : RoundNow(table),
+
+            // The round, or null while the match is busy: the page says "playing" of that, never "waiting".
+            round = table.Session.IsOver ? null : await RoundNowAsync(table),
             location = table.Run?.Location,
             seats = table.Seats.Select(seat => new
             {
@@ -158,13 +171,14 @@ internal sealed class LobbyApi
         };
 
     /// <summary>
-    /// The round a table is in, read without waiting on it: a listing must not block behind a match that is
-    /// in the middle of a command, so a table whose gate is busy reads as "somewhere" rather than holding the
-    /// whole list.
+    /// The round a table is in, read without waiting long on it: a listing must not block behind a match that
+    /// is in the middle of a command, so a table whose gate is busy reads as "somewhere" rather than holding
+    /// the whole list. A read that failed -- the table was let go of underneath -- reads the same way.
     /// </summary>
-    private static int? RoundNow(PlayedTable table)
+    private static async Task<int?> RoundNowAsync(PlayedTable table)
     {
         var reading = table.RoundAsync();
-        return reading.Wait(TimeSpan.FromMilliseconds(200)) ? reading.Result : null;
+        var first = await Task.WhenAny(reading, Task.Delay(TimeSpan.FromMilliseconds(200)));
+        return first == reading && reading.IsCompletedSuccessfully ? reading.Result : null;
     }
 }

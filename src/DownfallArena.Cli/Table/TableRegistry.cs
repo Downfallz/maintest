@@ -13,8 +13,9 @@ namespace DownfallArena.Cli.Table;
 /// </para>
 /// <para>
 /// Tables are let go of on a sweep rather than on a timer: a table that is finished and untouched for an
-/// hour, or abandoned (never over, nobody polling) for a day, is disposed and its codes forgotten. The sweep
-/// runs when the lobby is asked anything, which is the one moment memory is about to be spent.
+/// hour, or abandoned (never over, nobody polling) for twenty hours, is disposed and its codes forgotten. The
+/// sweep runs when the lobby is asked anything, which is the one moment memory is about to be spent, and at
+/// most once a minute from any other request, so a host whose lobby nobody opens still lets go.
 /// </para>
 /// </remarks>
 internal sealed class TableRegistry : IDisposable
@@ -24,6 +25,9 @@ internal sealed class TableRegistry : IDisposable
 
     /// <summary>How long a table nobody asks anything of is kept before it is abandoned: an evening, and a night's sleep.</summary>
     public static readonly TimeSpan IdleFor = TimeSpan.FromHours(20);
+
+    /// <summary>How often a request other than the lobby's is allowed to sweep.</summary>
+    public static readonly TimeSpan SweepEvery = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// How many tables may be under way at once. The lobby is behind the operator's login, so this bounds a
@@ -37,6 +41,7 @@ internal sealed class TableRegistry : IDisposable
     private readonly Dictionary<string, PlayedTable> _byToken = new(StringComparer.Ordinal);
     private readonly JoinCodes _codes = new();
     private readonly int _mostUnderWay;
+    private DateTimeOffset _swept = DateTimeOffset.MinValue;
 
     /// <param name="mostUnderWay">How many tables may be under way at once; a test lowers it to reach the bound.</param>
     public TableRegistry(int mostUnderWay = MostUnderWay)
@@ -51,18 +56,41 @@ internal sealed class TableRegistry : IDisposable
     /// <summary>The join codes, minted for every seat a person holds as its table is added.</summary>
     public JoinCodes Codes => _codes;
 
+    /// <summary>
+    /// Whether one more table would fit. Asked before a table is composed, because composing one opens its
+    /// recording and starts its match, and a table refused afterwards would have written a run nobody played.
+    /// <see cref="TryAdd" /> asks again under the lock; this is the cheap answer, not the authoritative one.
+    /// </summary>
+    public bool HasRoom
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return UnderWay() < _mostUnderWay;
+            }
+        }
+    }
+
     /// <summary>Adds a table, minting the codes of its seats. False when the host has as many under way as it takes.</summary>
     public bool TryAdd(PlayedTable table)
     {
         ArgumentNullException.ThrowIfNull(table);
         lock (_gate)
         {
-            if (_byId.Values.Count(held => !held.IsOver) >= _mostUnderWay)
+            if (UnderWay() >= _mostUnderWay)
             {
                 return false;
             }
 
-            _byId[table.Id] = table;
+            // An id names a run's directory and the tokenless session page, so two tables with one id would
+            // write into each other and read as each other. Thirty-two random bits a second make this a bug
+            // rather than a chance, and a bug is thrown, not routed.
+            if (!_byId.TryAdd(table.Id, table))
+            {
+                throw new InvalidOperationException($"A table with id '{table.Id}' is already at this host.");
+            }
+
             _byToken[table.Pilot.Token] = table;
             foreach (var seat in table.Seats)
             {
@@ -123,6 +151,25 @@ internal sealed class TableRegistry : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// <see cref="Sweep" />, at most once every <see cref="SweepEvery" />: what every request may afford, so a
+    /// host whose lobby nobody opens still lets go of the tables nobody is at.
+    /// </summary>
+    public IReadOnlyList<string> SweepIfDue(DateTimeOffset now)
+    {
+        lock (_gate)
+        {
+            if (now - _swept < SweepEvery)
+            {
+                return [];
+            }
+
+            _swept = now;
+        }
+
+        return Sweep(now);
+    }
+
     /// <summary>Lets go of the tables nobody is at any more. See the class remarks for which those are.</summary>
     public IReadOnlyList<string> Sweep(DateTimeOffset now)
     {
@@ -164,6 +211,8 @@ internal sealed class TableRegistry : IDisposable
             table.Dispose();
         }
     }
+
+    private int UnderWay() => _byId.Values.Count(held => !held.IsOver);
 
     private void Forget(PlayedTable table)
     {

@@ -67,8 +67,8 @@ internal sealed class GameSession
         var tracesARun = cliOptions.Command is "simulate" && cliOptions.Record is not null && cliOptions.Traces != 0;
 
         // The table is the third drain, and the one that reads the entries while they are still being made:
-        // its feed is what a seat is told happened (ADR 0054). It never forgets the match, which is a leak
-        // bounded by the shape of the command -- one host, one session, one process.
+        // its feed is what a seat is told happened (ADR 0054). It never forgets a match, which is a leak
+        // bounded by how many tables a host takes and how long it keeps them (ADR 0081).
         var showsAFeed = cliOptions.Command is "table";
         if (tracesOneMatch || tracesARun || showsAFeed)
         {

@@ -24,9 +24,11 @@ export function lobbyTransport(token, fetchImpl = globalThis.fetch.bind(globalTh
   async function send(method, path, body) {
     const options = { method, headers: {} };
     if (token) options.headers['X-Seat-Token'] = token;
-    if (body !== undefined) {
+    // Every write says it is JSON, a close included: the host's same-origin fence takes a write without that
+    // header as a form another site posted, and refuses it (HttpHost.CrossSite).
+    if (method !== 'GET') {
       options.headers['Content-Type'] = 'application/json';
-      options.body = JSON.stringify(body);
+      options.body = JSON.stringify(body ?? {});
     }
     const response = await fetchImpl(path, options);
     const text = await response.text();
@@ -87,11 +89,13 @@ export function tableRows(list) {
   }));
 }
 
+// A round the host could not read in time is a match in the middle of something, never one that has not
+// started: round 1 begins the moment a table opens.
 function stateOf(table) {
   if (table.finished) return 'Finished';
   if (table.over) return 'Over, being written';
   if (Number.isInteger(table.round)) return `Round ${table.round}`;
-  return 'Waiting for the first decision';
+  return 'Playing';
 }
 
 // What the page says after the host answered an opening. A refusal is the host telling the operator something

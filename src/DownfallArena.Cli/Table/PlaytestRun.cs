@@ -488,15 +488,13 @@ internal sealed class PlaytestRun
     }
 
     /// <summary>
-    /// A name that sorts by when it was played and cannot collide with a session started in the same second.
-    /// The clock is the injected one, so a test names a session rather than racing one.
-    /// </summary>
-    /// <summary>
-    /// A session id: when it was opened, to the second, and two random bytes so two tables opened in the same
-    /// second are two ids. It is the run's name in its store and the id every note carries.
+    /// A session id: when it was opened, to the second, so it sorts by when it was played, and four random
+    /// bytes so two tables opened in the same second are two ids. It is the run's name in its store, the id
+    /// every note carries, and the one thing the tokenless session page is reached by, which is why it is
+    /// not a counter. The clock is the injected one, so a test names a session rather than racing one.
     /// </summary>
     public static string NewId(TimeProvider clock) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"{clock.GetUtcNow():yyyyMMdd-HHmmss}-{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(2))}");
+            $"{clock.GetUtcNow():yyyyMMdd-HHmmss}-{Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4))}");
 }

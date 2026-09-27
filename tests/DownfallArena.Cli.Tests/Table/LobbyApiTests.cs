@@ -114,19 +114,37 @@ public sealed class LobbyApiTests : IDisposable
         tables[0].GetProperty("seats").GetArrayLength().ShouldBe(2);
     }
 
-    [Fact]
-    public async Task A_name_nothing_can_be_built_from_is_the_operator_s_typo()
+    [Theory]
+    [InlineData("""{"player1":"person","player2":"clairvoyant:nowhere.json"}""")]
+    [InlineData("""{"player1":"person","handover":0}""")]
+    [InlineData("not json")]
+    public async Task A_request_that_is_not_a_table_is_refused_before_anything_is_composed(string body)
     {
         var lobby = Lobby(OperatorGate.WithToken(OperatorToken));
 
-        (await lobby.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"clairvoyant:nowhere.json"}""", OperatorToken, null)).Status.ShouldBe(400);
-        (await lobby.HandleAsync("POST", "/api/tables", """{"player1":"person","handover":0}""", OperatorToken, null)).Status.ShouldBe(400);
-        (await lobby.HandleAsync("POST", "/api/tables", "not json", OperatorToken, null)).Status.ShouldBe(400);
+        (await lobby.HandleAsync("POST", "/api/tables", body, OperatorToken, null)).Status.ShouldBe(400);
+
         _registry.All().ShouldBeEmpty();
     }
 
+    /// <summary>A spec that parses but names a file that is not there fails while composing, and is the operator's typo too.</summary>
     [Fact]
-    public async Task A_host_with_as_many_tables_under_way_as_it_takes_refuses_another_by_name()
+    public async Task A_weights_file_that_is_not_there_is_the_operator_s_typo_not_a_broken_host()
+    {
+        var lobby = Lobby(OperatorGate.WithToken(OperatorToken));
+
+        var answer = await lobby.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"heuristic:nowhere.json"}""", OperatorToken, null);
+
+        answer.Status.ShouldBe(400, Text(answer));
+        _registry.All().ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// Refused before it is composed: a table composed and then refused would have opened a recording and
+    /// written a run nobody played.
+    /// </summary>
+    [Fact]
+    public async Task A_host_with_as_many_tables_under_way_as_it_takes_refuses_another_by_name_and_writes_nothing()
     {
         var lobby = Lobby(OperatorGate.WithToken(OperatorToken));
         (await lobby.HandleAsync("POST", "/api/tables", "{}", OperatorToken, null)).Status.ShouldBe(201);
@@ -135,6 +153,7 @@ public sealed class LobbyApiTests : IDisposable
 
         answer.Status.ShouldBe(409, Text(answer));
         JsonDocument.Parse(Text(answer)).RootElement.GetProperty("error").GetString().ShouldBe("Lobby.Full");
+        Directory.GetDirectories(_hosted.RunsDirectory).Length.ShouldBe(1, "the refused table must not have opened a run");
     }
 
     [Fact]

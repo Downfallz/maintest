@@ -1,4 +1,3 @@
-using System.Text;
 using DownfallArena.Cli.Table;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -100,7 +99,7 @@ public sealed class TableRegistryTests : IDisposable
     }
 
     [Fact]
-    public async Task A_table_nobody_asks_anything_of_for_a_day_is_abandoned()
+    public async Task A_table_nobody_asks_anything_of_for_twenty_hours_is_abandoned()
     {
         using var registry = new TableRegistry();
         var idle = await Composed(HostedTables.OnePerson);
@@ -114,15 +113,51 @@ public sealed class TableRegistryTests : IDisposable
         await Should.ThrowAsync<OperationCanceledException>(() => idle.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// A request other than the lobby's sweeps too, once a minute: a host whose lobby nobody opens still lets
+    /// go of the tables nobody is at.
+    /// </summary>
     [Fact]
-    public async Task A_table_says_whose_a_token_is()
+    public async Task Any_request_may_sweep_but_only_once_a_minute()
     {
-        using var table = await Composed(HostedTables.OnePerson);
+        using var registry = new TableRegistry();
+        var finished = await Composed(HostedTables.Bots);
+        await finished.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        registry.TryAdd(finished);
+        var later = finished.CreatedAt + TableRegistry.FinishedFor;
 
-        table.Holds(table.Seats[0].Token).ShouldBeTrue();
-        table.Holds(table.Pilot.Token).ShouldBeTrue();
-        table.Holds("another").ShouldBeFalse();
-        Encoding.UTF8.GetBytes(table.Id).Length.ShouldBeGreaterThan(0);
+        registry.SweepIfDue(later - TimeSpan.FromSeconds(30)).ShouldBeEmpty("nothing is old yet");
+        registry.SweepIfDue(later).ShouldBeEmpty("the table is old now, but the last sweep was half a minute ago");
+        registry.SweepIfDue(later + TableRegistry.SweepEvery).ShouldBe([finished.Id]);
+    }
+
+    /// <summary>
+    /// A table whose match did not reach an outcome is finished all the same, or it would be neither under
+    /// way nor sweepable and stay for the life of the host.
+    /// </summary>
+    [Fact]
+    public async Task A_table_whose_match_was_stopped_is_finished_and_swept_like_any_other()
+    {
+        using var recording = new HostedTables(recording: true);
+        using var registry = new TableRegistry();
+        var stopped = await recording.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        registry.TryAdd(stopped);
+        stopped.Dispose();
+        await Should.ThrowAsync<OperationCanceledException>(() => stopped.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        await Finished(stopped);
+
+        registry.Sweep(stopped.CreatedAt + TableRegistry.FinishedFor).ShouldBe([stopped.Id]);
+    }
+
+    /// <summary>The closing runs after the outcome, on its own task, so a test waits for it rather than assuming it.</summary>
+    private static async Task Finished(PlayedTable table)
+    {
+        for (var attempt = 0; attempt < 300 && !table.IsFinished; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        table.IsFinished.ShouldBeTrue("the closing should have marked the table finished");
     }
 
     private Task<PlayedTable> Composed(TableRequest request) => _hosted.Composer.ComposeAsync(request, TestContext.Current.CancellationToken);

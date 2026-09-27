@@ -13,6 +13,7 @@ internal sealed class PlayedTable : IDisposable
     private readonly CancellationTokenSource _stopping;
     private long _touched;
     private int _disposed;
+    private int _closed;
 
     public PlayedTable(
         string id,
@@ -64,16 +65,17 @@ internal sealed class PlayedTable : IDisposable
     public bool IsOver => Session.IsOver;
 
     /// <summary>
-    /// Whether the table is finished with its files too: over, and the recording closed or never opened. A
-    /// table that is over but still writing must not be dropped from under its own last note.
+    /// Whether the table is finished with its files too: over, and the recording closed, or given up on, or
+    /// never opened. A table that is over but still writing must not be dropped from under its own last
+    /// note; one whose match failed, or whose files could not be written, is finished all the same, or it
+    /// would be neither under way nor sweepable and stay for the life of the host.
     /// </summary>
-    public bool IsFinished => IsOver && (Run is null || Run.IsClosed);
+    public bool IsFinished => IsOver && (Run is null || Volatile.Read(ref _closed) != 0);
+
+    /// <summary>Says the recording is done with, written or not: the closing has run to its end.</summary>
+    public void MarkClosed() => Volatile.Write(ref _closed, 1);
 
     public void Touch(DateTimeOffset now) => Interlocked.Exchange(ref _touched, now.UtcTicks);
-
-    /// <summary>Whether a token is this table's pilot's or one of its seats'.</summary>
-    public bool Holds(string token) =>
-        string.Equals(Pilot.Token, token, StringComparison.Ordinal) || Seats.Any(seat => string.Equals(seat.Token, token, StringComparison.Ordinal));
 
     /// <summary>The round the match has reached, off seat 1's board, or none before the first.</summary>
     public async Task<int?> RoundAsync()
@@ -88,6 +90,11 @@ internal sealed class PlayedTable : IDisposable
     /// has, which is what an abandoned session is. Once only: the registry lets a table go and a test holds
     /// it too, and neither should have to know about the other.
     /// </summary>
+    /// <remarks>
+    /// The session is let go of once the driver has stopped, not now: the driver may be inside a command,
+    /// holding the gate the session disposes, and a gate disposed under it is an exception where an outcome
+    /// should be. Cancelling is what ends the driver; the outcome completing is what says it has.
+    /// </remarks>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -96,7 +103,14 @@ internal sealed class PlayedTable : IDisposable
         }
 
         _stopping.Cancel();
-        Session.Dispose();
-        _stopping.Dispose();
+        Session.Outcome.ContinueWith(
+            _ =>
+            {
+                Session.Dispose();
+                _stopping.Dispose();
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 }

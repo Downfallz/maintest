@@ -43,6 +43,23 @@ internal sealed class TableGate : IDisposable
 
     public void Dispose() => _gate.Dispose();
 
+    /// <summary>
+    /// Lets the gate go after a handler ran. A gate disposed in the meantime -- the table was let go of while
+    /// a page's last poll was inside it -- has nothing to release and nothing left to protect, and the poll's
+    /// answer is still the answer.
+    /// </summary>
+    private static void Release(SemaphoreSlim gate)
+    {
+        try
+        {
+            gate.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Nothing waits on a gate that is gone.
+        }
+    }
+
     private Command<TCommand, TResult> Around<TCommand, TResult>(ICommandHandler<TCommand, TResult> handler)
         where TCommand : notnull =>
         new(handler, _gate);
@@ -63,7 +80,7 @@ internal sealed class TableGate : IDisposable
             }
             finally
             {
-                gate.Release();
+                Release(gate);
             }
         }
     }
@@ -80,7 +97,7 @@ internal sealed class TableGate : IDisposable
             }
             finally
             {
-                gate.Release();
+                Release(gate);
             }
         }
     }

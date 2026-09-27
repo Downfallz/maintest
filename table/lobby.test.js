@@ -30,6 +30,8 @@ test('opening a table posts JSON and closing one names it in the path', async ()
   assert.deepEqual(JSON.parse(seen[0].options.body), { player1: 'person', player2: 'greedy' });
   assert.equal(seen[1].options.method, 'DELETE');
   assert.equal(seen[1].path, '/api/tables/20260927-1200-ab12');
+  assert.equal(seen[1].options.headers['Content-Type'], 'application/json', 'a write without it is refused by the same-origin fence');
+  assert.equal(seen[1].options.body, '{}');
 });
 
 test('a sign-in is needed only when the host answers 401 with where to sign in', () => {
@@ -70,7 +72,7 @@ test('a table reads as its round while it is played, and as finished once writte
   assert.equal(rows[1].session, '/session/b');
   assert.equal(rows[1].closable, false);
   assert.equal(rows[2].state, 'Over, being written');
-  assert.equal(rows[3].state, 'Waiting for the first decision');
+  assert.equal(rows[3].state, 'Playing');
 });
 
 test('an empty or missing list draws nothing', () => {

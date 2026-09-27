@@ -33,6 +33,9 @@ internal sealed class HostedTables : IDisposable
 
     public TableComposer Composer { get; }
 
+    /// <summary>Where a recording host writes its runs: one directory per table opened.</summary>
+    public string RunsDirectory => _runs;
+
     public IServiceProvider Services => _host.Services;
 
     /// <summary>A table of two bots, which plays itself to an outcome in a moment.</summary>

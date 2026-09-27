@@ -16,8 +16,8 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 /// <remarks>
 /// The driver runs off the calling thread because a seat held by a person blocks inside it, waiting for a tap
-/// that arrives on another thread entirely. That is also why a host built on this plays one session per
-/// process (<c>docs/tabletop/playtest-app.md</c>).
+/// that arrives on another thread entirely. That is also why a host built on this plays only so many at once:
+/// each is a thread (<c>docs/tabletop/playtest-app.md</c>, ADR 0081).
 /// </remarks>
 internal sealed class TableSession : IDisposable
 {

@@ -52,12 +52,7 @@ internal sealed class TableComposer
         _guide = new DecisionGuideProjection(resources, rules);
     }
 
-    public RuleSet Rules => _rules;
-
     public bool Records => _store is not null;
-
-    /// <summary>Where a table's recording would go, said by the store, or nothing for a host that keeps none.</summary>
-    public string? LocationOf(string id) => _store?.LocationOf(id);
 
     /// <summary>
     /// Composes and starts a table. The recording is opened before the match, so the files exist before
@@ -140,34 +135,35 @@ internal sealed class TableComposer
         var session = table.Session;
         try
         {
-            await session.Outcome;
-        }
-        catch (Exception exception) when (exception is OperationCanceledException or InvalidOperationException)
-        {
-            // Abandoned, or stopped by the host: the files stay as far as they got.
-        }
+            // Waited for, not awaited: an abandoned session's outcome is an exception, and the files stay as
+            // far as they got either way.
+            await Task.WhenAny(session.Outcome);
+            if (!session.Outcome.IsCompletedSuccessfully || session.Outcome.Result.IsFailure)
+            {
+                Console.WriteLine($"  Session {run.SessionId} was not finished; '{run.Location}' holds it as far as it got.");
+                return;
+            }
 
-        if (!session.Outcome.IsCompletedSuccessfully || session.Outcome.Result.IsFailure)
-        {
-            Console.WriteLine($"  Session {run.SessionId} was not finished; '{run.Location}' holds it as far as it got.");
-            return;
-        }
+            var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
+            if (board.IsFailure)
+            {
+                Console.WriteLine($"  Session {run.SessionId} ended but its final board could not be read: {board.Error.Message}");
+                return;
+            }
 
-        var board = await session.Queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, PlayerSlot.Player1));
-        if (board.IsFailure)
-        {
-            Console.WriteLine($"  Session {run.SessionId} ended but its final board could not be read: {board.Error.Message}");
-            return;
-        }
-
-        try
-        {
             await run.FinishAsync(session.MatchId, board.Value);
             Console.WriteLine($"  Session {run.SessionId} written to '{run.Location}'");
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or Azure.RequestFailedException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ObjectDisposedException or Azure.RequestFailedException)
         {
+            // ObjectDisposedException among them: the table was let go of while its files were being written,
+            // which is the operator closing it, not a broken host.
             Console.Error.WriteLine($"  Session {run.SessionId} could not be written to '{run.Location}': {exception.Message}");
+        }
+        finally
+        {
+            // Finished, written or not: what is not marked here is a table that is never swept.
+            table.MarkClosed();
         }
     }
 
