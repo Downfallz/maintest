@@ -24,15 +24,19 @@ to six hours at a time on GitHub Actions today, free.
 Storage account. The studio stays on GitHub Pages with GitHub as its backend. The batch work stays on GitHub
 Actions.**
 
-- One Container App in `canadacentral`, consumption plan, **0 to 1 replica**: it scales to zero when nobody
-  is playing, and costs nothing then. One replica at most, because a seat blocks a thread while a person
-  thinks (ADR 0054) and a second replica would hold a different match.
+- One Container App in `canadacentral`, consumption plan, **0 to 1 replica**. The platform scales it to
+  zero after minutes without a request, and it costs nothing then. One replica at most, because a seat blocks
+  a thread while a person thinks (ADR 0054) and a second replica would hold a different match.
 - The container is the CLI's `table` command bound to every interface (`--bind 0.0.0.0`). The host speaks
   plain HTTP inside the container, as it does today; the platform's ingress terminates TLS. The `Sec-Fetch-Site`
   guard and the seat tokens stay as they are.
-- One Storage account, Standard LRS, hot: **Blob** holds what `runs/playtest/` holds today, the session
-  recordings and traces; **Table** holds what the process holds in memory today, the match state, the
-  sessions, the join codes and the seat tokens, so a replica that scales to zero or restarts loses no match.
+- **A match lives in memory, as it does today.** A `Match` is an aggregate with a private constructor and a
+  random source of its own; it has no memento, and writing one is a domain change this record does not make.
+  A page that is open polls its seat, so a match being played keeps the replica awake; a match nobody has open
+  is lost when the replica goes, as it is lost today when the laptop closes. What survives is the recording.
+- One Storage account, Standard LRS, hot, and **Blob only**: it holds what `runs/playtest/` holds today, the
+  session recordings and traces, written as they are played and read back by the viewer. Table Storage has
+  no job in this design; the account can grow one (a session index) the day the table has sessions to list.
   The content, the weights and the models ship inside the image, because they are in git.
 - The container reaches the Storage account with its managed identity and a data-plane role. No storage key
   exists anywhere.
@@ -53,6 +57,8 @@ Actions.**
 - Bad: the table has to become a multi-session host to be worth hosting: today it is one match per process,
   with its tokens in memory and its end tied to Ctrl+C. That is its own decision and its own record.
 - Bad: a container scaled to zero takes some seconds to answer the first request. The first player waits.
+- Bad: a match is only as durable as the replica. Two people who close their pages for an hour come back to
+  no match. Persisting one is a memento of the aggregate and of its random source, and is left open here.
 - Bad: `HttpHost` now accepts the wildcard address outside Windows. On Windows it still refuses it, for the
   reason ADR 0054 gave (a URL reservation), so a laptop playtest is unchanged.
 - Neutral: the seat tokens travel over TLS now, which is better than the home-network HTTP they were designed
@@ -73,7 +79,8 @@ Actions.**
 ## Follow-up
 
 - `HttpHost.Bindable` accepts `0.0.0.0` outside Windows; `HttpHost.AnyInterface`.
-- Blob and Table adapters for `IArtifactWriter` and `IMatchRepository`, tested against Azurite.
+- A Blob adapter for `IArtifactWriter`, and a reader port for what `PlaytestRun.Artifacts()` reads back with
+  `File.*` today, both tested against Azurite.
 - A multi-session table, with its own ADR: create a session, join a seat by code, tokens persisted, the pilot
   behind the platform's authentication.
 - A `Dockerfile`, the Bicep under `infra/`, a `deploy.yml` workflow, and the one-time bootstrap the owner runs
