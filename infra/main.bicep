@@ -25,6 +25,7 @@ var tenantId = tenant().tenantId
 var operatorIds = filter(map(split(operators, ','), id => trim(id)), id => !empty(id))
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
+var subnetName = 'apps'
 
 // The one role the table needs: write and read its own recordings. A built-in role, named by its id.
 var storageBlobDataContributor = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
@@ -58,7 +59,7 @@ resource network 'Microsoft.Network/virtualNetworks@2024-01-01' = {
     }
     subnets: [
       {
-        name: 'apps'
+        name: subnetName
         properties: {
           addressPrefix: '10.80.0.0/27'
           delegations: [
@@ -82,6 +83,11 @@ resource network 'Microsoft.Network/virtualNetworks@2024-01-01' = {
     ]
   }
 }
+
+// The subnet by its id, spelled from the network's own id rather than read back from its properties: a
+// deployment is validated before anything in it exists, and the storage provider refuses a network rule whose
+// subnet id is still an unevaluated read of a network that has not been made yet.
+var appsSubnetId = '${network.id}/subnets/${subnetName}'
 
 // Blob only (ADR 0080). Two fences, either of which would hold alone (ADR 0082): the network refuses every
 // request that does not come from the app's subnet, and shared-key access is off, so no key exists to leak
@@ -109,7 +115,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
       bypass: 'None'
       virtualNetworkRules: [
         {
-          id: network.properties.subnets[0].id
+          id: appsSubnetId
           action: 'Allow'
         }
       ]
@@ -157,7 +163,7 @@ resource appEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   location: location
   properties: {
     vnetConfiguration: {
-      infrastructureSubnetId: network.properties.subnets[0].id
+      infrastructureSubnetId: appsSubnetId
       internal: false
     }
     workloadProfiles: [
