@@ -18,7 +18,7 @@ stop() {
 trap stop EXIT
 
 fail() {
-  echo "::error::$1"
+  echo "::error::$1" >&2
   docker logs "$CONTAINER" 2>&1 | tail -n 20 || true
   exit 1
 }

@@ -31,8 +31,10 @@ a password.
 - **The sign-in registration has no client secret.** The platform signs the operator in with the implicit
   flow, which needs ID tokens issued, and its authorization policy admits only the object ids listed as
   operators. Anonymous requests still pass, because a player joins by a code.
-- **The storage account has shared-key access off.** The app reaches it with its managed identity, so no
-  storage key exists to leak.
+- **The storage account has shared-key access off, and refuses every network but the app's.** The app
+  reaches it with its managed identity, so no storage key exists to leak; and the Container Apps environment
+  runs in a virtual network whose one subnet is the only place the account accepts a request from, through a
+  service endpoint. Either fence would hold alone. Both cost nothing.
 - **The infrastructure is one Bicep template** in `infra/`, compiled and linted on every run, and the one-time
   setup is one idempotent script the owner runs.
 
@@ -49,6 +51,8 @@ a password.
 - Bad: the implicit flow puts an ID token in a browser redirect. It is the flow the platform uses without a
   secret, and the token admits the operator to a lobby, nothing more.
 - Neutral: anyone can pull the image and run a table of their own, as anyone can build one from the repository.
+- Neutral: reading the recordings from anywhere but the app means adding one's own address to the account for
+  the occasion; `infra/README.md` says how.
 
 ## Alternatives considered
 

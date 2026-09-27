@@ -89,7 +89,7 @@ setup() {
 
   # The providers a fresh subscription has not registered yet: nothing deploys without them.
   local namespace
-  for namespace in Microsoft.App Microsoft.OperationalInsights Microsoft.Storage; do
+  for namespace in Microsoft.App Microsoft.Network Microsoft.OperationalInsights Microsoft.Storage; do
     az provider register --namespace "$namespace" --wait --output none
   done
 

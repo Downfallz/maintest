@@ -44,15 +44,58 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   }
 }
 
-// Blob only (ADR 0080). Reached with the app's identity, never a key: shared-key access is off, so no key
-// exists that could leak. Public network access stays on because the app runs on the consumption plan,
-// outside any network of ours; what fences the account is that nothing can authenticate to it but the app.
+// The network the app runs in, so the storage account can refuse everything else. A virtual network and a
+// service endpoint cost nothing; the subnet is the smallest a Container Apps environment on workload
+// profiles takes, delegated to it.
+resource network 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+  name: '${namePrefix}-net-${suffix}'
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        '10.80.0.0/23'
+      ]
+    }
+    subnets: [
+      {
+        name: 'apps'
+        properties: {
+          addressPrefix: '10.80.0.0/27'
+          delegations: [
+            {
+              name: 'container-apps'
+              properties: {
+                serviceName: 'Microsoft.App/environments'
+              }
+            }
+          ]
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.Storage'
+              locations: [
+                location
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+
+// Blob only (ADR 0080). Two fences, either of which would hold alone (ADR 0082): the network refuses every
+// request that does not come from the app's subnet, and shared-key access is off, so no key exists to leak
+// and the only credential that works is the app's identity. An owner who wants to read the recordings from
+// elsewhere adds their own address for the occasion (infra/README.md).
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: take('${namePrefix}${suffix}', 24)
   location: location
-  kind: 'StorageV2'
   sku: {
     name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  identity: {
+    type: 'SystemAssigned'
   }
   properties: {
     accessTier: 'Hot'
@@ -61,7 +104,17 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     allowBlobPublicAccess: false
     allowSharedKeyAccess: false
     defaultToOAuthAuthentication: true
-    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      defaultAction: 'Deny'
+      bypass: 'None'
+      virtualNetworkRules: [
+        {
+          id: network.properties.subnets[0].id
+          action: 'Allow'
+        }
+      ]
+      ipRules: []
+    }
     encryption: {
       keySource: 'Microsoft.Storage'
       requireInfrastructureEncryption: true
@@ -103,6 +156,10 @@ resource appEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${namePrefix}-env-${suffix}'
   location: location
   properties: {
+    vnetConfiguration: {
+      infrastructureSubnetId: network.properties.subnets[0].id
+      internal: false
+    }
     workloadProfiles: [
       {
         name: 'Consumption'
@@ -193,8 +250,8 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
 
 // Scoped to the one account, for the app's own identity and nothing else.
 resource recordsSessions 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storage.id, app.id, storageBlobDataContributor)
   scope: storage
+  name: guid(storage.id, app.id, storageBlobDataContributor)
   properties: {
     principalId: app.identity.principalId
     principalType: 'ServicePrincipal'

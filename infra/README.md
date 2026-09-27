@@ -10,7 +10,8 @@ on GitHub Pages (ADR 0023).
 | --- | --- | --- |
 | Container app `downfall-table` | The CLI's `table --lobby --platform-auth`, 0.5 vCPU, 1 GiB, **0 to 1 replica** | Nothing idle. While a page is open, well inside the monthly free grant for a few evenings of play |
 | Container Apps environment | Where the app runs, consumption plan | Nothing on its own |
-| Storage account, Blob only | The recorded sessions, one prefix per session under `playtests/` | Cents |
+| Virtual network, one subnet | Where the app runs, so the storage account can refuse every other network | Nothing |
+| Storage account, Blob only | The recorded sessions, one prefix per session under `playtests/`; no key, and only the app's subnet may reach it | Cents |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
 The app scales to zero a few minutes after the last request. An open page polls, so a table being played
@@ -32,7 +33,7 @@ You need the Azure subscription's owner, signed in, and ideally the GitHub CLI s
    infra/bootstrap.sh setup
    ```
 
-   It registers the three resource providers, creates `downfall-table` in `canadacentral`, an app
+   It registers the four resource providers, creates `downfall-table` in `canadacentral`, an app
    registration GitHub deploys as (federated to this repository's `azure` environment, allowed to change that
    one resource group and to assign one role in it), and the registration the lobby's sign-in uses (no client
    secret). It prints seven repository variables and sets them when `gh` is signed in. `LOCATION`,
@@ -82,5 +83,14 @@ comma-separated, and run the workflow again.
 az group delete --name downfall-table
 ```
 
-The recordings go with it. Download them first if they matter:
-`az storage blob download-batch --account-name <account> --auth-mode login --source playtests --destination runs/azure`.
+The recordings go with it. Download them first if they matter. The account refuses every network but the
+app's, so let your own address in for the download and take it out again:
+
+```bash
+account="$(az storage account list --resource-group downfall-table --query "[0].name" --output tsv)"
+az storage account network-rule add --resource-group downfall-table --account-name "$account" --ip-address "$(curl -s https://api.ipify.org)"
+az role assignment create --assignee "$(az ad signed-in-user show --query id --output tsv)" \
+  --role "Storage Blob Data Reader" --scope "$(az storage account show --name "$account" --query id --output tsv)"
+az storage blob download-batch --account-name "$account" --auth-mode login --source playtests --destination runs/azure
+az storage account network-rule remove --resource-group downfall-table --account-name "$account" --ip-address "$(curl -s https://api.ipify.org)"
+```
