@@ -10,7 +10,6 @@ using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Resources;
-using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
 
@@ -42,6 +41,7 @@ internal sealed class PlaytestRun
     private static readonly TimeSpan GrowthStep = TimeSpan.FromMilliseconds(5);
 
     private readonly IArtifactWriter _writer;
+    private readonly IArtifactReader _reader;
     private readonly RunRecorder _recorder;
     private readonly MatchTraceRecorder _events;
     private readonly RunStamp _stamp;
@@ -65,16 +65,20 @@ internal sealed class PlaytestRun
     private readonly int _seed;
 
     private PlaytestRun(
-        string directory,
+        string sessionId,
+        string location,
         IArtifactWriter writer,
+        IArtifactReader reader,
         RunRecorder recorder,
         MatchTraceRecorder events,
         RunStamp stamp,
         TimeProvider clock,
         int seed)
     {
-        Directory = directory;
+        SessionId = sessionId;
+        Location = location;
         _writer = writer;
+        _reader = reader;
         _recorder = recorder;
         _events = events;
         _stamp = stamp;
@@ -83,14 +87,14 @@ internal sealed class PlaytestRun
         _seed = seed;
     }
 
-    /// <summary>
-    /// The name of this session's directory, and the id every note carries. Read off the directory rather than
-    /// kept beside it: they are the same thing, and two fields holding it are two fields that can disagree.
-    /// </summary>
-    public string SessionId => Path.GetFileName(Directory);
+    /// <summary>The name of this session's run in its store, and the id every note carries.</summary>
+    public string SessionId { get; }
 
-    /// <summary>Where the session is being written, which its players are told before the first tap.</summary>
-    public string Directory { get; }
+    /// <summary>
+    /// Where the session is being written, which its players are told before the first tap: a directory on
+    /// this machine, or a blob prefix on Azure (ADR 0080). Said by the store, because only it knows.
+    /// </summary>
+    public string Location { get; }
 
     /// <summary>
     /// Whether the session's files are finished and nothing is still on its way into them: the episodes
@@ -127,15 +131,15 @@ internal sealed class PlaytestRun
     /// is built from it rather than from the engine default: a dataset whose schema describes a different
     /// rule set than the match played is a dataset that trains on a mislabelled board.
     /// </summary>
-    public static PlaytestRun Open(string root, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock)
+    public static PlaytestRun Open(IArtifactStore store, PlaytestSetup setup, MatchTraceRecorder events, TimeProvider clock)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(root);
+        ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(clock);
 
-        var directory = Path.Combine(root, Name(clock));
-        var writer = new FileArtifactWriter(directory);
+        var name = Name(clock);
+        var writer = store.Writer(name);
         var schema = FeatureSchema.Build(setup.Resources, setup.Rules);
         var stamp = RunStamp.Create(EngineVersion.Current, setup.Resources, setup.Rules, schema, setup.Player1Agent, setup.Player2Agent, setup.Seed);
 
@@ -151,7 +155,7 @@ internal sealed class PlaytestRun
             events,
             traceLimit: 1);
 
-        return new PlaytestRun(directory, writer, recorder, events, stamp, clock, setup.Seed);
+        return new PlaytestRun(name, store.LocationOf(name), writer, store.Reader(name), recorder, events, stamp, clock, setup.Seed);
     }
 
     /// <summary>
@@ -452,24 +456,22 @@ internal sealed class PlaytestRun
     /// the viewer ignores both today, which is deliberate: it can learn to read them later without the files
     /// having to be invented then.
     /// </summary>
-    public IReadOnlyList<(string Name, string Text)> Artifacts()
+    public async Task<IReadOnlyList<(string Name, string Text)>> ArtifactsAsync(CancellationToken cancellationToken = default)
     {
         List<(string Name, string Text)> artifacts = [];
-        var traces = Path.Combine(Directory, RunRecorder.TracesDirectory);
-        if (System.IO.Directory.Exists(traces))
+        foreach (var trace in await _reader.ListAsync(RunRecorder.TracesDirectory, cancellationToken))
         {
-            foreach (var trace in System.IO.Directory.GetFiles(traces, "*.json").OrderBy(path => path, StringComparer.Ordinal))
+            if (trace.EndsWith(".json", StringComparison.Ordinal) && await _reader.ReadTextAsync(trace, cancellationToken) is { } text)
             {
-                artifacts.Add(($"{RunRecorder.TracesDirectory}/{Path.GetFileName(trace)}", File.ReadAllText(trace)));
+                artifacts.Add((trace, text));
             }
         }
 
         foreach (var name in new[] { RunRecorder.ManifestFile, RunRecorder.EpisodesFile, RunRecorder.StepsFile, NotesFile, CatalogueFile })
         {
-            var path = Path.Combine(Directory, name);
-            if (File.Exists(path))
+            if (await _reader.ReadTextAsync(name, cancellationToken) is { } text)
             {
-                artifacts.Add((name, File.ReadAllText(path)));
+                artifacts.Add((name, text));
             }
         }
 

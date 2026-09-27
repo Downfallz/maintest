@@ -16,7 +16,9 @@ dotnet run --project src/DownfallArena.Cli -- table --rules <file> --who mk   # 
 `--traces <n>` keeps only the first `n` of them and `--traces 0` keeps none, which is what a dataset large
 enough to train on wants: a trace is about twenty times the disk of the steps from the same match and no
 learner reads one. `play --trace <file>` writes the trace of that one match. `table` records the session two people played into
-`runs/playtest/<session-id>/`, or under whatever `--record` names instead; `--who <initials>` puts them in the
+`runs/playtest/<session-id>/`, or under whatever `--record` names instead: another directory, or a blob
+container by its URL (`https://<account>.blob.core.windows.net/playtests`, the hosted table's case, ADR 0080),
+where the session is the same files under the prefix `<session-id>/`; `--who <initials>` puts them in the
 stamp as `human:<initials>` so two sessions played by different people differ on the agents axis rather than
 looking like the same player. `--no-record` writes nothing at all — no directory, no notes, no trace — for
 trying a rule out at a table that should leave the disk as it found it; the page then offers no note buttons,

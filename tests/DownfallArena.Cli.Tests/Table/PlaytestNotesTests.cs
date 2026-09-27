@@ -9,6 +9,7 @@ using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Resources.Authoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -329,7 +330,7 @@ public sealed class PlaytestNotesTests : IDisposable
     }
 
     private static IEnumerable<JsonElement> Notes((TableApi Api, TableSession Session, HumanSeat Person, string Token, PlaytestRun Run) table) =>
-        File.ReadAllLines(Path.Combine(table.Run.Directory, "notes.jsonl"))
+        File.ReadAllLines(Path.Combine(table.Run.Location, "notes.jsonl"))
             .Where(line => line.Length > 0)
             .Select(line => JsonDocument.Parse(line).RootElement);
 
@@ -371,7 +372,7 @@ public sealed class PlaytestNotesTests : IDisposable
         var person = new HumanSeat(_stopping.Token);
         var bot = new GreedyAgent(resources, Rules);
         var run = PlaytestRun.Open(
-            _runs,
+            new FileArtifactStore(_runs),
             new PlaytestSetup(resources, Rules, Seed: 7, "human:mk", "greedy"),
             _host.Services.GetRequiredService<MatchTraceRecorder>(),
             clock ?? _clock);
