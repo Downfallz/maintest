@@ -195,29 +195,54 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             ? asked
             : null;
 
+    /// <summary>
+    /// The question the seat is blocked on, with the board and the options that go with it, read as one.
+    /// </summary>
+    /// <remarks>
+    /// The question is what the seat is asked rather than what the sub-phase allows: a person acts when their
+    /// own seat is asked, and the two differ while the other seat is still deciding. The three are read in
+    /// separate steps and the match does not wait for a poll in between. The other seat resolves its action
+    /// the moment it binds it (ADR 0083), so the match can reach this seat's next question during the reads,
+    /// and a second device on the same seat can answer the question during them. Either way a question would
+    /// be served beside options that are not its own. So the question is read again once the options are in,
+    /// and the reads are repeated until it has not moved: it can only move on a decision, so this ends.
+    /// </remarks>
+    private async Task<Result<(HumanSeat.Question? Waiting, PlayerBoardState Board, PlayerOptions Options)>> SnapshotAsync(TableSeat seat)
+    {
+        while (true)
+        {
+            var waiting = seat.Person?.Waiting;
+            var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
+            if (board.IsFailure)
+            {
+                return Result.Failure<(HumanSeat.Question?, PlayerBoardState, PlayerOptions)>(board.Error);
+            }
+
+            var options = await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(session.MatchId, seat.Slot));
+            if (options.IsFailure)
+            {
+                return Result.Failure<(HumanSeat.Question?, PlayerBoardState, PlayerOptions)>(options.Error);
+            }
+
+            if (seat.Person?.Waiting?.Asked == waiting?.Asked)
+            {
+                return Result.Success((waiting, board.Value, options.Value));
+            }
+        }
+    }
+
     private async Task<StudioResponse> SeatAsync(TableSeat seat, int since, long? shown)
     {
         // Practice starts at its prepared question; setup rounds must not open a replay over that question.
         since = Math.Max(since, FeedStart);
 
-        // The question the seat is blocked on, rather than what the sub-phase allows: a person acts when their
-        // own seat is asked, and the two differ while the other seat is still deciding. Read before the board
-        // and the options, never after: the other seat resolves its action the moment it binds it (ADR 0083),
-        // so the match can reach this seat's next question between two reads, and a question read last would
-        // be served beside the options of the step before it. While a person is asked the match cannot move
-        // past their answer, so everything read after this belongs to this question.
-        var waiting = seat.Person?.Waiting;
-        var board = await queries.GetBoardStateForPlayer.HandleAsync(new GetBoardStateForPlayer(session.MatchId, seat.Slot));
-        if (board.IsFailure)
+        var snapshot = await SnapshotAsync(seat);
+        if (snapshot.IsFailure)
         {
-            return StudioResponse.OfPlainText(500, board.Error.Message);
+            return StudioResponse.OfPlainText(500, snapshot.Error.Message);
         }
 
-        var options = await queries.GetPlayerOptions.HandleAsync(new GetPlayerOptions(session.MatchId, seat.Slot));
-        if (options.IsFailure)
-        {
-            return StudioResponse.OfPlainText(500, options.Error.Message);
-        }
+        var (waiting, board, options) = snapshot.Value;
 
         // How many cards the other side has face down, and nothing else about them. At a table that number is
         // public -- face-down cards are countable -- so it is served, as a count computed here rather than as
@@ -234,7 +259,10 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
         // measured from. Only the page's own acknowledgement of *this* asking counts. Anything else leaves the
         // stamp exactly as it found it: a poll of the other seat from behind the pass screen would time the
         // handover, and the poll that fetches a question is too early to be the moment it was read.
-        if (shown is { } drawn && waiting is { } asking && drawn == asking.Asked)
+        // Checked against the question the seat is on now, not the one this poll was served: a second device on
+        // the same seat can answer in between, and the clock keeps one stamp a seat, so stamping the answered
+        // question would overwrite the next one's.
+        if (shown is { } drawn && seat.Person?.Waiting is { } asking && drawn == asking.Asked)
         {
             run?.Served(seat.Slot, asking);
         }
@@ -243,11 +271,11 @@ internal sealed class TableApi(TableSession session, MatchQueryHandlers queries,
             new
             {
                 seat = seat.Name,
-                board = board.Value,
-                options = options.Value,
+                board,
+                options,
                 waitingFor = waiting?.Kind.ToString(),
                 waitingCreature = waiting?.Creature,
-                guidance = Guide?.Build(board.Value, waiting?.Creature),
+                guidance = Guide?.Build(board, waiting?.Creature),
 
                 // Which asking this is. The page sends it back once it has drawn it, and that is what starts
                 // the clock: two questions of the same shape in a row are two askings, and the second must not

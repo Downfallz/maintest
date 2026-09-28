@@ -556,15 +556,18 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
-    /// A poll reads the options and the question in two steps, and the match does not wait for it in between:
-    /// the other seat resolves an action the moment it binds it (ADR 0083). Served in the wrong order, a page
-    /// was asked for an Intent beside the options of the step before, and had no spell to offer.
+    /// A poll reads the options and the question in separate steps, and the match does not wait for it in
+    /// between: the other seat resolves an action the moment it binds it (ADR 0083), and a second device on the
+    /// same seat can answer. Whichever side of the options read the match moves on, a page was once asked
+    /// for an Intent beside the options of the step before, and had no spell to offer.
     /// </summary>
-    [Fact]
-    public async Task A_seat_is_served_the_options_of_the_question_it_is_asked()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_seat_is_served_the_options_of_the_question_it_is_asked(bool movesBeforeTheRead)
     {
         var table = await Seated();
-        var moving = table.Session.Queries with { GetPlayerOptions = new AnsweredWhileRead(table.Session.Queries.GetPlayerOptions, table.Person) };
+        var moving = table.Session.Queries with { GetPlayerOptions = new AnsweredWhileRead(table.Session.Queries.GetPlayerOptions, table.Person, movesBeforeTheRead) };
         var api = new TableApi(
             table.Session,
             moving,
@@ -622,16 +625,27 @@ public sealed partial class TableApiTests : IDisposable
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);
 
     /// <summary>
-    /// Reads the options, then moves the match on before handing them back: the person passes every evolution
-    /// until the match asks them something else. That is the step the other seat's play can take between two
-    /// reads of one poll, made certain instead of left to the scheduler.
+    /// Reads the options and moves the match on, one before the other: the person passes every evolution until
+    /// the match asks them something else. That is the step the match can take between the reads of one poll,
+    /// made certain instead of left to the scheduler.
     /// </summary>
-    private sealed class AnsweredWhileRead(IQueryHandler<GetPlayerOptions, Result<PlayerOptions>> inner, HumanSeat person)
+    private sealed class AnsweredWhileRead(IQueryHandler<GetPlayerOptions, Result<PlayerOptions>> inner, HumanSeat person, bool movesBeforeTheRead)
         : IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>
     {
         public async Task<Result<PlayerOptions>> HandleAsync(GetPlayerOptions query, CancellationToken cancellationToken = default)
         {
+            if (movesBeforeTheRead)
+            {
+                await PassEvolutionsAsync();
+            }
+
             var options = await inner.HandleAsync(query, cancellationToken);
+            await PassEvolutionsAsync();
+            return options;
+        }
+
+        private async Task PassEvolutionsAsync()
+        {
             while (person.Waiting is not { Kind: not PlayerOptionsKind.Evolution })
             {
                 if (person.Waiting is { } question)
@@ -641,8 +655,6 @@ public sealed partial class TableApiTests : IDisposable
 
                 await Task.Delay(5, TestContext.Current.CancellationToken);
             }
-
-            return options;
         }
     }
 }
