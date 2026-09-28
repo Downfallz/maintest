@@ -3,7 +3,10 @@ using System.Text.Json;
 using DownfallArena.Application.Agents;
 using DownfallArena.Application.Catalogue;
 using DownfallArena.Application.Learning.Tracing;
+using DownfallArena.Application.Matches.Decisions;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Matches.Queries;
+using DownfallArena.Application.Messaging;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Cli.Tests.Studio;
@@ -11,6 +14,7 @@ using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Resources.Authoring;
+using DownfallArena.SharedKernel.Primitives;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -214,6 +218,33 @@ public sealed class PlaytestNotesTests : IDisposable
 
         Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
             .GetProperty("elapsedMs").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// A second device on the seat answers the question while this poll is being served, and acknowledges the
+    /// next one. This poll's acknowledgement names the answered question, and must not overwrite the next
+    /// one's stamp: the clock keeps one a seat, and the next decision would be timed from nothing.
+    /// </summary>
+    [Fact]
+    public async Task An_acknowledgement_of_a_question_answered_meanwhile_leaves_the_next_ones_clock_alone()
+    {
+        var table = await Recording();
+        var first = table.Person.Waiting!.Asked;
+        var resources = _host!.Services.GetRequiredService<IGameResources>();
+        var api = new TableApi(
+            table.Session,
+            table.Session.Queries with { GetPlayerOptions = new AnsweredElsewhere(table.Session.Queries.GetPlayerOptions, table.Person, table.Run) },
+            [new TableSeat(PlayerSlot.Player1, table.Token, table.Person), new TableSeat(PlayerSlot.Player2, "token-of-player-2", Person: null)],
+            CatalogueProjection.Build(resources, Rules),
+            _host.Services.GetRequiredService<MatchTraceRecorder>(),
+            table.Run);
+
+        await api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token, query: $"?shown={first}");
+        _clock.Advance(TimeSpan.FromMilliseconds(1500));
+        await Post(table, $$"""{"kind":"Speed","creature":{{table.Person.Waiting!.Creature!.Value.Value}},"speed":"Standard"}""");
+
+        Notes(table).Single(note => note.GetProperty("kind").GetString() == "Decision")
+            .GetProperty("elapsedMs").GetInt64().ShouldBe(1500);
     }
 
     /// <summary>The page is told which asking it is drawing, or it cannot acknowledge one.</summary>
@@ -464,5 +495,33 @@ public sealed class PlaytestNotesTests : IDisposable
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan by) => _now = _now.Add(by);
+    }
+
+    /// <summary>
+    /// The other device, during this poll's options read: it answers the question the poll was about, then
+    /// acknowledges the next one. Once only, as a device would.
+    /// </summary>
+    private sealed class AnsweredElsewhere(IQueryHandler<GetPlayerOptions, Result<PlayerOptions>> inner, HumanSeat person, PlaytestRun run)
+        : IQueryHandler<GetPlayerOptions, Result<PlayerOptions>>
+    {
+        private bool _answered;
+
+        public async Task<Result<PlayerOptions>> HandleAsync(GetPlayerOptions query, CancellationToken cancellationToken = default)
+        {
+            var options = await inner.HandleAsync(query, cancellationToken);
+            if (!_answered && person.Waiting is { } question)
+            {
+                _answered = true;
+                person.Submit(PlayerDecision.Pass, question.Asked);
+                while (person.Waiting is not { } next || next.Asked == question.Asked)
+                {
+                    await Task.Delay(5, TestContext.Current.CancellationToken);
+                }
+
+                run.Served(PlayerSlot.Player1, person.Waiting);
+            }
+
+            return options;
+        }
     }
 }
