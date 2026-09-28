@@ -1859,9 +1859,10 @@ function targetButtons(state, current) {
   const legal = current.view.options.target?.legalTargets ?? { candidates: [], minTargets: 0, maxTargets: 0 };
   const picked = state.picked;
   const howMany = legal.minTargets === legal.maxTargets ? `${legal.maxTargets}` : `${legal.minTargets}–${legal.maxTargets}`;
+  const noun = legal.maxTargets === 1 ? 'target' : 'targets';
   context.textContent = canCastTargets(state, current.view)
     ? 'Tap a selected target again, or Cast, to confirm.'
-    : `Choose ${howMany} ${legal.maxTargets === 1 ? 'target' : 'targets'} on the battlefield.`;
+    : `Choose ${howMany} ${noun} on the battlefield.`;
 
   // A spell with nothing left to hit is revealed with no targets and fizzles, so binding none is the action
   // rather than a dead end (docs/tabletop/rulebook.md, 6.2).
