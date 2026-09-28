@@ -28,8 +28,8 @@ first.
 - **What it says.** A rung. The found set is above the start against every opponent on seeds it never saw,
   and not below it anywhere. The gain is mostly against pressure-floor, the heuristic that beats search-19.
   Against search-19 itself it is small, and its interval barely clears zero. The search's own 0.9213 was the
-  best of 100 draws, and the hold-out's 0.910 is close to it. These weights go in as `lookahead-30.json` in
-  their own pull request.
+  best of 25 candidates (100 evaluations, four opponents each), and the hold-out's 0.910 is close to it.
+  These weights go in as `lookahead-30.json` in their own pull request.
 
 ## 2026-09-28. The lookahead under ADR 0083 to 0085: its fitted set collapsed, and search-19's weights lead
 
