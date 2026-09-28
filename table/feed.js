@@ -141,6 +141,8 @@ export function latestResolution(entries) {
   return sequences.length ? Math.max(...sequences) : null;
 }
 
+const SIDES = { ally: 'yours', enemy: 'opponent' };
+
 // That action as one line: who, what, on whom, and what it did or why it fizzled.
 export function lastResolvedText(action) {
   if (!action) return '';
@@ -148,8 +150,6 @@ export function lastResolvedText(action) {
   const critical = action.status === 'Critical' ? ' · critical' : '';
   return `${action.actor.label} (${SIDES[action.actor.side] ?? 'unknown side'}) · ${action.spell}${targets}${critical} · ${actionResult(action)}`;
 }
-
-const SIDES = { ally: 'yours', enemy: 'opponent' };
 
 function actionResult(action) {
   if (action.status === 'Fizzled') return `fizzled: ${action.reason}`;
