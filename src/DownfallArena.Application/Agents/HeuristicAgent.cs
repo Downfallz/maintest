@@ -57,21 +57,16 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>
-    /// Quick when the creature can kill an enemy this round without needing a critical, Standard otherwise.
+    /// Standard only when the critical it keeps is worth something: when the best expected score among the
+    /// creature's castable spells is higher with its critical chance than without. Quick otherwise, and always
+    /// when a castable spell kills an enemy without a critical (ADR 0084).
     /// <para>
-    /// The rule reads as a heuristic and is exact under the speed trade. <see cref="ActionScorer.Kills(CombatAction, IReadOnlyList{CreatureSnapshot})"/>
-    /// forces the plain roll, so a kill it reports is one the actor lands whatever the dice say: the critical
-    /// Quick gives up buys nothing that kill needs, and acting before the target does is free. When no plain
-    /// kill exists the critical is the only thing left to hope for, and Standard is the only speed that can
-    /// roll it.
-    /// </para>
-    /// <para>
-    /// A one-step agent cannot do better here, and that is a property of the evaluation rather than of this
-    /// rule: <see cref="ActionScorer"/> scores the board an action lands on and has no way to say "and it
-    /// landed first", so Quick is strictly worse in everything it can measure. The value of going early is
-    /// only visible to something that walks the timeline -- and a search cannot be asked either, because the
-    /// timeline is built in <c>TurnOrderResolution</c>, after this decision. Speed is the one choice in the
-    /// round no agent here can evaluate by playing it out.
+    /// <see cref="ActionScorer"/> cannot see what acting first is worth -- it scores the board an action lands
+    /// on, not when it lands -- so the rule does not weigh the two. It only asks whether Standard buys anything
+    /// the scorer can see. A creature whose spells cannot crit, or whose crit changes nothing its weights
+    /// price, gains nothing by waiting and goes first. Played against the rule it replaces, which went Standard
+    /// whenever no plain kill was on the table, this one won every weight set measured, the hold-out seeds
+    /// included (journal, 2026-09-28).
     /// </para>
     /// </summary>
     public Speed DecideSpeed(PlayerBoardState board, CreatureId creature)
@@ -80,10 +75,22 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
 
         var creatures = Creatures(board);
         var actor = creatures.First(candidate => candidate.Id == creature);
-        var kills = Castable(actor).Any(spell => TargetSets.Of(TargetingRules.LegalTargets(actor, resources.GetSpell(spell), creatures))
+        var castable = Castable(actor).ToList();
+        var kills = castable.Any(spell => TargetSets.Of(TargetingRules.LegalTargets(actor, resources.GetSpell(spell), creatures))
             .Any(targets => _scorer.Kills(CombatAction.Bind(new CombatIntent(actor.Id, spell), targets), creatures)));
-        return kills ? Speed.Quick : Speed.Standard;
+        if (kills)
+        {
+            return Speed.Quick;
+        }
+
+        return BestScore(actor, castable, creatures, Speed.Standard) > BestScore(actor, castable, creatures, Speed.Quick)
+            ? Speed.Standard
+            : Speed.Quick;
     }
+
+    /// <summary>The best expected score among the spells at a speed; nothing to hit is worth nothing (ADR 0040).</summary>
+    private double BestScore(CreatureSnapshot actor, IReadOnlyList<SpellId> spells, IReadOnlyList<CreatureSnapshot> creatures, Speed speed) =>
+        spells.Select(spell => _scorer.Best(actor, spell, creatures, speed: speed)?.Score ?? 0).DefaultIfEmpty(0).Max();
 
     public SpellId DecideIntent(PlayerBoardState board, IntentOption intentOption)
     {
@@ -93,11 +100,12 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
         var gone = _foresight.AlreadyDoomed(board, creatures, actor);
+        var stillToAct = Foresight.StillToAct(board, actor.Id);
         SpellId? best = null;
         var bestScore = double.NegativeInfinity;
         foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
-            var score = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id))?.Score ?? 0;  // nothing to hit is worth nothing (ADR 0040)
+            var score = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct)?.Score ?? 0;  // nothing to hit is worth nothing (ADR 0040)
             if (score > bestScore)
             {
                 best = spell;
@@ -121,7 +129,7 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == options.Actor);
         // The board already carries every action before this slot (ADR 0083): nobody is expected gone.
-        return _scorer.Best(actor, options.Spell, creatures, ActionScorer.NoneGone, SpeedOf(board, actor.Id))?.Targets ?? [];
+        return _scorer.Best(actor, options.Spell, creatures, ActionScorer.NoneGone, SpeedOf(board, actor.Id), Foresight.StillToAct(board, actor.Id))?.Targets ?? [];
     }
 
     /// <summary>

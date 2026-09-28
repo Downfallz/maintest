@@ -30,7 +30,9 @@ affordable, no legal target) scores nothing — which still loses to anything th
 A defensive term is priced by the damage it prevents, which needs a reading of the **threat** on a creature:
 what the living, unstunned enemies could deal it in one round with the damaging spells they know and can
 afford, after its defense (ADR 0022). It is read from the spells' own numbers, and only for an outcome that
-needs it, so an attack costs what it always did.
+needs it, so an attack costs what it always did. Whether the round is lethal, which decides a denied kill, is
+read from the enemies still to act after the cast on the timeline when the agent has one: an enemy that has
+already acted, or acts before the cast, cannot be stopped by it this round (ADR 0085).
 
 The score of one resolution, with the weights `w`:
 
@@ -40,7 +42,7 @@ The score of one resolution, with the weights `w`:
 | `w.kill` per kill | a target whose health the damage reaches | for an enemy, against an ally |
 | `w.pressure` x share of the target's health | the effective damage over the health the target had, one for a kill: how much closer the hit brings that creature to a kill (ADR 0050) | for an enemy, against an ally |
 | `w.heal` x effective healing | healing capped at what the target was missing | for an ally, against an enemy |
-| `w.kill` per denied kill | a heal or a defense buff that takes its target from dying to this round's threat to surviving it (ADR 0022) | for an ally, against an enemy |
+| `w.kill` per denied kill | a heal or a defense buff that takes its target from dying to this round's threat to surviving it (ADR 0022), the threat of the enemies still to act after the cast (ADR 0085) | for an ally, against an enemy |
 | `w.stun` x rounds stunned | a Stun on a target still alive after the damage | for an enemy, against an ally |
 | `w.bleed` x expected bleed damage | amount per round x rounds (a permanent condition counts three), capped at the health left after the hit | for an enemy, against an ally |
 | `w.damage` x bleed the target's defense would have blocked | the same bleed points, up to the target's total defense x the bleed's rounds: what a hit a round would lose to that defense and the bleed does not (ADR 0073) | for an enemy, against an ally |
@@ -66,7 +68,9 @@ Decisions:
   were bound a whole sub-phase before anything resolved, and the agent replayed the revealed actions to write
   off who would not survive them; that was 45.6 % of all fizzles (ADR 0039), and the replay is gone with the
   two passes.
-- **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
+- **Speed**: Quick when some castable spell kills an enemy without a critical. Otherwise Standard only when the
+  critical it keeps raises the best expected score among the castable spells, Quick when it does not: a creature
+  that cannot crit, or whose weights do not price what its critical adds, gains nothing by waiting (ADR 0084).
 - **Tie order**: the order the roll-off left (ADR 0063). The scorer reads one action at a time and has no view
   of which of two of its own creatures should act first, so it does not pretend to; the lookahead plays each
   seating out ([the round played out](#the-round-played-out)), the random agent shuffles each tie and the

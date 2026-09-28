@@ -99,6 +99,17 @@ public sealed class HeuristicAgentTests
     private static ActivationSlot Slot(CreatureId creature) =>
         new(PlayerSlot.Player1, creature, Speed.Standard, Initiative.Of(5));
 
+    /// <summary>ADR 0085: the creatures after a slot on the timeline are the ones still to act this round.</summary>
+    [Fact]
+    public void The_creatures_still_to_act_are_the_ones_after_the_slot()
+    {
+        var board = WithAllyStriking(Board(enemyHealth: 20)) with { Timeline = [Slot(Two), Slot(One), Slot(Three)] };
+
+        Foresight.StillToAct(board, Two).ShouldBe([One, Three], ignoreOrder: true);
+        Foresight.StillToAct(board, Three).ShouldBeEmpty();
+        Foresight.StillToAct(board, Four).ShouldBeNull();
+    }
+
     [Fact]
     public void Targets_go_to_the_creature_the_spell_can_kill()
     {
@@ -124,10 +135,35 @@ public sealed class HeuristicAgentTests
     }
 
     [Fact]
-    public void Speed_is_quick_only_when_a_kill_is_on_the_table()
+    public void Speed_is_quick_when_a_kill_is_on_the_table()
     {
         Agent.DecideSpeed(Board(enemyHealth: 3), One).ShouldBe(Speed.Quick);
+    }
+
+    /// <summary>The creature crits five times in a hundred, and the extra damage is priced: waiting is worth it.</summary>
+    [Fact]
+    public void Speed_is_standard_when_the_critical_it_keeps_raises_the_score()
+    {
         Agent.DecideSpeed(Board(enemyHealth: 20), One).ShouldBe(Speed.Standard);
+    }
+
+    /// <summary>ADR 0084: with nothing that can crit, Standard buys nothing, and the creature goes first.</summary>
+    [Fact]
+    public void Speed_is_quick_when_no_castable_spell_can_crit()
+    {
+        var board = Board(enemyHealth: 20);
+        board = board with { Allies = [board.Allies[0] with { CriticalChance = CriticalChance.Of(0) }, board.Allies[1]] };
+
+        Agent.DecideSpeed(board, One).ShouldBe(Speed.Quick);
+    }
+
+    /// <summary>A crit whose extra damage the weights do not price buys nothing either.</summary>
+    [Fact]
+    public void Speed_is_quick_when_the_weights_price_nothing_the_critical_adds()
+    {
+        var agent = new HeuristicAgent(ScoringWeights.Default with { Damage = 0, Pressure = 0 }, TestContent.Resources, Rules);
+
+        agent.DecideSpeed(Board(enemyHealth: 20), One).ShouldBe(Speed.Quick);
     }
 
     [Fact]
