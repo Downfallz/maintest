@@ -144,12 +144,16 @@ export function latestResolution(entries) {
 // That action as one line: who, what, on whom, and what it did or why it fizzled.
 export function lastResolvedText(action) {
   if (!action) return '';
-  const side = action.actor.side === 'ally' ? 'yours' : action.actor.side === 'enemy' ? 'opponent' : 'unknown side';
   const targets = action.targets.length ? ` → ${action.targets.map(target => target.label).join(', ')}` : '';
   const critical = action.status === 'Critical' ? ' · critical' : '';
-  const result = action.status === 'Fizzled' ? `fizzled: ${action.reason}`
-    : action.effects.map(effect => `${effect.text} → ${effect.target.label}`).join(', ') || 'no effect';
-  return `${action.actor.label} (${side}) · ${action.spell}${targets}${critical} · ${result}`;
+  return `${action.actor.label} (${SIDES[action.actor.side] ?? 'unknown side'}) · ${action.spell}${targets}${critical} · ${actionResult(action)}`;
+}
+
+const SIDES = { ally: 'yours', enemy: 'opponent' };
+
+function actionResult(action) {
+  if (action.status === 'Fizzled') return `fizzled: ${action.reason}`;
+  return action.effects.map(effect => `${effect.text} → ${effect.target.label}`).join(', ') || 'no effect';
 }
 
 function recapCreature(id, board) {

@@ -52,8 +52,12 @@ public static class WinCondition
             return null;
         }
 
-        PlayerSlot? survivor = player1Defeated && player2Defeated ? null : player1Defeated ? PlayerSlot.Player2 : PlayerSlot.Player1;
-        return new MatchOutcome(survivor, MatchEndReason.Elimination);
+        if (player1Defeated && player2Defeated)
+        {
+            return new MatchOutcome(null, MatchEndReason.Elimination);
+        }
+
+        return new MatchOutcome(player1Defeated ? PlayerSlot.Player2 : PlayerSlot.Player1, MatchEndReason.Elimination);
     }
 
     private static PlayerSlot? Healthier(Team player1, Team player2)

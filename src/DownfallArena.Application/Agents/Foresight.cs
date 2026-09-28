@@ -1,11 +1,7 @@
 using DownfallArena.Application.Matches.Projections;
-using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
 using DownfallArena.Domain.Matches.Rounds;
-using DownfallArena.Domain.Matches.Rules.Combat;
-using DownfallArena.Domain.Resources;
 using DownfallArena.SharedKernel.Identifiers;
-using DownfallArena.SharedKernel.Stats;
 
 namespace DownfallArena.Application.Agents;
 
