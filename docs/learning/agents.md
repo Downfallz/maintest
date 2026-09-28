@@ -66,7 +66,9 @@ Decisions:
   were bound a whole sub-phase before anything resolved, and the agent replayed the revealed actions to write
   off who would not survive them; that was 45.6 % of all fizzles (ADR 0039), and the replay is gone with the
   two passes.
-- **Speed**: Quick when some castable spell kills an enemy without a critical, Standard otherwise.
+- **Speed**: Quick when some castable spell kills an enemy without a critical. Otherwise Standard only when the
+  critical it keeps raises the best expected score among the castable spells, Quick when it does not: a creature
+  that cannot crit, or whose weights do not price what its critical adds, gains nothing by waiting (ADR 0084).
 - **Tie order**: the order the roll-off left (ADR 0063). The scorer reads one action at a time and has no view
   of which of two of its own creatures should act first, so it does not pretend to; the lookahead plays each
   seating out ([the round played out](#the-round-played-out)), the random agent shuffles each tie and the

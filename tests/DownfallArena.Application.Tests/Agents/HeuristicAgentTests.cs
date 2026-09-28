@@ -124,10 +124,35 @@ public sealed class HeuristicAgentTests
     }
 
     [Fact]
-    public void Speed_is_quick_only_when_a_kill_is_on_the_table()
+    public void Speed_is_quick_when_a_kill_is_on_the_table()
     {
         Agent.DecideSpeed(Board(enemyHealth: 3), One).ShouldBe(Speed.Quick);
+    }
+
+    /// <summary>The creature crits five times in a hundred, and the extra damage is priced: waiting is worth it.</summary>
+    [Fact]
+    public void Speed_is_standard_when_the_critical_it_keeps_raises_the_score()
+    {
         Agent.DecideSpeed(Board(enemyHealth: 20), One).ShouldBe(Speed.Standard);
+    }
+
+    /// <summary>ADR 0084: with nothing that can crit, Standard buys nothing, and the creature goes first.</summary>
+    [Fact]
+    public void Speed_is_quick_when_no_castable_spell_can_crit()
+    {
+        var board = Board(enemyHealth: 20);
+        board = board with { Allies = [board.Allies[0] with { CriticalChance = CriticalChance.Of(0) }, board.Allies[1]] };
+
+        Agent.DecideSpeed(board, One).ShouldBe(Speed.Quick);
+    }
+
+    /// <summary>A crit whose extra damage the weights do not price buys nothing either.</summary>
+    [Fact]
+    public void Speed_is_quick_when_the_weights_price_nothing_the_critical_adds()
+    {
+        var agent = new HeuristicAgent(ScoringWeights.Default with { Damage = 0, Pressure = 0 }, TestContent.Resources, Rules);
+
+        agent.DecideSpeed(Board(enemyHealth: 20), One).ShouldBe(Speed.Quick);
     }
 
     [Fact]
