@@ -16,9 +16,9 @@ namespace DownfallArena.Application.Learning;
 /// <para>
 /// Read the way <see cref="HeuristicAgent"/> reads: an intent's terms are those of the target set the built-in
 /// weights would bind for it, with the allies' declared kills already written off; a target set's terms are
-/// its own, with the revealed actions' kills written off; an unlock's terms are its combat estimate plus the
-/// initiative it buys and the cost it cannot cover. A speed choice and a pass have no reading and score zero
-/// on every term.
+/// its own, on a board that already carries the actions before it (ADR 0083); an unlock's terms are its combat
+/// estimate plus the initiative it buys and the cost it cannot cover. A speed choice and a pass have no reading
+/// and score zero on every term.
 /// </para>
 /// <para>
 /// The reading is the built-in weights' whatever agent is recorded or played, so a dataset and the policy
@@ -30,7 +30,7 @@ namespace DownfallArena.Application.Learning;
 public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
 {
     private readonly ActionScorer _scorer = new(resources, rules, ScoringWeights.Default);
-    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, ScoringWeights.Default), resources, rules);
+    private readonly Foresight _foresight = new(new ActionScorer(resources, rules, ScoringWeights.Default));
 
     /// <summary>The name of each term, in the order every vector below lists them: the weight names.</summary>
     public static IReadOnlyList<string> Names => ScoreTerms.Names;
@@ -81,8 +81,7 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         }
 
         var creatures = Foresight.Creatures(board);
-        var gone = _foresight.GoneBeforeThisSlot(board, creatures);
-        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures, gone)))];
+        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures)))];
     }
 
     private static float[] Vector(ScoreTerms terms) => [.. terms.ToArray().Select(value => (float)value)];

@@ -70,7 +70,10 @@ export function guidancePanel(document, view, chosen, picked) {
   }
   if (guide.casterEffects?.length) line(`On caster, once: ${guide.casterEffects.map(effectText).join(', ')}`);
   const caveat = document.createElement('small');
-  caveat.textContent = 'An estimate before caps and stacking: earlier actions, hidden choices and rolls can change the outcome.';
+  // A target is chosen on the board the earlier slots left (ADR 0083); a spell is declared before any of them.
+  caveat.textContent = view.waitingFor === 'Target'
+    ? 'An estimate before caps and stacking: the earlier actions are already on the board; rolls can still change the outcome.'
+    : 'An estimate before caps and stacking: earlier actions, hidden choices and rolls can change the outcome.';
   panel.append(caveat);
   return panel;
 }

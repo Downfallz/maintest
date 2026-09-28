@@ -5,7 +5,10 @@ for ADR 0066 the same day, and every Stun row re-read for
 [ADR 0072](../adr/0072-a-creature-is-immune-to-stun-the-round-after-one.md) the same day: a Stun on a Creature
 already stunned or immune to Stun is ignored, and a Stun that ends leaves a Round of Stun immunity; the rows
 `momentum` reaches re-read for [ADR 0078](../adr/0078-momentum-is-a-free-strike-that-gathers-energy.md) on
-2026-09-25, and the Base initiative row of 1.3 re-read for tune run 11 the same day). Phase 1 of [plan.md](plan.md).
+2026-09-25, and the Base initiative row of 1.3 re-read for tune run 11 the same day; the combat rows of 1.8,
+1.9 and 1.11 annotated, not re-audited, for
+[ADR 0083](../adr/0083-an-action-resolves-when-its-targets-are-confirmed.md) on 2026-09-28). Phase 1 of
+[plan.md](plan.md).
 
 **Two readings, and each Part says which it is.**
 
@@ -115,6 +118,15 @@ order of `src/DownfallArena.Domain/Matches/Rounds/RoundSubPhase.cs:8-18`. Each m
 one sub-phase, filed where it is enforced. The sections after 1.5 are one number higher than in the first
 audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 
+> **ADR 0083 (2026-09-28): noted here, not re-audited.** `RevealAndTarget` and `ActionResolution` are one
+> sub-phase now, `Activation`, walked once with one cursor: at each slot the Intent is revealed, its owner
+> binds targets on the board as it stands, and the action resolves on confirmation. A Creature that cannot act
+> when its slot comes up is revealed with no targets and fizzles without its owner being asked. A Team wiped by
+> an action or at upkeep ends the Match on the spot, with no further slot and no Cleanup. The engine has ten
+> sub-phases again. Sections 1.8, 1.9 and 1.11 below are the audit as it was measured against the two-pass
+> engine, and they are not rewritten; each carries a note of what the change moves in it. The counts of Part 5
+> are that measurement too.
+
 ### 1.1 `EnergyGain` (Start of round)
 
 | Mechanic | What the engine does | By hand | Verdict | What the verdict costs |
@@ -188,6 +200,16 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 
 ### 1.8 `RevealAndTarget` (Combat)
 
+> **Since ADR 0083** this is the first half of `Activation`, and targets are bound on a board that already
+> includes every action before them. Two verdicts move, and neither is re-counted in Part 5. "Reveal in
+> timeline order, bind targets at reveal" no longer needs its component: the action resolves before the next
+> slot is targeted, so no marker waits on a board, and [components.md](components.md) retires the 18 target
+> markers and the `Targeted by` row; it reads as **restate** now. "No duplicate targets" loses the component
+> that made it physically impossible and becomes a sentence in the rulebook, **restate** too. "A Spell with no
+> legal target is revealed with no targets" is now one case of "a Creature that cannot act is revealed with
+> no targets and fizzles, its owner not asked"; with this content it cannot happen, since a Spell's origin
+> runs out of targets only when a Team is wiped, which ends the Match first.
+
 | Mechanic | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- |
 | Reveal in timeline order, bind targets at reveal | The reveal cursor walks the timeline; targets are chosen after seeing what came before (`Rules/Combat/ActionRules.cs:16-52`) | 1 card flip and 1 to 3 target markers per Activation slot; 6 slots a Round | **needs a component** | Target markers, one set per Player. Nothing is lost; this is the other mechanic that translates for free. |
@@ -199,6 +221,13 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | Dead and wrong-origin targets are refused here | Per-target failures block the binding (`TargetingRules.cs:79-102`) | 1 lookup per target | **keep as is** | Nothing. |
 
 ### 1.9 `ActionResolution` (Combat)
+
+> **Since ADR 0083** this is the second half of `Activation`: an action resolves the moment its targets are
+> confirmed. The rows keep their verdicts. The Fizzle row's causes shrink in practice: the actor checks (dead,
+> stunned, no longer knowing or affording the Spell) and "no legal target" are made when the slot comes up,
+> before anyone is asked, and a global targeting failure or "no target left" (`AllTargetsInvalid`) is no
+> longer reachable, since nothing happens between binding and resolving. The engine keeps both as guards no
+> command reaches. The rulebook's Fizzle table went from seven causes to five.
 
 | Mechanic | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- |
@@ -231,6 +260,11 @@ audit: what was 1.6 `IntentSelection` is 1.7, and so on to 1.11 `Finalization`.
 | A refresh also resets the free tick | `Condition.Refresh` sets `_fresh = true` (`Condition.cs:50`). Reachable only by a content file that authors `stacking: refresh` on a kind other than Stun, and none does: since ADR 0072 no Condition in `data/` refreshes | 0. Unreachable with this content | **keep as is** | Nothing. The rulebook need not say it until the content makes it reachable; it said it while a Stun refreshed. |
 
 ### 1.11 `Finalization` (End of round)
+
+> **Since ADR 0083** a defeated Team does not wait for Finalization: the Match ends on the action or the
+> upkeep that wipes it, with no further slot and no Cleanup, and both Teams wiped at once is still a draw. The
+> first two rows below measured the end-of-Round check; their verdict, **keep as is**, does not move, since
+> the check is the same one lookup made at another moment. Finalization reads the Round cap only.
 
 | Mechanic | What the engine does | By hand | Verdict | What the verdict costs |
 | --- | --- | --- | --- | --- |
@@ -510,7 +544,7 @@ problem.
 
 **What the table shows.** A `_fresh` flag skips the first tick (`Condition.cs:12,53-59`), and a refresh sets
 it again (`Condition.cs:50`), though since ADR 0072 no content refreshes. Nothing in `data/` applies a
-Condition anywhere but `ActionResolution`, which runs after that Round's `OngoingEffects`. So for every Condition the content can produce, the flag is exactly
+Condition anywhere but `ActionResolution` (`Activation` since ADR 0083), which runs after that Round's `OngoingEffects`. So for every Condition the content can produce, the flag is exactly
 equivalent to "the Condition lasts N of the following Rounds". A 2-Round Stun costs its target two whole
 Rounds; a 1-Round Bleed ticks once. The table needs no flag, only the sentence.
 
@@ -583,7 +617,9 @@ order would play another game without breaking a test.
 section, in the enum's order (`RoundSubPhase.cs:8-18`): `EnergyGain`, `OngoingEffects`, `Evolution`,
 `Speed`, `TurnOrderResolution`, `TieOrder`, `IntentSelection`, `RevealAndTarget`, `ActionResolution`,
 `Cleanup`, `Finalization`. 11 of 11. No mechanic is filed under two of them. Rows per section: 3, 6, 12, 3,
-6, 3, 3, 7, 17, 4, 4.
+6, 3, 3, 7, 17, 4, 4. Since ADR 0083 the enum has ten, `RevealAndTarget` and `ActionResolution` being one
+`Activation`; this check and the tallies below are the measurement as taken, and a re-audit would file the
+7 and 17 rows under one section and move the two verdicts the note under 1.8 names.
 
 **Effect kinds.** All twelve of the taxonomy appear, each as exactly one row in Part 2: `Damage`, `Heal`,
 `EnergyGain`, `EnergyDrain`, `Bleed`, `Regeneration`, `EnergyRegeneration`, `Stun`, `DefenseBuff`,

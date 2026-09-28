@@ -62,24 +62,29 @@ public sealed class LookaheadAgentTests
     }
 
     /// <summary>
-    /// Four has revealed Guard on itself before One's slot. The one-step replay cannot carry a condition
-    /// forward, so it reads the two enemies as equal and takes the first candidate; the hypothetical board
-    /// carries the buff, so the strike goes where it lands whole.
+    /// Four guarded itself on the slot before One's, and that action has already resolved: the buff is on the
+    /// board (ADR 0083). Both readings see it, and the strike goes where it lands whole, rather than to Four
+    /// by board order.
     /// </summary>
     [Fact]
-    public void Targets_are_bound_on_the_board_the_revealed_actions_leave()
+    public void Targets_are_bound_on_the_board_as_the_earlier_slots_left_it()
     {
-        var four = (Boards.Creature(4, PlayerSlot.Player2) with { Energy = Energy.Of(1) }).Bought(TestContent.GuardPack);
+        var guarded = (Boards.Creature(4, PlayerSlot.Player2) with
+        {
+            TotalDefense = Defense.Of(2),
+            Conditions = [new ConditionSnapshot(DefenseBuff.Of(2, Duration.OfRounds(1)), 1, new ConditionSource(Four, TestContent.Guard))],
+        }).Bought(TestContent.GuardPack);
         // Four first on the board, so a reading that cannot tell the two apart takes it by order.
-        var board = Boards.Board(PlayerSlot.Player1, [Boards.Creature(1, PlayerSlot.Player1)], [four, Boards.Creature(3, PlayerSlot.Player2)]) with
+        var board = Boards.Board(PlayerSlot.Player1, [Boards.Creature(1, PlayerSlot.Player1)], [guarded, Boards.Creature(3, PlayerSlot.Player2)]) with
         {
             Timeline = [Slot(Four, PlayerSlot.Player2), Slot(One, PlayerSlot.Player1)],
             RevealedActions = [CombatAction.Bind(new CombatIntent(Four, TestContent.Guard), [Four])],
+            ActivationCursor = 1,
         };
         var options = new TargetOptions(One, TestContent.Strike, new LegalTargets(1, 1, [Four, Three]));
 
         Agent.DecideTargets(board, options).ShouldBe([Three]);
-        new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules).DecideTargets(board, options).ShouldBe([Four], "the one-step replay does not carry the buff");
+        new HeuristicAgent(ScoringWeights.Default, TestContent.Resources, Rules).DecideTargets(board, options).ShouldBe([Three]);
     }
 
     /// <summary>

@@ -27,7 +27,7 @@ public sealed class PlayerDecisionCheckTests
     [Fact]
     public void Nothing_is_accepted_while_the_seat_is_waiting_or_the_match_has_ended()
     {
-        foreach (var kind in new[] { PlayerOptionsKind.Waiting, PlayerOptionsKind.Resolution, PlayerOptionsKind.Ended })
+        foreach (var kind in new[] { PlayerOptionsKind.Waiting, PlayerOptionsKind.Ended })
         {
             var options = new PlayerOptions { Kind = kind };
 

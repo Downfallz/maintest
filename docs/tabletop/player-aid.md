@@ -2,9 +2,9 @@
 
 One page, one per Player. Every rule on it is stated in full in [rulebook.md](rulebook.md), and it describes
 the same engine: Tiers bought on the Rule set's schedule, one a Creature an opportunity (ADR 0056, ADR 0059,
-ADR 0066), ties settled by a Roll-off on a d20 (ADR 0063), and a Round of Stun immunity after every Stun
-(ADR 0072). The section number is beside each rule. Fill
-the setup table's values in before the first Match.
+ADR 0066), ties settled by a Roll-off on a d20 (ADR 0063), a Round of Stun immunity after every Stun
+(ADR 0072), and one Activation a slot, each action resolving the moment its targets are named (ADR 0083). The
+section number is beside each rule. Fill the setup table's values in before the first Match.
 
 ---
 
@@ -13,15 +13,14 @@ the setup table's values in before the first Match.
 | # | Phase | Sub-phase | What happens | §|
 | --- | --- | --- | --- | --- |
 | 1 | Start | **Energy gain** | Every **living** Creature gains the Rule set's Energy. | 5.1 |
-| 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. | 5.2 |
+| 2 | Start | **Ongoing effects** | **Energy regeneration, then Regeneration, then Bleed.** Bleed ignores Defense. A Team the Bleeds wipe **ends the Match here**. | 5.2 |
 | 3 | Planning | **Evolution** | **Only on a Round with a pick mark.** Players alternate, Player 1 first, each pick buying one Tier, openly. **One Tier a Creature**: your picks go to different Creatures. See below. | 5.3 |
 | 4 | Planning | **Speed** | Quick or Standard, **face down**, for every living, unstunned Creature. Turn them over together. | 5.4 |
 | 5 | Planning | **Turn order resolution**, then **Tie order** | Build the Combat timeline, hold a Roll-off for each tie between the sides, then order your own with the tie order chits, **face down**. Turn them over together. | 5.5 |
 | 6 | Combat | **Intent selection** | One card **face down** per Creature on the timeline. Must be known and affordable. | 5.6 |
-| 7 | Combat | **Reveal and target** | Walk the timeline: flip, place target markers. **All six before any resolve. Nothing changes yet.** | 5.7 |
-| 8 | Combat | **Action resolution** | Walk the timeline again: resolve each cast fully, one at a time. | 5.8 |
-| 9 | End | **Cleanup** | Slide the dock left, then `new` into its lane. A Stun ending on a living Creature leaves an **Immune** token in lane `1`. | 5.9 |
-| 10 | End | **Finalization** | Check the Win condition. Advance the Round marker or end the Match. | 5.10 |
+| 7 | Combat | **Activation** | Walk the timeline **once**. At each slot: can it act? If not, flip it with no targets: **Fizzle**. Otherwise choose targets on the board **as it stands**, flip the card and name them together, and **resolve it now**, before the next slot. A Team wiped **ends the Match here**. | 5.7, 5.8 |
+| 8 | End | **Cleanup** | Slide the dock left, then `new` into its lane. A Stun ending on a living Creature leaves an **Immune** token in lane `1`. | 5.9 |
+| 9 | End | **Finalization** | Check the **Round cap**. Advance the Round marker or end the Match. | 5.10 |
 
 ---
 
@@ -72,15 +71,17 @@ here. A debuff that lands in Combat does not reshuffle this Round.
 
 ---
 
-## Resolving one cast, in order (§5.8)
+## One slot, in order (§5.7, §5.8)
 
-1. **Can the actor act?** Otherwise **Fizzle**.
-2. **Drop the dead targets.** None left → **Fizzle**.
-3. **Roll for a critical**, once for the cast.
+1. **Can it act?** Dead, stunned, can no longer pay, or no legal target: flip with no targets, **Fizzle**.
+   Nobody chooses.
+2. **Choose targets** on the board as it stands. Same Spell: you choose targets, never another card.
+3. **Flip and name** the targets, together.
 4. **Pay** the printed cost.
-5. **Apply each effect line to each target.**
-6. **Apply the `Caster:` line**, once.
-7. **Take the markers back.**
+5. **Roll for a critical**, once for the cast. **Quick never rolls.**
+6. **Apply each effect line to each target.**
+7. **Apply the `Caster:` line**, once.
+8. **A Team with no living Creature?** The Match ends now. Otherwise, the next slot.
 
 **Total Defense** = base Defense + Defense buffs (**at most 10**) - Defense debuffs, never below 0. Floor the
 **total**, not the halves.
@@ -106,17 +107,17 @@ Not `(printed Damage - total Defense) x multiplier`.
 
 ## Every cause of a Fizzle (§6.1)
 
-A Fizzle **costs nothing**: no Energy, no Effect, no `Caster:` line, no Condition.
+A Fizzle **costs nothing**: no Energy, no Effect, no `Caster:` line, no Condition. Checked when the slot comes
+up, in this order:
 
-1. The actor is **dead**.
-2. The actor is **stunned**.
-3. The actor no longer **knows** the Spell. *(cannot happen)*
-4. The actor **cannot afford** the cost now.
-5. **No targets were bound** — it had no legal target when it flipped.
-6. Too many targets, a duplicate, or a `Self` Spell pointed elsewhere. *(the components prevent all three)*
-7. **Every bound target is invalid now** — all dead.
+1. The Creature is **dead**.
+2. The Creature is **stunned**.
+3. The Creature no longer **knows** the Spell. *(cannot happen)*
+4. The Creature **cannot afford** the cost now.
+5. The Spell has **no legal target**. *(cannot happen with today's cards: a wiped Team has already ended the Match)*
 
-A **per-target** failure is not a Fizzle: drop that target, pay the cost, resolve against the rest (§6.2).
+Once targets are named, the action resolves at once: **no target is ever dropped**, and it never Fizzles
+after (§6.3). A target line broken — too many, a duplicate, a dead Creature — is not a Fizzle: choose again.
 
 ---
 
@@ -130,7 +131,7 @@ Creature is ignored.**
 | **Energy regeneration** | Start of Round, **1st** *(no card applies it today)* |
 | **Regeneration** | Start of Round, **2nd** — before Bleed, on purpose |
 | **Bleed** | Start of Round, **3rd**. **Ignores Defense** |
-| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Also fizzles an action already revealed. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
+| **Stun** | Speed Sub-phase: no Speed, **no slot, no Intent**. Landing in Combat, it also fizzles the Creature's own slot if that has not come up yet. When it ends, the Creature is **immune to Stun** for the next Round (§6.4) |
 | **Defense buff / debuff** | Read whenever Damage is computed |
 | **Initiative buff / debuff** | Read once, at Turn order resolution |
 
@@ -151,13 +152,11 @@ A **permanent** Condition moves a rail and takes no token. It never counts down.
 
 ## Ending the Match (§7.2)
 
-Checked at **Finalization**, end of every Round:
-
-1. A Team with **no living Creature** loses. Both at once is a **draw**.
-2. At the **Round cap**: the higher **total remaining Health** wins.
+1. A Team with **no living Creature** loses, **the moment it happens**: after the action or the Bleed pass
+   that wiped it. No further slot, no Cleanup. Both at once is a **draw**.
+2. At the **Round cap**, checked at **Finalization** only: the higher **total remaining Health** wins.
 3. **Equal totals is a draw.**
 
-The Round always finishes first: every remaining Activation slot resolves and Cleanup runs before the check.
 One cast can wipe both Teams — **Hateful Sacrifice**, `Damage 10` then `Caster: Damage 4` — and that is a draw.
 
 ---

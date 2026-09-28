@@ -43,23 +43,18 @@ public sealed class Round : Entity<RoundId>
 
     public CombatTimeline Timeline { get; private set; } = CombatTimeline.Empty;
 
-    public TurnCursor RevealCursor { get; private set; } = TurnCursor.Start;
+    /// <summary>
+    /// How far combat has walked the timeline: the slots before it have been revealed, targeted and resolved
+    /// (ADR 0083).
+    /// </summary>
+    public TurnCursor ActivationCursor { get; private set; } = TurnCursor.Start;
 
-    public TurnCursor ResolveCursor { get; private set; } = TurnCursor.Start;
-
-    public bool AllActionsBound => RevealCursor.IsEnd(Timeline.Count);
-
-    public bool IsCombatResolved => ResolveCursor.IsEnd(Timeline.Count);
+    public bool IsCombatResolved => ActivationCursor.IsEnd(Timeline.Count);
 
     /// <summary>
-    /// The slot whose intent is revealed and targeted next, or <c>null</c> when every slot has been.
+    /// The slot whose intent is revealed, targeted and resolved next, or <c>null</c> when every slot has been.
     /// </summary>
-    public ActivationSlot? NextSlotToReveal => AllActionsBound ? null : Timeline[RevealCursor.Index];
-
-    /// <summary>
-    /// The slot whose action resolves next, or <c>null</c> when combat is resolved.
-    /// </summary>
-    public ActivationSlot? NextSlotToResolve => IsCombatResolved ? null : Timeline[ResolveCursor.Index];
+    public ActivationSlot? NextSlot => IsCombatResolved ? null : Timeline[ActivationCursor.Index];
 
     public static Round First() => new(RoundId.First);
 
@@ -131,7 +126,7 @@ public sealed class Round : Entity<RoundId>
     }
 
     /// <summary>
-    /// Installs the timeline built by the planning rules and resets both cursors.
+    /// Installs the timeline built by the planning rules and resets the cursor.
     /// </summary>
     internal void SetTimeline(CombatTimeline timeline)
     {
@@ -139,8 +134,7 @@ public sealed class Round : Entity<RoundId>
         RequireSubPhase(RoundSubPhase.TurnOrderResolution, "set the timeline");
 
         Timeline = timeline;
-        RevealCursor = TurnCursor.Start;
-        ResolveCursor = TurnCursor.Start;
+        ActivationCursor = TurnCursor.Start;
     }
 
     /// <summary>
@@ -168,7 +162,7 @@ public sealed class Round : Entity<RoundId>
     /// <summary>
     /// Installs the timeline the tie orders produced. The same slots, and every place keeps its side, its speed
     /// and its initiative: a tie order moves a player's creatures between their own places in one tie and
-    /// nothing else (ADR 0063). Cursors stay at the start, since nothing has been revealed yet.
+    /// nothing else (ADR 0063). The cursor stays at the start, since nothing has been revealed yet.
     /// </summary>
     internal void ReorderTimeline(CombatTimeline timeline)
     {
@@ -215,26 +209,27 @@ public sealed class Round : Entity<RoundId>
     }
 
     /// <summary>
-    /// The intent at the reveal cursor, without moving it. The caller binds targets with <see cref="SubmitAction"/>.
+    /// The intent at the cursor, without moving it. The caller binds targets with <see cref="SubmitAction"/>.
     /// </summary>
     public CombatIntent? PeekNextIntent() =>
-        NextSlotToReveal is { } slot ? IntentOf(slot.Creature) : null;
+        NextSlot is { } slot ? IntentOf(slot.Creature) : null;
 
     public CombatAction? ActionOf(CreatureId creature) => _actions.GetValueOrDefault(creature);
 
     /// <summary>
-    /// Accepts the targeted action for the intent at the reveal cursor and moves the cursor forward.
+    /// Accepts the targeted action for the intent at the cursor. The cursor moves once the match has resolved
+    /// it, with <see cref="MarkSlotActivated"/>.
     /// </summary>
     internal Result SubmitAction(CombatAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        if (SubPhase != RoundSubPhase.RevealAndTarget)
+        if (SubPhase != RoundSubPhase.Activation)
         {
             return Result.Failure(RoundErrors.TargetingNotOpen);
         }
 
-        if (NextSlotToReveal is not { } slot)
+        if (NextSlot is not { } slot)
         {
             return Result.Failure(RoundErrors.NothingLeftToReveal);
         }
@@ -252,35 +247,33 @@ public sealed class Round : Entity<RoundId>
             return Result.Failure(RoundErrors.ActionDoesNotMatchIntent);
         }
 
+        // A slot is bound once and activated at once (ADR 0083): a second binding before the cursor moves
+        // would replace an action that already resolved, or is resolving.
+        if (_actions.ContainsKey(action.Actor))
+        {
+            throw new InvalidOperationException($"Creature {action.Actor} is bound twice in one slot.");
+        }
+
         _actions[action.Actor] = action;
-        RevealCursor = RevealCursor.MoveNext();
         return Result.Success();
     }
 
     /// <summary>
-    /// The action at the resolve cursor. Missing actions and wrong sub-phases are invariant violations.
+    /// Moves the cursor past the slot whose action the match has just resolved. A slot without a bound action
+    /// and a wrong sub-phase are invariant violations.
     /// </summary>
-    internal CombatAction NextActionToResolve()
+    internal void MarkSlotActivated()
     {
-        RequireSubPhase(RoundSubPhase.ActionResolution, "resolve an action");
+        RequireSubPhase(RoundSubPhase.Activation, "activate a slot");
 
-        var slot = NextSlotToResolve
+        var slot = NextSlot
             ?? throw new InvalidOperationException($"Round {Number}: combat is already resolved.");
-
-        return _actions.GetValueOrDefault(slot.Creature)
-            ?? throw new InvalidOperationException($"Creature {slot.Creature} is on the timeline without a bound action.");
-    }
-
-    internal void MarkActionResolved()
-    {
-        RequireSubPhase(RoundSubPhase.ActionResolution, "mark an action resolved");
-
-        if (IsCombatResolved)
+        if (!_actions.ContainsKey(slot.Creature))
         {
-            throw new InvalidOperationException($"Round {Number}: combat is already resolved.");
+            throw new InvalidOperationException($"Creature {slot.Creature} is activated without a bound action.");
         }
 
-        ResolveCursor = ResolveCursor.MoveNext();
+        ActivationCursor = ActivationCursor.MoveNext();
     }
 
     public override string ToString() => $"Round {Number} ({Phase}/{SubPhase})";

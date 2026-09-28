@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, outcomeText, resolutionText, retainRoundEvents, roundRecap } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -38,8 +38,8 @@ test('a critical is on the resolution line, because no total on the board can sa
 // forgot to mention it, and the card they cast advertised a threshold they were watching for.
 test('a resolution that was not critical says so rather than staying silent', () => {
   assert.equal(resolutionText(resolved, cards), '4: Throwing Star · no critical · Damage 3 on 1');
-  assert.equal(feedLine({ round: 1, subPhase: 'ActionResolution', event: resolved }, cards),
-    '1 · ActionResolution · CombatActionResolved — 4: Throwing Star · no critical · Damage 3 on 1');
+  assert.equal(feedLine({ round: 1, subPhase: 'Activation', event: resolved }, cards),
+    '1 · Activation · CombatActionResolved — 4: Throwing Star · no critical · Damage 3 on 1');
 });
 
 test('a fizzle says so and says why', () => {
@@ -218,4 +218,38 @@ test('upkeep uses the event round and actual capped ticks in host order, retaine
   assert.equal(retainRoundEvents(kept, entries, 7).length, 1);
   assert.equal(retainRoundEvents(kept, [], 9).length, 0);
   assert.equal(roundUpkeep([{ sequence: 51, event: { kind: 'OngoingEffectsApplied', roundId: 8 } }], 8).rows.length, 0);
+});
+
+// ADR 0083: an action resolves as its targets are confirmed, so the table shows the latest one live, and only
+// while the round's combat is running; after it, the recap holds the round.
+test('the action resolved last is read live during combat and nowhere else', () => {
+  const board = { roundNumber: 2, subPhase: 'Activation', allies: [{ id: 4 }], enemies: [{ id: 1 }] };
+  const entries = [
+    { sequence: 1, round: 1, event: { kind: 'CombatActionResolved', roundId: 1, resolution: { action: { actor: 1, spell: 'old', targets: [4] } }, appliedOutcomes: [] } },
+    { sequence: 5, round: 2, event: { kind: 'CombatActionResolved', roundId: 2, resolution: { action: { actor: 4, spell: 'spell:throwing_star:v1', targets: [1] }, isCritical: true }, appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount: 6, critical: true }] } },
+    { sequence: 6, round: 2, event: { kind: 'CombatActionResolved', roundId: 2, resolution: { action: { actor: 1, spell: 'spell:throwing_star:v1', targets: [] }, fizzled: true, fizzleReason: { message: 'A dead creature cannot act.' } }, appliedOutcomes: [] } },
+  ];
+
+  const last = lastResolved(entries, board, cards);
+
+  assert.equal(last.actor.id, 1);
+  assert.equal(lastResolvedText(last), 'Creature 1 (opponent) · Throwing Star · fizzled: A dead creature cannot act.');
+  assert.equal(lastResolvedText(lastResolved(entries.slice(0, 2), board, cards)),
+    'Creature 4 (yours) · Throwing Star → Creature 1 · critical · Damage 6! → Creature 1');
+  assert.equal(lastResolved(entries, { ...board, subPhase: 'Cleanup' }, cards), null);
+  assert.equal(lastResolved(entries.slice(0, 1), board, cards), null);
+  assert.equal(lastResolvedText(null), '');
+});
+
+// A bot can play several slots between two decisions of a person, and the last slot of a round is followed at
+// once by the next round: every action after the one the seat last decided on is read, across the boundary.
+test('what resolved since a seat last decided is every action after it, oldest first', () => {
+  const resolved = (sequence, round, actor) => ({ sequence, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor, spell: 's', targets: [] } }, appliedOutcomes: [] } });
+  const entries = [resolved(9, 1, 3), { sequence: 10, round: 2, event: { kind: 'RoundEnded', roundId: 1 } }, resolved(4, 1, 1), resolved(7, 1, 2)];
+
+  assert.deepEqual(resolvedSince(entries, 4, {}, cards).map(action => action.actor.id), [2, 3]);
+  assert.deepEqual(resolvedSince(entries, undefined, {}, cards).map(action => action.actor.id), [1, 2, 3]);
+  assert.deepEqual(resolvedSince(entries, 9, {}, cards), []);
+  assert.equal(latestResolution(entries), 9);
+  assert.equal(latestResolution([]), null);
 });

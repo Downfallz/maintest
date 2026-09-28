@@ -262,13 +262,14 @@ public sealed class Match : AggregateRoot<MatchId>
     }
 
     /// <summary>
-    /// Reveals the next intent of the timeline by binding its targets. Only the owner of that intent may do so.
+    /// Binds the targets of the creature whose slot has come up and resolves its action at once (ADR 0083). Only
+    /// the owner of that creature may do so. When the action wipes a team, the match ends on it.
     /// </summary>
     public Result SubmitAction(PlayerSlot slot, CombatAction action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        var open = RequireSubPhase(RoundSubPhase.RevealAndTarget, RoundErrors.TargetingNotOpen);
+        var open = RequireSubPhase(RoundSubPhase.Activation, RoundErrors.TargetingNotOpen);
         if (open.IsFailure)
         {
             return open;
@@ -288,37 +289,9 @@ public sealed class Match : AggregateRoot<MatchId>
         }
 
         RaiseDomainEvent(new ActionRevealed(Id, round.Id, action));
+        Activate(round, action);
         Drive();
         return Result.Success();
-    }
-
-    /// <summary>
-    /// Resolves the action at the resolve cursor and applies it. When it was the last one, the round is
-    /// finalized and either the match ends or the next round starts.
-    /// </summary>
-    public Result<CombatStep> ResolveNextAction()
-    {
-        var open = RequireSubPhase(RoundSubPhase.ActionResolution, RoundErrors.ResolutionNotOpen);
-        if (open.IsFailure)
-        {
-            return Result.Failure<CombatStep>(open.Error);
-        }
-
-        var round = ActiveRound;
-        var action = round.NextActionToResolve();
-        // Every creature on the timeline chose a speed in planning, so the lookup cannot miss: an action is
-        // only ever resolved for a slot the timeline holds, and a slot is only built from a speed choice.
-        var speed = round.SpeedChoiceOf(action.Actor)?.Speed
-            ?? throw new InvalidOperationException($"Actor {action.Actor} is resolving an action without a speed choice.");
-        var before = Snapshots();
-        var resolution = ResolutionRules.Resolve(action, before, _resources, RuleSet, _random, speed);
-        var applied = CombatExecution.Apply(resolution, Creatures);
-        var frame = new CombatActionFrame(before, Snapshots(), [.. round.Timeline.Slots], [.. round.Timeline.RollOffs]);
-        round.MarkActionResolved();
-        RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied, frame));
-        Drive();
-
-        return Result.Success(new CombatStep(round.Id, resolution, applied, round.IsFinalized, State == MatchState.Ended));
     }
 
     private Round ActiveRound =>
@@ -385,18 +358,78 @@ public sealed class Match : AggregateRoot<MatchId>
         return round.SubPhase switch
         {
             RoundSubPhase.EnergyGain => Automatic(() => UpkeepRules.EnergyGain(creatures, RuleSet)),
-            RoundSubPhase.OngoingEffects => Automatic(() => RaiseOngoingEffects(round, UpkeepRules.OngoingEffects(creatures))),
+            RoundSubPhase.OngoingEffects => ApplyOngoingEffects(round, creatures),
             RoundSubPhase.Evolution => AdvanceIf(EvolutionRules.Evaluate(Snapshots(), round, _resources, RuleSet).CanAdvance),
             RoundSubPhase.Speed => AdvanceIf(SpeedRules.Evaluate(Snapshots(), round).CanAdvance),
             RoundSubPhase.TurnOrderResolution => Automatic(BuildTimeline),
             RoundSubPhase.TieOrder => TieOrderRules.Evaluate(round).CanAdvance && Automatic(() => ApplyTieOrders(round)),
             RoundSubPhase.IntentSelection => AdvanceIf(IntentRules.Evaluate(round).CanAdvance),
-            RoundSubPhase.RevealAndTarget => AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
-            RoundSubPhase.ActionResolution => AdvanceIf(round.IsCombatResolved),
+            RoundSubPhase.Activation => ActivateUnavailableSlot(round) || AdvanceIf(ActionRules.Evaluate(round).CanAdvance),
             RoundSubPhase.Cleanup => Automatic(() => Cleanup(round, creatures)),
             RoundSubPhase.Finalization => FinalizeRound(),
             _ => throw new InvalidOperationException($"Sub-phase {round.SubPhase} has no driver step."),
         };
+    }
+
+    /// <summary>
+    /// A creature that cannot take its slot is revealed with no targets and fizzles, without its owner being
+    /// asked (ADR 0083). Returns whether a slot was activated this way.
+    /// </summary>
+    private bool ActivateUnavailableSlot(Round round)
+    {
+        if (round.PeekNextIntent() is not { } intent || ActionRules.CanTakeItsSlot(intent, Snapshots(), _resources))
+        {
+            return false;
+        }
+
+        var action = CombatAction.Bind(intent, []);
+        var accepted = round.SubmitAction(action);
+        if (accepted.IsFailure)
+        {
+            throw new InvalidOperationException($"Round {round.Id} refused the fizzle of {intent.Actor}: {accepted.Error.Message}");
+        }
+
+        RaiseDomainEvent(new ActionRevealed(Id, round.Id, action));
+        Activate(round, action);
+        return true;
+    }
+
+    /// <summary>Resolves a bound action on the board as it stands, applies it, and moves past its slot.</summary>
+    private void Activate(Round round, CombatAction action)
+    {
+        // Every creature on the timeline chose a speed in planning, so the lookup cannot miss: a slot is only
+        // built from a speed choice.
+        var speed = round.SpeedChoiceOf(action.Actor)?.Speed
+            ?? throw new InvalidOperationException($"Actor {action.Actor} is acting without a speed choice.");
+        var before = Snapshots();
+        var resolution = ResolutionRules.Resolve(action, before, _resources, RuleSet, _random, speed);
+        var applied = CombatExecution.Apply(resolution, Creatures);
+        var frame = new CombatActionFrame(before, Snapshots(), [.. round.Timeline.Slots], [.. round.Timeline.RollOffs]);
+        round.MarkSlotActivated();
+        RaiseDomainEvent(new CombatActionResolved(Id, round.Id, resolution, applied, frame));
+        EndIfEliminated(round);
+    }
+
+    /// <summary>
+    /// Ends the round and the match the moment a team is wiped (ADR 0083). Returns whether it did.
+    /// </summary>
+    private bool EndIfEliminated(Round round)
+    {
+        if (WinCondition.Elimination(_teams[PlayerSlot.Player1], _teams[PlayerSlot.Player2]) is not { } outcome)
+        {
+            return false;
+        }
+
+        RaiseDomainEvent(new RoundEnded(Id, round.Id));
+        End(round, outcome);
+        return true;
+    }
+
+    private void End(Round round, MatchOutcome outcome)
+    {
+        State = MatchState.Ended;
+        Outcome = outcome;
+        RaiseDomainEvent(new MatchEnded(Id, round.Id, outcome));
     }
 
     private void Cleanup(Round round, IReadOnlyList<Creature> creatures)
@@ -412,8 +445,13 @@ public sealed class Match : AggregateRoot<MatchId>
         }
     }
 
-    private void RaiseOngoingEffects(Round round, OngoingEffectTicks ticks) =>
+    // A bleed can wipe a team at upkeep: the match ends there rather than playing a round for nobody (ADR 0083).
+    private bool ApplyOngoingEffects(Round round, IReadOnlyList<Creature> creatures)
+    {
+        var ticks = UpkeepRules.OngoingEffects(creatures);
         RaiseDomainEvent(new OngoingEffectsApplied(Id, round.Id, ticks.EnergyRegenerationTicks, ticks.RegenerationTicks, ticks.BleedTicks));
+        return !EndIfEliminated(round) && AdvanceIf(true);
+    }
 
     private static Dictionary<CreatureId, IReadOnlyList<ConditionSnapshot>> Expired(IReadOnlyDictionary<CreatureId, IReadOnlyList<Condition>> expired) =>
         expired.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<ConditionSnapshot>)[.. entry.Value.Select(condition => condition.Snapshot())]);
@@ -465,9 +503,7 @@ public sealed class Match : AggregateRoot<MatchId>
         var outcome = WinCondition.Evaluate(_teams[PlayerSlot.Player1], _teams[PlayerSlot.Player2], round.Number, RuleSet);
         if (outcome is not null)
         {
-            State = MatchState.Ended;
-            Outcome = outcome;
-            RaiseDomainEvent(new MatchEnded(Id, round.Id, outcome));
+            End(round, outcome);
             return false;
         }
 

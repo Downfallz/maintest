@@ -12,8 +12,7 @@ public enum RoundSubPhase
     TurnOrderResolution,
     TieOrder,
     IntentSelection,
-    RevealAndTarget,
-    ActionResolution,
+    Activation,
     Cleanup,
     Finalization,
 }

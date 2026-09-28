@@ -14,8 +14,7 @@ public static class RoundFlow
         [RoundSubPhase.TurnOrderResolution] = RoundPhase.Planning,
         [RoundSubPhase.TieOrder] = RoundPhase.Planning,
         [RoundSubPhase.IntentSelection] = RoundPhase.Combat,
-        [RoundSubPhase.RevealAndTarget] = RoundPhase.Combat,
-        [RoundSubPhase.ActionResolution] = RoundPhase.Combat,
+        [RoundSubPhase.Activation] = RoundPhase.Combat,
         [RoundSubPhase.Cleanup] = RoundPhase.EndOfRound,
         [RoundSubPhase.Finalization] = RoundPhase.EndOfRound,
     };
@@ -29,8 +28,7 @@ public static class RoundFlow
         RoundSubPhase.TurnOrderResolution,
         RoundSubPhase.TieOrder,
         RoundSubPhase.IntentSelection,
-        RoundSubPhase.RevealAndTarget,
-        RoundSubPhase.ActionResolution,
+        RoundSubPhase.Activation,
         RoundSubPhase.Cleanup,
         RoundSubPhase.Finalization,
     ];

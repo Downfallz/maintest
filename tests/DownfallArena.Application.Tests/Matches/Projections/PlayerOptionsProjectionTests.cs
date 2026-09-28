@@ -26,15 +26,8 @@ public sealed class PlayerOptionsProjectionTests
             ended.SubmitAction(slot.Owner, CombatAction.Bind(new CombatIntent(slot.Creature, TestContent.Strike), [enemy])).IsSuccess.ShouldBeTrue();
         }
 
-        var resolution = Options(ended, PlayerSlot.Player1);
-        while (ended.State == MatchState.InProgress)
-        {
-            ended.ResolveNextAction().IsSuccess.ShouldBeTrue();
-        }
-
         Options(waiting, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Waiting);
-        resolution.Kind.ShouldBe(PlayerOptionsKind.Resolution);
-        resolution.SubPhase.ShouldBe(RoundSubPhase.ActionResolution);
+        ended.State.ShouldBe(MatchState.Ended);
         Options(ended, PlayerSlot.Player1).Kind.ShouldBe(PlayerOptionsKind.Ended);
     }
 
@@ -125,7 +118,27 @@ public sealed class PlayerOptionsProjectionTests
         player1.Kind.ShouldBe(PlayerOptionsKind.Target);
         player1.Target.ShouldBe(new TargetOptions(CreatureId.From(1), TestContent.Strike, new LegalTargets(1, 1, [CreatureId.From(3), CreatureId.From(4)])));
         player2.Kind.ShouldBe(PlayerOptionsKind.Waiting);
-        player2.SubPhase.ShouldBe(RoundSubPhase.RevealAndTarget);
+        player2.SubPhase.ShouldBe(RoundSubPhase.Activation);
+    }
+
+    [Fact]
+    public void Target_is_offered_on_the_board_the_earlier_slots_left()
+    {
+        var match = new MatchStore().Started();
+        MatchStore.PassEvolution(match);
+        MatchStore.ChooseStandard(match);
+        MatchStore.DeclareStrikes(match);
+        var round = match.CurrentRound.ShouldNotBeNull();
+        var first = round.NextSlot.ShouldNotBeNull();
+        var victim = CreatureId.From(3);
+
+        match.SubmitAction(first.Owner, CombatAction.Bind(new CombatIntent(first.Creature, TestContent.Strike), [victim])).IsSuccess.ShouldBeTrue();
+
+        var next = round.NextSlot.ShouldNotBeNull();
+        Options(match, next.Owner).Kind.ShouldBe(PlayerOptionsKind.Target);
+        var board = PlayerBoardStateProjection.Build(match, next.Owner);
+        var hit = board.Allies.Concat(board.Enemies).Single(creature => creature.Id == victim);
+        hit.Health.Value.ShouldBe(hit.MaxHealth.Value - 3, "the strike before this slot has already resolved");
     }
 
     [Fact]

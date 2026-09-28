@@ -56,6 +56,23 @@ public sealed class WinConditionTests
         WinCondition.Evaluate(player1, player2, 4, Rules).ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.RoundCap));
     }
 
+    [Theory]
+    [InlineData(false, false, null)]
+    [InlineData(true, false, PlayerSlot.Player2)]
+    [InlineData(false, true, PlayerSlot.Player1)]
+    public void An_elimination_read_from_which_side_is_defeated_goes_to_the_other_side(bool player1Defeated, bool player2Defeated, PlayerSlot? winner)
+    {
+        var outcome = WinCondition.Elimination(player1Defeated, player2Defeated);
+
+        outcome.ShouldBe(winner is null ? null : new MatchOutcome(winner, MatchEndReason.Elimination));
+    }
+
+    [Fact]
+    public void Both_sides_defeated_at_once_is_a_drawn_elimination()
+    {
+        WinCondition.Elimination(true, true).ShouldBe(new MatchOutcome(null, MatchEndReason.Elimination));
+    }
+
     [Fact]
     public void Null_arguments_are_rejected()
     {

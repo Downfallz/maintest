@@ -51,12 +51,14 @@ public sealed record PlayerBoardState
     /// <summary>The d20 rolls behind the timeline's ties, public like the timeline (ADR 0063).</summary>
     public IReadOnlyList<RollOff> RollOffs { get; init; } = [];
 
-    /// <summary>The actions revealed so far this round, in timeline order; public to both players.</summary>
+    /// <summary>
+    /// The actions revealed so far this round, in timeline order; public to both players. Each has already
+    /// resolved: an action resolves as its targets are confirmed (ADR 0083), so the board includes them.
+    /// </summary>
     public IReadOnlyList<CombatAction> RevealedActions { get; init; } = [];
 
-    public int RevealCursor { get; init; }
-
-    public int ResolveCursor { get; init; }
+    /// <summary>How many slots of the timeline have been activated this round (ADR 0083).</summary>
+    public int ActivationCursor { get; init; }
 
     public MatchOutcome? Outcome { get; init; }
 }

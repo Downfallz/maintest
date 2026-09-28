@@ -15,7 +15,7 @@ namespace DownfallArena.Application.Learning;
 /// </summary>
 public sealed class FeatureSchema
 {
-    public const string CurrentVersion = "features:v7";
+    public const string CurrentVersion = "features:v8";
 
     /// <summary>The largest team size a schema supports: target masks hold one bit per board slot in an <c>int</c>.</summary>
     public const int MaxTeamSize = BoardSlots.MaxTeamSize;

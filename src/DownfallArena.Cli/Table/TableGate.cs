@@ -31,8 +31,7 @@ internal sealed class TableGate : IDisposable
             Around(commands.SubmitSpeedChoice),
             Around(commands.SubmitTieOrder),
             Around(commands.SubmitIntent),
-            Around(commands.SubmitAction),
-            Around(commands.ResolveNextAction));
+            Around(commands.SubmitAction));
     }
 
     public MatchQueryHandlers Around(MatchQueryHandlers queries)

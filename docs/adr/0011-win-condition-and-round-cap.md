@@ -1,7 +1,7 @@
 # 0011. Win condition: last team standing, with a round cap
 
 Date: 2026-09-08
-Status: Accepted
+Status: Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md)
 
 ## Context
 

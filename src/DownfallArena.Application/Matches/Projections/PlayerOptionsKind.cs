@@ -18,10 +18,11 @@ public enum PlayerOptionsKind
 
     Intent,
 
+    /// <summary>
+    /// The player's creature whose slot has come up chooses its targets; the action resolves on confirmation
+    /// (ADR 0083).
+    /// </summary>
     Target,
-
-    /// <summary>A combat action waits for resolution; any host may drive it.</summary>
-    Resolution,
 
     Ended,
 }

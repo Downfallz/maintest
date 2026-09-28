@@ -466,8 +466,11 @@
       board.timeline.forEach((slot, index) => {
         const revealed = board.revealedActions[index];
         let cls = `slot ${slot.owner.toLowerCase()}`;
-        if (index < board.resolveCursor) cls += ' resolved';
-        else if (index < board.revealCursor) cls += ' revealed';
+        // One cursor since ADR 0083: a slot is revealed, targeted and resolved together. A trace recorded
+        // before it carries the two cursors of the two-pass combat, and still reads as it did.
+        const resolved = board.activationCursor ?? board.resolveCursor ?? 0;
+        if (index < resolved) cls += ' resolved';
+        else if (index < (board.revealCursor ?? 0)) cls += ' revealed';
         const label = revealed ? `${names[slot.creature]}: ${spellName(revealed.spell)}` : `${names[slot.creature]} (${slot.speed})`;
         strip.append(el('span', { class: cls }, label));
       });

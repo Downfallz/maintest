@@ -1,7 +1,7 @@
 # 0010. Rounds are driven by a phase and sub-phase state machine
 
 Date: 2026-09-08
-Status: Accepted
+Status: Accepted, amended by [0083](0083-an-action-resolves-when-its-targets-are-confirmed.md)
 
 ## Context
 

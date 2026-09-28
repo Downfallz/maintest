@@ -177,10 +177,14 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     }
 
     /// <summary>
-    /// The target set whose round ends best, on the board the actions already revealed leave: they are bound
-    /// in timeline order and public, so the board this actor's action lands on is a reading, not a guess
-    /// (ADR 0039, made exact by ADR 0047). Ties go to the first set in candidate order; no target when the
-    /// spell is no longer castable.
+    /// The target set whose round ends best, on the board as it stands: every action before this slot has
+    /// resolved already (ADR 0083), so the board this actor's action lands on is the board itself. Ties go to
+    /// the first set in candidate order; no target when the spell is no longer castable.
+    /// <para>
+    /// The enemies still ahead are guessed on this board too. They declared before combat, on a board this
+    /// state no longer carries; what the earlier slots changed since -- health, energy, conditions -- is read
+    /// as if they had seen it, which is the one guess this reading adds.
+    /// </para>
     /// </summary>
     public IReadOnlyList<CreatureId> DecideTargets(PlayerBoardState board, TargetOptions options)
     {
@@ -192,15 +196,8 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             return [];
         }
 
-        var beforeCombat = Creatures(board);
-        var declared = DeclaredSpells(board, beforeCombat, options.Actor, options.Spell);
-        IReadOnlyList<CreatureSnapshot> ahead = beforeCombat;
-        foreach (var revealed in board.RevealedActions)
-        {
-            // Already revealed and replayed plain: the roll is forced, so the speed changes nothing here.
-            ahead = Advance.Action(revealed, ahead, resources, rules, ForcedRandom.NotCritical, Speed.Standard).Board;
-        }
-
+        var ahead = Creatures(board);
+        var declared = DeclaredSpells(board, ahead, options.Actor, options.Spell);
         var intent = new CombatIntent(options.Actor, options.Spell);
         IReadOnlyList<CreatureId> best = [];
         var bestValue = (Round: RoundValue.Lowest, OneStep: double.NegativeInfinity);
@@ -208,7 +205,7 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
         {
             var action = CombatAction.Bind(intent, targets);
             var value = (
-                Round: Value(board, ahead, beforeCombat, board.RevealedActions.Count, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
+                Round: Value(board, ahead, ahead, board.ActivationCursor, options.Actor, new Dictionary<CreatureId, SpellId?>(declared), _ => action),
                 OneStep: _scorer.Expected(action, ahead, speed: SpeedOf(board, options.Actor)));
             if (Better(value, bestValue))
             {
@@ -244,10 +241,9 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// still at their guess: a joint worst case over every enemy would cost the product of their spell counts
     /// where this costs the sum, and the round is short enough that the difference between the two is rarely
     /// a different reply. The map is left holding what was settled, which is what <see cref="Replies"/> reads.
-    /// The replies an enemy can choose from are read on the board before combat, where it declared: the
-    /// round is played from <paramref name="start"/>, which at reveal time has the revealed actions on it,
-    /// and an energy one of those gave or drained changes what the enemy can cast now, not what it could
-    /// declare then.
+    /// The replies an enemy can choose from are read on <paramref name="beforeCombat"/>, where it declared:
+    /// the round is played from <paramref name="start"/>. At a declaration the two are the same board; at a
+    /// target, the only board left is the one the earlier slots made (ADR 0083), and it stands for both.
     /// </summary>
     private RoundValue Value(
         PlayerBoardState board,
@@ -309,7 +305,8 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
     /// What the round is worth when played out from a slot: the actor plays what the candidate says at its
     /// slot, every other creature plays what can be read of it, and every action is scored on the board it
     /// lands on, the actor's team's for and the other's against, under the match the round ends, if it ends
-    /// one, which outranks the score.
+    /// one, which outranks the score. A team wiped on a slot ends the round there, as it ends the match
+    /// (ADR 0083): the slots after it are not played.
     /// </summary>
     private RoundValue PlayOut(
         PlayerBoardState board,
@@ -357,16 +354,22 @@ public sealed class LookaheadAgent(ScoringWeights weights, IGameResources resour
             var sign = ahead.First(candidate => candidate.Id == creature).Owner == board.Slot ? 1 : -1;
             value += sign * _scorer.Score(advanced.Resolution, ahead);
             ahead = advanced.Board;
+            if (Advance.Elimination(ahead) is { } wiped)
+            {
+                return Valued(wiped, board.Slot, value, stopped);
+            }
         }
 
-        var cleaned = Advance.Cleanup(ahead, resources);
-        return Advance.Outcome(cleaned, resources, board.RoundNumber ?? 1, rules) switch
+        return Valued(Advance.Outcome(Advance.Cleanup(ahead, resources), resources, board.RoundNumber ?? 1, rules), board.Slot, value, stopped);
+    }
+
+    private static RoundValue Valued(MatchOutcome? outcome, PlayerSlot seat, double value, bool stopped) =>
+        outcome switch
         {
             null => new RoundValue(0, value, stopped),
             { Winner: null } => new RoundValue(0, value, stopped),
-            { Winner: var winner } => new RoundValue(winner == board.Slot ? 1 : -1, value, stopped),
+            { Winner: var winner } => new RoundValue(winner == seat ? 1 : -1, value, stopped),
         };
-    }
 
     /// <summary>Whether a fizzle says the actor could not act at all, rather than that its spell missed.</summary>
     private static bool Stops(DomainError? fizzle) =>

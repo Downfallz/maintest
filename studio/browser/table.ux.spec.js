@@ -32,7 +32,7 @@ const packages = ['North', 'East', 'West'].flatMap((family, root) => [
 ]);
 const catalogue = {
   cards, packages, contentHash: 'fixture', rules: { teamSize: 3, energyPerRound: 2, evolutionPicksPerOpportunity: 2, evolutionInterval: 2, firstEvolutionRound: 1, roundCap: 20, criticalMultiplier: 2 },
-  round: { subPhases: ['Upkeep', 'Evolution', 'EnergyGain', 'Speed', 'TurnOrderResolution', 'TieOrder', 'IntentSelection', 'RevealAndTarget', 'ActionResolution', 'Cleanup', 'Finalization'],
+  round: { subPhases: ['Upkeep', 'Evolution', 'EnergyGain', 'Speed', 'TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization'],
     orderings: ['Healing resolves before bleeding.', 'A critical is applied before defense is subtracted.'] },
 };
 
@@ -174,7 +174,7 @@ test('below a laptop the battlefield is in the round bar at a glance, not at the
 test('a spell aimed at an ally is aimed from the round bar, and the battlefield opens at the allies', async ({ page }, info) => {
   const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });
   const target = { ...view, waitingFor: 'Target', options: { target: { actor: 1, spell: cards[2].id, legalTargets: { candidates: [1, 5], minTargets: 1, maxTargets: 1 } } },
-    board: { ...view.board, subPhase: 'RevealAndTarget', allies: [{ ...view.board.allies[0], name: undefined }, creature(5, 30), creature(6, 30)],
+    board: { ...view.board, subPhase: 'Activation', allies: [{ ...view.board.allies[0], name: undefined }, creature(5, 30), creature(6, 30)],
       enemies: [creature(2, 20), creature(3, 30), creature(4, 30)] } };
   await page.route('**/api/seat/player1**', route => route.fulfill({ json: target }));
   await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');

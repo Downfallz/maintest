@@ -11,14 +11,14 @@
       "firstEvolutionRound": 1,
       "evolutionInterval": 2
     },
-    "featureSchema": "features:v7\u002Bf8655f8428df",
+    "featureSchema": "features:v8\u002Bf8655f8428df",
     "player1Agent": "Random",
     "player2Agent": "Random",
     "baseSeed": 1
   },
   "createdAt": "2026-09-24T01:26:55.0940865+00:00",
-  "schemaId": "features:v7\u002Bf8655f8428df",
-  "schemaVersion": "features:v7",
+  "schemaId": "features:v8\u002Bf8655f8428df",
+  "schemaVersion": "features:v8",
   "featureNames": [
     "round_fraction",
     "phase",

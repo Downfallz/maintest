@@ -2,9 +2,9 @@ import { httpTransport } from './transport.js';
 import { activeSeat, isAsked, needsPass } from './seats.js';
 import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
-import { badges, chipSource, chipText, conditionDock, healthShare, healthText, statPairs, targetedBy, turnOrder, liveChoice } from './board.js';
+import { badges, chipSource, chipText, conditionDock, healthShare, healthText, statPairs, turnOrder, liveChoice } from './board.js';
 import { handRows } from './hand.js';
-import { accumulate, feedLine, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
 import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
@@ -549,13 +549,17 @@ function renderBoard(state, current) {
   state.creatureRows = new Map();
   // What a row may do and say this poll. Targeting is a tap on a legal creature (playtest-app.md §3.2), so
   // the candidates the options offer are the rows that are tappable, and no others.
+  // Live, the action resolved last is marked the way a replayed one is: its caster, its targets and what it
+  // changed, on the board as it stands (ADR 0083). A replay the player opened takes its place.
+  const live = state.playback ? null : lastResolved(view.roundEvents, board, state.cards);
   const marks = {
     picked: state.picked,
     board,
     roundEvents: view.roundEvents,
     active: state.playback ? state.playback.actions[state.playback.index]?.actor.id : isAsked(view) ? view.waitingCreature : null,
-    playback: state.playback?.actions[state.playback.index],
-    playbackStage: state.playback?.stage,
+    playback: state.playback?.actions[state.playback.index] ?? live,
+    playbackStage: state.playback?.stage ?? (live ? 'after' : undefined),
+    live: Boolean(live),
     draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen : null,
     targeting: isAsked(view) && view.waitingFor === 'Target',
     candidates: !state.playback && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
@@ -717,9 +721,9 @@ function offerCard(state, current, face, availability, spell, creature, chosen) 
 function line(state, creature, which, marks) {
   const picked = (marks?.picked ?? []).includes(creature.id);
   const legal = (marks?.candidates ?? []).includes(creature.id);
-  const casters = targetedBy(creature.id, marks?.board);
   const box = document.createElement('div');
   box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}${legal ? ' legal' : ''}${creature.id === marks?.active ? ' active' : ''}`;
+  if (marks?.live) box.classList.toggle('live', true);
   if (marks?.playback?.actor.id === creature.id) box.classList.toggle('replay-caster', true);
   if (marks?.playback?.targets.some(target => target.id === creature.id)) box.classList.toggle('replay-target', true);
   state.creatureRows?.set(creature.id, box);
@@ -814,27 +818,17 @@ function line(state, creature, which, marks) {
     if (choice) box.append(choice);
   }
 
-  // The markers, on the row rather than only in the sheet: a target is chosen against this creature's health,
+  // The marker, on the row rather than only in the sheet: a target is chosen against this creature's health,
   // its defense and what is already on it, so the choice has to be visible where those numbers are
-  // (playtest-app.md §3.1). `picked` is what this seat has tapped and not yet sent; `Targeted by` is every
-  // caster already pointing at it, which is what the printed board's row of boxes holds.
-  if (picked || casters.length > 0) {
+  // (playtest-app.md §3.1). `picked` is what this seat has tapped and not yet sent. No other caster points at
+  // it: every earlier action has already resolved (ADR 0083).
+  if (picked) {
     const markers = document.createElement('div');
     markers.className = 'markers';
-    if (picked) {
-      const mine = document.createElement('span');
-      mine.className = 'marker picked';
-      mine.textContent = 'picked';
-      markers.append(mine);
-    }
-
-    for (const caster of casters) {
-      const marker = document.createElement('span');
-      marker.className = 'marker';
-      marker.textContent = `${caster}`;
-      markers.append(marker);
-    }
-
+    const mine = document.createElement('span');
+    mine.className = 'marker picked';
+    mine.textContent = 'picked';
+    markers.append(mine);
     box.append(markers);
   }
 
@@ -1192,15 +1186,11 @@ function renderRecap(state, view) {
   element('recap-actions').replaceChildren(...rows);
 }
 
-// The next question is acknowledged only on exit; historical frames never replace the live view.
+// A replay is only ever the player's choice, from the recap: each action was shown live as it resolved
+// (ADR 0083), so the end of a round no longer plays them back. The next question is acknowledged only on exit;
+// historical frames never replace the live view.
 function syncPlayback(state, current) {
   if (state.playback && state.playback.seat !== current.seat) state.playback = null;
-  state.playbackSeen ??= new Map();
-  const recap = roundRecap(current.view.roundEvents, current.view.board, state.cards);
-  const previous = state.playbackSeen.get(current.seat);
-  const round = recap?.round ?? 0;
-  state.playbackSeen.set(current.seat, Math.max(previous ?? 0, round));
-  if (previous !== undefined && round > previous && recap.actions.length && !state.playback) startPlayback(state, current.seat, recap);
 }
 
 function startPlayback(state, seat, recap) {
@@ -1245,10 +1235,10 @@ function renderPlayback(state, current) {
   const position = `Action ${replay.index + 1} of ${replay.actions.length}`;
   element('phase-round').textContent = `Round ${replay.round}`;
   element('upkeep').hidden = true;
-  element('phase-current').textContent = 'Resolution replay';
+  element('phase-current').textContent = 'Round replay';
   element('phase-turn').textContent = `Action ${replay.index + 1} of ${replay.actions.length} · ${action.actor.label}`;
   element('phase-reminder').textContent = 'Next: apply / advance · Previous: review again · Skip: return to the match';
-  setPhase(`Round ${replay.round} · Resolution replay`, true);
+  setPhase(`Round ${replay.round} · Round replay`, true);
   element('playback-title').textContent = `${action.actor.label} ${before ? 'is about to act' : 'acted'}`;
   element('playback-count').textContent = action.frame ? `${position} · ${stage}` : position;
   element('playback-board-note').textContent = action.frame
@@ -1353,6 +1343,16 @@ function renderDecision(state, current) {
   const turn = activeTurn(view.board);
   element('decision-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
   element('decision-turn').hidden = !turn;
+  // What resolved since this seat last decided, live (ADR 0083): the last few, so a bot's two slots in a row
+  // or the last slot of a round are read as well as the action just before this one.
+  const fresh = resolvedSince(view.roundEvents, state.liveSeen?.get(current.seat), view.board, state.cards).slice(-4);
+  element('live-action').replaceChildren(...fresh.map(action => {
+    const item = document.createElement('li');
+    item.textContent = lastResolvedText(action);
+    item.title = item.textContent;
+    return item;
+  }));
+  element('live-action').hidden = fresh.length === 0;
 
   if (view.over) {
     asking.textContent = 'The match is over.';
@@ -1400,7 +1400,7 @@ function titleOf(state, view) {
 function decisionPhase(view) {
   if (view.over) return 'Match complete';
   const phases = { Evolution: 'Evolution', Speed: 'Choose speed', TieOrder: 'Order tied creatures', Intent: 'Choose spell', Target: 'Targeting' };
-  return phases[view.waitingFor] ?? (view.board.subPhase === 'ActionResolution' ? 'Resolution' : 'Waiting');
+  return phases[view.waitingFor] ?? (view.board.subPhase === 'Activation' ? 'Combat' : 'Waiting');
 }
 
 function activeTurn(board) {
@@ -1456,8 +1456,8 @@ function renderPhaseGuide(state, view, seat) {
     ['Speed', ['Speed', 'TurnOrderResolution'], 'Pick a speed for each eligible creature. All speeds reveal together when everyone is done.'],
     ['Tie order', ['TieOrder'], 'The d20 settled places between teams. Order your own tied creatures; both orders reveal together.'],
     ['Spells', ['IntentSelection'], 'Declare one spell per creature. Opposing choices stay hidden.'],
-    ['Targeting', ['RevealAndTarget'], 'Choose targets in turn order. Each confirmed spell and its targets reveal together.'],
-    ['Resolve', ['ActionResolution', 'Cleanup', 'Finalization'], 'All targets are locked. Actions resolve in turn order, then the next round begins.'],
+    ['Combat', ['Activation'], 'In turn order, each spell is revealed, its owner chooses targets, and it resolves at once. A creature that cannot act fizzles.'],
+    ['Cleanup', ['Cleanup', 'Finalization'], 'Conditions count down, then the next round begins.'],
   ];
   const current = view.board.phase === 'StartOfRound' ? 0 : phases.findIndex(([, names]) => names.includes(view.board.subPhase));
   element('phase-round').textContent = `Round ${view.board.roundNumber ?? '—'} / ${state.catalogue?.rules?.roundCap ?? '—'}`;
@@ -2022,6 +2022,8 @@ async function submit(state, current, decision) {
     state.chosen = null;
     state.ordered = [];
     state.error = '';
+    state.liveSeen ??= new Map();
+    state.liveSeen.set(current.seat, latestResolution(current.view.roundEvents) ?? -1);
   } catch {
     state.error = 'Could not reach the host. Check your connection before trying again.';
   } finally {

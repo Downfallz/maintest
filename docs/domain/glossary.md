@@ -11,7 +11,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Player | A participant in a Match. Controls one Team. Occupies a Player slot (`Player1`, `Player2`). | decided |
 | Team | The set of Creatures a Player commands during a Match. Defeated when all its Creatures are dead. | decided |
 | Rule set | The tunable parameters of a Match: team size, evolution picks per opportunity, the first evolution Round and the interval between opportunities, energy gain per round, round cap, damage and crit formulas. It answers the schedule for everything that needs it, so no client works out which Rounds offer a pick (ADR 0056). | decided |
-| Win condition | The match ends when a Team is defeated at the end of a round, or when the round cap is reached (ADR 0011). | decided |
+| Win condition | The match ends the moment a Team is defeated, on the action or the upkeep that wipes it (ADR 0083), or at the end of the round cap (ADR 0011). | decided |
 | Match outcome | How a Match ended: the winning Player slot, or a draw, and the reason (`Elimination`, `RoundCap`). | decided |
 | Match state | Where a Match is in its life: `WaitingForPlayers`, `InProgress`, `Ended`. | decided |
 | Roster | The Creature definitions a Player brings to a Match; its size is the Rule set's team size. | decided |
@@ -65,23 +65,22 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Evolution opportunity | A Round in which the Rule set's schedule gives each Player Evolution picks: two, at Round 1 and every second Round after it (ADR 0056), each for a different Creature (ADR 0066). Any other Round gives none. | decided |
 | Evolution pass | A Planning decision where a Player gives up their remaining Evolution picks for the Round. | decided |
 | Speed choice | A Planning decision setting a Creature's speed for the Round: `Quick` or `Standard`. | decided |
-| Turn cursor | The position in the Combat timeline of the next Intent to reveal (reveal cursor) or the next Combat action to resolve (resolve cursor). | decided |
+| Turn cursor | The position in the Combat timeline of the next Activation slot: the activation cursor, the one cursor Combat walks (ADR 0083). | decided |
 | Combat timeline | The ordered list of Activation slots for the Round: all Quick slots by Initiative descending, then all Standard slots, ties broken by a Roll-off between the sides and a Tie order within one. | decided |
 | Activation slot | A position in the Combat timeline at which one Creature acts. | decided |
 | Roll-off | How a tie between the two sides on the Combat timeline, in one band with the same Current initiative, decides which places each side holds: every tied Creature rolls a d20, the highest takes the first Place, and when both sides rolled the same number, every Creature on it rolls again, a side's own included. A tie held by one side alone rolls nothing (ADR 0063). | decided |
 | Place | An Activation slot a side holds in a tie once the Roll-off is done: it keeps its side, and which of that side's tied Creatures fills it is the Tie order's (ADR 0063). | decided |
 | Tie order | A Planning decision in which a Player orders their own tied Creatures among the Places their side holds in a tie, after the Roll-off and before any Intent (ADR 0063). | decided |
-| Combat | The Phase in which Creatures act in timeline order: Intent selection, Reveal and target, Action resolution. | decided |
+| Combat | The Phase in which Creatures act in timeline order: Intent selection, then Activation. | decided |
 | Upkeep | The automatic steps of a Round with no player decision: energy gain and Bleed ticks at the start, Condition countdown at Cleanup. | decided |
 | Bleed tick | The damage a Creature takes from its bleed Conditions at the start of a Round; it ignores Defense. It carries one share per Condition source, adding up to exactly what the Creature took. | decided |
 | Regeneration tick | The health a Creature regains from its regeneration Conditions at the start of a Round, applied before the Bleed ticks. | decided |
 | Energy regeneration tick | The Energy a Creature gains from its energy regeneration Conditions at the start of a Round, on top of the Round's own Energy gain. It is given before the Bleed ticks, so a Creature its Bleed kills that Round still gained it. | decided |
 | Intent | A Player's hidden declaration of the Spell a Creature will use in its Activation slot. | decided |
-| Reveal and target | The owner binds targets for the next Intent on the timeline; its Spell and targets become public together on confirmation, producing a Combat action (ADR 0070). | decided |
+| Activation | The Combat sub-phase that walks the timeline once: at each slot the Intent is revealed, its owner binds targets on the board as it stands, and the Combat action resolves on confirmation; a Creature that cannot act is revealed with no targets and fizzles without its owner being asked (ADR 0083). | decided |
 | Combat action | A revealed Intent bound to its targets. | decided |
-| Combat step | The result of resolving one Combat action through the Match: the Resolution, and whether it completed the Round or the Match. | decided |
 | Resolution | The step where a Combat action is computed (targeting check, effects, crit, energy cost) and applied. | decided |
-| Fizzle | A Combat action that resolves with no effect and at no cost because its actor cannot act any more, its targeting failed globally, or no target remains; a per-target failure only removes that target. | decided |
+| Fizzle | A Combat action that resolves with no effect and at no cost because its actor cannot act when its slot comes up (dead, stunned, unable to pay or to cast, or with no legal target); its targeting failing globally or losing every target is the same, though no command reaches it since ADR 0083. | decided |
 | Targeting report | Every targeting failure of a Combat action at once: global ones (count, duplicates, self-only) and per-target ones (unknown, dead, wrong origin). | decided |
 | Legal targets | The Creatures a Spell may target right now, with the minimum and maximum count. | decided |
 | Outcome | One computed consequence of a Resolution on one target (damage after crit and Defense, heal, energy, a Condition to attach), before the execution step applies it. | decided |
@@ -92,7 +91,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Restore | Building a Creature, or a Condition, back from its Snapshot at the state the Snapshot copied. Internal to the Domain: only Advance does it, and nothing a Match plays is restored. | decided |
 | Hypothetical board | The Snapshots of every Creature as they would stand after a step no Match has played (ADR 0047). What Advance answers with, and what its code calls `board`; unrelated to the open Board term, which is about positions. | decided |
 | Advance | The pure domain service that answers what a Hypothetical board would be after one Combat action, a Cleanup or the automatic steps of a Start of round, and what the Win condition would say of it, by restoring the Creatures from their Snapshots and running on them the rules a Match runs: one applier, not a second one (ADR 0047). | decided |
-| Advanced action | What Advance answers for one Combat action: its Resolution, its Applied outcomes and the Hypothetical board after them. A Combat step without the Round, because none was played. | decided |
+| Advanced action | What Advance answers for one Combat action: its Resolution, its Applied outcomes and the Hypothetical board after them. | decided |
 | Player slot | The seat a Player occupies in a Match (`Player1`, `Player2`). Creatures and choices are attributed to a slot. | decided |
 
 ## Learning

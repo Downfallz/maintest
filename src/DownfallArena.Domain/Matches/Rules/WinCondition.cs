@@ -1,8 +1,9 @@
 namespace DownfallArena.Domain.Matches.Rules;
 
 /// <summary>
-/// The win condition of ADR 0011, checked at the end of every round: a defeated team loses (both defeated is a
-/// draw); otherwise, at the round cap, the highest total remaining health wins and equality is a draw.
+/// The win condition of ADR 0011: a defeated team loses (both defeated is a draw), checked whenever health
+/// changes (ADR 0083); otherwise, at the end of the round cap, the highest total remaining health wins and
+/// equality is a draw.
 /// </summary>
 public static class WinCondition
 {
@@ -15,9 +16,9 @@ public static class WinCondition
         ArgumentNullException.ThrowIfNull(player2);
         ArgumentNullException.ThrowIfNull(rules);
 
-        if (player1.IsDefeated || player2.IsDefeated)
+        if (Elimination(player1, player2) is { } eliminated)
         {
-            return new MatchOutcome(Survivor(player1, player2), MatchEndReason.Elimination);
+            return eliminated;
         }
 
         if (completedRound >= rules.RoundCap)
@@ -28,14 +29,35 @@ public static class WinCondition
         return null;
     }
 
-    private static PlayerSlot? Survivor(Team player1, Team player2)
+    /// <summary>
+    /// The outcome when a team has been wiped, or <c>null</c> while both still stand. The match reads it after
+    /// every action and every upkeep, and ends at once on it (ADR 0083).
+    /// </summary>
+    public static MatchOutcome? Elimination(Team player1, Team player2)
     {
-        if (player1.IsDefeated && player2.IsDefeated)
+        ArgumentNullException.ThrowIfNull(player1);
+        ArgumentNullException.ThrowIfNull(player2);
+
+        return Elimination(player1.IsDefeated, player2.IsDefeated);
+    }
+
+    /// <summary>
+    /// The same outcome from whether each side is defeated, for a reader that knows it without forming the
+    /// teams: a hypothetical board read after every slot of a rollout (ADR 0083).
+    /// </summary>
+    public static MatchOutcome? Elimination(bool player1Defeated, bool player2Defeated)
+    {
+        if (!player1Defeated && !player2Defeated)
         {
             return null;
         }
 
-        return player1.IsDefeated ? player2.Owner : player1.Owner;
+        if (player1Defeated && player2Defeated)
+        {
+            return new MatchOutcome(null, MatchEndReason.Elimination);
+        }
+
+        return new MatchOutcome(player1Defeated ? PlayerSlot.Player2 : PlayerSlot.Player1, MatchEndReason.Elimination);
     }
 
     private static PlayerSlot? Healthier(Team player1, Team player2)

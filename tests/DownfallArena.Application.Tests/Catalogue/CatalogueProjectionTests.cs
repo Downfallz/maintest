@@ -348,7 +348,7 @@ public sealed class CatalogueProjectionTests
         View.Round.SubPhases.ShouldBe(Enum.GetNames<RoundSubPhase>());
         View.Round.SubPhases[0].ShouldBe(nameof(RoundSubPhase.EnergyGain));
         View.Round.SubPhases[^1].ShouldBe(nameof(RoundSubPhase.Finalization));
-        View.Round.SubPhases.ShouldContain(nameof(RoundSubPhase.RevealAndTarget));
+        View.Round.SubPhases.ShouldContain(nameof(RoundSubPhase.Activation));
 
         // The two the player aid calls load-bearing, because they are the two a player gets wrong.
         View.Round.Orderings.Count.ShouldBe(2);

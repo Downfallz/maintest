@@ -24,11 +24,9 @@ public static class RoundErrors
 
     public static readonly DomainError TargetingNotOpen = new("Round.TargetingNotOpen", "Combat actions are not accepted in the current sub-phase.");
 
-    public static readonly DomainError NothingLeftToReveal = new("Round.NothingLeftToReveal", "Every intent of the timeline has been revealed and targeted.");
+    public static readonly DomainError NothingLeftToReveal = new("Round.NothingLeftToReveal", "Every slot of the timeline has been activated.");
 
-    public static readonly DomainError NotThisCreaturesTurn = new("Round.NotThisCreaturesTurn", "The next intent to reveal belongs to another creature.");
-
-    public static readonly DomainError ResolutionNotOpen = new("Round.ResolutionNotOpen", "No combat action is waiting for resolution in the current sub-phase.");
+    public static readonly DomainError NotThisCreaturesTurn = new("Round.NotThisCreaturesTurn", "The slot that has come up belongs to another creature.");
 
     public static readonly DomainError ActionDoesNotMatchIntent = new("Round.ActionDoesNotMatchIntent", "The action must use the spell declared in the intent.");
 }

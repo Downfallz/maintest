@@ -1,5 +1,6 @@
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Matches.Creatures;
+using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Planning;
 using DownfallArena.SharedKernel.Identifiers;
@@ -10,7 +11,7 @@ namespace DownfallArena.Domain.Tests.Matches.Support;
 /// <summary>
 /// A match between two players with two creatures each, played on the <see cref="Arena"/> content, and the
 /// scripted moves a test needs to walk a round: pass evolution, choose Standard, declare Strike, hit the first
-/// living enemy, resolve.
+/// living enemy, which resolves it.
 /// </summary>
 internal static class Table
 {
@@ -96,36 +97,37 @@ internal static class Table
         }
     }
 
-    public static void HitFirstLivingEnemy(Match match)
+    /// <summary>
+    /// Activates every slot the round asks a player for, each creature hitting the first living enemy, and
+    /// returns every action resolved on the way, the fizzles of the creatures that could not act included
+    /// (ADR 0083). Stops when the round is over or the match has ended.
+    /// </summary>
+    public static List<CombatActionResolved> HitFirstLivingEnemy(Match match)
     {
+        var seen = match.DomainEvents.Count;
         var round = match.CurrentRound.ShouldNotBeNull();
-        while (round.NextSlotToReveal is { } slot)
+        while (match.State == MatchState.InProgress && round.SubPhase == RoundSubPhase.Activation && round.NextSlot is { } slot)
         {
             var enemy = slot.Owner == PlayerSlot.Player1 ? PlayerSlot.Player2 : PlayerSlot.Player1;
             var target = Living(match, enemy).First().Id;
             var intent = round.IntentOf(slot.Creature).ShouldNotBeNull();
             match.SubmitAction(slot.Owner, CombatAction.Bind(intent, [target])).IsSuccess.ShouldBeTrue();
         }
+
+        return ResolvedSince(match, seen);
     }
 
-    public static List<CombatStep> ResolveAll(Match match)
+    /// <summary>Plays one full round with the scripted moves and returns the actions it resolved.</summary>
+    public static List<CombatActionResolved> PlayRound(Match match)
     {
-        var steps = new List<CombatStep>();
-        while (match.State == MatchState.InProgress && match.CurrentRound.ShouldNotBeNull().SubPhase == RoundSubPhase.ActionResolution)
-        {
-            steps.Add(match.ResolveNextAction().Value);
-        }
-
-        return steps;
-    }
-
-    /// <summary>Plays one full round with the scripted moves and returns the combat steps.</summary>
-    public static List<CombatStep> PlayRound(Match match)
-    {
+        var seen = match.DomainEvents.Count;
         PassEvolution(match);
         ChooseStandard(match);
         DeclareStrikes(match);
         HitFirstLivingEnemy(match);
-        return ResolveAll(match);
+        return ResolvedSince(match, seen);
     }
+
+    private static List<CombatActionResolved> ResolvedSince(Match match, int seen) =>
+        [.. match.DomainEvents.Skip(seen).OfType<CombatActionResolved>()];
 }

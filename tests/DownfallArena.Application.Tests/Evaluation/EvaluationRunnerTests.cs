@@ -169,9 +169,12 @@ public sealed class EvaluationRunnerTests
     {
         var evaluation = await EvaluateAsync([1, 2, 3], withCombat: true);
 
+        // The score, which counts a draw as half, is what self-play pins at one half; the win rate only matches
+        // across the two sides, since a seed that draws both its matches gives neither side a win.
         evaluation.SelfPlay.ShouldBeTrue();
-        evaluation.AgentA.WinRate.Mean.ShouldBe(0.5, 1e-9);
-        evaluation.AgentB.WinRate.Mean.ShouldBe(0.5, 1e-9);
+        evaluation.AgentA.Score.Mean.ShouldBe(0.5, 1e-9);
+        evaluation.AgentB.Score.Mean.ShouldBe(0.5, 1e-9);
+        evaluation.AgentA.WinRate.Mean.ShouldBe(evaluation.AgentB.WinRate.Mean, 1e-9);
         evaluation.AgentA.SpellUsage.ShouldBe(evaluation.AgentB.SpellUsage);
     }
 

@@ -41,7 +41,7 @@ public sealed class ObservationBuilder(FeatureSchema schema)
         features[0] = board.RoundNumber is { } round ? (float)round / schema.RoundCap : 0f;
         features[1] = board.Phase is { } phase ? (float)phase / 3f : 0f;
         features[2] = board.SubPhase is { } subPhase ? SubPhaseValue(subPhase) : 0f;
-        features[3] = board.Timeline.Count == 0 ? 0f : (float)board.RevealCursor / board.Timeline.Count;
+        features[3] = board.Timeline.Count == 0 ? 0f : (float)board.ActivationCursor / board.Timeline.Count;
         features[4] = (float)board.RevealedActions.Count(action => !slots.IsOwn(slots.SlotOf(action.Actor))) / schema.TeamSize;
     }
 
@@ -49,7 +49,9 @@ public sealed class ObservationBuilder(FeatureSchema schema)
     /// The sub-phase as features:v6 has always encoded it, the ordinal of ADR 0010's ten steps over 9. Spelled
     /// out rather than cast, because ADR 0063 inserted <see cref="RoundSubPhase.TieOrder"/> into the enum and a
     /// cast would have moved every later value under the same schema id. TieOrder reads as the turn-order step it
-    /// belongs to; no decision is recorded there, so no dataset carries it.
+    /// belongs to; no decision is recorded there, so no dataset carries it. <see cref="RoundSubPhase.Activation"/>
+    /// keeps the value of the targeting step it replaced (ADR 0083): the resolution step it absorbed never had a
+    /// decision either.
     /// </summary>
     private static float SubPhaseValue(RoundSubPhase subPhase) => subPhase switch
     {
@@ -59,8 +61,7 @@ public sealed class ObservationBuilder(FeatureSchema schema)
         RoundSubPhase.Speed => 3f / 9f,
         RoundSubPhase.TurnOrderResolution or RoundSubPhase.TieOrder => 4f / 9f,
         RoundSubPhase.IntentSelection => 5f / 9f,
-        RoundSubPhase.RevealAndTarget => 6f / 9f,
-        RoundSubPhase.ActionResolution => 7f / 9f,
+        RoundSubPhase.Activation => 6f / 9f,
         RoundSubPhase.Cleanup => 8f / 9f,
         RoundSubPhase.Finalization => 1f,
         _ => throw new ArgumentOutOfRangeException(nameof(subPhase), subPhase, "A sub-phase features:v6 has no value for."),

@@ -14,10 +14,10 @@ listed in [spells.md](spells.md).
   a dead creature ignores damage, healing, energy, spells, and conditions. Conditions follow the stacking policy
   of their effect and count down when the rules tick them; stun, total defense, and current initiative are
   derived from the active conditions. A team is defeated when none of its creatures is alive.
-- Round (phase 4): a forward-only walk through the sub-phases of ADR 0010, eleven since `TieOrder` (ADR 0063).
-  The round stores evolution choices per player, one speed choice per creature, at most one tie order per
-  player, one intent per creature (kept per player until revealed), and the targeted actions bound in
-  timeline order; a reveal cursor and a resolve cursor track combat. Wrong
+- Round (phase 4): a forward-only walk through the sub-phases of ADR 0010, ten since `TieOrder` (ADR 0063) and
+  `Activation` (ADR 0083). The round stores evolution choices per player, one speed choice per creature, at
+  most one tie order per player, one intent per creature (kept per player until revealed), and the targeted
+  actions bound in timeline order; one activation cursor tracks combat. Wrong
   sub-phase and duplicate submissions are rule failures; moving past finalization, installing the timeline
   outside turn-order resolution, or a timeline slot without an intent or action are invariant violations.
 - Planning rules (phase 5): a package is available to a creature when it does not own it and owns every
@@ -35,10 +35,10 @@ listed in [spells.md](spells.md).
 
 - Combat rules (phase 6): an intent is valid for an own, living, unstunned creature that knows the spell and can
   afford it; the sub-phase completes when every creature on the timeline has one. Binding targets checks the
-  spell's targeting spec fully (count, duplicates, origin, existence, death) and any failure blocks the action.
-  Resolution re-checks against the current state: an actor that cannot act any more, or a global targeting
-  failure, fizzles the action at no cost; a target that became invalid is dropped and the action fizzles only
-  when none remains. The critical roll adds the creature's and the spell's chances and multiplies what the cast
+  spell's targeting spec fully (count, duplicates, origin, existence, death) against the board as it stands,
+  any failure blocks the action, and the action resolves as soon as its targets are confirmed (ADR 0083). A
+  creature that cannot act when its slot comes up -- dead, stunned, unable to pay or to cast, or with no legal
+  target -- is revealed with no targets and fizzles at no cost, without its owner being asked. The critical roll adds the creature's and the spell's chances and multiplies what the cast
   puts on a target's health now -- damage and a direct heal (ADR 0033) -- floored; damage is then reduced by
   the target's total defense, floor zero. A lasting effect, an effect on the caster and energy are not
   multiplied. The energy cost is spent, instant
@@ -51,8 +51,9 @@ listed in [spells.md](spells.md).
 - Match (phase 7): a match seats two players with a roster of creature definitions sized by the rule set and
   starts when the second one joins. Every player action is validated by the rules before anything changes; the
   driver then runs the automatic steps and the progression gates until the round waits on a player again. A
-  player may pass their remaining evolution picks. Resolving the last action of the timeline runs cleanup and
-  finalization: the win condition of ADR 0011 either ends the match or starts the next round. Every step
+  player may pass their remaining evolution picks. An action or an upkeep that wipes a team ends the round and
+  the match on the spot (ADR 0083). Activating the last slot of the timeline runs cleanup and finalization:
+  the round cap of ADR 0011 either ends the match or starts the next round. Every step
   raises a domain event, and the match is stamped with the content hash of its game resources (ADR 0009).
 
 - Application (phase 8): commands and queries over the match, projections of what a player sees and can
@@ -70,8 +71,9 @@ listed in [spells.md](spells.md).
 - A Match waits for two Players and starts when both have joined.
 - Each Player controls one Team of creatures built from Creature definitions in the Game resources. Team size
   comes from the Rule set (three in the prototypes).
-- The Match ends per the Win condition: a Team defeated at the end of a round, or the round cap reached, in
-  which case the Team with the highest total remaining Health wins; equality is a draw (ADR 0011).
+- The Match ends per the Win condition: a Team defeated, the moment it is (ADR 0083) -- on the action or the
+  upkeep that wipes it, with no further slot and no cleanup; both Teams at once is a draw -- or, at the end
+  of the round cap, the Team with the highest total remaining Health wins; equality is a draw (ADR 0011).
 
 ### Round sequence (ADR 0010)
 
@@ -117,16 +119,14 @@ listed in [spells.md](spells.md).
    1. `IntentSelection`: each Player submits, hidden, one Intent per living, non-stunned Creature. An Intent is
       valid if the Creature knows the Spell and can afford its energy cost. Completes when every such Creature
       has an Intent.
-   2. `RevealAndTarget`: following the timeline, each owner binds targets for the next Intent. Its Spell and
-      targets become public together when that action is confirmed (ADR 0070), never before. The
-      targets must satisfy the Spell's targeting spec (origin, scope, count). An Intent whose Spell has no legal
-      target any more is revealed with no targets and fizzles at resolution. Completes when the cursor reaches
-      the end of the timeline.
-   3. `ActionResolution`: following the timeline, each Combat action resolves in turn:
-      - a dead or stunned actor fizzles, as does an actor that no longer knows or can afford the Spell;
-      - targeting is checked again against the current state; a global failure fizzles the action, a per-target
-        failure drops that target, and the action fizzles when no target remains;
-      - a fizzled action costs nothing;
+   2. `Activation` (ADR 0083): following the timeline, one slot at a time, the Creature's Intent is revealed,
+      its owner chooses targets on the board as it stands, and **the action resolves as soon as they are
+      confirmed**, before the next slot comes up. Its Spell and targets become public together, never before.
+      The targets must satisfy the Spell's targeting spec (origin, scope, count). A Creature that cannot act
+      when its slot comes up -- dead, stunned, no longer knowing or able to pay for the Spell, or left with no
+      legal target -- is revealed all the same, with no targets, and fizzles at no cost: its owner is not
+      asked. A Team wiped by an action ends the Match there. Otherwise the sub-phase completes when the cursor
+      reaches the end of the timeline. An action resolves in this order:
       - the energy cost is spent;
       - a critical roll (creature chance plus Spell chance, and zero for a `Quick` Creature) multiplies a
         target's damage and direct heal by
@@ -142,7 +142,8 @@ listed in [spells.md](spells.md).
    1. `Cleanup`: every Condition counts one round down and expires at zero; the first countdown after an
       application does not count. A living Creature whose Stun expires here is immune to stun through the next
       Round, until the next Cleanup (ADR 0072).
-   2. `Finalization`: the Win condition is checked; either the Match ends or the next Round starts.
+   2. `Finalization`: the round cap is checked; either the Match ends or the next Round starts. A Team wiped
+      at upkeep ends the Match before `Evolution`, like one wiped in combat.
 
 ### Determinism
 

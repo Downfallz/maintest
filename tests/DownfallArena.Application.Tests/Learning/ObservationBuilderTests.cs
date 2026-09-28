@@ -24,7 +24,7 @@ public sealed class ObservationBuilderTests
 
         observation.ShouldBe(Builder.Build(board));
         observation.SchemaId.ShouldBe(Schema.Id);
-        observation.SchemaId.ShouldStartWith("features:v7+");
+        observation.SchemaId.ShouldStartWith("features:v8+");
         observation.Features.Count.ShouldBe(Schema.Length);
         Builder.Schema.ShouldBeSameAs(Schema);
     }
@@ -74,11 +74,11 @@ public sealed class ObservationBuilderTests
         var revealed = timeline.Take(2).Select(slot => CombatAction.Bind(new CombatIntent(slot.Creature, TestContent.Strike), [])).ToList();
         var enemyRevealed = revealed.Count(action => board.Enemies.Any(enemy => enemy.Id == action.Actor));
 
-        var features = Builder.Build(board with { RevealedActions = revealed, RevealCursor = 2 }).Features;
+        var features = Builder.Build(board with { RevealedActions = revealed, ActivationCursor = 2 }).Features;
 
         features[Schema.IndexOf("reveal_progress")].ShouldBe(2f / timeline.Count);
         features[Schema.IndexOf("revealed_enemy_actions")].ShouldBe(enemyRevealed / 2f);
-        features[Schema.IndexOf("sub_phase")].ShouldBe(6f / 9f, "the value features:v6 has always had for RevealAndTarget, whatever the enum inserted before it");
+        features[Schema.IndexOf("sub_phase")].ShouldBe(6f / 9f, "the value features:v6 has always had for the targeting step, whatever the enum inserted before it");
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public sealed class ObservationBuilderTests
         var exception = Should.Throw<InvalidOperationException>(() => Builder.Build(Boards.Board(PlayerSlot.Player1, [creature], [])));
 
         exception.Message.ShouldContain("Unpublished");
-        exception.Message.ShouldContain("features:v7");
+        exception.Message.ShouldContain("features:v8");
     }
 
     [Fact]

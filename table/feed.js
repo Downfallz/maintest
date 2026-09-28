@@ -113,6 +113,49 @@ export function roundRecap(entries, board, cards) {
   return { round, actions };
 }
 
+// The action the round resolved last, while its combat is still running. An action resolves the moment its
+// targets are confirmed (ADR 0083), so the table shows each one as it happens rather than replaying the round
+// at its end; the replay stays in the recap, on demand. Outside Activation the round has moved on to cleanup
+// or to the next round, and the recap is where its actions are read.
+export function lastResolved(entries, board, cards) {
+  if (board?.subPhase !== 'Activation') return null;
+  const entry = (entries ?? [])
+    .filter(item => eventRound(item) === board.roundNumber && item?.event?.kind === 'CombatActionResolved')
+    .sort((left, right) => right.sequence - left.sequence)[0];
+  return entry ? recapAction(entry, board, cards) : null;
+}
+
+// Every action resolved after the sequence a seat last decided on, oldest first: a bot can play several slots
+// between two decisions of a person, the last slot of a round is followed at once by the next round, and each
+// of those resolved while nobody was looking. `seen` absent means the seat has not decided yet.
+export function resolvedSince(entries, seen, board, cards) {
+  return (entries ?? [])
+    .filter(item => item?.event?.kind === 'CombatActionResolved' && (!Number.isInteger(seen) || item.sequence > seen))
+    .sort((left, right) => left.sequence - right.sequence)
+    .map(entry => recapAction(entry, board, cards));
+}
+
+// The latest resolution a seat has in front of it, which is what a decision it sends was made after.
+export function latestResolution(entries) {
+  const sequences = (entries ?? []).filter(item => item?.event?.kind === 'CombatActionResolved').map(item => item.sequence);
+  return sequences.length ? Math.max(...sequences) : null;
+}
+
+const SIDES = { ally: 'yours', enemy: 'opponent' };
+
+// That action as one line: who, what, on whom, and what it did or why it fizzled.
+export function lastResolvedText(action) {
+  if (!action) return '';
+  const targets = action.targets.length ? ` → ${action.targets.map(target => target.label).join(', ')}` : '';
+  const critical = action.status === 'Critical' ? ' · critical' : '';
+  return `${action.actor.label} (${SIDES[action.actor.side] ?? 'unknown side'}) · ${action.spell}${targets}${critical} · ${actionResult(action)}`;
+}
+
+function actionResult(action) {
+  if (action.status === 'Fizzled') return `fizzled: ${action.reason}`;
+  return action.effects.map(effect => `${effect.text} → ${effect.target.label}`).join(', ') || 'no effect';
+}
+
 function recapCreature(id, board) {
   const ally = (board?.allies ?? []).find(creature => creature.id === id);
   const enemy = (board?.enemies ?? []).find(creature => creature.id === id);

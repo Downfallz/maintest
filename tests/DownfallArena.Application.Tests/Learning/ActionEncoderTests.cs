@@ -165,7 +165,6 @@ public sealed class ActionEncoderTests
 
     [Theory]
     [InlineData(PlayerOptionsKind.Waiting)]
-    [InlineData(PlayerOptionsKind.Resolution)]
     [InlineData(PlayerOptionsKind.Ended)]
     [InlineData(PlayerOptionsKind.Evolution)]
     public void Kinds_without_a_decision_have_no_candidates(PlayerOptionsKind kind)

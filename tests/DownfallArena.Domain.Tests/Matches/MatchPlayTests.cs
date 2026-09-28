@@ -4,8 +4,10 @@ using DownfallArena.Domain.Matches.Events;
 using DownfallArena.Domain.Matches.Rounds;
 using DownfallArena.Domain.Matches.Rules.Combat;
 using DownfallArena.Domain.Matches.Rules.Planning;
+using DownfallArena.Domain.Resources;
 using DownfallArena.Domain.Resources.Effects;
 using DownfallArena.Domain.Tests.Matches.Support;
+using DownfallArena.Domain.Tests.Resources.Support;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Stats;
 
@@ -28,39 +30,147 @@ public sealed class MatchPlayTests
             rounds++;
         }
 
-        // Each side focuses the first living enemy; Player1 acts first in every slot, so its second creature
-        // finishes the duel with two health left.
-        rounds.ShouldBe(11);
+        // Each side focuses the first living enemy when its slot comes up, so no strike is spent on a creature
+        // an earlier slot killed (ADR 0083); Player1 acts first in every slot and wipes Bob's team in round 10.
+        rounds.ShouldBe(10);
         match.State.ShouldBe(MatchState.Ended);
         var outcome = match.Outcome.ShouldNotBeNull();
         outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
         Table.TeamOf(match, PlayerSlot.Player2).IsDefeated.ShouldBeTrue();
-        Table.CreatureNumber(match, 2).Health.ShouldBe(Health.Of(2));
-        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(11);
-        match.CurrentRound.IsFinalized.ShouldBeTrue();
-        match.DomainEvents.OfType<MatchEnded>().Single().ShouldBe(new MatchEnded(match.Id, RoundId.From(11), outcome));
-        match.DomainEvents.OfType<RoundStarted>().Count().ShouldBe(11);
+        Table.CreatureNumber(match, 2).Health.ShouldBe(Health.Of(5));
+        match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(10);
+        match.DomainEvents.OfType<MatchEnded>().Single().ShouldBe(new MatchEnded(match.Id, RoundId.From(10), outcome));
+        match.DomainEvents.OfType<RoundStarted>().Count().ShouldBe(10);
+        match.DomainEvents.OfType<RoundEnded>().Count().ShouldBe(10);
+        match.DomainEvents.OfType<ConditionsExpired>().Count().ShouldBe(9, "the round of the wipe ends without its cleanup");
 
         match.PassEvolution(PlayerSlot.Player1).Error.ShouldBe(MatchErrors.NotInProgress);
         match.Join(PlayerId.New(), Table.Roster(match)).Error.ShouldBe(MatchErrors.AlreadyStarted);
     }
 
     [Fact]
-    public void Actions_of_creatures_that_died_earlier_in_the_round_fizzle()
+    public void A_creature_that_died_earlier_in_the_round_is_revealed_and_fizzles()
     {
         var match = Table.Started();
-        var steps = new List<CombatStep>();
+        var steps = new List<CombatActionResolved>();
         for (var round = 0; round < 4; round++)
         {
             steps = Table.PlayRound(match);
         }
 
-        // Round 4: creature 1 kills creature 3, creature 2 loses its only target, creature 3 is dead, creature 4 kills creature 1.
-        steps.Select(step => step.Resolution.FizzleReason).ShouldBe([null, CombatErrors.AllTargetsInvalid, CombatErrors.ActorDead, null]);
+        // Round 4: creature 1 kills creature 3, creature 2 aims at creature 4 since 3 is gone, creature 3 is
+        // revealed dead and fizzles without Bob being asked, creature 4 kills creature 1.
+        steps.Select(step => step.Resolution.FizzleReason).ShouldBe([null, null, CombatErrors.ActorDead, null]);
+        steps[1].Resolution.Action.Targets.ShouldBe([CreatureId.From(4)]);
+        steps[2].Resolution.Action.Targets.ShouldBeEmpty();
         Table.CreatureNumber(match, 1).IsDead.ShouldBeTrue();
         Table.CreatureNumber(match, 3).IsDead.ShouldBeTrue();
         match.State.ShouldBe(MatchState.InProgress);
         match.CurrentRound.ShouldNotBeNull().Number.ShouldBe(5);
+    }
+
+    [Fact]
+    public void A_team_wiped_mid_round_ends_the_match_before_the_remaining_slots()
+    {
+        var match = Table.Started();
+        Table.PassEvolution(match);
+        Table.ChooseStandard(match);
+        Table.DeclareStrikes(match);
+        Table.CreatureNumber(match, 3).TakeDamage(19);
+        Table.CreatureNumber(match, 4).TakeDamage(19);
+        var seen = match.DomainEvents.Count;
+
+        Table.HitFirstLivingEnemy(match);
+
+        match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
+        match.DomainEvents.Skip(seen).Select(raised => raised.GetType()).ShouldBe(
+        [
+            typeof(ActionRevealed), typeof(CombatActionResolved),
+            typeof(ActionRevealed), typeof(CombatActionResolved),
+            typeof(RoundEnded), typeof(MatchEnded),
+        ]);
+        match.CurrentRound.ShouldNotBeNull().ActivationCursor.Index.ShouldBe(2);
+    }
+
+    [Fact]
+    public void A_team_wiped_at_upkeep_ends_the_match_before_planning()
+    {
+        var match = Table.Started();
+        Table.PassEvolution(match);
+        Table.ChooseStandard(match);
+        Table.DeclareStrikes(match);
+        Table.CreatureNumber(match, 3).Apply(Bleed.Of(50, rounds: 2)).ShouldNotBeNull();
+        Table.CreatureNumber(match, 4).Apply(Bleed.Of(50, rounds: 2)).ShouldNotBeNull();
+
+        Table.HitFirstLivingEnemy(match);
+
+        match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player1, MatchEndReason.Elimination));
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.Number.ShouldBe(2);
+        round.SubPhase.ShouldBe(RoundSubPhase.OngoingEffects);
+        match.DomainEvents.OfType<RoundEnded>().Select(ended => ended.RoundId.Number).ShouldBe([1, 2]);
+        match.DomainEvents.OfType<MatchEnded>().Single().RoundId.ShouldBe(RoundId.From(2));
+    }
+
+    /// <summary>
+    /// A creature still alive but no longer able to pay for its spell when its slot comes up: revealed with no
+    /// targets and fizzled, and its owner is never asked. Here it is the first slot of the round, so the
+    /// fizzle happens as Activation opens (ADR 0083).
+    /// </summary>
+    [Fact]
+    public void A_creature_that_can_no_longer_pay_is_revealed_and_fizzles_without_its_owner_being_asked()
+    {
+        var match = Table.Started();
+        match.PassEvolution(PlayerSlot.Player1).IsSuccess.ShouldBeTrue();
+        match.SubmitEvolutionChoice(PlayerSlot.Player2, new EvolutionChoice(CreatureId.From(3), Arena.GuardPack)).IsSuccess.ShouldBeTrue();
+        match.PassEvolution(PlayerSlot.Player2).IsSuccess.ShouldBeTrue();
+        Table.ChooseStandard(match);
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(3), Arena.Guard)).IsSuccess.ShouldBeTrue();
+        Table.CreatureNumber(match, 3).LoseEnergy(99);
+        match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(4), Arena.Strike)).IsSuccess.ShouldBeTrue();
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(1), Arena.Strike)).IsSuccess.ShouldBeTrue();
+
+        match.SubmitIntent(PlayerSlot.Player1, new CombatIntent(CreatureId.From(2), Arena.Strike)).IsSuccess.ShouldBeTrue();
+
+        var round = match.CurrentRound.ShouldNotBeNull();
+        round.Timeline[0].Creature.ShouldBe(CreatureId.From(3), "Guard's initiative puts it first");
+        var fizzle = match.DomainEvents.OfType<CombatActionResolved>().ShouldHaveSingleItem();
+        fizzle.Resolution.FizzleReason.ShouldBe(CombatErrors.NotEnoughEnergy);
+        fizzle.Resolution.Action.Targets.ShouldBeEmpty();
+        match.DomainEvents.OfType<ActionRevealed>().ShouldHaveSingleItem().Action.Targets.ShouldBeEmpty();
+        round.ActivationCursor.Index.ShouldBe(1);
+        round.NextSlot.ShouldNotBeNull().Owner.ShouldBe(PlayerSlot.Player1);
+    }
+
+    /// <summary>One action that kills the last creature of both teams, its target and its caster, is a draw.</summary>
+    [Fact]
+    public void An_action_that_wipes_both_teams_ends_the_match_in_a_draw_on_the_spot()
+    {
+        var recoil = Content.SpellWithCasterEffects("spell:recoil:v1", [Damage.Of(50)], Damage.Of(50));
+        var resources = GameResources.Create(
+            "recoil",
+            [Content.Creature("creature:main:v1", "spell:recoil:v1")],
+            [recoil],
+            [Content.Tree(Content.TalentSpell("spell:recoil:v1"))],
+            []);
+        var match = Match.Create(MatchId.New(), resources, RuleSet.Create(1, 2, 2, 30, 2.0), new FixedRandom(0.99));
+        match.Join(Table.Alice, [Table.Main]).IsSuccess.ShouldBeTrue();
+        match.Join(Table.Bob, [Table.Main]).IsSuccess.ShouldBeTrue();
+        Table.PassEvolution(match);
+        Table.ChooseStandard(match);
+        foreach (var slot in match.CurrentRound.ShouldNotBeNull().Timeline.Slots)
+        {
+            match.SubmitIntent(slot.Owner, new CombatIntent(slot.Creature, recoil.Id)).IsSuccess.ShouldBeTrue();
+        }
+
+        var first = match.CurrentRound.NextSlot.ShouldNotBeNull();
+        var other = first.Owner == PlayerSlot.Player1 ? CreatureId.From(2) : CreatureId.From(1);
+
+        match.SubmitAction(first.Owner, CombatAction.Bind(new CombatIntent(first.Creature, recoil.Id), [other])).IsSuccess.ShouldBeTrue();
+
+        match.Outcome.ShouldBe(new MatchOutcome(null, MatchEndReason.Elimination));
+        match.DomainEvents.OfType<CombatActionResolved>().ShouldHaveSingleItem();
+        match.DomainEvents.OfType<MatchEnded>().ShouldHaveSingleItem().RoundId.ShouldBe(RoundId.First);
     }
 
     [Fact]
@@ -82,12 +192,11 @@ public sealed class MatchPlayTests
         match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(3), Arena.Guard), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(1), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(2), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
+        var seen = match.DomainEvents.Count;
+
         match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(4), Arena.Strike), [CreatureId.From(1)])).IsSuccess.ShouldBeTrue();
 
-        var steps = Table.ResolveAll(match);
-
-        steps[3].MatchCompleted.ShouldBeTrue();
-        steps[3].RoundCompleted.ShouldBeTrue();
+        match.DomainEvents.Skip(seen).Select(raised => raised.GetType()).ShouldContain(typeof(ConditionsExpired));
         match.State.ShouldBe(MatchState.Ended);
         match.Outcome.ShouldBe(new MatchOutcome(PlayerSlot.Player2, MatchEndReason.RoundCap));
         Table.TeamOf(match, PlayerSlot.Player1).TotalHealth.ShouldBe(37);
@@ -115,7 +224,6 @@ public sealed class MatchPlayTests
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(1), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(2), Arena.Strike), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player2, CombatAction.Bind(new CombatIntent(CreatureId.From(4), Arena.Strike), [CreatureId.From(1)])).IsSuccess.ShouldBeTrue();
-        Table.ResolveAll(match);
         Table.CreatureNumber(match, 3).TotalDefense.ShouldBe(Defense.Of(2));
 
         Table.PlayRound(match);
@@ -152,10 +260,10 @@ public sealed class MatchPlayTests
         match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(3), Arena.Strike)).IsSuccess.ShouldBeTrue();
         match.SubmitIntent(PlayerSlot.Player2, new CombatIntent(CreatureId.From(4), Arena.Strike)).IsSuccess.ShouldBeTrue();
         match.SubmitAction(PlayerSlot.Player1, CombatAction.Bind(new CombatIntent(CreatureId.From(1), Arena.Slam), [CreatureId.From(3), CreatureId.From(4)])).IsSuccess.ShouldBeTrue();
+
         Table.HitFirstLivingEnemy(match);
 
-        var steps = Table.ResolveAll(match);
-
+        var steps = match.DomainEvents.OfType<CombatActionResolved>().ToList();
         steps[0].Resolution.Outcomes.Count.ShouldBe(4);
         steps.Skip(2).Select(step => step.Resolution.FizzleReason).ShouldBe([CombatErrors.ActorStunned, CombatErrors.ActorStunned]);
         Table.CreatureNumber(match, 3).IsStunned.ShouldBeTrue();
@@ -170,7 +278,6 @@ public sealed class MatchPlayTests
 
         Table.DeclareStrikes(match);
         Table.HitFirstLivingEnemy(match);
-        Table.ResolveAll(match);
 
         Table.CreatureNumber(match, 3).IsStunned.ShouldBeFalse();
         Table.CreatureNumber(match, 3).Health.ShouldBe(Health.Of(9));
@@ -190,7 +297,8 @@ public sealed class MatchPlayTests
 
         var steps = Table.PlayRound(match);
 
-        steps[3].MatchCompleted.ShouldBeTrue();
+        steps.Count.ShouldBe(4);
+        match.State.ShouldBe(MatchState.Ended);
         var outcome = match.Outcome.ShouldNotBeNull();
         outcome.ShouldBe(new MatchOutcome(null, MatchEndReason.RoundCap));
         outcome.IsDraw.ShouldBeTrue();
@@ -203,10 +311,12 @@ public sealed class MatchPlayTests
         Table.PassEvolution(match);
         Table.ChooseStandard(match);
         Table.DeclareStrikes(match);
-        Table.HitFirstLivingEnemy(match);
+        var round = match.CurrentRound.ShouldNotBeNull();
+        var slot = round.NextSlot.ShouldNotBeNull();
 
-        var step = match.ResolveNextAction().Value;
+        match.SubmitAction(slot.Owner, CombatAction.Bind(round.IntentOf(slot.Creature).ShouldNotBeNull(), [CreatureId.From(3)])).IsSuccess.ShouldBeTrue();
 
+        var step = match.DomainEvents.OfType<CombatActionResolved>().Single();
         step.Resolution.IsCritical.ShouldBeTrue();
         step.Resolution.Outcomes.ShouldBe([new DamageOutcome(CreatureId.From(3), 6, true)]);
         Table.CreatureNumber(match, 3).Health.ShouldBe(Health.Of(14));
