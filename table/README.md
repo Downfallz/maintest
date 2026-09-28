@@ -48,7 +48,8 @@ not recorded matches. Card text and creature names in the actual app come from t
   New-round controls and their asking acknowledgement wait until the review closes; replay controls send
   no decisions. Arrow keys step backward/forward and Escape skips. Reloading does not auto-play old history;
   the recap's Replay action by action button makes it available on demand.
-- The sticky top bar leads with round, current phase and the acting position/creature from the host timeline.
+- The sticky top bar leads with round, current phase and the acting position/creature from the host timeline;
+  on a phone the acting creature is the outlined chip in its battlefield bar instead.
   The decision repeats the phase and turn position above the creature/spell title; targeting starts with one
   short instruction and keeps confirmation help collapsed. Round flow, upkeep, announcements and recap are
   on-demand references in this same bar. Speeds reveal together;
@@ -58,13 +59,18 @@ not recorded matches. Card text and creature names in the actual app come from t
   visible while the page scrolls through longer spell lists; neither board nor hand has a clipped inner
   scrolling pane. Cards wrap into two columns and the active creature appears first.
 - Below desktop width the battlefield is not a section at the bottom of the page. The round bar carries it
-  at a glance, a chip per creature (number, health, energy, a stun mark; the acting creature outlined), and a
+  at a glance, a chip per creature (number, health, energy, a stun ring; the creature acting now outlined,
+  whichever seat is deciding), and a
   Battlefield button that opens the whole battlefield over the page, under the bar; a second tap (or Escape)
   closes it where the player left off, and a handover closes it. A legal target is picked from its chip, so
   a spell aimed at an ally never sends the player past the opponent to find one; any other chip opens the
   battlefield at that creature, and the battlefield opened while a target is asked for starts at the first
-  creature the spell may take. In a resolution replay the chips mark the caster and its targets and, once
-  the action is applied, what it did to health.
+  creature the spell may take. A picked chip says that a second tap casts, as its row does. With the
+  battlefield shut, arrows walk the legal chips and number keys pick as on a laptop; a chip that opens the
+  battlefield hands it the focus, and closing it hands the focus back to its button. In a resolution replay
+  the chips mark the caster and its targets and, once the action is applied, what it did to health. The bar
+  never widens the page: a long phase name is cut short, and on the narrowest phones a chip showing a health
+  change leaves its energy out.
 - Phones keep scrolling short and never sideways: the hand is a list of compact rows (name, cues, cost,
   effects; the rules reminder and the declare cue on the chosen card), packages are two-line rows, the
   opened battlefield prints each creature on a few lines with its stats as symbols (ϟ energy, ◇ defense,

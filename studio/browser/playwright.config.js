@@ -8,6 +8,7 @@ export default defineConfig({
   projects: [
     { name: 'small-phone', use: { viewport: { width: 320, height: 740 }, isMobile: true, hasTouch: true } },
     { name: 'phone', use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    { name: 'tablet', testMatch: 'table.ux.spec.js', use: { viewport: { width: 900, height: 700 }, isMobile: true, hasTouch: true } },
     { name: 'desktop', use: { viewport: { width: 1440, height: 1000 } } },
   ],
   webServer: { command: 'node server.js', port: 5199, reuseExistingServer: !process.env.CI },

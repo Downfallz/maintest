@@ -31,6 +31,6 @@ export function playbackChanges(action, creature) {
 // What an action did to a creature's health, from its two boundary snapshots: negative for damage, zero when
 // either snapshot is missing or nothing changed.
 export function healthChange(action, creature) {
-  const before = action?.frame?.before.find(one => one.id === creature?.id);
+  const before = action?.frame?.before?.find(one => one.id === creature?.id);
   return Number.isFinite(before?.health) && Number.isFinite(creature?.health) ? creature.health - before.health : 0;
 }

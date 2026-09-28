@@ -318,6 +318,7 @@ function showBoard(state, open) {
     revealRow(state, state.targetAnchor);
   }
   if (!returning) return;
+  if (element('board').contains(document.activeElement)) element('board-toggle').focus({ preventScroll: true });
   globalThis.scrollTo?.(0, state.boardReturn ?? 0);
   const current = activeSeat(state.views, state.holder);
   if (current && !state.playback && !needsPass(current, state.holder)) guideDecision(state, current);
@@ -444,9 +445,7 @@ function render(state, views) {
   element('phase-progress').hidden = Boolean(state.playback);
   const phaseHeight = element('phase-dock').getBoundingClientRect().height ?? 0;
   element('table').style.setProperty('--phase-height', `${phaseHeight}px`);
-  const targetOffset = view.waitingFor === 'Target' && globalThis.innerWidth > 760 && globalThis.innerWidth < 1100
-    ? element('decision').getBoundingClientRect().height + 30 : 18;
-  element('board').style.setProperty('--target-offset', `${targetOffset + phaseHeight}px`);
+  element('board').style.setProperty('--target-offset', `${18 + phaseHeight}px`);
   renderNotes(view);
   element('shortcut-context').textContent = view.waitingFor === 'Speed'
     ? '1 Quick · 2 Standard' : view.waitingFor === 'Evolution'
@@ -562,6 +561,7 @@ function renderBoard(state, current) {
     candidates: !state.playback && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
     onPick: candidate => pick(state, current, candidate),
     canConfirm: canCastTargets(state, view),
+    turn: activeTurn(board)?.slot.creature ?? null,
   };
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
@@ -874,24 +874,35 @@ function miniCreature(state, creature, which, marks) {
     stunned.title = 'Stunned';
     chip.append(stunned);
   }
-  chip.setAttribute('aria-label', miniLabel(creature, which, legal, picked));
-  if (legal) chip.setAttribute('aria-pressed', String(picked));
+  const confirm = picked && marks.canConfirm;
+  chip.setAttribute('aria-label', miniLabel(creature, which, marks, legal, picked));
+  if (confirm) chip.title = 'Tap again to cast';
+  // Its own key, so a redraw gives focus back to the chip and arrows walk the chips while the board is shut.
+  if (legal) chip.dataset.focus = `mini-target-${creature.id}`;
   chip.addEventListener('click', () => (legal ? marks.onPick(creature.id) : openBoardAt(state, creature.id)));
   return chip;
 }
 
 function miniClasses(creature, which, marks, legal, picked) {
   const replay = marks.playback;
-  return ['mini-creature', which, creature.isAlive === false && 'dead', legal && 'legal', picked && 'picked',
-    creature.id === marks.active && 'active', replay?.actor.id === creature.id && 'replay-caster',
+  return ['mini-creature', which, creature.isAlive === false && 'dead', creature.isStunned === true && 'stunned', legal && 'legal', picked && 'picked',
+    picked && marks.canConfirm && 'confirm', creature.id === marks.active && 'active',
+    creature.id === marks.turn && 'turn', replay?.actor.id === creature.id && 'replay-caster',
     replay?.targets.some(target => target.id === creature.id) && 'replay-target'].filter(Boolean).join(' ');
 }
 
-function miniLabel(creature, which, legal, picked) {
+// What a screen reader hears, and what the picked chip's second tap does: it casts, as the row's does.
+function miniLabel(creature, which, marks, legal, picked) {
   const role = which === 'ally' ? 'your creature' : 'opponent';
-  const target = picked ? 'selected target' : 'legal target';
-  const status = [creature.isAlive === false && 'defeated', creature.isStunned === true && 'stunned', legal && target];
+  const acting = creature.id === marks.active || creature.id === marks.turn;
+  const status = [acting && 'acting now', creature.isAlive === false && 'defeated', creature.isStunned === true && 'stunned',
+    legal && targetStatus(marks, picked)];
   return [`Creature ${creature.id}, ${role}, ${healthText(creature)} health, ${creature.energy ?? 0} energy`, ...status.filter(Boolean)].join(', ');
+}
+
+function targetStatus(marks, picked) {
+  if (!picked) return 'legal target';
+  return marks.canConfirm ? 'selected target, tap again to cast' : 'selected target, choose more targets';
 }
 
 // Once a replayed action is applied, what it did to health is on the chip, where the bar just moved.
@@ -907,6 +918,8 @@ function miniDelta(creature, marks) {
 function openBoardAt(state, id) {
   showBoard(state, true);
   revealRow(state, state.creatureRows?.get(id));
+  // The chip that opened it is hidden with the bar's chips; the battlefield takes focus so keys stay in reach.
+  element('board').focus({ preventScroll: true });
 }
 
 // Scrolls the open battlefield, and only it, so a row is in view under the round bar.
@@ -1839,7 +1852,9 @@ function targetButtons(state, current) {
   const legal = current.view.options.target?.legalTargets ?? { candidates: [], minTargets: 0, maxTargets: 0 };
   const picked = state.picked;
   const howMany = legal.minTargets === legal.maxTargets ? `${legal.maxTargets}` : `${legal.minTargets}–${legal.maxTargets}`;
-  context.textContent = `Choose ${howMany} ${legal.maxTargets === 1 ? 'target' : 'targets'} on the battlefield.`;
+  context.textContent = canCastTargets(state, current.view)
+    ? 'Tap a selected target again, or Cast, to confirm.'
+    : `Choose ${howMany} ${legal.maxTargets === 1 ? 'target' : 'targets'} on the battlefield.`;
 
   // A spell with nothing left to hit is revealed with no targets and fizzles, so binding none is the action
   // rather than a dead end (docs/tabletop/rulebook.md, 6.2).
@@ -2049,7 +2064,7 @@ function treeNode(state, node, classes, creature) {
 function closeTalents(state) {
   showTab(state, 'board');
   if (state.talentOpener?.isConnected) state.talentOpener.focus({ preventScroll: true });
-  else element('tab-mat').focus({ preventScroll: true });
+  else [element('tab-mat'), element('hand-talents')].find(node => node.checkVisibility?.() ?? true)?.focus({ preventScroll: true });
 }
 
 // Only the title grip moves the window. Card clicks and scrolling keep their ordinary meaning.
@@ -2125,7 +2140,7 @@ function keyboardDecision(state, event) {
   const current = activeSeat(state.views, state.holder);
   if (!current || needsPass(current, state.holder) || state.sending) return;
   const key = event.key.toLowerCase();
-  if (key !== 'escape' && target?.closest?.('#phase-dock')) return;
+  if (key !== 'escape' && target?.closest?.('#phase-dock') && !target.closest('#mini-board')) return;
   if (state.playback && !target?.closest?.('#phase-dock')) {
     if (key === 'arrowright' || key === 'arrowleft' || key === 'escape') {
       event.preventDefault();
@@ -2301,9 +2316,9 @@ function navigateChoices(state, current, event) {
     else focus(next ?? active);
     return;
   }
-  const prefix = { Speed: 'speed-', TieOrder: 'tie-', Intent: 'card-', Target: 'target-' }[view.waitingFor];
-  if (!prefix) return;
-  const controls = nodes(prefix);
+  const prefixes = { Speed: ['speed-'], TieOrder: ['tie-'], Intent: ['card-'], Target: ['target-', 'mini-target-'] }[view.waitingFor];
+  if (!prefixes) return;
+  const controls = prefixes.flatMap(nodes).filter(node => node.checkVisibility?.() ?? true);
   if (!controls.length) return;
   const explore = view.waitingFor === 'Intent' ? element('hand-talents') : null;
   if (active === explore) {

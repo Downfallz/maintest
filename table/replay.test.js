@@ -13,4 +13,5 @@ test('an action without a snapshot of the creature changes nothing it can show',
   assert.equal(healthChange({ frame: { before: [] } }, { id: 1, health: 17 }), 0);
   assert.equal(healthChange(undefined, { id: 1, health: 17 }), 0);
   assert.equal(healthChange({ frame: { before: [{ id: 1 }] } }, { id: 1, health: 17 }), 0);
+  assert.equal(healthChange({ frame: {} }, { id: 1, health: 17 }), 0);
 });

@@ -54,8 +54,9 @@ test('target previews stay readable on a phone and restart clears the selection'
   // A phone picks a target in the battlefield bar under the round; a laptop on the battlefield beside the desk.
   const target = info.project.name === 'table-phone' ? page.locator('#mini-board [aria-label^="Creature 4,"]') : page.locator('[data-focus="target-4"]');
   await target.click();
-  await expect(page.locator('#decision-guide')).toContainText('Creature 4');
-  await expect(page.locator('#decision-guide')).not.toContainText('Creature 5');
+  // Picked, the preview is that one creature's line: before, three alike shared "Creatures 4, 5, 6".
+  const lines = await page.locator('#decision-guide p').allTextContents();
+  expect(lines.filter(line => /^Creatures? /.test(line))).toEqual([expect.stringMatching(/^Creature 4 · /)]);
   await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('#decision').scrollIntoViewIfNeeded();
@@ -103,5 +104,16 @@ for (const scenario of ['stun', 'resolution']) {
     await page.locator('[data-focus="playback-next"]').click();
     await expect(page.locator('#playback-board-note')).toContainText('After action');
     await page.screenshot({ path: info.outputPath(`${scenario}-resolution.png`), animations: 'disabled' });
+    if (info.project.name === 'table-phone') {
+      // A replayed action on the narrowest phone: every chip keeps what it shows inside itself, and the
+      // round bar inside the page, whatever the chips add (a health change, a stun) and however long the
+      // phase's name.
+      await page.setViewportSize({ width: 320, height: 740 });
+      await expect(page.locator('#mini-board')).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+      const spills = await page.locator('#mini-board .mini-creature').evaluateAll(chips => chips.filter(chip => chip.scrollWidth > chip.clientWidth).length);
+      expect(spills).toBe(0);
+      await page.screenshot({ path: info.outputPath(`${scenario}-resolution-320.png`), animations: 'disabled' });
+    }
   });
 }
