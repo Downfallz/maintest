@@ -26,6 +26,22 @@ export function targetLines(guide, picked = []) {
   }));
 }
 
+// Candidates the spell would do exactly the same thing to share one line: a heal on three unhurt allies is one
+// sentence, not three copies of it. The order is the host's, by each group's first candidate.
+export function groupTargetLines(lines) {
+  const groups = new Map();
+  for (const row of lines ?? []) {
+    const key = JSON.stringify([row.plain, row.critical]);
+    if (!groups.has(key)) groups.set(key, { targets: [], plain: row.plain, critical: row.critical });
+    groups.get(key).targets.push(row.target);
+  }
+  return [...groups.values()];
+}
+
+function targetsLabel(targets) {
+  return targets.length === 1 ? `Creature ${targets[0]}` : `Creatures ${targets.join(', ')}`;
+}
+
 export function guidancePanel(document, view, chosen, picked) {
   const panel = document.createElement('section');
   panel.className = 'decision-guide';
@@ -37,7 +53,7 @@ export function guidancePanel(document, view, chosen, picked) {
     panel.append(p);
   };
   if (view.waitingFor === 'Speed') {
-    line('Quick acts before Standard, without crits. Standard crit chances are shown in the spell list below.');
+    line('Quick acts first, without crits. Standard keeps its crits, shown below.');
     return panel;
   }
   const spell = view.waitingFor === 'Target' ? view.options.target?.spell : chosen;
@@ -48,13 +64,13 @@ export function guidancePanel(document, view, chosen, picked) {
   const heading = document.createElement('strong');
   heading.textContent = 'If cast on the current board';
   panel.append(heading);
-  for (const row of targetLines(guide, picked)) {
-    const critical = row.plain === row.critical ? '' : ` | Critical: ${row.critical}`;
-    line(`Creature ${row.target} · ${row.plain}${critical}`);
+  for (const group of groupTargetLines(targetLines(guide, picked))) {
+    const critical = group.plain === group.critical ? '' : ` | Critical: ${group.critical}`;
+    line(`${targetsLabel(group.targets)} · ${group.plain}${critical}`);
   }
   if (guide.casterEffects?.length) line(`On caster, once: ${guide.casterEffects.map(effectText).join(', ')}`);
   const caveat = document.createElement('small');
-  caveat.textContent = 'Computed effects before health/energy caps and condition stacking. Earlier actions can change these results. Hidden choices and future rolls are unknown; this is not the round outcome.';
+  caveat.textContent = 'An estimate before caps and stacking: earlier actions, hidden choices and rolls can change the outcome.';
   panel.append(caveat);
   return panel;
 }

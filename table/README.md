@@ -56,12 +56,20 @@ not recorded matches. Card text and creature names in the actual app come from t
 - The opponent, initiative order, your team and your spellbook keep the same reading order on every screen.
 - Desktop keeps the battlefield beside a compact planning desk with the acting spellbook. The board stays
   visible while the page scrolls through longer spell lists; neither board nor hand has a clipped inner
-  scrolling pane. Cards wrap into two columns and the active creature appears first. Below desktop width
-  the round bar carries a Battlefield button, always there: it opens every creature, the spellbooks
-  revealed and the turn order over the page under the bar, and a second tap (or Escape) closes it where the
-  player left off. A handover closes it. Phones list the hand as compact rows (name, cues, cost, effects on
-  one or two lines; the rules reminder and the declare cue on the chosen card) and wrap the turn order into
-  rows, so nothing on the table scrolls sideways.
+  scrolling pane. Cards wrap into two columns and the active creature appears first.
+- Below desktop width the battlefield is not a section at the bottom of the page. The round bar carries it
+  at a glance, a chip per creature (number, health, energy, a stun mark; the acting creature outlined), and a
+  Battlefield button that opens the whole battlefield over the page, under the bar; a second tap (or Escape)
+  closes it where the player left off, and a handover closes it. A legal target is picked from its chip, so
+  a spell aimed at an ally never sends the player past the opponent to find one; any other chip opens the
+  battlefield at that creature, and the battlefield opened while a target is asked for starts at the first
+  creature the spell may take. In a resolution replay the chips mark the caster and its targets and, once
+  the action is applied, what it did to health.
+- Phones keep scrolling short and never sideways: the hand is a list of compact rows (name, cues, cost,
+  effects; the rules reminder and the declare cue on the chosen card), packages are two-line rows, the
+  opened battlefield prints each creature on a few lines with its stats as symbols (ϟ energy, ◇ defense,
+  ↟ initiative), and the turn order wraps. Round flow and the tab row are left to the Round guide and the
+  spellbook's Talent atlas link, and the turn in the round bar to the decision heading and the acting chip.
 - Gold identifies the acting creature, selected card or target, and the next action. Team names and text
   labels also identify the sides and selection state, so colour is never the only signal.
 - Evolution presents one creature's available packages at a time. Each pick buys all of a package's spells
@@ -192,6 +200,8 @@ left after paying it, turn position, and plain/critical effects against the curr
 targets. Choosing speed shows the Quick/Standard trade and each spell's critical
 chance. Unaffordable cards keep the engine's reason visible. Caster effects appear
 once, separately from target effects.
+
+Candidates a spell would treat alike share one preview line (`Creatures 1, 2, 3 · Heal 4`).
 
 The preview is explicitly conditional: earlier actions can change the board, rolls
 are unknown, and computed effects still go through execution caps and condition

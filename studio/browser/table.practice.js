@@ -50,8 +50,10 @@ async function open(page, scenario) {
 test('target previews stay readable on a phone and restart clears the selection', async ({ page }, info) => {
   await open(page, 'targeting');
   await expect(page.locator('#decision-guide')).toContainText('If cast on the current board');
-  await expect(page.locator('#decision-guide')).toContainText('Hidden choices and future rolls are unknown');
-  await page.locator('[data-focus="target-4"]').click();
+  await expect(page.locator('#decision-guide')).toContainText('hidden choices and rolls can change the outcome');
+  // A phone picks a target in the battlefield bar under the round; a laptop on the battlefield beside the desk.
+  const target = info.project.name === 'table-phone' ? page.locator('#mini-board [aria-label^="Creature 4,"]') : page.locator('[data-focus="target-4"]');
+  await target.click();
   await expect(page.locator('#decision-guide')).toContainText('Creature 4');
   await expect(page.locator('#decision-guide')).not.toContainText('Creature 5');
   await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
@@ -62,7 +64,7 @@ test('target previews stay readable on a phone and restart clears the selection'
   await page.locator('#practice-start').click();
   await expect.poll(async () => (await state()).seatToken).not.toBe(old);
   await expect(page.locator('#choices')).toContainText('Cast on 0 of 1');
-  await expect(page.locator('#decision-guide')).toContainText('Creature 5');
+  await expect(page.locator('#decision-guide')).toContainText(/Creatures? [\d, ]*\b5\b/);
 });
 
 test('multiclass starts at the new opportunity with existing packages visible', async ({ page }) => {
@@ -71,7 +73,8 @@ test('multiclass starts at the new opportunity with existing packages visible', 
   await expect(page.locator('#evolution-budget')).toContainText('2 / 2');
   await expect(page.locator('#choices')).toContainText('Occultist');
   await expect(page.locator('#choices')).toContainText('Berserker');
-  await page.locator('#tab-mat').click();
+  // The spellbook's link opens the atlas at every width; a phone has no tab row for it.
+  await page.locator('#hand-talents').click();
   await expect(page.locator('#mat')).toBeVisible();
 });
 

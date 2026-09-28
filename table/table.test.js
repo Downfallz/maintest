@@ -131,6 +131,72 @@ test('legal targets are keyboard operable and still obey the host maximum', () =
   assert.equal(p.state.picked.length, 1);
 });
 
+test('the round bar carries every creature at a glance: number, health, energy and a stun', () => {
+  const p = page(); p.view.board.enemies[0].isStunned = true; p.draw();
+  const [ally] = p.nodes['mini-allies'].children;
+  const [enemy] = p.nodes['mini-enemies'].children;
+  assert.match(ally.className, /mini-creature ally/);
+  assert.equal(ally.textContent, '120ϟ4');
+  assert.equal(enemy.textContent, '210ϟ0⊘');
+  assert.equal(enemy.attributes['aria-label'], 'Creature 2, opponent, 10/20 health, 0 energy, stunned');
+  assert.doesNotMatch(p.nodes['mini-board'].className, /targeting/);
+});
+
+test('a spell aimed at an ally is aimed from the round bar, and any other chip opens the battlefield', () => {
+  const p = page(); p.view.waitingFor = 'Target';
+  p.view.options = { target: { legalTargets: { candidates: [1], minTargets: 1, maxTargets: 1 } } }; p.draw();
+  assert.match(p.nodes['mini-board'].className, /targeting/);
+  const [ally] = p.nodes['mini-allies'].children;
+  assert.match(ally.className, /legal/);
+  assert.equal(ally.attributes['aria-pressed'], 'false');
+  ally.click();
+  assert.deepEqual([...p.state.picked], [1]);
+  assert.match(p.nodes['mini-allies'].children[0].className, /picked/);
+  assert.equal(p.nodes['mini-allies'].children[0].attributes['aria-pressed'], 'true');
+  assert.ok(!p.state.boardOpen);
+  p.nodes['mini-enemies'].children[0].click();
+  assert.equal(p.state.boardOpen, true);
+  assert.deepEqual([...p.state.picked], [1]);
+});
+
+test('opened while a target is asked for, the battlefield starts at the first creature the spell may take', () => {
+  const p = page(); p.view.waitingFor = 'Target';
+  p.view.options = { target: { legalTargets: { candidates: [1], minTargets: 1, maxTargets: 1 } } }; p.draw();
+  p.nodes.allies.children[0].getBoundingClientRect = () => ({ top: 1700, bottom: 1900, left: 0, right: 600, height: 200 });
+  p.nodes.board.scrollTop = 300;
+  p.context.showBoard(p.state, true);
+  assert.equal(p.nodes.board.scrollTop, 488);
+});
+
+test('a chip opens the battlefield at its own creature', () => {
+  const p = page(); p.draw();
+  p.nodes.enemies.children[0].getBoundingClientRect = () => ({ top: 1500, bottom: 1700, left: 0, right: 600, height: 200 });
+  p.nodes['mini-enemies'].children[0].click();
+  assert.equal(p.state.boardOpen, true);
+  assert.equal(p.nodes.board.scrollTop, 288);
+});
+
+test('a replayed action shows what it did to health on the chip once applied', () => {
+  const p = page(); p.draw();
+  const creature = { id: 1, health: 17, maxHealth: 20, energy: 4 };
+  const marks = { picked: [], candidates: [], playbackStage: 'after', playback: { actor: { id: 2 }, targets: [{ id: 1 }], frame: { before: [{ id: 1, health: 20 }] } } };
+  const chip = p.context.miniCreature(p.state, creature, 'ally', marks);
+  assert.match(chip.className, /replay-target/);
+  assert.equal(chip.children.find(child => child.className === 'mini-delta harm').textContent, '−3');
+  const before = p.context.miniCreature(p.state, creature, 'ally', { ...marks, playbackStage: 'before' });
+  assert.equal(before.children.some(child => /mini-delta/.test(child.className)), false);
+});
+
+test('candidates a spell treats alike share one preview line', () => {
+  const p = page(); p.view.waitingFor = 'Target';
+  p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [1, 3], minTargets: 1, maxTargets: 1 } } };
+  const heal = { kind: 'HealOutcome', amount: 4 };
+  p.view.guidance = [{ spell: 'one', cost: 1, energyAfterCost: 3, targets: [{ target: 1, plain: [heal], critical: [heal] }, { target: 3, plain: [heal], critical: [heal] }] }];
+  p.draw();
+  assert.match(p.nodes['decision-guide'].textContent, /Creatures 1, 3 · Heal 4/);
+  assert.doesNotMatch(p.nodes['decision-guide'].textContent, /Creature 1 · /);
+});
+
 test('evolution keeps every creature accessible without mixing their package buttons', () => {
   const p = page(); p.view.waitingFor = 'Evolution';
   p.view.options = { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['tier:one:v1'] }, { creature: 3, availableTiers: ['tier:two:v1'] }] } }; p.draw();
