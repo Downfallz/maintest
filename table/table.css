@@ -744,6 +744,7 @@ body:has(#table) { padding-bottom: 24px; }
   .mini-creature.enemy .mini-bar { background: #93564d; }
   .mini-hp { position: relative; display: block; font-size: 10px; font-weight: 750; line-height: 14px; text-align: center; color: #f6f2e6; text-shadow: 0 1px 1px #000c; }
   .mini-energy { flex: none; font-size: 10px; font-weight: 650; color: var(--gold); }
+  .mini-defense { flex: none; font-size: 10px; font-weight: 650; color: #8bc6ed; }
   .mini-delta { flex: none; padding: 0 3px; border-radius: 3px; font-size: 10px; font-weight: 750; }
   .mini-delta.harm { color: #ffbbb4; background: #472a29; }
   .mini-delta.recovery { color: #b0edc2; background: #23452e; }
@@ -898,4 +899,6 @@ body:has(#table) { padding-bottom: 24px; }
   .board-toggle { padding: 4px 8px; font-size: 11px; }
   .mini-creature { gap: 3px; padding: 3px 4px; }
   .mini-creature:has(.mini-delta) .mini-energy { display: none; }
+  .mini-energy, .mini-defense { font-size: 9px; }
+  .phase-tools { flex-wrap: wrap; }
 }

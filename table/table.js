@@ -867,6 +867,13 @@ function miniCreature(state, creature, which, marks) {
   energy.className = 'mini-energy';
   energy.textContent = `ϟ${creature.energy ?? 0}`;
   chip.append(id, health, ...miniDelta(creature, marks), energy);
+  // Defense only when there is some: a creature without any is the usual case, and a phone has no room to say so.
+  if (creature.totalDefense > 0) {
+    const defense = document.createElement('span');
+    defense.className = 'mini-defense';
+    defense.textContent = `◇${creature.totalDefense}`;
+    chip.append(defense);
+  }
   if (creature.isStunned === true) {
     const stunned = document.createElement('span');
     stunned.className = 'mini-flag';
@@ -897,7 +904,7 @@ function miniLabel(creature, which, marks, legal, picked) {
   const acting = creature.id === marks.active || creature.id === marks.turn;
   const status = [acting && 'acting now', creature.isAlive === false && 'defeated', creature.isStunned === true && 'stunned',
     legal && targetStatus(marks, picked)];
-  return [`Creature ${creature.id}, ${role}, ${healthText(creature)} health, ${creature.energy ?? 0} energy`, ...status.filter(Boolean)].join(', ');
+  return [`Creature ${creature.id}, ${role}, ${healthText(creature)} health, ${creature.energy ?? 0} energy, ${creature.totalDefense ?? 0} defense`, ...status.filter(Boolean)].join(', ');
 }
 
 function targetStatus(marks, picked) {

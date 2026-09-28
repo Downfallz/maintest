@@ -138,8 +138,16 @@ test('the round bar carries every creature at a glance: number, health, energy a
   assert.match(ally.className, /mini-creature ally/);
   assert.equal(ally.textContent, '120ϟ4');
   assert.equal(enemy.textContent, '210ϟ0⊘');
-  assert.equal(enemy.attributes['aria-label'], 'Creature 2, opponent, 10/20 health, 0 energy, stunned');
+  assert.equal(enemy.attributes['aria-label'], 'Creature 2, opponent, 10/20 health, 0 energy, 0 defense, stunned');
   assert.doesNotMatch(p.nodes['mini-board'].className, /targeting/);
+});
+
+test("a chip shows a creature's defense when it has some", () => {
+  const p = page(); p.view.board.allies[0].totalDefense = 3; p.draw();
+  const [ally] = p.nodes['mini-allies'].children;
+  assert.equal(ally.textContent, '120ϟ4◇3');
+  assert.match(ally.attributes['aria-label'], /, 4 energy, 3 defense(,|$)/);
+  assert.equal(p.nodes['mini-enemies'].children[0].children.some(child => child.className === 'mini-defense'), false);
 });
 
 test('a spell aimed at an ally is aimed from the round bar, and any other chip opens the battlefield', () => {

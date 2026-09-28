@@ -59,7 +59,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   visible while the page scrolls through longer spell lists; neither board nor hand has a clipped inner
   scrolling pane. Cards wrap into two columns and the active creature appears first.
 - Below desktop width the battlefield is not a section at the bottom of the page. The round bar carries it
-  at a glance, a chip per creature (number, health, energy, a stun ring; the creature acting now outlined,
+  at a glance, a chip per creature (number, health, energy, defense when it has some, a stun ring; the creature acting now outlined,
   whichever seat is deciding), and a
   Battlefield button that opens the whole battlefield over the page, under the bar; a second tap (or Escape)
   closes it where the player left off, and a handover closes it. A legal target is picked from its chip, so
