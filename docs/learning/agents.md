@@ -262,7 +262,7 @@ not stun. Its own mirror reaches the round cap in 0.67 of its matches, where `se
 but a few. `search-23.json` is the first rung under the defense buff ceiling (ADR 0076), searched from `search-21`
 against Greedy, `search-21` and the lookahead with `lookahead-20` (journal, 2026-09-24): on 200 seeds nothing
 had played it takes every match from Greedy and `search-21` and beats `lookahead-20` 0.685, and it gives
-`stun-first`, which was not in its panel, back to 0.560. Changing `greedy.json` itself changes nothing for `greedy`, which reads
+`stun-first`, which was not in its panel, back to 0.560. `lookahead-30.json` is the lookahead's first rung under ADR 0083 to 0085, searched as `lookahead:<weights>` from `search-19` against `search-19`, `stun-first`, Greedy and `pressure-floor` (journal, 2026-09-28): on 200 seeds nothing had played it scores above the lookahead with `search-19`'s weights against all four, most against `pressure-floor` (0.95 to 0.78) and least against `search-19` itself (0.73 to 0.71). It nearly stops valuing energy. Changing `greedy.json` itself changes nothing for `greedy`, which reads
 the built-in values; only `heuristic:learning/weights/greedy.json` sees it. Changing `ScoringWeights.Default`
 does change the benchmark baseline, but the digest records the outcome of each seed and not the weights, so it
 only moves when the new values actually change a decision: scaling all nine by the same positive factor
