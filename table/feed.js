@@ -135,6 +135,25 @@ export function resolvedSince(entries, seen, board, cards) {
     .map(entry => recapAction(entry, board, cards));
 }
 
+// The opponent's actions a seat has not stepped through yet, oldest first. An action resolves the moment its
+// targets are confirmed (ADR 0083), so between two decisions of a person the other side can play several slots;
+// the table shows them one at a time and waits for an OK before the next question. The seat's own actions are
+// never held: it chose them.
+export function opponentSteps(entries, seen, board, cards) {
+  return resolvedSince(entries, seen, board, cards).filter(action => action.actor.side !== 'ally');
+}
+
+// Where stepping starts for a seat the page has just picked up (a load, a reload): after the seat's own latest
+// action, which it decided on, else after every earlier round. Only what resolved since the seat last acted is
+// shown again, rather than the two rounds the page retains.
+export function stepStart(entries, board, cards) {
+  const resolved = resolvedSince(entries, undefined, board, cards);
+  const own = resolved.filter(action => action.actor.side === 'ally').map(action => action.sequence);
+  if (own.length) return Math.max(...own);
+  const earlier = resolved.filter(action => action.round < (board?.roundNumber ?? 0)).map(action => action.sequence);
+  return earlier.length ? Math.max(...earlier) : -1;
+}
+
 // The latest resolution a seat has in front of it, which is what a decision it sends was made after.
 export function latestResolution(entries) {
   const sequences = (entries ?? []).filter(item => item?.event?.kind === 'CombatActionResolved').map(item => item.sequence);
@@ -173,6 +192,7 @@ function recapAction(entry, board, cards) {
   const action = resolution.action ?? {};
   return {
     sequence: entry.sequence,
+    round: eventRound(entry),
     ...(event.frame ? { frame: event.frame, action } : {}),
     actor: recapCreature(action.actor, board),
     spell: cards?.get?.(action.spell)?.name ?? action.spell ?? 'Unknown spell',

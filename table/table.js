@@ -4,8 +4,8 @@ import { forget, heldSeats } from './session.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, statPairs, turnOrder, liveChoice } from './board.js';
 import { handRows } from './hand.js';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep } from './feed.js';
-import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, opponentSteps, resolvedSince, retainRoundEvents, roundRecap, roundUpkeep, stepStart } from './feed.js';
+import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
@@ -27,6 +27,14 @@ function setPhase(text, repeated = false) {
 // back through the round without holding a whole match in memory on a phone.
 const FeedKept = 60;
 
+// How long an opponent's action stays on screen before auto mode OKs it: long enough to read the line, short
+// enough that a round of bot slots is over in a few seconds.
+const StepPause = 1400;
+
+// Which tables this browser muted the pop-ups of, by their seat tokens: a token lasts one match, so a mute does
+// too, and it survives a reload in the middle of it.
+const QuietKey = 'downfall.table.quiet';
+
 boot(practice);
 
 function boot(practice) {
@@ -36,7 +44,7 @@ function boot(practice) {
   } else {
     // Practice keeps its separate capability so a reload can rejoin without touching normal seat storage.
     if (!practice) tidy();
-    start(held.map(({ seat, token }) => ({ seat, transport: httpTransport(seat, token) })), practice ? 'player1' : null);
+    start(held.map(({ seat, token }) => ({ seat, token, transport: httpTransport(seat, token) })), practice ? 'player1' : null);
   }
 }
 
@@ -56,7 +64,9 @@ function start(seats, holder = null) {
     rendered: null, revision: 0, polling: false, sending: false, error: '',
     picked: [], chosen: null, evolving: null, expandedHands: new Set(),
     cards: new Map(), packages: new Map(), catalogue: null, tab: 'board', boardOpen: false, feeds: new Map(),
+    stepSeen: new Map(), stepAuto: null, quietKey: seats.map(seat => seat.token).join('/'),
   };
+  state.quiet = quietTables().includes(state.quietKey);
   load(state);
   setupTalentWindow(state);
   setupPhaseControls(state);
@@ -388,6 +398,9 @@ function render(state, views) {
   // screen (seats.js).
   const fence = needsPass(current, state.holder);
   if (!fence) syncPlayback(state, current);
+  // The opponent's actions this seat has not read yet hold its next question back, one OK each.
+  state.stepSeen ??= new Map();
+  state.step = fence ? null : stepOf(state, current);
 
   // What the host is told has been drawn, and it is the asking rather than the seat. One seat is asked several
   // questions in a row -- two Evolution picks are two askings of the same shape -- so acknowledging per seat
@@ -397,12 +410,12 @@ function render(state, views) {
   // Per seat as well as per asking: the two seats count their own questions, so they are at the same number
   // whenever they have decided the same number of times -- which in hotseat is most of the time. A bare number
   // would call the other seat's question already acknowledged and never announce it.
-  const drawn = fence || state.playback ? null : view.waitingAsked ?? null;
+  const drawn = fence || state.playback || state.step ? null : view.waitingAsked ?? null;
   const acknowledgement = `${current.seat}/${drawn}`;
   if (drawn !== null && acknowledgement !== state.acknowledged && acknowledgement !== state.announcing) {
     announce(state, current, drawn);
   }
-  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback]);
+  const identity = JSON.stringify([current.seat, view, fence, state.chosen, state.picked, state.evolving, state.ordered, state.inspectCreature, state.inspectClass, state.catalogue, state.error, state.playback, state.stepSeen.get(current.seat), state.stepAuto, state.quiet]);
   if (state.rendered === identity) return;
   state.rendered = identity;
   const saved = rememberPosition();
@@ -415,6 +428,9 @@ function render(state, views) {
   if (fence) {
     showBoard(state, false);
     hidePhaseNotice(state);
+    clearTimeout(state.stepTimer);
+    state.stepTimerFor = null;
+    element('order').open = false;
     element('upkeep').open = false;
     element('announcements').open = false;
     element('phase-progress').open = false;
@@ -426,23 +442,32 @@ function render(state, views) {
     ? 'The match is over.'
     : `Round ${view.board.roundNumber ?? '—'} of ${state.catalogue?.rules?.roundCap ?? '—'} · ${(view.board.subPhase ?? '—').replace(/([a-z])([A-Z])/g, '$1 $2')}`, !view.over);
   state.palette = talentPalette(state.catalogue, state.cards);
-  const display = state.playback ? { ...current, view: {
-    ...view, board: playbackBoard(state.playback, view.board), waitingFor: null, options: {},
-    roundEvents: (view.roundEvents ?? []).filter(entry => entry.sequence < state.playback.actions[state.playback.index].sequence
-      || (state.playback.stage === 'after' && entry.sequence === state.playback.actions[state.playback.index].sequence)),
+  // A replay the player opened, or the opponent's action being stepped through: the battlefield as it stood
+  // right after that action (when the host recorded it), and no question on it.
+  const replay = state.playback ?? state.step;
+  const display = replay ? { ...current, view: {
+    ...view, board: playbackBoard(replay, view.board), waitingFor: null, options: {},
+    roundEvents: (view.roundEvents ?? []).filter(entry => entry.sequence < replay.actions[replay.index].sequence
+      || (replay.stage === 'after' && entry.sequence === replay.actions[replay.index].sequence)),
   } } : current;
   renderTimeline(display.view.board);
-  renderBoard(state, display);
+  // The spellbook stays the live one while an opponent action is read: it is the player's, not the replay's.
+  renderBoard(state, display, state.playback ? display : current);
   renderMat(state, display);
   renderFeed(state, view.feed);
   renderRecap(state, view);
   renderDecision(state, current);
+  renderCombatLine(state, view);
   if (state.playback) renderPlayback(state, current);
-  else renderPhaseGuide(state, view, current.seat);
+  else {
+    renderPhaseGuide(state, view, current.seat);
+    renderOrder(state, view, current.seat);
+  }
   element('planning').hidden = Boolean(state.playback);
   element('playback').hidden = !state.playback;
   element('playback-board-note').hidden = !state.playback;
   element('phase-progress').hidden = Boolean(state.playback);
+  element('order').hidden ||= Boolean(state.playback);
   const phaseHeight = element('phase-dock').getBoundingClientRect().height ?? 0;
   element('table').style.setProperty('--phase-height', `${phaseHeight}px`);
   element('board').style.setProperty('--target-offset', `${18 + phaseHeight}px`);
@@ -465,7 +490,7 @@ function render(state, views) {
 // pull the player back after they deliberately scroll elsewhere to inspect the board.
 function guideDecision(state, current) {
   // A player reading the open battlefield is not moved under it; closing it guides them instead.
-  if (state.boardOpen || state.guidedAsking === state.asked || current.view.over || current.view.playedByBot) return;
+  if (state.step || state.boardOpen || state.guidedAsking === state.asked || current.view.over || current.view.playedByBot) return;
   state.guidedAsking = state.asked;
   const kind = current.view.waitingFor;
   const desktop = globalThis.innerWidth >= 1100;
@@ -482,7 +507,7 @@ function guideDecision(state, current) {
 // A handler can outlive its DOM node or its question. Only the visible seat's current asking may act.
 function canInteract(state, current, kind) {
   const active = activeSeat(state.views, state.holder);
-  return !state.playback && !state.sending && !current.view.over && !current.view.playedByBot &&
+  return !state.playback && !state.step && !state.sending && !current.view.over && !current.view.playedByBot &&
     current.view.waitingFor === kind && current.seat === state.shown &&
     active?.seat === current.seat && active.view.waitingAsked === current.view.waitingAsked &&
     !needsPass(current, state.holder);
@@ -542,7 +567,7 @@ function renderTimeline(board) {
   element('timeline').replaceChildren(...strip);
 }
 
-function renderBoard(state, current) {
+function renderBoard(state, current, spellbook = current) {
   const view = current.view;
   const board = view.board;
   state.targetAnchor = null;
@@ -551,18 +576,19 @@ function renderBoard(state, current) {
   // the candidates the options offer are the rows that are tappable, and no others.
   // Live, the action resolved last is marked the way a replayed one is: its caster, its targets and what it
   // changed, on the board as it stands (ADR 0083). A replay the player opened takes its place.
-  const live = state.playback ? null : lastResolved(view.roundEvents, board, state.cards);
+  const replay = state.playback ?? state.step;
+  const live = replay ? null : lastResolved(view.roundEvents, board, state.cards);
   const marks = {
     picked: state.picked,
     board,
     roundEvents: view.roundEvents,
-    active: state.playback ? state.playback.actions[state.playback.index]?.actor.id : isAsked(view) ? view.waitingCreature : null,
-    playback: state.playback?.actions[state.playback.index] ?? live,
-    playbackStage: state.playback?.stage ?? (live ? 'after' : undefined),
+    active: replay ? replay.actions[replay.index]?.actor.id : isAsked(view) ? view.waitingCreature : null,
+    playback: replay?.actions[replay.index] ?? live,
+    playbackStage: replay?.stage ?? (live ? 'after' : undefined),
     live: Boolean(live),
     draftSpell: isAsked(view) && view.waitingFor === 'Intent' ? state.chosen : null,
     targeting: isAsked(view) && view.waitingFor === 'Target',
-    candidates: !state.playback && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
+    candidates: !replay && isAsked(view) && view.waitingFor === 'Target' ? view.options.target?.legalTargets?.candidates ?? [] : [],
     onPick: candidate => pick(state, current, candidate),
     canConfirm: canCastTargets(state, view),
     turn: activeTurn(board)?.slot.creature ?? null,
@@ -573,7 +599,7 @@ function renderBoard(state, current) {
   element('mini-enemies').replaceChildren(...(board.enemies ?? []).map(creature => miniCreature(state, creature, 'enemy', marks)));
   element('mini-allies').replaceChildren(...(board.allies ?? []).map(creature => miniCreature(state, creature, 'ally', marks)));
   enemyBooks(state, current);
-  element('own-hand').replaceChildren(hand(state, current));
+  element('own-hand').replaceChildren(hand(state, spellbook));
 }
 
 // The hand: every spell this seat's creatures know, drawn as the whole card, with the ones it could cast right
@@ -617,7 +643,9 @@ function handRow(state, row, asked, current) {
 
   const who = document.createElement(active ? 'div' : 'summary');
   who.className = 'hand-who';
-  who.textContent = `Creature ${row.creature}${active ? (reference ? ' · choose speed · spell reference' : ' · choose a card') : row.declared ? ' · declared' : ''}`;
+  const order = turnOrder({ id: row.creature }, current.view.board);
+  const acts = order === null ? '' : ` · acts ${order} of ${current.view.board.timeline.length}`;
+  who.textContent = `Creature ${row.creature}${acts}${active ? (reference ? ' · choose speed · spell reference' : ' · choose a card') : row.declared ? ' · declared' : ''}`;
 
   const held = document.createElement('div');
   held.className = `held-cards${reference ? ' speed-reference' : ''}`;
@@ -1136,6 +1164,131 @@ function buyPackage(state, current, creature, tier) {
   if (offer?.availableTiers?.includes(tier)) return submit(state, current, { kind: 'Evolution', creature, tier });
 }
 
+// The opponent's next action this seat has not read, as a one-action replay: where it sits among the round's
+// actions, so the battlefield can show the board as it stood right after it, and how many are left to read.
+// Nothing is held for a bot's seat -- nobody is reading it.
+function stepOf(state, current) {
+  const view = current.view;
+  if (view.playedByBot || state.playback) return null;
+  if (!state.stepSeen.has(current.seat)) state.stepSeen.set(current.seat, stepStart(view.roundEvents, view.board, state.cards));
+  const steps = opponentSteps(view.roundEvents, state.stepSeen.get(current.seat), view.board, state.cards);
+  if (steps.length === 0) return null;
+  const [action] = steps;
+  const actions = resolvedSince(view.roundEvents, undefined, view.board, state.cards).filter(one => one.round === action.round);
+  return {
+    seat: current.seat, round: action.round, actions, index: actions.findIndex(one => one.sequence === action.sequence),
+    stage: 'after', action, left: steps.length, last: steps.at(-1).sequence,
+  };
+}
+
+function advanceStep(state, seat, sequence) {
+  clearTimeout(state.stepTimer);
+  state.stepTimerFor = null;
+  if (sequence <= (state.stepSeen.get(seat) ?? -1)) return;
+  state.stepSeen.set(seat, sequence);
+  redraw(state);
+}
+
+// The opponent's action, one at a time, above the question it holds back. Auto OKs every opponent action of
+// that round after a pause, including the ones still to come; it ends with the round.
+function renderStep(state, current) {
+  const step = state.step;
+  element('combat-step').hidden = !step;
+  element('planning').classList.toggle('stepping', Boolean(step));
+  if (!step) {
+    clearTimeout(state.stepTimer);
+    state.stepTimerFor = null;
+    return;
+  }
+  // Auto belongs to the seat that asked for it: in hotseat the other player reads their own actions by hand.
+  const auto = state.stepAuto?.seat === step.seat && state.stepAuto.round === step.round;
+  if (!auto && state.stepTimerFor !== null) {
+    clearTimeout(state.stepTimer);
+    state.stepTimerFor = null;
+  }
+  const asked = isAsked(current.view) && !current.view.over;
+  element('combat-step-count').textContent = `Round ${step.round} · opponent action${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
+  element('combat-step-action').replaceChildren(recapRow(step.action));
+  let label = 'OK';
+  if (step.left > 1) label = 'OK · next action →';
+  else if (asked) label = 'OK · your move →';
+  const next = button(label, () => advanceStep(state, step.seat, step.action.sequence));
+  next.dataset.focus = 'step-next';
+  const fast = button(auto ? 'Stop auto' : 'Auto this round ▸▸', () => {
+    state.stepAuto = auto ? null : { seat: step.seat, round: step.round };
+    if (auto) redraw(state);
+    else advanceStep(state, step.seat, step.action.sequence);
+  });
+  fast.className = 'secondary';
+  fast.dataset.focus = 'step-auto';
+  fast.setAttribute('aria-pressed', String(auto));
+  const controls = [next, fast];
+  if (step.left > 1) {
+    const skip = button('Skip all', () => advanceStep(state, step.seat, step.last));
+    skip.className = 'secondary';
+    skip.dataset.focus = 'step-skip';
+    controls.push(skip);
+  }
+  element('combat-step-controls').replaceChildren(...controls);
+  if (auto && state.stepTimerFor !== step.action.sequence) {
+    clearTimeout(state.stepTimer);
+    state.stepTimerFor = step.action.sequence;
+    state.stepTimer = setTimeout(() => advanceStep(state, step.seat, step.action.sequence), StepPause);
+  }
+}
+
+// The round bar's one line of play-by-play: the opponent action being read, else the action resolved last while
+// combat runs -- the player's own included, which resolved the moment its targets were confirmed (ADR 0083).
+function renderCombatLine(state, view) {
+  const action = state.step?.action ?? (state.playback ? null : lastResolved(view.roundEvents, view.board, state.cards));
+  const line = element('combat-line');
+  line.hidden = !action;
+  line.dataset.pending = String(Boolean(state.step));
+  const text = document.createElement('span');
+  text.textContent = action ? lastResolvedText(action) : '';
+  line.replaceChildren(text);
+  line.title = text.textContent;
+}
+
+// The speeds both sides chose and the order they make, from the round bar. Below a laptop it opens by itself once
+// a round, when the timeline first exists (speeds reveal together), unless the pop-ups are muted or an opponent
+// action is still being read: the battlefield's turn order says the same, but a tap further away on a phone.
+function renderOrder(state, view, seat) {
+  const panel = element('order');
+  const reveal = speedReveal(view.board);
+  panel.hidden = reveal.order.length === 0 || Boolean(view.over);
+  if (panel.hidden) {
+    panel.open = false;
+    return;
+  }
+  const speeds = choices => choices.map(one => `Creature ${one.creature} ${one.speed}`).join(' · ') || '—';
+  element('order-label').textContent = 'Turn order';
+  element('order-title').textContent = `Round ${view.board.roundNumber} · speeds revealed`;
+  element('order-theirs').textContent = `Opponent: ${speeds(reveal.theirs)}`;
+  element('order-mine').textContent = `You: ${speeds(reveal.mine)}`;
+  element('order-list').replaceChildren(...reveal.order.map(slot => {
+    const item = document.createElement('li');
+    item.className = `order-slot ${slot.side}${slot.isNow ? ' now' : ''}`;
+    const position = document.createElement('span');
+    position.className = 'turn-order';
+    position.textContent = slot.position;
+    position.style.setProperty('--turn-color', turnColour(slot.position, reveal.order.length));
+    const who = document.createElement('strong');
+    who.textContent = `Creature ${slot.creature}`;
+    const detail = document.createElement('span');
+    detail.textContent = [slot.side === 'ally' ? 'yours' : 'opponent', slot.speed, `initiative ${slot.initiative}`, slot.roll, slot.isNow && 'acting now']
+      .filter(Boolean).join(' · ');
+    item.append(position, who, detail);
+    return item;
+  }));
+  state.orderShown ??= new Map();
+  const key = `${view.board.roundNumber}`;
+  if (state.orderShown.get(seat) === key || state.step) return;
+  state.orderShown.set(seat, key);
+  // A laptop has the turn order on screen beside the battlefield already; the pop-up would cover the desk.
+  if (!state.quiet && !(globalThis.innerWidth >= 1100)) panel.open = true;
+}
+
 // What has happened, as this seat may be told it. The kinds are the engine's own words, off the wire, and a
 // resolution carries its fields -- the critical above all (feed.js).
 function renderFeed(state, feed) {
@@ -1199,6 +1352,7 @@ function startPlayback(state, seat, recap) {
   state.chosen = null;
   hidePhaseNotice(state);
   element('upkeep').open = false;
+  element('order').open = false;
   element('announcements').open = false;
   element('phase-progress').open = false;
   if (state.tab === 'mat') closeTalents(state);
@@ -1340,9 +1494,10 @@ function renderDecision(state, current) {
   element('decision').dataset.kind = view.waitingFor ?? 'Waiting';
   element('decision-state').textContent = view.over ? 'Finished' : view.playedByBot ? 'Bot playing' : isAsked(view) ? 'Your turn' : 'Waiting';
   element('decision-phase').textContent = decisionPhase(view);
-  const turn = activeTurn(view.board);
-  element('decision-turn').textContent = turn ? `Turn ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
+  const turn = activeTurn(view.board) ?? plannedTurn(view);
+  element('decision-turn').textContent = turn ? `${turn.planned ? 'Acts' : 'Turn'} ${turn.position} of ${turn.total}${turn.slot.speed ? ` · ${turn.slot.speed}` : ''}` : '';
   element('decision-turn').hidden = !turn;
+  renderStep(state, current);
   // What resolved since this seat last decided, live (ADR 0083): the last few, so a bot's two slots in a row
   // or the last slot of a round are read as well as the action just before this one.
   const fresh = resolvedSince(view.roundEvents, state.liveSeen?.get(current.seat), view.board, state.cards).slice(-4);
@@ -1352,7 +1507,7 @@ function renderDecision(state, current) {
     item.title = item.textContent;
     return item;
   }));
-  element('live-action').hidden = fresh.length === 0;
+  element('live-action').hidden = fresh.length === 0 || Boolean(state.step);
 
   if (view.over) {
     asking.textContent = 'The match is over.';
@@ -1377,6 +1532,11 @@ function renderDecision(state, current) {
     ? `${healthText(actor)} HP · ${actor.energy ?? 0} energy`
     : '';
   asking.textContent = titleOf(state, view);
+  if (state.step) {
+    element('decision-context').textContent = 'The opponent acted first. OK each action to reach your move.';
+    choices.replaceChildren();
+    return;
+  }
   const buttons = buttonsFor(state, current);
   const guidance = guidancePanel(document, view, state.chosen, state.picked);
   element('decision-guide').replaceChildren(guidance);
@@ -1407,6 +1567,14 @@ function activeTurn(board) {
   const cursor = cursorOf(board);
   const slot = board.timeline?.[cursor];
   return slot ? { slot, position: cursor + 1, total: board.timeline.length } : null;
+}
+
+// Where the creature being asked for a spell will act. The timeline is built before intents are declared, so the
+// order is already known while a spell is chosen for it.
+function plannedTurn(view) {
+  if (!isAsked(view) || view.waitingFor !== 'Intent') return null;
+  const index = (view.board.timeline ?? []).findIndex(slot => slot.creature === view.waitingCreature);
+  return index < 0 ? null : { slot: view.board.timeline[index], position: index + 1, total: view.board.timeline.length, planned: true };
 }
 
 function evolutionBudgetText(state, view) {
@@ -1544,6 +1712,10 @@ function hidePhaseNotice(state) {
 
 function showPhaseNotice(state, { title, detail, upkeep, newRound }, replay = false) {
   hidePhaseNotice(state);
+  // Muted, a phase change is still listed under Announcements, and an earlier one can still be opened from it.
+  if (state.quiet && !replay) return;
+  // One pop-up at a time: the turn order read at the reveal gives way to the next phase.
+  element('order').open = false;
   state.noticePinned = replay;
   state.noticeDuration = newRound ? 8000 : 6000;
   const notice = element('phase-notice');
@@ -1568,13 +1740,19 @@ function schedulePhaseNotice(state) {
 
 function renderAnnouncements(state, seat) {
   const history = state.announcements?.get(seat) ?? [];
-  const key = JSON.stringify([seat, history]);
+  const key = JSON.stringify([seat, history, state.quiet]);
   if (state.announcementView === key) return;
   if (state.announcementSeat !== seat) element('announcements').open = false;
   state.announcementSeat = seat;
   state.announcementView = key;
-  element('announcements-label').textContent = `Announcements · ${history.length}`;
-  element('announcement-list').replaceChildren(...[...history].reverse().map(entry => {
+  element('announcements-label').textContent = `Announcements · ${history.length}${state.quiet ? ' · muted' : ''}`;
+  const mute = document.createElement('li');
+  mute.className = 'announcement-mute';
+  const toggle = button(state.quiet ? 'Pop-ups muted for this match · turn back on' : 'Mute pop-ups for this match', () => setQuiet(state, !state.quiet));
+  toggle.className = 'secondary';
+  toggle.setAttribute('aria-pressed', String(Boolean(state.quiet)));
+  mute.append(toggle);
+  element('announcement-list').replaceChildren(mute, ...[...history].reverse().map(entry => {
     const item = document.createElement('li');
     item.append(button(entry.title, () => {
       element('announcements').open = false;
@@ -1585,8 +1763,36 @@ function renderAnnouncements(state, seat) {
   }));
 }
 
+function quietTables() {
+  try {
+    const kept = JSON.parse(storage?.getItem(QuietKey) ?? '[]');
+    return Array.isArray(kept) ? kept : [];
+  } catch {
+    return [];
+  }
+}
+
+// Phase pop-ups and the turn order opening on its own, for the rest of this match. The history stays in the
+// round bar either way; only the interruption goes.
+function setQuiet(state, quiet) {
+  state.quiet = quiet;
+  if (quiet) hidePhaseNotice(state);
+  try {
+    const kept = quietTables().filter(key => key !== state.quietKey);
+    if (quiet) kept.push(state.quietKey);
+    storage?.setItem(QuietKey, JSON.stringify(kept.slice(-8)));
+  } catch {
+    // A browser that keeps nothing mutes this page until it is reloaded.
+  }
+  redraw(state);
+}
+
 function setupPhaseControls(state) {
   const notice = element('phase-notice');
+  element('phase-notice-mute').addEventListener('click', () => {
+    setQuiet(state, true);
+    element('announcements-label').focus({ preventScroll: true });
+  });
   element('phase-notice-close').addEventListener('click', () => {
     hidePhaseNotice(state);
     element('announcements-label').focus({ preventScroll: true });
@@ -1605,11 +1811,12 @@ function setupPhaseControls(state) {
   notice.addEventListener('focusout', event => {
     if (!notice.contains(event.relatedTarget)) schedulePhaseNotice(state);
   });
-  for (const id of ['upkeep', 'recap', 'announcements', 'phase-progress']) {
+  const panels = ['upkeep', 'recap', 'announcements', 'phase-progress', 'order'];
+  for (const id of panels) {
     element(id).addEventListener('toggle', () => {
       if (!element(id).open) return;
       hidePhaseNotice(state);
-      for (const other of ['upkeep', 'recap', 'announcements', 'phase-progress']) if (other !== id) element(other).open = false;
+      for (const other of panels) if (other !== id) element(other).open = false;
     });
   }
   if (globalThis.ResizeObserver) new ResizeObserver(() => {
@@ -1996,7 +2203,7 @@ async function submit(state, current, decision) {
   // The guard is here and not only on the buttons, because there is no undo: on a slow connection a rapid
   // double tap posted twice, one call committing the decision and the other coming back 409, which showed the
   // player an error for a declaration that had in fact been accepted.
-  if (state.sending || state.playback) {
+  if (state.sending || state.playback || state.step) {
     return;
   }
 
@@ -2024,6 +2231,8 @@ async function submit(state, current, decision) {
     state.error = '';
     state.liveSeen ??= new Map();
     state.liveSeen.set(current.seat, latestResolution(current.view.roundEvents) ?? -1);
+    state.stepSeen ??= new Map();
+    state.stepSeen.set(current.seat, Math.max(state.stepSeen.get(current.seat) ?? -1, latestResolution(current.view.roundEvents) ?? -1));
   } catch {
     state.error = 'Could not reach the host. Check your connection before trying again.';
   } finally {
@@ -2158,6 +2367,15 @@ function keyboardDecision(state, event) {
     }
     return;
   }
+  if (state.step && !target?.closest?.('#phase-dock')) {
+    const focused = target?.closest?.('button, summary, [role="button"]');
+    if ((key === 'enter' && !focused) || key === 'arrowright' || key === 'escape') {
+      event.preventDefault();
+      advanceStep(state, state.step.seat, key === 'escape' ? state.step.last : state.step.action.sequence);
+      return;
+    }
+    if (key.startsWith('arrow') || /^[1-9]$/.test(key)) return;
+  }
   if (key.startsWith('arrow')) { navigateChoices(state, current, event); return; }
   if (key === '?') {
     event.preventDefault();
@@ -2173,6 +2391,7 @@ function keyboardDecision(state, event) {
     event.preventDefault();
     if (state.tab === 'mat') closeTalents(state);
     else if (element('announcements').open) element('announcements').open = false;
+    else if (element('order').open) element('order').open = false;
     else if (element('phase-progress').open) element('phase-progress').open = false;
     else if (element('upkeep').open) element('upkeep').open = false;
     else if (element('recap').open) element('recap').open = false;

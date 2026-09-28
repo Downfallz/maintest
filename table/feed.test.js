@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap } from './feed.js';
+import { accumulate, feedLine, lastResolved, lastResolvedText, latestResolution, outcomeText, resolutionText, resolvedSince, retainRoundEvents, roundRecap, opponentSteps, stepStart } from './feed.js';
 
 const cards = new Map([['spell:throwing_star:v1', { name: 'Throwing Star' }]]);
 
@@ -252,4 +252,17 @@ test('what resolved since a seat last decided is every action after it, oldest f
   assert.deepEqual(resolvedSince(entries, 9, {}, cards), []);
   assert.equal(latestResolution(entries), 9);
   assert.equal(latestResolution([]), null);
+});
+
+// An opponent's actions are read one at a time before the seat's next question; its own never wait. A page that
+// picks a seat up again starts after the seat's own latest action, not at the two rounds it retains.
+test("only the opponent's actions are held, and a seat picked up again starts after its own latest action", () => {
+  const board = { roundNumber: 2, allies: [{ id: 1 }], enemies: [{ id: 2 }] };
+  const resolved = (sequence, round, actor) => ({ sequence, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor, spell: 's', targets: [] } }, appliedOutcomes: [] } });
+  const entries = [resolved(3, 1, 2), resolved(5, 1, 1), resolved(8, 2, 2), resolved(9, 2, 1), resolved(11, 2, 2)];
+
+  assert.deepEqual(opponentSteps(entries, 5, board, cards).map(action => [action.sequence, action.round]), [[8, 2], [11, 2]]);
+  assert.equal(stepStart(entries, board, cards), 9);
+  assert.equal(stepStart(entries.filter(entry => entry.event.resolution.action.actor === 2), board, cards), 3);
+  assert.equal(stepStart([], board, cards), -1);
 });

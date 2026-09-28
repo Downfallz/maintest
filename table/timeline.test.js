@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
+import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
 
 const timeline = [
   { owner: 'Player1', creature: 2, speed: 'Quick', initiative: 6 },
@@ -81,4 +81,17 @@ test('a slot reads the rolls behind its place, and nothing when it did not roll'
   assert.equal(rollText(rollOffs, 4), 'd20 11 → 4');
   assert.equal(rollText(rollOffs, 1), '');
   assert.equal(rollText(undefined, 1), '');
+});
+
+// The pop-up that follows the reveal reads the host's timeline and nothing else: each side's speeds in the order
+// played, and every slot with its initiative and roll.
+test('revealed speeds are read per side off the timeline, in the order played', () => {
+  const reveal = speedReveal({ slot: 'Player1', timeline, rollOffs: [{ creature: 4, rolls: [11, 4] }], subPhase: 'Activation', activationCursor: 1 });
+
+  assert.deepEqual(reveal.theirs, [{ creature: 4, speed: 'Quick' }, { creature: 3, speed: 'Standard' }]);
+  assert.deepEqual(reveal.mine, [{ creature: 2, speed: 'Quick' }, { creature: 1, speed: 'Standard' }]);
+  assert.deepEqual(reveal.order.map(slot => [slot.position, slot.creature, slot.side, slot.isNow]),
+    [[1, 2, 'ally', false], [2, 4, 'enemy', true], [3, 1, 'ally', false], [4, 3, 'enemy', false]]);
+  assert.equal(reveal.order[1].roll, 'd20 11 → 4');
+  assert.deepEqual(speedReveal({ slot: 'Player1' }), { order: [], theirs: [], mine: [] });
 });

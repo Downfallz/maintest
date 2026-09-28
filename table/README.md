@@ -38,9 +38,17 @@ not recorded matches. Card text and creature names in the actual app come from t
 - A completed round adds a compact recap button in the sticky top status bar. Open it to read the
   colour-coded casts, targets and outcomes in a floating panel; it never scrolls or pushes the battlefield.
   It remains available throughout the next round and after the match ends. Escape closes it.
-- Each action resolves as its targets are confirmed (ADR 0083) and is shown live: the decision sheet lists
-  every action resolved since this seat's last decision (a bot's slots in a row, the last slot of a round),
-  and the action resolved last marks its caster and targets on the battlefield with what it changed. A
+- Each action resolves as its targets are confirmed (ADR 0083) and is shown live. The round bar carries one
+  line of play-by-play: the action resolved last, the player's own included, or the opponent action being read.
+  The opponent's actions are read one at a time before this seat's next question: the decision sheet shows
+  each one (caster, targets, outcomes) with the battlefield as it stood right after it, and **OK** moves on;
+  the question, its controls and its acknowledgement to the host wait until the last one is read. **Auto this
+  round** OKs the rest of that round's opponent actions after a short pause each (and any still to come in
+  it); the next round is read by hand again. **Skip all** reads past them at once; Enter or → is OK, Escape is
+  Skip all. The seat's own actions are never held, and a reload only asks again for what resolved after the
+  seat's own latest action. Once read, the sheet lists every action resolved since this seat's last decision
+  (a bot's slots in a row, the last slot of a round), wrapped inside the sheet at every width, and the action
+  resolved last marks its caster and targets on the battlefield with what it changed. A
   completed round is not replayed on its own; the recap's Replay action by action button opens a review
   in the decision column. Previous and Next traverse actual public results (including criticals and
   fizzles); Skip returns to the latest round or match results. The actor and targets are highlighted on the battlefield. Each action starts
@@ -85,6 +93,11 @@ not recorded matches. Card text and creature names in the actual app come from t
   living creatures, with at most one package per creature per opportunity (ADR 0066). Both the atlas and
   decision panel show effective remaining and spent picks; switching creature never resets them. The host
   supplies the next evolution round, displayed in the phase guide between opportunities.
+- Once speeds are revealed the round bar gains **Turn order**: each side's speeds (the opponent's first) and
+  every slot in play order with its initiative and any d20 roll, read off the host's timeline. Below laptop
+  width it opens by itself once a round, when the timeline first exists; a laptop shows the same order beside
+  the battlefield, so there it opens on request. While a spell is chosen, the decision heading and the
+  spellbook rows say where each creature acts (`Acts 2 of 6 · Quick`), since the order is set before intents.
 - Speed opens the acting creature's spellbook as a compact reference: name, energy cost and positive
   Standard critical chance, with effects available by expanding a spell. Zero critical stats are omitted
   throughout the spell cards. On phones, the masthead shows the seat and Round guide; round and phase stay
@@ -132,6 +145,10 @@ not recorded matches. Card text and creature names in the actual app come from t
   Hovering or focusing pauses expiry; Keep open pins the notice and Close dismisses it. Announcements holds
   the last twelve notices per seat for this page session. Replaying one stays open and is marked as an earlier
   announcement; it does not change the current phase, question or selection. The top bar remains current.
+  **Mute pop-ups** (on the notice, or at the top of Announcements) stops phase notices and the turn order
+  opening by itself for the rest of the match; changes are still listed under Announcements and earlier ones
+  still open from there. The mute is kept per match (by its seat tokens) across a reload, and the same control
+  turns it back on.
 - Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
   configured energy allowance and actual applied ongoing energy, healing and damage ticks per creature,
   including zero/capped results, in engine order. These public events are retained separately from the short
@@ -166,6 +183,8 @@ a decision has been sent.
 | Enter | Confirm the selected intent or valid target set; activate a focused button normally |
 | 1–9 during Evolution or in the atlas | Choose the creature to evolve or inspect |
 | T | Open / close the Talent atlas |
+| Enter / → while an opponent action is read | OK: read the next one, or reach the question |
+| Escape while an opponent action is read | Skip all the opponent actions left |
 | Escape | Close the battlefield or the atlas; otherwise clear the pending card/target selection |
 | ? | Show / hide contextual shortcut help |
 | Tab, Enter / Space | Navigate and activate controls, including class nodes and unlocks |
@@ -191,7 +210,7 @@ dotnet format --verify-no-changes
 `table.test.js` runs the shipped renderer in a minimal DOM double using Node's standard library. It covers
 stable polling, keyboard selection, asking identity, target bounds, creature-specific unlock lists, the
 handover fence, visible refusals, request failures, in-flight poll ordering, decision scrolling, second-tap
-confirmation, public opponent books, live public actions, talent filters, keyboard guards and server-derived
+confirmation, public opponent books, live public actions, opponent actions read one at a time (OK, auto, skip), muted pop-ups, the turn-order pop-up, talent filters, keyboard guards and server-derived
 turn numbers. Hierarchy and palette tests cover reordered nodes, tree-scoped parents and descendant shades. The feed tests also cover
 completed-round recap formatting, event round identity, applied outcomes, failed casts and independent
 two-round retention. It complements the existing
