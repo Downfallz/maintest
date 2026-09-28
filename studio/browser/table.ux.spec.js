@@ -142,3 +142,43 @@ test('a phone lists the castable spells as compact rows, the chosen one with its
   await expect(pummel.locator('.card-availability')).toBeVisible();
   await page.screenshot({ path: info.outputPath('choose-spell.png'), animations: 'disabled' });
 });
+
+test('a phone keeps the battlefield in the round bar at a glance, not at the bottom of the page', async ({ page }, info) => {
+  if (info.project.name === 'desktop') {
+    await expect(page.locator('#mini-board')).toBeHidden();
+    await expect(page.locator('#board')).toBeVisible();
+    return;
+  }
+  await expect(page.locator('#board')).toBeHidden();
+  await expect(page.locator('#mini-board .mini-creature')).toHaveCount(2);
+  await expect(page.locator('#mini-enemies .mini-creature')).toHaveAttribute('aria-label', /^Creature 2, opponent, 20\/30 health/);
+  const [dock, mini] = await Promise.all([page.locator('#phase-dock').boundingBox(), page.locator('#mini-board').boundingBox()]);
+  expect(mini.y + mini.height).toBeLessThanOrEqual(dock.y + dock.height);
+  await page.locator('#phase-notice-close').click();
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  await expect(page.locator('#mini-board')).toBeInViewport();
+});
+
+test('a spell aimed at an ally is aimed from the round bar, and the battlefield opens at the allies', async ({ page }, info) => {
+  const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });
+  const target = { ...view, waitingFor: 'Target', options: { target: { actor: 1, spell: cards[2].id, legalTargets: { candidates: [1, 5], minTargets: 1, maxTargets: 1 } } },
+    board: { ...view.board, subPhase: 'RevealAndTarget', allies: [{ ...view.board.allies[0], name: undefined }, creature(5, 30), creature(6, 30)],
+      enemies: [creature(2, 20), creature(3, 30), creature(4, 30)] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: target }));
+  await expect(page.locator('#decision')).toHaveAttribute('data-kind', 'Target');
+  await page.locator('#phase-notice-close').click();
+  if (info.project.name === 'desktop') {
+    await page.locator('[data-focus="target-5"]').click();
+    await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
+    return;
+  }
+  await expect(page.locator('#mini-enemies .mini-creature.legal')).toHaveCount(0);
+  await page.locator('#mini-allies [aria-label^="Creature 5,"]').click();
+  await expect(page.locator('#mini-allies [aria-label^="Creature 5,"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#choices')).toContainText('Cast on 1 of 1');
+  await page.screenshot({ path: info.outputPath('ally-target.png'), animations: 'disabled' });
+  await page.locator('#board-toggle').click();
+  await expect(page.locator('#allies .creature.legal').first()).toBeInViewport();
+  expect(await page.locator('#board').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await page.screenshot({ path: info.outputPath('ally-target-battlefield.png'), animations: 'disabled' });
+});

@@ -785,3 +785,137 @@ body:has(#table) { padding-bottom: 24px; }
   :is(#own-hand, .enemy-books) .held:not(.chosen) > .card-availability { display: none; }
   :is(#own-hand, .enemy-books) .held > .card-availability { flex: 1 0 100%; margin: 0; }
 }
+
+/* The battlefield at a glance, in the round bar below the laptop layout. With it there, the full battlefield
+   is no longer a section at the bottom of the page: it opens from the Battlefield button, over the page. */
+.mini-board { display: none; }
+@media (max-width: 1099px) {
+  body:not(.board-open) #board { display: none; }
+  .mini-board { grid-column: 1 / -1; display: grid; gap: 4px; }
+  body.board-open .mini-board { display: none; }
+  .mini-row { display: flex; gap: 4px; }
+  .mini-creature { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 5px; min-height: 30px; margin: 0; padding: 3px 6px; border: 1px solid #3c4b43; border-radius: 7px; background: #1d2b25; color: var(--ink); font-size: 11px; text-align: left; }
+  .mini-creature.enemy { border-color: #6b4843; }
+  .mini-creature.ally { border-color: #3f6a55; }
+  .mini-id { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; font-weight: 750; color: #17231d; }
+  .mini-creature.enemy .mini-id { background: var(--enemy); }
+  .mini-creature.ally .mini-id { background: var(--ally); }
+  .mini-health { position: relative; flex: 1 1 auto; min-width: 18px; height: 14px; overflow: hidden; border-radius: 4px; background: #0d1512; }
+  .mini-bar { position: absolute; inset: 0 auto 0 0; background: #4f7f61; }
+  .mini-creature.enemy .mini-bar { background: #93564d; }
+  .mini-hp { position: relative; display: block; font-size: 10px; font-weight: 750; line-height: 14px; text-align: center; color: #f6f2e6; text-shadow: 0 1px 1px #000c; }
+  .mini-energy { flex: none; font-size: 10px; font-weight: 650; color: var(--gold); }
+  .mini-flag { flex: none; font-size: 11px; color: #f0b2a8; }
+  .mini-creature.active { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+  .mini-creature.dead { opacity: .45; }
+  .mini-creature.dead .mini-id { text-decoration: line-through; }
+  .mini-board.targeting .mini-creature:not(.legal) { opacity: .4; }
+  .mini-creature.legal { border: 1px dashed var(--gold); background: #2a3223; }
+  .mini-creature.picked { border-style: solid; background: #544520; box-shadow: inset 0 0 0 1px var(--gold); }
+  .mini-creature.picked .mini-energy::after { content: ' ✓'; }
+  .mini-creature.replay-caster { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+  .mini-creature.replay-target { box-shadow: inset 0 0 0 2px #8ad4de; }
+}
+@media (min-width: 761px) and (max-width: 1099px) {
+  .mini-board { grid-row: 4; }
+}
+@media (max-width: 760px) {
+  .mini-board { grid-row: 3; }
+}
+
+/* Less to scroll past on a phone: a tighter round bar (the turn is in the decision heading and on the acting
+   creature's chip), a decision that states itself in one line, and a spellbook heading on one row. */
+@media (max-width: 760px) {
+  #phase-dock { padding: 8px; gap: 5px; }
+  #phase-turn { display: none; }
+  .board-toggle { min-height: 30px; padding: 4px 10px; }
+  .phase-tools > details > summary { min-height: 26px; padding: 3px 7px; }
+  #decision { padding: 12px; gap: 6px; }
+  #decision .decision-heading { margin-bottom: 2px; }
+  #decision #asking, #decision[data-kind="Speed"] #asking, #decision[data-kind="Target"] #asking { font-size: 22px; margin: 2px 0; }
+  .decision-context { margin: 0 0 4px; }
+  #decision .shortcuts { display: none; }
+  .decision-guide { padding: 8px 10px; margin-block: 6px; font-size: 12px; }
+  .decision-guide p { margin-block: 3px; line-height: 1.4; }
+  .decision-guide small { margin-top: 4px; font-size: 10px; line-height: 1.4; }
+  .target-instruction { font-size: 13px; margin: 0; }
+  #decision[data-kind="Speed"] #choices > button { min-height: 48px; font-size: 18px; }
+  #decision[data-kind="Intent"] #choices > button, #decision[data-kind="Target"] #choices > button { min-height: 44px; font-size: 15px; }
+  #planning:is([data-kind="Speed"], [data-kind="Intent"]) { padding: 12px; }
+  #planning .hand-section { padding-top: 10px; }
+  .hand-section > .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  #hand-heading { font-size: 14px; margin: 0; }
+  .hand-actions .reference-link { min-height: 32px; padding: 4px 0; border: 0; font-size: 11px; }
+}
+
+/* The opened battlefield on a phone: each creature in about half the height it had, its role said by its
+   section, its stats on one line and its round's choice on one line. */
+@media (max-width: 760px) {
+  #board .creature { gap: 4px 10px; padding: 9px 10px; }
+  #board .creature.legal, #board .creature.picked { padding: 8px 9px; }
+  #board .creature:not(.legal, .picked, .active, .dead) .creature-label { display: none; }
+  #board .creature-id { min-width: 24px; height: 24px; }
+  #board .health { height: 17px; }
+  #board .stats { gap: 6px; }
+  #board .stat { flex-direction: row; align-items: baseline; gap: 3px; }
+  #board .stat strong { font-size: 15px; }
+  #board .round-choice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 2px; padding-top: 5px; }
+  #board .round-choice .choice-spell { margin: 0; font-size: 13px; }
+  #board .round-choice .choice-targets, #board .round-choice .choice-previous { margin: 0; font-size: 11px; }
+  #board .team-section .section-heading { margin-bottom: 6px; }
+  #board .team-grid { gap: 6px; }
+}
+
+/* Evolution on a phone: each package a two-line row (name, tier and initiative; its spells and what it
+   requires), the budget on two lines, and the atlas and pass side by side. The round's tools keep one line:
+   the Round guide at the top of the page already lists the round's steps, so Round flow is not repeated, and
+   the atlas is reached from the spellbook rather than from a tab row of its own. */
+@media (max-width: 760px) {
+  .tabs, #phase-progress { display: none; }
+  .phase-tools { flex-wrap: nowrap; }
+  .phase-tools > details > summary { padding: 3px 6px; font-size: 9px; }
+  #recap-title { font-size: 9px; }
+  #decision[data-kind="Evolution"] #choices { grid-template-columns: 1fr 1fr; gap: 8px; }
+  #decision[data-kind="Evolution"] #choices > :is(.creature-picker, .choice-help, .choice-cards) { grid-column: 1 / -1; }
+  #decision[data-kind="Evolution"] #choices > button { min-height: 40px; padding: 6px; font-size: 12px; }
+  #decision[data-kind="Evolution"] .choice-cards { gap: 6px; }
+  #decision[data-kind="Evolution"] .choice-help { margin: 0; font-size: 11px; }
+  #decision .package-card { min-height: 0; padding: 8px 11px; border-radius: 10px; }
+  #decision .package-card .card-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font-size: 16px; }
+  #decision .package-card .card-meta { margin: 0; }
+  #decision .package-card .card-body { margin: 3px 0 0; padding: 0; border: 0; font-size: 12px; line-height: 1.35; }
+  #decision .package-card .package-requires { margin: 1px 0 0; font-size: 10px; }
+  #evolution-budget .pick-budget { padding: 7px 10px; margin-bottom: 4px; }
+  #evolution-budget .pick-budget > strong { font-size: 13px; }
+  #evolution-budget .pick-tokens { margin: 4px 0 0; }
+  #evolution-budget .pick-note { display: none; }
+}
+@media (max-width: 1099px) {
+  .mini-delta { flex: none; padding: 0 3px; border-radius: 3px; font-size: 10px; font-weight: 750; }
+  .mini-delta.harm { color: #ffbbb4; background: #472a29; }
+  .mini-delta.recovery { color: #b0edc2; background: #23452e; }
+}
+
+/* A phone's opened battlefield prints each stat as its symbol and number, the ones the cards and packages
+   already use; the word stays for a screen reader. A narrow phone keeps the round and the button on one line. */
+@media (max-width: 760px) {
+  #board .creature { grid-template-columns: minmax(0, 1fr) auto; }
+  #board .stats { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 8px; }
+  #board .health { grid-column: 1 / -1; }
+  #board .stat span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #board .stat strong::before { margin-right: 1px; font-size: 12px; }
+  #board .stat-energy strong::before { content: 'ϟ'; }
+  #board .stat-defense strong::before { content: '◇'; }
+  #board .stat-initiative strong::before { content: '↟'; }
+}
+@media (max-width: 360px) {
+  .phase-primary { gap: 4px 8px; }
+  #phase-round { font-size: 14px; }
+  #phase-current { font-size: 13px; }
+  .board-toggle { padding: 4px 8px; font-size: 11px; }
+}
+@media (max-width: 760px) {
+  .phase-primary { flex-wrap: nowrap; }
+  #phase-round, .board-toggle { flex: none; }
+  #phase-current { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

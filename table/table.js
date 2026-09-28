@@ -9,7 +9,7 @@ import { bands, cursorOf, rollText, side, withCursor } from './timeline.js';
 import { classColour, talentClasses, packageForest, talentPalette } from './mat.js';
 import { isSettled, orderOf, tap, untapped } from './ties.js';
 import { NOTHING_TO_RECORD, TAPPED, commentIsOpen, commentNote, noted, notesAreKept, tappedNote } from './notes.js';
-import { playbackBoard, playbackChanges } from './replay.js';
+import { healthChange, playbackBoard, playbackChanges } from './replay.js';
 import { chance, guidancePanel, spellSummary } from './guidance.js';
 import { practice, storage } from './startup.js';
 
@@ -311,7 +311,12 @@ function showBoard(state, open) {
   toggle.textContent = open ? 'Battlefield ✕' : 'Battlefield';
   toggle.title = open ? 'Back to your move' : 'Show every creature';
   placeBoard(state);
-  if (open) element('board').scrollTop = 0;
+  if (open) {
+    element('board').scrollTop = 0;
+    // Opened while a target is asked for, the battlefield starts at the first creature the spell may take,
+    // which for a spell aimed at an ally is the player's own team rather than the opponent above it.
+    revealRow(state, state.targetAnchor);
+  }
   if (!returning) return;
   globalThis.scrollTo?.(0, state.boardReturn ?? 0);
   const current = activeSeat(state.views, state.holder);
@@ -542,6 +547,7 @@ function renderBoard(state, current) {
   const view = current.view;
   const board = view.board;
   state.targetAnchor = null;
+  state.creatureRows = new Map();
   // What a row may do and say this poll. Targeting is a tap on a legal creature (playtest-app.md §3.2), so
   // the candidates the options offer are the rows that are tappable, and no others.
   const marks = {
@@ -559,6 +565,9 @@ function renderBoard(state, current) {
   };
   element('enemies').replaceChildren(...(board.enemies ?? []).map(creature => line(state, creature, 'enemy', marks)));
   element('allies').replaceChildren(...(board.allies ?? []).map(creature => line(state, creature, 'ally', marks)));
+  element('mini-board').classList.toggle('targeting', marks.candidates.length > 0);
+  element('mini-enemies').replaceChildren(...(board.enemies ?? []).map(creature => miniCreature(state, creature, 'enemy', marks)));
+  element('mini-allies').replaceChildren(...(board.allies ?? []).map(creature => miniCreature(state, creature, 'ally', marks)));
   enemyBooks(state, current);
   element('own-hand').replaceChildren(hand(state, current));
 }
@@ -713,6 +722,7 @@ function line(state, creature, which, marks) {
   box.className = `creature ${which}${creature.isAlive === false ? ' dead' : ''}${picked ? ' picked' : ''}${legal ? ' legal' : ''}${creature.id === marks?.active ? ' active' : ''}`;
   if (marks?.playback?.actor.id === creature.id) box.classList.toggle('replay-caster', true);
   if (marks?.playback?.targets.some(target => target.id === creature.id)) box.classList.toggle('replay-target', true);
+  state.creatureRows?.set(creature.id, box);
   if (legal) {
     state.targetAnchor ??= box;
     box.dataset.focus = `target-${creature.id}`;
@@ -829,6 +839,81 @@ function line(state, creature, which, marks) {
   }
 
   return box;
+}
+
+// The battlefield at a glance, in the round bar below the laptop layout: each creature's number, health and
+// energy, and whether it is stunned. A legal target is picked here exactly as on its row, so a spell aimed at
+// an ally never sends the player past the opponent to find one; any other creature opens the battlefield at its
+// row, where its defense, conditions and choice are.
+function miniCreature(state, creature, which, marks) {
+  const picked = (marks.picked ?? []).includes(creature.id);
+  const legal = (marks.candidates ?? []).includes(creature.id);
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = miniClasses(creature, which, marks, legal, picked);
+  const id = document.createElement('span');
+  id.className = 'mini-id';
+  id.textContent = creature.id;
+  const health = document.createElement('span');
+  health.className = 'mini-health';
+  const bar = document.createElement('span');
+  bar.className = 'mini-bar';
+  bar.style.width = `${Math.round(healthShare(creature) * 100)}%`;
+  const amount = document.createElement('span');
+  amount.className = 'mini-hp';
+  amount.textContent = `${creature.health ?? 0}`;
+  health.append(bar, amount);
+  const energy = document.createElement('span');
+  energy.className = 'mini-energy';
+  energy.textContent = `ϟ${creature.energy ?? 0}`;
+  chip.append(id, health, ...miniDelta(creature, marks), energy);
+  if (creature.isStunned === true) {
+    const stunned = document.createElement('span');
+    stunned.className = 'mini-flag';
+    stunned.textContent = '⊘';
+    stunned.title = 'Stunned';
+    chip.append(stunned);
+  }
+  chip.setAttribute('aria-label', miniLabel(creature, which, legal, picked));
+  if (legal) chip.setAttribute('aria-pressed', String(picked));
+  chip.addEventListener('click', () => (legal ? marks.onPick(creature.id) : openBoardAt(state, creature.id)));
+  return chip;
+}
+
+function miniClasses(creature, which, marks, legal, picked) {
+  const replay = marks.playback;
+  return ['mini-creature', which, creature.isAlive === false && 'dead', legal && 'legal', picked && 'picked',
+    creature.id === marks.active && 'active', replay?.actor.id === creature.id && 'replay-caster',
+    replay?.targets.some(target => target.id === creature.id) && 'replay-target'].filter(Boolean).join(' ');
+}
+
+function miniLabel(creature, which, legal, picked) {
+  const role = which === 'ally' ? 'your creature' : 'opponent';
+  const target = picked ? 'selected target' : 'legal target';
+  const status = [creature.isAlive === false && 'defeated', creature.isStunned === true && 'stunned', legal && target];
+  return [`Creature ${creature.id}, ${role}, ${healthText(creature)} health, ${creature.energy ?? 0} energy`, ...status.filter(Boolean)].join(', ');
+}
+
+// Once a replayed action is applied, what it did to health is on the chip, where the bar just moved.
+function miniDelta(creature, marks) {
+  const change = marks.playbackStage === 'after' ? healthChange(marks.playback, creature) : 0;
+  if (change === 0) return [];
+  const delta = document.createElement('span');
+  delta.className = `mini-delta ${change < 0 ? 'harm' : 'recovery'}`;
+  delta.textContent = change < 0 ? `−${-change}` : `+${change}`;
+  return [delta];
+}
+
+function openBoardAt(state, id) {
+  showBoard(state, true);
+  revealRow(state, state.creatureRows?.get(id));
+}
+
+// Scrolls the open battlefield, and only it, so a row is in view under the round bar.
+function revealRow(state, row) {
+  if (!state.boardOpen || !row) return;
+  const board = element('board');
+  board.scrollTop += row.getBoundingClientRect().top - board.getBoundingClientRect().top - 12;
 }
 
 // The condition dock: the printed board's lanes, `new` first and permanent last, each chip carrying its kind,
@@ -1569,7 +1654,7 @@ function evolutionButtons(state, current) {
   hint.textContent = cards.children.length ? 'Choose a creature, then tap a package to buy it whole.' : 'No package left for this creature. Choose another creature or pass.';
   const pass = button('Pass this pick', () => submit(state, current, { kind: 'Evolution', pass: true }));
   pass.className = 'secondary';
-  const explore = button('Explore packages & tiers →', () => openTalents(state));
+  const explore = button('Talent atlas →', () => openTalents(state));
   explore.className = 'secondary';
   explore.dataset.focus = 'evolution-explorer';
   pass.dataset.focus = 'evolution-pass';
@@ -1684,7 +1769,7 @@ function intentButtons(state, current) {
   // (playtest-app.md §3.2). The sheet says what to tap and holds the commitment.
   const asking = document.createElement('p');
   asking.className = 'muted';
-  asking.textContent = `Tap a card for creature ${view.waitingCreature}, then tap it again to declare. You can also use the button below.`;
+  asking.textContent = 'Tap a card, then tap it again to declare, or use the button.';
 
   const name = chosen === null ? '' : state.cards.get(chosen)?.name ?? chosen;
   const confirm = button(chosen === null ? 'Choose a card' : `Declare ${name}`, () => {
