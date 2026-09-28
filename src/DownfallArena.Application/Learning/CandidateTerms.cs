@@ -65,8 +65,9 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         var creatures = Foresight.Creatures(board);
         var actor = creatures.First(creature => creature.Id == option.Creature);
         var gone = _foresight.AlreadyDoomed(board, creatures, actor);
+        var stillToAct = Foresight.StillToAct(board, actor.Id);
         // Nothing to hit is worth nothing (ADR 0040), as the heuristic agent reads it.
-        return [.. option.CastableSpells.Select(spell => Vector(_scorer.BestTerms(actor, spell, creatures, gone)?.Terms ?? ScoreTerms.Zero))];
+        return [.. option.CastableSpells.Select(spell => Vector(_scorer.BestTerms(actor, spell, creatures, gone, stillToAct: stillToAct)?.Terms ?? ScoreTerms.Zero))];
     }
 
     /// <summary>One vector per legal target set in <see cref="TargetSets"/> order; one zero vector for an uncastable spell.</summary>
@@ -81,7 +82,8 @@ public sealed class CandidateTerms(IGameResources resources, RuleSet rules)
         }
 
         var creatures = Foresight.Creatures(board);
-        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures)))];
+        var stillToAct = Foresight.StillToAct(board, options.Actor);
+        return [.. TargetSets.Of(options.LegalTargets).Select(targets => Vector(_scorer.ExpectedTerms(CombatAction.Bind(new CombatIntent(options.Actor, options.Spell), targets), creatures, stillToAct: stillToAct)))];
     }
 
     private static float[] Vector(ScoreTerms terms) => [.. terms.ToArray().Select(value => (float)value)];

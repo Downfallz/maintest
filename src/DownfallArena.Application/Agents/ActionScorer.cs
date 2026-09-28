@@ -38,9 +38,15 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// resolves (ADR 0039). It is empty everywhere except a declaration, which is the one decision taken
     /// against a board that will have changed before the action lands.
     /// </para>
+    /// <para>
+    /// <paramref name="stillToAct"/> names the creatures whose slot comes after this action's in the round, read
+    /// off the timeline: only an enemy among them can still land, this round, the hit a heal or a defense buff
+    /// is cast against, so only they make the round lethal for the kill it denies (ADR 0085). <c>null</c> when
+    /// no timeline is read, and then every living, unstunned enemy counts.
+    /// </para>
     /// </summary>
-    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard) =>
-        weights.Apply(ExpectedTerms(action, creatures, gone, speed));
+    public double Expected(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null) =>
+        weights.Apply(ExpectedTerms(action, creatures, gone, speed, stillToAct));
 
     /// <summary>
     /// The terms behind <see cref="Expected"/>: the crit and non-crit terms weighted by the crit chance.
@@ -52,7 +58,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// the speed — because mispricing costs an agent a good move while misresolving would change the game.
     /// </para>
     /// </summary>
-    public ScoreTerms ExpectedTerms(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard)
+    public ScoreTerms ExpectedTerms(CombatAction action, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(creatures);
@@ -60,8 +66,8 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         gone ??= NoneGone;
         var actor = creatures.First(creature => creature.Id == action.Actor);
         var chance = ResolutionRules.CriticalChanceOf(actor, resources.GetSpell(action.Spell), speed);
-        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical, speed), creatures, gone);
-        var plain = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, speed), creatures, gone);
+        var critical = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.Critical, speed), creatures, gone, stillToAct);
+        var plain = Terms(ResolutionRules.Resolve(action, creatures, resources, rules, ForcedRandom.NotCritical, speed), creatures, gone, stillToAct);
         return (chance * critical) + ((1 - chance) * plain);
     }
 
@@ -90,14 +96,14 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     }
 
     /// <summary>The best target set of a spell for an actor, or null when the spell has no legal target.</summary>
-    public (IReadOnlyList<CreatureId> Targets, double Score)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard) =>
-        BestTerms(actor, spellId, creatures, gone, speed) is { } best ? (best.Targets, weights.Apply(best.Terms)) : null;
+    public (IReadOnlyList<CreatureId> Targets, double Score)? Best(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null) =>
+        BestTerms(actor, spellId, creatures, gone, speed, stillToAct) is { } best ? (best.Targets, weights.Apply(best.Terms)) : null;
 
     /// <summary>
     /// The best target set of a spell for an actor with the terms behind its score, or null when the spell has
     /// no legal target. Best under this scorer's weights: the terms say what that set does, the weights chose it.
     /// </summary>
-    public (IReadOnlyList<CreatureId> Targets, ScoreTerms Terms)? BestTerms(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard)
+    public (IReadOnlyList<CreatureId> Targets, ScoreTerms Terms)? BestTerms(CreatureSnapshot actor, SpellId spellId, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, Speed speed = Speed.Standard, IReadOnlySet<CreatureId>? stillToAct = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(spellId);
@@ -108,7 +114,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
         var bestScore = double.NegativeInfinity;
         foreach (var targets in TargetSets.Of(legal))
         {
-            var terms = ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets), creatures, gone, speed);
+            var terms = ExpectedTerms(CombatAction.Bind(new CombatIntent(actor.Id, spellId), targets), creatures, gone, speed, stillToAct);
             var score = weights.Apply(terms);
             if (best is null || score > bestScore)
             {
@@ -208,11 +214,11 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// (ADR 0039). The set is empty for every reading but a declaration.
     /// </para>
     /// </summary>
-    public double Score(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null) =>
-        weights.Apply(Terms(resolution, creatures, gone));
+    public double Score(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null) =>
+        weights.Apply(Terms(resolution, creatures, gone, stillToAct));
 
     /// <summary>The terms of one resolution, each signed: what it does to enemies counts for, to allies against.</summary>
-    public ScoreTerms Terms(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null)
+    public ScoreTerms Terms(CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, IReadOnlySet<CreatureId>? gone = null, IReadOnlySet<CreatureId>? stillToAct = null)
     {
         ArgumentNullException.ThrowIfNull(resolution);
         ArgumentNullException.ThrowIfNull(creatures);
@@ -247,7 +253,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             };
         }
 
-        terms += DefensiveTerms(actor, resolution, creatures, remaining);
+        terms += DefensiveTerms(actor, resolution, creatures, remaining, stillToAct);
 
         // What the actor keeps; what a spell hands out is priced per outcome above.
         return terms with { Energy = terms.Energy + (actor.Energy.Value - resolution.EnergySpent.Value) };
@@ -388,7 +394,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// outcome the kill would be paid twice, or, when survival needs the effects together, not at all.
     /// </para>
     /// </summary>
-    private ScoreTerms DefensiveTerms(CreatureSnapshot actor, CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, Dictionary<CreatureId, int> remaining)
+    private ScoreTerms DefensiveTerms(CreatureSnapshot actor, CombatResolution resolution, IReadOnlyList<CreatureSnapshot> creatures, Dictionary<CreatureId, int> remaining, IReadOnlySet<CreatureId>? stillToAct)
     {
         var terms = ScoreTerms.Zero;
         foreach (var targetId in resolution.Outcomes
@@ -404,7 +410,9 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
 
             var target = Target(targetId, creatures);
             var allies = creatures.Count(creature => creature.Owner == target.Owner && creature.IsAlive);
-            var bare = ThreatOn(target, creatures, extraDefense: 0);
+            // Whether the round is lethal is read from the enemies still to act after this cast (ADR 0085); what
+            // a buff prevents over its rounds is read from every enemy, since the rounds after this one are whole.
+            var bare = ThreatOn(target, creatures, extraDefense: 0, stillToAct);
             var sign = Sign(actor, target);
             var stacked = 0;
             var prevented = 0.0;
@@ -420,7 +428,7 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
             }
 
             terms = terms with { Defense = terms.Defense - (sign * prevented / Math.Max(1, allies)) };
-            if (bare >= health && ThreatOn(target, creatures, Math.Min(stacked, room)) < health + Restored(resolution, target, targetId))
+            if (bare >= health && ThreatOn(target, creatures, Math.Min(stacked, room), stillToAct) < health + Restored(resolution, target, targetId))
             {
                 terms = terms with { Kill = terms.Kill - sign };
             }
@@ -455,15 +463,16 @@ public sealed class ActionScorer(IGameResources resources, RuleSet rules, Scorin
     /// the best of the damaging spells it knows and can afford, weighted between its critical and its plain
     /// roll, after the defense the creature would have (ADR 0022). Read from the spells' own numbers rather
     /// than from a nested resolution, and computed only for an outcome that needs it, so scoring an attack
-    /// costs exactly what it cost before.
+    /// costs exactly what it cost before. With <paramref name="stillToAct"/>, only the enemies among them count:
+    /// the rest of this round's threat (ADR 0085).
     /// </summary>
-    private double ThreatOn(CreatureSnapshot target, IReadOnlyList<CreatureSnapshot> creatures, int extraDefense)
+    private double ThreatOn(CreatureSnapshot target, IReadOnlyList<CreatureSnapshot> creatures, int extraDefense, IReadOnlySet<CreatureId>? stillToAct = null)
     {
         var defense = target.TotalDefense.Value + extraDefense;
         var total = 0.0;
         foreach (var enemy in creatures)
         {
-            if (enemy.Owner == target.Owner || enemy.IsDead || enemy.IsStunned)
+            if (enemy.Owner == target.Owner || enemy.IsDead || enemy.IsStunned || (stillToAct is not null && !stillToAct.Contains(enemy.Id)))
             {
                 continue;
             }

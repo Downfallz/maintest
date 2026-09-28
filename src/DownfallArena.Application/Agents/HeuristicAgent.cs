@@ -100,11 +100,12 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == intentOption.Creature);
         var gone = _foresight.AlreadyDoomed(board, creatures, actor);
+        var stillToAct = Foresight.StillToAct(board, actor.Id);
         SpellId? best = null;
         var bestScore = double.NegativeInfinity;
         foreach (var spell in intentOption.CastableSpells.OrderBy(spell => spell.Value, StringComparer.Ordinal))
         {
-            var score = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id))?.Score ?? 0;  // nothing to hit is worth nothing (ADR 0040)
+            var score = _scorer.Best(actor, spell, creatures, gone, SpeedOf(board, actor.Id), stillToAct)?.Score ?? 0;  // nothing to hit is worth nothing (ADR 0040)
             if (score > bestScore)
             {
                 best = spell;
@@ -128,7 +129,7 @@ public sealed class HeuristicAgent(ScoringWeights weights, IGameResources resour
         var creatures = Creatures(board);
         var actor = creatures.First(creature => creature.Id == options.Actor);
         // The board already carries every action before this slot (ADR 0083): nobody is expected gone.
-        return _scorer.Best(actor, options.Spell, creatures, ActionScorer.NoneGone, SpeedOf(board, actor.Id))?.Targets ?? [];
+        return _scorer.Best(actor, options.Spell, creatures, ActionScorer.NoneGone, SpeedOf(board, actor.Id), Foresight.StillToAct(board, actor.Id))?.Targets ?? [];
     }
 
     /// <summary>

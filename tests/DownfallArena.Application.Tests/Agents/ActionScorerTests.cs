@@ -593,6 +593,22 @@ public sealed class ActionScorerTests
     }
 
     /// <summary>
+    /// ADR 0085: only the enemies still to act after the cast can make this round lethal. With both still to
+    /// come, the ally at 5 faces 6.3 and the heal denies a kill; with one of them already past, it faces 3.15,
+    /// survives without the heal, and the heal is worth its healing alone.
+    /// </summary>
+    [Fact]
+    public void A_heal_denies_a_kill_only_against_the_enemies_still_to_act_this_round()
+    {
+        var heal = CombatResolution.Resolved(Strike(One, Three), [Two], [], false, Energy.Of(0), [new HealOutcome(Two, 3)]);
+        var dying = WithAlly(Health.Of(5));
+
+        Scorer.Score(heal, dying, stillToAct: new HashSet<CreatureId> { Three, Four }).ShouldBe((0.8 * 3) + 5, 1e-9);
+        Scorer.Score(heal, dying, stillToAct: new HashSet<CreatureId> { Four }).ShouldBe(0.8 * 3, 1e-9);
+        Scorer.Score(heal, dying, stillToAct: new HashSet<CreatureId>()).ShouldBe(0.8 * 3, 1e-9);
+    }
+
+    /// <summary>
     /// A heal that leaves its target inside the round's threat denies nothing: 5 health and 3 restored is
     /// still under the 6.3 coming. The term is for the heal that saves a life, not for every heal on a hurt
     /// creature.

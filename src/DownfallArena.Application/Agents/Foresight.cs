@@ -76,6 +76,19 @@ public sealed class Foresight(ActionScorer scorer)
         return doomed;
     }
 
+    /// <summary>
+    /// The creatures whose slot comes after this one's in the round, read off the timeline, or <c>null</c> when
+    /// the creature has no slot (ADR 0085). At a declaration they are every creature later on the timeline; at a
+    /// target, the ones not yet activated, since the cursor is on this creature's slot.
+    /// </summary>
+    public static IReadOnlySet<CreatureId>? StillToAct(PlayerBoardState board, CreatureId creature)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+
+        var position = IndexOnTimeline(board, creature);
+        return position < 0 ? null : board.Timeline.Skip(position + 1).Select(slot => slot.Creature).ToHashSet();
+    }
+
     /// <summary>Where a creature sits in the combat timeline, or -1 when it has no slot this round.</summary>
     private static int IndexOnTimeline(PlayerBoardState board, CreatureId creature)
     {

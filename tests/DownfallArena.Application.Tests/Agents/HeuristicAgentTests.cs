@@ -99,6 +99,17 @@ public sealed class HeuristicAgentTests
     private static ActivationSlot Slot(CreatureId creature) =>
         new(PlayerSlot.Player1, creature, Speed.Standard, Initiative.Of(5));
 
+    /// <summary>ADR 0085: the creatures after a slot on the timeline are the ones still to act this round.</summary>
+    [Fact]
+    public void The_creatures_still_to_act_are_the_ones_after_the_slot()
+    {
+        var board = WithAllyStriking(Board(enemyHealth: 20)) with { Timeline = [Slot(Two), Slot(One), Slot(Three)] };
+
+        Foresight.StillToAct(board, Two).ShouldBe([One, Three], ignoreOrder: true);
+        Foresight.StillToAct(board, Three).ShouldBeEmpty();
+        Foresight.StillToAct(board, Four).ShouldBeNull();
+    }
+
     [Fact]
     public void Targets_go_to_the_creature_the_spell_can_kill()
     {
