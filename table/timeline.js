@@ -51,3 +51,17 @@ export function rollText(rollOffs, creature) {
   const rolls = (rollOffs ?? []).find(rollOff => rollOff?.creature === creature)?.rolls ?? [];
   return rolls.length === 0 ? '' : `d20 ${rolls.join(' → ')}`;
 }
+
+// The round's order once the speeds are revealed, as the pop-up reads it: each side's speeds, and every slot in
+// the order it is played with its initiative and any roll. Read off the host's timeline and nothing else -- the
+// opponent's speeds are public from the moment the timeline exists, and never before it.
+export function speedReveal(board) {
+  const timeline = board?.timeline ?? [];
+  const cursor = cursorOf(board);
+  const order = timeline.map((slot, index) => ({
+    position: index + 1, creature: slot.creature, side: side(slot, board.slot), speed: slot.speed ?? '',
+    initiative: slot.initiative, roll: rollText(board.rollOffs, slot.creature), isNow: index === cursor,
+  }));
+  const of = which => order.filter(slot => slot.side === which).map(({ creature, speed }) => ({ creature, speed }));
+  return { order, theirs: of('enemy'), mine: of('ally') };
+}

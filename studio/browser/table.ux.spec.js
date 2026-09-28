@@ -197,3 +197,66 @@ test('a spell aimed at an ally is aimed from the round bar, and the battlefield 
   expect(await page.locator('#board').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
   await page.screenshot({ path: info.outputPath('ally-target-battlefield.png'), animations: 'disabled' });
 });
+
+// What resolved since the seat's last move, with the longest lines an action produces, in every question.
+const resolved = (sequence, actor, targets, outcomes) => ({ sequence, round: 3, subPhase: 'Activation', event: { kind: 'CombatActionResolved', roundId: 3,
+  resolution: { action: { actor, spell: cards[3].id, targets } },
+  appliedOutcomes: outcomes.map(target => ({ kind: 'ConditionOutcome', target, effect: { kind: 'DefenseModifier', amount: -3, duration: { rounds: 2 } } })) } });
+
+for (const kind of ['Speed', 'Evolution', 'Target']) {
+  test(`long resolved actions are read one at a time and wrap inside the sheet during ${kind}`, async ({ page }, info) => {
+    const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });
+    const board = { ...view.board, subPhase: kind === 'Target' ? 'Activation' : kind, allies: [view.board.allies[0], creature(5, 30), creature(6, 30)], enemies: [creature(2, 20), creature(3, 30), creature(4, 30)],
+      evolutionChoices: [] };
+    const options = { Speed: view.options, Evolution: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: [packages[0].id] }] } },
+      Target: { target: { actor: 1, spell: cards[2].id, legalTargets: { candidates: [2, 3], minTargets: 1, maxTargets: 1 } } } }[kind];
+    const feed = [resolved(20, 5, [2, 3, 4], [2, 3, 4]), resolved(21, 2, [1, 5, 6], [1, 5, 6])];
+    await page.route('**/api/seat/player1**', route => route.fulfill({ json: { ...view, waitingFor: kind, options, board, feed, feedNext: 22 } }));
+    await expect(page.locator('#decision')).toHaveAttribute('data-kind', kind);
+    await page.locator('#phase-notice-close').click();
+    // The opponent's action is read first, one OK each, and only then is the question offered.
+    await expect(page.locator('#combat-step')).toBeVisible();
+    await expect(page.locator('#combat-line')).toContainText('Heavy Strike');
+    await expect(page.locator('#choices')).toBeEmpty();
+    await expectNoSidewaysScroll(page);
+    await page.locator('#decision').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`opponent-action-${kind}.png`), animations: 'disabled' });
+    await page.locator('#combat-step-controls button').first().click();
+    await expect(page.locator('#combat-step')).toBeHidden();
+    await expect(page.locator('#live-action li')).toHaveCount(2);
+    await expect(page.locator('#choices')).not.toBeEmpty();
+    await expectNoSidewaysScroll(page);
+    await page.locator('#decision').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`resolved-${kind}.png`), animations: 'disabled' });
+  });
+}
+
+test('revealed speeds open the turn order from the round bar, and the spell being chosen says when it acts', async ({ page }, info) => {
+  const creature = (id, health) => ({ id, health, maxHealth: 30, energy: 2 });
+  const timeline = [[2, 'Player2', 'Quick', 9], [1, 'Player1', 'Quick', 8], [5, 'Player1', 'Standard', 7], [3, 'Player2', 'Standard', 6], [6, 'Player1', 'Standard', 5], [4, 'Player2', 'Standard', 3]]
+    .map(([id, owner, speed, initiative]) => ({ creature: id, owner, speed, initiative }));
+  const intent = { ...view, waitingFor: 'Intent', options: { intent: { creatures: [{ creature: 1, castableSpells: cards.map(card => card.id) }] } },
+    board: { ...view.board, slot: 'Player1', subPhase: 'IntentSelection', allies: [view.board.allies[0], creature(5, 30), creature(6, 30)], enemies: [creature(2, 20), creature(3, 30), creature(4, 30)],
+      timeline, rollOffs: [{ creature: 3, rolls: [14] }] } };
+  await page.route('**/api/seat/player1**', route => route.fulfill({ json: intent }));
+  await expect(page.locator('#order')).toBeVisible();
+  // A laptop already shows the turn order beside the battlefield: the panel waits to be asked for there.
+  if (isLaptop(page)) {
+    await expect(page.locator('#order-panel')).toBeHidden();
+    await page.locator('#order-label').click();
+  }
+  await expect(page.locator('#order-panel')).toBeVisible();
+  await expect(page.locator('#order-theirs')).toHaveText('Opponent: Creature 2 Quick · Creature 3 Standard · Creature 4 Standard');
+  await expect(page.locator('#order-list li')).toHaveCount(6);
+  await expect(page.locator('#decision-turn')).toHaveText('Acts 2 of 6 · Quick');
+  const panel = await page.locator('#order-panel').boundingBox();
+  expect(panel.x).toBeGreaterThanOrEqual(0);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(widthOf(page));
+  await expectNoSidewaysScroll(page);
+  await page.screenshot({ path: info.outputPath('turn-order.png'), animations: 'disabled' });
+  await page.locator('#order-label').click();
+  await expect(page.locator('#order-panel')).toBeHidden();
+  await page.locator('#announcements-label').click();
+  await page.locator('#announcement-list .announcement-mute button').click();
+  await expect(page.locator('#announcements-label')).toContainText('muted');
+});

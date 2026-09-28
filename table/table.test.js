@@ -963,7 +963,7 @@ test('announcement history is bounded, separate per seat, and replays without ch
   const p = page(); p.draw(); p.state.chosen = 'one'; p.draw();
   assert.equal(p.state.announcements.get('player1').length, 1);
   p.view.board.subPhase = 'Activation'; p.draw();
-  p.nodes['announcement-list'].children[1].children[0].click();
+  p.nodes['announcement-list'].children[2].children[0].click();
   assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement/);
   assert.match(p.nodes['phase-notice-title'].textContent, /Spells/);
   assert.equal(p.nodes['phase-current'].textContent, 'Combat');
@@ -975,7 +975,7 @@ test('announcement history is bounded, separate per seat, and replays without ch
   p.current.seat = 'player2'; p.draw();
   assert.equal(p.nodes.table.hidden, true);
   p.state.holder = 'player2'; p.draw();
-  assert.equal(p.nodes['announcement-list'].children.length, 1);
+  assert.equal(p.nodes['announcement-list'].children.length, 2);
   assert.equal(p.state.announcements.get('player1').length, 12);
 });
 
@@ -1004,6 +1004,10 @@ function completedRound(round) {
   ];
 }
 
+function stepOk(p) {
+  p.nodes['combat-step-controls'].children[0].click();
+}
+
 function openReplay(p) {
   p.nodes['recap-actions'].children[0].children[0].click();
 }
@@ -1018,6 +1022,9 @@ test('a completed round is not replayed on its own, and its recap replays one ac
   p.view.board.roundNumber = 2; p.view.waitingAsked = 2; p.view.roundEvents = completedRound(1); p.draw();
   assert.equal(p.state.playback ?? null, null);
   assert.equal(p.nodes.planning.hidden, false);
+  // The opponent's last action of the round is read first, and the next question is only acknowledged after it.
+  assert.deepEqual(acknowledgements, [1]);
+  stepOk(p);
   assert.deepEqual(acknowledgements, [1, 2]);
   openReplay(p);
   assert.equal(p.state.playback.index, 0);
@@ -1065,6 +1072,7 @@ test('every action resolved since the seat last decided is listed, and a decisio
   const p = page(); p.view.waitingFor = 'Intent'; p.view.board.subPhase = 'Activation';
   p.current.transport.decide = async () => ({ ok: true });
   p.view.roundEvents = completedRound(1).slice(0, 2); p.draw();
+  stepOk(p);
   assert.equal(p.nodes['live-action'].children.length, 2);
   assert.match(p.nodes['live-action'].children[1].textContent, /Second card → Creature 1 · fizzled: Cannot act\./);
   await p.context.submit(p.state, p.current, { kind: 'Intent', spell: 'one' });
@@ -1136,6 +1144,7 @@ test('recorded frames rewind stats, death, timeline and energy without replacing
   assert.equal(sent.length, 0); assert.equal(JSON.stringify(p.view.board), live);
   p.context.movePlayback(p.state, 1);
   assert.equal(p.state.playback, null);
+  stepOk(p);
   assert.equal(p.nodes.allies.children[0].children[2].children[0].children[0].textContent, '6');
   assert.equal(p.nodes.timeline.textContent, '');
 });
@@ -1243,4 +1252,137 @@ test('a stale or handed-over tie control cannot submit or change a later questio
   p.state.holder = null; p.draw();
   await p.context.keyboardDecision(p.state, keyEvent('1'));
   assert.deepEqual([...p.state.ordered], []);
+});
+
+// ADR 0083: an opponent's action resolves the moment its owner confirms targets, so several can land between two
+// decisions of a person. Each is read before the seat's next question, with the battlefield marking what it did.
+function opponentAction(sequence, amount, round = 1) {
+  return { sequence, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor: 2, spell: 'two', targets: [1] } },
+    appliedOutcomes: [{ kind: 'DamageOutcome', target: 1, amount }] } };
+}
+
+test("opponent actions hold the next question, one OK each, and the question is acknowledged after the last", () => {
+  const p = page(); const acknowledgements = [];
+  p.current.transport.seat = async (_, drawn) => { acknowledgements.push(drawn); return { ok: true }; };
+  p.view.waitingFor = 'Target'; p.view.board.subPhase = 'Activation';
+  p.view.options = { target: { actor: 1, spell: 'one', legalTargets: { candidates: [2], minTargets: 1, maxTargets: 1 } } };
+  p.draw();
+  p.view.waitingAsked = 2; p.view.roundEvents = [opponentAction(30, 4), opponentAction(31, 2)]; p.draw();
+  assert.equal(p.nodes['combat-step'].hidden, false);
+  assert.match(p.nodes['combat-step-count'].textContent, /opponent action · 2 to read/);
+  assert.match(p.nodes['combat-step-action'].textContent, /Second card.*Damage 4 → Creature 1/);
+  assert.equal(p.nodes['combat-line'].textContent, 'Creature 2 (opponent) · Second card → Creature 1 · Damage 4 → Creature 1');
+  assert.equal(p.nodes['combat-line'].dataset.pending, 'true');
+  assert.equal(p.nodes.choices.children.length, 0);
+  assert.match(p.nodes.enemies.children[0].className, /replay-caster/);
+  assert.match(p.nodes.allies.children[0].className, /replay-target/);
+  assert.doesNotMatch(p.nodes['mini-enemies'].children[0].className, /legal/);
+  p.context.pick(p.state, p.current, 2);
+  assert.deepEqual([...p.state.picked], []);
+  assert.deepEqual(acknowledgements, [1]);
+
+  p.nodes['combat-step-controls'].children[0].click();
+  assert.match(p.nodes['combat-step-action'].textContent, /Damage 2/);
+  assert.doesNotMatch(p.nodes['combat-step-count'].textContent, /to read/);
+  assert.equal(p.nodes['combat-step-controls'].children[0].textContent, 'OK · your move →');
+  p.nodes['combat-step-controls'].children[0].click();
+  assert.equal(p.nodes['combat-step'].hidden, true);
+  assert.deepEqual(acknowledgements, [1, 2]);
+  assert.ok(p.nodes.choices.children.length > 0);
+  assert.equal(p.nodes['live-action'].children.length, 2);
+  assert.equal(p.nodes['combat-line'].dataset.pending, 'false');
+});
+
+test("the seat's own action is shown in the round bar and never held", () => {
+  const p = page(); p.view.waitingFor = null; p.view.board.subPhase = 'Activation';
+  p.view.roundEvents = [opponentAction(28, 3), { ...completedRound(1)[0], sequence: 29 }]; p.draw();
+  assert.equal(p.nodes['combat-step'].hidden, true, 'an opponent action before the seat acted was read then');
+  assert.match(p.nodes['combat-line'].textContent, /^Creature 1 \(yours\) · First card/);
+  assert.equal(p.nodes['combat-line'].dataset.pending, 'false');
+});
+
+test('Skip all reads past every opponent action, and Enter and Escape step from the keyboard', () => {
+  const p = page(); p.draw();
+  p.view.roundEvents = [opponentAction(30, 4), opponentAction(31, 2), opponentAction(32, 1)]; p.draw();
+  p.context.keyboardDecision(p.state, keyEvent('1'));
+  assert.equal(p.state.chosen, null, 'a number never picks a card while an action is read');
+  p.context.keyboardDecision(p.state, keyEvent('Enter'));
+  assert.match(p.nodes['combat-step-action'].textContent, /Damage 2/);
+  assert.match(p.nodes['combat-step-controls'].textContent, /Skip all/);
+  p.context.keyboardDecision(p.state, keyEvent('Escape'));
+  assert.equal(p.nodes['combat-step'].hidden, true);
+  p.view.roundEvents = [...p.view.roundEvents, opponentAction(33, 5), opponentAction(34, 6)]; p.draw();
+  p.nodes['combat-step-controls'].children[2].click();
+  assert.equal(p.nodes['combat-step'].hidden, true);
+});
+
+test('auto OKs the opponent actions of its round after a pause, and ends with the round', () => {
+  const p = page(); p.draw();
+  p.view.roundEvents = [opponentAction(30, 4), opponentAction(31, 2)]; p.draw();
+  p.nodes['combat-step-controls'].children[1].click();
+  assert.match(p.nodes['combat-step-action'].textContent, /Damage 2/, 'the action on screen is OK-ed at once');
+  assert.match(p.nodes['combat-step-count'].textContent, /auto$/);
+  assert.equal(p.nodes['combat-step-controls'].children[1].textContent, 'Stop auto');
+  assert.equal(p.delays.get(p.state.stepTimer), 1400);
+  p.draw();
+  assert.equal(p.timers.size, 2, 'a redraw does not start a second pause');
+  p.timers.get(p.state.stepTimer)();
+  assert.equal(p.nodes['combat-step'].hidden, true);
+  p.view.roundEvents = [...p.view.roundEvents, opponentAction(32, 1)]; p.draw();
+  assert.equal(p.state.stepTimerFor, 32, 'a later action of the same round is OK-ed too');
+  p.timers.get(p.state.stepTimer)();
+  p.view.roundEvents = [...p.view.roundEvents, opponentAction(40, 1, 2)]; p.view.board.roundNumber = 2; p.draw();
+  assert.equal(p.nodes['combat-step'].hidden, false);
+  assert.equal(p.state.stepTimerFor, null, 'the next round is read by hand again');
+});
+
+test('muted pop-ups stay listed, hold for the rest of the match across a reload, and can be turned back on', () => {
+  const p = page(); const kept = new Map();
+  p.context.storage = { getItem: key => kept.get(key) ?? null, setItem: (key, value) => kept.set(key, value) };
+  p.state.quietKey = 'token-1';
+  p.context.setupPhaseControls(p.state); p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+  p.nodes['phase-notice-mute'].click();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  p.view.board.subPhase = 'Activation'; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, true);
+  assert.equal(p.state.announcements.get('player1').length, 2);
+  assert.match(p.nodes['announcements-label'].textContent, /· muted$/);
+  assert.deepEqual([...p.context.quietTables()], ['token-1']);
+  p.nodes['announcement-list'].children[1].children[0].click();
+  assert.equal(p.nodes['phase-notice'].hidden, false, 'an earlier announcement still opens when asked for');
+  const toggle = p.nodes['announcement-list'].children[0].children[0];
+  assert.equal(toggle.attributes['aria-pressed'], 'true');
+  toggle.click();
+  assert.equal(p.state.quiet, false);
+  assert.deepEqual([...p.context.quietTables()], []);
+  p.view.board.roundNumber = 2; p.draw();
+  assert.equal(p.nodes['phase-notice'].hidden, false);
+});
+
+test('revealed speeds open the turn order once a round, opponent first, unless the pop-ups are muted', () => {
+  const p = page(); p.view.board.slot = 'Player1';
+  p.view.board.timeline = [{ creature: 2, owner: 'Player2', speed: 'Quick', initiative: 9 }, { creature: 1, owner: 'Player1', speed: 'Standard', initiative: 7 }];
+  p.draw();
+  assert.equal(p.nodes.order.hidden, false);
+  assert.equal(p.nodes.order.open, true);
+  assert.equal(p.nodes['order-theirs'].textContent, 'Opponent: Creature 2 Quick');
+  assert.equal(p.nodes['order-mine'].textContent, 'You: Creature 1 Standard');
+  assert.equal(p.nodes['order-list'].children[0].textContent, '1Creature 2opponent · Quick · initiative 9');
+  p.nodes.order.open = false; p.view.waitingAsked++; p.draw();
+  assert.equal(p.nodes.order.open, false);
+  p.view.board.roundNumber = 2; p.draw();
+  assert.equal(p.nodes.order.open, true);
+  p.nodes.order.open = false; p.state.quiet = true; p.view.board.roundNumber = 3; p.draw();
+  assert.equal(p.nodes.order.open, false);
+  assert.equal(p.nodes.order.hidden, false);
+  p.view.board.timeline = []; p.draw();
+  assert.equal(p.nodes.order.hidden, true);
+});
+
+test('choosing a spell shows where its creature acts, in the heading and on its spellbook row', () => {
+  const p = page(); p.view.board.timeline = [{ creature: 2, speed: 'Quick' }, { creature: 1, speed: 'Standard' }]; p.draw();
+  assert.equal(p.nodes['decision-turn'].textContent, 'Acts 2 of 2 · Standard');
+  assert.equal(p.nodes['decision-turn'].hidden, false);
+  assert.match(p.nodes['own-hand'].textContent, /Creature 1 · acts 2 of 2 · choose a card/);
 });
