@@ -1386,3 +1386,21 @@ test('choosing a spell shows where its creature acts, in the heading and on its 
   assert.equal(p.nodes['decision-turn'].hidden, false);
   assert.match(p.nodes['own-hand'].textContent, /Creature 1 · acts 2 of 2 · choose a card/);
 });
+
+test('stopping auto cancels the pause already running, and auto never carries over to the other seat', () => {
+  const p = page(); p.draw();
+  p.view.roundEvents = [opponentAction(30, 4), opponentAction(31, 2), opponentAction(32, 1)]; p.draw();
+  p.nodes['combat-step-controls'].children[1].click();
+  const pending = p.state.stepTimer;
+  assert.equal(p.timers.has(pending), true);
+  p.nodes['combat-step-controls'].children[1].click();
+  assert.equal(p.timers.has(pending), false, 'Stop auto cancels the pending OK');
+  assert.match(p.nodes['combat-step-action'].textContent, /Damage 2/);
+
+  p.nodes['combat-step-controls'].children[1].click();
+  assert.equal(p.state.stepAuto.seat, 'player1');
+  p.current.seat = 'player2'; p.state.holder = 'player2'; p.draw();
+  assert.equal(p.nodes['combat-step'].hidden, false);
+  assert.equal(p.state.stepTimerFor, null, "the other seat's actions wait for its own OK");
+  assert.doesNotMatch(p.nodes['combat-step-count'].textContent, /auto/);
+});

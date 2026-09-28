@@ -1200,7 +1200,12 @@ function renderStep(state, current) {
     state.stepTimerFor = null;
     return;
   }
-  const auto = state.stepAuto === step.round;
+  // Auto belongs to the seat that asked for it: in hotseat the other player reads their own actions by hand.
+  const auto = state.stepAuto?.seat === step.seat && state.stepAuto.round === step.round;
+  if (!auto && state.stepTimerFor !== null) {
+    clearTimeout(state.stepTimer);
+    state.stepTimerFor = null;
+  }
   const asked = isAsked(current.view) && !current.view.over;
   element('combat-step-count').textContent = `Round ${step.round} · opponent action${step.left > 1 ? ` · ${step.left} to read` : ''}${auto ? ' · auto' : ''}`;
   element('combat-step-action').replaceChildren(recapRow(step.action));
@@ -1210,7 +1215,7 @@ function renderStep(state, current) {
   const next = button(label, () => advanceStep(state, step.seat, step.action.sequence));
   next.dataset.focus = 'step-next';
   const fast = button(auto ? 'Stop auto' : 'Auto this round ▸▸', () => {
-    state.stepAuto = auto ? null : step.round;
+    state.stepAuto = auto ? null : { seat: step.seat, round: step.round };
     if (auto) redraw(state);
     else advanceStep(state, step.seat, step.action.sequence);
   });
